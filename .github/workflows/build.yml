@@ -15,6 +15,9 @@ jobs:
         submodules: 'recursive'
         fetch-depth: 0
 
+    - name: Clone OsmAnd Resources
+      run: git clone https://github.com/osmandapp/OsmAnd-resources.git resources
+
     - name: Set up Java Development Kit
       uses: actions/setup-java@v4
       with:
@@ -28,11 +31,10 @@ jobs:
       env:
         _JAVA_OPTIONS: "-Xmx4g"
         GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx4g -Dorg.gradle.workers.max=2"
-      # Adding --warning-mode all and specific flags to force past the resource linking
       run: ./gradlew clean :OsmAnd:assembleAndroidFullLegacyArm64Debug -x test --no-daemon --warning-mode all
 
     - name: Upload Finished Installer APK
       uses: actions/upload-artifact@v4
       with:
         name: Nautical-OsmAnd-Installer
-        path: OsmAnd/build/outputs/apk/debug/app-debug.apk
+        path: OsmAnd/build/outputs/apk/**/*.apk
