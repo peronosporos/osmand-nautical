@@ -71,7 +71,7 @@ class POICategoriesScreen(
 			}
 			var groupIcon = QuickSearchListItem.getIcon(app, result)
 			if (groupIcon == null) {
-				groupIcon = app.uiUtilities.getIcon(R.drawable.mx_special_custom_category)
+				groupIcon = app.uiUtilities.getIcon(R.drawable.ic_action_poi_name)
 			}
 			val icon = CarIcon.Builder(
 				IconCompat.createWithBitmap(AndroidUtils.drawableToBitmap(groupIcon))

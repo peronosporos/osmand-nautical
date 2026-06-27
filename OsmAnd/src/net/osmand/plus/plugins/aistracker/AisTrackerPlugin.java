@@ -267,7 +267,7 @@ public class AisTrackerPlugin extends OsmandPlugin {
 
 	@Override
 	public int getLogoResourceId() {
-		return R.drawable.mm_sport_sailing;
+		return R.drawable.ic_action_sail_boat_dark;
 	}
 
 	@Override

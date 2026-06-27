@@ -460,7 +460,7 @@ public class QuickSearchCustomPoiFragment extends BaseFullScreenDialogFragment i
 				UiUtilities ic = app.getUIUtilities();
 				int iconId = getIconId(category);
 				if (iconId == 0) {
-					iconId = R.drawable.mx_special_custom_category;
+					iconId = R.drawable.ic_action_poi_name;
 				}
 				if (categorySelected) {
 					iconView.setImageDrawable(ic.getIcon(iconId, R.color.osmand_orange));

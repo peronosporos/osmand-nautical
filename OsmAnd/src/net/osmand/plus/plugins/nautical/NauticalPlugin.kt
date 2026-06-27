@@ -1,4 +1,5 @@
 package net.osmand.plus.plugins.nautical
+import android.util.Log
 
 import android.content.Context
 import android.graphics.drawable.Drawable
@@ -30,7 +31,7 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app) {
 
     override fun getLogoResourceId(): Int {
         // Reusing the native sport sailing icon resource already built into OsmAnd
-        return R.drawable.mm_sport_sailing
+        return R.drawable.ic_action_sail_boat_dark
     }
 
     override fun setEnabled(enabled: Boolean) {
@@ -39,7 +40,7 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app) {
             // We will configure the active server IP address and port strings in a later step
             Log.d("NauticalPlugin", "Plugin activated. Engine ready.")
         } else {
-            engine.disconnect()
+            connection.disconnect()
             Log.d("NauticalPlugin", "Plugin deactivated. Network disconnected cleanly.")
         }
     }

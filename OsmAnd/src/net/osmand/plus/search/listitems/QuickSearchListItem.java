@@ -689,7 +689,7 @@ public class QuickSearchListItem {
 				iconId = RenderingIcons.getBigIconResourceId(iconName);
 			}
 		}
-		return iconId > 0 ? iconId : R.drawable.mx_special_custom_category;
+		return iconId > 0 ? iconId : R.drawable.ic_action_poi_name;
 	}
 
 	@NonNull

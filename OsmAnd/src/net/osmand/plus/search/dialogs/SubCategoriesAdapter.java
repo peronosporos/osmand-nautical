@@ -106,7 +106,7 @@ public class SubCategoriesAdapter extends ArrayAdapter<PoiType> {
 			if (iconRes == 0) {
 				iconRes = RenderingIcons.getBigIconResourceId(poiType.getOsmTag() + "_" + poiType.getOsmValue());
 				if (iconRes == 0) {
-					iconRes = R.drawable.mx_special_custom_category;
+					iconRes = R.drawable.ic_action_poi_name;
 				}
 			}
 			icon.setImageDrawable(uiUtilities.getIcon(iconRes, tintIconColorRes));

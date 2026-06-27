@@ -445,7 +445,7 @@ public class MapLayers {
 		if (RenderingIcons.containsBigIcon(f.getIconId())) {
 			item.setIcon(RenderingIcons.getBigIconResourceId(f.getIconId()));
 		} else {
-			item.setIcon(R.drawable.mx_special_custom_category);
+			item.setIcon(R.drawable.ic_action_poi_name);
 		}
 		item.setColor(app, ContextMenuItem.INVALID_ID);
 		item.setUseNaturalIconColor(true);

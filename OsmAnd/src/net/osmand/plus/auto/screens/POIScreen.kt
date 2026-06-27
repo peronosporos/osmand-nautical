@@ -136,7 +136,7 @@ class POIScreen(
                 val title = point.localeName
                 var groupIcon = QuickSearchListItem.getIcon(app, point)
                 if (groupIcon == null) {
-                    groupIcon = AppCompatResources.getDrawable(app, R.drawable.mx_special_custom_category)
+                    groupIcon = AppCompatResources.getDrawable(app, R.drawable.ic_action_poi_name)
                 }
                 val icon = if (groupIcon != null) CarIcon.Builder(
                     IconCompat.createWithBitmap(AndroidUtils.drawableToBitmap(groupIcon)))
