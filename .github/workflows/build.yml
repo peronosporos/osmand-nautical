@@ -9,21 +9,15 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout Source Code
+    - name: Checkout Source Code with Submodules
       uses: actions/checkout@v4
+      with:
+        # Crucial for OsmAnd: Forces the server to download all asset submodules recursively
+        submodules: 'recursive'
+        fetch-depth: 0
 
     - name: Set up Java Development Kit
       uses: actions/setup-java@v4
       with:
         distribution: 'zulu'
         java-version: '17'
-
-    - name: Grant Execute Permission for Gradle
-      run: chmod +x gradlew
-
-    - name: Execute Cloud Compilation
-      env:
-        # Allocates a massive 4GB heap space to the remote compiler
-        _JAVA_OPTIONS: "-Xmx4g"
-        GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx4g -Dorg.gradle.workers.max=2"
-      run: ./gradlew :OsmAnd:assembleAndroidFullLegacyArm64Debug -x test --no-daemon
