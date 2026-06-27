@@ -26,6 +26,6 @@
 		android:layout_gravity="center"
 		android:clickable="false"
 		android:visibility="gone"
-		app:srcCompat="@drawable/mx_special_star_stroked" />
+		app:srcCompat="@drawable/ic_action_favorite_stroke" />
 
 </FrameLayout>

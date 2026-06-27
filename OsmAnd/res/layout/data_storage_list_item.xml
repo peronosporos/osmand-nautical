@@ -26,7 +26,7 @@
 				android:layout_marginLeft="@dimen/content_padding"
 				android:layout_marginRight="@dimen/content_padding"
 				android:layout_gravity="center"
-				app:srcCompat="@drawable/mm_storage_tank"
+				app:srcCompat="@drawable/ic_action_storage"
 				tools:tint="?attr/default_icon_color"
 				android:layout_marginEnd="@dimen/content_padding"
 				android:layout_marginStart="@dimen/content_padding" />
@@ -86,7 +86,7 @@
 				android:layout_height="@dimen/standard_icon_size"
 				android:layout_gravity="center"
 				android:visibility="invisible"
-				app:srcCompat="@drawable/mm_storage_tank"
+				app:srcCompat="@drawable/ic_action_storage"
 				android:layout_marginHorizontal="@dimen/content_padding" />
 
 			<LinearLayout

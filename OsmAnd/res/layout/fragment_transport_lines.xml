@@ -46,7 +46,7 @@
 					android:layout_height="@dimen/icon_size_double"
 					android:layout_gravity="center"
 					android:layout_marginVertical="@dimen/content_padding"
-					android:src="@drawable/mm_amenity_bus_station"
+					android:src="@drawable/ic_action_bus_dark"
 					android:tint="?attr/default_icon_color" />
 
 				<net.osmand.plus.widgets.TextViewEx
