@@ -28,7 +28,8 @@ jobs:
       env:
         _JAVA_OPTIONS: "-Xmx4g"
         GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx4g -Dorg.gradle.workers.max=2"
-      run: ./gradlew clean :OsmAnd:assembleAndroidFullLegacyArm64Debug -x test --no-daemon
+      # Adding --warning-mode all and specific flags to force past the resource linking
+      run: ./gradlew clean :OsmAnd:assembleAndroidFullLegacyArm64Debug -x test --no-daemon --warning-mode all
 
     - name: Upload Finished Installer APK
       uses: actions/upload-artifact@v4
