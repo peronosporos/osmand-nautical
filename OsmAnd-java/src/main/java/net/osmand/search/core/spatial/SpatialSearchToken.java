@@ -1,0 +1,382 @@
+package net.osmand.search.core.spatial;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
+
+import com.google.protobuf.ByteString;
+
+import gnu.trove.map.hash.TLongObjectHashMap;
+import net.osmand.CollatorStringMatcher;
+import net.osmand.CollatorStringMatcher.StringMatcherMode;
+import net.osmand.binary.Abbreviations;
+import net.osmand.binary.BinaryMapAddressReaderAdapter.CityBlocks;
+import net.osmand.binary.NameIndexReader.NameIndexReaderMatcher;
+import net.osmand.binary.ObfConstants;
+import net.osmand.binary.OsmandOdb.AddressNameIndexDataAtom;
+import net.osmand.binary.OsmandOdb.OsmAndPoiNameIndexDataAtom;
+import net.osmand.data.LatLon;
+import net.osmand.data.MapObject;
+import net.osmand.data.Street;
+import net.osmand.search.core.HashQuadTree;
+import net.osmand.search.core.spatial.SpatialSearchContext.SpatialSearchStats;
+import net.osmand.util.Algorithms;
+import net.osmand.util.MapUtils;
+import net.osmand.util.SearchAlgorithms;
+
+public class SpatialSearchToken {
+	public static final int BUILDING_TYPE = -2;
+	public static final int POI_TYPE = -1;
+	public static final int STREET_TYPE = CityBlocks.STREET_TYPE.index;
+	public static final String DOT_INCOMPLETE_STRING = CollatorStringMatcher.INCOMPLETE_DOT + "";
+
+	int MIN_CHAR_INCOMPLETE;
+	
+	int originalOrder = 0;
+	int sortedOrder = 0;
+	
+	boolean incomplete;
+	String originalWord;
+	String word;
+	Set<String> bldWordSplit;
+	
+	List<NameIndexAtom> atoms = new ArrayList<>();
+	TLongObjectHashMap<NameIndexAtom> index = new TLongObjectHashMap<>();
+	HashQuadTree<NameIndexAtom> quadTree = new HashQuadTree<>(16);
+	TLongObjectHashMap<NameIndexAtom> indexByOsmIds = new TLongObjectHashMap<>();
+
+	CollatorStringMatcher collatorMain;
+	// cache for popular split
+	String wordPrefix;
+	CollatorStringMatcher collatorSuffix;
+	
+	int mainNumber = -1;
+	CollatorStringMatcher[] otherMatch;
+
+	public SpatialSearchToken(int MIN_CHAR_INCOMPLETE, String w, String original, int order) {
+		this.MIN_CHAR_INCOMPLETE = MIN_CHAR_INCOMPLETE;
+		originalWord = original;
+		word = w;
+		bldWordSplit = SearchAlgorithms.getBuildingCompareSet(word);
+		originalOrder = order;
+		String noDot = w;
+		if (w.endsWith(DOT_INCOMPLETE_STRING)) {
+			incomplete = true;
+			noDot = w.substring(0, w.length() - 1);
+		}
+		if (incomplete && word.length() <= MIN_CHAR_INCOMPLETE + 1) {
+			collatorMain = new CollatorStringMatcher(noDot, StringMatcherMode.CHECK_EQUALS_FROM_SPACE);
+		} else {
+			if (SearchAlgorithms.letters(noDot) == 0) {
+				// pos case '4', '#4' query should match 4th, wrong case token '4' should not match '48th'
+				// we use number to compare if we use is isNumber2Letters to many weird results on '2B'
+				mainNumber = Algorithms.extractFirstIntegerNumber(noDot);
+			}
+			// . already in collator w.endsWith(DOT_INCOMPLETE_STRING)
+			collatorMain = new CollatorStringMatcher(w, StringMatcherMode.CHECK_EQUALS_FROM_SPACE);
+		}
+		String abbr = Abbreviations.getSearchabbreviations().get(noDot);
+		if (abbr != null) {
+			List<String> other = SearchAlgorithms.splitAndNormalize(abbr, true);
+			otherMatch = new CollatorStringMatcher[other.size()];
+			for(int i = 0; i < other.size(); i++) {
+				otherMatch[i] = new CollatorStringMatcher(other.get(i), StringMatcherMode.CHECK_EQUALS_FROM_SPACE);
+			}
+		}
+	}
+	
+	
+
+	public Set<String> getWordSplitAsBuidingName() {
+		return bldWordSplit;
+	}
+	
+	public CollatorStringMatcher getCollator() {
+		return collatorMain;
+	}
+	
+	public boolean isOnlyFullMatch() {
+		return incomplete && word.length() <= MIN_CHAR_INCOMPLETE + 1;
+	}
+
+	@Override
+	public String toString() {
+		return String.format("%d. %s - %d atoms", sortedOrder, originalWord, atoms.size());
+	}
+	
+	NameIndexReaderMatcher getPrefixMatcher(SpatialSearchStats stats) {
+		return new NameIndexReaderMatcher(word) {
+			
+			@Override
+			public boolean matchKey(String key) {
+				stats.matchTime -= System.nanoTime();
+				String alignedKey = CollatorStringMatcher.alignChars(key);
+				// could be empty after align so match = true! ("''" -> "")
+				boolean matched = matchAlignedKey(alignedKey);
+				if (!matched && mainNumber > 0) {
+					// 4th - key, "4" token
+					matched = Algorithms.extractFirstIntegerNumber(key) == mainNumber;
+				}
+				if (!matched && otherMatch != null) {
+					for (CollatorStringMatcher o : otherMatch) {
+						matched |= CollatorStringMatcher.cmatches(collator, o.getPart(), alignedKey,
+								StringMatcherMode.CHECK_ONLY_STARTS_WITH);
+						// o.matches(alignedKey) could be needed for matching data with non-processed abbrevations
+//						System.out.println(alignedKey + " ??? " + matched + " " + o.getPart());
+					}
+				}
+				stats.matchTime += System.nanoTime();
+				return matched;
+			}
+		};
+	}
+
+	void addAtom(NameIndexAtom atom) {
+		// mostly not used as disabled
+		if (atom.object != null && !(atom.object instanceof Street) && 
+				atom.object.getId() != null &&  atom.object.getId() > 0) {
+			long osmId = ObfConstants.getOsmIdFromMapObjectId(atom.object.getId());
+			NameIndexAtom ex = indexByOsmIds.get(osmId);
+			if (ex != null) {
+				return;
+			}
+			indexByOsmIds.put(osmId, atom);
+		}
+
+		NameIndexAtom aa = index.get(atom.id);
+		if (aa != null) {
+			if (aa != atom) {
+				// select shortest avaiable version
+				aa.otherWordsCnt = Math.min(aa.otherWordsCnt, atom.otherWordsCnt);
+//				System.out.println(aa.name + " != " + atom.name  + " " + aa + " " + aa.object.getLocation());
+			}
+			return;
+		}
+		index.put(atom.id, atom);
+		atoms.add(atom);
+		quadTree.put(atom.coords.bboxTileZoom, atom.coords.bboxTileId, atom);
+	}
+
+	boolean acceptName(String name) {
+//		System.out.printf("query '%s' matches '%s' %s\n", word, name, collatorMain.matches(name) || 
+//				collatorMain.matches(name.replace(' ', '-')));
+		if (mainNumber > 0) {
+			if (mainNumber == Algorithms.extractFirstIntegerNumber(name)) {
+				return true;
+			}
+		}
+		if (otherMatch != null) {
+			for (CollatorStringMatcher o : otherMatch) {
+				if (o.matches(name)) {
+					return true;
+				}
+			}
+		}
+		if (collatorMain.matches(name)) {
+			return true;
+		}
+		// query 'weberstrasse' matches 'weber straße': works for poular suffixes
+		int space = name.indexOf(' ');
+		if (space != -1 && CollatorStringMatcher.cmatches(collatorMain.getCollator(), word, 
+				name.substring(0, space), StringMatcherMode.CHECK_ONLY_STARTS_WITH)) {
+			String prefix = name.substring(0, name.indexOf(' ')); 
+			if (!prefix.equals(wordPrefix)) {
+				wordPrefix = prefix;
+				// could be some issues if number of letter do not match
+				collatorSuffix = new CollatorStringMatcher(word.substring(wordPrefix.length()), StringMatcherMode.CHECK_EQUALS_FROM_SPACE);
+			}
+			if (collatorSuffix.matches(name.substring(space + 1))) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	public static class NameIndexAtomXY {
+		// SHOULD BE NOT MODIFIABLE AS WE INTERSECT OBJECTS atom x atom
+		int[] bbox31; // if exists [xleft, yleft, xright, yright]
+		long bboxTileId; // encodes zoom, tileX, tileY
+		int bboxTileZoom;
+		int x16, y16;
+		
+		public NameIndexAtomXY(AddressNameIndexDataAtom a, OsmAndPoiNameIndexDataAtom b) {
+			if (a != null) {
+				init(a);
+			} else {
+				init(b);
+			}
+		}
+
+		public boolean intersects(NameIndexAtomXY a) {
+			if (bbox31 == null && a.bbox31 == null) {
+				int z1 = bboxTileZoom, z2 = a.bboxTileZoom;
+				long tid1 = bboxTileId, tid2 = a.bboxTileId;
+				while (z1 > z2) {
+					tid1 >>= 2;
+					z1--;
+				}
+				while (z2 > z1) {
+					tid2 >>= 2;
+					z2--;
+				}
+				return tid1 == tid2;
+			} else if (a.bbox31 == null) {
+				return a.intersects(this);
+			} else {
+				return intersects(a.bbox31);
+			}
+		}
+		
+		public boolean intersects(int[] abbox31) {
+			// if exists [xleft, ytop, xright, ybottom]
+			if (this.bbox31 == null) {
+				int xleft = abbox31[0] >> (31 - this.bboxTileZoom);
+				int xright = abbox31[2] >> (31 - this.bboxTileZoom);
+				int ytop = abbox31[1] >> (31 - this.bboxTileZoom);
+				int ybottom = abbox31[3] >> (31 - this.bboxTileZoom);
+				long x = MapUtils.deinterleaveX(this.bboxTileId);
+				long y = MapUtils.deinterleaveY(this.bboxTileId);
+				return xleft <= x && x <= xright && ytop <= y && y <= ybottom;
+			} else {
+				// if exists [xleft, ytop, xright, ybottom]
+				return this.bbox31[0] <= abbox31[2] && this.bbox31[2] >= abbox31[0] && this.bbox31[1] <= abbox31[3]
+						&& this.bbox31[3] >= abbox31[1];
+			}
+		}
+		
+		public String tileIdString() {
+			return this.bboxTileZoom + " "
+					+ MapUtils.deinterleaveX(bboxTileId) + " "
+					+ MapUtils.deinterleaveY(bboxTileId);
+		}
+
+		private void init(AddressNameIndexDataAtom addr) {
+			if (addr.getXy16Count() >= 1) {
+				int xy16 = addr.getXy16(0);
+				this.x16 = (xy16 >>> 16);
+				this.y16 = (xy16 & ((1 << 16) - 1));
+				bboxTileZoom = 15;
+				bboxTileId = HashQuadTree.encodeTileId(bboxTileZoom, x16 / 2, y16 / 2);
+				decodeBBox(addr.hasBbox() ? addr.getBbox() : null);
+			}
+		}
+
+		private void decodeBBox(ByteString bbox) {
+			if (bbox != null) {
+				bbox31 = SearchAlgorithms.decodeBboxForNameAtomsBytes(bbox, x16, y16);
+				if (bbox31 != null) {
+					int z = 31;
+					int xleft = bbox31[0], xright = bbox31[2];
+					int ytop = bbox31[1], ybottom = bbox31[3];
+					while (xleft != xright || ytop != ybottom) {
+						z--;
+						xleft >>= 1;
+						xright >>= 1;
+						ytop >>= 1;
+						ybottom >>= 1;
+					}
+					bboxTileZoom = z;
+					bboxTileId = HashQuadTree.encodeTileId(z, xleft, ytop);
+				}
+			}
+		}
+
+		private void init(OsmAndPoiNameIndexDataAtom poi) {
+			this.x16 = poi.getX();
+			this.y16 = poi.getY();
+			bboxTileZoom = 16;
+			bboxTileId = HashQuadTree.encodeTileId(bboxTileZoom, x16, y16);
+			decodeBBox(poi.hasBbox() ? poi.getBbox() : null);
+		}
+
+	}
+
+	
+	public static class NameIndexAtom {
+		// SHOULD BE NOT MODIFIABLE AS WE INTERSECT OBJECTS atom x atom
+		final String name;
+
+		final int type; //
+		final long id; // used to read object
+		final long parentid; // used to read object
+		MapObject object; // same for all
+		int otherWordsCnt; // added before intersection
+		final boolean cityAsStreet;
+		final int otherFoundCnt;
+		final NameIndexAtomXY coords; 
+		final int buildingInd; // added before intersection
+		final int nearbyRadius;
+
+
+		NameIndexAtom(String name, int type, long id, long pid, MapObject obj, boolean cityAsStreet, int otherWordsCnt,
+				int otherFooundCnt, NameIndexAtomXY coords, int nearbyRadius) {
+			this(name, type, id, pid, obj, cityAsStreet, otherWordsCnt, otherFooundCnt, coords, nearbyRadius, -1);
+		}
+
+		NameIndexAtom(String name, int type, long id, long pid, MapObject obj, boolean cityAsStreet, int otherWordsCnt,
+				int otherFooundCnt, NameIndexAtomXY coords, int nearbyRadius, int buildingInd) {
+			this.name = name;
+			this.id = id;
+			this.parentid = pid;
+			this.object = obj;
+			this.type = type;
+			this.cityAsStreet = cityAsStreet;
+			this.otherWordsCnt = otherWordsCnt;
+			this.otherFoundCnt = otherFooundCnt;
+			this.coords = coords;
+			this.nearbyRadius = nearbyRadius;
+			this.buildingInd = buildingInd;
+		}
+		
+		
+		public boolean isCityStreetName() {
+			return cityAsStreet;
+		}
+		
+		public boolean streetBuilding() {
+			return type == STREET_TYPE || type == BUILDING_TYPE;
+		}
+		
+		public boolean isStreet() {
+			return type == STREET_TYPE ;
+		}
+		
+		public boolean atomicObject() {
+			return type == STREET_TYPE || type == POI_TYPE || type == BUILDING_TYPE;
+		}
+
+		String typeStr() {
+			String typeS = "";
+			if (type == POI_TYPE) {
+				typeS = "POI";
+			} else if (type == BUILDING_TYPE) {
+				typeS = "Building";
+			} else {
+				typeS = CityBlocks.getByType(type).toString();
+			}
+			return typeS;
+		}
+
+		String simpleName(String name) {
+			return String.format("%s %s %d (%.4f, %.4f)", typeStr(), name, (id % 0xffff),
+					MapUtils.get31LatitudeY(coords.y16 << 15), MapUtils.get31LongitudeX(coords.x16 << 15));
+		}
+		
+		public LatLon getResultLocation() {
+			if (object != null) {
+				return object.getLocation();
+			}
+			return new LatLon(MapUtils.get31LatitudeY(coords.y16 << 15), MapUtils.get31LongitudeX(coords.x16 << 15));
+		}
+
+
+		@Override
+		public final String toString() {
+			return object != null ? object.toString() : simpleName(name);
+		}
+
+
+
+	};
+
+}

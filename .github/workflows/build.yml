@@ -1,0 +1,31 @@
+name: Remote Marine Compiler
+
+on:
+  push:
+    branches: [ master, main ] # Triggers whenever you push changes to these branches
+
+jobs:
+  build:
+    runs-on: ubuntu-latest # Runs on an external 7GB RAM cloud server for free
+
+    steps:
+    - name: Checkout Source Code
+      uses: actions/checkout@v4
+
+    - name: Set up Java Development Kit
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'zulu'
+        java-version: '17'
+
+    - name: Grant Execute Permission for Gradle
+      run: chmod +x gradlew
+
+    - name: Execute Cloud Compilation
+      run: ./gradlew assembleDebug --no-daemon
+
+    - name: Upload Finished Installer APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: Nautical-OsmAnd-Installer
+        path: app/build/outputs/apk/debug/app-debug.apk
