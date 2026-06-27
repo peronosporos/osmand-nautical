@@ -22,7 +22,7 @@ jobs:
       run: chmod +x gradlew
 
     - name: Execute Cloud Compilation
-      run: ./gradlew assembleDebug -x test --no-daemon
+      run: ./gradlew :OsmAnd:assembleAndroidFullArm64Debug -x test --no-daemon
 
     - name: Upload Finished Installer APK
       uses: actions/upload-artifact@v4

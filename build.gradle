@@ -49,3 +49,16 @@ allprojects {
         }
     }
 }
+
+// Fix strict Gradle task validation race condition for resource copying
+project(':OsmAnd') {
+    tasks.configureEach { task ->
+        if (task.name.endsWith("NavigationResources")) {
+            try {
+                task.mustRunAfter "copyIcons"
+            } catch (Exception e) {
+                // Safeguard if task names vary dynamically
+            }
+        }
+    }
+}
