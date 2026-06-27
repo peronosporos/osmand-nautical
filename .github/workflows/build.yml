@@ -1,0 +1,40 @@
+name: Remote Marine Compiler
+
+on:
+  push:
+    branches: [ master, main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Source Code with Submodules
+      uses: actions/checkout@v4
+      with:
+        submodules: 'recursive'
+        fetch-depth: 0
+
+    - name: Clone OsmAnd Resources
+      run: git clone https://github.com/osmandapp/OsmAnd-resources.git resources
+
+    - name: Set up Java Development Kit
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'zulu'
+        java-version: '17'
+
+    - name: Grant Execute Permission for Gradle
+      run: chmod +x gradlew
+
+    - name: Execute Cloud Compilation
+      env:
+        _JAVA_OPTIONS: "-Xmx4g"
+        GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx4g -Dorg.gradle.workers.max=2"
+      run: ./gradlew clean :OsmAnd:assembleAndroidFullLegacyArm64Debug -x test --no-daemon --warning-mode all
+
+    - name: Upload Finished Installer APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: Nautical-OsmAnd-Installer
+        path: OsmAnd/build/outputs/apk/**/*.apk
