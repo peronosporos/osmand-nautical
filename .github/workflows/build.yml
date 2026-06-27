@@ -13,10 +13,13 @@ jobs:
       uses: actions/checkout@v4
       with:
         submodules: 'recursive'
-        fetch-depth: 0
+        path: android # Places your code in a folder named 'android'
 
-    - name: Clone OsmAnd Resources
-      run: git clone https://github.com/osmandapp/OsmAnd-resources.git resources
+    - name: Checkout OsmAnd Resources
+      uses: actions/checkout@v4
+      with:
+        repository: osmandapp/OsmAnd-resources
+        path: resources # Places the icons right next to it, where Gradle expects them
 
     - name: Set up Java Development Kit
       uses: actions/setup-java@v4
@@ -25,16 +28,19 @@ jobs:
         java-version: '17'
 
     - name: Grant Execute Permission for Gradle
+      working-directory: ./android
       run: chmod +x gradlew
 
     - name: Execute Cloud Compilation
+      working-directory: ./android
       env:
         _JAVA_OPTIONS: "-Xmx4g"
         GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx4g -Dorg.gradle.workers.max=2"
-      run: ./gradlew clean :OsmAnd:assembleAndroidFullLegacyArm64Debug -x test --no-daemon --warning-mode all
+      run: ./gradlew clean :OsmAnd:assembleAndroidFullLegacyArm64Debug -x test --no-daemon
 
     - name: Upload Finished Installer APK
       uses: actions/upload-artifact@v4
       with:
         name: Nautical-OsmAnd-Installer
-        path: OsmAnd/build/outputs/apk/**/*.apk
+        # Updated path to look inside the new 'android' folder
+        path: android/OsmAnd/build/outputs/apk/**/*.apk
