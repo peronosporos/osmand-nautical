@@ -50,7 +50,7 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app) {
         }
 
 
-        val wsUrl = "ws://$ip:$port/signalk/v1/stream?subscribe=all"
+        val wsUrl = "ws://$ip:$port/signalk/v1/stream"
         Log.d("NauticalPlugin", "Connecting to SignalK at $wsUrl")
 
         connection.connect(wsUrl) { message ->
