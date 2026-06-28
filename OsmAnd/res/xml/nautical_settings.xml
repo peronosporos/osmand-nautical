@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+    <PreferenceCategory android:title="@string/nautical_settings_title">
+        <EditTextPreference
+            android:key="server_ip"
+            android:title="IP Address"
+            android:summary="Enter your SignalK server IP" />
+        <EditTextPreference
+            android:key="server_port"
+            android:title="Port"
+            android:summary="Enter port (default 3000)" />
+    </PreferenceCategory>
+</PreferenceScreen>
