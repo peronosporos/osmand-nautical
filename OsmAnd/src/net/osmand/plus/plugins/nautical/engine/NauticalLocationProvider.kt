@@ -1,5 +1,6 @@
 package net.osmand.plus.plugins.nautical.engine
 
+import android.os.SystemClock
 import android.util.Log
 import net.osmand.plus.OsmandApplication
 import java.lang.reflect.Method
@@ -19,6 +20,9 @@ class NauticalLocationProvider(
     private val setLat = locationClass.getMethod("setLatitude", Double::class.java)
     private val setLon = locationClass.getMethod("setLongitude", Double::class.java)
     private val setTime = locationClass.getMethod("setTime", Long::class.java)
+
+    // Nanos are CRITICAL for tricking OsmAnd into accepting the packet over hardware GPS
+    private val setNanos: Method? = try { locationClass.getMethod("setElapsedRealtimeNanos", Long::class.java) } catch (e: Exception) { null }
 
     private val setHasAcc: Method? = try { locationClass.getMethod("setHasAccuracy", Boolean::class.java) } catch (e: Exception) { null }
     private val setAcc: Method? = try { locationClass.getMethod("setAccuracy", Float::class.java) } catch (e: Exception) { null }
@@ -40,36 +44,34 @@ class NauticalLocationProvider(
     fun stop() {
         isActive = false
         lastUpdateTime.set(0L)
-        // Release the provider back to the native hardware GPS
-        app.runInUIThread {
-            try {
-                val provider = app.locationProvider
-                provider.javaClass.getMethod("resume").invoke(provider)
-            } catch (e: Exception) { /* ignore */ }
-        }
         Log.d("NauticalPlugin", "Location Bridge: Stopped")
     }
 
     private fun injectMarineStateAsLocation(state: MarineState) {
-        val currentTime = System.currentTimeMillis()
+        // DIAGNOSTIC 1: Is the data actually reaching the provider?
+        Log.d("NauticalPlugin", "RX Packet -> Lat: ${state.latitude}, Lon: ${state.longitude}")
 
-        // The Throttle Fix (Ensures 1 update per second maximum, prevents UI lockup)
+        if (state.latitude == null || state.longitude == null) {
+            // This fulfills your fallback logic: If SignalK has no GPS, we do nothing.
+            // Hardware GPS (Greece) naturally takes over.
+            return
+        }
+
+        val currentTime = System.currentTimeMillis()
         val lastTime = lastUpdateTime.get()
         if (lastTime != 0L && (currentTime - lastTime) < 1000) return
-
         lastUpdateTime.set(currentTime)
 
-        val lat = state.latitude ?: return
-        val lon = state.longitude ?: return
-
         try {
-            val loc = constructor.newInstance("SignalKProvider")
-            setLat.invoke(loc, lat)
-            setLon.invoke(loc, lon)
+            // PERFECT SPOOF: We must name it "gps" so OsmAnd treats it as high-priority hardware data
+            val loc = constructor.newInstance("gps")
+            setLat.invoke(loc, state.latitude)
+            setLon.invoke(loc, state.longitude)
             setTime.invoke(loc, currentTime)
+            setNanos?.invoke(loc, SystemClock.elapsedRealtimeNanos())
 
             setHasAcc?.invoke(loc, true)
-            setAcc?.invoke(loc, 5.0f) // Tight accuracy forces OsmAnd to prefer this over weak hardware GPS
+            setAcc?.invoke(loc, 1.0f) // Hyper-accurate radius to beat the smartphone GPS priority
 
             state.speedOverGround?.let { setSpeed?.invoke(loc, it.toFloat()) }
             state.headingTrue?.let {
@@ -80,6 +82,8 @@ class NauticalLocationProvider(
             app.runInUIThread {
                 try {
                     setLocationFromService.invoke(app.locationProvider, loc)
+                    // DIAGNOSTIC 2: Did OsmAnd accept the method call?
+                    Log.d("NauticalPlugin", "Successfully injected Finland spoof to OsmAnd")
                 } catch (e: Exception) { Log.e("NauticalPlugin", "Injection failed: ${e.message}") }
             }
         } catch (e: Exception) { Log.e("NauticalPlugin", "Reflection failed: ${e.message}") }

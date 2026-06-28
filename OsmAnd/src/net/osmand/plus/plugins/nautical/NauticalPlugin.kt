@@ -49,6 +49,7 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app) {
         }
 
         val wsUrl = "ws://$ip:$port/signalk/v1/stream"
+        Log.d("NauticalPlugin", "Attempting connection to: $wsUrl") // ADDED THIS LOG
         connection.connect(wsUrl) { message ->
             engine.handleIncomingMessage(message)
         }
