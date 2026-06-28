@@ -81,10 +81,21 @@ class NauticalLocationProvider(
 
             app.runInUIThread {
                 try {
-                    setLocationFromService.invoke(app.locationProvider, loc)
-                    // DIAGNOSTIC 2: Did OsmAnd accept the method call?
-                    Log.d("NauticalPlugin", "Successfully injected Finland spoof to OsmAnd")
-                } catch (e: Exception) { Log.e("NauticalPlugin", "Injection failed: ${e.message}") }
+                    val provider = app.locationProvider
+                    // 1. Force the engine to accept this as the absolute last known location
+                    // We use reflection to reach deep into the LocationProvider's map-update logic
+                    val method = provider.javaClass.getMethod("setLocationFromService", locationClass)
+                    method.invoke(provider, loc)
+
+                    // 2. EXTRA: Force the map's last known location to the new coordinates
+                    // This bypasses the priority-arbitration logic
+                    val mapMethod = provider.javaClass.getMethod("setLastKnownLocation", locationClass)
+                    mapMethod.invoke(provider, loc)
+
+                    Log.d("NauticalPlugin", "Force-injected Finland coordinate as LastKnown")
+                } catch (e: Exception) {
+                    Log.e("NauticalPlugin", "Force-injection failed: ${e.message}")
+                }
             }
         } catch (e: Exception) { Log.e("NauticalPlugin", "Reflection failed: ${e.message}") }
     }
