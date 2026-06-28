@@ -11,8 +11,9 @@ class NauticalLocationProvider(
 ) {
     private var isActive = false
     private val lastUpdateTime = AtomicLong(0L)
+    private var lastProfileLogTime = 0L
 
-    // Defensive reflection: Attempt to load, but don't crash if missing
+    // Defensive reflection
     private val locationClass = Class.forName("net.osmand.Location")
     private val constructor = locationClass.getConstructor(String::class.java)
 
@@ -20,7 +21,6 @@ class NauticalLocationProvider(
     private val setLon = locationClass.getMethod("setLongitude", Double::class.java)
     private val setTime = locationClass.getMethod("setTime", Long::class.java)
 
-    // Defensive loading for methods that might not exist in all versions
     private val setHasAcc: Method? = try { locationClass.getMethod("setHasAccuracy", Boolean::class.java) } catch (e: Exception) { null }
     private val setAcc: Method? = try { locationClass.getMethod("setAccuracy", Float::class.java) } catch (e: Exception) { null }
     private val setSpeed: Method? = try { locationClass.getMethod("setSpeed", Float::class.java) } catch (e: Exception) { null }
@@ -46,8 +46,24 @@ class NauticalLocationProvider(
 
     private fun injectMarineStateAsLocation(state: MarineState) {
         val currentTime = System.currentTimeMillis()
+
+        // 1. Real-time Profile Gatekeeping
+        val currentModeId = app.settings?.APPLICATION_MODE?.get()?.toString()?.lowercase() ?: "default"
+        val isBoatMode = currentModeId.contains("nautical") || currentModeId.contains("boat")
+
+        if (!isBoatMode) {
+            // Log once every 5 seconds to avoid spamming logcat while dropping packets
+            if (currentTime - lastProfileLogTime > 5000) {
+                Log.d("NauticalPlugin", "Profile is '$currentModeId'. Dropping SignalK data to allow hardware GPS.")
+                lastProfileLogTime = currentTime
+            }
+            return
+        }
+
+        // 2. The Throttle Fix (Ensures 1 update per second maximum, prevents UI lockup)
         val lastTime = lastUpdateTime.get()
-        if (lastTime != 0L && (currentTime - lastTime) > 10000) return
+        if (lastTime != 0L && (currentTime - lastTime) < 1000) return
+
         lastUpdateTime.set(currentTime)
 
         val lat = state.latitude ?: return
@@ -59,9 +75,9 @@ class NauticalLocationProvider(
             setLon.invoke(loc, lon)
             setTime.invoke(loc, currentTime)
 
-            // Safe invocation using ?. (only calls if the method exists)
             setHasAcc?.invoke(loc, true)
-            setAcc?.invoke(loc, 5.0f)
+            setAcc?.invoke(loc, 5.0f) // Set a tight accuracy so OsmAnd prefers this over weak hardware GPS
+
             state.speedOverGround?.let { setSpeed?.invoke(loc, it.toFloat()) }
             state.headingTrue?.let {
                 setBearing?.invoke(loc, it.toFloat())

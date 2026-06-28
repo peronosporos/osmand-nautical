@@ -25,42 +25,28 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app) {
 
     override fun setEnabled(enabled: Boolean) {
         super.setEnabled(enabled)
-        checkPluginLifecycle()
-    }
-
-    fun checkPluginLifecycle() {
-        if (!isEnabled) {
-            stopEverything()
-            return
-        }
-
-        // Use safe call (?.) and Elvis operator (?:) to handle potential nulls during startup
-        val currentModeId = app.settings?.APPLICATION_MODE?.get()?.toString()?.lowercase() ?: "default"
-        val isBoatMode = currentModeId.contains("nautical") || currentModeId.contains("boat")
-
-        if (isBoatMode) {
-            Log.d("NauticalPlugin", "Boat mode detected. Activating services.")
+        if (enabled) {
+            Log.d("NauticalPlugin", "Plugin explicitly enabled by user.")
             if (locationProvider == null) {
                 locationProvider = NauticalLocationProvider(app, engine)
             }
             locationProvider?.start()
             startEngine()
         } else {
-            Log.d("NauticalPlugin", "Dormant mode ($currentModeId). Shutting down.")
-            stopEverything()
+            Log.d("NauticalPlugin", "Plugin explicitly disabled by user.")
+            locationProvider?.stop()
+            connection.disconnect()
         }
-    }
-
-    private fun stopEverything() {
-        locationProvider?.stop()
-        connection.disconnect()
     }
 
     private fun startEngine() {
         val ip = app.settings?.NAUTICAL_SERVER_IP?.get()
         val port = app.settings?.NAUTICAL_SERVER_PORT?.get()
 
-        if (ip.isNullOrEmpty()) return
+        if (ip.isNullOrEmpty()) {
+            Log.e("NauticalPlugin", "Server IP is missing. Cannot connect.")
+            return
+        }
 
         val wsUrl = "ws://$ip:$port/signalk/v1/stream"
         connection.connect(wsUrl) { message ->
