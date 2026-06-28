@@ -120,12 +120,11 @@ android {
 			applicationId "net.osmand.dev"
 			resValue "string", "app_name", "OsmAnd Nightly"
 			resValue "string", "app_edition", System.getenv("APP_EDITION") ? System.getenv("APP_EDITION") : ""
-			// resConfig "en"
 		}
 		androidFull {
 			dimension "version"
-			applicationId "net.osmand.plus.nautical" // The compiler handles the renaming safely
-			resValue "string", "app_name", "OsmAnd Nautical" // Distinct app name for your home screen
+			applicationId "net.osmand.plus.nautical" // Change this line here
+			resValue "string", "app_name", "OsmAnd Nautical" // Change the label on your home screen
 			resValue "string", "app_edition", System.getenv("APP_EDITION") ? System.getenv("APP_EDITION") : ""
 		}
 		gplayFree {
@@ -160,6 +159,7 @@ android {
 	buildTypes {
 		debug {
 			signingConfig signingConfigs.development
+			applicationIdSuffix ".nautical" // Forces the final package to be net.osmand.plus.nautical
 		}
 		release {
 			signingConfig signingConfigs.publishing
