@@ -11,7 +11,6 @@ class NauticalLocationProvider(
 ) {
     private var isActive = false
     private val lastUpdateTime = AtomicLong(0L)
-    private var lastProfileLogTime = 0L
 
     // Defensive reflection
     private val locationClass = Class.forName("net.osmand.Location")
@@ -41,26 +40,20 @@ class NauticalLocationProvider(
     fun stop() {
         isActive = false
         lastUpdateTime.set(0L)
+        // Release the provider back to the native hardware GPS
+        app.runInUIThread {
+            try {
+                val provider = app.locationProvider
+                provider.javaClass.getMethod("resume").invoke(provider)
+            } catch (e: Exception) { /* ignore */ }
+        }
         Log.d("NauticalPlugin", "Location Bridge: Stopped")
     }
 
     private fun injectMarineStateAsLocation(state: MarineState) {
         val currentTime = System.currentTimeMillis()
 
-        // 1. Real-time Profile Gatekeeping
-        val currentModeId = app.settings?.APPLICATION_MODE?.get()?.toString()?.lowercase() ?: "default"
-        val isBoatMode = currentModeId.contains("nautical") || currentModeId.contains("boat")
-
-        if (!isBoatMode) {
-            // Log once every 5 seconds to avoid spamming logcat while dropping packets
-            if (currentTime - lastProfileLogTime > 5000) {
-                Log.d("NauticalPlugin", "Profile is '$currentModeId'. Dropping SignalK data to allow hardware GPS.")
-                lastProfileLogTime = currentTime
-            }
-            return
-        }
-
-        // 2. The Throttle Fix (Ensures 1 update per second maximum, prevents UI lockup)
+        // The Throttle Fix (Ensures 1 update per second maximum, prevents UI lockup)
         val lastTime = lastUpdateTime.get()
         if (lastTime != 0L && (currentTime - lastTime) < 1000) return
 
@@ -76,7 +69,7 @@ class NauticalLocationProvider(
             setTime.invoke(loc, currentTime)
 
             setHasAcc?.invoke(loc, true)
-            setAcc?.invoke(loc, 5.0f) // Set a tight accuracy so OsmAnd prefers this over weak hardware GPS
+            setAcc?.invoke(loc, 5.0f) // Tight accuracy forces OsmAnd to prefer this over weak hardware GPS
 
             state.speedOverGround?.let { setSpeed?.invoke(loc, it.toFloat()) }
             state.headingTrue?.let {
