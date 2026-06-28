@@ -1,5 +1,6 @@
 package net.osmand.plus.plugins.nautical.engine
 
+import android.util.Log
 import java.util.UUID
 
 class SignalKEngine(private val connection: SignalKConnection) {
@@ -14,6 +15,7 @@ class SignalKEngine(private val connection: SignalKConnection) {
     }
 
     fun handleIncomingMessage(jsonMessage: String) {
+        Log.d("NauticalEngine", "Processing: $jsonMessage")
         // Lightweight parsing to avoid massive JSON library overhead during testing
         if (jsonMessage.contains("\"path\":\"navigation.position\"")) {
             val lat = extractJsonValue(jsonMessage, "latitude")?.toDoubleOrNull()

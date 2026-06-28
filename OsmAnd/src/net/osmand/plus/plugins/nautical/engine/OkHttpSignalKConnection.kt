@@ -16,12 +16,21 @@ class OkHttpSignalKConnection : SignalKConnection {
         val request = Request.Builder().url(url).build()
 
         webSocket = client.newWebSocket(request, object : WebSocketListener() {
+            override fun onOpen(webSocket: WebSocket, response: Response) {
+                Log.d("NauticalNetwork", "WebSocket Connected Successfully!")
+
+                // Send the required SignalK Hello
+                val hello = """{"name":"OsmAnd-Nautical","version":"1.0.0"}"""
+                webSocket.send(hello)
+            }
+
             override fun onMessage(webSocket: WebSocket, text: String) {
+                Log.d("NauticalNetwork", "Message received: $text") // Add this log
                 onMessageReceived(text)
             }
 
             override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
-                Log.e("NauticalNetwork", "WebSocket Failure: ${t.message}", t)
+                Log.e("NauticalNetwork", "WebSocket Failure: ${t.message}")
             }
 
             override fun onClosing(webSocket: WebSocket, code: Int, reason: String) {
