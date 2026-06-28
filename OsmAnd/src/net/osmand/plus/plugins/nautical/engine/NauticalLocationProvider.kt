@@ -1,5 +1,7 @@
 package net.osmand.plus.plugins.nautical.engine
 
+import android.os.Handler
+import android.os.Looper
 import android.os.SystemClock
 import android.util.Log
 import net.osmand.plus.OsmandApplication
@@ -23,43 +25,53 @@ class NauticalLocationProvider(
     private val setNanos: Method? = try { locationClass.getMethod("setElapsedRealtimeNanos", Long::class.java) } catch (e: Exception) { null }
     private val setHasAcc: Method? = try { locationClass.getMethod("setHasAccuracy", Boolean::class.java) } catch (e: Exception) { null }
     private val setAcc: Method? = try { locationClass.getMethod("setAccuracy", Float::class.java) } catch (e: Exception) { null }
+
+    // NEW: Needed to render the Boat icon instead of the Blue Dot
+    private val setHasSpeed: Method? = try { locationClass.getMethod("setHasSpeed", Boolean::class.java) } catch (e: Exception) { null }
     private val setSpeed: Method? = try { locationClass.getMethod("setSpeed", Float::class.java) } catch (e: Exception) { null }
+    private val setHasBearing: Method? = try { locationClass.getMethod("setHasBearing", Boolean::class.java) } catch (e: Exception) { null }
     private val setBearing: Method? = try { locationClass.getMethod("setBearing", Float::class.java) } catch (e: Exception) { null }
     private val setBearingAcc: Method? = try { locationClass.getMethod("setBearingAcc", Float::class.java) } catch (e: Exception) { null }
 
-    // Dynamically bound map-updating method
+    // Hardware GPS Control
+    private val pauseHardwareGps: Method? = try { app.locationProvider.javaClass.getMethod("pause") } catch (e: Exception) { null }
+    private val resumeHardwareGps: Method? = try { app.locationProvider.javaClass.getMethod("resume") } catch (e: Exception) { null }
+
     private var cachedInjectMethod: Method? = null
+
+    // The Dead-Man's Switch variables
+    private var isHardwarePaused = false
+    private val fallbackHandler = Handler(Looper.getMainLooper())
+    private val fallbackRunnable = Runnable {
+        if (isHardwarePaused) {
+            try {
+                resumeHardwareGps?.invoke(app.locationProvider)
+                isHardwarePaused = false
+                Log.d("NauticalPlugin", "SignalK data timeout. Resumed hardware GPS fallback.")
+            } catch (e: Exception) {}
+        }
+    }
 
     private val listener: (MarineState) -> Unit = { state -> if (isActive) injectMarineStateAsLocation(state) }
 
     init {
-        // THE FIX: Scan the OsmAnd engine for the correct map update method.
-        // We prioritize 'setLocation' as it directly forces the map UI to redraw.
         val providerClass = app.locationProvider.javaClass
         val potentialInjectMethods = listOf("setLocation", "updateLocation", "setLocationFromService")
 
         for (methodName in potentialInjectMethods) {
             try {
-                // Try to find the public method
                 val method = providerClass.getMethod(methodName, locationClass)
                 method.isAccessible = true
                 cachedInjectMethod = method
-                Log.d("NauticalPlugin", "Success: Bound public injection method -> $methodName")
                 break
             } catch (e: Exception) {
                 try {
-                    // Fallback to searching private methods if OsmAnd hid it
                     val method = providerClass.getDeclaredMethod(methodName, locationClass)
                     method.isAccessible = true
                     cachedInjectMethod = method
-                    Log.d("NauticalPlugin", "Success: Bound private injection method -> $methodName")
                     break
-                } catch (e2: Exception) { /* ignore and check next method */ }
+                } catch (e2: Exception) { }
             }
-        }
-
-        if (cachedInjectMethod == null) {
-            Log.e("NauticalPlugin", "CRITICAL ERROR: No valid location injection method found in OsmAnd!")
         }
     }
 
@@ -73,6 +85,17 @@ class NauticalLocationProvider(
     fun stop() {
         isActive = false
         lastUpdateTime.set(0L)
+
+        // Clean up the dead-man's switch and restore GPS when plugin is turned off
+        fallbackHandler.removeCallbacks(fallbackRunnable)
+        if (isHardwarePaused) {
+            app.runInUIThread {
+                try {
+                    resumeHardwareGps?.invoke(app.locationProvider)
+                    isHardwarePaused = false
+                } catch (e: Exception) {}
+            }
+        }
         Log.d("NauticalPlugin", "Location Bridge: Stopped")
     }
 
@@ -94,15 +117,30 @@ class NauticalLocationProvider(
             setHasAcc?.invoke(loc, true)
             setAcc?.invoke(loc, 1.0f)
 
-            state.speedOverGround?.let { setSpeed?.invoke(loc, it.toFloat()) }
+            // NEW: Explicitly declare the metadata exists so the Boat icon renders
+            state.speedOverGround?.let {
+                setHasSpeed?.invoke(loc, true)
+                setSpeed?.invoke(loc, it.toFloat())
+            }
             state.headingTrue?.let {
+                setHasBearing?.invoke(loc, true)
                 setBearing?.invoke(loc, it.toFloat())
                 setBearingAcc?.invoke(loc, 1f)
             }
 
             app.runInUIThread {
                 try {
-                    // Safely invoke the dynamically found method
+                    // Mute hardware GPS dynamically to stop ping-pong
+                    if (!isHardwarePaused) {
+                        pauseHardwareGps?.invoke(app.locationProvider)
+                        isHardwarePaused = true
+                        Log.d("NauticalPlugin", "Valid SignalK data received. Hardware GPS paused.")
+                    }
+
+                    // Reset the 5-second dead-man's switch
+                    fallbackHandler.removeCallbacks(fallbackRunnable)
+                    fallbackHandler.postDelayed(fallbackRunnable, 5000)
+
                     cachedInjectMethod?.invoke(app.locationProvider, loc)
                 } catch (e: Exception) {
                     Log.e("NauticalPlugin", "Dynamic injection failed: ${e.message}")
