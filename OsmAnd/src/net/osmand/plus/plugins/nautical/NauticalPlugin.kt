@@ -23,21 +23,19 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app) {
     override fun getDescription(linksEnabled: Boolean): CharSequence = "SignalK integration."
     override fun getLogoResourceId(): Int = R.drawable.ic_action_sail_boat_dark
 
-    // 1. Unified lifecycle management
     override fun setEnabled(enabled: Boolean) {
         super.setEnabled(enabled)
         checkPluginLifecycle()
     }
 
-    // 2. Central logic: This is safe because it only uses app.settings
     fun checkPluginLifecycle() {
         if (!isEnabled) {
             stopEverything()
             return
         }
 
-        // Use the base settings registry to get the current profile ID
-        val currentModeId = app.settings.APPLICATION_MODE.get().toString().lowercase()
+        // Use safe call (?.) and Elvis operator (?:) to handle potential nulls during startup
+        val currentModeId = app.settings?.APPLICATION_MODE?.get()?.toString()?.lowercase() ?: "default"
         val isBoatMode = currentModeId.contains("nautical") || currentModeId.contains("boat")
 
         if (isBoatMode) {
@@ -59,10 +57,9 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app) {
     }
 
     private fun startEngine() {
-        // Use a simple boolean check if your connection class supports it
-        // If 'isConnected' is missing, implement a check via your connection status
-        val ip = app.settings.NAUTICAL_SERVER_IP.get()
-        val port = app.settings.NAUTICAL_SERVER_PORT.get()
+        val ip = app.settings?.NAUTICAL_SERVER_IP?.get()
+        val port = app.settings?.NAUTICAL_SERVER_PORT?.get()
+
         if (ip.isNullOrEmpty()) return
 
         val wsUrl = "ws://$ip:$port/signalk/v1/stream"
