@@ -1,6 +1,5 @@
 package net.osmand.plus.plugins.nautical
 
-import android.preference.PreferenceManager
 import android.util.Log
 import net.osmand.plus.OsmandApplication
 import net.osmand.plus.R
@@ -24,43 +23,46 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app) {
     override fun getDescription(linksEnabled: Boolean): CharSequence = "SignalK integration."
     override fun getLogoResourceId(): Int = R.drawable.ic_action_sail_boat_dark
 
-    // 1. Manually trigger a lifecycle check whenever the settings are updated
-    // We override this to detect when the user changes profiles
+    // 1. Unified lifecycle management
     override fun setEnabled(enabled: Boolean) {
         super.setEnabled(enabled)
         checkPluginLifecycle()
     }
 
-    // 2. The central logic using SharedPreferences (No external type dependencies)
+    // 2. Central logic: This is safe because it only uses app.settings
     fun checkPluginLifecycle() {
         if (!isEnabled) {
-            locationProvider?.stop()
-            connection.disconnect()
+            stopEverything()
             return
         }
 
-        val prefs = PreferenceManager.getDefaultSharedPreferences(app)
-        val currentProfile = prefs.getString("application_mode", "default")?.lowercase() ?: ""
-        val isBoatMode = currentProfile.contains("nautical") || currentProfile.contains("boat")
+        // Use the base settings registry to get the current profile ID
+        val currentModeId = app.settings.APPLICATION_MODE.get().toString().lowercase()
+        val isBoatMode = currentModeId.contains("nautical") || currentModeId.contains("boat")
 
         if (isBoatMode) {
+            Log.d("NauticalPlugin", "Boat mode detected. Activating services.")
             if (locationProvider == null) {
                 locationProvider = NauticalLocationProvider(app, engine)
             }
             locationProvider?.start()
             startEngine()
         } else {
-            locationProvider?.stop()
-            connection.disconnect()
+            Log.d("NauticalPlugin", "Dormant mode ($currentModeId). Shutting down.")
+            stopEverything()
         }
     }
 
-    // 3. Engine management
+    private fun stopEverything() {
+        locationProvider?.stop()
+        connection.disconnect()
+    }
+
     private fun startEngine() {
-        // Safe check for connection state if possible, otherwise just re-connect
+        // Use a simple boolean check if your connection class supports it
+        // If 'isConnected' is missing, implement a check via your connection status
         val ip = app.settings.NAUTICAL_SERVER_IP.get()
         val port = app.settings.NAUTICAL_SERVER_PORT.get()
-
         if (ip.isNullOrEmpty()) return
 
         val wsUrl = "ws://$ip:$port/signalk/v1/stream"
