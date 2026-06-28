@@ -11,6 +11,11 @@
 	Strings for OsmAnd core
 	Thx - Hardy
 -->
+	<!-- Nautical plugin-->
+	<string name="nautical_settings_title">SignalK Server Settings</string>
+	<string name="nautical_ip_hint">IP Address (e.g., 192.168.1.100)</string>
+	<string name="nautical_port_hint">Port (e.g., 3000)</string>
+	<string name="nautical_save_button">Save &amp; Connect</string>
 	<!--  AisTrackerSettings  -->
 	<string name="ais_own_object">Settings for display of own AIS object</string>
 	<string name="ais_own_object_description">If the own vessel has an AIS transmitter then the signal will be received together with other AIS vessel\'s signals. Special handling of the own AIS signal is defined here.</string>
