@@ -1,5 +1,6 @@
 package net.osmand.plus.plugins.nautical.engine
 
+import android.preference.PreferenceManager
 import android.util.Log
 import net.osmand.plus.OsmandApplication
 
@@ -28,6 +29,18 @@ class NauticalLocationProvider(
     }
 
     private fun injectMarineStateAsLocation(state: MarineState) {
+        // 1. Bypass OsmAnd's custom classes and read the active profile directly from Android's SharedPreferences.
+        // This relies purely on the Android SDK, eliminating all "Unresolved reference" errors.
+        val prefs = PreferenceManager.getDefaultSharedPreferences(app)
+        val currentProfileStr = prefs.getString("application_mode", "default")?.lowercase() ?: ""
+
+        Log.d("NauticalPlugin", "Raw SharedPreferences Profile: $currentProfileStr")
+
+        // 2. Filter based on the raw string
+        if (!currentProfileStr.contains("nautical") && !currentProfileStr.contains("boat")) {
+            return
+        }
+
         val currentTime = System.currentTimeMillis()
         if (lastUpdateTime != 0L && (currentTime - lastUpdateTime) > 10000) return
         lastUpdateTime = currentTime
@@ -36,15 +49,15 @@ class NauticalLocationProvider(
         val lon = state.longitude ?: return
 
         try {
-            // Use reflection to instantiate OsmAnd's core Location class
             val locationClass = Class.forName("net.osmand.Location")
             val constructor = locationClass.getConstructor(String::class.java)
             val loc = constructor.newInstance("SignalKProvider")
 
-            // Set properties via reflection
             locationClass.getMethod("setLatitude", Double::class.java).invoke(loc, lat)
             locationClass.getMethod("setLongitude", Double::class.java).invoke(loc, lon)
             locationClass.getMethod("setTime", Long::class.java).invoke(loc, currentTime)
+            locationClass.getMethod("setAccuracy", Float::class.java).invoke(loc, 5.0f)
+            locationClass.getMethod("setHasAccuracy", Boolean::class.java).invoke(loc, true)
 
             state.speedOverGround?.let {
                 locationClass.getMethod("setSpeed", Float::class.java).invoke(loc, it.toFloat())
@@ -55,11 +68,9 @@ class NauticalLocationProvider(
                 locationClass.getMethod("setBearingAcc", Float::class.java).invoke(loc, 1f)
             }
 
-            // Push to provider
             app.runInUIThread {
                 try {
                     val provider = app.locationProvider
-                    // Find the method setLocationFromService(Location loc)
                     val method = provider.javaClass.getMethod("setLocationFromService", locationClass)
                     method.invoke(provider, loc)
                 } catch (e: Exception) {

@@ -55,8 +55,7 @@ public enum SettingsScreenType {
 	EXTERNAL_INPUT_DEVICE(MainExternalInputDevicesFragment.class.getName(), true, ApplyQueryType.SNACK_BAR, R.xml.external_input_device_settings, R.layout.profile_preference_toolbar_with_switch),
 	AIS_SETTINGS(AisTrackerSettingsFragment.class.getName(), true, ApplyQueryType.SNACK_BAR, R.xml.ais_settings, R.layout.profile_preference_toolbar),
 	POSITION_ANIMATION(PositionAnimationFragment.class.getName(), true, ApplyQueryType.NONE, R.xml.position_animation_settings, R.layout.profile_preference_toolbar_with_switch),
-	NAUTICAL_SETTINGS("net.osmand.plus.plugins.nautical.NauticalSettingsFragment", true, ApplyQueryType.SNACK_BAR, R.xml.nautical_settings, R.layout.profile_preference_toolbar);
-
+	NAUTICAL_SETTINGS("net.osmand.plus.plugins.nautical.NauticalSettingsFragment", false, ApplyQueryType.SNACK_BAR, R.xml.nautical_settings, R.layout.global_preference_toolbar);
 	public final String fragmentName;
 	public final boolean profileDependent;
 	public final ApplyQueryType applyQueryType;
