@@ -6,6 +6,7 @@ import net.osmand.plus.R
 import net.osmand.plus.plugins.OsmandPlugin
 import net.osmand.plus.plugins.nautical.engine.OkHttpSignalKConnection
 import net.osmand.plus.plugins.nautical.engine.SignalKEngine
+import net.osmand.plus.plugins.nautical.engine.NauticalLocationProvider
 
 class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app) {
 
@@ -15,6 +16,9 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app) {
 
     private val connection = OkHttpSignalKConnection()
     val engine = SignalKEngine(connection)
+
+    // Integrated Step 2: Location Provider instance
+    private var locationProvider: NauticalLocationProvider? = null
 
     override fun getId(): String = NAUTICAL_ID
 
@@ -31,15 +35,23 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app) {
     override fun setEnabled(enabled: Boolean) {
         super.setEnabled(enabled)
         if (enabled) {
+            // Step 2 Integration: Initialize and start the bridge
+            if (locationProvider == null) {
+                locationProvider = NauticalLocationProvider(app, engine)
+            }
+            locationProvider?.start()
+
             startEngine()
         } else {
+            // Step 2 Integration: Clean shutdown
+            locationProvider?.stop()
+
             connection.disconnect()
             Log.d("NauticalPlugin", "Plugin deactivated. WebSocket closed.")
         }
     }
 
     private fun startEngine() {
-        // Pull the settings from the core registry we created
         val ip = app.settings.NAUTICAL_SERVER_IP.get()
         val port = app.settings.NAUTICAL_SERVER_PORT.get()
 
@@ -48,7 +60,6 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app) {
             app.showShortToastMessage("Nautical Plugin: Please configure Server IP in settings.")
             return
         }
-
 
         val wsUrl = "ws://$ip:$port/signalk/v1/stream"
         Log.d("NauticalPlugin", "Connecting to SignalK at $wsUrl")
