@@ -3545,6 +3545,9 @@ public class OsmandSettings {
 
 	public final CommonPreference<Boolean> ENABLE_MSAA = new BooleanPreference(this, "enable_msaa", false).makeGlobal().makeShared().cache();
 	public final CommonPreference<Boolean> SPHERICAL_MAP = new BooleanPreference(this, "spherical_map", false).makeProfile().cache();
+	// Nautical Plugin Settings
+	public final CommonPreference<String> NAUTICAL_SERVER_IP = registerStringPreference("server_ip", "");
+	public final CommonPreference<String> NAUTICAL_SERVER_PORT = registerStringPreference("server_port", "3000");
 
 	@NonNull
 	public OsmandPreference<Boolean> getAllowPrivatePreference(@NonNull ApplicationMode appMode) {
