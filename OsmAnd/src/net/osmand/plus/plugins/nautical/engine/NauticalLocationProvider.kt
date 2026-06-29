@@ -26,18 +26,16 @@ class NauticalLocationProvider(
     private val setHasAcc: Method? = try { locationClass.getMethod("setHasAccuracy", Boolean::class.java) } catch (e: Exception) { null }
     private val setAcc: Method? = try { locationClass.getMethod("setAccuracy", Float::class.java) } catch (e: Exception) { null }
 
-    // NEW: Needed to render the Boat icon instead of the Blue Dot
     private val setHasSpeed: Method? = try { locationClass.getMethod("setHasSpeed", Boolean::class.java) } catch (e: Exception) { null }
     private val setSpeed: Method? = try { locationClass.getMethod("setSpeed", Float::class.java) } catch (e: Exception) { null }
     private val setHasBearing: Method? = try { locationClass.getMethod("setHasBearing", Boolean::class.java) } catch (e: Exception) { null }
     private val setBearing: Method? = try { locationClass.getMethod("setBearing", Float::class.java) } catch (e: Exception) { null }
     private val setBearingAcc: Method? = try { locationClass.getMethod("setBearingAcc", Float::class.java) } catch (e: Exception) { null }
 
-    // Hardware GPS Control
-    private val pauseHardwareGps: Method? = try { app.locationProvider.javaClass.getMethod("pause") } catch (e: Exception) { null }
-    private val resumeHardwareGps: Method? = try { app.locationProvider.javaClass.getMethod("resume") } catch (e: Exception) { null }
-
+    // Dynamically bound map-updating methods
     private var cachedInjectMethod: Method? = null
+    private var pauseHardwareGps: Method? = null
+    private var resumeHardwareGps: Method? = null
 
     // The Dead-Man's Switch variables
     private var isHardwarePaused = false
@@ -47,7 +45,7 @@ class NauticalLocationProvider(
             try {
                 resumeHardwareGps?.invoke(app.locationProvider)
                 isHardwarePaused = false
-                Log.d("NauticalPlugin", "SignalK data timeout. Resumed hardware GPS fallback.")
+                Log.d("NauticalPlugin", "SignalK data timeout (15s). Resumed smartphone GPS.")
             } catch (e: Exception) {}
         }
     }
@@ -56,22 +54,45 @@ class NauticalLocationProvider(
 
     init {
         val providerClass = app.locationProvider.javaClass
-        val potentialInjectMethods = listOf("setLocation", "updateLocation", "setLocationFromService")
 
+        // 1. Find injection method
+        val potentialInjectMethods = listOf("setLocation", "updateLocation", "setLocationFromService")
         for (methodName in potentialInjectMethods) {
             try {
                 val method = providerClass.getMethod(methodName, locationClass)
                 method.isAccessible = true
                 cachedInjectMethod = method
+                Log.d("NauticalPlugin", "Success: Bound injection -> $methodName")
                 break
             } catch (e: Exception) {
                 try {
                     val method = providerClass.getDeclaredMethod(methodName, locationClass)
                     method.isAccessible = true
                     cachedInjectMethod = method
+                    Log.d("NauticalPlugin", "Success: Bound private injection -> $methodName")
                     break
                 } catch (e2: Exception) { }
             }
+        }
+
+        // 2. Find pause method (turns off internal GPS chip for battery saving)
+        val pauseMethods = listOf("pauseAllUpdates", "stopLocationUpdates", "pause")
+        for (methodName in pauseMethods) {
+            try {
+                pauseHardwareGps = providerClass.getMethod(methodName)
+                Log.d("NauticalPlugin", "Success: Bound pause GPS -> $methodName")
+                break
+            } catch (e: Exception) {}
+        }
+
+        // 3. Find resume method (turns on internal GPS chip)
+        val resumeMethods = listOf("resumeAllUpdates", "startLocationUpdates", "resume")
+        for (methodName in resumeMethods) {
+            try {
+                resumeHardwareGps = providerClass.getMethod(methodName)
+                Log.d("NauticalPlugin", "Success: Bound resume GPS -> $methodName")
+                break
+            } catch (e: Exception) {}
         }
     }
 
@@ -86,17 +107,15 @@ class NauticalLocationProvider(
         isActive = false
         lastUpdateTime.set(0L)
 
-        // Clean up the dead-man's switch and restore GPS when plugin is turned off
+        // Clean up the dead-man's switch and aggressively restore smartphone GPS
         fallbackHandler.removeCallbacks(fallbackRunnable)
-        if (isHardwarePaused) {
-            app.runInUIThread {
-                try {
-                    resumeHardwareGps?.invoke(app.locationProvider)
-                    isHardwarePaused = false
-                } catch (e: Exception) {}
-            }
+        app.runInUIThread {
+            try {
+                resumeHardwareGps?.invoke(app.locationProvider)
+                isHardwarePaused = false
+            } catch (e: Exception) {}
         }
-        Log.d("NauticalPlugin", "Location Bridge: Stopped")
+        Log.d("NauticalPlugin", "Location Bridge: Stopped. Restored smartphone GPS.")
     }
 
     private fun injectMarineStateAsLocation(state: MarineState) {
@@ -117,29 +136,28 @@ class NauticalLocationProvider(
             setHasAcc?.invoke(loc, true)
             setAcc?.invoke(loc, 1.0f)
 
-            // NEW: Explicitly declare the metadata exists so the Boat icon renders
-            state.speedOverGround?.let {
-                setHasSpeed?.invoke(loc, true)
-                setSpeed?.invoke(loc, it.toFloat())
-            }
-            state.headingTrue?.let {
-                setHasBearing?.invoke(loc, true)
-                setBearing?.invoke(loc, it.toFloat())
-                setBearingAcc?.invoke(loc, 1f)
-            }
+            // FIX 3: Force metadata so OsmAnd draws the Boat/Arrow instead of a Blue Dot
+            val speed = state.speedOverGround?.toFloat() ?: 0.1f // Default to 0.1 so it's not strictly stationary
+            setHasSpeed?.invoke(loc, true)
+            setSpeed?.invoke(loc, speed)
+
+            val bearing = state.headingTrue?.toFloat() ?: 0f // Default pointing North if no compass data
+            setHasBearing?.invoke(loc, true)
+            setBearing?.invoke(loc, bearing)
+            setBearingAcc?.invoke(loc, 1f)
 
             app.runInUIThread {
                 try {
-                    // Mute hardware GPS dynamically to stop ping-pong
+                    // FIX 2: Relentlessly pause the hardware GPS to overpower MapActivity lifecycle resumes
+                    pauseHardwareGps?.invoke(app.locationProvider)
                     if (!isHardwarePaused) {
-                        pauseHardwareGps?.invoke(app.locationProvider)
                         isHardwarePaused = true
-                        Log.d("NauticalPlugin", "Valid SignalK data received. Hardware GPS paused.")
+                        Log.d("NauticalPlugin", "Smartphone GPS antenna powered down. Saving battery.")
                     }
 
-                    // Reset the 5-second dead-man's switch
+                    // FIX 1: Reset the Dead-Man's switch (Extended to 15s to prevent false alarms)
                     fallbackHandler.removeCallbacks(fallbackRunnable)
-                    fallbackHandler.postDelayed(fallbackRunnable, 5000)
+                    fallbackHandler.postDelayed(fallbackRunnable, 15000)
 
                     cachedInjectMethod?.invoke(app.locationProvider, loc)
                 } catch (e: Exception) {
