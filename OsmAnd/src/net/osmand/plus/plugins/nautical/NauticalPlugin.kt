@@ -75,7 +75,10 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app) {
 
         connection.disconnect()
 
-        val wsUrl = "ws://$ip:$port/signalk/v1/stream"
+        // FIX: Added ?subscribe=all to the WebSocket URL.
+        // This forces the SignalK server to stream data for ALL vessels, not just our own.
+        val wsUrl = "ws://$ip:$port/signalk/v1/stream?subscribe=all"
+
         Log.d("NauticalPlugin", "Attempting connection to: $wsUrl")
         connection.connect(wsUrl) { message ->
             engine.handleIncomingMessage(message)
