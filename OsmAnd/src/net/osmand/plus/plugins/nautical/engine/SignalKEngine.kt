@@ -1,6 +1,7 @@
 package net.osmand.plus.plugins.nautical.engine
 
 import android.util.Log
+import kotlinx.coroutines.*
 import org.json.JSONObject
 import java.util.UUID
 import kotlin.math.absoluteValue
@@ -43,12 +44,11 @@ class SignalKEngine(private val connection: SignalKConnection) {
 
             val isSelf = context == "vessels.self" || context == ""
 
-            // FIX: Safely extract and enforce a 9-digit numeric MMSI
+            // Extract numeric MMSI
             var numericMmsi = 0
             if (!isSelf) {
                 val rawId = context.substringAfterLast(":", "")
                 if (rawId.isEmpty()) return
-
                 numericMmsi = rawId.toIntOrNull() ?: (rawId.hashCode().absoluteValue % 1000000000)
             }
 
@@ -65,7 +65,6 @@ class SignalKEngine(private val connection: SignalKConnection) {
                     val valueObj = valueItem.opt("value")
 
                     if (isSelf) {
-                        // PHASE 1: Process Our Boat
                         when (path) {
                             "navigation.position" -> {
                                 if (valueObj is JSONObject) {
@@ -89,7 +88,6 @@ class SignalKEngine(private val connection: SignalKConnection) {
                             }
                         }
                     } else if (aisTarget != null) {
-                        // PHASE 2: Process External AIS Ships
                         when (path) {
                             "navigation.position" -> {
                                 if (valueObj is JSONObject) {
@@ -118,16 +116,19 @@ class SignalKEngine(private val connection: SignalKConnection) {
                 }
             }
 
-            // Dispatch the extracted data
+            // Dispatching with thread separation
             if (isSelf) {
+                // High priority: update navigation state immediately on calling thread
                 stateListener?.invoke(currentState)
             } else if (aisTarget != null && aisTarget.latitude != null && aisTarget.longitude != null) {
-                // Only send ships to the encoder if they have valid GPS coordinates
-                aisListener?.invoke(aisTarget)
+                // Offload: AIS targets processed in background to save UI thread
+                CoroutineScope(Dispatchers.Default).launch {
+                    aisListener?.invoke(aisTarget)
+                }
             }
 
         } catch (e: Exception) {
-            // Silently ignore malformed JSON packets
+            // Log.e("SignalKEngine", "JSON parsing error", e)
         }
     }
 
@@ -142,7 +143,6 @@ class SignalKEngine(private val connection: SignalKConnection) {
           }
         }
         """.trimIndent()
-
         connection.sendDelta(putRequest)
     }
 }
