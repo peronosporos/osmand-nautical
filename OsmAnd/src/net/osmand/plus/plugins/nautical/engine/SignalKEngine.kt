@@ -6,9 +6,8 @@ import org.json.JSONObject
 import java.util.UUID
 import kotlin.math.absoluteValue
 
-// NEW: Data structure to hold AIS ships before we encode them
 data class AisTarget(
-    val mmsi: Int, // Enforced as Integer for strict NMEA compatibility
+    val mmsi: Int,
     var latitude: Double? = null,
     var longitude: Double? = null,
     var speedOverGround: Float? = null,
@@ -21,10 +20,11 @@ class SignalKEngine(private val connection: SignalKConnection) {
     var currentState = MarineState()
         private set
 
-    // Phase 1 Callback (Our Boat)
     private var stateListener: ((MarineState) -> Unit)? = null
-    // Phase 2 Callback (Other Ships)
     private var aisListener: ((AisTarget) -> Unit)? = null
+
+    // FIX: Variable to store the true UUID of your boat
+    private var trueSelfContext: String = "vessels.self"
 
     fun registerListener(listener: (MarineState) -> Unit) {
         this.stateListener = listener
@@ -37,14 +37,22 @@ class SignalKEngine(private val connection: SignalKConnection) {
     fun handleIncomingMessage(jsonMessage: String) {
         try {
             val json = JSONObject(jsonMessage)
+
+            // FIX: Catch the initial SignalK "Hello" message to discover your boat's real ID
+            if (json.has("self")) {
+                trueSelfContext = json.getString("self")
+                Log.d("NauticalPlugin", "Discovered true boat ID: $trueSelfContext")
+                return
+            }
+
             if (!json.has("updates")) return
 
             val context = json.optString("context", "vessels.self")
             val updates = json.getJSONArray("updates")
 
-            val isSelf = context == "vessels.self" || context == ""
+            // FIX: Accurately identify your boat using the discovered ID
+            val isSelf = context == "vessels.self" || context == "" || context == trueSelfContext
 
-            // Extract numeric MMSI
             var numericMmsi = 0
             if (!isSelf) {
                 val rawId = context.substringAfterLast(":", "")
@@ -65,6 +73,7 @@ class SignalKEngine(private val connection: SignalKConnection) {
                     val valueObj = valueItem.opt("value")
 
                     if (isSelf) {
+                        // Process Our Boat
                         when (path) {
                             "navigation.position" -> {
                                 if (valueObj is JSONObject) {
@@ -88,6 +97,7 @@ class SignalKEngine(private val connection: SignalKConnection) {
                             }
                         }
                     } else if (aisTarget != null) {
+                        // Process External AIS Ships
                         when (path) {
                             "navigation.position" -> {
                                 if (valueObj is JSONObject) {
@@ -116,19 +126,17 @@ class SignalKEngine(private val connection: SignalKConnection) {
                 }
             }
 
-            // Dispatching with thread separation
+            // Dispatch
             if (isSelf) {
-                // High priority: update navigation state immediately on calling thread
                 stateListener?.invoke(currentState)
             } else if (aisTarget != null && aisTarget.latitude != null && aisTarget.longitude != null) {
-                // Offload: AIS targets processed in background to save UI thread
                 CoroutineScope(Dispatchers.Default).launch {
                     aisListener?.invoke(aisTarget)
                 }
             }
 
         } catch (e: Exception) {
-            // Log.e("SignalKEngine", "JSON parsing error", e)
+            // Silently ignore
         }
     }
 
@@ -143,6 +151,7 @@ class SignalKEngine(private val connection: SignalKConnection) {
           }
         }
         """.trimIndent()
+
         connection.sendDelta(putRequest)
     }
 }
