@@ -35,6 +35,7 @@ class NauticalLocationProvider(
     private var cachedInjectMethod: Method? = null
     private var pauseHardwareGps: Method? = null
     private var resumeHardwareGps: Method? = null
+    private var setCompassHeading: Method? = null // NEW: Compass Hijacker
 
     private var isHardwarePaused = false
     private val fallbackHandler = Handler(Looper.getMainLooper())
@@ -53,38 +54,51 @@ class NauticalLocationProvider(
     init {
         val providerClass = app.locationProvider.javaClass
 
+        // 1. Find Location Injection
         val potentialInjectMethods = listOf("setLocation", "updateLocation", "setLocationFromService")
         for (methodName in potentialInjectMethods) {
             try {
                 val method = providerClass.getMethod(methodName, locationClass)
                 method.isAccessible = true
                 cachedInjectMethod = method
+                Log.d("NauticalPlugin", "Success: Bound injection -> $methodName")
                 break
             } catch (e: Exception) {
                 try {
                     val method = providerClass.getDeclaredMethod(methodName, locationClass)
                     method.isAccessible = true
                     cachedInjectMethod = method
+                    Log.d("NauticalPlugin", "Success: Bound private injection -> $methodName")
                     break
                 } catch (e2: Exception) { }
             }
         }
 
+        // 2. Find GPS Pause
         val pauseMethods = listOf("pauseAllUpdates", "stopLocationUpdates", "pause")
         for (methodName in pauseMethods) {
             try {
                 pauseHardwareGps = providerClass.getMethod(methodName)
+                Log.d("NauticalPlugin", "Success: Bound pause GPS -> $methodName")
                 break
             } catch (e: Exception) {}
         }
 
+        // 3. Find GPS Resume
         val resumeMethods = listOf("resumeAllUpdates", "startLocationUpdates", "resume")
         for (methodName in resumeMethods) {
             try {
                 resumeHardwareGps = providerClass.getMethod(methodName)
+                Log.d("NauticalPlugin", "Success: Bound resume GPS -> $methodName")
                 break
             } catch (e: Exception) {}
         }
+
+        // 4. Find Compass Hijack (Overrides flashing phone orientation)
+        try {
+            setCompassHeading = providerClass.getMethod("setCompassHeading", Float::class.java)
+            Log.d("NauticalPlugin", "Success: Bound compass injection -> setCompassHeading")
+        } catch (e: Exception) {}
     }
 
     fun start() {
@@ -126,8 +140,7 @@ class NauticalLocationProvider(
             setHasAcc?.invoke(loc, true)
             setAcc?.invoke(loc, 1.0f)
 
-            // FIX: Set minimum speed to 1.5m/s (3 knots) so OsmAnd disables the compass
-            // and renders the Boat Icon based on GPS bearing instead of the Blue Dot.
+            // Force speed to > 1.0 m/s so OsmAnd disables the fallback dot and renders a boat
             val speed = state.speedOverGround?.toFloat() ?: 1.5f
             setHasSpeed?.invoke(loc, true)
             setSpeed?.invoke(loc, speed)
@@ -139,16 +152,21 @@ class NauticalLocationProvider(
 
             app.runInUIThread {
                 try {
-                    // FIX: Aggressively invoke pause on EVERY packet to overpower OsmAnd lifecycle changes
+                    // Aggressively mute the OS GPS
                     pauseHardwareGps?.invoke(app.locationProvider)
                     if (!isHardwarePaused) {
                         isHardwarePaused = true
                         Log.d("NauticalPlugin", "Smartphone GPS antenna powered down. Saving battery.")
                     }
 
+                    // Force the map view-cone to follow the boat, ignoring phone sensors
+                    setCompassHeading?.invoke(app.locationProvider, bearing)
+
+                    // Keep the dead-man's switch alive
                     fallbackHandler.removeCallbacks(fallbackRunnable)
                     fallbackHandler.postDelayed(fallbackRunnable, 15000)
 
+                    // Inject the location into the UI
                     cachedInjectMethod?.invoke(app.locationProvider, loc)
                 } catch (e: Exception) {
                     Log.e("NauticalPlugin", "Dynamic injection failed: ${e.message}")

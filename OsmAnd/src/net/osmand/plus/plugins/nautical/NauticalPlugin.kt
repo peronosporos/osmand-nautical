@@ -7,6 +7,8 @@ import net.osmand.plus.plugins.OsmandPlugin
 import net.osmand.plus.plugins.nautical.engine.OkHttpSignalKConnection
 import net.osmand.plus.plugins.nautical.engine.SignalKEngine
 import net.osmand.plus.plugins.nautical.engine.NauticalLocationProvider
+import net.osmand.plus.plugins.nautical.engine.AisUdpEmitter
+import net.osmand.plus.plugins.nautical.engine.AisEncoder
 
 class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app) {
 
@@ -16,7 +18,10 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app) {
 
     private val connection = OkHttpSignalKConnection()
     val engine = SignalKEngine(connection)
+
     private var locationProvider: NauticalLocationProvider? = null
+    private var aisEmitter: AisUdpEmitter? = null
+    private val aisEncoder = AisEncoder()
 
     override fun getId(): String = NAUTICAL_ID
     override fun getName(): String = "Nautical Marine Controls"
@@ -27,13 +32,30 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app) {
         super.setEnabled(enabled)
         if (enabled) {
             Log.d("NauticalPlugin", "Plugin explicitly enabled by user.")
+
             if (locationProvider == null) {
                 locationProvider = NauticalLocationProvider(app, engine)
             }
+            if (aisEmitter == null) {
+                aisEmitter = AisUdpEmitter()
+            }
+
             locationProvider?.start()
+            aisEmitter?.start()
+
+            // Wire the live SignalK engine to the AIS Encoder and UDP Emitter
+            engine.registerAisListener { target ->
+                val nmeaString = aisEncoder.encodeTargetToAivdm(target)
+                if (nmeaString != null) {
+                    aisEmitter?.emitNmeaSentence(nmeaString)
+                }
+            }
+
             startEngine()
         } else {
             Log.d("NauticalPlugin", "Plugin explicitly disabled by user.")
+
+            aisEmitter?.stop()
             locationProvider?.stop()
             connection.disconnect()
         }
@@ -48,8 +70,10 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app) {
             return
         }
 
+        connection.disconnect()
+
         val wsUrl = "ws://$ip:$port/signalk/v1/stream"
-        Log.d("NauticalPlugin", "Attempting connection to: $wsUrl") // ADDED THIS LOG
+        Log.d("NauticalPlugin", "Attempting connection to: $wsUrl")
         connection.connect(wsUrl) { message ->
             engine.handleIncomingMessage(message)
         }
