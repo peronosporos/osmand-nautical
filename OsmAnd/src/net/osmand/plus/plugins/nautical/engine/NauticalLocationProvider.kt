@@ -32,12 +32,10 @@ class NauticalLocationProvider(
     private val setBearing: Method? = try { locationClass.getMethod("setBearing", Float::class.java) } catch (e: Exception) { null }
     private val setBearingAcc: Method? = try { locationClass.getMethod("setBearingAcc", Float::class.java) } catch (e: Exception) { null }
 
-    // Dynamically bound map-updating methods
     private var cachedInjectMethod: Method? = null
     private var pauseHardwareGps: Method? = null
     private var resumeHardwareGps: Method? = null
 
-    // The Dead-Man's Switch variables
     private var isHardwarePaused = false
     private val fallbackHandler = Handler(Looper.getMainLooper())
     private val fallbackRunnable = Runnable {
@@ -55,42 +53,35 @@ class NauticalLocationProvider(
     init {
         val providerClass = app.locationProvider.javaClass
 
-        // 1. Find injection method
         val potentialInjectMethods = listOf("setLocation", "updateLocation", "setLocationFromService")
         for (methodName in potentialInjectMethods) {
             try {
                 val method = providerClass.getMethod(methodName, locationClass)
                 method.isAccessible = true
                 cachedInjectMethod = method
-                Log.d("NauticalPlugin", "Success: Bound injection -> $methodName")
                 break
             } catch (e: Exception) {
                 try {
                     val method = providerClass.getDeclaredMethod(methodName, locationClass)
                     method.isAccessible = true
                     cachedInjectMethod = method
-                    Log.d("NauticalPlugin", "Success: Bound private injection -> $methodName")
                     break
                 } catch (e2: Exception) { }
             }
         }
 
-        // 2. Find pause method (turns off internal GPS chip for battery saving)
         val pauseMethods = listOf("pauseAllUpdates", "stopLocationUpdates", "pause")
         for (methodName in pauseMethods) {
             try {
                 pauseHardwareGps = providerClass.getMethod(methodName)
-                Log.d("NauticalPlugin", "Success: Bound pause GPS -> $methodName")
                 break
             } catch (e: Exception) {}
         }
 
-        // 3. Find resume method (turns on internal GPS chip)
         val resumeMethods = listOf("resumeAllUpdates", "startLocationUpdates", "resume")
         for (methodName in resumeMethods) {
             try {
                 resumeHardwareGps = providerClass.getMethod(methodName)
-                Log.d("NauticalPlugin", "Success: Bound resume GPS -> $methodName")
                 break
             } catch (e: Exception) {}
         }
@@ -107,7 +98,6 @@ class NauticalLocationProvider(
         isActive = false
         lastUpdateTime.set(0L)
 
-        // Clean up the dead-man's switch and aggressively restore smartphone GPS
         fallbackHandler.removeCallbacks(fallbackRunnable)
         app.runInUIThread {
             try {
@@ -136,26 +126,26 @@ class NauticalLocationProvider(
             setHasAcc?.invoke(loc, true)
             setAcc?.invoke(loc, 1.0f)
 
-            // FIX 3: Force metadata so OsmAnd draws the Boat/Arrow instead of a Blue Dot
-            val speed = state.speedOverGround?.toFloat() ?: 0.1f // Default to 0.1 so it's not strictly stationary
+            // FIX: Set minimum speed to 1.5m/s (3 knots) so OsmAnd disables the compass
+            // and renders the Boat Icon based on GPS bearing instead of the Blue Dot.
+            val speed = state.speedOverGround?.toFloat() ?: 1.5f
             setHasSpeed?.invoke(loc, true)
             setSpeed?.invoke(loc, speed)
 
-            val bearing = state.headingTrue?.toFloat() ?: 0f // Default pointing North if no compass data
+            val bearing = state.headingTrue?.toFloat() ?: 0f
             setHasBearing?.invoke(loc, true)
             setBearing?.invoke(loc, bearing)
             setBearingAcc?.invoke(loc, 1f)
 
             app.runInUIThread {
                 try {
-                    // FIX 2: Relentlessly pause the hardware GPS to overpower MapActivity lifecycle resumes
+                    // FIX: Aggressively invoke pause on EVERY packet to overpower OsmAnd lifecycle changes
                     pauseHardwareGps?.invoke(app.locationProvider)
                     if (!isHardwarePaused) {
                         isHardwarePaused = true
                         Log.d("NauticalPlugin", "Smartphone GPS antenna powered down. Saving battery.")
                     }
 
-                    // FIX 1: Reset the Dead-Man's switch (Extended to 15s to prevent false alarms)
                     fallbackHandler.removeCallbacks(fallbackRunnable)
                     fallbackHandler.postDelayed(fallbackRunnable, 15000)
 
