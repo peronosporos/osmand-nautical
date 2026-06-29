@@ -33,6 +33,7 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app) {
         if (enabled) {
             Log.d("NauticalPlugin", "Plugin explicitly enabled by user.")
 
+            // 1. Initialize dependencies
             if (locationProvider == null) {
                 locationProvider = NauticalLocationProvider(app, engine)
             }
@@ -40,10 +41,7 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app) {
                 aisEmitter = AisUdpEmitter()
             }
 
-            locationProvider?.start()
-            aisEmitter?.start()
-
-            // Wire the live SignalK engine to the AIS Encoder and UDP Emitter
+            // 2. Wire the AIS pipeline first
             engine.registerAisListener { target ->
                 val nmeaString = aisEncoder.encodeTargetToAivdm(target)
                 if (nmeaString != null) {
@@ -51,10 +49,15 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app) {
                 }
             }
 
+            // 3. Start the Network Engine
             startEngine()
+
+            // 4. Start the providers LAST, after engine is attempting connection
+            aisEmitter?.start()
+            locationProvider?.start()
+
         } else {
             Log.d("NauticalPlugin", "Plugin explicitly disabled by user.")
-
             aisEmitter?.stop()
             locationProvider?.stop()
             connection.disconnect()
