@@ -17,7 +17,9 @@
 	<string name="nautical_port_hint">Port (e.g., 3000)</string>
 	<string name="nautical_save_button">Save &amp; Connect</string>
 	<string name="nautical_widget_depth_label">Depth</string>
+	<string name="nautical_depth_desc">Displays depth below transducer</string>
 	<string name="nautical_widget_wind_label">Wind</string>
+	<string name="nautical_wind_desc">Displays true wind speed</string>
 	<string name="nautical_group_title">Nautical</string>
 	<string name="nautical_group_desc">Marine instruments and data</string>
 	<!--  AisTrackerSettings  -->
