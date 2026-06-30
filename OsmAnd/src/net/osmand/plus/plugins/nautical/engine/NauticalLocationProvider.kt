@@ -1,10 +1,13 @@
 package net.osmand.plus.plugins.nautical.engine
 
+import android.Manifest
+import android.content.pm.PackageManager
 import android.location.LocationListener
 import android.location.LocationManager
 import android.os.Bundle
 import android.os.SystemClock
 import android.util.Log
+import androidx.core.content.ContextCompat
 import net.osmand.plus.OsmandApplication
 import java.lang.reflect.Method
 import java.util.concurrent.atomic.AtomicLong
@@ -18,13 +21,12 @@ class NauticalLocationProvider(
     private val lastUpdateTime = AtomicLong(0L)
     private val lastSignalKTime = AtomicLong(System.currentTimeMillis())
 
-    // State Tracking
     private val isUsingSignalK = AtomicBoolean(false)
     private var isHardwarePaused = false
     private var dummyListener: LocationListener? = null
     private var watchdogThread: Thread? = null
 
-    // Core Reflection Methods
+    // Reflection setup
     private val locationClass = Class.forName("net.osmand.Location")
     private val constructor = locationClass.getConstructor(String::class.java)
     private val setLat = locationClass.getMethod("setLatitude", Double::class.java)
@@ -47,8 +49,8 @@ class NauticalLocationProvider(
 
     init {
         val providerClass = app.locationProvider.javaClass
-        val potentialInjectMethods = listOf("setLocation", "updateLocation", "setLocationFromService")
-        for (name in potentialInjectMethods) {
+        val methods = listOf("setLocation", "updateLocation", "setLocationFromService")
+        for (name in methods) {
             try {
                 val method = providerClass.getMethod(name, locationClass)
                 method.isAccessible = true
@@ -72,24 +74,18 @@ class NauticalLocationProvider(
                 while (isActive) {
                     val timeSinceLast = System.currentTimeMillis() - lastSignalKTime.get()
                     if (timeSinceLast > 15000 && isUsingSignalK.get()) {
-                        Log.d("NauticalPlugin", "SignalK Timeout: Falling back to Phone GPS.")
                         switchMode(false)
                     }
                     Thread.sleep(2000)
                 }
-            } catch (e: InterruptedException) { /* Normal exit */ }
-        }, "NauticalWatchdog")
-        watchdogThread?.start()
+            } catch (e: InterruptedException) {}
+        }, "NauticalWatchdog").apply { start() }
     }
 
     private fun processState(state: MarineState) {
         if (state.latitude == null || state.longitude == null) return
-
         lastSignalKTime.set(System.currentTimeMillis())
-        if (!isUsingSignalK.get()) {
-            Log.d("NauticalPlugin", "SignalK Active: Hijacking GPS.")
-            switchMode(true)
-        }
+        if (!isUsingSignalK.get()) switchMode(true)
 
         val currentTime = System.currentTimeMillis()
         if ((currentTime - lastUpdateTime.get()) < 1000) return
@@ -111,13 +107,16 @@ class NauticalLocationProvider(
 
     private fun switchMode(useSignalK: Boolean) {
         if (isUsingSignalK.getAndSet(useSignalK) == useSignalK) return
-        app.runInUIThread {
-            if (useSignalK) muteHardwareGps() else unmuteHardwareGps()
-        }
+        app.runInUIThread { if (useSignalK) muteHardwareGps() else unmuteHardwareGps() }
     }
 
     private fun muteHardwareGps() {
         if (isHardwarePaused) return
+        // Check for location permissions before accessing GPS_PROVIDER
+        if (ContextCompat.checkSelfPermission(app, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            Log.e("NauticalPlugin", "Missing location permission, cannot mute GPS.")
+            return
+        }
         try {
             pauseHardwareGps?.invoke(app.locationProvider)
             val lm = app.getSystemService(android.content.Context.LOCATION_SERVICE) as LocationManager
@@ -129,7 +128,9 @@ class NauticalLocationProvider(
             }
             lm.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0L, 0f, dummyListener!!)
             isHardwarePaused = true
-        } catch (e: Exception) {}
+        } catch (se: SecurityException) {
+            Log.e("NauticalPlugin", "SecurityException on mute: ${se.message}")
+        } catch (e: Exception) { Log.e("NauticalPlugin", "Mute failed: ${e.message}") }
     }
 
     private fun unmuteHardwareGps() {
