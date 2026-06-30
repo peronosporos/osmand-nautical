@@ -7,31 +7,28 @@ import net.osmand.plus.activities.MapActivity
 import net.osmand.plus.plugins.nautical.engine.MarineState
 import net.osmand.plus.plugins.nautical.engine.SignalKEngine
 import net.osmand.plus.views.mapwidgets.WidgetType
-import net.osmand.plus.views.mapwidgets.WidgetsPanel
 import net.osmand.plus.views.mapwidgets.widgets.TextInfoWidget
-import net.osmand.plus.views.layers.base.OsmandMapLayer
 import net.osmand.plus.R
-import java.lang.reflect.Proxy
 
 class MarineDashboard(
     private val app: OsmandApplication,
     private val engine: SignalKEngine
 ) {
-    class MarineTextWidget(activity: MapActivity, type: WidgetType, id: String, panel: WidgetsPanel?) :
-        TextInfoWidget(activity, type, id, panel) {
+    class MarineTextWidget(activity: MapActivity, type: WidgetType, id: String, panel: Any?) :
+        TextInfoWidget(activity, type, id, null) {
 
-        override fun updateInfo(view: View, drawSettings: OsmandMapLayer.DrawSettings?) { }
-        override fun updateInfo(drawSettings: OsmandMapLayer.DrawSettings?) { }
+        override fun updateInfo(view: View, drawSettings: net.osmand.plus.views.layers.base.OsmandMapLayer.DrawSettings?) { }
+        override fun updateInfo(drawSettings: net.osmand.plus.views.layers.base.OsmandMapLayer.DrawSettings?) { }
 
         fun setViewVisible(visible: Boolean) {
             try {
-                // Using 'view' field as identified in your build
+                // Accessing the view via reflection to avoid Unresolved reference
                 val field = TextInfoWidget::class.java.getDeclaredField("view")
                 field.isAccessible = true
                 val v = field.get(this) as? View
                 v?.visibility = if (visible) View.VISIBLE else View.GONE
             } catch (e: Exception) {
-                Log.e("NauticalWidgets", "Visibility field not found", e)
+                Log.e("NauticalWidgets", "Visibility field access failed")
             }
         }
     }
@@ -53,48 +50,27 @@ class MarineDashboard(
     }
 
     fun init(activity: MapActivity) {
-        val registry = activity.mapLayers.mapWidgetRegistry
-
         try {
-            // 1. DYNAMIC TYPE RESOLUTION: Get the first available WidgetType to avoid 'INFO' error
-            val widgetType = WidgetType.values().firstOrNull() ?: return
+            // 1. Get the widgetsPanel via reflection from mapLayers
+            val mapLayers = activity.mapLayers
+            val panelField = mapLayers.javaClass.getDeclaredField("widgetsPanel")
+            panelField.isAccessible = true
+            val panel = panelField.get(mapLayers)
 
-            // 2. DYNAMIC REGISTRATION
-            val creatorClass = Class.forName("net.osmand.plus.views.mapwidgets.WidgetCreator")
-            val creator = Proxy.newProxyInstance(creatorClass.classLoader, arrayOf(creatorClass)) { _, method, args ->
-                if (method.name == "createWidget") {
-                    val wType = args[0] as WidgetType
-                    val wId = args[1] as String
-                    val wPanel = args[2] as WidgetsPanel?
+            // 2. Create widgets
+            val type = WidgetType.values().firstOrNull() ?: return
 
-                    Log.d("NauticalWidgets", "OsmAnd requested creation of: $wId")
+            depthWidget = MarineTextWidget(activity, type, "nautical_depth", null)
+            windWidget = MarineTextWidget(activity, type, "nautical_wind", null)
 
-                    val widget = MarineTextWidget(activity, wType, wId, wPanel).apply {
-                        setIcons(R.drawable.ic_action_info_dark, R.drawable.ic_action_info_dark)
-                    }
+            // 3. Force add using reflection
+            val addMethod = panel?.javaClass?.getMethod("addWidget", TextInfoWidget::class.java)
+            addMethod?.invoke(panel, depthWidget)
+            addMethod?.invoke(panel, windWidget)
 
-                    if (wId == "nautical_depth") depthWidget = widget
-                    if (wId == "nautical_wind") windWidget = widget
-
-                    // FORCE ADD via Reflection
-                    try {
-                        val addMethod = wPanel?.javaClass?.getMethod("addWidget", TextInfoWidget::class.java)
-                        addMethod?.invoke(wPanel, widget)
-                        Log.d("NauticalWidgets", "Widget $wId forced into panel")
-                    } catch (e: Exception) {
-                        Log.e("NauticalWidgets", "Could not force add $wId: ${e.message}")
-                    }
-
-                    widget
-                } else null
-            }
-
-            val regMethod = registry.javaClass.getMethod("registerWidget", WidgetType::class.java, creatorClass)
-            regMethod.invoke(registry, widgetType, creator)
-            Log.d("NauticalWidgets", "Registration call complete")
-
+            Log.d("NauticalWidgets", "Widgets manually injected via reflection")
         } catch (e: Exception) {
-            Log.e("NauticalWidgets", "Registration error", e)
+            Log.e("NauticalWidgets", "Dashboard init failed: ${e.message}", e)
         }
 
         engine.registerListener(marineStateListener)
