@@ -19,8 +19,21 @@ class MarineDashboard(
 ) {
     class MarineTextWidget(activity: MapActivity, type: WidgetType, id: String, panel: WidgetsPanel?) :
         TextInfoWidget(activity, type, id, panel) {
+
         override fun updateInfo(view: View, drawSettings: OsmandMapLayer.DrawSettings?) { }
         override fun updateInfo(drawSettings: OsmandMapLayer.DrawSettings?) { }
+
+        fun setViewVisible(visible: Boolean) {
+            try {
+                // Using 'view' field as identified in your build
+                val field = TextInfoWidget::class.java.getDeclaredField("view")
+                field.isAccessible = true
+                val v = field.get(this) as? View
+                v?.visibility = if (visible) View.VISIBLE else View.GONE
+            } catch (e: Exception) {
+                Log.e("NauticalWidgets", "Visibility field not found", e)
+            }
+        }
     }
 
     private var depthWidget: MarineTextWidget? = null
@@ -28,57 +41,60 @@ class MarineDashboard(
 
     private val marineStateListener: (MarineState) -> Unit = { state ->
         app.runInUIThread {
-            state.depthBelowTransducer?.let { depthWidget?.setText(String.format("%.1f", it), "m") }
-            state.windSpeedTrue?.let { windWidget?.setText(String.format("%.1f", it * 1.94384), "kn") }
+            state.depthBelowTransducer?.let {
+                depthWidget?.setText(String.format("%.1f", it), "m")
+                depthWidget?.setViewVisible(true)
+            }
+            state.windSpeedTrue?.let {
+                windWidget?.setText(String.format("%.1f", it * 1.94384), "kn")
+                windWidget?.setViewVisible(true)
+            }
         }
     }
 
     fun init(activity: MapActivity) {
         val registry = activity.mapLayers.mapWidgetRegistry
-        val type = try { WidgetType.valueOf("INFO") } catch (e: Exception) { WidgetType.values().firstOrNull() ?: return }
 
         try {
-            val registryClass = registry.javaClass
-            // 1. Find registerWidget(WidgetType, WidgetCreator)
-            val regMethod = registryClass.methods.find {
-                it.name == "registerWidget" && it.parameterTypes.size == 2
+            // 1. DYNAMIC TYPE RESOLUTION: Get the first available WidgetType to avoid 'INFO' error
+            val widgetType = WidgetType.values().firstOrNull() ?: return
+
+            // 2. DYNAMIC REGISTRATION
+            val creatorClass = Class.forName("net.osmand.plus.views.mapwidgets.WidgetCreator")
+            val creator = Proxy.newProxyInstance(creatorClass.classLoader, arrayOf(creatorClass)) { _, method, args ->
+                if (method.name == "createWidget") {
+                    val wType = args[0] as WidgetType
+                    val wId = args[1] as String
+                    val wPanel = args[2] as WidgetsPanel?
+
+                    Log.d("NauticalWidgets", "OsmAnd requested creation of: $wId")
+
+                    val widget = MarineTextWidget(activity, wType, wId, wPanel).apply {
+                        setIcons(R.drawable.ic_action_info_dark, R.drawable.ic_action_info_dark)
+                    }
+
+                    if (wId == "nautical_depth") depthWidget = widget
+                    if (wId == "nautical_wind") windWidget = widget
+
+                    // FORCE ADD via Reflection
+                    try {
+                        val addMethod = wPanel?.javaClass?.getMethod("addWidget", TextInfoWidget::class.java)
+                        addMethod?.invoke(wPanel, widget)
+                        Log.d("NauticalWidgets", "Widget $wId forced into panel")
+                    } catch (e: Exception) {
+                        Log.e("NauticalWidgets", "Could not force add $wId: ${e.message}")
+                    }
+
+                    widget
+                } else null
             }
 
-            if (regMethod != null) {
-                // 2. Load WidgetCreator class dynamically, avoiding compile-time dependency
-                val creatorClass = Class.forName("net.osmand.plus.views.mapwidgets.WidgetCreator")
+            val regMethod = registry.javaClass.getMethod("registerWidget", WidgetType::class.java, creatorClass)
+            regMethod.invoke(registry, widgetType, creator)
+            Log.d("NauticalWidgets", "Registration call complete")
 
-                // 3. Create a Proxy to implement WidgetCreator at runtime
-                val creator = Proxy.newProxyInstance(
-                    creatorClass.classLoader,
-                    arrayOf(creatorClass)
-                ) { _, method, args ->
-                    if (method.name == "createWidget") {
-                        val wType = args[0] as WidgetType
-                        val wId = args[1] as String
-                        val wPanel = args[2] as WidgetsPanel?
-
-                        if (wId == "nautical_depth") {
-                            depthWidget = MarineTextWidget(activity, wType, wId, wPanel).apply {
-                                setText("---", "m")
-                                setIcons(R.drawable.ic_action_info_dark, R.drawable.ic_action_info_dark)
-                            }
-                            depthWidget
-                        } else {
-                            windWidget = MarineTextWidget(activity, wType, wId, wPanel).apply {
-                                setText("---", "kn")
-                                setIcons(R.drawable.ic_action_info_dark, R.drawable.ic_action_info_dark)
-                            }
-                            windWidget
-                        }
-                    } else null
-                }
-
-                regMethod.invoke(registry, type, creator)
-                Log.d("NauticalPlugin", "Widgets registered via Dynamic Proxy")
-            }
         } catch (e: Exception) {
-            Log.e("NauticalPlugin", "Registration failed", e)
+            Log.e("NauticalWidgets", "Registration error", e)
         }
 
         engine.registerListener(marineStateListener)
@@ -86,7 +102,5 @@ class MarineDashboard(
 
     fun destroy() {
         engine.unregisterListener(marineStateListener)
-        depthWidget = null
-        windWidget = null
     }
 }
