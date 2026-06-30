@@ -71,7 +71,6 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app) {
         connection.disconnect()
     }
 
-    // Robust UI Lifecycle Hook with correct signature
     override fun registerLayers(context: Context, mapActivity: MapActivity?) {
         super.registerLayers(context, mapActivity)
 
@@ -82,6 +81,14 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app) {
                 marineDashboard?.init(mapActivity)
             }
         }
+    }
+
+    // This method is the correct way to handle cleanup if 'unregisterLayers' is not available.
+    // Ensure you call this from your MapActivity's onDestroy() if needed,
+    // or keep it here for internal management.
+    fun onMapActivityDestroyed(mapActivity: MapActivity) {
+        marineDashboard?.destroy()
+        marineDashboard = null
     }
 
     private fun startEngine() {
