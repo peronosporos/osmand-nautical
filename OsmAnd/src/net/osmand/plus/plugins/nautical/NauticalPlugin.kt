@@ -1,14 +1,17 @@
 package net.osmand.plus.plugins.nautical
 
+import android.content.Context
 import android.util.Log
 import net.osmand.plus.OsmandApplication
 import net.osmand.plus.R
+import net.osmand.plus.activities.MapActivity
 import net.osmand.plus.plugins.OsmandPlugin
 import net.osmand.plus.plugins.nautical.engine.OkHttpSignalKConnection
 import net.osmand.plus.plugins.nautical.engine.SignalKEngine
 import net.osmand.plus.plugins.nautical.engine.NauticalLocationProvider
 import net.osmand.plus.plugins.nautical.engine.AisUdpEmitter
 import net.osmand.plus.plugins.nautical.engine.AisEncoder
+import net.osmand.plus.plugins.nautical.ui.MarineDashboard
 
 class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app) {
 
@@ -21,6 +24,7 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app) {
 
     private var locationProvider: NauticalLocationProvider? = null
     private var aisEmitter: AisUdpEmitter? = null
+    private var marineDashboard: MarineDashboard? = null
     private val aisEncoder = AisEncoder()
 
     override fun getId(): String = NAUTICAL_ID
@@ -31,9 +35,8 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app) {
     override fun setEnabled(enabled: Boolean) {
         super.setEnabled(enabled)
         if (enabled) {
-            Log.d("NauticalPlugin", "Plugin explicitly enabled by user.")
+            Log.d("NauticalPlugin", "Plugin explicitly enabled.")
 
-            // 1. Initialize dependencies
             if (locationProvider == null) {
                 locationProvider = NauticalLocationProvider(app, engine)
             }
@@ -41,7 +44,7 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app) {
                 aisEmitter = AisUdpEmitter()
             }
 
-            // 2. Wire the AIS pipeline first
+            // Wire AIS pipeline safely
             engine.registerAisListener { target ->
                 val nmeaString = aisEncoder.encodeTargetToAivdm(target)
                 if (nmeaString != null) {
@@ -49,18 +52,35 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app) {
                 }
             }
 
-            // 3. Start the Network Engine
             startEngine()
 
-            // 4. Start the providers LAST, after engine is attempting connection
             aisEmitter?.start()
             locationProvider?.start()
 
         } else {
-            Log.d("NauticalPlugin", "Plugin explicitly disabled by user.")
-            aisEmitter?.stop()
-            locationProvider?.stop()
-            connection.disconnect()
+            Log.d("NauticalPlugin", "Plugin explicitly disabled.")
+            shutdownResources()
+        }
+    }
+
+    private fun shutdownResources() {
+        aisEmitter?.stop()
+        locationProvider?.stop()
+        marineDashboard?.destroy()
+        marineDashboard = null
+        connection.disconnect()
+    }
+
+    // Robust UI Lifecycle Hook with correct signature
+    override fun registerLayers(context: Context, mapActivity: MapActivity?) {
+        super.registerLayers(context, mapActivity)
+
+        // Ensure we only initialize UI when the map is active and the activity is valid
+        if (isActive && mapActivity != null) {
+            if (marineDashboard == null) {
+                marineDashboard = MarineDashboard(app, engine)
+                marineDashboard?.init(mapActivity)
+            }
         }
     }
 
@@ -69,17 +89,16 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app) {
         val port = app.settings?.NAUTICAL_SERVER_PORT?.get()
 
         if (ip.isNullOrEmpty()) {
-            Log.e("NauticalPlugin", "Server IP is missing. Cannot connect.")
+            Log.e("NauticalPlugin", "Server IP is missing. Engine startup aborted.")
             return
         }
 
         connection.disconnect()
 
-        // FIX: Added ?subscribe=all to the WebSocket URL.
-        // This forces the SignalK server to stream data for ALL vessels, not just our own.
+        // Subscribe to all vessels to ensure AIS targets are received
         val wsUrl = "ws://$ip:$port/signalk/v1/stream?subscribe=all"
 
-        Log.d("NauticalPlugin", "Attempting connection to: $wsUrl")
+        Log.d("NauticalPlugin", "Connecting to SignalK: $wsUrl")
         connection.connect(wsUrl) { message ->
             engine.handleIncomingMessage(message)
         }

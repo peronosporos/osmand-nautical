@@ -23,7 +23,7 @@ class SignalKEngine(private val connection: SignalKConnection) {
     private var stateListener: ((MarineState) -> Unit)? = null
     private var aisListener: ((AisTarget) -> Unit)? = null
 
-    // FIX: Variable to store the true UUID of your boat
+    // Variable to store the true UUID of your boat
     private var trueSelfContext: String = "vessels.self"
 
     fun registerListener(listener: (MarineState) -> Unit) {
@@ -34,11 +34,15 @@ class SignalKEngine(private val connection: SignalKConnection) {
         this.aisListener = listener
     }
 
+    fun unregisterListener(listener: (MarineState) -> Unit) {
+        this.stateListener = null
+    }
+
     fun handleIncomingMessage(jsonMessage: String) {
         try {
             val json = JSONObject(jsonMessage)
 
-            // FIX: Catch the initial SignalK "Hello" message to discover your boat's real ID
+            // Catch the initial SignalK "Hello" message to discover your boat's real ID
             if (json.has("self")) {
                 trueSelfContext = json.getString("self")
                 Log.d("NauticalPlugin", "Discovered true boat ID: $trueSelfContext")
@@ -50,7 +54,6 @@ class SignalKEngine(private val connection: SignalKConnection) {
             val context = json.optString("context", "vessels.self")
             val updates = json.getJSONArray("updates")
 
-            // FIX: Accurately identify your boat using the discovered ID
             val isSelf = context == "vessels.self" || context == "" || context == trueSelfContext
 
             var numericMmsi = 0
@@ -73,7 +76,7 @@ class SignalKEngine(private val connection: SignalKConnection) {
                     val valueObj = valueItem.opt("value")
 
                     if (isSelf) {
-                        // Process Our Boat
+                        // Process Our Boat Navigation & Telemetry
                         when (path) {
                             "navigation.position" -> {
                                 if (valueObj is JSONObject) {
@@ -94,6 +97,15 @@ class SignalKEngine(private val connection: SignalKConnection) {
                             }
                             "steering.autopilot.state" -> {
                                 currentState = currentState.copy(autopilotState = valueItem.optString("value", "standby"))
+                            }
+                            // Phase 3 Telemetry Paths
+                            "environment.depth.belowTransducer" -> {
+                                val depth = valueItem.optDouble("value", Double.NaN)
+                                if (!depth.isNaN()) currentState = currentState.copy(depthBelowTransducer = depth)
+                            }
+                            "environment.wind.speedTrue" -> {
+                                val wind = valueItem.optDouble("value", Double.NaN)
+                                if (!wind.isNaN()) currentState = currentState.copy(windSpeedTrue = wind)
                             }
                         }
                     } else if (aisTarget != null) {
@@ -136,7 +148,7 @@ class SignalKEngine(private val connection: SignalKConnection) {
             }
 
         } catch (e: Exception) {
-            // Silently ignore
+            // Silently ignore malformed JSON
         }
     }
 

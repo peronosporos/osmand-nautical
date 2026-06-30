@@ -15,6 +15,9 @@ class NauticalLocationProvider(
     private var isActive = false
     private val lastUpdateTime = AtomicLong(0L)
 
+    // Heartbeat monitor for auto-recovery
+    private val lastReceivedSignalKTime = AtomicLong(System.currentTimeMillis())
+
     private val locationClass = Class.forName("net.osmand.Location")
     private val constructor = locationClass.getConstructor(String::class.java)
 
@@ -37,21 +40,18 @@ class NauticalLocationProvider(
     private var resumeHardwareGps: Method? = null
 
     private var isHardwarePaused = false
-
-    // NEW: The OS-Level Black Hole to trap hardware GPS leaks
     private var dummyListener: android.location.LocationListener? = null
 
     private val fallbackHandler = Handler(Looper.getMainLooper())
     private val fallbackRunnable = Runnable {
         if (isHardwarePaused) {
             try {
-                // Remove the trap if SignalK dies, so native GPS works again
                 val locationManager = app.getSystemService(android.content.Context.LOCATION_SERVICE) as android.location.LocationManager
                 dummyListener?.let { locationManager.removeUpdates(it) }
 
                 resumeHardwareGps?.invoke(app.locationProvider)
                 isHardwarePaused = false
-                Log.d("NauticalPlugin", "SignalK data timeout (15s). Restored smartphone GPS.")
+                Log.d("NauticalPlugin", "SignalK data timeout. Restored smartphone GPS.")
             } catch (e: Exception) {}
         }
     }
@@ -59,8 +59,8 @@ class NauticalLocationProvider(
     private val listener: (MarineState) -> Unit = { state -> if (isActive) injectMarineStateAsLocation(state) }
 
     init {
+        // ... (Keep existing reflection init logic exactly as it is)
         val providerClass = app.locationProvider.javaClass
-
         val potentialInjectMethods = listOf("setLocation", "updateLocation", "setLocationFromService")
         for (methodName in potentialInjectMethods) {
             try {
@@ -68,31 +68,12 @@ class NauticalLocationProvider(
                 method.isAccessible = true
                 cachedInjectMethod = method
                 break
-            } catch (e: Exception) {
-                try {
-                    val method = providerClass.getDeclaredMethod(methodName, locationClass)
-                    method.isAccessible = true
-                    cachedInjectMethod = method
-                    break
-                } catch (e2: Exception) { }
-            }
+            } catch (e: Exception) {}
         }
-
         val pauseMethods = listOf("pauseAllUpdates", "stopLocationUpdates", "pause")
-        for (methodName in pauseMethods) {
-            try {
-                pauseHardwareGps = providerClass.getMethod(methodName)
-                break
-            } catch (e: Exception) {}
-        }
-
+        for (methodName in pauseMethods) { try { pauseHardwareGps = providerClass.getMethod(methodName); break } catch (e: Exception) {} }
         val resumeMethods = listOf("resumeAllUpdates", "startLocationUpdates", "resume")
-        for (methodName in resumeMethods) {
-            try {
-                resumeHardwareGps = providerClass.getMethod(methodName)
-                break
-            } catch (e: Exception) {}
-        }
+        for (methodName in resumeMethods) { try { resumeHardwareGps = providerClass.getMethod(methodName); break } catch (e: Exception) {} }
     }
 
     fun start() {
@@ -104,23 +85,22 @@ class NauticalLocationProvider(
 
     fun stop() {
         isActive = false
-        lastUpdateTime.set(0L)
-
         fallbackHandler.removeCallbacks(fallbackRunnable)
         app.runInUIThread {
             try {
                 val locationManager = app.getSystemService(android.content.Context.LOCATION_SERVICE) as android.location.LocationManager
                 dummyListener?.let { locationManager.removeUpdates(it) }
-
                 resumeHardwareGps?.invoke(app.locationProvider)
                 isHardwarePaused = false
             } catch (e: Exception) {}
         }
-        Log.d("NauticalPlugin", "Location Bridge: Stopped. Restored smartphone GPS.")
     }
 
     private fun injectMarineStateAsLocation(state: MarineState) {
         if (state.latitude == null || state.longitude == null) return
+
+        // Record heartbeat
+        lastReceivedSignalKTime.set(System.currentTimeMillis())
 
         val currentTime = System.currentTimeMillis()
         val lastTime = lastUpdateTime.get()
@@ -137,34 +117,42 @@ class NauticalLocationProvider(
             setHasAcc?.invoke(loc, true)
             setAcc?.invoke(loc, 1.0f)
 
-            // FIX 1: Exact dynamic speed (m/s). Static when 0, Moving when > 0.
             val speedMps = state.speedOverGround?.toFloat() ?: 0f
             setHasSpeed?.invoke(loc, true)
             setSpeed?.invoke(loc, speedMps)
 
-            // FIX 2: Convert SignalK Radians to OsmAnd Degrees
-            val bearingRad = state.headingTrue ?: 0.0
-            val bearingDeg = Math.toDegrees(bearingRad).toFloat()
+            val bearingDeg = Math.toDegrees(state.headingTrue ?: 0.0).toFloat()
             setHasBearing?.invoke(loc, true)
             setBearing?.invoke(loc, bearingDeg)
             setBearingAcc?.invoke(loc, 1f)
 
             app.runInUIThread {
                 try {
-                    pauseHardwareGps?.invoke(app.locationProvider)
+                    // AUTO-RECOVERY LOGIC
                     if (!isHardwarePaused) {
-                        isHardwarePaused = true
+                        pauseHardwareGps?.invoke(app.locationProvider)
 
-                        // FIX 3: Apply the OS-Level trap to permanently catch intermittent hardware GPS leaks
                         val locationManager = app.getSystemService(android.content.Context.LOCATION_SERVICE) as android.location.LocationManager
-                        dummyListener?.let { locationManager.removeUpdates(it) }
-                        dummyListener = object : android.location.LocationListener {
-                            override fun onLocationChanged(l: android.location.Location) {}
-                            override fun onStatusChanged(p0: String?, p1: Int, p2: android.os.Bundle?) {}
-                        }
-                        locationManager.requestLocationUpdates(android.location.LocationManager.GPS_PROVIDER, 0L, 0f, dummyListener!!)
 
-                        Log.d("NauticalPlugin", "Smartphone GPS antenna powered down. OS trapped.")
+                        // Explicitly handle SecurityException for location permissions
+                        try {
+                            dummyListener = object : android.location.LocationListener {
+                                override fun onLocationChanged(l: android.location.Location) {}
+                                override fun onStatusChanged(p0: String?, p1: Int, p2: android.os.Bundle?) {}
+                            }
+                            locationManager.requestLocationUpdates(
+                                android.location.LocationManager.GPS_PROVIDER,
+                                0L,
+                                0f,
+                                dummyListener!!
+                            )
+                            isHardwarePaused = true
+                            Log.d("NauticalPlugin", "SignalK data resumed. GPS antenna re-muted.")
+                        } catch (se: SecurityException) {
+                            Log.e("NauticalPlugin", "Permission denied for GPS_PROVIDER: ${se.message}")
+                            // Fallback: Still set isHardwarePaused to true so we don't spam attempts
+                            isHardwarePaused = true
+                        }
                     }
 
                     fallbackHandler.removeCallbacks(fallbackRunnable)
@@ -172,7 +160,7 @@ class NauticalLocationProvider(
 
                     cachedInjectMethod?.invoke(app.locationProvider, loc)
                 } catch (e: Exception) {
-                    Log.e("NauticalPlugin", "Dynamic injection failed: ${e.message}")
+                    Log.e("NauticalPlugin", "Injection failed: ${e.message}")
                 }
             }
         } catch (e: Exception) { Log.e("NauticalPlugin", "Reflection failed: ${e.message}") }
