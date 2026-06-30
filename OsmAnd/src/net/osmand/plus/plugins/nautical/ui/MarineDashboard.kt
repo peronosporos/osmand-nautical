@@ -57,11 +57,9 @@ class MarineDashboard(
 
     private val marineStateListener: (MarineState) -> Unit = { state ->
         app.runInUIThread {
-            // Retrieve the metrics configuration specifically for the BOAT profile
             val metrics = app.settings.METRIC_SYSTEM.getModeValue(ApplicationMode.BOAT)
                 ?: MetricsConstants.KILOMETERS_AND_METERS
 
-            // Check against nautical constants to enable knots
             val useKnots = (metrics == MetricsConstants.NAUTICAL_MILES_AND_METERS ||
                     metrics == MetricsConstants.NAUTICAL_MILES_AND_FEET)
 
@@ -69,7 +67,6 @@ class MarineDashboard(
                 depthWidget?.setText(String.format("%.1f", it), "m")
             }
             state.windSpeedTrue?.let {
-                // Conversion from m/s to knots
                 val speedValue = if (useKnots) it * 1.94384 else it
                 val unitLabel = if (useKnots) "kn" else "m/s"
                 windWidget?.setText(String.format("%.1f", speedValue), unitLabel)
@@ -78,7 +75,7 @@ class MarineDashboard(
     }
 
     fun init(activity: MapActivity) {
-        Log.d("NauticalWidgets", "Initializing MarineDashboard widgets...")
+        Log.d("NauticalWidgets", "Initializing MarineDashboard widgets unconditionally...")
 
         val registry = activity.mapLayers.mapWidgetRegistry
         val wType = WidgetType.values().firstOrNull() ?: return
@@ -98,7 +95,7 @@ class MarineDashboard(
             depthWidget!!,
             "Depth",
             WidgetsPanel.LEFT,
-            R.string.nautical_widget_depth_label // Ensure this exists in strings.xml, else use 0
+            R.string.nautical_widget_depth_label
         )
 
         val windInfo = MarineWidgetInfo(
@@ -106,19 +103,14 @@ class MarineDashboard(
             windWidget!!,
             "Wind",
             WidgetsPanel.LEFT,
-            R.string.nautical_widget_wind_label // Ensure this exists in strings.xml, else use 0
+            R.string.nautical_widget_wind_label
         )
 
-        // 1. Unconditionally register the widgets so OsmAnd knows they exist in the ecosystem
+        // Register widgets globally. No ApplicationMode restrictions applied.
         registry.registerWidget(depthInfo)
         registry.registerWidget(windInfo)
 
-        // 2. Tell OsmAnd these widgets specifically belong in the BOAT profile
-        registry.enableDisableWidgetForMode(ApplicationMode.BOAT, depthInfo, true, null, true)
-        registry.enableDisableWidgetForMode(ApplicationMode.BOAT, windInfo, true, null, true)
-
         engine.registerListener(marineStateListener)
-
         Log.d("NauticalWidgets", "Widget registration complete.")
     }
 
