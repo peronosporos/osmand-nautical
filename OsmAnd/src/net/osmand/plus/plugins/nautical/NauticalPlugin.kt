@@ -71,11 +71,12 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app) {
         connection.disconnect()
     }
 
+    // Restored the correct hook. Because MarineDashboard no longer
+    // aborts on startup, this will successfully register your widgets.
     override fun registerLayers(context: Context, mapActivity: MapActivity?) {
         super.registerLayers(context, mapActivity)
 
-        // Ensure we only initialize UI when the map is active and the activity is valid
-        if (isActive && mapActivity != null) {
+        if (mapActivity != null) {
             if (marineDashboard == null) {
                 marineDashboard = MarineDashboard(app, engine)
                 marineDashboard?.init(mapActivity)
@@ -83,9 +84,7 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app) {
         }
     }
 
-    // This method is the correct way to handle cleanup if 'unregisterLayers' is not available.
-    // Ensure you call this from your MapActivity's onDestroy() if needed,
-    // or keep it here for internal management.
+    // Keep this for proper cleanup
     fun onMapActivityDestroyed(mapActivity: MapActivity) {
         marineDashboard?.destroy()
         marineDashboard = null
@@ -102,7 +101,6 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app) {
 
         connection.disconnect()
 
-        // Subscribe to all vessels to ensure AIS targets are received
         val wsUrl = "ws://$ip:$port/signalk/v1/stream?subscribe=all"
 
         Log.d("NauticalPlugin", "Connecting to SignalK: $wsUrl")
