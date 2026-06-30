@@ -54,20 +54,19 @@ class MarineDashboard(
             setIcons(R.drawable.ic_action_info_dark, R.drawable.ic_action_info_dark)
         }
 
-        // Diagnostic Registration Block
+        // Modern Registration Block targeting the correct method
         try {
             val methods = registry.javaClass.methods
-            val regMethod = methods.firstOrNull { it.name.contains("registerSideWidget", ignoreCase = true) }
 
-            if (regMethod == null) {
-                val allMethods = methods.joinToString(separator = ", ") { it.name }
-                Log.e("NauticalPlugin", "CRITICAL: No registerSideWidget found! Available methods: $allMethods")
+            // Find the modern registerWidget method that takes 1 parameter (the MapWidget itself)
+            val regMethod = methods.find { it.name == "registerWidget" && it.parameterTypes.size == 1 }
+
+            if (regMethod != null) {
+                regMethod.invoke(registry, depthWidget)
+                regMethod.invoke(registry, windWidget)
+                Log.d("NauticalPlugin", "Widgets successfully registered to the UI!")
             } else {
-                Log.d("NauticalPlugin", "Found method: ${regMethod.name}. Parameter count: ${regMethod.parameterTypes.size}")
-
-                // Attempt to register. If it fails, the catch block will expose the exact parameter mismatch.
-                regMethod.invoke(registry, depthWidget, R.drawable.ic_action_info_dark, 0, "nautical_depth", false, 25)
-                regMethod.invoke(registry, windWidget, R.drawable.ic_action_info_dark, 0, "nautical_wind", false, 26)
+                Log.e("NauticalPlugin", "CRITICAL: Could not find a 1-parameter registerWidget method.")
             }
         } catch (e: Exception) {
             Log.e("NauticalPlugin", "CRITICAL: Widget registration failed during invoke!", e)
