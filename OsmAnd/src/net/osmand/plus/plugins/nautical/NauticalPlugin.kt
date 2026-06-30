@@ -2,6 +2,7 @@ package net.osmand.plus.plugins.nautical
 
 import android.app.Activity
 import android.app.Application
+import android.content.Context
 import android.os.Bundle
 import android.util.Log
 import net.osmand.plus.OsmandApplication
@@ -29,7 +30,6 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app) {
     private var marineDashboard: MarineDashboard? = null
     private val aisEncoder = AisEncoder()
 
-    // The native Android OS interceptor
     private var lifecycleCallback: Application.ActivityLifecycleCallbacks? = null
 
     override fun getId(): String = NAUTICAL_ID
@@ -60,7 +60,6 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app) {
             aisEmitter?.start()
             locationProvider?.start()
 
-            // Start listening to the Android OS directly
             attachAndroidLifecycleInterceptor()
 
         } else {
@@ -69,27 +68,39 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app) {
         }
     }
 
+    // Centralized Initialization
+    private fun initDashboardUnconditionally(activity: MapActivity) {
+        if (marineDashboard == null) {
+            Log.d("NauticalPlugin", "MapActivity acquired. Booting MarineDashboard.")
+            marineDashboard = MarineDashboard(app, engine)
+            marineDashboard?.init(activity)
+        }
+    }
+
+    // Hook 1: The Official OsmAnd Route (Works on cold boots)
+    override fun registerLayers(context: Context, mapActivity: MapActivity?) {
+        super.registerLayers(context, mapActivity)
+        if (mapActivity != null) {
+            initDashboardUnconditionally(mapActivity)
+        }
+    }
+
+    // Hook 2: The Android OS Bypass (Works mid-session)
     private fun attachAndroidLifecycleInterceptor() {
         if (lifecycleCallback != null) return
 
         lifecycleCallback = object : Application.ActivityLifecycleCallbacks {
             override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {}
             override fun onActivityStarted(activity: Activity) {}
-
-            override fun onActivityResumed(activity: Activity) {
-                // The absolute second the MapActivity hits the screen, we intercept it.
-                if (activity is MapActivity) {
-                    if (marineDashboard == null) {
-                        Log.d("NauticalPlugin", "OS Intercepted MapActivity. Booting Dashboard.")
-                        marineDashboard = MarineDashboard(app, engine)
-                        marineDashboard?.init(activity)
-                    }
-                }
-            }
-
             override fun onActivityPaused(activity: Activity) {}
             override fun onActivityStopped(activity: Activity) {}
             override fun onActivitySaveInstanceState(activity: Activity, outState: Bundle) {}
+
+            override fun onActivityResumed(activity: Activity) {
+                if (activity is MapActivity) {
+                    initDashboardUnconditionally(activity)
+                }
+            }
 
             override fun onActivityDestroyed(activity: Activity) {
                 if (activity is MapActivity) {
@@ -98,7 +109,6 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app) {
                 }
             }
         }
-
         app.registerActivityLifecycleCallbacks(lifecycleCallback)
     }
 
@@ -115,6 +125,11 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app) {
         }
     }
 
+    fun onMapActivityDestroyed(mapActivity: MapActivity) {
+        marineDashboard?.destroy()
+        marineDashboard = null
+    }
+
     private fun startEngine() {
         val ip = app.settings?.NAUTICAL_SERVER_IP?.get()
         val port = app.settings?.NAUTICAL_SERVER_PORT?.get()
@@ -125,7 +140,6 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app) {
         }
 
         connection.disconnect()
-
         val wsUrl = "ws://$ip:$port/signalk/v1/stream?subscribe=all"
         Log.d("NauticalPlugin", "Connecting to SignalK: $wsUrl")
 
