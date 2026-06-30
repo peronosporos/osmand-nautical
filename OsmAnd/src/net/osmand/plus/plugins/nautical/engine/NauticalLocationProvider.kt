@@ -37,13 +37,21 @@ class NauticalLocationProvider(
     private var resumeHardwareGps: Method? = null
 
     private var isHardwarePaused = false
+
+    // NEW: The OS-Level Black Hole to trap hardware GPS leaks
+    private var dummyListener: android.location.LocationListener? = null
+
     private val fallbackHandler = Handler(Looper.getMainLooper())
     private val fallbackRunnable = Runnable {
         if (isHardwarePaused) {
             try {
+                // Remove the trap if SignalK dies, so native GPS works again
+                val locationManager = app.getSystemService(android.content.Context.LOCATION_SERVICE) as android.location.LocationManager
+                dummyListener?.let { locationManager.removeUpdates(it) }
+
                 resumeHardwareGps?.invoke(app.locationProvider)
                 isHardwarePaused = false
-                Log.d("NauticalPlugin", "SignalK data timeout (15s). Resumed smartphone GPS.")
+                Log.d("NauticalPlugin", "SignalK data timeout (15s). Restored smartphone GPS.")
             } catch (e: Exception) {}
         }
     }
@@ -101,6 +109,9 @@ class NauticalLocationProvider(
         fallbackHandler.removeCallbacks(fallbackRunnable)
         app.runInUIThread {
             try {
+                val locationManager = app.getSystemService(android.content.Context.LOCATION_SERVICE) as android.location.LocationManager
+                dummyListener?.let { locationManager.removeUpdates(it) }
+
                 resumeHardwareGps?.invoke(app.locationProvider)
                 isHardwarePaused = false
             } catch (e: Exception) {}
@@ -126,24 +137,34 @@ class NauticalLocationProvider(
             setHasAcc?.invoke(loc, true)
             setAcc?.invoke(loc, 1.0f)
 
-            // FIX: Set minimum speed to 1.5m/s (3 knots) so OsmAnd disables the compass
-            // and renders the Boat Icon based on GPS bearing instead of the Blue Dot.
-            val speed = state.speedOverGround?.toFloat() ?: 1.5f
+            // FIX 1: Exact dynamic speed (m/s). Static when 0, Moving when > 0.
+            val speedMps = state.speedOverGround?.toFloat() ?: 0f
             setHasSpeed?.invoke(loc, true)
-            setSpeed?.invoke(loc, speed)
+            setSpeed?.invoke(loc, speedMps)
 
-            val bearing = state.headingTrue?.toFloat() ?: 0f
+            // FIX 2: Convert SignalK Radians to OsmAnd Degrees
+            val bearingRad = state.headingTrue ?: 0.0
+            val bearingDeg = Math.toDegrees(bearingRad).toFloat()
             setHasBearing?.invoke(loc, true)
-            setBearing?.invoke(loc, bearing)
+            setBearing?.invoke(loc, bearingDeg)
             setBearingAcc?.invoke(loc, 1f)
 
             app.runInUIThread {
                 try {
-                    // FIX: Aggressively invoke pause on EVERY packet to overpower OsmAnd lifecycle changes
                     pauseHardwareGps?.invoke(app.locationProvider)
                     if (!isHardwarePaused) {
                         isHardwarePaused = true
-                        Log.d("NauticalPlugin", "Smartphone GPS antenna powered down. Saving battery.")
+
+                        // FIX 3: Apply the OS-Level trap to permanently catch intermittent hardware GPS leaks
+                        val locationManager = app.getSystemService(android.content.Context.LOCATION_SERVICE) as android.location.LocationManager
+                        dummyListener?.let { locationManager.removeUpdates(it) }
+                        dummyListener = object : android.location.LocationListener {
+                            override fun onLocationChanged(l: android.location.Location) {}
+                            override fun onStatusChanged(p0: String?, p1: Int, p2: android.os.Bundle?) {}
+                        }
+                        locationManager.requestLocationUpdates(android.location.LocationManager.GPS_PROVIDER, 0L, 0f, dummyListener!!)
+
+                        Log.d("NauticalPlugin", "Smartphone GPS antenna powered down. OS trapped.")
                     }
 
                     fallbackHandler.removeCallbacks(fallbackRunnable)
