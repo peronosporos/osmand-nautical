@@ -33,6 +33,8 @@ import static net.osmand.plus.views.mapwidgets.WidgetType.SUN_POSITION;
 import static net.osmand.plus.views.mapwidgets.WidgetType.TIME_TO_DESTINATION;
 import static net.osmand.plus.views.mapwidgets.WidgetType.TIME_TO_INTERMEDIATE;
 import static net.osmand.plus.views.mapwidgets.WidgetType.TRUE_BEARING;
+import static net.osmand.plus.views.mapwidgets.WidgetType.NAUTICAL_DEPTH;
+import static net.osmand.plus.views.mapwidgets.WidgetType.NAUTICAL_WIND;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -129,6 +131,8 @@ public class WidgetsInitializer {
 		addWidgetInfo(SUN_POSITION);
 		addWidgetInfo(GLIDE_TARGET);
 		addWidgetInfo(GLIDE_AVERAGE);
+		addWidgetInfo(NAUTICAL_DEPTH);
+		addWidgetInfo(NAUTICAL_WIND);
 	}
 
 	private void addWidgetInfo(@NonNull WidgetType widgetType) {

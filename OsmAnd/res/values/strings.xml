@@ -18,6 +18,8 @@
 	<string name="nautical_save_button">Save &amp; Connect</string>
 	<string name="nautical_widget_depth_label">Depth</string>
 	<string name="nautical_widget_wind_label">Wind</string>
+	<string name="nautical_group_title">Nautical</string>
+	<string name="nautical_group_desc">Marine instruments and data</string>
 	<!--  AisTrackerSettings  -->
 	<string name="ais_own_object">Settings for display of own AIS object</string>
 	<string name="ais_own_object_description">If the own vessel has an AIS transmitter then the signal will be received together with other AIS vessel\'s signals. Special handling of the own AIS signal is defined here.</string>
