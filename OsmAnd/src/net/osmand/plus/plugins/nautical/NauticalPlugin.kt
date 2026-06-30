@@ -1,6 +1,8 @@
 package net.osmand.plus.plugins.nautical
 
-import android.content.Context
+import android.app.Activity
+import android.app.Application
+import android.os.Bundle
 import android.util.Log
 import net.osmand.plus.OsmandApplication
 import net.osmand.plus.R
@@ -27,6 +29,9 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app) {
     private var marineDashboard: MarineDashboard? = null
     private val aisEncoder = AisEncoder()
 
+    // The native Android OS interceptor
+    private var lifecycleCallback: Application.ActivityLifecycleCallbacks? = null
+
     override fun getId(): String = NAUTICAL_ID
     override fun getName(): String = "Nautical Marine Controls"
     override fun getDescription(linksEnabled: Boolean): CharSequence = "SignalK integration."
@@ -44,7 +49,6 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app) {
                 aisEmitter = AisUdpEmitter()
             }
 
-            // Wire AIS pipeline safely
             engine.registerAisListener { target ->
                 val nmeaString = aisEncoder.encodeTargetToAivdm(target)
                 if (nmeaString != null) {
@@ -53,14 +57,49 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app) {
             }
 
             startEngine()
-
             aisEmitter?.start()
             locationProvider?.start()
+
+            // Start listening to the Android OS directly
+            attachAndroidLifecycleInterceptor()
 
         } else {
             Log.d("NauticalPlugin", "Plugin explicitly disabled.")
             shutdownResources()
         }
+    }
+
+    private fun attachAndroidLifecycleInterceptor() {
+        if (lifecycleCallback != null) return
+
+        lifecycleCallback = object : Application.ActivityLifecycleCallbacks {
+            override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {}
+            override fun onActivityStarted(activity: Activity) {}
+
+            override fun onActivityResumed(activity: Activity) {
+                // The absolute second the MapActivity hits the screen, we intercept it.
+                if (activity is MapActivity) {
+                    if (marineDashboard == null) {
+                        Log.d("NauticalPlugin", "OS Intercepted MapActivity. Booting Dashboard.")
+                        marineDashboard = MarineDashboard(app, engine)
+                        marineDashboard?.init(activity)
+                    }
+                }
+            }
+
+            override fun onActivityPaused(activity: Activity) {}
+            override fun onActivityStopped(activity: Activity) {}
+            override fun onActivitySaveInstanceState(activity: Activity, outState: Bundle) {}
+
+            override fun onActivityDestroyed(activity: Activity) {
+                if (activity is MapActivity) {
+                    marineDashboard?.destroy()
+                    marineDashboard = null
+                }
+            }
+        }
+
+        app.registerActivityLifecycleCallbacks(lifecycleCallback)
     }
 
     private fun shutdownResources() {
@@ -69,25 +108,11 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app) {
         marineDashboard?.destroy()
         marineDashboard = null
         connection.disconnect()
-    }
 
-    // Restored the correct hook. Because MarineDashboard no longer
-    // aborts on startup, this will successfully register your widgets.
-    override fun registerLayers(context: Context, mapActivity: MapActivity?) {
-        super.registerLayers(context, mapActivity)
-
-        if (mapActivity != null) {
-            if (marineDashboard == null) {
-                marineDashboard = MarineDashboard(app, engine)
-                marineDashboard?.init(mapActivity)
-            }
+        lifecycleCallback?.let {
+            app.unregisterActivityLifecycleCallbacks(it)
+            lifecycleCallback = null
         }
-    }
-
-    // Keep this for proper cleanup
-    fun onMapActivityDestroyed(mapActivity: MapActivity) {
-        marineDashboard?.destroy()
-        marineDashboard = null
     }
 
     private fun startEngine() {
@@ -102,8 +127,8 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app) {
         connection.disconnect()
 
         val wsUrl = "ws://$ip:$port/signalk/v1/stream?subscribe=all"
-
         Log.d("NauticalPlugin", "Connecting to SignalK: $wsUrl")
+
         connection.connect(wsUrl) { message ->
             engine.handleIncomingMessage(message)
         }
