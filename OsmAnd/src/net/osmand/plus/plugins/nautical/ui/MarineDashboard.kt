@@ -15,6 +15,7 @@ import net.osmand.plus.settings.backend.ApplicationMode
 import net.osmand.plus.settings.enums.ScreenLayoutMode
 import net.osmand.plus.views.mapwidgets.WidgetsPanel
 import net.osmand.shared.settings.enums.MetricsConstants
+import android.util.Log
 
 class MarineDashboard(
     private val app: OsmandApplication,
@@ -77,10 +78,7 @@ class MarineDashboard(
     }
 
     fun init(activity: MapActivity) {
-        // Only initialize for Boat mode
-        if (app.settings.APPLICATION_MODE.get() != ApplicationMode.BOAT) {
-            return
-        }
+        Log.d("NauticalWidgets", "Initializing MarineDashboard widgets...")
 
         val registry = activity.mapLayers.mapWidgetRegistry
         val wType = WidgetType.values().firstOrNull() ?: return
@@ -100,7 +98,7 @@ class MarineDashboard(
             depthWidget!!,
             "Depth",
             WidgetsPanel.LEFT,
-            R.string.nautical_widget_depth_label
+            R.string.nautical_widget_depth_label // Ensure this exists in strings.xml, else use 0
         )
 
         val windInfo = MarineWidgetInfo(
@@ -108,17 +106,20 @@ class MarineDashboard(
             windWidget!!,
             "Wind",
             WidgetsPanel.LEFT,
-            R.string.nautical_widget_wind_label
+            R.string.nautical_widget_wind_label // Ensure this exists in strings.xml, else use 0
         )
 
-        // Ensure widgets only appear in Boat mode
-        registry.enableDisableWidgetForMode(ApplicationMode.BOAT, depthInfo, true, null, true)
-        registry.enableDisableWidgetForMode(ApplicationMode.BOAT, windInfo, true, null, true)
-
+        // 1. Unconditionally register the widgets so OsmAnd knows they exist in the ecosystem
         registry.registerWidget(depthInfo)
         registry.registerWidget(windInfo)
 
+        // 2. Tell OsmAnd these widgets specifically belong in the BOAT profile
+        registry.enableDisableWidgetForMode(ApplicationMode.BOAT, depthInfo, true, null, true)
+        registry.enableDisableWidgetForMode(ApplicationMode.BOAT, windInfo, true, null, true)
+
         engine.registerListener(marineStateListener)
+
+        Log.d("NauticalWidgets", "Widget registration complete.")
     }
 
     fun destroy() {
