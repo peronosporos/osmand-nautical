@@ -5,6 +5,8 @@ import android.content.pm.PackageManager
 import android.location.LocationListener
 import android.location.LocationManager
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.os.SystemClock
 import android.util.Log
 import androidx.core.content.ContextCompat
@@ -21,13 +23,12 @@ class NauticalLocationProvider(
     private val lastUpdateTime = AtomicLong(0L)
     private val lastSignalKTime = AtomicLong(System.currentTimeMillis())
 
-    // State Tracking
     private val isUsingSignalK = AtomicBoolean(false)
     private var isHardwarePaused = false
     private var dummyListener: LocationListener? = null
     private var watchdogThread: Thread? = null
+    private val mainHandler = Handler(Looper.getMainLooper())
 
-    // Core Reflection Methods
     private val locationClass = Class.forName("net.osmand.Location")
     private val constructor = locationClass.getConstructor(String::class.java)
     private val setLat = locationClass.getMethod("setLatitude", Double::class.java)
@@ -69,7 +70,8 @@ class NauticalLocationProvider(
         if (isActive) return
         isActive = true
         engine.registerListener(listener)
-        Log.d("NauticalPlugin", "Location Bridge: Active (Waiting for data...)")
+        startWatchdog()
+        Log.d("NauticalPlugin", "Location Bridge: Active")
     }
 
     private fun startWatchdog() {
@@ -77,24 +79,21 @@ class NauticalLocationProvider(
         watchdogThread = Thread({
             try {
                 while (isActive) {
-                    if (System.currentTimeMillis() - lastSignalKTime.get() > 15000 && isUsingSignalK.get()) {
-                        Log.d("NauticalPlugin", "SignalK Timeout: Falling back to Phone GPS.")
-                        switchMode(false)
+                    if (isUsingSignalK.get() && (System.currentTimeMillis() - lastSignalKTime.get() > 15000)) {
+                        Log.d("NauticalPlugin", "SignalK Timeout detected by Sentinel.")
+                        mainHandler.post { switchMode(false) }
                     }
                     Thread.sleep(2000)
                 }
             } catch (e: InterruptedException) {}
-        }, "NauticalWatchdog").apply { start() }
+        }, "NauticalSentinel").apply { start() }
     }
 
     private fun processState(state: MarineState) {
         lastSignalKTime.set(System.currentTimeMillis())
 
-        // 1. Lazy Hijack: Initialize watchdog and mute GPS only when SignalK data actually arrives
         if (!isUsingSignalK.get()) {
-            Log.d("NauticalPlugin", "SignalK Active: Hijacking GPS.")
-            startWatchdog()
-            switchMode(true)
+            mainHandler.post { switchMode(true) }
         }
 
         if (state.latitude == null || state.longitude == null) return
@@ -119,7 +118,7 @@ class NauticalLocationProvider(
 
     private fun switchMode(useSignalK: Boolean) {
         if (isUsingSignalK.getAndSet(useSignalK) == useSignalK) return
-        app.runInUIThread { if (useSignalK) muteHardwareGps() else unmuteHardwareGps() }
+        if (useSignalK) muteHardwareGps() else unmuteHardwareGps()
     }
 
     private fun muteHardwareGps() {
@@ -130,12 +129,13 @@ class NauticalLocationProvider(
             val lm = app.getSystemService(android.content.Context.LOCATION_SERVICE) as LocationManager
             dummyListener = object : LocationListener {
                 override fun onLocationChanged(l: android.location.Location) {}
-                override fun onStatusChanged(p0: String?, p1: Int, p2: Bundle?) {}
+                override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {}
                 override fun onProviderEnabled(p0: String) {}
                 override fun onProviderDisabled(p0: String) {}
             }
             lm.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0L, 0f, dummyListener!!)
             isHardwarePaused = true
+            Log.d("NauticalPlugin", "Hardware GPS muted.")
         } catch (e: Exception) { Log.e("NauticalPlugin", "Mute failed: ${e.message}") }
     }
 
@@ -146,6 +146,7 @@ class NauticalLocationProvider(
             dummyListener?.let { lm.removeUpdates(it) }
             resumeHardwareGps?.invoke(app.locationProvider)
             isHardwarePaused = false
+            Log.d("NauticalPlugin", "Hardware GPS restored.")
         } catch (e: Exception) {}
     }
 
