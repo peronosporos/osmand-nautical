@@ -21,12 +21,13 @@ class NauticalLocationProvider(
     private val lastUpdateTime = AtomicLong(0L)
     private val lastSignalKTime = AtomicLong(System.currentTimeMillis())
 
+    // State Tracking
     private val isUsingSignalK = AtomicBoolean(false)
     private var isHardwarePaused = false
     private var dummyListener: LocationListener? = null
     private var watchdogThread: Thread? = null
 
-    // Reflection setup
+    // Core Reflection Methods
     private val locationClass = Class.forName("net.osmand.Location")
     private val constructor = locationClass.getConstructor(String::class.java)
     private val setLat = locationClass.getMethod("setLatitude", Double::class.java)
@@ -68,12 +69,16 @@ class NauticalLocationProvider(
         if (isActive) return
         isActive = true
         engine.registerListener(listener)
+        Log.d("NauticalPlugin", "Location Bridge: Active (Waiting for data...)")
+    }
 
+    private fun startWatchdog() {
+        if (watchdogThread != null) return
         watchdogThread = Thread({
             try {
                 while (isActive) {
-                    val timeSinceLast = System.currentTimeMillis() - lastSignalKTime.get()
-                    if (timeSinceLast > 15000 && isUsingSignalK.get()) {
+                    if (System.currentTimeMillis() - lastSignalKTime.get() > 15000 && isUsingSignalK.get()) {
+                        Log.d("NauticalPlugin", "SignalK Timeout: Falling back to Phone GPS.")
                         switchMode(false)
                     }
                     Thread.sleep(2000)
@@ -83,9 +88,16 @@ class NauticalLocationProvider(
     }
 
     private fun processState(state: MarineState) {
-        if (state.latitude == null || state.longitude == null) return
         lastSignalKTime.set(System.currentTimeMillis())
-        if (!isUsingSignalK.get()) switchMode(true)
+
+        // 1. Lazy Hijack: Initialize watchdog and mute GPS only when SignalK data actually arrives
+        if (!isUsingSignalK.get()) {
+            Log.d("NauticalPlugin", "SignalK Active: Hijacking GPS.")
+            startWatchdog()
+            switchMode(true)
+        }
+
+        if (state.latitude == null || state.longitude == null) return
 
         val currentTime = System.currentTimeMillis()
         if ((currentTime - lastUpdateTime.get()) < 1000) return
@@ -112,11 +124,7 @@ class NauticalLocationProvider(
 
     private fun muteHardwareGps() {
         if (isHardwarePaused) return
-        // Check for location permissions before accessing GPS_PROVIDER
-        if (ContextCompat.checkSelfPermission(app, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            Log.e("NauticalPlugin", "Missing location permission, cannot mute GPS.")
-            return
-        }
+        if (ContextCompat.checkSelfPermission(app, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) return
         try {
             pauseHardwareGps?.invoke(app.locationProvider)
             val lm = app.getSystemService(android.content.Context.LOCATION_SERVICE) as LocationManager
@@ -128,8 +136,6 @@ class NauticalLocationProvider(
             }
             lm.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0L, 0f, dummyListener!!)
             isHardwarePaused = true
-        } catch (se: SecurityException) {
-            Log.e("NauticalPlugin", "SecurityException on mute: ${se.message}")
         } catch (e: Exception) { Log.e("NauticalPlugin", "Mute failed: ${e.message}") }
     }
 
@@ -146,6 +152,7 @@ class NauticalLocationProvider(
     fun stop() {
         isActive = false
         watchdogThread?.interrupt()
+        try { watchdogThread?.join(500) } catch (e: InterruptedException) {}
         engine.unregisterListener(listener)
         app.runInUIThread { unmuteHardwareGps() }
     }
