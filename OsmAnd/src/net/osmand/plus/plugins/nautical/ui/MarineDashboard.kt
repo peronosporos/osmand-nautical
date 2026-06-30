@@ -16,86 +16,63 @@ class MarineDashboard(
     private val app: OsmandApplication,
     private val engine: SignalKEngine
 ) {
-    class MarineTextWidget(
-        activity: MapActivity,
-        type: WidgetType,
-        id: String,
-        panel: WidgetsPanel?
-    ) : TextInfoWidget(activity, type, id, panel) {
-
+    class MarineTextWidget(activity: MapActivity, type: WidgetType, id: String, panel: WidgetsPanel?) :
+        TextInfoWidget(activity, type, id, panel) {
         override fun updateInfo(view: View, drawSettings: OsmandMapLayer.DrawSettings?) { }
-
         override fun updateInfo(drawSettings: OsmandMapLayer.DrawSettings?) { }
     }
 
     private var depthWidget: MarineTextWidget? = null
     private var windWidget: MarineTextWidget? = null
 
-    private val marineStateListener: (MarineState) -> Unit = { state ->
-        updateWidgets(state)
-    }
-
     fun init(activity: MapActivity) {
         val registry = activity.mapLayers.mapWidgetRegistry
+        val type = try { WidgetType.valueOf("INFO") } catch (e: Exception) { WidgetType.values().firstOrNull() ?: return }
 
-        val type = try {
-            WidgetType.valueOf("INFO")
-        } catch (e: Exception) {
-            WidgetType.values().firstOrNull() ?: return
-        }
-
-        depthWidget = MarineTextWidget(activity, type, "nautical_depth", null).apply {
-            setText("---", "m")
-            setIcons(R.drawable.ic_action_info_dark, R.drawable.ic_action_info_dark)
-        }
-
-        windWidget = MarineTextWidget(activity, type, "nautical_wind", null).apply {
-            setText("---", "kn")
-            setIcons(R.drawable.ic_action_info_dark, R.drawable.ic_action_info_dark)
-        }
-
-        // Modern Registration Block targeting the correct method
+        // Use the factory pattern that the MapWidgetRegistry expects
         try {
-            val methods = registry.javaClass.methods
-
-            // Find the modern registerWidget method that takes 1 parameter (the MapWidget itself)
-            val regMethod = methods.find { it.name == "registerWidget" && it.parameterTypes.size == 1 }
+            val registryClass = registry.javaClass
+            // We search for a method that takes (WidgetType, WidgetCreator)
+            val regMethod = registryClass.methods.find {
+                it.name == "registerWidget" && it.parameterTypes.size == 2
+            }
 
             if (regMethod != null) {
-                regMethod.invoke(registry, depthWidget)
-                regMethod.invoke(registry, windWidget)
-                Log.d("NauticalPlugin", "Widgets successfully registered to the UI!")
+                val creator = net.osmand.plus.views.mapwidgets.WidgetCreator { wType, wId, wPanel ->
+                    if (wId == "nautical_depth") {
+                        depthWidget = MarineTextWidget(activity, wType, wId, wPanel).apply {
+                            setText("---", "m")
+                            setIcons(R.drawable.ic_action_info_dark, R.drawable.ic_action_info_dark)
+                        }
+                        depthWidget
+                    } else {
+                        windWidget = MarineTextWidget(activity, wType, wId, wPanel).apply {
+                            setText("---", "kn")
+                            setIcons(R.drawable.ic_action_info_dark, R.drawable.ic_action_info_dark)
+                        }
+                        windWidget
+                    }
+                }
+
+                regMethod.invoke(registry, type, creator)
+                Log.d("NauticalPlugin", "Widgets successfully registered via WidgetCreator")
             } else {
-                Log.e("NauticalPlugin", "CRITICAL: Could not find a 1-parameter registerWidget method.")
+                Log.e("NauticalPlugin", "CRITICAL: Could not find registerWidget(WidgetType, WidgetCreator)")
             }
         } catch (e: Exception) {
-            Log.e("NauticalPlugin", "CRITICAL: Widget registration failed during invoke!", e)
+            Log.e("NauticalPlugin", "Registration failed", e)
         }
 
-        engine.registerListener(marineStateListener)
-        updateVisibilityForProfile()
+        engine.registerListener { state ->
+            app.runInUIThread {
+                state.depthBelowTransducer?.let { depthWidget?.setText(String.format("%.1f", it), "m") }
+                state.windSpeedTrue?.let { windWidget?.setText(String.format("%.1f", it * 1.94384), "kn") }
+            }
+        }
     }
 
     fun destroy() {
-        engine.unregisterListener(marineStateListener)
         depthWidget = null
         windWidget = null
-    }
-
-    fun updateVisibilityForProfile() {
-        val isBoatMode = app.settings.applicationMode.toString().contains("BOAT", true)
-        app.runInUIThread {
-            depthWidget?.updateVisibility(isBoatMode)
-            windWidget?.updateVisibility(isBoatMode)
-        }
-    }
-
-    private fun updateWidgets(state: MarineState) {
-        if (!app.settings.applicationMode.toString().contains("BOAT", true)) return
-
-        app.runInUIThread {
-            state.depthBelowTransducer?.let { depthWidget?.setText(String.format("%.1f", it), "m") }
-            state.windSpeedTrue?.let { windWidget?.setText(String.format("%.1f", it * 1.94384), "kn") }
-        }
     }
 }
