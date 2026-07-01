@@ -61,4 +61,20 @@ public class MarineTextWidget extends TextInfoWidget {
             }
         }
     }
+
+    @Override
+    protected void setupView(@NonNull View view) {
+        super.setupView(view);
+
+        // TEMPORARY TEST: Tap the widget to launch the Action Dialog
+        view.setOnClickListener(v -> {
+            // Using the newInstance method from our dialog
+            net.osmand.plus.plugins.nautical.NauticalActionBottomSheet dialog =
+                    net.osmand.plus.plugins.nautical.NauticalActionBottomSheet.newInstance(40.6892, -74.0445);
+
+            // Launch the dialog using the MapActivity's FragmentManager
+            dialog.show(mapActivity.getSupportFragmentManager(),
+                    net.osmand.plus.plugins.nautical.NauticalActionBottomSheet.TAG);
+        });
+    }
 }

@@ -9,14 +9,18 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app) {
 
     companion object {
         const val NAUTICAL_ID = "osmand.nautical"
-        // Static access for your Widgets
         lateinit var engine: SignalKEngine
+        lateinit var autopilot: AutopilotController
+
+        @JvmStatic
+        fun getAutopilot(): AutopilotController = autopilot
     }
 
     private val connection = OkHttpSignalKConnection()
 
     init {
         engine = SignalKEngine(connection)
+        autopilot = AutopilotController(app)
     }
 
     private var locationProvider: NauticalLocationProvider? = null
