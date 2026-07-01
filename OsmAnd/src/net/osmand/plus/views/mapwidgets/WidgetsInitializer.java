@@ -131,6 +131,8 @@ public class WidgetsInitializer {
 		addWidgetInfo(SUN_POSITION);
 		addWidgetInfo(GLIDE_TARGET);
 		addWidgetInfo(GLIDE_AVERAGE);
+		addWidgetInfo(NAUTICAL_DEPTH);
+		addWidgetInfo(NAUTICAL_WIND);
 	}
 
 	private void addWidgetInfo(@NonNull WidgetType widgetType) {

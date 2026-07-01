@@ -10,7 +10,6 @@ import net.osmand.plus.views.layers.base.OsmandMapLayer;
 import net.osmand.plus.plugins.nautical.NauticalPlugin;
 import net.osmand.plus.plugins.nautical.engine.MarineState;
 import net.osmand.plus.settings.backend.OsmandSettings;
-import net.osmand.plus.plugins.nautical.NauticalActionBottomSheet;
 
 public class MarineTextWidget extends TextInfoWidget {
 
@@ -21,13 +20,22 @@ public class MarineTextWidget extends TextInfoWidget {
     }
 
     @Override
+    protected void setupView(@NonNull View view) {
+        super.setupView(view);
+        view.setOnClickListener(v -> {
+            NauticalDataBottomSheet dialog = NauticalDataBottomSheet.newInstance(this.widgetType);
+            dialog.show(mapActivity.getSupportFragmentManager(), "nautical_graph");
+        });
+    }
+
+    @Override
     protected void updateInfo(@NonNull View view, @Nullable OsmandMapLayer.DrawSettings drawSettings) {
         super.updateInfo(view, drawSettings);
 
         MarineState state = NauticalPlugin.Companion.getEngine().getCurrentState();
+        boolean isConnected = NauticalPlugin.Companion.getAutopilot().isConnected();
 
-        // 2c: Fallback UI (Critical for UX so user knows connection is lost)
-        if (state == null) {
+        if (!isConnected || state == null) {
             setText("OFF", "---");
             return;
         }
@@ -64,17 +72,5 @@ public class MarineTextWidget extends TextInfoWidget {
             }
         }
     }
-
-    @Override
-    protected void setupView(@NonNull View view) {
-        super.setupView(view);
-
-        view.setOnClickListener(v -> {
-            NauticalActionBottomSheet dialog = NauticalActionBottomSheet.newInstance(
-                    mapActivity.getMapView().getLatitude(),
-                    mapActivity.getMapView().getLongitude()
-            );
-            dialog.show(mapActivity.getSupportFragmentManager(), NauticalActionBottomSheet.TAG);
-        });
-    }
+    // setupView deleted: The widget is now pure telemetry.
 }

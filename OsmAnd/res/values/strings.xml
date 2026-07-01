@@ -23,6 +23,7 @@
 	<string name="nautical_widget_wind_label">Wind</string>
 	<string name="nautical_wind_desc">Displays true wind speed</string>
 	<string name="nautical_steer_here">Engage Autopilot Here</string>
+	<string name="nautical_graph_title">Data History (Last 1 Hour)</string>
 	<!--  AisTrackerSettings  -->
 	<string name="ais_own_object">Settings for display of own AIS object</string>
 	<string name="ais_own_object_description">If the own vessel has an AIS transmitter then the signal will be received together with other AIS vessel\'s signals. Special handling of the own AIS signal is defined here.</string>

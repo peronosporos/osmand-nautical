@@ -29,6 +29,12 @@ class SignalKEngine(private val connection: SignalKConnection) {
 
     private val engineScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
 
+    private val depthBuffer = CircularBuffer<Double>(360) // 1 hour @ 10s intervals
+    private val windBuffer = CircularBuffer<Double>(360)
+
+    fun getDepthHistory(): List<Double> = depthBuffer.getAll()
+    fun getWindHistory(): List<Double> = windBuffer.getAll()
+
     fun registerListener(listener: (MarineState) -> Unit) {
         this.stateListener = listener
     }
@@ -53,7 +59,6 @@ class SignalKEngine(private val connection: SignalKConnection) {
 
             if (!json.has("updates")) return
 
-            // Ensure state is initialized when the first data arrives
             if (_currentState == null) _currentState = MarineState()
 
             val context = json.optString("context", "vessels.self")
@@ -80,7 +85,7 @@ class SignalKEngine(private val connection: SignalKConnection) {
                     val valueObj = valueItem.opt("value")
 
                     if (isSelf) {
-                        val state = _currentState!! // Guaranteed non-null by check above
+                        val state = _currentState!!
                         when (path) {
                             "navigation.position" -> {
                                 if (valueObj is JSONObject) {
@@ -104,7 +109,10 @@ class SignalKEngine(private val connection: SignalKConnection) {
                             }
                             "environment.depth.belowTransducer" -> {
                                 val depth = valueItem.optDouble("value", Double.NaN)
-                                if (!depth.isNaN()) _currentState = state.copy(depthBelowTransducer = depth)
+                                if (!depth.isNaN()) {
+                                    _currentState = state.copy(depthBelowTransducer = depth)
+                                    depthBuffer.add(depth)
+                                }
                             }
                             "environment.wind.speedTrue" -> {
                                 val wind = valueItem.optDouble("value", Double.NaN)
