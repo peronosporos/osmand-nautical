@@ -147,9 +147,10 @@ public abstract class MapWidget {
 		updateInfo(getView(), drawSettings);
 	}
 
-	protected abstract void updateInfo(@NonNull View view, @Nullable DrawSettings drawSettings);
+    protected void updateInfo(@NonNull View view, @Nullable DrawSettings drawSettings) {
+    }
 
-	public void updateColors(@NonNull TextState textState) {
+    public void updateColors(@NonNull TextState textState) {
 		nightMode = textState.night;
 	}
 

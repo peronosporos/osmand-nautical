@@ -1,6 +1,7 @@
 package net.osmand.plus.plugins.nautical.engine
 
 import android.util.Log
+import android.widget.Toast
 import net.osmand.plus.OsmandApplication
 import okhttp3.Call
 import okhttp3.Callback
@@ -11,9 +12,14 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
 import java.io.IOException
 
-class AutopilotController(private val app: OsmandApplication) {
+class AutopilotController(private val app: OsmandApplication, private val connection: OkHttpSignalKConnection) {
     private val client = OkHttpClient()
     private val JSON = "application/json; charset=utf-8".toMediaType()
+
+    fun isConnected(): Boolean {
+        // Use the passed connection object
+        return connection.isConnected()
+    }
 
     fun sendActiveWaypoint(latitude: Double, longitude: Double) {
         val ip = app.settings.NAUTICAL_SERVER_IP.get()
@@ -45,11 +51,23 @@ class AutopilotController(private val app: OsmandApplication) {
 
         client.newCall(request).enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) {
-                Log.e("NauticalAutopilot", "Failed to send waypoint: ${e.message}")
+                Log.e("NauticalAutopilot", "Failed: ${e.message}")
+                // UI Polish: Tell the user it failed
+                app.runInUIThread {
+                    Toast.makeText(app, "Autopilot: Connection failed", Toast.LENGTH_SHORT).show()
+                }
             }
 
             override fun onResponse(call: Call, response: Response) {
-                Log.i("NauticalAutopilot", "Waypoint sent successfully. HTTP Code: ${response.code}")
+                if (response.isSuccessful) {
+                    app.runInUIThread {
+                        Toast.makeText(app, "Autopilot: Waypoint set", Toast.LENGTH_SHORT).show()
+                    }
+                } else {
+                    app.runInUIThread {
+                        Toast.makeText(app, "Autopilot: Server error ${response.code}", Toast.LENGTH_SHORT).show()
+                    }
+                }
                 response.close()
             }
         })

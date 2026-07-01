@@ -397,6 +397,8 @@ public enum WidgetType {
 			return new RouteInfoWidgetInfoFragment();
 		} else if (this == STREET_NAME) {
 			return new StreetNameWidgetInfoFragment();
+		} else if (this == NAUTICAL_DEPTH || this == NAUTICAL_WIND) {
+			return new BaseSimpleWidgetInfoFragment();
 		}
 
 		if (widgetInfo instanceof SimpleWidgetInfo) {

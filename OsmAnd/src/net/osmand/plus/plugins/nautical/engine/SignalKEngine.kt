@@ -17,14 +17,17 @@ data class AisTarget(
 
 class SignalKEngine(private val connection: SignalKConnection) {
 
-    var currentState = MarineState()
-        private set
+    // Nullable state to represent the "Uninitialized" or "Offline" condition
+    private var _currentState: MarineState? = null
+
+    // Public getter
+    fun getCurrentState(): MarineState? = _currentState
 
     private var stateListener: ((MarineState) -> Unit)? = null
     private var aisListener: ((AisTarget) -> Unit)? = null
-
-    // Variable to store the true UUID of your boat
     private var trueSelfContext: String = "vessels.self"
+
+    private val engineScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
 
     fun registerListener(listener: (MarineState) -> Unit) {
         this.stateListener = listener
@@ -42,7 +45,6 @@ class SignalKEngine(private val connection: SignalKConnection) {
         try {
             val json = JSONObject(jsonMessage)
 
-            // Catch the initial SignalK "Hello" message to discover your boat's real ID
             if (json.has("self")) {
                 trueSelfContext = json.getString("self")
                 Log.d("NauticalPlugin", "Discovered true boat ID: $trueSelfContext")
@@ -51,9 +53,11 @@ class SignalKEngine(private val connection: SignalKConnection) {
 
             if (!json.has("updates")) return
 
+            // Ensure state is initialized when the first data arrives
+            if (_currentState == null) _currentState = MarineState()
+
             val context = json.optString("context", "vessels.self")
             val updates = json.getJSONArray("updates")
-
             val isSelf = context == "vessels.self" || context == "" || context == trueSelfContext
 
             var numericMmsi = 0
@@ -76,40 +80,38 @@ class SignalKEngine(private val connection: SignalKConnection) {
                     val valueObj = valueItem.opt("value")
 
                     if (isSelf) {
-                        // Process Our Boat Navigation & Telemetry
+                        val state = _currentState!! // Guaranteed non-null by check above
                         when (path) {
                             "navigation.position" -> {
                                 if (valueObj is JSONObject) {
                                     val lat = valueObj.optDouble("latitude", Double.NaN)
                                     val lon = valueObj.optDouble("longitude", Double.NaN)
                                     if (!lat.isNaN() && !lon.isNaN()) {
-                                        currentState = currentState.copy(latitude = lat, longitude = lon)
+                                        _currentState = state.copy(latitude = lat, longitude = lon)
                                     }
                                 }
                             }
                             "navigation.headingTrue" -> {
                                 val heading = valueItem.optDouble("value", Double.NaN)
-                                if (!heading.isNaN()) currentState = currentState.copy(headingTrue = heading)
+                                if (!heading.isNaN()) _currentState = state.copy(headingTrue = heading)
                             }
                             "navigation.speedOverGround" -> {
                                 val sog = valueItem.optDouble("value", Double.NaN)
-                                if (!sog.isNaN()) currentState = currentState.copy(speedOverGround = sog)
+                                if (!sog.isNaN()) _currentState = state.copy(speedOverGround = sog)
                             }
                             "steering.autopilot.state" -> {
-                                currentState = currentState.copy(autopilotState = valueItem.optString("value", "standby"))
+                                _currentState = state.copy(autopilotState = valueItem.optString("value", "standby"))
                             }
-                            // Phase 3 Telemetry Paths
                             "environment.depth.belowTransducer" -> {
                                 val depth = valueItem.optDouble("value", Double.NaN)
-                                if (!depth.isNaN()) currentState = currentState.copy(depthBelowTransducer = depth)
+                                if (!depth.isNaN()) _currentState = state.copy(depthBelowTransducer = depth)
                             }
                             "environment.wind.speedTrue" -> {
                                 val wind = valueItem.optDouble("value", Double.NaN)
-                                if (!wind.isNaN()) currentState = currentState.copy(windSpeedTrue = wind)
+                                if (!wind.isNaN()) _currentState = state.copy(windSpeedTrue = wind)
                             }
                         }
                     } else if (aisTarget != null) {
-                        // Process External AIS Ships
                         when (path) {
                             "navigation.position" -> {
                                 if (valueObj is JSONObject) {
@@ -140,15 +142,14 @@ class SignalKEngine(private val connection: SignalKConnection) {
 
             // Dispatch
             if (isSelf) {
-                stateListener?.invoke(currentState)
+                _currentState?.let { stateListener?.invoke(it) }
             } else if (aisTarget != null && aisTarget.latitude != null && aisTarget.longitude != null) {
-                CoroutineScope(Dispatchers.Default).launch {
+                engineScope.launch {
                     aisListener?.invoke(aisTarget)
                 }
             }
-
         } catch (e: Exception) {
-            // Silently ignore malformed JSON
+            Log.e("SignalKEngine", "JSON parsing error: ${e.message}")
         }
     }
 

@@ -10,6 +10,7 @@ import net.osmand.plus.views.layers.base.OsmandMapLayer;
 import net.osmand.plus.plugins.nautical.NauticalPlugin;
 import net.osmand.plus.plugins.nautical.engine.MarineState;
 import net.osmand.plus.settings.backend.OsmandSettings;
+import net.osmand.plus.plugins.nautical.NauticalActionBottomSheet;
 
 public class MarineTextWidget extends TextInfoWidget {
 
@@ -21,43 +22,45 @@ public class MarineTextWidget extends TextInfoWidget {
 
     @Override
     protected void updateInfo(@NonNull View view, @Nullable OsmandMapLayer.DrawSettings drawSettings) {
-        OsmandSettings settings = mapActivity.getApp().getSettings();
+        super.updateInfo(view, drawSettings);
+
         MarineState state = NauticalPlugin.Companion.getEngine().getCurrentState();
 
-        if (state != null) {
-            // POINT 8: Smart Units
-            String metricSystem = String.valueOf(settings.METRIC_SYSTEM.get());
+        // 2c: Fallback UI (Critical for UX so user knows connection is lost)
+        if (state == null) {
+            setText("OFF", "---");
+            return;
+        }
 
-            if (this.widgetType == WidgetType.NAUTICAL_DEPTH) {
-                Double depth = state.getDepthBelowTransducer();
+        OsmandSettings settings = mapActivity.getApp().getSettings();
+        String metricSystem = String.valueOf(settings.METRIC_SYSTEM.get());
+
+        if (this.widgetType == WidgetType.NAUTICAL_DEPTH) {
+            Double depth = state.getDepthBelowTransducer();
+            if (depth != null) {
                 String unit = "m";
-
-                if (depth != null) {
-                    if (metricSystem.contains("FEET") || metricSystem.contains("YARDS")) {
-                        depth = depth * 3.28084; // Meters to Feet
-                        unit = "ft";
-                    }
-                    setText(String.format("%.1f", depth), unit);
-                } else {
-                    setText("---", unit);
+                if (metricSystem.contains("FEET") || metricSystem.contains("YARDS")) {
+                    depth = depth * 3.28084;
+                    unit = "ft";
                 }
-
-            } else if (this.widgetType == WidgetType.NAUTICAL_WIND) {
-                Double windKnots = state.getWindSpeedTrue();
+                setText(String.format("%.1f", depth), unit);
+            } else {
+                setText("---", "m");
+            }
+        } else if (this.widgetType == WidgetType.NAUTICAL_WIND) {
+            Double windKnots = state.getWindSpeedTrue();
+            if (windKnots != null) {
                 String unit = "kn";
-
-                if (windKnots != null) {
-                    if (metricSystem.contains("KILOMETERS")) {
-                        windKnots = windKnots * 1.852; // Knots to km/h
-                        unit = "km/h";
-                    } else if (metricSystem.contains("MILES")) {
-                        windKnots = windKnots * 1.15078; // Knots to mph
-                        unit = "mph";
-                    }
-                    setText(String.format("%.1f", windKnots), unit);
-                } else {
-                    setText("---", unit);
+                if (metricSystem.contains("KILOMETERS")) {
+                    windKnots = windKnots * 1.852;
+                    unit = "km/h";
+                } else if (metricSystem.contains("MILES")) {
+                    windKnots = windKnots * 1.15078;
+                    unit = "mph";
                 }
+                setText(String.format("%.1f", windKnots), unit);
+            } else {
+                setText("---", "kn");
             }
         }
     }
@@ -66,15 +69,12 @@ public class MarineTextWidget extends TextInfoWidget {
     protected void setupView(@NonNull View view) {
         super.setupView(view);
 
-        // TEMPORARY TEST: Tap the widget to launch the Action Dialog
         view.setOnClickListener(v -> {
-            // Using the newInstance method from our dialog
-            net.osmand.plus.plugins.nautical.NauticalActionBottomSheet dialog =
-                    net.osmand.plus.plugins.nautical.NauticalActionBottomSheet.newInstance(40.6892, -74.0445);
-
-            // Launch the dialog using the MapActivity's FragmentManager
-            dialog.show(mapActivity.getSupportFragmentManager(),
-                    net.osmand.plus.plugins.nautical.NauticalActionBottomSheet.TAG);
+            NauticalActionBottomSheet dialog = NauticalActionBottomSheet.newInstance(
+                    mapActivity.getMapView().getLatitude(),
+                    mapActivity.getMapView().getLongitude()
+            );
+            dialog.show(mapActivity.getSupportFragmentManager(), NauticalActionBottomSheet.TAG);
         });
     }
 }

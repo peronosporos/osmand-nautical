@@ -51,6 +51,16 @@ class AisUdpEmitter {
         } catch (e: Exception) {
             Log.e("NauticalPlugin", "Failed to start UDP Emitter: ${e.message}")
         }
+
+        try {
+            socket = DatagramSocket()
+            // UX Polish: Provide feedback
+            Log.d("NauticalPlugin", "AIS UDP Emitter started on local port $targetPort")
+        } catch (e: Exception) {
+            // UX Polish: Clear user feedback
+            Log.e("NauticalPlugin", "UDP Socket Setup Error: ${e.message}")
+        }
+
     }
 
     fun emitNmeaSentence(nmeaSentence: String) {

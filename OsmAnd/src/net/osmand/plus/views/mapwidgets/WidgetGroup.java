@@ -99,6 +99,7 @@ public enum WidgetGroup {
 			case BEARING -> WidgetType.RELATIVE_BEARING;
 			case TRIP_RECORDING -> WidgetType.TRIP_RECORDING_DISTANCE;
 			case AUDIO_VIDEO_NOTES -> WidgetType.AV_NOTES_ON_REQUEST;
+			case NAUTICAL -> WidgetType.NAUTICAL_DEPTH;
 			default -> null;
 		};
 	}

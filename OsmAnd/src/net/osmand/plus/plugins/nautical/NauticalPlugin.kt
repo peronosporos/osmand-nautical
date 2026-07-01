@@ -6,6 +6,7 @@ import net.osmand.plus.R
 import net.osmand.plus.activities.MapActivity
 import net.osmand.plus.plugins.OsmandPlugin
 import net.osmand.plus.plugins.nautical.engine.*
+import net.osmand.plus.settings.backend.ApplicationMode
 import net.osmand.plus.widgets.ctxmenu.ContextMenuAdapter
 import net.osmand.plus.widgets.ctxmenu.data.ContextMenuItem
 
@@ -23,7 +24,7 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app) {
 
     init {
         engine = SignalKEngine(connection)
-        autopilot = AutopilotController(app)
+        autopilot = AutopilotController(app, connection)
     }
 
     private var locationProvider: NauticalLocationProvider? = null
@@ -67,9 +68,9 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app) {
         connection.disconnect()
         val wsUrl = "ws://$ip:$port/signalk/v1/stream?subscribe=all"
         connection.connect(wsUrl) { message -> engine.handleIncomingMessage(message) }
+        Toast.makeText(app, "Nautical: Connecting to SignalK...", Toast.LENGTH_SHORT).show()
     }
 
-    // --- PHASE 4: THE MAP CONTEXT MENU INJECTION ---
     override fun registerMapContextMenuActions(
         mapActivity: MapActivity,
         latitude: Double,
@@ -78,21 +79,23 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app) {
         selectedObj: Any?,
         configureMenu: Boolean
     ) {
-        val item = ContextMenuItem("nautical_steer_id")
-        item.setTitleId(R.string.nautical_steer_here, mapActivity)
-        item.setIcon(R.drawable.widget_target_day)
+        // CONDITION 1: Only show if the Application Mode is "Boating"
+        val isBoating = mapActivity.app.settings.APPLICATION_MODE.get() == ApplicationMode.BOAT
 
-        // The compiler error told us exactly what the signature is:
-        // (OnDataChangeUiAdapter, View, ContextMenuItem, Boolean) -> Boolean
-        item.setListener { adapter, view, item, isChecked ->
-            autopilot.sendActiveWaypoint(latitude, longitude)
+        // CONDITION 2: Only show if Autopilot is initialized and connected
+        val isAutopilotReady = NauticalPlugin.autopilot.isConnected()
 
-            Toast.makeText(mapActivity, "Autopilot Engaged", Toast.LENGTH_SHORT).show()
+        if (isBoating && isAutopilotReady) {
+            val item = ContextMenuItem("nautical_steer_id")
+            item.setTitleId(R.string.nautical_steer_here, mapActivity)
+            item.setIcon(R.drawable.ic_action_sail_boat_dark)
 
-            // Return true to indicate the click was handled
-            true
+            item.setListener { _, _, _, _ ->
+                NauticalPlugin.autopilot.sendActiveWaypoint(latitude, longitude)
+                Toast.makeText(mapActivity, "Autopilot Engaged", Toast.LENGTH_SHORT).show()
+                true
+            }
+            adapter.addItem(item)
         }
-
-        adapter.addItem(item)
     }
 }

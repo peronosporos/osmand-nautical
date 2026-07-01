@@ -12,6 +12,10 @@ class OkHttpSignalKConnection : SignalKConnection {
 
     private var webSocket: WebSocket? = null
 
+    fun isConnected(): Boolean {
+        return webSocket != null
+    }
+
     override fun connect(url: String, onMessageReceived: (String) -> Unit) {
         val request = Request.Builder().url(url).build()
 
