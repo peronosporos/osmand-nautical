@@ -14,10 +14,9 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app) {
     companion object {
         const val NAUTICAL_ID = "osmand.nautical"
         lateinit var engine: SignalKEngine
-        lateinit var autopilot: AutopilotController
 
         @JvmStatic
-        fun getAutopilot(): AutopilotController = autopilot
+        lateinit var autopilot: AutopilotController
     }
 
     private val connection = OkHttpSignalKConnection()
