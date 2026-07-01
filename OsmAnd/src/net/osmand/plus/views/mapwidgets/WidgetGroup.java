@@ -131,8 +131,6 @@ public enum WidgetGroup {
 			return getPartOfPluginDesc(context, ExternalSensorsPlugin.class);
 		} else if (this == WEATHER) {
 			return getPartOfPluginDesc(context, WeatherPlugin.class);
-		} else if (this == NAUTICAL) {
-			return context.getString(R.string.nautical_group_desc);
 		}
 		return null;
 	}
@@ -144,8 +142,6 @@ public enum WidgetGroup {
 		} else if (this == TRIP_RECORDING || this == AUDIO_VIDEO_NOTES || this == DEVELOPER_OPTIONS
 				|| this == WEATHER || this == ANT_PLUS) {
 			return R.drawable.ic_extension_dark;
-		} else if (this == NAUTICAL) {
-			return R.drawable.ic_action_sail_boat_dark;
 		}
 		return 0;
 	}
