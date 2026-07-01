@@ -1,9 +1,13 @@
 package net.osmand.plus.plugins.nautical
 
+import android.widget.Toast
 import net.osmand.plus.OsmandApplication
 import net.osmand.plus.R
+import net.osmand.plus.activities.MapActivity
 import net.osmand.plus.plugins.OsmandPlugin
 import net.osmand.plus.plugins.nautical.engine.*
+import net.osmand.plus.widgets.ctxmenu.ContextMenuAdapter
+import net.osmand.plus.widgets.ctxmenu.data.ContextMenuItem
 
 class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app) {
 
@@ -64,5 +68,32 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app) {
         connection.disconnect()
         val wsUrl = "ws://$ip:$port/signalk/v1/stream?subscribe=all"
         connection.connect(wsUrl) { message -> engine.handleIncomingMessage(message) }
+    }
+
+    // --- PHASE 4: THE MAP CONTEXT MENU INJECTION ---
+    override fun registerMapContextMenuActions(
+        mapActivity: MapActivity,
+        latitude: Double,
+        longitude: Double,
+        adapter: ContextMenuAdapter,
+        selectedObj: Any?,
+        configureMenu: Boolean
+    ) {
+        val item = ContextMenuItem("nautical_steer_id")
+        item.setTitleId(R.string.nautical_steer_here, mapActivity)
+        item.setIcon(R.drawable.widget_target_day)
+
+        // The compiler error told us exactly what the signature is:
+        // (OnDataChangeUiAdapter, View, ContextMenuItem, Boolean) -> Boolean
+        item.setListener { adapter, view, item, isChecked ->
+            autopilot.sendActiveWaypoint(latitude, longitude)
+
+            Toast.makeText(mapActivity, "Autopilot Engaged", Toast.LENGTH_SHORT).show()
+
+            // Return true to indicate the click was handled
+            true
+        }
+
+        adapter.addItem(item)
     }
 }
