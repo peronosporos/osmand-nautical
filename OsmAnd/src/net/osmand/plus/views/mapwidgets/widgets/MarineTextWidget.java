@@ -10,14 +10,51 @@ import net.osmand.plus.views.layers.base.OsmandMapLayer;
 import net.osmand.plus.plugins.nautical.NauticalPlugin;
 import net.osmand.plus.plugins.nautical.engine.MarineState;
 import net.osmand.plus.settings.backend.OsmandSettings;
+import net.osmand.plus.views.mapwidgets.widgetinterfaces.ISupportWidgetResizing;
+import net.osmand.plus.settings.backend.preferences.OsmandPreference;
+import net.osmand.plus.settings.backend.preferences.EnumStringPreference;
+import net.osmand.plus.settings.enums.WidgetSize;
 
-public class MarineTextWidget extends TextInfoWidget {
+public class MarineTextWidget extends TextInfoWidget implements ISupportWidgetResizing {
+
+    private final OsmandPreference<WidgetSize> widgetSizePref;
 
     public MarineTextWidget(@NonNull MapActivity mapActivity, @NonNull WidgetType widgetType,
                             @Nullable String customId, @Nullable WidgetsPanel panel) {
         super(mapActivity, widgetType, customId, panel);
         setText("---", "m");
+
+        // Initialize the preference locally to satisfy the ISupportWidgetResizing interface
+        this.widgetSizePref = new EnumStringPreference<>(
+                mapActivity.getApp().getSettings(),
+                "nautical_widget_size_" + widgetType.name(),
+                WidgetSize.MEDIUM,
+                WidgetSize.values()
+        ).makeProfile();
     }
+
+    // --- ISupportWidgetResizing Implementation ---
+
+    @NonNull
+    @Override
+    public OsmandPreference<WidgetSize> getWidgetSizePref() {
+        return widgetSizePref;
+    }
+
+    @Override
+    public void recreateView() {
+        if (getView() != null) {
+            setupView(getView());
+            updateInfo(getView(), null);
+        }
+    }
+
+    @Override
+    public boolean allowResize() {
+        return true;
+    }
+
+    // --- Lifecycle Methods ---
 
     @Override
     protected void setupView(@NonNull View view) {
@@ -72,5 +109,4 @@ public class MarineTextWidget extends TextInfoWidget {
             }
         }
     }
-    // setupView deleted: The widget is now pure telemetry.
 }

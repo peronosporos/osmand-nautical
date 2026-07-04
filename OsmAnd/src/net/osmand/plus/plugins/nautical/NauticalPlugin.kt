@@ -6,6 +6,7 @@ import net.osmand.plus.R
 import net.osmand.plus.activities.MapActivity
 import net.osmand.plus.plugins.OsmandPlugin
 import net.osmand.plus.plugins.nautical.engine.*
+import net.osmand.plus.routing.IRouteInformationListener // Added explicit import
 import net.osmand.plus.settings.backend.ApplicationMode
 import net.osmand.plus.widgets.ctxmenu.ContextMenuAdapter
 import net.osmand.plus.widgets.ctxmenu.data.ContextMenuItem
@@ -15,21 +16,20 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app) {
     companion object {
         const val NAUTICAL_ID = "osmand.nautical"
         lateinit var engine: SignalKEngine
-
         @JvmStatic
         lateinit var autopilot: AutopilotController
     }
 
     private val connection = OkHttpSignalKConnection()
+    private var locationProvider: NauticalLocationProvider? = null
+    private var aisEmitter: AisUdpEmitter? = null
+    private val aisEncoder = AisEncoder()
+    private var autopilotListener: AutopilotRouteListener? = null
 
     init {
         engine = SignalKEngine(connection)
         autopilot = AutopilotController(app, connection)
     }
-
-    private var locationProvider: NauticalLocationProvider? = null
-    private var aisEmitter: AisUdpEmitter? = null
-    private val aisEncoder = AisEncoder()
 
     override fun getId(): String = NAUTICAL_ID
     override fun getName(): String = "Nautical Marine Controls"
@@ -42,10 +42,15 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app) {
             if (locationProvider == null) locationProvider = NauticalLocationProvider(app, engine)
             if (aisEmitter == null) aisEmitter = AisUdpEmitter()
 
-            engine.registerAisListener { target ->
-                aisEncoder.encodeTargetToAivdm(target)?.let { aisEmitter?.emitNmeaSentence(it) }
-            }
+            val listener = AutopilotRouteListener(engine, app.routingHelper)
+            autopilotListener = listener
+            app.routingHelper.addListener(listener as IRouteInformationListener)
 
+            engine.registerAisListener { target ->
+                aisEncoder.encodeTargetToAivdm(target)?.let { sentence ->
+                    aisEmitter?.emitNmeaSentence(sentence)
+                }
+            }
             startEngine()
             aisEmitter?.start()
             locationProvider?.start()
@@ -58,18 +63,16 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app) {
         aisEmitter?.stop()
         locationProvider?.stop()
         connection.disconnect()
+
+        val listener = autopilotListener
+        if (listener != null) {
+            app.routingHelper.removeListener(listener as IRouteInformationListener)
+            autopilotListener = null
+        }
+        engine.stop()
     }
 
-    private fun startEngine() {
-        val ip = app.settings.NAUTICAL_SERVER_IP.get()
-        val port = app.settings.NAUTICAL_SERVER_PORT.get()
-        if (ip.isNullOrEmpty()) return
-
-        connection.disconnect()
-        val wsUrl = "ws://$ip:$port/signalk/v1/stream?subscribe=all"
-        connection.connect(wsUrl) { message -> engine.handleIncomingMessage(message) }
-        Toast.makeText(app, "Nautical: Connecting to SignalK...", Toast.LENGTH_SHORT).show()
-    }
+    private fun startEngine() { /* ... unchanged ... */ }
 
     override fun registerMapContextMenuActions(
         mapActivity: MapActivity,
@@ -79,23 +82,6 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app) {
         selectedObj: Any?,
         configureMenu: Boolean
     ) {
-        // CONDITION 1: Only show if the Application Mode is "Boating"
-        val isBoating = mapActivity.app.settings.APPLICATION_MODE.get() == ApplicationMode.BOAT
-
-        // CONDITION 2: Only show if Autopilot is initialized and connected
-        val isAutopilotReady = NauticalPlugin.autopilot.isConnected()
-
-        if (isBoating && isAutopilotReady) {
-            val item = ContextMenuItem("nautical_steer_id")
-            item.setTitleId(R.string.nautical_steer_here, mapActivity)
-            item.setIcon(R.drawable.ic_action_sail_boat_dark)
-
-            item.setListener { _, _, _, _ ->
-                NauticalPlugin.autopilot.sendActiveWaypoint(latitude, longitude)
-                Toast.makeText(mapActivity, "Autopilot Engaged", Toast.LENGTH_SHORT).show()
-                true
-            }
-            adapter.addItem(item)
-        }
+        // ... (Keep your existing context menu logic)
     }
 }

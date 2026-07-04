@@ -2,8 +2,9 @@ package net.osmand.plus.views.mapwidgets.widgets;
 
 import android.os.Bundle;
 import android.view.*;
+import android.widget.TextView;
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable; // This solves your error
+import androidx.annotation.Nullable;
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment;
 import net.osmand.plus.R;
 import net.osmand.plus.plugins.nautical.NauticalPlugin;
@@ -26,13 +27,19 @@ public class NauticalDataBottomSheet extends BottomSheetDialogFragment {
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
+
+        TextView titleView = view.findViewById(R.id.graph_title);
         NauticalGraphView graph = view.findViewById(R.id.graph_view);
 
         if (graph != null && type != null) {
             if (type == WidgetType.NAUTICAL_DEPTH) {
-                graph.setData(NauticalPlugin.Companion.getEngine().getDepthHistory());
+                titleView.setText("Depth History");
+                graph.setData(NauticalPlugin.Companion.getEngine().getDepthHistory(), "m");
             } else if (type == WidgetType.NAUTICAL_WIND) {
-                graph.setData(NauticalPlugin.Companion.getEngine().getWindHistory());
+                titleView.setText("Wind History");
+                graph.setData(NauticalPlugin.Companion.getEngine().getWindHistory(), "kn");
+            } else {
+                titleView.setText("Telemetry History");
             }
         }
     }
