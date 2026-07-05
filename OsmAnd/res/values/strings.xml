@@ -24,6 +24,22 @@
 	<string name="nautical_wind_desc">Displays true wind speed</string>
 	<string name="nautical_steer_here">Engage Autopilot Here</string>
 	<string name="nautical_graph_title">Data History (Last 1 Hour)</string>
+	<string name="nautical_steer">Steer Here</string>
+	<string name="nautical_stop">Stop Autopilot</string>
+	<string name="nautical_title_depth">Depth History</string>
+	<string name="nautical_title_wind">Wind Speed History</string>
+	<string name="nautical_title_vmg">VMG History</string>
+	<string name="nautical_title_telemetry">Telemetry History</string>
+	<string name="nautical_status_off">OFF</string>
+	<string name="nautical_hold">Hold Heading</string>
+	<string name="nautical_toast_heading_sent">Heading sent to autopilot</string>
+	<string name="nautical_toast_stopped">Autopilot stopped</string>
+	<string name="nautical_toast_conn_failed">Autopilot: Connection failed</string>
+	<string name="nautical_toast_server_error">Autopilot: Server error %1$d</string>
+	<string name="nautical_dialog_title_heading">Enter Heading (°)</string>
+	<string name="nautical_dialog_button_hold">Hold</string>
+	<string name="nautical_dialog_button_cancel">Cancel</string>
+	<string name="nautical_toast_heading_set">Heading %1$.0f° set</string>
 	<!--  AisTrackerSettings  -->
 	<string name="ais_own_object">Settings for display of own AIS object</string>
 	<string name="ais_own_object_description">If the own vessel has an AIS transmitter then the signal will be received together with other AIS vessel\'s signals. Special handling of the own AIS signal is defined here.</string>

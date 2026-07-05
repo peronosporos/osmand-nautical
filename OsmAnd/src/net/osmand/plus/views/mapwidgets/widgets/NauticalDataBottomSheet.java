@@ -33,13 +33,13 @@ public class NauticalDataBottomSheet extends BottomSheetDialogFragment {
 
         if (graph != null && type != null) {
             if (type == WidgetType.NAUTICAL_DEPTH) {
-                titleView.setText("Depth History");
+                titleView.setText(getString(R.string.nautical_title_depth));
                 graph.setData(NauticalPlugin.Companion.getEngine().getDepthHistory(), "m");
             } else if (type == WidgetType.NAUTICAL_WIND) {
-                titleView.setText("Wind History");
+                titleView.setText(getString(R.string.nautical_title_wind));
                 graph.setData(NauticalPlugin.Companion.getEngine().getWindHistory(), "kn");
             } else {
-                titleView.setText("Telemetry History");
+                titleView.setText(getString(R.string.nautical_title_telemetry));
             }
         }
     }

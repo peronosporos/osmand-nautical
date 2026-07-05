@@ -1,8 +1,11 @@
 package net.osmand.plus.views.mapwidgets.widgets;
 
 import android.view.View;
+import android.view.ViewGroup;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+
+import net.osmand.plus.R;
 import net.osmand.plus.activities.MapActivity;
 import net.osmand.plus.views.mapwidgets.WidgetType;
 import net.osmand.plus.views.mapwidgets.WidgetsPanel;
@@ -24,7 +27,6 @@ public class MarineTextWidget extends TextInfoWidget implements ISupportWidgetRe
         super(mapActivity, widgetType, customId, panel);
         setText("---", "m");
 
-        // Initialize the preference locally to satisfy the ISupportWidgetResizing interface
         this.widgetSizePref = new EnumStringPreference<>(
                 mapActivity.getApp().getSettings(),
                 "nautical_widget_size_" + widgetType.name(),
@@ -59,6 +61,18 @@ public class MarineTextWidget extends TextInfoWidget implements ISupportWidgetRe
     @Override
     protected void setupView(@NonNull View view) {
         super.setupView(view);
+
+        // Force height update
+        int heightInDp = 60;
+        int heightInPixels = (int) (heightInDp * mapActivity.getResources().getDisplayMetrics().density);
+
+        ViewGroup.LayoutParams params = view.getLayoutParams();
+        if (params != null) {
+            params.height = heightInPixels;
+            view.setLayoutParams(params);
+            view.requestLayout();
+        }
+
         view.setOnClickListener(v -> {
             NauticalDataBottomSheet dialog = NauticalDataBottomSheet.newInstance(this.widgetType);
             dialog.show(mapActivity.getSupportFragmentManager(), "nautical_graph");
@@ -72,8 +86,12 @@ public class MarineTextWidget extends TextInfoWidget implements ISupportWidgetRe
         MarineState state = NauticalPlugin.Companion.getEngine().getCurrentState();
         boolean isConnected = NauticalPlugin.Companion.getAutopilot().isConnected();
 
+        // Visual feedback: Dim the widget if disconnected
+        view.setAlpha(isConnected ? 1.0f : 0.5f);
+
         if (!isConnected || state == null) {
-            setText("OFF", "---");
+            // Instead of "OFF"
+            setText(mapActivity.getString(R.string.nautical_status_off), "---");
             return;
         }
 

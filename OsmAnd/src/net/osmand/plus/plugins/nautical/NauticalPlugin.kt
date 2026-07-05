@@ -1,13 +1,15 @@
 package net.osmand.plus.plugins.nautical
 
+import android.app.AlertDialog
+import android.text.InputType
+import android.widget.EditText
 import android.widget.Toast
 import net.osmand.plus.OsmandApplication
 import net.osmand.plus.R
 import net.osmand.plus.activities.MapActivity
 import net.osmand.plus.plugins.OsmandPlugin
 import net.osmand.plus.plugins.nautical.engine.*
-import net.osmand.plus.routing.IRouteInformationListener // Added explicit import
-import net.osmand.plus.settings.backend.ApplicationMode
+import net.osmand.plus.routing.IRouteInformationListener
 import net.osmand.plus.widgets.ctxmenu.ContextMenuAdapter
 import net.osmand.plus.widgets.ctxmenu.data.ContextMenuItem
 
@@ -72,7 +74,14 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app) {
         engine.stop()
     }
 
-    private fun startEngine() { /* ... unchanged ... */ }
+    private fun startEngine() {
+        val ip = app.settings.NAUTICAL_SERVER_IP.get()
+        val port = app.settings.NAUTICAL_SERVER_PORT.get()
+        if (ip.isNullOrEmpty()) return
+
+        val wsUrl = "ws://$ip:$port/signalk/v1/stream?subscribe=all"
+        connection.connect(wsUrl) { message -> engine.handleIncomingMessage(message) }
+    }
 
     override fun registerMapContextMenuActions(
         mapActivity: MapActivity,
@@ -82,6 +91,52 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app) {
         selectedObj: Any?,
         configureMenu: Boolean
     ) {
-        // ... (Keep your existing context menu logic)
+        if (!autopilot.isConnected()) return
+
+        // 1. Steer Here
+        val steerItem = ContextMenuItem("nautical_steer_id")
+        steerItem.setTitle(mapActivity.getString(R.string.nautical_steer))
+        steerItem.setIcon(R.drawable.ic_action_sail_boat_dark)
+        steerItem.setListener { _, _, _, _ ->
+            autopilot.sendActiveWaypoint(latitude, longitude)
+            Toast.makeText(mapActivity, mapActivity.getString(R.string.nautical_toast_heading_sent), Toast.LENGTH_SHORT).show()
+            true
+        }
+        adapter.addItem(steerItem)
+
+        // 2. Stop Autopilot
+        val stopItem = ContextMenuItem("nautical_stop_id")
+        stopItem.setTitle(mapActivity.getString(R.string.nautical_stop))
+        stopItem.setIcon(R.drawable.ic_action_close)
+        stopItem.setListener { _, _, _, _ ->
+            autopilot.stopNavigation()
+            Toast.makeText(mapActivity, mapActivity.getString(R.string.nautical_toast_stopped), Toast.LENGTH_SHORT).show()
+            true
+        }
+        adapter.addItem(stopItem)
+
+        // 3. Hold Heading
+        val holdItem = ContextMenuItem("nautical_hold_id")
+        holdItem.setTitle(mapActivity.getString(R.string.nautical_hold))
+        holdItem.setIcon(R.drawable.ic_action_sail_boat_dark)
+        holdItem.setListener { _, _, _, _ ->
+            val input = EditText(mapActivity)
+            input.inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
+
+            AlertDialog.Builder(mapActivity)
+                .setTitle(mapActivity.getString(R.string.nautical_dialog_title_heading))
+                .setView(input)
+                .setPositiveButton(mapActivity.getString(R.string.nautical_dialog_button_hold)) { _, _ ->
+                    val heading = input.text.toString().toDoubleOrNull()
+                    if (heading != null) {
+                        autopilot.holdHeading(heading)
+                        Toast.makeText(mapActivity, mapActivity.getString(R.string.nautical_toast_heading_set, heading), Toast.LENGTH_SHORT).show()
+                    }
+                }
+                .setNegativeButton(mapActivity.getString(R.string.nautical_dialog_button_cancel), null)
+                .show()
+            true
+        }
+        adapter.addItem(holdItem)
     }
 }
