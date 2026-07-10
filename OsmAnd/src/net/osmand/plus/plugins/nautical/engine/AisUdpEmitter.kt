@@ -11,60 +11,42 @@ import java.net.InetAddress
 class AisUdpEmitter {
     private var socket: DatagramSocket? = null
     private val targetPort = 10110
-
     private var scope: CoroutineScope? = null
-    // The Funnel: Buffers incoming sentences so the main thread is never blocked
     private var messageChannel: Channel<String>? = null
 
     fun start() {
-        if (scope != null) return // Prevent double-starts
+        if (scope != null) return
 
-        try {
-            scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
-            // Use a buffered channel to prevent memory spikes if flooded with AIS targets
-            messageChannel = Channel(Channel.BUFFERED)
+        scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+        messageChannel = Channel(Channel.BUFFERED)
 
-            // Launch ONE single dedicated background worker
-            scope?.launch {
-                try {
-                    // 1. Safe Network Setup: Resolve address and bind socket completely OFF the main thread
-                    val localAddress = InetAddress.getByName("127.0.0.1")
-                    socket = DatagramSocket()
-                    Log.d("NauticalPlugin", "AIS UDP Emitter started on local port $targetPort")
+        scope?.launch {
+            try {
+                // Initialize socket exactly once inside the scope
+                socket = DatagramSocket()
+                val localAddress = InetAddress.getByName("127.0.0.1")
+                Log.d("NauticalPlugin", "AIS UDP Emitter started on local port $targetPort")
 
-                    // 2. The Consumer Loop: Reads from the funnel and transmits continuously
-                    messageChannel?.consumeEach { nmeaSentence ->
-                        try {
-                            val payload = "$nmeaSentence\r\n".toByteArray(Charsets.UTF_8)
-                            val packet = DatagramPacket(payload, payload.size, localAddress, targetPort)
-                            socket?.send(packet)
+                // The Consumer Loop: Reads from the funnel and transmits continuously
+                messageChannel?.consumeEach { nmeaSentence ->
+                    try {
+                        val payload = "$nmeaSentence\r\n".toByteArray(Charsets.UTF_8)
+                        val packet = DatagramPacket(payload, payload.size, localAddress, targetPort)
+                        socket?.send(packet)
 
-                            Log.d("NauticalPlugin", "UDP TX -> $nmeaSentence")
-                        } catch (e: Exception) {
-                            Log.e("NauticalPlugin", "UDP Transmit Error: ${e.message}")
-                        }
+                        // Debug log to confirm it's actually leaving the plugin
+                        Log.d("NauticalPlugin", "UDP TX -> $nmeaSentence")
+                    } catch (e: Exception) {
+                        Log.e("NauticalPlugin", "UDP Transmit Error: ${e.message}")
                     }
-                } catch (e: Exception) {
-                    Log.e("NauticalPlugin", "UDP Socket Setup Error: ${e.message}")
                 }
+            } catch (e: Exception) {
+                Log.e("NauticalPlugin", "UDP Socket Setup Error: ${e.message}")
             }
-        } catch (e: Exception) {
-            Log.e("NauticalPlugin", "Failed to start UDP Emitter: ${e.message}")
         }
-
-        try {
-            socket = DatagramSocket()
-            // UX Polish: Provide feedback
-            Log.d("NauticalPlugin", "AIS UDP Emitter started on local port $targetPort")
-        } catch (e: Exception) {
-            // UX Polish: Clear user feedback
-            Log.e("NauticalPlugin", "UDP Socket Setup Error: ${e.message}")
-        }
-
     }
 
     fun emitNmeaSentence(nmeaSentence: String) {
-        // The Producer: Instantly queue the message without spinning up new coroutines
         val result = messageChannel?.trySend(nmeaSentence)
         if (result?.isFailure == true) {
             Log.w("NauticalPlugin", "UDP Emitter buffer full, dropped sentence.")
@@ -73,7 +55,6 @@ class AisUdpEmitter {
 
     fun stop() {
         try {
-            // Safely dismantle the scope, channel, and socket
             scope?.cancel()
             scope = null
 

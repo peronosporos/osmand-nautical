@@ -6,7 +6,6 @@ import net.osmand.plus.routing.IRouteInformationListener
 import net.osmand.plus.routing.RoutingHelper
 
 class AutopilotRouteListener(
-    private val engine: SignalKEngine,
     private val routingHelper: RoutingHelper
 ) : IRouteInformationListener {
 
@@ -27,10 +26,10 @@ class AutopilotRouteListener(
 
         if (point != null) {
             // Using the correct getter methods for your specific version
-            val latitude = point.getLatitude()
-            val longitude = point.getLongitude()
+            val latitude = point.latitude
+            val longitude = point.longitude
 
-            NauticalPlugin.autopilot.sendActiveWaypoint(latitude, longitude)
+            NauticalPlugin.autopilot?.sendActiveWaypoint(latitude, longitude)
         }
     }
 }

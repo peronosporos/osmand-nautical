@@ -96,6 +96,7 @@ import net.osmand.plus.plugins.OsmandPlugin;
 import net.osmand.plus.plugins.PluginsHelper;
 import net.osmand.plus.plugins.accessibility.MapAccessibilityActions;
 import net.osmand.plus.plugins.audionotes.AudioVideoNoteRecordingMenu;
+import net.osmand.plus.plugins.nautical.NauticalPlugin;
 import net.osmand.plus.routepreparationmenu.MapRouteInfoMenu;
 import net.osmand.plus.routing.IRouteInformationListener;
 import net.osmand.plus.routing.RouteCalculationProgressListener;
@@ -346,6 +347,27 @@ public class MapActivity extends OsmandActionBarActivity implements DownloadEven
 
 	protected int getRootViewId() {
 		return R.id.drawer_layout;
+	}
+
+	@Override
+	protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+		PluginsHelper.onMapActivityResult(requestCode, resultCode, data);
+		extendedMapActivity.onActivityResult(this, requestCode, resultCode, data);
+
+		if (requestCode == 999 && resultCode == RESULT_OK && data != null) {
+			Uri uri = data.getData();
+			if (uri != null) {
+				// Take persistable permission
+				getContentResolver().takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION);
+
+				// Java-friendly call to the Kotlin plugin
+				NauticalPlugin plugin = NauticalPlugin.getInstance();
+				if (plugin != null) {
+					plugin.onGpxFileSelected(uri);
+				}
+			}
+		}
+		super.onActivityResult(requestCode, resultCode, data);
 	}
 
 	@Override
@@ -1342,12 +1364,7 @@ public class MapActivity extends OsmandActionBarActivity implements DownloadEven
 		prevActivityIntent = null;
 	}
 
-	@Override
-	protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-		PluginsHelper.onMapActivityResult(requestCode, resultCode, data);
-		extendedMapActivity.onActivityResult(this, requestCode, resultCode, data);
-		super.onActivityResult(requestCode, resultCode, data);
-	}
+
 
 	public void refreshMap() {
 		getMapView().refreshMap();

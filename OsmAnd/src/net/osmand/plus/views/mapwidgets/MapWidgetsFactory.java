@@ -110,6 +110,8 @@ public class MapWidgetsFactory {
 				return new MarineTextWidget(mapActivity, widgetType, customId, panel);
 			case NAUTICAL_WIND:
 				return new MarineTextWidget(mapActivity, widgetType, customId, panel);
+			case NAUTICAL_PILOT:
+				return new NauticalPilotWidget(mapActivity, widgetType, customId, panel);
 			case AIDL_WIDGET:
 				return app.getAidlApi().askCreateExternalWidget(mapActivity, customId, panel);
 			default:

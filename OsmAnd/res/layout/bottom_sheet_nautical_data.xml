@@ -6,8 +6,6 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_gravity="center_horizontal"
-        android:maxWidth="500dp"
         android:orientation="vertical"
         android:padding="16dp">
 
@@ -16,7 +14,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:padding="8dp"
-            android:text="Status: Standby"
+            android:text="@string/status_standby"
             android:textAlignment="center"
             android:background="#EEEEEE"
             android:textColor="#333333"
@@ -27,8 +25,9 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:gravity="center"
-            android:text="@string/nautical_graph_title"
-            android:textAppearance="@style/TextAppearance.AppCompat.Medium" />
+            android:text="@string/data_telemetry"
+            android:textAppearance="@style/TextAppearance.AppCompat.Medium"
+            android:layout_marginTop="16dp" />
 
         <net.osmand.plus.views.mapwidgets.widgets.NauticalGraphView
             android:id="@+id/graph_view"
@@ -37,4 +36,14 @@
             android:layout_marginTop="16dp" />
 
     </LinearLayout>
+
+    <!-- The Connectivity Dot: Positioned top-right -->
+    <View
+        android:id="@+id/connection_dot"
+        android:layout_width="12dp"
+        android:layout_height="12dp"
+        android:layout_gravity="top|end"
+        android:layout_margin="16dp"
+        android:background="#CCCCCC" />
+
 </FrameLayout>

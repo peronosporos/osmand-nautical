@@ -635,7 +635,12 @@
 	<color name="sale_badge_dark">#E82A3B</color>
 	<color name="banner_feature_bg_light">#EDF1F7</color>
 	<color name="banner_feature_bg_dark">#2E3238</color>
-	
+
+
+	<!-- Nautical plugin -->
+	<color name="nautical_status_green">#2ECC71</color>
+	<color name="nautical_status_yellow">#F1C40F</color>
+	<color name="nautical_status_red">#E74C3C</color>
 
 
 

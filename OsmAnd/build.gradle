@@ -237,7 +237,8 @@ tasks.register('copyOsmAndCoreWithJNI') {
 }
 
 dependencies {
-	openglImplementation fileTree(include:  ['QtAndroid.jar', 'QtAndroidBearer.jar', 'QtAndroidNetwork.jar'], dir: 'libs')
+	implementation project(':OsmAnd-java')
+    openglImplementation fileTree(include:  ['QtAndroid.jar', 'QtAndroidBearer.jar', 'QtAndroidNetwork.jar'], dir: 'libs')
 	opengldebugImplementation fileTree(include:  ['QtAndroid.jar', 'QtAndroidBearer.jar', 'QtAndroidNetwork.jar'], dir: 'libs')
 
 	//huaweiImplementation 'com.huawei.agconnect:agconnect-core:1.8.0.300'

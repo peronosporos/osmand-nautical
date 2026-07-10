@@ -1,7 +1,10 @@
 package net.osmand.plus.views.mapwidgets.widgets;
 
+import android.graphics.Color;
 import android.os.Bundle;
-import android.view.*;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
 import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -9,38 +12,119 @@ import com.google.android.material.bottomsheet.BottomSheetDialogFragment;
 import net.osmand.plus.R;
 import net.osmand.plus.plugins.nautical.NauticalPlugin;
 import net.osmand.plus.views.mapwidgets.WidgetType;
+import java.util.Locale;
+import java.util.Objects;
+
+import net.osmand.plus.plugins.nautical.engine.MarineState;
 
 public class NauticalDataBottomSheet extends BottomSheetDialogFragment {
+
     private WidgetType type;
+    private NauticalGraphView graph;
+    private View dot;
+    private TextView statusView;
+    private kotlin.jvm.functions.Function1<MarineState, kotlin.Unit> myListener;
 
     public static NauticalDataBottomSheet newInstance(WidgetType type) {
         NauticalDataBottomSheet fragment = new NauticalDataBottomSheet();
-        fragment.type = type;
+        Bundle args = new Bundle();
+        args.putSerializable("widget_type", type);
+        fragment.setArguments(args);
         return fragment;
     }
 
     @Override
-    public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
-        return inflater.inflate(R.layout.nautical_data_bottom_sheet, container, false);
+    public void onCreate(@Nullable Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        if (getArguments() != null) {
+            type = (WidgetType) getArguments().getSerializable("widget_type");
+        }
+    }
+
+    @Nullable
+    @Override
+    public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
+        return inflater.inflate(R.layout.bottom_sheet_nautical_data, container, false);
     }
 
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
+        statusView = view.findViewById(R.id.tv_pilot_status);
         TextView titleView = view.findViewById(R.id.graph_title);
-        NauticalGraphView graph = view.findViewById(R.id.graph_view);
+        graph = view.findViewById(R.id.graph_view);
+        dot = view.findViewById(R.id.connection_dot);
 
-        if (graph != null && type != null) {
+        if (type == null) {
+            dismiss();
+            return;
+        }
+
+        if (titleView != null) {
             if (type == WidgetType.NAUTICAL_DEPTH) {
                 titleView.setText(getString(R.string.nautical_title_depth));
-                graph.setData(NauticalPlugin.Companion.getEngine().getDepthHistory(), "m");
             } else if (type == WidgetType.NAUTICAL_WIND) {
                 titleView.setText(getString(R.string.nautical_title_wind));
-                graph.setData(NauticalPlugin.Companion.getEngine().getWindHistory(), "kn");
             } else {
                 titleView.setText(getString(R.string.nautical_title_telemetry));
             }
+        }
+    }
+
+    @Override
+    public void onStart() {
+        super.onStart();
+
+        myListener = state -> {
+            if (!isAdded()) return kotlin.Unit.INSTANCE;
+
+            boolean isConnected = Objects.requireNonNull(NauticalPlugin.Companion.getAutopilot()).isConnected();
+            boolean isStale = Objects.requireNonNull(NauticalPlugin.Companion.getEngine()).isDataStale();
+            state.getAutopilotState();
+            String mode = state.getAutopilotState();
+
+            requireActivity().runOnUiThread(() -> {
+                if (dot != null) {
+                    if (!isConnected) dot.setBackgroundColor(Color.RED);
+                    else if (isStale) dot.setBackgroundColor(Color.YELLOW);
+                    else dot.setBackgroundColor(Color.GREEN);
+                }
+
+                if (statusView != null) {
+                    statusView.setText(getString(R.string.nautical_active_mode, mode.toUpperCase(Locale.US)));
+
+                    if (mode.equalsIgnoreCase("auto")) {
+                        statusView.setBackgroundColor(Color.parseColor("#E3F2FD"));
+                    } else if (mode.equalsIgnoreCase("emergency") || mode.equalsIgnoreCase("stop")) {
+                        statusView.setBackgroundColor(Color.parseColor("#FFCDD2"));
+                    } else {
+                        statusView.setBackgroundColor(Color.parseColor("#EEEEEE"));
+                    }
+                }
+
+                if (graph != null) {
+                    updateGraphData();
+                }
+            });
+            return kotlin.Unit.INSTANCE;
+        };
+        Objects.requireNonNull(NauticalPlugin.Companion.getEngine()).registerListener(myListener);
+    }
+
+    @Override
+    public void onStop() {
+        super.onStop();
+        if (myListener != null) {
+            Objects.requireNonNull(NauticalPlugin.Companion.getEngine()).unregisterListener(myListener);
+        }
+    }
+
+    private void updateGraphData() {
+        if (type == WidgetType.NAUTICAL_DEPTH) {
+            graph.setData(Objects.requireNonNull(NauticalPlugin.Companion.getEngine()).getDepthHistory(), "m");
+        } else if (type == WidgetType.NAUTICAL_WIND) {
+            graph.setData(Objects.requireNonNull(NauticalPlugin.Companion.getEngine()).getWindHistory(), "kn");
         }
     }
 }

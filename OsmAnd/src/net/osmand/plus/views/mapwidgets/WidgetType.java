@@ -151,6 +151,7 @@ public enum WidgetType {
 
 	NAUTICAL_DEPTH("nautical_depth", R.string.nautical_widget_depth_label, R.string.nautical_depth_desc, R.drawable.widget_altitude_day, R.drawable.widget_altitude_night, R.string.nautical_group_desc, WidgetGroup.NAUTICAL, RIGHT),
 	NAUTICAL_WIND("nautical_wind", R.string.nautical_widget_wind_label, R.string.nautical_wind_desc, R.drawable.widget_speed_day, R.drawable.widget_speed_night, R.string.nautical_group_desc, WidgetGroup.NAUTICAL, RIGHT),
+	NAUTICAL_PILOT("nautical_pilot", R.string.nautical_pilot_title, R.string.nautical_pilot_desc, R.drawable.ic_action_sail_boat_dark, R.drawable.ic_action_sail_boat_dark, R.string.nautical_group_desc, WidgetGroup.NAUTICAL, RIGHT),
 
 	// Bottom panel
 	ROUTE_INFO("route_info", R.string.map_widget_route_information, R.string.map_widget_route_information_desc, R.drawable.widget_route_info_day, R.drawable.widget_route_info_night, 0, null, NAVIGATION_POINTS, BOTTOM),
@@ -397,7 +398,7 @@ public enum WidgetType {
 			return new RouteInfoWidgetInfoFragment();
 		} else if (this == STREET_NAME) {
 			return new StreetNameWidgetInfoFragment();
-		} else if (this == NAUTICAL_DEPTH || this == NAUTICAL_WIND) {
+		} else if (this == NAUTICAL_DEPTH || this == NAUTICAL_WIND || this == NAUTICAL_PILOT) {
 			return new NauticalWidgetSettingsFragment();
 		}
 

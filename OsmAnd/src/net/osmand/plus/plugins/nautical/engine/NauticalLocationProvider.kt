@@ -17,7 +17,7 @@ import java.util.concurrent.atomic.AtomicLong
 
 class NauticalLocationProvider(
     private val app: OsmandApplication,
-    private val engine: SignalKEngine
+    private val engine: SignalKEngine?
 ) {
     private var isActive = false
     private val lastUpdateTime = AtomicLong(0L)
@@ -30,18 +30,17 @@ class NauticalLocationProvider(
     // Core Reflection Methods for OsmAnd internal API
     private val locationClass = Class.forName("net.osmand.Location")
     private val constructor = locationClass.getConstructor(String::class.java)
-
     private val setLat = locationClass.getMethod("setLatitude", Double::class.java)
     private val setLon = locationClass.getMethod("setLongitude", Double::class.java)
     private val setTime = locationClass.getMethod("setTime", Long::class.java)
-    private val setNanos = try { locationClass.getMethod("setElapsedRealtimeNanos", Long::class.java) } catch (e: Exception) { null }
-    private val setHasAcc = try { locationClass.getMethod("setHasAccuracy", Boolean::class.java) } catch (e: Exception) { null }
-    private val setAcc = try { locationClass.getMethod("setAccuracy", Float::class.java) } catch (e: Exception) { null }
-    private val setHasSpeed = try { locationClass.getMethod("setHasSpeed", Boolean::class.java) } catch (e: Exception) { null }
-    private val setSpeed = try { locationClass.getMethod("setSpeed", Float::class.java) } catch (e: Exception) { null }
-    private val setHasBearing = try { locationClass.getMethod("setHasBearing", Boolean::class.java) } catch (e: Exception) { null }
-    private val setBearing = try { locationClass.getMethod("setBearing", Float::class.java) } catch (e: Exception) { null }
-    private val setBearingAcc = try { locationClass.getMethod("setBearingAcc", Float::class.java) } catch (e: Exception) { null }
+    private val setNanos = try { locationClass.getMethod("setElapsedRealtimeNanos", Long::class.java) } catch (_: Exception) { null }
+    private val setHasAcc = try { locationClass.getMethod("setHasAccuracy", Boolean::class.java) } catch (_: Exception) { null }
+    private val setAcc = try { locationClass.getMethod("setAccuracy", Float::class.java) } catch (_: Exception) { null }
+    private val setHasSpeed = try { locationClass.getMethod("setHasSpeed", Boolean::class.java) } catch (_: Exception) { null }
+    private val setSpeed = try { locationClass.getMethod("setSpeed", Float::class.java) } catch (_: Exception) { null }
+    private val setHasBearing = try { locationClass.getMethod("setHasBearing", Boolean::class.java) } catch (_: Exception) { null }
+    private val setBearing = try { locationClass.getMethod("setBearing", Float::class.java) } catch (_: Exception) { null }
+    private val setBearingAcc = try { locationClass.getMethod("setBearingAcc", Float::class.java) } catch (_: Exception) { null }
 
     private var cachedInjectMethod: Method? = null
     private var pauseHardwareGps: Method? = null
@@ -68,18 +67,30 @@ class NauticalLocationProvider(
                 method.isAccessible = true
                 cachedInjectMethod = method
                 break
-            } catch (e: Exception) {}
+            } catch (_: Exception) {}
         }
         val pauseNames = listOf("pauseAllUpdates", "stopLocationUpdates", "pause")
-        pauseHardwareGps = pauseNames.mapNotNull { try { providerClass.getMethod(it) } catch (e: Exception) { null } }.firstOrNull()
+        pauseHardwareGps = pauseNames.firstNotNullOfOrNull {
+            try {
+                providerClass.getMethod(it)
+            } catch (_: Exception) {
+                null
+            }
+        }
         val resumeNames = listOf("resumeAllUpdates", "startLocationUpdates", "resume")
-        resumeHardwareGps = resumeNames.mapNotNull { try { providerClass.getMethod(it) } catch (e: Exception) { null } }.firstOrNull()
+        resumeHardwareGps = resumeNames.firstNotNullOfOrNull {
+            try {
+                providerClass.getMethod(it)
+            } catch (_: Exception) {
+                null
+            }
+        }
     }
 
     fun start() {
         if (isActive) return
         isActive = true
-        engine.registerListener(listener)
+        engine?.registerListener(listener)
 
         app.runInUIThread { muteHardwareGps() }
 
@@ -91,45 +102,49 @@ class NauticalLocationProvider(
 
     fun stop() {
         isActive = false
-        engine.unregisterListener(listener)
+        engine?.unregisterListener(listener)
         fallbackHandler.removeCallbacks(fallbackRunnable)
         app.runInUIThread { unmuteHardwareGps() }
     }
 
     private fun injectMarineStateAsLocation(state: MarineState) {
+        // 1. Guard clause: Ensure we have the data we need
         if (state.latitude == null || state.longitude == null) return
 
-        // 1. Reset the watchdog the moment we get valid position data
-        fallbackHandler.removeCallbacks(fallbackRunnable)
-        fallbackHandler.postDelayed(fallbackRunnable, 15000)
-
-        // 2. Throttle to 1Hz for OsmAnd stability
+        // 2. Throttle to 1Hz (1000ms) for OsmAnd stability
         val currentTime = System.currentTimeMillis()
         if ((currentTime - lastUpdateTime.get()) < 1000) return
         lastUpdateTime.set(currentTime)
 
+        // 3. Reset the watchdog
+        fallbackHandler.removeCallbacks(fallbackRunnable)
+        fallbackHandler.postDelayed(fallbackRunnable, 15000)
+
         try {
+            // 4. Build the location object using the reflection constructor
             val loc = constructor.newInstance("gps")
+
+            // 5. Inject values using the reflection methods you defined
             setLat.invoke(loc, state.latitude)
             setLon.invoke(loc, state.longitude)
             setTime.invoke(loc, currentTime)
             setNanos?.invoke(loc, SystemClock.elapsedRealtimeNanos())
 
-            setHasAcc?.invoke(loc, true); setAcc?.invoke(loc, 1.0f)
+            // 6. Set optional telemetry (Speed, Bearing, Accuracy)
+            setHasAcc?.invoke(loc, true)
+            setAcc?.invoke(loc, 1.0f)
             state.speedOverGround?.let { setHasSpeed?.invoke(loc, true); setSpeed?.invoke(loc, it.toFloat()) }
             state.headingTrue?.let { setHasBearing?.invoke(loc, true); setBearing?.invoke(loc, Math.toDegrees(it).toFloat()) }
             setBearingAcc?.invoke(loc, 1f)
 
+            // 7. Inject into OsmAnd via the cached method
             app.runInUIThread {
-                // 3. SEAMLESS RE-ENTRY: If we had fallen back to OS GPS, re-mute it now!
-                if (!isHardwarePaused) {
-                    muteHardwareGps()
-                }
-
+                if (!isHardwarePaused) muteHardwareGps()
                 cachedInjectMethod?.invoke(app.locationProvider, loc)
             }
         } catch (e: Exception) {
-            Log.e("NauticalPlugin", "Injection error: ${e.message}")
+            // 8. Industrial Error Logging: If the reflection fails, log it instead of crashing
+            Log.e("NauticalLocation", "Injection error: ${e.message}")
         }
     }
 
@@ -148,6 +163,7 @@ class NauticalLocationProvider(
 
             dummyListener = object : LocationListener {
                 override fun onLocationChanged(l: android.location.Location) {}
+                @Deprecated("Deprecated in Java")
                 override fun onStatusChanged(p0: String?, p1: Int, p2: Bundle?) {}
                 override fun onProviderEnabled(p0: String) {}
                 override fun onProviderDisabled(p0: String) {}
@@ -169,6 +185,6 @@ class NauticalLocationProvider(
             dummyListener?.let { locationManager.removeUpdates(it) }
             resumeHardwareGps?.invoke(app.locationProvider)
             isHardwarePaused = false
-        } catch (e: Exception) {}
+        } catch (_: Exception) {}
     }
 }

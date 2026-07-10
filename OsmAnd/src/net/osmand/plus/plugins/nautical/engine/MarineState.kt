@@ -5,16 +5,19 @@ package net.osmand.plus.plugins.nautical.engine
  */
 data class MarineState(
     // Navigation Data
-    var latitude: Double? = null,
-    var longitude: Double? = null,
-    var headingTrue: Double? = null,
-    var speedOverGround: Double? = null,
+    val latitude: Double? = null,
+    val longitude: Double? = null,
+    val headingTrue: Double? = null,
+    val speedOverGround: Double? = null,
 
     // Status Data
-    var autopilotState: String = "standby",
-    var autopilotHeadingSet: Double? = null,
+    val autopilotState: String = "standby",
+    val autopilotHeadingSet: Double? = null,
 
     // Telemetry Data (Phase 3)
-    var depthBelowTransducer: Double? = null,
-    var windSpeedTrue: Double? = null
+    val depthBelowTransducer: Double? = null,
+    val windSpeedTrue: Double? = null,
+
+    // Navigation Deviation (Cross-Track Error)
+    val crossTrackError: Double? = null
 )

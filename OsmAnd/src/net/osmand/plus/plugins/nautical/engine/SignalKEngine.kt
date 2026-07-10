@@ -2,9 +2,12 @@ package net.osmand.plus.plugins.nautical.engine
 
 import android.util.Log
 import kotlinx.coroutines.*
+import net.osmand.plus.plugins.nautical.NauticalPlugin
 import org.json.JSONObject
-import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.absoluteValue
+import kotlin.time.Duration.Companion.seconds
+import kotlin.math.hypot
 
 data class AisTarget(
     val mmsi: Int,
@@ -15,68 +18,105 @@ data class AisTarget(
     var headingTrue: Float? = null
 )
 
-class SignalKEngine(private val connection: SignalKConnection) {
+class SignalKEngine {
+
 
     private var _currentState: MarineState? = null
+    private val aisCache = ConcurrentHashMap<Int, AisTarget>()
 
-    // Public getter
-    fun getCurrentState(): MarineState? = _currentState
+    var onConnectionLost: (() -> Unit)? = null
 
-    private var stateListener: ((MarineState) -> Unit)? = null
+    private val stateListeners = java.util.concurrent.CopyOnWriteArraySet<(MarineState) -> Unit>()
     private var aisListener: ((AisTarget) -> Unit)? = null
+
     private var trueSelfContext: String = "vessels.self"
     private var watchdogJob: Job? = null
+    private var lastUpdateTimestamp: Long = 0
 
-    // Use a SupervisorJob so failures in individual tasks don't kill the engine
     private val engineScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
-
     private val depthBuffer = CircularBuffer<Double>(360)
     private val windBuffer = CircularBuffer<Double>(360)
+    private val trajectoryBuffer = CircularBuffer<Pair<Double, Double>>(100)
+    private val routeQueue = java.util.concurrent.ConcurrentLinkedQueue<Pair<Double, Double>>()
+    var isFollowingRoute: Boolean = false
+        private set
 
-    // Lifecycle: Must be called when the plugin stops
+    fun getCurrentState(): MarineState? = _currentState
+    fun isDataStale(): Boolean = (System.currentTimeMillis() - lastUpdateTimestamp) > 5000
+
     fun stop() {
+        watchdogJob?.cancel()
         engineScope.cancel()
+    }
+
+    fun getRouteQueueSize(): Int = routeQueue.size
+
+    fun clearRoute() {
+        routeQueue.clear()
+        isFollowingRoute = false
+        Log.i("SignalKEngine", "Route cleared. Manual control engaged.")
+    }
+
+    fun dispatchCommand(command: String) {
+        Log.d("SignalKEngine", "Dispatching: $command")
     }
 
     private fun resetWatchdog() {
         watchdogJob?.cancel()
         watchdogJob = engineScope.launch {
-            delay(10000) // 10 seconds timeout
+            delay(10.seconds)
             _currentState = null
-            // Broadcast a blank state to trigger "OFF" status in UI
-            stateListener?.invoke(MarineState())
+            notifyListeners(MarineState())
+            Log.e("NauticalEngine", "Data timeout!")
+            onConnectionLost?.invoke()
+        }
+    }
+
+    fun registerListener(listener: (MarineState) -> Unit) { stateListeners.add(listener) }
+    fun unregisterListener(listener: (MarineState) -> Unit) { stateListeners.remove(listener) }
+    fun registerAisListener(listener: (AisTarget) -> Unit) { this.aisListener = listener }
+
+    private fun notifyListeners(state: MarineState) {
+        synchronized(stateListeners) {
+            stateListeners.forEach { it.invoke(state) }
         }
     }
 
     fun getDepthHistory(): List<Double> = depthBuffer.getAll()
     fun getWindHistory(): List<Double> = windBuffer.getAll()
 
-    fun registerListener(listener: (MarineState) -> Unit) {
-        this.stateListener = listener
+    fun addWaypoint(lat: Double, lon: Double) {
+        val history = trajectoryBuffer.getAll()
+        val last = history.lastOrNull()
+
+        if (last != null) {
+            val delta = hypot(lat - last.first, lon - last.second)
+            if (delta > 0.1) {
+                Log.w("SignalKEngine", "Jump detected! Discarding point: $lat, $lon")
+                return
+            }
+        }
+        trajectoryBuffer.add(Pair(lat, lon))
     }
 
-    fun registerAisListener(listener: (AisTarget) -> Unit) {
-        this.aisListener = listener
-    }
-
-    fun unregisterListener(listener: (MarineState) -> Unit) {
-        this.stateListener = null
+    fun getTrajectory(): List<Pair<Double, Double>> {
+        return trajectoryBuffer.getAll()
     }
 
     fun handleIncomingMessage(jsonMessage: String) {
-        resetWatchdog() // Keep the engine alive as long as messages arrive
+        lastUpdateTimestamp = System.currentTimeMillis()
+        resetWatchdog()
         try {
             val json = JSONObject(jsonMessage)
-
             if (json.has("self")) {
                 trueSelfContext = json.getString("self")
-                Log.d("NauticalPlugin", "Discovered true boat ID: $trueSelfContext")
                 return
             }
 
             if (!json.has("updates")) return
 
-            if (_currentState == null) _currentState = MarineState()
+            // Pattern: Use a local variable for the state during parsing, then commit once at the end
+            var state = _currentState ?: MarineState()
 
             val context = json.optString("context", "vessels.self")
             val updates = json.getJSONArray("updates")
@@ -89,7 +129,8 @@ class SignalKEngine(private val connection: SignalKConnection) {
                 numericMmsi = rawId.toIntOrNull() ?: (rawId.hashCode().absoluteValue % 1000000000)
             }
 
-            val aisTarget = if (!isSelf) AisTarget(numericMmsi) else null
+            val aisTarget = if (!isSelf) aisCache.getOrPut(numericMmsi) { AisTarget(numericMmsi) } else null
+            var stateUpdated = false
 
             for (i in 0 until updates.length()) {
                 val update = updates.getJSONObject(i)
@@ -102,48 +143,73 @@ class SignalKEngine(private val connection: SignalKConnection) {
                     val valueObj = valueItem.opt("value")
 
                     if (isSelf) {
-                        val state = _currentState!!
                         when (path) {
                             "navigation.position" -> {
                                 if (valueObj is JSONObject) {
                                     val lat = valueObj.optDouble("latitude", Double.NaN)
                                     val lon = valueObj.optDouble("longitude", Double.NaN)
                                     if (!lat.isNaN() && !lon.isNaN()) {
-                                        _currentState = state.copy(latitude = lat, longitude = lon)
+                                        state = state.copy(latitude = lat, longitude = lon)
+                                        stateUpdated = true
+                                        updateFollowingState(lat, lon)
+                                        NauticalPlugin.autopilot?.processRouteStep()
                                     }
                                 }
                             }
                             "navigation.headingTrue" -> {
                                 val heading = valueItem.optDouble("value", Double.NaN)
-                                if (!heading.isNaN()) _currentState = state.copy(headingTrue = heading)
+                                if (!heading.isNaN()) {
+                                    state = state.copy(headingTrue = heading)
+                                    stateUpdated = true
+                                }
                             }
                             "navigation.speedOverGround" -> {
                                 val sog = valueItem.optDouble("value", Double.NaN)
-                                if (!sog.isNaN()) _currentState = state.copy(speedOverGround = sog)
+                                if (!sog.isNaN()) {
+                                    state = state.copy(speedOverGround = sog)
+                                    stateUpdated = true
+                                }
                             }
                             "steering.autopilot.state" -> {
-                                _currentState = state.copy(autopilotState = valueItem.optString("value", "standby"))
+                                state = state.copy(autopilotState = valueItem.optString("value", "standby"))
+                                stateUpdated = true
                             }
                             "environment.depth.belowTransducer" -> {
                                 val depth = valueItem.optDouble("value", Double.NaN)
                                 if (!depth.isNaN()) {
-                                    _currentState = state.copy(depthBelowTransducer = depth)
+                                    state = state.copy(depthBelowTransducer = depth)
                                     depthBuffer.add(depth)
+                                    stateUpdated = true
                                 }
                             }
                             "environment.wind.speedTrue" -> {
                                 val wind = valueItem.optDouble("value", Double.NaN)
-                                if (!wind.isNaN()) _currentState = state.copy(windSpeedTrue = wind)
+                                if (!wind.isNaN()) {
+                                    state = state.copy(windSpeedTrue = wind)
+                                    windBuffer.add(wind)
+                                    stateUpdated = true
+                                }
                             }
                         }
                     } else if (aisTarget != null) {
-                        // ... existing AIS logic ...
+                        when (path) {
+                            "navigation.position" -> {
+                                if (valueObj is JSONObject) {
+                                    aisTarget.latitude = valueObj.optDouble("latitude", Double.NaN).takeUnless { it.isNaN() }
+                                    aisTarget.longitude = valueObj.optDouble("longitude", Double.NaN).takeUnless { it.isNaN() }
+                                }
+                            }
+                            "navigation.speedOverGround" -> aisTarget.speedOverGround = valueItem.optDouble("value", Double.NaN).takeUnless { it.isNaN() }?.toFloat()
+                            "navigation.courseOverGroundTrue" -> aisTarget.courseOverGround = valueItem.optDouble("value", Double.NaN).takeUnless { it.isNaN() }?.toFloat()
+                            "navigation.headingTrue" -> aisTarget.headingTrue = valueItem.optDouble("value", Double.NaN).takeUnless { it.isNaN() }?.toFloat()
+                        }
                     }
                 }
             }
 
-            if (isSelf) {
-                _currentState?.let { stateListener?.invoke(it) }
+            if (isSelf && stateUpdated) {
+                _currentState = state
+                notifyListeners(state)
             } else if (aisTarget != null && aisTarget.latitude != null && aisTarget.longitude != null) {
                 engineScope.launch { aisListener?.invoke(aisTarget) }
             }
@@ -152,17 +218,40 @@ class SignalKEngine(private val connection: SignalKConnection) {
         }
     }
 
-    fun changeAutopilotState(targetState: String) {
-        val putRequest = """
-        {
-          "requestId": "${UUID.randomUUID()}",
-          "context": "vessels.self",
-          "put": {
-            "path": "steering.autopilot.state",
-            "value": "$targetState"
-          }
-        }
-        """.trimIndent()
-        connection.sendDelta(putRequest)
+    fun loadRoute(route: List<Pair<Double, Double>>) {
+        routeQueue.clear()
+        routeQueue.addAll(route)
+        isFollowingRoute = true
+        pushNextWaypointsToAutopilot()
+        Log.i("SignalKEngine", "Route loaded: ${route.size} points. Following enabled.")
     }
+
+    fun updateFollowingState(currentLat: Double, currentLon: Double) {
+        if (!isFollowingRoute || routeQueue.isEmpty()) return
+
+        val target = routeQueue.peek() ?: return
+        // Using Haversine-lite distance (0.02 NM is ~37 meters)
+        val distance = hypot(currentLat - target.first, currentLon - target.second) * 60.0
+
+        if (distance < 0.02) {
+            routeQueue.poll() // Arrived! Remove this point
+            Log.i("SignalKEngine", "Waypoint reached. Next in queue: ${routeQueue.size}")
+        }
+
+        // If route finished
+        if (routeQueue.isEmpty()) {
+            isFollowingRoute = false
+            Log.i("SignalKEngine", "Route complete.")
+        }
+    }
+
+    fun pushNextWaypointsToAutopilot() {
+        repeat(5) {
+            routeQueue.poll()?.let { point ->
+                dispatchCommand("WAYPOINT:${point.first},${point.second}")
+            }
+        }
+    }
+
+
 }

@@ -1,7 +1,11 @@
 package net.osmand.plus.views.mapwidgets.widgets;
 
+import android.annotation.SuppressLint;
+import android.graphics.Color;
+import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.FrameLayout;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
@@ -18,9 +22,12 @@ import net.osmand.plus.settings.backend.preferences.OsmandPreference;
 import net.osmand.plus.settings.backend.preferences.EnumStringPreference;
 import net.osmand.plus.settings.enums.WidgetSize;
 
+import java.util.Objects;
+
 public class MarineTextWidget extends TextInfoWidget implements ISupportWidgetResizing {
 
     private final OsmandPreference<WidgetSize> widgetSizePref;
+    private View statusDot;
 
     public MarineTextWidget(@NonNull MapActivity mapActivity, @NonNull WidgetType widgetType,
                             @Nullable String customId, @Nullable WidgetsPanel panel) {
@@ -33,9 +40,15 @@ public class MarineTextWidget extends TextInfoWidget implements ISupportWidgetRe
                 WidgetSize.MEDIUM,
                 WidgetSize.values()
         ).makeProfile();
-    }
 
-    // --- ISupportWidgetResizing Implementation ---
+        Objects.requireNonNull(NauticalPlugin.Companion.getEngine()).registerListener(state -> {
+            mapActivity.runOnUiThread(() -> {
+                View v = getView();
+                updateInfo(v, null);
+            });
+            return kotlin.Unit.INSTANCE;
+        });
+    }
 
     @NonNull
     @Override
@@ -45,10 +58,9 @@ public class MarineTextWidget extends TextInfoWidget implements ISupportWidgetRe
 
     @Override
     public void recreateView() {
-        if (getView() != null) {
-            setupView(getView());
-            updateInfo(getView(), null);
-        }
+        View v = getView();
+        setupView(v);
+        updateInfo(v, null);
     }
 
     @Override
@@ -56,21 +68,25 @@ public class MarineTextWidget extends TextInfoWidget implements ISupportWidgetRe
         return true;
     }
 
-    // --- Lifecycle Methods ---
-
     @Override
     protected void setupView(@NonNull View view) {
         super.setupView(view);
-
-        // Force height update
-        int heightInDp = 60;
-        int heightInPixels = (int) (heightInDp * mapActivity.getResources().getDisplayMetrics().density);
-
+        int heightInPixels = (int) (60 * mapActivity.getResources().getDisplayMetrics().density);
         ViewGroup.LayoutParams params = view.getLayoutParams();
         if (params != null) {
             params.height = heightInPixels;
             view.setLayoutParams(params);
-            view.requestLayout();
+        }
+
+        // Initialize and add Status Dot
+        if (statusDot == null && view instanceof ViewGroup) {
+            statusDot = new View(mapActivity);
+            int size = (int) (8 * mapActivity.getResources().getDisplayMetrics().density);
+            FrameLayout.LayoutParams dotParams = new FrameLayout.LayoutParams(size, size);
+            dotParams.gravity = Gravity.TOP | Gravity.END;
+            dotParams.setMargins(0, 8, 8, 0);
+            statusDot.setLayoutParams(dotParams);
+            ((ViewGroup) view).addView(statusDot);
         }
 
         view.setOnClickListener(v -> {
@@ -83,48 +99,61 @@ public class MarineTextWidget extends TextInfoWidget implements ISupportWidgetRe
     protected void updateInfo(@NonNull View view, @Nullable OsmandMapLayer.DrawSettings drawSettings) {
         super.updateInfo(view, drawSettings);
 
-        MarineState state = NauticalPlugin.Companion.getEngine().getCurrentState();
-        boolean isConnected = NauticalPlugin.Companion.getAutopilot().isConnected();
+        MarineState state = Objects.requireNonNull(NauticalPlugin.Companion.getEngine()).getCurrentState();
+        boolean isConnected = Objects.requireNonNull(NauticalPlugin.Companion.getAutopilot()).isConnected();
+        boolean isStale = NauticalPlugin.Companion.getEngine().isDataStale();
 
-        // Visual feedback: Dim the widget if disconnected
+        // Update status dot color
+        if (statusDot != null) {
+            if (!isConnected) {
+                statusDot.setBackgroundColor(Color.RED);
+            } else if (isStale) {
+                statusDot.setBackgroundColor(Color.YELLOW);
+            } else {
+                statusDot.setBackgroundColor(Color.GREEN);
+            }
+        }
+
         view.setAlpha(isConnected ? 1.0f : 0.5f);
 
         if (!isConnected || state == null) {
-            // Instead of "OFF"
             setText(mapActivity.getString(R.string.nautical_status_off), "---");
-            return;
+        } else {
+            OsmandSettings settings = mapActivity.getApp().getSettings();
+            String metricSystem = String.valueOf(settings.METRIC_SYSTEM.get());
+
+            if (this.widgetType == WidgetType.NAUTICAL_DEPTH) {
+                handleDepthUpdate(state, metricSystem);
+            } else if (this.widgetType == WidgetType.NAUTICAL_WIND) {
+                handleWindUpdate(state, metricSystem);
+            }
         }
+    }
 
-        OsmandSettings settings = mapActivity.getApp().getSettings();
-        String metricSystem = String.valueOf(settings.METRIC_SYSTEM.get());
+    @SuppressLint("DefaultLocale")
+    private void handleDepthUpdate(MarineState state, String metricSystem) {
+        Double depth = state.getDepthBelowTransducer();
+        if (depth != null) {
+            String unit = (metricSystem.contains("FEET") || metricSystem.contains("YARDS")) ? "ft" : "m";
+            if (unit.equals("ft")) depth *= 3.28084;
+            setText(String.format("%.1f", depth), unit);
+        } else {
+            setText("---", "m");
+        }
+    }
 
-        if (this.widgetType == WidgetType.NAUTICAL_DEPTH) {
-            Double depth = state.getDepthBelowTransducer();
-            if (depth != null) {
-                String unit = "m";
-                if (metricSystem.contains("FEET") || metricSystem.contains("YARDS")) {
-                    depth = depth * 3.28084;
-                    unit = "ft";
-                }
-                setText(String.format("%.1f", depth), unit);
-            } else {
-                setText("---", "m");
+    private void handleWindUpdate(MarineState state, String metricSystem) {
+        Double wind = state.getWindSpeedTrue();
+        if (wind != null) {
+            String unit = "kn";
+            if (metricSystem.contains("KILOMETERS")) {
+                wind *= 1.852; unit = "km/h";
+            } else if (metricSystem.contains("MILES")) {
+                wind *= 1.15078; unit = "mph";
             }
-        } else if (this.widgetType == WidgetType.NAUTICAL_WIND) {
-            Double windKnots = state.getWindSpeedTrue();
-            if (windKnots != null) {
-                String unit = "kn";
-                if (metricSystem.contains("KILOMETERS")) {
-                    windKnots = windKnots * 1.852;
-                    unit = "km/h";
-                } else if (metricSystem.contains("MILES")) {
-                    windKnots = windKnots * 1.15078;
-                    unit = "mph";
-                }
-                setText(String.format("%.1f", windKnots), unit);
-            } else {
-                setText("---", "kn");
-            }
+            setText(String.format("%.1f", wind), unit);
+        } else {
+            setText("---", "kn");
         }
     }
 }
