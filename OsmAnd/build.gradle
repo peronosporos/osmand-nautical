@@ -237,7 +237,6 @@ tasks.register('copyOsmAndCoreWithJNI') {
 }
 
 dependencies {
-	implementation project(':OsmAnd-java')
     openglImplementation fileTree(include:  ['QtAndroid.jar', 'QtAndroidBearer.jar', 'QtAndroidNetwork.jar'], dir: 'libs')
 	opengldebugImplementation fileTree(include:  ['QtAndroid.jar', 'QtAndroidBearer.jar', 'QtAndroidNetwork.jar'], dir: 'libs')
 
