@@ -1,6 +1,5 @@
 package net.osmand.plus.views.mapwidgets.widgets;
 
-import android.annotation.SuppressLint;
 import android.graphics.Color;
 import android.view.Gravity;
 import android.view.View;
@@ -22,6 +21,7 @@ import net.osmand.plus.settings.backend.preferences.OsmandPreference;
 import net.osmand.plus.settings.backend.preferences.EnumStringPreference;
 import net.osmand.plus.settings.enums.WidgetSize;
 
+import java.util.Locale;
 import java.util.Objects;
 
 public class MarineTextWidget extends TextInfoWidget implements ISupportWidgetResizing {
@@ -71,12 +71,6 @@ public class MarineTextWidget extends TextInfoWidget implements ISupportWidgetRe
     @Override
     protected void setupView(@NonNull View view) {
         super.setupView(view);
-        int heightInPixels = (int) (60 * mapActivity.getResources().getDisplayMetrics().density);
-        ViewGroup.LayoutParams params = view.getLayoutParams();
-        if (params != null) {
-            params.height = heightInPixels;
-            view.setLayoutParams(params);
-        }
 
         // Initialize and add Status Dot
         if (statusDot == null && view instanceof ViewGroup) {
@@ -130,13 +124,12 @@ public class MarineTextWidget extends TextInfoWidget implements ISupportWidgetRe
         }
     }
 
-    @SuppressLint("DefaultLocale")
     private void handleDepthUpdate(MarineState state, String metricSystem) {
         Double depth = state.getDepthBelowTransducer();
         if (depth != null) {
             String unit = (metricSystem.contains("FEET") || metricSystem.contains("YARDS")) ? "ft" : "m";
             if (unit.equals("ft")) depth *= 3.28084;
-            setText(String.format("%.1f", depth), unit);
+            setText(String.format(Locale.US, "%.1f", depth), unit);
         } else {
             setText("---", "m");
         }
@@ -151,7 +144,7 @@ public class MarineTextWidget extends TextInfoWidget implements ISupportWidgetRe
             } else if (metricSystem.contains("MILES")) {
                 wind *= 1.15078; unit = "mph";
             }
-            setText(String.format("%.1f", wind), unit);
+            setText(String.format(Locale.US, "%.1f", wind), unit);
         } else {
             setText("---", "kn");
         }

@@ -50,6 +50,13 @@
 	<string name="nautical_emergency_stop">Emergency Stop Executed</string>
 	<string name="nautical_autopilot_not_connected">Autopilot not connected: check settings</string>
 	<string name="nautical_emergency_stop_executed">Emergency Stop Executed</string>
+	<string name="engage_autopilot">Engage Autopilot</string>
+	<string name="emergency_stop">EMERGENCY STOP</string>
+	<string name="status_standby">Status: Standby</string>
+	<string name="data_telemetry">Data Telemetry</string>
+	<string name="confirm_tactical_move">Confirm Tactical Move?</string>
+	<string name="confirm">CONFIRM</string>
+	<string name="nautical_toast_mode_changed" />
 	<!--  AisTrackerSettings  -->
 	<string name="ais_own_object">Settings for display of own AIS object</string>
 	<string name="ais_own_object_description">If the own vessel has an AIS transmitter then the signal will be received together with other AIS vessel\'s signals. Special handling of the own AIS signal is defined here.</string>
@@ -6675,11 +6682,5 @@ Download tile maps directly, or copy them as SQLite database files to OsmAnd\'s 
     <string name="routing_attr_freeride_policy_name">Off-piste</string>
     <string name="routing_attr_freeride_policy_description">\'Freeride\' and \'Off-piste\' are unofficial routes and passages. Typically ungroomed, unmaintained and not checked in the evening. Enter at your own risk.</string>
     <string name="voice_prompts_timetable">Voice prompts times</string>
-	<string name="engage_autopilot">Engage Autopilot</string>
-	<string name="emergency_stop">EMERGENCY STOP</string>
-	<string name="status_standby">Status: Standby</string>
-	<string name="data_telemetry">Data Telemetry</string>
-    <string name="confirm_tactical_move">Confirm Tactical Move?</string>
-	<string name="confirm">CONFIRM</string>
-	<string name="nautical_toast_mode_changed" />
+
 </resources>

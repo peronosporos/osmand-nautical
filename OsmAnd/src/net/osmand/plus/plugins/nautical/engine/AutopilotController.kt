@@ -68,9 +68,8 @@ class AutopilotController(
     }
 
     private fun updateCache() {
-        val prefs = app.getSharedPreferences(app.packageName + "_preferences", android.content.Context.MODE_PRIVATE)
-        cachedIp = prefs.getString("nautical_server_ip", "") ?: ""
-        cachedPort = prefs.getString("nautical_server_port", "") ?: ""
+        cachedIp = app.settings.NAUTICAL_SERVER_IP.get() ?: ""
+        cachedPort = app.settings.NAUTICAL_SERVER_PORT.get() ?: "3000"
     }
 
     private fun buildUrl(path: String): String? {

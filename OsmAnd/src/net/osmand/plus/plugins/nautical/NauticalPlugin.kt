@@ -1,6 +1,5 @@
 package net.osmand.plus.plugins.nautical
 
-import android.net.Uri
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
@@ -8,7 +7,6 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
 import androidx.core.graphics.toColorInt
-import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.launch
 import net.osmand.plus.OsmandApplication
 import net.osmand.plus.R
@@ -37,7 +35,6 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app) {
         @JvmStatic
         fun getInstance(): NauticalPlugin? = instanceRef?.get()
 
-
         @JvmStatic
         fun sendWaypoint(lat: Double, lon: Double) {
             engine?.clearRoute()
@@ -57,10 +54,9 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app) {
     private var isAlertActive = false
     private var nauticalMapLayer: NauticalMapLayer? = null
 
+    // 1. LOCAL REGISTRATION (For your new features that aren't in OsmandSettings.java)
     private val xteThresholdPref = app.settings.registerFloatPreference("nautical_xte_threshold", 0.1f)
     private val nightVisionOpacityPref = app.settings.registerFloatPreference("nautical_night_vision_opacity", 0.5f)
-    private val serverIpPref = app.settings.registerStringPreference("nautical_server_ip", "")
-    private val serverPortPref = app.settings.registerStringPreference("nautical_server_port", "")
 
     private val saveFile = java.io.File(app.filesDir, "trajectory.dat")
 
@@ -83,28 +79,6 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app) {
                 }
             } catch (e: Exception) {
                 logError("Failed to load trajectory: ${e.message}")
-            }
-        }
-    }
-
-    @OptIn(DelicateCoroutinesApi::class)
-    fun onGpxFileSelected(uri: Uri?) {
-        if (uri == null) return
-
-        val streamer = GpxStreamer(app)
-        // Launch a coroutine to parse the file without freezing the UI
-        kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.Main) {
-            val route = streamer.parseGpx(uri)
-            if (route.isNotEmpty()) {
-                // Send the entire route to the engine
-                engine?.loadRoute(route)
-
-                // Send first batch to hardware
-                engine?.pushNextWaypointsToAutopilot()
-
-                Toast.makeText(app, "Route Loaded: ${route.size} points. Autopilot ready.", Toast.LENGTH_SHORT).show()
-            } else {
-                Toast.makeText(app, "Failed to parse GPX or route is empty", Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -163,7 +137,11 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app) {
     private fun checkOffCourseAlert(state: MarineState) {
         val xte: Double? = state.crossTrackError
         val deadband = 0.05
-        if (xte != null && abs(xte) > xteThresholdPref.get()) {
+
+        // Safely extract the local preference and convert to Double for math logic
+        val threshold = (xteThresholdPref.get() ?: 0.1f).toDouble()
+
+        if (xte != null && abs(xte) > threshold) {
             if (abs(xte) > deadband && !isAlertActive) {
                 isAlertActive = true
                 Log.w("NauticalPlugin", "OFF COURSE ALERT: $xte NM")
@@ -178,25 +156,24 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app) {
     fun toggleNightVision(mapActivity: MapActivity, enable: Boolean) {
         this.isNightVisionEnabled = enable
 
-        // We target the map activity's root view so the tint covers EVERYTHING
         val container = mapActivity.findViewById<ViewGroup>(android.R.id.content)
 
         if (enable) {
-            val opacity = nightVisionOpacityPref.get().coerceIn(0f, 1f)
+            // Safely extract the local preference as Float
+            val rawOpacity = nightVisionOpacityPref.get() ?: 0.5f
+            val opacity = rawOpacity.coerceIn(0f, 1f)
             val alphaHex = (opacity * 255).toInt().toString(16).padStart(2, '0')
 
-            // Create a dedicated overlay view that sits on top of everything
             val overlay = View(mapActivity)
             overlay.setBackgroundColor("#${alphaHex}FF0000".toColorInt())
-            overlay.isClickable = false // Let touches pass through
-            overlay.tag = "nautical_night_overlay" // Tag it so we can find it later
+            overlay.isClickable = false
+            overlay.tag = "nautical_night_overlay"
 
             container.addView(overlay, ViewGroup.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT
             ))
         } else {
-            // Remove the overlay by finding it via the tag
             val overlay = container.findViewWithTag<View>("nautical_night_overlay")
             if (overlay != null) {
                 container.removeView(overlay)
@@ -205,10 +182,14 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app) {
     }
 
     private fun startEngine() {
-        val ip: String? = serverIpPref.get()
-        val port: String? = serverPortPref.get()
+        // 2. GLOBAL ACCESS (For your old features that DO exist in OsmandSettings.java)
+        val ip = app.settings.NAUTICAL_SERVER_IP.get()
+        val port = app.settings.NAUTICAL_SERVER_PORT.get()
 
-        if (ip.isNullOrEmpty()) return
+        if (ip.isNullOrEmpty()) {
+            Log.w("NauticalPlugin", "IP not configured")
+            return
+        }
 
         val wsUrl = "ws://$ip:$port/signalk/v1/stream?subscribe=all"
 
@@ -249,7 +230,7 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app) {
         isNightVisionEnabled = false
     }
 
-    private var gpxLauncher: androidx.activity.result.ActivityResultLauncher<android.content.Intent>? = null
+    //private var gpxLauncher: androidx.activity.result.ActivityResultLauncher<android.content.Intent>? = null
 
     override fun registerMapContextMenuActions(mapActivity: MapActivity, lat: Double, lon: Double, adapter: ContextMenuAdapter, obj: Any?, conf: Boolean) {
         autopilot?.isConnected()?.let { if (!it) return }
@@ -275,11 +256,59 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app) {
         adapter.addItem(ContextMenuItem("nautical_follow_gpx").apply {
             setTitle("Follow GPX Route")
             setListener { _, _, _, _ ->
-                val intent = android.content.Intent(android.content.Intent.ACTION_OPEN_DOCUMENT).apply {
-                    addCategory(android.content.Intent.CATEGORY_OPENABLE)
-                    type = "*/*" // Or "application/gpx+xml"
+                // 1. Safely access OsmAnd's physical GPX directory
+                val gpxDir = app.getAppPath(net.osmand.IndexConstants.GPX_INDEX_DIR)
+                val gpxFiles = gpxDir.listFiles { file ->
+                    file.isFile && file.name.endsWith(".gpx", ignoreCase = true)
+                }?.toList() ?: emptyList()
+
+                if (gpxFiles.isEmpty()) {
+                    Toast.makeText(mapActivity, "No saved tracks found in OsmAnd's tracks folder.", Toast.LENGTH_SHORT).show()
+                    return@setListener true
                 }
-                gpxLauncher?.launch(intent)
+
+                // 2. Extract clean names for the UI dialog (removes the .gpx extension)
+                val fileNames = gpxFiles.map { it.nameWithoutExtension }.toTypedArray()
+
+                // 3. Show native Android dialog
+                android.app.AlertDialog.Builder(mapActivity)
+                    .setTitle("Select Track for Autopilot")
+                    .setItems(fileNames) { _, which ->
+                        val selectedFile = gpxFiles[which]
+
+                        // 4. Parse file safely in background
+                        val pluginScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main + kotlinx.coroutines.SupervisorJob())
+                        pluginScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                            val routePoints = mutableListOf<Pair<Double, Double>>()
+                            try {
+                                // Fallback to GPXUtilities for maximum compatibility
+                                val gpx = net.osmand.gpx.GPXUtilities.loadGPXFile(selectedFile, null, false)
+
+                                // Directly access public fields, avoiding the 'get' methods that might not exist
+                                gpx?.tracks?.forEach { track ->
+                                    track.segments.forEach { segment ->
+                                        segment.points.forEach { point ->
+                                            // Directly access 'lat' and 'lon' fields (the most stable API)
+                                            routePoints.add(Pair(point.lat, point.lon))
+                                        }
+                                    }
+                                }
+                            } catch (e: Exception) {
+                                Log.e("NauticalPlugin", "Error parsing GPX: ${e.message}")
+                            }
+
+                            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                                if (routePoints.isNotEmpty()) {
+                                    engine?.loadRoute(routePoints)
+                                    Toast.makeText(mapActivity, "Autopilot: Loaded ${routePoints.size} points", Toast.LENGTH_SHORT).show()
+                                } else {
+                                    Toast.makeText(mapActivity, "Track is empty or invalid.", Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                        }
+                    }
+                    .setNegativeButton("Cancel", null)
+                    .show()
                 true
             }
         })

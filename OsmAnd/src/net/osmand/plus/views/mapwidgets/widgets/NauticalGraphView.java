@@ -23,8 +23,21 @@ public class NauticalGraphView extends View {
     private String unit = "";
     private final Path graphPath = new Path();
 
+    public NauticalGraphView(Context context) {
+        super(context);
+        setWillNotDraw(false);
+        init(context);
+    }
+
     public NauticalGraphView(Context context, @Nullable AttributeSet attrs) {
         super(context, attrs);
+        setWillNotDraw(false);
+        init(context);
+    }
+
+    public NauticalGraphView(Context context, @Nullable AttributeSet attrs, int defStyleAttr) {
+        super(context, attrs, defStyleAttr);
+        setWillNotDraw(false);
         init(context);
     }
 

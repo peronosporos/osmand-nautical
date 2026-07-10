@@ -40,6 +40,7 @@ public class NauticalPilotWidget extends TextInfoWidget implements ISupportWidge
     private final android.os.Handler holdHandler = new android.os.Handler(android.os.Looper.getMainLooper());
     private int holdProgress = 0;
 
+
     public NauticalPilotWidget(@NonNull MapActivity mapActivity, @NonNull WidgetType widgetType,
                                @Nullable String customId, @Nullable WidgetsPanel panel) {
         super(mapActivity, widgetType, customId, panel);
@@ -141,19 +142,14 @@ public class NauticalPilotWidget extends TextInfoWidget implements ISupportWidge
     protected void setupView(@NonNull View view) {
         super.setupView(view);
 
-        int heightInPixels = (int) (60 * mapActivity.getResources().getDisplayMetrics().density);
-        ViewGroup.LayoutParams params = view.getLayoutParams();
-        if (params != null) {
-            params.height = heightInPixels;
-            view.setLayoutParams(params);
-        }
-
         view.addOnAttachStateChangeListener(new android.view.View.OnAttachStateChangeListener() {
             @Override
             public void onViewAttachedToWindow(@NonNull View v) {
-                // Access engine directly from NauticalPlugin
-                Objects.requireNonNull(NauticalPlugin.getEngine()).unregisterListener(myListener);
-                NauticalPlugin.getEngine().registerListener(myListener);
+                SignalKEngine engine = NauticalPlugin.getEngine();
+                if (engine != null) {
+                    engine.unregisterListener(myListener);
+                    engine.registerListener(myListener);
+                }
             }
 
             @Override

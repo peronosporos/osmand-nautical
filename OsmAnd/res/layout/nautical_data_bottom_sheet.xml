@@ -1,40 +1,42 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content">
+    android:layout_height="wrap_content"
+    android:maxWidth="500dp"
+    android:orientation="vertical"
+    android:padding="16dp">
 
-    <LinearLayout
+    <View
+        android:id="@+id/connection_dot"
+        android:layout_width="16dp"
+        android:layout_height="16dp"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginBottom="8dp" />
+
+    <TextView
+        android:id="@+id/tv_pilot_status"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_gravity="center_horizontal"
-        android:maxWidth="500dp"
-        android:orientation="vertical"
-        android:padding="16dp">
+        android:padding="8dp"
+        android:text="@string/status_standby"
+        android:textAlignment="center"
+        android:background="#EEEEEE"
+        android:textColor="#333333"
+        android:textStyle="bold" />
 
-        <TextView
-            android:id="@+id/tv_pilot_status"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:padding="8dp"
-            android:text="Status: Standby"
-            android:textAlignment="center"
-            android:background="#EEEEEE"
-            android:textColor="#333333"
-            android:textStyle="bold" />
+    <TextView
+        android:id="@+id/graph_title"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:text="@string/nautical_graph_title"
+        android:textAppearance="@style/TextAppearance.AppCompat.Medium" />
 
-        <TextView
-            android:id="@+id/graph_title"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:gravity="center"
-            android:text="@string/nautical_graph_title"
-            android:textAppearance="@style/TextAppearance.AppCompat.Medium" />
+    <view
+        class="net.osmand.plus.views.mapwidgets.widgets.NauticalGraphView"
+        android:id="@+id/graph_view"
+        android:layout_width="match_parent"
+        android:layout_height="200dp"
+        android:layout_marginTop="16dp" />
 
-        <net.osmand.plus.views.mapwidgets.widgets.NauticalGraphView
-            android:id="@+id/graph_view"
-            android:layout_width="match_parent"
-            android:layout_height="200dp"
-            android:layout_marginTop="16dp" />
-
-    </LinearLayout>
-</FrameLayout>
+</LinearLayout>
