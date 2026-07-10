@@ -1,9 +1,9 @@
 package net.osmand.plus.plugins.nautical
 
-import net.osmand.plus.OsmandApplication
+import androidx.preference.EditTextPreference
 import net.osmand.plus.settings.fragments.BaseSettingsFragment
-import net.osmand.plus.settings.preferences.EditTextPreferenceEx
 import net.osmand.plus.R
+import net.osmand.plus.plugins.PluginsHelper
 
 class NauticalSettingsFragment : BaseSettingsFragment() {
 
@@ -11,31 +11,34 @@ class NauticalSettingsFragment : BaseSettingsFragment() {
         // 1. setPreferences prevents duplicates by clearing the screen before inflating
         setPreferencesFromResource(R.xml.nautical_settings, null)
 
-        val app = requireActivity().application as OsmandApplication
-        val settings = app.settings
+        val plugin = PluginsHelper.requirePlugin(NauticalPlugin::class.java)
 
         // 2. Wire the IP Address dynamically
-        val ipPref = findPreference<EditTextPreferenceEx>("server_ip")
-        if (ipPref != null) {
-            val currentIp = settings.NAUTICAL_SERVER_IP.get()
-            ipPref.summary = if (currentIp.isNullOrEmpty()) "Enter your SignalK server IP" else currentIp
+        val ipPref = findPreference<EditTextPreference>("server_ip")
+        ipPref?.let { pref ->
+            val currentIp = plugin.nauticalServerIp.get()
+            pref.summary = currentIp.ifEmpty { "Enter your SignalK server IP" }
+            pref.text = currentIp
 
-            ipPref.setOnPreferenceChangeListener { _, newValue ->
+            pref.setOnPreferenceChangeListener { _, newValue ->
                 val newString = newValue.toString()
-                ipPref.summary = if (newString.isEmpty()) "Enter your SignalK server IP" else newString
-                true // Returns true to allow saving
+                pref.summary = newString.ifEmpty { "Enter your SignalK server IP" }
+                plugin.nauticalServerIp.set(newString)
+                true
             }
         }
 
         // 3. Wire the Port dynamically
-        val portPref = findPreference<EditTextPreferenceEx>("server_port")
-        if (portPref != null) {
-            val currentPort = settings.NAUTICAL_SERVER_PORT.get()
-            portPref.summary = if (currentPort.isNullOrEmpty()) "Enter port (default 3000)" else currentPort
+        val portPref = findPreference<EditTextPreference>("server_port")
+        portPref?.let { pref ->
+            val currentPort = plugin.nauticalServerPort.get()
+            pref.summary = currentPort.ifEmpty { "Enter port (default 3000)" }
+            pref.text = currentPort
 
-            portPref.setOnPreferenceChangeListener { _, newValue ->
+            pref.setOnPreferenceChangeListener { _, newValue ->
                 val newString = newValue.toString()
-                portPref.summary = if (newString.isEmpty()) "Enter port (default 3000)" else newString
+                pref.summary = newString.ifEmpty { "Enter port (default 3000)" }
+                plugin.nauticalServerPort.set(newString)
                 true
             }
         }

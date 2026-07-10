@@ -1,8 +1,13 @@
 package net.osmand.plus.plugins.nautical.engine
 
+import java.util.Locale
+import java.io.Serializable
+
 /**
  * Single source of truth for the vessel's status.
  */
+
+
 data class MarineState(
     // Navigation Data
     val latitude: Double? = null,
@@ -20,4 +25,7 @@ data class MarineState(
 
     // Navigation Deviation (Cross-Track Error)
     val crossTrackError: Double? = null
-)
+) : Serializable {
+    val autopilotMode: String
+        get() = autopilotState.uppercase(Locale.US)
+}

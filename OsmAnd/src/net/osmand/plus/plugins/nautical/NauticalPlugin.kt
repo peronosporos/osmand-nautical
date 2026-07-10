@@ -18,6 +18,8 @@ import net.osmand.plus.activities.MapActivity
 import net.osmand.plus.plugins.OsmandPlugin
 import net.osmand.plus.plugins.nautical.engine.*
 import net.osmand.plus.routing.IRouteInformationListener
+import net.osmand.plus.settings.backend.preferences.CommonPreference
+import net.osmand.plus.settings.fragments.SettingsScreenType
 import net.osmand.plus.widgets.ctxmenu.ContextMenuAdapter
 import net.osmand.plus.widgets.ctxmenu.data.ContextMenuItem
 import kotlin.math.abs
@@ -87,12 +89,23 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app) {
         }
     }
 
+    override fun getSettingsScreenType(): SettingsScreenType {
+        return SettingsScreenType.NAUTICAL_SETTINGS
+    }
 
+    override fun getPrefsDescription(): String {
+        return "Configure SignalK connection settings"
+    }
+
+
+    val nauticalServerIp: CommonPreference<String> = registerStringPreference("server_ip", "")
+        .makeGlobal().cache() as CommonPreference<String>
+
+    val nauticalServerPort: CommonPreference<String> = registerStringPreference("server_port", "3000")
+        .makeGlobal().cache() as CommonPreference<String>
 
     init {
         instanceRef = WeakReference(this)
-        engine = SignalKEngine()
-        autopilot = AutopilotController(app, connection)
         loadTrajectory()
     }
 
@@ -104,9 +117,35 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app) {
     override fun setEnabled(enabled: Boolean) {
         super.setEnabled(enabled)
         val mapView = app.osmandMap?.mapView
+
         if (enabled) {
             instanceRef = WeakReference(this)
 
+            // 1. Initialize components if they are null
+            if (engine == null) {
+                engine = SignalKEngine()
+                engine?.loadBuffersFromDisk(app)
+            }
+            if (autopilot == null) autopilot = AutopilotController(app, connection)
+            if (nauticalMapLayer == null) {
+                nauticalMapLayer = NauticalMapLayer(app)
+                mapView?.addLayer(nauticalMapLayer!!, 5.0f)
+            }
+            if (locationProvider == null) locationProvider = NauticalLocationProvider(app, engine)
+            if (aisEmitter == null) aisEmitter = AisUdpEmitter()
+            if (autopilotListener == null) {
+                val listener = AutopilotRouteListener(app.routingHelper)
+                autopilotListener = listener
+                app.routingHelper.addListener(listener as IRouteInformationListener)
+            }
+
+            // 2. Check settings
+            val ip = app.settings.NAUTICAL_SERVER_IP.get()
+            if (ip.isNullOrEmpty()) {
+                Toast.makeText(app, "Nautical Plugin active, but IP is not configured.", Toast.LENGTH_LONG).show()
+            }
+
+            // 3. Setup UI and Listeners
             nauticalMapLayer = NauticalMapLayer(app)
             mapView?.addLayer(nauticalMapLayer!!, 5.0f)
 
@@ -123,17 +162,18 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app) {
 
             engine?.registerListener { state -> checkOffCourseAlert(state) }
 
+            // 4. Start operations
             startEngine()
             aisEmitter?.start()
             locationProvider?.start()
-        } else {
-            instanceRef = null
 
+        } else {
+            // SHUTDOWN
+            instanceRef = null
             nauticalMapLayer?.let { layer ->
                 mapView?.removeLayer(layer)
                 nauticalMapLayer = null
             }
-
             shutdownResources()
         }
     }
@@ -224,7 +264,10 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app) {
         aisEmitter?.stop()
         locationProvider?.stop()
         connection.disconnect()
-        engine?.stop()
+        engine?.let {
+            it.saveBuffersToDisk(app)
+            it.stop()
+        }
 
         autopilotListener?.let {
             app.routingHelper.removeListener(it as IRouteInformationListener)
@@ -292,8 +335,8 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app) {
                         val selectedFile = gpxFiles[which]
 
                         // 4. Parse file safely in background
-                        val pluginScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main + kotlinx.coroutines.SupervisorJob())
-                        pluginScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                        val pluginScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
+                        pluginScope.launch(Dispatchers.IO) {
                             val routePoints = mutableListOf<Pair<Double, Double>>()
                             try {
                                 // Fallback to GPXUtilities for maximum compatibility
@@ -312,7 +355,7 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app) {
                                 Log.e("NauticalPlugin", "Error parsing GPX: ${e.message}")
                             }
 
-                            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                            kotlinx.coroutines.withContext(Dispatchers.Main) {
                                 if (routePoints.isNotEmpty()) {
                                     engine?.loadRoute(routePoints)
                                     Toast.makeText(mapActivity, "Autopilot: Loaded ${routePoints.size} points", Toast.LENGTH_SHORT).show()

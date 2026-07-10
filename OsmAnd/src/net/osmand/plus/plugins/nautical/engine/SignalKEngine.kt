@@ -8,6 +8,11 @@ import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.absoluteValue
 import kotlin.time.Duration.Companion.seconds
 import kotlin.math.hypot
+import android.content.Context
+import java.io.File
+import java.io.ObjectInputStream
+import java.io.ObjectOutputStream
+import java.io.Serializable
 
 data class AisTarget(
     val mmsi: Int,
@@ -17,6 +22,7 @@ data class AisTarget(
     var courseOverGround: Float? = null,
     var headingTrue: Float? = null
 )
+
 
 class SignalKEngine {
 
@@ -47,6 +53,44 @@ class SignalKEngine {
     fun stop() {
         watchdogJob?.cancel()
         engineScope.cancel()
+    }
+
+    fun saveBuffersToDisk(context: Context) {
+        // We save the contents of the buffers as Lists, which are natively Serializable
+        saveToFile(File(context.filesDir, "depth_buffer.dat"), depthBuffer.getAll() as Serializable)
+        saveToFile(File(context.filesDir, "wind_buffer.dat"), windBuffer.getAll() as Serializable)
+        saveToFile(File(context.filesDir, "trajectory_buffer.dat"),
+            trajectoryBuffer.getAll() as Serializable
+        )
+    }
+
+    private fun saveToFile(file: File, data: Serializable) {
+        try {
+            ObjectOutputStream(file.outputStream()).use { it.writeObject(data) }
+        } catch (e: Exception) {
+            Log.e("SignalKEngine", "Failed to save ${file.name}: ${e.message}")
+        }
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    fun loadBuffersFromDisk(context: Context) {
+        // Helper to safely load and add
+        fun <T> load(fileName: String, action: (T) -> Unit) {
+            val file = File(context.filesDir, fileName)
+            if (!file.exists()) return
+            try {
+                ObjectInputStream(file.inputStream()).use { ois ->
+                    val data = ois.readObject() as Collection<T>
+                    data.forEach { action(it) }
+                }
+            } catch (e: Exception) {
+                Log.e("SignalKEngine", "Failed to load $fileName: ${e.message}")
+            }
+        }
+
+        load<Double>("depth_buffer.dat") { depthBuffer.add(it) }
+        load<Double>("wind_buffer.dat") { windBuffer.add(it) }
+        load<Pair<Double, Double>>("trajectory_buffer.dat") { trajectoryBuffer.add(it) }
     }
 
     fun getRouteQueueSize(): Int = routeQueue.size

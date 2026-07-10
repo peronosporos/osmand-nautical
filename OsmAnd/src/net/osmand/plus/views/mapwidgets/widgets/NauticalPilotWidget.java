@@ -115,8 +115,10 @@ public class NauticalPilotWidget extends TextInfoWidget implements ISupportWidge
         Toast.makeText(mapActivity, "Command: " + command, Toast.LENGTH_SHORT).show();
     }
 
-
-
+    @Nullable
+    public Class<? extends net.osmand.plus.settings.fragments.BaseSettingsFragment> getSettingsFragment() {
+        return null;
+    }
 
     // --- Standard Widget Lifecycle ---
     @NonNull

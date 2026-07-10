@@ -16,17 +16,14 @@ import net.osmand.plus.plugins.nautical.engine.AutopilotController;
 import net.osmand.plus.plugins.nautical.engine.MarineState;
 import net.osmand.plus.plugins.nautical.engine.SignalKEngine;
 import java.util.Locale;
-import java.util.Objects;
 
 public class NauticalPilotBottomSheet extends DialogFragment {
 
-
+    private kotlin.jvm.functions.Function1<MarineState, kotlin.Unit> listener;
 
     public static NauticalPilotBottomSheet newInstance() {
         return new NauticalPilotBottomSheet();
     }
-
-
 
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
@@ -55,15 +52,15 @@ public class NauticalPilotBottomSheet extends DialogFragment {
 
         TextView statusView = view.findViewById(R.id.tv_pilot_status);
 
-
-        // Register listener safely
-        // Using placeholder resource (ensure this exists in strings.xml)
-        kotlin.jvm.functions.Function1<MarineState, kotlin.Unit> myListener = state -> {
-            if (!isAdded() || statusView == null) return kotlin.Unit.INSTANCE;
+        listener = state -> {
+            if (!isAdded() || getContext() == null || isDetached() || statusView == null) {
+                return kotlin.Unit.INSTANCE;
+            }
 
             statusView.post(() -> {
+                if (!isAdded() || getContext() == null) return;
+
                 String mode = state.getAutopilotState();
-                // Using placeholder resource (ensure this exists in strings.xml)
                 statusView.setText(getString(R.string.nautical_pilot_status_active, mode.toUpperCase(Locale.US)));
 
                 if (mode.equalsIgnoreCase("auto")) {
@@ -76,13 +73,15 @@ public class NauticalPilotBottomSheet extends DialogFragment {
             });
             return kotlin.Unit.INSTANCE;
         };
-        engine.registerListener(myListener);
 
-        // 3. Button Click Listeners
+        engine.registerListener(listener);
+        listener.invoke(engine.getCurrentState());
+
+        // Button Click Listeners
         View btnAuto = view.findViewById(R.id.btn_auto);
         if (btnAuto != null) {
             btnAuto.setOnClickListener(v -> {
-                Objects.requireNonNull(NauticalPlugin.getAutopilot()).setAutopilotMode("auto");
+                autopilot.setAutopilotMode("auto");
                 dismiss();
             });
         }
@@ -90,10 +89,20 @@ public class NauticalPilotBottomSheet extends DialogFragment {
         View btnStop = view.findViewById(R.id.btn_emergency_stop);
         if (btnStop != null) {
             btnStop.setOnClickListener(v -> {
-                Objects.requireNonNull(NauticalPlugin.getAutopilot()).stopNavigation();
-                Toast.makeText(getContext(), getString(R.string.nautical_emergency_stop_executed), Toast.LENGTH_SHORT).show();
+                autopilot.stopNavigation();
+                Toast.makeText(requireContext(), getString(R.string.nautical_emergency_stop_executed), Toast.LENGTH_SHORT).show();
                 dismiss();
             });
         }
     }
+
+    @Override
+    public void onDestroyView() {
+        super.onDestroyView();
+        SignalKEngine engine = NauticalPlugin.getEngine();
+        if (engine != null && listener != null) {
+            engine.unregisterListener(listener);
+        }
+    }
+
 }

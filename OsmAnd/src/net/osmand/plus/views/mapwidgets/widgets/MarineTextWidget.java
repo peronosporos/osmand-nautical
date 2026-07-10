@@ -10,6 +10,8 @@ import androidx.annotation.Nullable;
 
 import net.osmand.plus.R;
 import net.osmand.plus.activities.MapActivity;
+import net.osmand.plus.plugins.nautical.engine.AutopilotController;
+import net.osmand.plus.plugins.nautical.engine.SignalKEngine;
 import net.osmand.plus.views.mapwidgets.WidgetType;
 import net.osmand.plus.views.mapwidgets.WidgetsPanel;
 import net.osmand.plus.views.layers.base.OsmandMapLayer;
@@ -22,12 +24,12 @@ import net.osmand.plus.settings.backend.preferences.EnumStringPreference;
 import net.osmand.plus.settings.enums.WidgetSize;
 
 import java.util.Locale;
-import java.util.Objects;
 
 public class MarineTextWidget extends TextInfoWidget implements ISupportWidgetResizing {
 
     private final OsmandPreference<WidgetSize> widgetSizePref;
     private View statusDot;
+    private String lastDisplayedText = "";
 
     public MarineTextWidget(@NonNull MapActivity mapActivity, @NonNull WidgetType widgetType,
                             @Nullable String customId, @Nullable WidgetsPanel panel) {
@@ -41,19 +43,27 @@ public class MarineTextWidget extends TextInfoWidget implements ISupportWidgetRe
                 WidgetSize.values()
         ).makeProfile();
 
-        Objects.requireNonNull(NauticalPlugin.Companion.getEngine()).registerListener(state -> {
-            mapActivity.runOnUiThread(() -> {
-                View v = getView();
-                updateInfo(v, null);
+        SignalKEngine engine = NauticalPlugin.getEngine();
+        if (engine != null) {
+            engine.registerListener(state -> {
+                mapActivity.runOnUiThread(() -> {
+                    View v = getView();
+                    updateInfo(v, null);
+                });
+                return kotlin.Unit.INSTANCE;
             });
-            return kotlin.Unit.INSTANCE;
-        });
+        }
     }
 
     @NonNull
     @Override
     public OsmandPreference<WidgetSize> getWidgetSizePref() {
         return widgetSizePref;
+    }
+
+    @Nullable
+    public Class<? extends net.osmand.plus.settings.fragments.BaseSettingsFragment> getSettingsFragment() {
+        return null;
     }
 
     @Override
@@ -72,20 +82,31 @@ public class MarineTextWidget extends TextInfoWidget implements ISupportWidgetRe
     protected void setupView(@NonNull View view) {
         super.setupView(view);
 
-        // Initialize and add Status Dot
-        if (statusDot == null && view instanceof ViewGroup) {
-            statusDot = new View(mapActivity);
-            int size = (int) (8 * mapActivity.getResources().getDisplayMetrics().density);
-            FrameLayout.LayoutParams dotParams = new FrameLayout.LayoutParams(size, size);
-            dotParams.gravity = Gravity.TOP | Gravity.END;
-            dotParams.setMargins(0, 8, 8, 0);
-            statusDot.setLayoutParams(dotParams);
-            ((ViewGroup) view).addView(statusDot);
+        if (view instanceof ViewGroup parentView) {
+
+            // 2. Create the dot programmatically ONLY if it doesn't exist
+            // We use 'findViewWithTag' to ensure we never add it twice
+            if (parentView.findViewWithTag("status_dot") == null) {
+                statusDot = new View(mapActivity);
+                statusDot.setTag("status_dot");
+
+                int size = (int) (8 * mapActivity.getResources().getDisplayMetrics().density);
+                FrameLayout.LayoutParams dotParams = new FrameLayout.LayoutParams(size, size);
+                dotParams.gravity = Gravity.TOP | Gravity.END;
+                dotParams.setMargins(0, 8, 8, 0);
+
+                statusDot.setLayoutParams(dotParams);
+                parentView.addView(statusDot);
+            } else {
+                statusDot = parentView.findViewWithTag("status_dot");
+            }
         }
 
         view.setOnClickListener(v -> {
-            NauticalDataBottomSheet dialog = NauticalDataBottomSheet.newInstance(this.widgetType);
-            dialog.show(mapActivity.getSupportFragmentManager(), "nautical_graph");
+            if (mapActivity != null && !mapActivity.isFinishing()) {
+                NauticalDataBottomSheet dialog = NauticalDataBottomSheet.newInstance(this.widgetType);
+                dialog.show(mapActivity.getSupportFragmentManager(), "nautical_graph");
+            }
         });
     }
 
@@ -93,11 +114,20 @@ public class MarineTextWidget extends TextInfoWidget implements ISupportWidgetRe
     protected void updateInfo(@NonNull View view, @Nullable OsmandMapLayer.DrawSettings drawSettings) {
         super.updateInfo(view, drawSettings);
 
-        MarineState state = Objects.requireNonNull(NauticalPlugin.Companion.getEngine()).getCurrentState();
-        boolean isConnected = Objects.requireNonNull(NauticalPlugin.Companion.getAutopilot()).isConnected();
-        boolean isStale = NauticalPlugin.Companion.getEngine().isDataStale();
+        // 1. Get references
+        SignalKEngine engine = NauticalPlugin.getEngine();
+        AutopilotController autopilot = NauticalPlugin.getAutopilot();
 
-        // Update status dot color
+        // 2. SAFE EXIT: If engine is null, stop here.
+        // Do NOT use Objects.requireNonNull.
+        if (engine == null || autopilot == null) return;
+
+        // 3. Now it is safe to access the state
+        MarineState state = engine.getCurrentState();
+        boolean isConnected = autopilot.isConnected();
+        boolean isStale = engine.isDataStale();
+
+        // 4. Update status dot color
         if (statusDot != null) {
             if (!isConnected) {
                 statusDot.setBackgroundColor(Color.RED);
@@ -110,8 +140,15 @@ public class MarineTextWidget extends TextInfoWidget implements ISupportWidgetRe
 
         view.setAlpha(isConnected ? 1.0f : 0.5f);
 
+        // 5. Update UI
+        // Only set "OFF" if the system has been disconnected for more than 1 second
+        String offStatus = mapActivity.getString(R.string.nautical_status_off);
+
         if (!isConnected || state == null) {
-            setText(mapActivity.getString(R.string.nautical_status_off), "---");
+            if (!lastDisplayedText.equals("OFF")) {
+                setText(offStatus, "---");
+                lastDisplayedText = "OFF";
+            }
         } else {
             OsmandSettings settings = mapActivity.getApp().getSettings();
             String metricSystem = String.valueOf(settings.METRIC_SYSTEM.get());
@@ -120,7 +157,17 @@ public class MarineTextWidget extends TextInfoWidget implements ISupportWidgetRe
                 handleDepthUpdate(state, metricSystem);
             } else if (this.widgetType == WidgetType.NAUTICAL_WIND) {
                 handleWindUpdate(state, metricSystem);
+            } else if (this.widgetType == WidgetType.NAUTICAL_PILOT) {
+                handlePilotUpdate(state);
             }
+        }
+    }
+
+    private void handlePilotUpdate(MarineState state) {
+        String mode = state.getAutopilotMode();
+        if (!lastDisplayedText.equals(mode)) {
+            setText(mode.toUpperCase(Locale.US), "");
+            lastDisplayedText = mode;
         }
     }
 
@@ -129,9 +176,14 @@ public class MarineTextWidget extends TextInfoWidget implements ISupportWidgetRe
         if (depth != null) {
             String unit = (metricSystem.contains("FEET") || metricSystem.contains("YARDS")) ? "ft" : "m";
             if (unit.equals("ft")) depth *= 3.28084;
-            setText(String.format(Locale.US, "%.1f", depth), unit);
-        } else {
+            String valueText = String.format(Locale.US, "%.1f", depth);
+            if (!lastDisplayedText.equals(valueText)) {
+                setText(valueText, unit);
+                lastDisplayedText = valueText;
+            }
+        } else if (!lastDisplayedText.equals("---")) {
             setText("---", "m");
+            lastDisplayedText = "---";
         }
     }
 
@@ -144,9 +196,14 @@ public class MarineTextWidget extends TextInfoWidget implements ISupportWidgetRe
             } else if (metricSystem.contains("MILES")) {
                 wind *= 1.15078; unit = "mph";
             }
-            setText(String.format(Locale.US, "%.1f", wind), unit);
-        } else {
+            String valueText = String.format(Locale.US, "%.1f", wind);
+            if (!lastDisplayedText.equals(valueText)) {
+                setText(valueText, unit);
+                lastDisplayedText = valueText;
+            }
+        } else if (!lastDisplayedText.equals("---")) {
             setText("---", "kn");
+            lastDisplayedText = "---";
         }
     }
 }
