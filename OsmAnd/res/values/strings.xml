@@ -45,7 +45,6 @@
 	<string name="nautical_active_mode">Active Mode: %1$s</string>
 	<string name="nautical_emg_stop">EMG</string>
 	<string name="nautical_stop_label">STOP</string>
-	<string name="nautical_status_off">OFF</string>
 	<string name="nautical_pilot_status_active">Active Mode: %1$s</string>
 	<string name="nautical_emergency_stop">Emergency Stop Executed</string>
 	<string name="nautical_autopilot_not_connected">Autopilot not connected: check settings</string>
