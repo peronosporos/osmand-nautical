@@ -6,7 +6,11 @@ import android.util.Log
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
+import android.net.Uri
 import androidx.core.graphics.toColorInt
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import net.osmand.plus.OsmandApplication
 import net.osmand.plus.R
@@ -230,7 +234,18 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app) {
         isNightVisionEnabled = false
     }
 
-    //private var gpxLauncher: androidx.activity.result.ActivityResultLauncher<android.content.Intent>? = null
+    fun onGpxFileSelected(uri: Uri) {
+        val pluginScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
+        pluginScope.launch {
+            val routePoints = GpxStreamer(app).parseGpx(uri)
+            if (routePoints.isNotEmpty()) {
+                engine?.loadRoute(routePoints)
+                Toast.makeText(app, "Autopilot: Loaded ${routePoints.size} points", Toast.LENGTH_SHORT).show()
+            } else {
+                Toast.makeText(app, "Track is empty or invalid.", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
 
     override fun registerMapContextMenuActions(mapActivity: MapActivity, lat: Double, lon: Double, adapter: ContextMenuAdapter, obj: Any?, conf: Boolean) {
         autopilot?.isConnected()?.let { if (!it) return }
