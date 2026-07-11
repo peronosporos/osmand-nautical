@@ -30,6 +30,8 @@ public class MarineTextWidget extends TextInfoWidget implements ISupportWidgetRe
     private final OsmandPreference<WidgetSize> widgetSizePref;
     private View statusDot;
     private String lastDisplayedText = "";
+    private boolean isCurrentlyConnected = false;
+    private boolean isCurrentlyStale = false;
 
     public MarineTextWidget(@NonNull MapActivity mapActivity, @NonNull WidgetType widgetType,
                             @Nullable String customId, @Nullable WidgetsPanel panel) {
@@ -73,6 +75,8 @@ public class MarineTextWidget extends TextInfoWidget implements ISupportWidgetRe
         updateInfo(v, null);
     }
 
+
+
     @Override
     public boolean allowResize() {
         return true;
@@ -102,13 +106,39 @@ public class MarineTextWidget extends TextInfoWidget implements ISupportWidgetRe
             }
         }
 
-        view.setOnClickListener(v -> {
-            if (mapActivity != null && !mapActivity.isFinishing()) {
-                NauticalDataBottomSheet dialog = NauticalDataBottomSheet.newInstance(this.widgetType);
-                dialog.show(mapActivity.getSupportFragmentManager(), "nautical_graph");
-            }
-        });
+        View actualWidgetContent = this.container;
+        view.setOnClickListener(null);
+
+        if (actualWidgetContent != null) {
+            actualWidgetContent.setOnClickListener(v -> {
+                if (mapActivity != null && !mapActivity.isFinishing()) {
+                    NauticalDataBottomSheet dialog = NauticalDataBottomSheet.newInstance(this.widgetType);
+                    dialog.show(mapActivity.getSupportFragmentManager(), "nautical_graph");
+                }
+            });
+        }
     }
+
+    @Override
+    public void updateColors(@NonNull net.osmand.plus.views.layers.MapInfoLayer.TextState textState) {
+        // 1. Apply native OsmAnd background/theme logic
+        super.updateColors(textState);
+
+        // 2. Use the class-level variables (already updated by updateInfo)
+        if (statusDot != null) {
+            if (!this.isCurrentlyConnected) {
+                statusDot.setBackgroundColor(Color.RED);
+            } else if (this.isCurrentlyStale) {
+                statusDot.setBackgroundColor(Color.YELLOW);
+            } else {
+                statusDot.setBackgroundColor(Color.GREEN);
+            }
+        }
+
+        // 3. Apply alpha based on the class-level isCurrentlyConnected
+        getView().setAlpha(this.isCurrentlyConnected ? 1.0f : 0.5f);
+    }
+
 
     @Override
     protected void updateInfo(@NonNull View view, @Nullable OsmandMapLayer.DrawSettings drawSettings) {
@@ -118,33 +148,17 @@ public class MarineTextWidget extends TextInfoWidget implements ISupportWidgetRe
         SignalKEngine engine = NauticalPlugin.getEngine();
         AutopilotController autopilot = NauticalPlugin.getAutopilot();
 
-        // 2. SAFE EXIT: If engine is null, stop here.
-        // Do NOT use Objects.requireNonNull.
+        // 2. SAFE EXIT
         if (engine == null || autopilot == null) return;
+        this.isCurrentlyConnected = autopilot.isConnected();
+        this.isCurrentlyStale = engine.isDataStale();
 
-        // 3. Now it is safe to access the state
+        // 3. Calculate Logic (State)
         MarineState state = engine.getCurrentState();
-        boolean isConnected = autopilot.isConnected();
-        boolean isStale = engine.isDataStale();
 
-        // 4. Update status dot color
-        if (statusDot != null) {
-            if (!isConnected) {
-                statusDot.setBackgroundColor(Color.RED);
-            } else if (isStale) {
-                statusDot.setBackgroundColor(Color.YELLOW);
-            } else {
-                statusDot.setBackgroundColor(Color.GREEN);
-            }
-        }
-
-        view.setAlpha(isConnected ? 1.0f : 0.5f);
-
-        // 5. Update UI
-        // Only set "OFF" if the system has been disconnected for more than 1 second
+        // 4. Update UI Data
         String offStatus = mapActivity.getString(R.string.nautical_status_off);
-
-        if (!isConnected || state == null) {
+        if (!this.isCurrentlyConnected || state == null) {
             if (!lastDisplayedText.equals("OFF")) {
                 setText(offStatus, "---");
                 lastDisplayedText = "OFF";
@@ -161,7 +175,12 @@ public class MarineTextWidget extends TextInfoWidget implements ISupportWidgetRe
                 handlePilotUpdate(state);
             }
         }
+
+        // 5. Trigger the render pass
+        view.invalidate();
     }
+
+
 
     private void handlePilotUpdate(MarineState state) {
         String mode = state.getAutopilotMode();

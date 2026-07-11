@@ -14,6 +14,8 @@ import androidx.annotation.Nullable;
 
 import net.osmand.plus.base.BottomSheetDialogFragment;
 
+import java.util.Objects;
+
 public class NauticalActionBottomSheet extends BottomSheetDialogFragment {
 
     public static final String TAG = "NauticalActionBottomSheet";
@@ -45,7 +47,7 @@ public class NauticalActionBottomSheet extends BottomSheetDialogFragment {
         header.setText(String.format("Target: %.5f, %.5f", targetLat, targetLon));
         header.setTextSize(18);
         header.setPadding(0, 0, 0, 48);
-        header.setTextColor(getResources().getColor(android.R.color.tab_indicator_text, getContext().getTheme()));
+        header.setTextColor(getResources().getColor(android.R.color.tab_indicator_text, requireContext().getTheme()));
         mainView.addView(header);
 
         // UI TEST: The Engage Button
@@ -53,7 +55,7 @@ public class NauticalActionBottomSheet extends BottomSheetDialogFragment {
         engageButton.setText("ENGAGE AUTOPILOT");
         engageButton.setOnClickListener(v -> {
             // Trigger the network logic
-            NauticalPlugin.Companion.getAutopilot().sendActiveWaypoint(targetLat, targetLon);
+            Objects.requireNonNull(NauticalPlugin.Companion.getAutopilot()).sendActiveWaypoint(targetLat, targetLon);
             Toast.makeText(getContext(), "Command Sent to SignalK", Toast.LENGTH_SHORT).show();
             dismiss(); // Close the menu
         });

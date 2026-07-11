@@ -132,6 +132,8 @@ public enum WidgetGroup {
 			return getPartOfPluginDesc(context, ExternalSensorsPlugin.class);
 		} else if (this == WEATHER) {
 			return getPartOfPluginDesc(context, WeatherPlugin.class);
+		} else if (this == WidgetGroup.NAUTICAL) {
+			return context.getString(R.string.nautical_group_desc);
 		}
 		return null;
 	}

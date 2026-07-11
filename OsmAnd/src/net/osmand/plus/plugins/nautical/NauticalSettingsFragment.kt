@@ -10,20 +10,18 @@ class NauticalSettingsFragment : BaseSettingsFragment() {
     override fun setupPreferences() {
         // 1. setPreferences prevents duplicates by clearing the screen before inflating
         setPreferencesFromResource(R.xml.nautical_settings, null)
-
         val plugin = PluginsHelper.requirePlugin(NauticalPlugin::class.java)
 
         // 2. Wire the IP Address dynamically
         val ipPref = findPreference<EditTextPreference>("server_ip")
         ipPref?.let { pref ->
-            val currentIp = plugin.nauticalServerIp.get()
-            pref.summary = currentIp.ifEmpty { "Enter your SignalK server IP" }
-            pref.text = currentIp
+            pref.text = plugin.nauticalServerIp.get()
+            pref.summary = pref.text?.ifEmpty { "Enter your SignalK server IP" }
 
             pref.setOnPreferenceChangeListener { _, newValue ->
                 val newString = newValue.toString()
-                pref.summary = newString.ifEmpty { "Enter your SignalK server IP" }
                 plugin.nauticalServerIp.set(newString)
+                pref.summary = newString.ifEmpty { "Enter your SignalK server IP" }
                 true
             }
         }
@@ -31,14 +29,13 @@ class NauticalSettingsFragment : BaseSettingsFragment() {
         // 3. Wire the Port dynamically
         val portPref = findPreference<EditTextPreference>("server_port")
         portPref?.let { pref ->
-            val currentPort = plugin.nauticalServerPort.get()
-            pref.summary = currentPort.ifEmpty { "Enter port (default 3000)" }
-            pref.text = currentPort
+            pref.text = plugin.nauticalServerPort.get()
+            pref.summary = pref.text?.ifEmpty { "Enter port (default 3000)" }
 
             pref.setOnPreferenceChangeListener { _, newValue ->
                 val newString = newValue.toString()
-                pref.summary = newString.ifEmpty { "Enter port (default 3000)" }
                 plugin.nauticalServerPort.set(newString)
+                pref.summary = newString.ifEmpty { "Enter port (default 3000)" }
                 true
             }
         }

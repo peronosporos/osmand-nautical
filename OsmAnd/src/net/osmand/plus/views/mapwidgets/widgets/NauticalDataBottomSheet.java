@@ -13,7 +13,6 @@ import net.osmand.plus.R;
 import net.osmand.plus.plugins.nautical.NauticalPlugin;
 import net.osmand.plus.views.mapwidgets.WidgetType;
 import java.util.Locale;
-import java.util.Objects;
 
 import net.osmand.plus.plugins.nautical.engine.MarineState;
 
@@ -77,54 +76,73 @@ public class NauticalDataBottomSheet extends BottomSheetDialogFragment {
         super.onStart();
 
         myListener = state -> {
-            if (!isAdded()) return kotlin.Unit.INSTANCE;
+            if (!isAdded() || getContext() == null) {
+                return kotlin.Unit.INSTANCE;
+            }
 
-            boolean isConnected = Objects.requireNonNull(NauticalPlugin.Companion.getAutopilot()).isConnected();
-            boolean isStale = Objects.requireNonNull(NauticalPlugin.Companion.getEngine()).isDataStale();
+            final boolean isConnected = NauticalPlugin.Companion.getAutopilot() != null
+                    && NauticalPlugin.Companion.getAutopilot().isConnected();
+            final boolean isStale = NauticalPlugin.Companion.getEngine() != null
+                    && NauticalPlugin.Companion.getEngine().isDataStale();
             state.getAutopilotState();
-            String mode = state.getAutopilotState();
+            final String mode = state.getAutopilotState();
 
-            requireActivity().runOnUiThread(() -> {
-                if (dot != null) {
-                    if (!isConnected) dot.setBackgroundColor(Color.RED);
-                    else if (isStale) dot.setBackgroundColor(Color.YELLOW);
-                    else dot.setBackgroundColor(Color.GREEN);
-                }
+            View view = getView();
+            if (view != null) {
+                view.post(() -> {
+                    // 4. Final attachment check inside the UI thread
+                    if (!isAdded() || getContext() == null) return;
 
-                if (statusView != null) {
-                    statusView.setText(getString(R.string.nautical_active_mode, mode.toUpperCase(Locale.US)));
-
-                    if (mode.equalsIgnoreCase("auto")) {
-                        statusView.setBackgroundColor(Color.parseColor("#E3F2FD"));
-                    } else if (mode.equalsIgnoreCase("emergency") || mode.equalsIgnoreCase("stop")) {
-                        statusView.setBackgroundColor(Color.parseColor("#FFCDD2"));
-                    } else {
-                        statusView.setBackgroundColor(Color.parseColor("#EEEEEE"));
+                    if (dot != null) {
+                        if (!isConnected) dot.setBackgroundColor(Color.RED);
+                        else if (isStale) dot.setBackgroundColor(Color.YELLOW);
+                        else dot.setBackgroundColor(Color.GREEN);
                     }
-                }
 
-                if (graph != null) {
-                    updateGraphData();
-                }
-            });
+                    if (statusView != null) {
+                        statusView.setText(getString(R.string.nautical_active_mode, mode.toUpperCase(Locale.US)));
+
+                        if (mode.equalsIgnoreCase("auto")) {
+                            statusView.setBackgroundColor(Color.parseColor("#E3F2FD"));
+                        } else if (mode.equalsIgnoreCase("emergency") || mode.equalsIgnoreCase("stop")) {
+                            statusView.setBackgroundColor(Color.parseColor("#FFCDD2"));
+                        } else {
+                            statusView.setBackgroundColor(Color.parseColor("#EEEEEE"));
+                        }
+                    }
+
+                    if (graph != null) {
+                        updateGraphData();
+                    }
+                });
+            }
             return kotlin.Unit.INSTANCE;
         };
-        Objects.requireNonNull(NauticalPlugin.Companion.getEngine()).registerListener(myListener);
+
+        if (NauticalPlugin.Companion.getEngine() != null) {
+            NauticalPlugin.Companion.getEngine().registerListener(myListener);
+        }
     }
 
     @Override
     public void onStop() {
-        super.onStop();
-        if (myListener != null) {
-            Objects.requireNonNull(NauticalPlugin.Companion.getEngine()).unregisterListener(myListener);
+        if (myListener != null && NauticalPlugin.Companion.getEngine() != null) {
+            NauticalPlugin.Companion.getEngine().unregisterListener(myListener);
+            myListener = null;
         }
+        super.onStop();
     }
 
     private void updateGraphData() {
+        var engine = NauticalPlugin.Companion.getEngine();
+        if (engine == null || graph == null) {
+            return;
+        }
+
         if (type == WidgetType.NAUTICAL_DEPTH) {
-            graph.setData(Objects.requireNonNull(NauticalPlugin.Companion.getEngine()).getDepthHistory(), "m");
+            graph.setData(engine.getDepthHistory(), "m");
         } else if (type == WidgetType.NAUTICAL_WIND) {
-            graph.setData(Objects.requireNonNull(NauticalPlugin.Companion.getEngine()).getWindHistory(), "kn");
+            graph.setData(engine.getWindHistory(), "kn");
         }
     }
 }
