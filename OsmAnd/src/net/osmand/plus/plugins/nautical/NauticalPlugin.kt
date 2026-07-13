@@ -99,13 +99,6 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app) {
         return "Configure SignalK connection settings"
     }
 
-
-    val nauticalServerIp: CommonPreference<String> = registerStringPreference("server_ip", "")
-        .makeGlobal().cache() as CommonPreference<String>
-
-    val nauticalServerPort: CommonPreference<String> = registerStringPreference("server_port", "3000")
-        .makeGlobal().cache() as CommonPreference<String>
-
     init {
         instanceRef = WeakReference(this)
         loadTrajectory()

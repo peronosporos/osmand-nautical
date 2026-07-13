@@ -4,14 +4,12 @@
     android:title="Nautical Marine Controls">
 
     <PreferenceCategory android:title="SignalK Server">
-        <androidx.preference.EditTextPreference
+        <net.osmand.plus.settings.preferences.EditTextPreferenceEx
             android:key="server_ip"
-            android:title="SignalK Server IP"
-            android:defaultValue="" />
+            android:title="IP Address" />
 
-        <androidx.preference.EditTextPreference
+        <net.osmand.plus.settings.preferences.EditTextPreferenceEx
             android:key="server_port"
-            android:title="SignalK Server Port"
-            android:defaultValue="3000" />
+            android:title="Port" />
     </PreferenceCategory>
 </PreferenceScreen>
