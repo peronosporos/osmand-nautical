@@ -31,6 +31,10 @@ jobs:
       working-directory: ./android
       run: chmod +x gradlew
 
+    - name: Create local.properties
+      run: |
+        echo "sdk.dir=/home/administrator/Android/Sdk" > android/local.properties
+
     - name: Execute Cloud Compilation
       working-directory: ./android
       env:
