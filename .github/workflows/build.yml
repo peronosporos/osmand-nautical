@@ -6,7 +6,7 @@ on:
 
 jobs:
   build:
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
 
     steps:
     - name: Checkout Source Code with Submodules
@@ -30,10 +30,6 @@ jobs:
     - name: Grant Execute Permission for Gradle
       working-directory: ./android
       run: chmod +x gradlew
-
-    - name: Create local.properties
-      run: |
-        echo "sdk.dir=/home/administrator/Android/Sdk" > android/local.properties
 
     - name: Execute Cloud Compilation
       working-directory: ./android
