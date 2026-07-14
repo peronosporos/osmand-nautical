@@ -200,6 +200,11 @@ android {
 			println(osmandTask.getName() + " generate resources")
 			osmandTask.dependsOn(collectExternalResources)
 		}
+		def processNavigationResources = "process${taskName}NavigationResources"
+		tasks.named(processNavigationResources).configure { osmandTask ->
+			println(osmandTask.getName() + " process navigation resources")
+			osmandTask.dependsOn(copyIcons)
+		}
 	}
 }
 
