@@ -641,6 +641,9 @@
 	<color name="nautical_status_green">#2ECC71</color>
 	<color name="nautical_status_yellow">#F1C40F</color>
 	<color name="nautical_status_red">#E74C3C</color>
+	<color name="nautical_status_bg_active">#E3F2FD</color>
+	<color name="nautical_status_bg_emergency">#FFCDD2</color>
+	<color name="nautical_status_bg_standby">#EEEEEE</color>
 
 
 

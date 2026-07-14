@@ -2,37 +2,53 @@ package net.osmand.plus.plugins.nautical
 
 import android.os.Handler
 import android.os.Looper
-import android.util.Log
+import net.osmand.IndexConstants
+import net.osmand.PlatformUtil
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
 import android.net.Uri
-import androidx.core.graphics.toColorInt
+import android.graphics.ColorMatrix
+import android.graphics.ColorMatrixColorFilter
+import android.graphics.Paint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import net.osmand.plus.OsmandApplication
 import net.osmand.plus.R
 import net.osmand.plus.activities.MapActivity
 import net.osmand.plus.plugins.OsmandPlugin
 import net.osmand.plus.plugins.nautical.engine.*
-import net.osmand.plus.routing.IRouteInformationListener
-import net.osmand.plus.settings.backend.preferences.CommonPreference
+import net.osmand.plus.views.mapwidgets.WidgetType
+import net.osmand.plus.views.mapwidgets.WidgetsPanel
+import net.osmand.plus.views.mapwidgets.widgets.MapWidget
+import net.osmand.plus.views.mapwidgets.widgets.MarineTextWidget
+import net.osmand.plus.views.mapwidgets.widgets.NauticalGraphWidget
+import net.osmand.plus.views.mapwidgets.widgets.NauticalPilotWidget
+import net.osmand.plus.settings.enums.DayNightMode
 import net.osmand.plus.settings.fragments.SettingsScreenType
 import net.osmand.plus.widgets.ctxmenu.ContextMenuAdapter
 import net.osmand.plus.widgets.ctxmenu.data.ContextMenuItem
 import kotlin.math.abs
 import java.lang.ref.WeakReference
 import kotlinx.coroutines.cancel
-import net.osmand.IndexConstants
-import net.osmand.gpx.GPXUtilities
 
 class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app) {
+    private val log = PlatformUtil.getLog(NauticalPlugin::class.java)
 
     companion object {
         const val NAUTICAL_ID = "osmand.nautical"
+        private const val GPX_INDEX_DIR = IndexConstants.GPX_INDEX_DIR
+
+        private val RED_FILTER_MATRIX = ColorMatrix(
+            floatArrayOf(
+                0.33f, 0.33f, 0.33f, 0f, 0f,
+                0f, 0f, 0f, 0f, 0f,
+                0f, 0f, 0f, 0f, 0f,
+                0f, 0f, 0f, 1f, 0f,
+            ),
+        )
 
         @JvmStatic
         var engine: SignalKEngine? = null
@@ -61,53 +77,75 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app) {
     private var aisEmitter: AisUdpEmitter? = null
     private val aisEncoder = AisEncoder()
     private var autopilotListener: AutopilotRouteListener? = null
+    private val marineStateListener: (MarineState) -> Unit = { state -> checkOffCourseAlert(state) }
+    private val aisTargetListener: (AisTarget) -> Unit = { target ->
+        aisEncoder.encodeTargetToAivdm(target)?.let { aisEmitter?.emitNmeaSentence(it) }
+    }
+    private val routeStepListener: () -> Unit = {
+        autopilot?.processRouteStep()
+        app.osmandMap?.refreshMap()
+    }
+    private val retryHandler = Handler(Looper.getMainLooper())
+    private val retryRunnable = Runnable { startEngine() }
     private var isAlertActive = false
     private var nauticalMapLayer: NauticalMapLayer? = null
-    private val xteThresholdPref = app.settings.registerFloatPreference("nautical_xte_threshold", 0.1f)
-    private val nightVisionOpacityPref = app.settings.registerFloatPreference("nautical_night_vision_opacity", 0.5f)
-    private val pluginScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
-    private val saveFile = java.io.File(app.filesDir, "trajectory.dat")
-
-    private fun saveTrajectory() {
-        try {
-            val data = engine?.getTrajectory()
-            java.io.ObjectOutputStream(saveFile.outputStream()).use { it.writeObject(data) }
-        } catch (e: Exception) {
-            logError("Failed to save trajectory: ${e.message}")
-        }
-    }
-
-    private fun loadTrajectory() {
-        if (saveFile.exists()) {
-            try {
-                java.io.ObjectInputStream(saveFile.inputStream()).use {
-                    @Suppress("UNCHECKED_CAST")
-                    val data = it.readObject() as List<Pair<Double, Double>>
-                    data.forEach { p -> engine?.addWaypoint(p.first, p.second) }
-                }
-            } catch (e: Exception) {
-                logError("Failed to load trajectory: ${e.message}")
+    private val receiveInBackgroundPrefListener = net.osmand.StateChangedListener<Boolean> {
+        if (it) {
+            updateNauticalBackgroundService()
+        } else {
+            stopNauticalBackgroundService()
+            if (!app.settings.MAP_ACTIVITY_ENABLED) {
+                connection.disconnect()
             }
         }
     }
+    private var pluginScope: CoroutineScope? = null
 
-    override fun getSettingsScreenType(): SettingsScreenType {
-        return SettingsScreenType.NAUTICAL_SETTINGS
+    override fun createMapWidgetForParams(mapActivity: MapActivity, widgetType: WidgetType, customId: String?, widgetsPanel: WidgetsPanel?): MapWidget? {
+        return when (widgetType) {
+            WidgetType.NAUTICAL_DEPTH,
+            WidgetType.NAUTICAL_WIND,
+            WidgetType.NAUTICAL_VMG,
+            WidgetType.NAUTICAL_COG -> MarineTextWidget(mapActivity, widgetType, customId, widgetsPanel)
+            WidgetType.NAUTICAL_DEPTH_GRAPH,
+            WidgetType.NAUTICAL_WIND_GRAPH,
+            WidgetType.NAUTICAL_VMG_GRAPH -> NauticalGraphWidget(mapActivity, widgetType, customId, widgetsPanel)
+            WidgetType.NAUTICAL_PILOT -> NauticalPilotWidget(mapActivity, widgetType, customId, widgetsPanel)
+            else -> null
+        }
     }
 
-    override fun getPrefsDescription(): String {
-        return "Configure SignalK connection settings"
-    }
+    override fun getSettingsScreenType(): SettingsScreenType = SettingsScreenType.NAUTICAL_SETTINGS
+
+    override fun getPrefsDescription(): String = app.getString(R.string.nautical_plugin_description)
 
     init {
         instanceRef = WeakReference(this)
-        loadTrajectory()
     }
 
     override fun getId(): String = NAUTICAL_ID
-    override fun getName(): String = "Nautical Marine Controls"
-    override fun getDescription(linksEnabled: Boolean): CharSequence = "SignalK integration."
+    override fun getName(): String = app.getString(R.string.nautical_plugin_name)
+    override fun getDescription(linksEnabled: Boolean): CharSequence = app.getString(R.string.nautical_plugin_description)
     override fun getLogoResourceId(): Int = R.drawable.ic_action_sail_boat_dark
+
+    private val screenStateReceiver = object : android.content.BroadcastReceiver() {
+        override fun onReceive(context: android.content.Context, intent: android.content.Intent) {
+            when (intent.action) {
+                android.content.Intent.ACTION_SCREEN_OFF -> {
+                    if ((engine?.isFollowingRoute != true) && !app.settings.NAUTICAL_RECEIVE_IN_BACKGROUND.get()) {
+                        connection.disconnect()
+                    } else if (app.settings.NAUTICAL_RECEIVE_IN_BACKGROUND.get()) {
+                        updateNauticalBackgroundService()
+                    }
+                }
+                android.content.Intent.ACTION_SCREEN_ON -> {
+                    if (!connection.isConnected()) {
+                        startEngine()
+                    }
+                }
+            }
+        }
+    }
 
     override fun setEnabled(enabled: Boolean) {
         super.setEnabled(enabled)
@@ -115,58 +153,59 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app) {
 
         if (enabled) {
             instanceRef = WeakReference(this)
+            if (pluginScope == null) {
+                pluginScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
+            }
 
-            // 1. Initialize components if they are null
             if (engine == null) {
                 engine = SignalKEngine()
+                engine?.onRouteStepProcessed = routeStepListener
                 engine?.loadBuffersFromDisk(app)
             }
             if (autopilot == null) autopilot = AutopilotController(app, connection)
-            if (nauticalMapLayer == null) {
+
+            if ((nauticalMapLayer == null) && (mapView != null)) {
                 nauticalMapLayer = NauticalMapLayer(app)
-                mapView?.addLayer(nauticalMapLayer!!, 5.0f)
+                NauticalActionBottomSheet.addNauticalLayer(mapView, nauticalMapLayer!!)
             }
+
             if (locationProvider == null) locationProvider = NauticalLocationProvider(app, engine)
             if (aisEmitter == null) aisEmitter = AisUdpEmitter()
+
             if (autopilotListener == null) {
                 val listener = AutopilotRouteListener(app.routingHelper)
                 autopilotListener = listener
-                app.routingHelper.addListener(listener as IRouteInformationListener)
+                app.routingHelper.addListener(listener)
             }
 
-            // 2. Check settings
             val ip = app.settings.NAUTICAL_SERVER_IP.get()
             if (ip.isNullOrEmpty()) {
-                Toast.makeText(app, "Nautical Plugin active, but IP is not configured.", Toast.LENGTH_LONG).show()
+                Toast.makeText(app, app.getString(R.string.nautical_ip_not_configured), Toast.LENGTH_LONG).show()
             }
 
-            // 3. Setup UI and Listeners
-            nauticalMapLayer = NauticalMapLayer(app)
-            mapView?.addLayer(nauticalMapLayer!!, 5.0f)
+            engine?.registerAisListener(aisTargetListener)
+            engine?.registerListener(marineStateListener)
+            app.settings.NAUTICAL_RECEIVE_IN_BACKGROUND.addListener(receiveInBackgroundPrefListener)
 
-            if (locationProvider == null) locationProvider = NauticalLocationProvider(app, engine)
-            if (aisEmitter == null) aisEmitter = AisUdpEmitter()
-
-            val listener = AutopilotRouteListener(app.routingHelper)
-            autopilotListener = listener
-            app.routingHelper.addListener(listener as IRouteInformationListener)
-
-            engine?.registerAisListener { target ->
-                aisEncoder.encodeTargetToAivdm(target)?.let { aisEmitter?.emitNmeaSentence(it) }
-            }
-
-            engine?.registerListener { state -> checkOffCourseAlert(state) }
-
-            // 4. Start operations
             startEngine()
             aisEmitter?.start()
             locationProvider?.start()
+            updateNauticalBackgroundService()
+
+            val filter = android.content.IntentFilter().apply {
+                addAction(android.content.Intent.ACTION_SCREEN_OFF)
+                addAction(android.content.Intent.ACTION_SCREEN_ON)
+            }
+            app.registerReceiver(screenStateReceiver, filter)
 
         } else {
-            // SHUTDOWN
             instanceRef = null
+            app.settings.NAUTICAL_RECEIVE_IN_BACKGROUND.removeListener(receiveInBackgroundPrefListener)
+            stopNauticalBackgroundService()
             nauticalMapLayer?.let { layer ->
-                mapView?.removeLayer(layer)
+                mapView?.let {
+                    NauticalActionBottomSheet.removeNauticalLayer(it, layer)
+                }
                 nauticalMapLayer = null
             }
             shutdownResources()
@@ -174,205 +213,197 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app) {
     }
 
     private fun checkOffCourseAlert(state: MarineState) {
-        val xte: Double? = state.crossTrackError
-        val deadband = 0.05
+        val xte = state.crossTrackError ?: return
+        val threshold = (app.settings.NAUTICAL_XTE_THRESHOLD.get() ?: 0.1f).toDouble()
 
-        // Safely extract the local preference and convert to Double for math logic
-        val threshold = (xteThresholdPref.get() ?: 0.1f).toDouble()
-
-        if (xte != null && abs(xte) > threshold) {
-            if (abs(xte) > deadband && !isAlertActive) {
+        if (abs(xte) > threshold) {
+            if (!isAlertActive) {
                 isAlertActive = true
-                Log.w("NauticalPlugin", "OFF COURSE ALERT: $xte NM")
+                log.warn("OFF COURSE ALERT: $xte NM")
             }
         } else {
             isAlertActive = false
         }
     }
 
-
-
-    private var isNightVisionEnabled = false
+    var isNightVisionEnabled = false
+        private set
 
     fun toggleNightVision(mapActivity: MapActivity, enable: Boolean) {
         this.isNightVisionEnabled = enable
-
         val container = mapActivity.findViewById<ViewGroup>(android.R.id.content)
 
         if (enable) {
-            // Safely extract the local preference as Float
-            val rawOpacity = nightVisionOpacityPref.get() ?: 0.5f
-            val opacity = rawOpacity.coerceIn(0f, 1f)
-            val alphaHex = (opacity * 255).toInt().toString(16).padStart(2, '0')
-
-            val overlay = View(mapActivity)
-            overlay.setBackgroundColor("#${alphaHex}FF0000".toColorInt())
-            overlay.isClickable = false
-            overlay.tag = "nautical_night_overlay"
-
-            container.addView(overlay, ViewGroup.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.MATCH_PARENT
-            ))
-        } else {
-            val overlay = container.findViewWithTag<View>("nautical_night_overlay")
-            if (overlay != null) {
-                container.removeView(overlay)
+            val paint = Paint().apply {
+                colorFilter = ColorMatrixColorFilter(RED_FILTER_MATRIX)
             }
+            container.setLayerType(View.LAYER_TYPE_HARDWARE, paint)
+            net.osmand.plus.helpers.AndroidUiHelper.setStatusBarColor(mapActivity, android.graphics.Color.BLACK)
+            net.osmand.plus.helpers.AndroidUiHelper.setNavigationBarColor(mapActivity, android.graphics.Color.BLACK, false)
+            if (app.settings.DAYNIGHT_MODE.get() != DayNightMode.NIGHT) {
+                app.settings.DAYNIGHT_MODE.set(DayNightMode.NIGHT)
+            }
+        } else {
+            container.setLayerType(View.LAYER_TYPE_NONE, null)
+            mapActivity.updateStatusBarColor()
+            mapActivity.updateNavigationBarColor()
         }
+        app.notificationHelper.refreshNotification(net.osmand.plus.notifications.OsmandNotification.NotificationType.NAUTICAL)
     }
 
     private fun startEngine() {
-        // 2. GLOBAL ACCESS (For your old features that DO exist in OsmandSettings.java)
         val ip = app.settings.NAUTICAL_SERVER_IP.get()
         val port = app.settings.NAUTICAL_SERVER_PORT.get()
+        val useSecure = app.settings.NAUTICAL_USE_SECURE_CONNECTION.get()
+        val username = app.settings.NAUTICAL_SERVER_USERNAME.get()
+        val password = app.settings.NAUTICAL_SERVER_PASSWORD.get()
 
-        if (ip.isNullOrEmpty()) {
-            Log.w("NauticalPlugin", "IP not configured")
-            return
-        }
+        if (ip.isNullOrEmpty()) return
 
-        val wsUrl = "ws://$ip:$port/signalk/v1/stream?subscribe=all"
-
+        val protocol = if (useSecure) "wss" else "ws"
+        val wsUrl = "$protocol://$ip:$port/signalk/v1/stream?subscribe=all"
         engine?.onConnectionLost = {
-            Log.w("NauticalPlugin", "Engine silent. Retrying...")
-            retryConnection()
+            retryHandler.removeCallbacks(retryRunnable)
+            retryHandler.postDelayed(retryRunnable, 5000)
         }
 
         connection.disconnect()
-        connection.connect(wsUrl) { message -> engine?.handleIncomingMessage(message) }
-    }
-
-    private fun retryConnection() {
-        Handler(Looper.getMainLooper()).postDelayed({ startEngine() }, 5000)
-    }
-
-    private fun logError(message: String, tag: String = "NauticalPlugin") {
-        Log.e(tag, message)
-        try {
-            val logFile = java.io.File(app.filesDir, "nautical_errors.log")
-            if (logFile.length() > 50000) logFile.delete()
-            logFile.appendText("${java.util.Date()}: [$tag] $message\n")
-        } catch (_: Exception) { }
+        connection.connect(wsUrl, username, password) { message -> engine?.handleIncomingMessage(message) }
     }
 
     private fun shutdownResources() {
-        pluginScope.cancel()
-        saveTrajectory()
+        stopNauticalBackgroundService()
+        try {
+            app.unregisterReceiver(screenStateReceiver)
+        } catch (_: Exception) { }
+        pluginScope?.cancel()
+        pluginScope = null
+        retryHandler.removeCallbacks(retryRunnable)
         aisEmitter?.stop()
+        aisEmitter = null
         locationProvider?.stop()
+        locationProvider = null
         connection.disconnect()
         engine?.let {
+            it.unregisterListener(marineStateListener)
+            it.registerAisListener(null)
+            it.onRouteStepProcessed = null
             it.saveBuffersToDisk(app)
             it.stop()
         }
-
+        engine = null
+        autopilot = null
         autopilotListener?.let {
-            app.routingHelper.removeListener(it as IRouteInformationListener)
+            app.routingHelper.removeListener(it)
             autopilotListener = null
         }
-
         isNightVisionEnabled = false
     }
 
-    fun onGpxFileSelected(uri: Uri) {
-        val pluginScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
-        pluginScope.launch {
-            val routePoints = GpxStreamer(app).parseGpx(uri)
-            if (routePoints.isNotEmpty()) {
-                engine?.loadRoute(routePoints)
-                Toast.makeText(app, "Autopilot: Loaded ${routePoints.size} points", Toast.LENGTH_SHORT).show()
-            } else {
-                Toast.makeText(app, "Track is empty or invalid.", Toast.LENGTH_SHORT).show()
-            }
-        }
-    }
+    override fun registerMapContextMenuActions(mapActivity: MapActivity, lat: Double, lon: Double, adapter: ContextMenuAdapter, obj: Any?, conf: Boolean) {
+        if (app.settings.APPLICATION_MODE.get() != net.osmand.plus.settings.backend.ApplicationMode.BOAT) return
 
-    private fun parseGpxPoints(file: java.io.File): List<Pair<Double, Double>> {
-        val routePoints = mutableListOf<Pair<Double, Double>>()
-        try {
-            val gpx = GPXUtilities.loadGPXFile(file, null, false)
-            gpx?.tracks?.forEach { track ->
-                track.segments?.forEach { segment ->
-                    segment.points?.forEach { point ->
-                        routePoints.add(Pair(point.lat, point.lon))
-                    }
+        adapter.addItem(
+            ContextMenuItem("nautical_night_vision").apply {
+                title = mapActivity.getString(R.string.nautical_toggle_night_vision)
+                icon = if (isNightVisionEnabled) R.drawable.ic_action_red_filter_overlay_on else R.drawable.ic_action_red_filter_off
+                setListener { _, _, _, _ ->
+                    toggleNightVision(mapActivity, !isNightVisionEnabled)
+                    true
                 }
             }
-        } catch (e: Exception) {
-            Log.e("NauticalPlugin", "Error parsing GPX: ${e.message}")
-        }
-        return routePoints
-    }
+        )
 
-    override fun registerMapContextMenuActions(mapActivity: MapActivity, lat: Double, lon: Double, adapter: ContextMenuAdapter, obj: Any?, conf: Boolean) {
-
-        val appMode = app.settings.APPLICATION_MODE.get()
-
-        if (appMode != net.osmand.plus.settings.backend.ApplicationMode.BOAT) {
-            return
-        }
-
-        if (autopilot?.isConnected() != true) {
-            return
-        }
-
-        // Night Vision
-        adapter.addItem(ContextMenuItem("nautical_night_vision").apply {
-            setTitle("Toggle Night Vision")
-            setIcon(R.drawable.ic_action_red_filter_off)
-            setListener { _, _, _, _ ->
-                toggleNightVision(mapActivity, !isNightVisionEnabled)
-                true
+        adapter.addItem(
+            ContextMenuItem("nautical_follow_gpx").apply {
+                title = mapActivity.getString(R.string.nautical_follow_gpx_route)
+                icon = R.drawable.ic_action_track_16
+                setListener { _, _, _, _ ->
+                    handleGpxSelection(mapActivity)
+                    true
+                }
             }
-        })
+        )
 
-        // Steer Here
-        adapter.addItem(ContextMenuItem("nautical_steer_id").apply {
-            setTitle(mapActivity.getString(R.string.nautical_steer))
-            setIcon(R.drawable.ic_action_sail_boat_dark)
-            setListener { _, _, _, _ ->
-                autopilot?.sendActiveWaypoint(lat, lon)
-                Toast.makeText(mapActivity, mapActivity.getString(R.string.nautical_toast_heading_sent), Toast.LENGTH_SHORT).show()
-                true
+        adapter.addItem(
+            ContextMenuItem("nautical_export_trajectory").apply {
+                title = mapActivity.getString(R.string.nautical_export_trajectory)
+                icon = R.drawable.ic_action_export
+                setListener { _, _, _, _ ->
+                    exportCurrentTrajectory(mapActivity)
+                    true
+                }
             }
-        })
+        )
 
-        // Follow GPX
-        adapter.addItem(ContextMenuItem("nautical_follow_gpx").apply {
-            setTitle("Follow GPX Route")
-            setIcon(R.drawable.ic_action_track_16)
-            setListener { _, _, _, _ ->
-                handleGpxSelection(mapActivity)
-                true
-            }
-        })
+        if (autopilot?.isConnected() == true) {
+            adapter.addItem(
+                ContextMenuItem("nautical_steer_id").apply {
+                    title = mapActivity.getString(R.string.nautical_steer_here)
+                    icon = R.drawable.ic_action_direction_compass
+                    setListener { _, _, _, _ ->
+                        NauticalActionBottomSheet.newInstance(lat, lon).show(mapActivity.supportFragmentManager, NauticalActionBottomSheet.TAG)
+                        true
+                    }
+                }
+            )
+        }
     }
 
     private fun handleGpxSelection(mapActivity: MapActivity) {
-        val gpxDir = app.getAppPath(IndexConstants.GPX_INDEX_DIR)
+        val gpxDir = app.getAppPath(GPX_INDEX_DIR)
         val gpxFiles = gpxDir.listFiles { f -> f.isFile && f.name.endsWith(".gpx", true) }?.toList() ?: emptyList()
 
         if (gpxFiles.isEmpty()) {
-            Toast.makeText(mapActivity, "No tracks found.", Toast.LENGTH_SHORT).show()
+            Toast.makeText(mapActivity, R.string.nautical_no_tracks_found, Toast.LENGTH_SHORT).show()
             return
         }
 
         android.app.AlertDialog.Builder(mapActivity)
-            .setTitle("Select Track")
+            .setTitle(R.string.nautical_select_track)
             .setItems(gpxFiles.map { it.nameWithoutExtension }.toTypedArray()) { _, which ->
                 val selectedFile = gpxFiles[which]
-
-                // Use the managed pluginScope here
-                pluginScope.launch(Dispatchers.IO) {
-                    val routePoints = parseGpxPoints(selectedFile)
-                    withContext(Dispatchers.Main) {
-                        if (routePoints.isNotEmpty()) {
-                            engine?.loadRoute(routePoints)
-                            Toast.makeText(mapActivity, "Loaded ${routePoints.size} points", Toast.LENGTH_SHORT).show()
-                        }
+                pluginScope?.launch {
+                    val routePoints = GpxStreamer(app).parseGpx(Uri.fromFile(selectedFile))
+                    if (routePoints.isNotEmpty()) {
+                        engine?.loadRoute(routePoints)
+                        Toast.makeText(mapActivity, mapActivity.getString(R.string.nautical_loaded_points, routePoints.size), Toast.LENGTH_SHORT).show()
                     }
                 }
             }.show()
+    }
+
+    private fun exportCurrentTrajectory(mapActivity: MapActivity) {
+        val points = engine?.getTrajectory() ?: emptyList()
+        if (points.isEmpty()) {
+            Toast.makeText(mapActivity, "No trajectory data available", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        pluginScope?.launch {
+            val file = GpxStreamer(app).exportTrajectory(points)
+            if (file != null) {
+                Toast.makeText(mapActivity, mapActivity.getString(R.string.nautical_trajectory_exported, file.name), Toast.LENGTH_LONG).show()
+            } else {
+                Toast.makeText(mapActivity, "Failed to export trajectory", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    private fun updateNauticalBackgroundService() {
+        if (isActive && app.settings.NAUTICAL_RECEIVE_IN_BACKGROUND.get()) {
+            app.startNavigationService(net.osmand.plus.NavigationService.USED_BY_NAUTICAL)
+            app.notificationHelper.refreshNotification(net.osmand.plus.notifications.OsmandNotification.NotificationType.NAUTICAL)
+        } else {
+            stopNauticalBackgroundService()
+        }
+    }
+
+    private fun stopNauticalBackgroundService() {
+        app.navigationService?.let {
+            if (it.isUsedBy(net.osmand.plus.NavigationService.USED_BY_NAUTICAL)) {
+                it.stopIfNeeded(app, net.osmand.plus.NavigationService.USED_BY_NAUTICAL)
+            }
+        }
     }
 }

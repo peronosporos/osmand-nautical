@@ -32,6 +32,7 @@ public class NotificationHelper {
 	private NavigationNotification navigationNotification;
 	private GpxNotification gpxNotification;
 	private AisNotification aisNotification;
+	private NauticalNotification nauticalNotification;
 	private CarAppNotification carAppNotification;
 	private DownloadNotification downloadNotification;
 	private FallbackNotification fallbackNotification;
@@ -46,12 +47,14 @@ public class NotificationHelper {
 		navigationNotification = new NavigationNotification(app);
 		gpxNotification = new GpxNotification(app);
 		aisNotification = new AisNotification(app);
+		nauticalNotification = new NauticalNotification(app);
 		downloadNotification = new DownloadNotification(app);
 		carAppNotification = new CarAppNotification(app);
 		fallbackNotification = new FallbackNotification(app);
 		all.add(navigationNotification);
 		all.add(gpxNotification);
 		all.add(aisNotification);
+		all.add(nauticalNotification);
 		all.add(downloadNotification);
 		all.add(carAppNotification);
 	}

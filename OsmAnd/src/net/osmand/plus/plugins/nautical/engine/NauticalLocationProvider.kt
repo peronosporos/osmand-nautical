@@ -9,7 +9,7 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
-import android.util.Log
+import net.osmand.PlatformUtil
 import androidx.core.content.ContextCompat
 import net.osmand.plus.OsmandApplication
 import java.lang.reflect.Method
@@ -17,8 +17,9 @@ import java.util.concurrent.atomic.AtomicLong
 
 class NauticalLocationProvider(
     private val app: OsmandApplication,
-    private val engine: SignalKEngine?
+    private val engine: SignalKEngine?,
 ) {
+    private val log = PlatformUtil.getLog(NauticalLocationProvider::class.java)
     private var isActive = false
     private val lastUpdateTime = AtomicLong(0L)
 
@@ -50,7 +51,7 @@ class NauticalLocationProvider(
     private val fallbackRunnable = Runnable {
         if (isHardwarePaused) {
             app.runInUIThread { unmuteHardwareGps() }
-            Log.d("NauticalPlugin", "SignalK data timeout (15s). Restored smartphone GPS.")
+            log.debug("SignalK data timeout (15s). Restored smartphone GPS.")
         }
     }
 
@@ -97,7 +98,7 @@ class NauticalLocationProvider(
         // Start the watchdog
         fallbackHandler.removeCallbacks(fallbackRunnable)
         fallbackHandler.postDelayed(fallbackRunnable, 15000)
-        Log.d("NauticalPlugin", "Location Bridge: Active, GPS Muted, Watchdog started.")
+        log.debug("Location Bridge: Active, GPS Muted, Watchdog started.")
     }
 
     fun stop() {
@@ -109,7 +110,7 @@ class NauticalLocationProvider(
 
     private fun injectMarineStateAsLocation(state: MarineState) {
         // 1. Guard clause: Ensure we have the data we need
-        if (state.latitude == null || state.longitude == null) return
+        if (state.latitude == null || (state.longitude == null)) return
 
         // 2. Throttle to 1Hz (1000ms) for OsmAnd stability
         val currentTime = System.currentTimeMillis()
@@ -144,7 +145,7 @@ class NauticalLocationProvider(
             }
         } catch (e: Exception) {
             // 8. Industrial Error Logging: If the reflection fails, log it instead of crashing
-            Log.e("NauticalLocation", "Injection error: ${e.message}")
+            log.error("Injection error: ${e.message}")
         }
     }
 
@@ -153,7 +154,7 @@ class NauticalLocationProvider(
 
         // Permission check for LocationManager access
         if (ContextCompat.checkSelfPermission(app, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            Log.e("NauticalPlugin", "Cannot mute GPS: Missing ACCESS_FINE_LOCATION permission.")
+            log.error("Cannot mute GPS: Missing ACCESS_FINE_LOCATION permission.")
             return
         }
 
@@ -172,9 +173,9 @@ class NauticalLocationProvider(
             locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0L, 0f, dummyListener!!)
             isHardwarePaused = true
         } catch (se: SecurityException) {
-            Log.e("NauticalPlugin", "SecurityException: Location permission denied: ${se.message}")
+            log.error("SecurityException: Location permission denied: ${se.message}")
         } catch (e: Exception) {
-            Log.e("NauticalPlugin", "GPS mute failed: ${e.message}")
+            log.error("GPS mute failed: ${e.message}")
         }
     }
 

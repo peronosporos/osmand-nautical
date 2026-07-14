@@ -84,7 +84,7 @@ class AisEncoder {
         private var size = 0
 
         fun append(value: Long, bitCount: Int) {
-            for (i in bitCount - 1 downTo 0) {
+            for (i in (bitCount - 1) downTo 0) {
                 bits[size++] = ((value ushr i) and 1L) == 1L
             }
         }

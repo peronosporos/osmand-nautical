@@ -1,6 +1,6 @@
 package net.osmand.plus.plugins.nautical.engine
 
-import android.util.Log
+import net.osmand.PlatformUtil
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.consumeEach
@@ -9,6 +9,7 @@ import java.net.DatagramSocket
 import java.net.InetAddress
 
 class AisUdpEmitter {
+    private val log = PlatformUtil.getLog(AisUdpEmitter::class.java)
     private var socket: DatagramSocket? = null
     private val targetPort = 10110
     private var scope: CoroutineScope? = null
@@ -25,7 +26,7 @@ class AisUdpEmitter {
                 // Initialize socket exactly once inside the scope
                 socket = DatagramSocket()
                 val localAddress = InetAddress.getByName("127.0.0.1")
-                Log.d("NauticalPlugin", "AIS UDP Emitter started on local port $targetPort")
+                log.debug("AIS UDP Emitter started on local port $targetPort")
 
                 // The Consumer Loop: Reads from the funnel and transmits continuously
                 messageChannel?.consumeEach { nmeaSentence ->
@@ -35,13 +36,13 @@ class AisUdpEmitter {
                         socket?.send(packet)
 
                         // Debug log to confirm it's actually leaving the plugin
-                        Log.d("NauticalPlugin", "UDP TX -> $nmeaSentence")
+                        log.debug("UDP TX -> $nmeaSentence")
                     } catch (e: Exception) {
-                        Log.e("NauticalPlugin", "UDP Transmit Error: ${e.message}")
+                        log.error("UDP Transmit Error: ${e.message}")
                     }
                 }
             } catch (e: Exception) {
-                Log.e("NauticalPlugin", "UDP Socket Setup Error: ${e.message}")
+                log.error("UDP Socket Setup Error: ${e.message}")
             }
         }
     }
@@ -49,7 +50,7 @@ class AisUdpEmitter {
     fun emitNmeaSentence(nmeaSentence: String) {
         val result = messageChannel?.trySend(nmeaSentence)
         if (result?.isFailure == true) {
-            Log.w("NauticalPlugin", "UDP Emitter buffer full, dropped sentence.")
+            log.warn("UDP Emitter buffer full, dropped sentence.")
         }
     }
 
@@ -64,9 +65,9 @@ class AisUdpEmitter {
             socket?.close()
             socket = null
 
-            Log.d("NauticalPlugin", "AIS UDP Emitter stopped and resources released")
+            log.debug("AIS UDP Emitter stopped and resources released")
         } catch (e: Exception) {
-            Log.e("NauticalPlugin", "Error stopping UDP Emitter: ${e.message}")
+            log.error("Error stopping UDP Emitter: ${e.message}")
         }
     }
 }

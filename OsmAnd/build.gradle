@@ -57,12 +57,8 @@ android {
 		versionName System.getenv("APK_VERSION_SUFFIX")? versionName + System.getenv("APK_VERSION_SUFFIX").toString(): versionName
 	}
 
-	lintOptions {
-		lintConfig file("lint.xml")
-		warningsAsErrors false
-	}
 
-	bundle {
+    bundle {
 		language {
 			// Specifies that the app bundle should not support
 			// configuration APKs for language resources. These
@@ -113,7 +109,15 @@ android {
 	}
 
 	flavorDimensions "version", "coreversion", "abi"
-	productFlavors {
+    androidResources {
+        noCompress 'qz'
+    }
+    lint {
+        abortOnError false
+        lintConfig file('lint.xml')
+        warningsAsErrors false
+    }
+    productFlavors {
 		// Version
 		nightlyFree {
 			dimension "version"

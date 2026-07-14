@@ -1,18 +1,59 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="vertical"
-    android:padding="20dp">
+    android:background="?attr/list_background_color"
+    android:fitsSystemWindows="true">
 
-    <Button android:id="@+id/btn_auto"
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="@string/engage_autopilot" />
+        android:orientation="vertical"
+        android:paddingLeft="24dp"
+        android:paddingRight="24dp"
+        android:paddingTop="32dp"
+        android:paddingBottom="48dp"
+        android:gravity="center_horizontal">
 
-    <Button android:id="@+id/btn_emergency_stop"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="@string/emergency_stop"
-        android:backgroundTint="#FF0000" />
-</LinearLayout>
+        <TextView
+            android:id="@+id/tv_pilot_status"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:padding="12dp"
+            android:textAlignment="center"
+            android:textColor="?android:attr/textColorPrimary"
+            android:textStyle="bold"
+            android:layout_marginBottom="24dp"
+            android:background="?attr/activity_background_color"
+            android:text="@string/status_standby" />
+
+        <Button
+            android:id="@+id/btn_auto"
+            style="@style/Widget.AppCompat.Button.Colored"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:maxWidth="320dp"
+            android:layout_gravity="center_horizontal"
+            android:drawableStart="@drawable/ic_action_sail_boat_dark"
+            android:drawablePadding="12dp"
+            android:paddingStart="24dp"
+            android:paddingEnd="24dp"
+            android:text="@string/engage_autopilot" />
+
+        <Button
+            android:id="@+id/btn_emergency_stop"
+            style="@style/Widget.AppCompat.Button.Colored"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:maxWidth="320dp"
+            android:layout_gravity="center_horizontal"
+            android:drawableStart="@drawable/ic_action_track_broken"
+            android:drawablePadding="12dp"
+            android:paddingStart="24dp"
+            android:paddingEnd="24dp"
+            android:text="@string/emergency_stop"
+            android:backgroundTint="@color/text_color_negative" />
+
+    </LinearLayout>
+</androidx.core.widget.NestedScrollView>

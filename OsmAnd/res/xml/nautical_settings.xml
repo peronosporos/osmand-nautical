@@ -1,15 +1,35 @@
 <?xml version="1.0" encoding="utf-8"?>
-<PreferenceScreen
-    xmlns:android="http://schemas.android.com/apk/res/android"
-    android:title="Nautical Marine Controls">
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:title="@string/plugin_nautical_name"
+    tools:context="net.osmand.plus.plugins.nautical.NauticalSettingsFragment">
 
-    <PreferenceCategory android:title="SignalK Server">
-        <net.osmand.plus.settings.preferences.EditTextPreferenceEx
-            android:key="server_ip"
-            android:title="IP Address" />
+    <PreferenceCategory
+        android:layout="@layout/preference_category_with_descr"
+        android:title="@string/nautical_settings_title" />
 
-        <net.osmand.plus.settings.preferences.EditTextPreferenceEx
-            android:key="server_port"
-            android:title="Port" />
-    </PreferenceCategory>
+    <net.osmand.plus.settings.preferences.EditTextPreferenceEx
+        android:key="server_ip"
+        android:layout="@layout/preference_with_descr"
+        android:title="@string/ais_address_nmea_server"
+        android:dialogTitle="@string/ais_address_nmea_server" />
+
+    <net.osmand.plus.settings.preferences.EditTextPreferenceEx
+        android:key="server_port"
+        android:layout="@layout/preference_with_descr"
+        android:title="@string/ais_port_nmea_server"
+        android:dialogTitle="@string/ais_port_nmea_server" />
+
+    <net.osmand.plus.settings.preferences.EditTextPreferenceEx
+        android:key="nautical_xte_threshold"
+        android:layout="@layout/preference_with_descr"
+        android:title="XTE Threshold (NM)"
+        android:dialogTitle="XTE Threshold (NM)" />
+
+    <net.osmand.plus.settings.preferences.ListPreferenceEx
+        android:key="ais_receive_in_background"
+        android:layout="@layout/preference_with_descr"
+        android:title="@string/nautical_receive_in_background" />
+
 </PreferenceScreen>

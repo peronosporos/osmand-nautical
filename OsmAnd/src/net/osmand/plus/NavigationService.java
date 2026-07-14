@@ -4,6 +4,7 @@ import static android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION;
 import static net.osmand.plus.OsmAndLocationProvider.NOT_SWITCH_TO_NETWORK_WHEN_GPS_LOST_MS;
 import static net.osmand.plus.OsmAndLocationProvider.isRunningOnEmulator;
 import static net.osmand.plus.notifications.OsmandNotification.NotificationType.AIS;
+import static net.osmand.plus.notifications.OsmandNotification.NotificationType.NAUTICAL;
 import static net.osmand.plus.notifications.OsmandNotification.NotificationType.GPX;
 import static net.osmand.plus.notifications.OsmandNotification.NotificationType.NAVIGATION;
 import static net.osmand.plus.notifications.OsmandNotification.TOP_NOTIFICATION_SERVICE_ID;
@@ -49,6 +50,7 @@ public class NavigationService extends Service {
 	public static int USED_BY_NAVIGATION = 1;
 	public static int USED_BY_GPX = 2;
 	public static int USED_BY_AIS = 4;
+	public static int USED_BY_NAUTICAL = 8;
 	public static final String USAGE_INTENT = "SERVICE_USED_BY";
 
 	private final NavigationServiceBinder binder = new NavigationServiceBinder();
@@ -142,7 +144,7 @@ public class NavigationService extends Service {
 		locationServiceHelper = app.createLocationServiceHelper();
 		app.setNavigationService(this);
 
-		NotificationType type = isUsedBy(USED_BY_NAVIGATION) ? NAVIGATION : isUsedBy(USED_BY_GPX) ? GPX : AIS;
+		NotificationType type = isUsedBy(USED_BY_NAVIGATION) ? NAVIGATION : isUsedBy(USED_BY_GPX) ? GPX : isUsedBy(USED_BY_NAUTICAL) ? NAUTICAL : AIS;
 		NotificationHelper notificationHelper = app.getNotificationHelper();
 		Notification notification = notificationHelper.buildTopNotification(this, type);
 

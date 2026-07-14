@@ -1,7 +1,7 @@
 package net.osmand.plus.plugins.nautical.engine
 
-import android.util.Log
 import android.widget.Toast
+import net.osmand.PlatformUtil
 import net.osmand.plus.OsmandApplication
 import net.osmand.plus.R
 import net.osmand.plus.plugins.nautical.NauticalPlugin
@@ -12,8 +12,10 @@ import java.io.IOException
 
 class AutopilotController(
     private val app: OsmandApplication,
-    private val connection: OkHttpSignalKConnection
+    private val connection: OkHttpSignalKConnection,
 ) {
+    private val log = PlatformUtil.getLog(AutopilotController::class.java)
+
     private companion object {
         val JSON = "application/json; charset=utf-8".toMediaType()
     }
@@ -32,14 +34,14 @@ class AutopilotController(
             return
         }
         val payload = """{ "value": { "position": { "latitude": $latitude, "longitude": $longitude } } }"""
-        executePut(url, payload, R.string.nautical_toast_heading_sent, true)
+        executePut(url, payload, R.string.nautical_toast_heading_sent, showToast = true)
     }
 
     fun processRouteStep() {
         val engine = NauticalPlugin.engine
         if (engine?.isFollowingRoute == true) {
-            if (engine.getRouteQueueSize() < 5) {
-                engine.pushNextWaypointsToAutopilot()
+            engine.getNextWaypoint()?.let {
+                sendActiveWaypoint(it.first, it.second)
             }
         }
     }
@@ -50,13 +52,13 @@ class AutopilotController(
             showConnectionError()
             return
         }
-        executePut(url, """{ "value": null }""", R.string.nautical_toast_stopped, true)
+        executePut(url, """{ "value": null }""", R.string.nautical_toast_stopped, showToast = true)
     }
 
     @Suppress("unused")
     fun holdHeading(heading: Double) {
         val url = buildUrl("bearingTrue") ?: return
-        executePut(url, """{ "value": $heading }""", null, false)
+        executePut(url, """{ "value": $heading }""", null, showToast = false)
     }
 
     private var cachedIp: String = ""
@@ -87,7 +89,7 @@ class AutopilotController(
             return
         }
         val payload = """{ "value": "$mode" }"""
-        executePut(url, payload, R.string.nautical_toast_mode_changed, true)
+        executePut(url, payload, R.string.nautical_toast_mode_changed, showToast = true)
     }
 
     private fun showConnectionError() {
@@ -99,9 +101,10 @@ class AutopilotController(
     private fun executePut(url: String, payload: String, successToastRes: Int?, showToast: Boolean) {
         val request = Request.Builder().url(url).put(payload.toRequestBody(JSON)).build()
 
-        client.newCall(request).enqueue(object : Callback {
-            override fun onFailure(call: Call, e: IOException) {
-                Log.e("NauticalAutopilot", "Request failed: ${e.message}")
+        client.newCall(request).enqueue(
+            object : Callback {
+                override fun onFailure(call: Call, e: IOException) {
+                log.error("Request failed: ${e.message}")
                 if (showToast) {
                     app.runInUIThread {
                         Toast.makeText(app, app.getString(R.string.nautical_toast_conn_failed), Toast.LENGTH_SHORT).show()
@@ -111,7 +114,7 @@ class AutopilotController(
 
             override fun onResponse(call: Call, response: Response) {
                 if (!response.isSuccessful) {
-                    Log.e("NauticalAutopilot", "Server error: ${response.code}")
+                    log.error("Server error: ${response.code}")
                     if (showToast) {
                         app.runInUIThread {
                             Toast.makeText(app, app.getString(R.string.nautical_toast_server_error, response.code), Toast.LENGTH_SHORT).show()
@@ -124,6 +127,7 @@ class AutopilotController(
                 }
                 response.close()
             }
-        })
+        },
+        )
     }
 }

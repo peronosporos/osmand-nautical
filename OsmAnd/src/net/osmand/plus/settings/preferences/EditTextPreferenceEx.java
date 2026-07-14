@@ -36,4 +36,10 @@ public class EditTextPreferenceEx extends EditTextPreference {
 	public void setDescription(int descriptionResId) {
 		setDescription(getContext().getString(descriptionResId));
 	}
+
+	@Override
+	public CharSequence getDialogTitle() {
+		CharSequence dialogTitle = super.getDialogTitle();
+		return dialogTitle != null ? dialogTitle : getTitle();
+	}
 }

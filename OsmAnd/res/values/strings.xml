@@ -1,5 +1,13 @@
 <?xml version="1.0" encoding="utf-8" standalone="no"?>
 <resources>
+	<string name="nautical_server_username_desc">Username (optional)</string>
+	<string name="nautical_server_password_desc">Password (optional)</string>
+	<string name="nautical_server_secure_desc">Use secure connection (wss://)</string>
+	<string name="nautical_export_trajectory">Export Current Trajectory</string>
+	<string name="nautical_trajectory_exported">Trajectory exported to %1$s</string>
+	<string name="nautical_show_laylines">Show Laylines</string>
+	<string name="nautical_show_wind_shifts">Show Wind Shifts</string>
+	<string name="nautical_show_trajectory">Show Trajectory</string>
 <!--
 	README:
 	- The preferred way to help with translations is via https://hosted.weblate.org/engage/osmand/
@@ -12,6 +20,26 @@
 	Thx - Hardy
 -->
 	<!-- Nautical plugin-->
+	<string name="nautical_plugin_name">Nautical Marine Controls</string>
+	<string name="nautical_plugin_description">SignalK integration for marine navigation and autopilot control.</string>
+	<string name="nautical_ip_not_configured">SignalK IP not configured. Please check plugin settings.</string>
+	<string name="nautical_toggle_night_vision">Toggle Night Vision</string>
+	<string name="nautical_follow_gpx_route">Follow GPX Route</string>
+	<string name="nautical_select_track">Select Track</string>
+	<string name="nautical_no_tracks_found">No tracks found.</string>
+	<string name="nautical_loaded_points">Loaded %1$d points</string>
+	<string name="nautical_server_ip_desc">Enter your SignalK server IP</string>
+	<string name="nautical_server_port_desc">Enter port (default 3000)</string>
+	<string name="nautical_xte_threshold_desc">Threshold for Off Course alarm (NM)</string>
+	<string name="nautical_widget_vmg_label">VMG</string>
+	<string name="nautical_vmg_desc">Displays Velocity Made Good</string>
+	<string name="nautical_widget_cog_label">COG</string>
+	<string name="nautical_cog_desc">Displays Course Over Ground</string>
+	<string name="nautical_connection_stale">STALE</string>
+	<string name="nautical_connection_disconnected">DISCONNECTED</string>
+
+	<string name="nautical_unit_nm">NM</string>
+	<string name="nautical_no_data">No data</string>
 	<string name="nautical_settings_title">SignalK Server Settings</string>
 	<string name="nautical_ip_hint">IP Address (e.g., 192.168.1.100)</string>
 	<string name="nautical_port_hint">Port (e.g., 3000)</string>
@@ -34,6 +62,14 @@
 	<string name="shared_string_nautical_pilot">Nautical Pilot</string>
 	<string name="shared_string_nautical_pilot_desc">Control the autopilot state</string>
 
+	<string name="nautical_unit_knots">kn</string>
+	<string name="nautical_unit_meters">m</string>
+	<string name="nautical_unit_feet">ft</string>
+	<string name="nautical_mode_ap">AP</string>
+	<string name="nautical_mode_auto">AUTO</string>
+	<string name="nautical_mode_stby">STBY</string>
+	<string name="nautical_mode_stop">STOP</string>
+
 	<string name="nautical_status_off">OFF</string>
 	<string name="nautical_steer_here">Engage Autopilot Here</string>
 	<string name="nautical_graph_title">Data History (Last 1 Hour)</string>
@@ -48,6 +84,9 @@
 	<string name="nautical_dialog_button_hold">Hold</string>
 	<string name="nautical_dialog_button_cancel">Cancel</string>
 	<string name="nautical_pilot_status_active">Active Mode: %1$s</string>
+	<string name="nautical_engage_autopilot">ENGAGE AUTOPILOT</string>
+	<string name="nautical_target_coordinates">Target: %1$.5f, %2$.5f</string>
+	<string name="nautical_command_sent">Command Sent to SignalK</string>
 	<string name="nautical_emg_stop">EMG</string>
 	<string name="nautical_stop_label">STOP</string>
 	<string name="nautical_emergency_stop">Emergency Stop Executed</string>
@@ -73,6 +112,8 @@
 	<string name="ais_own_mmsi_description">Identify the MMSI (9 digit numerical value) of own AIS object.</string>
 	<string name="ais_display_own_position">Define whether the own AIS object shall be displayed.</string>
 	<string name="ais_display_own_position_description">Usually the own position is shown by OsmAnd. The additional display of the own AIS object may be confusing and can be disabled here.</string>
+	<string name="nautical_receive_in_background">Keep SignalK connection active</string>
+	<string name="nautical_receive_in_background_description">Keep SignalK connection alive when the screen is off or the app is in background.</string>
 	<string name="ais_receive_in_background">Receive AIS data even if OsmAnd is paused.</string>
 	<string name="ais_receive_in_background_description">If enabled, the AIS message listener stays running if OsmAnd is paused or in background. If disabled, no messages are received if OsmAnd is in background.</string>
 	<string name="data_storage">Data storage</string>

@@ -16,11 +16,8 @@ android {
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
 
-	lintOptions {
-		abortOnError false
-	}
 
-	// related to kuromoji
+    // related to kuromoji
 	//packagingOptions {
 	//	exclude '/META-INF/CONTRIBUTORS.md'
 	//	exclude '/META-INF/LICENSE.md'
@@ -30,8 +27,7 @@ android {
 	// This is from OsmAndCore_android.aar - for some reason it's not inherited
 	aaptOptions {
 		// Don't compress any embedded resources
-		noCompress "qz"
-		cruncherEnabled = false
+        cruncherEnabled = false
 		// Flag notifies aapt to keep the attribute IDs around
 		// additionalParameters "--no-version-vectors"
 	}
@@ -374,7 +370,7 @@ tasks.register('appStart', Exec) {
 }
 
 dependencies {
-	implementation project(path: ':OsmAnd-java', configuration: 'android')
+	implementation project(':OsmAnd-java')
 	implementation project(':OsmAnd-api')
 
 	implementation project(':OsmAnd-shared')
