@@ -15,6 +15,22 @@
 	<string name="nautical_plugin_name">Nautical Marine Controls</string>
 	<string name="nautical_plugin_description">SignalK integration for marine navigation and autopilot control.</string>
 	<string name="nautical_settings_title">SignalK Server Settings</string>
+
+	<string name="nautical_mode_auto">Heading Hold</string>
+	<string name="nautical_mode_wind">Wind Mode</string>
+	<string name="nautical_mode_track">Track Mode</string>
+	<string name="nautical_mode_pattern">Pattern Mode</string>
+	<string name="nautical_sea_state">Sea State</string>
+	<string name="nautical_sea_state_label">Sensitivity: %1$d</string>
+	<string name="nautical_adjust_course">Course Adjustment</string>
+	<string name="nautical_adjust_minus_10" translatable="false">-10°</string>
+	<string name="nautical_adjust_minus_1" translatable="false">-1°</string>
+	<string name="nautical_adjust_plus_1" translatable="false">+1°</string>
+	<string name="nautical_adjust_plus_10" translatable="false">+10°</string>
+	<string name="nautical_target_heading_val">Target: %1$.0f°</string>
+	<string name="nautical_rudder_angle">Rudder Angle</string>
+	<string name="nautical_mode_stby">STBY</string>
+	<string name="nautical_mode_ap">AP</string>
 	<string name="nautical_group_title">Nautical</string>
 	<string name="nautical_group_desc">Marine instruments and data</string>
 	<string name="nautical_ip_not_configured">SignalK IP not configured. Please check plugin settings.</string>

@@ -1,12 +1,12 @@
 package net.osmand.plus.views.mapwidgets.widgets
 
-import android.animation.ValueAnimator
 import android.content.Context
 import android.graphics.*
 import android.util.AttributeSet
 import android.util.TypedValue
 import android.view.View
 import net.osmand.plus.R
+import net.osmand.plus.plugins.nautical.NauticalPlugin
 import java.util.*
 
 class NauticalGraphView @JvmOverloads constructor(
@@ -22,8 +22,6 @@ class NauticalGraphView @JvmOverloads constructor(
     private val dotPaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private var unit = ""
     private val graphPath = Path()
-    private var pulseRadius = 10f
-    private var pulseAnimator: ValueAnimator? = null
 
     init {
         setWillNotDraw(false)
@@ -67,19 +65,6 @@ class NauticalGraphView @JvmOverloads constructor(
 
         dotPaint.color = activeColor
         dotPaint.style = Paint.Style.FILL
-
-        if (!isInEditMode) {
-            pulseAnimator = ValueAnimator.ofFloat(3f * density, 6f * density).apply {
-                duration = 1200
-                repeatCount = ValueAnimator.INFINITE
-                repeatMode = ValueAnimator.REVERSE
-                addUpdateListener { animation ->
-                    pulseRadius = animation.animatedValue as Float
-                    postInvalidateOnAnimation()
-                }
-                start()
-            }
-        }
     }
 
     fun setData(newData: List<Double>?, unit: String) {
@@ -92,7 +77,6 @@ class NauticalGraphView @JvmOverloads constructor(
     }
 
     override fun onDetachedFromWindow() {
-        pulseAnimator?.cancel()
         super.onDetachedFromWindow()
     }
 
@@ -106,13 +90,21 @@ class NauticalGraphView @JvmOverloads constructor(
                 return
             }
 
+            val isNightVision = NauticalPlugin.getInstance()?.isNightVisionEnabled == true
+            if (isNightVision) {
+                linePaint.color = Color.RED
+                textPaint.color = Color.RED
+                gridPaint.color = Color.DKGRAY
+            }
+
             val width = width.toFloat()
             val height = height.toFloat()
             val density = resources.displayMetrics.density
             val paddingH = 36f * density
             val paddingV = 16f * density
+            val paddingBottom = 24f * density
             val graphW = width - (paddingH * 2)
-            val graphH = height - (paddingV * 2)
+            val graphH = height - (paddingV + paddingBottom)
 
             var min = data.minOrNull() ?: 0.0
             var max = data.maxOrNull() ?: 1.0
@@ -126,13 +118,13 @@ class NauticalGraphView @JvmOverloads constructor(
 
             // Draw Grid
             canvas.drawLine(paddingH, paddingV, width - paddingH, paddingV, gridPaint)
-            canvas.drawLine(paddingH, height - paddingV, width - paddingH, height - paddingV, gridPaint)
+            canvas.drawLine(paddingH, height - paddingBottom, width - paddingH, height - paddingBottom, gridPaint)
 
             // Draw Path
             graphPath.reset()
             for (i in data.indices) {
                 val x = paddingH + (i * stepX)
-                val y = (height - paddingV - (((data[i] - min) / range) * graphH)).toFloat()
+                val y = (height - paddingBottom - (((data[i] - min) / range) * graphH)).toFloat()
                 if (i == 0) graphPath.moveTo(x, y)
                 else graphPath.lineTo(x, y)
             }
@@ -149,21 +141,21 @@ class NauticalGraphView @JvmOverloads constructor(
                 ((0.2126 * r) + (0.7152 * g) + (0.0722 * b)).toFloat()
             }
             val shadowColor = if (luminance > 0.5f) Color.BLACK else Color.WHITE
-            textPaint.setShadowLayer(2f, 1f, 1f, shadowColor) // Add shadow for high contrast
+            if (!isNightVision) textPaint.setShadowLayer(2f, 1f, 1f, shadowColor) // Add shadow for high contrast
 
             canvas.drawText(String.format(Locale.US, "%.1f", max), paddingH - (4 * density), paddingV + (4 * density), textPaint)
-            canvas.drawText(String.format(Locale.US, "%.1f", min), paddingH - (4 * density), height - paddingV, textPaint)
+            canvas.drawText(String.format(Locale.US, "%.1f", min), paddingH - (4 * density), height - paddingBottom, textPaint)
 
             textPaint.textAlign = Paint.Align.LEFT
             canvas.drawText(unit, (width - paddingH) + (4 * density), paddingV + (4 * density), textPaint)
-            textPaint.clearShadowLayer()
+            
+            // X-Axis Timespan Labels
+            textPaint.textAlign = Paint.Align.CENTER
+            canvas.drawText("-6m", paddingH, height - (4 * density), textPaint)
+            canvas.drawText("-3m", paddingH + (graphW / 2), height - (4 * density), textPaint)
+            canvas.drawText("Now", width - paddingH, height - (4 * density), textPaint)
 
-            // Draw Current Point
-            if (data.isNotEmpty()) {
-                val lastX = paddingH + (data.size - 1) * stepX
-                val lastY = (height - paddingV - ((data.last() - min) / range) * graphH).toFloat()
-                canvas.drawCircle(lastX, lastY, pulseRadius, dotPaint)
-            }
+            textPaint.clearShadowLayer()
         }
     }
 }

@@ -9,12 +9,12 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:paddingLeft="24dp"
-        android:paddingRight="24dp"
-        android:paddingTop="32dp"
-        android:paddingBottom="48dp"
-        android:gravity="center_horizontal">
+        android:paddingLeft="16dp"
+        android:paddingRight="16dp"
+        android:paddingTop="24dp"
+        android:paddingBottom="32dp">
 
+        <!-- Header Status -->
         <TextView
             android:id="@+id/tv_pilot_status"
             android:layout_width="match_parent"
@@ -23,35 +23,157 @@
             android:textAlignment="center"
             android:textColor="?android:attr/textColorPrimary"
             android:textStyle="bold"
-            android:layout_marginBottom="24dp"
             android:background="?attr/activity_background_color"
             android:text="@string/nautical_status_standby" />
 
-        <Button
-            android:id="@+id/btn_auto"
-            style="@style/Widget.AppCompat.Button.Colored"
+        <!-- Rudder Angle Display -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:layout_gravity="center_horizontal"
+            android:text="@string/nautical_rudder_angle"
+            android:textSize="12sp"
+            android:textAllCaps="true" />
+
+        <net.osmand.plus.plugins.nautical.ui.RudderView
+            android:id="@+id/rudder_view"
+            android:layout_width="match_parent"
+            android:layout_height="80dp"
+            android:layout_marginTop="4dp" />
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="?android:attr/dividerVertical"
+            android:layout_marginTop="16dp"
+            android:layout_marginBottom="16dp" />
+
+        <!-- Course Adjustment -->
+        <TextView
+            android:id="@+id/tv_target_heading"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:text="@string/nautical_target_heading_val"
+            android:textSize="18sp"
+            android:textStyle="bold" />
+
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:maxWidth="320dp"
-            android:layout_gravity="center_horizontal"
-            android:drawableStart="@drawable/ic_action_sail_boat_dark"
-            android:drawablePadding="12dp"
-            android:paddingStart="24dp"
-            android:paddingEnd="24dp"
-            android:text="@string/nautical_engage_autopilot_btn" />
+            android:orientation="horizontal"
+            android:layout_marginTop="12dp"
+            android:gravity="center">
 
+            <Button
+                android:id="@+id/btn_minus_10"
+                style="@style/Widget.AppCompat.Button.Borderless"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/nautical_adjust_minus_10" />
+            <Button
+                android:id="@+id/btn_minus_1"
+                style="@style/Widget.AppCompat.Button.Borderless"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/nautical_adjust_minus_1" />
+            <Button
+                android:id="@+id/btn_plus_1"
+                style="@style/Widget.AppCompat.Button.Borderless"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/nautical_adjust_plus_1" />
+            <Button
+                android:id="@+id/btn_plus_10"
+                style="@style/Widget.AppCompat.Button.Borderless"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/nautical_adjust_plus_10" />
+        </LinearLayout>
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="?android:attr/dividerVertical"
+            android:layout_marginTop="16dp"
+            android:layout_marginBottom="16dp" />
+
+        <!-- Modes Grid -->
+        <GridLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:columnCount="2"
+            android:alignmentMode="alignMargins"
+            android:columnOrderPreserved="false">
+
+            <Button
+                android:id="@+id/btn_auto"
+                style="@style/Widget.AppCompat.Button.Colored"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_columnWeight="1"
+                android:layout_margin="4dp"
+                android:text="@string/nautical_mode_auto" />
+            <Button
+                android:id="@+id/btn_wind"
+                style="@style/Widget.AppCompat.Button.Colored"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_columnWeight="1"
+                android:layout_margin="4dp"
+                android:text="@string/nautical_mode_wind" />
+            <Button
+                android:id="@+id/btn_track"
+                style="@style/Widget.AppCompat.Button.Colored"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_columnWeight="1"
+                android:layout_margin="4dp"
+                android:text="@string/nautical_mode_track" />
+            <Button
+                android:id="@+id/btn_pattern"
+                style="@style/Widget.AppCompat.Button.Colored"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_columnWeight="1"
+                android:layout_margin="4dp"
+                android:text="@string/nautical_mode_pattern" />
+        </GridLayout>
+
+        <!-- Sea State / Sensitivity -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_marginTop="16dp">
+
+            <TextView
+                android:id="@+id/tv_sea_state"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:text="@string/nautical_sea_state_label" />
+
+            <SeekBar
+                android:id="@+id/sb_sea_state"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:max="4" />
+        </LinearLayout>
+
+        <!-- Emergency Stop -->
         <Button
             android:id="@+id/btn_emergency_stop"
             style="@style/Widget.AppCompat.Button.Colored"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:maxWidth="320dp"
-            android:layout_gravity="center_horizontal"
-            android:drawableStart="@drawable/ic_action_track_broken"
-            android:drawablePadding="12dp"
-            android:paddingStart="24dp"
-            android:paddingEnd="24dp"
+            android:layout_marginTop="24dp"
             android:text="@string/nautical_emergency_stop_label"
             android:backgroundTint="@color/text_color_negative" />
 

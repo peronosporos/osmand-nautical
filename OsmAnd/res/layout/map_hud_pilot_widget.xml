@@ -2,7 +2,7 @@
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
 	xmlns:app="http://schemas.android.com/apk/res-auto"
 	xmlns:tools="http://schemas.android.com/tools"
-	android:id="@+id/widget_bg_root"
+	android:id="@+id/widget_bg"
 	android:layout_width="match_parent"
 	android:layout_height="wrap_content"
 	android:minWidth="@dimen/map_minwidth_widget"
@@ -50,7 +50,6 @@
 						android:layout_marginEnd="@dimen/map_widget_icon_margin"
 						android:maxLines="1"
 						android:minWidth="10dp"
-						android:textColor="@color/activity_background_color_dark"
 						android:textSize="@dimen/map_widget_text_size"
 						tools:text="AUTO" />
 
@@ -75,9 +74,20 @@
 							android:layout_width="wrap_content"
 							android:layout_height="wrap_content"
 							android:maxLines="1"
-							android:textColor="@color/activity_background_color_dark"
 							android:textSize="@dimen/map_widget_text_size_small"
 							tools:text="AP" />
+
+						<net.osmand.plus.views.mapwidgets.OutlinedTextContainer
+							android:id="@+id/widget_name"
+							android:layout_width="wrap_content"
+							android:layout_height="wrap_content"
+							android:visibility="gone" />
+
+						<View
+							android:id="@+id/empty_banner"
+							android:layout_width="0dp"
+							android:layout_height="0dp"
+							android:visibility="gone" />
 
 					</FrameLayout>
 				</LinearLayout>

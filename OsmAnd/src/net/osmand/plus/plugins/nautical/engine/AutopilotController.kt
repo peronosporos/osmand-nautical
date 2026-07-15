@@ -48,16 +48,13 @@ class AutopilotController(
             return
         }
         executePut(url, """{ "value": null }""", R.string.nautical_toast_stopped, showToast = true)
+        setAutopilotMode("standby")
     }
 
     @Suppress("unused")
     fun holdHeading(heading: Double) {
         val url = buildUrl("bearingTrue") ?: return
         executePut(url, """{ "value": $heading }""", null, showToast = false)
-    }
-
-    init {
-        // Optional: Add a listener here if you want real-time updates when settings change
     }
 
     private fun buildUrl(path: String): String? {
@@ -71,14 +68,62 @@ class AutopilotController(
         return "$protocol://$ip:$port/signalk/v1/api/vessels/self/navigation/course/$path"
     }
 
+    private fun buildAutopilotUrl(path: String): String? {
+        val ip = app.settings.NAUTICAL_SERVER_IP.get() ?: ""
+        val port = app.settings.NAUTICAL_SERVER_PORT.get() ?: "3000"
+        if (ip.isEmpty()) return null
+
+        val useSecure = app.settings.NAUTICAL_USE_SECURE_CONNECTION.get()
+        val protocol = if (useSecure) "https" else "http"
+
+        return "$protocol://$ip:$port/signalk/v1/api/vessels/self/steering/autopilot/$path"
+    }
+
     fun setAutopilotMode(mode: String) {
-        val url = buildUrl("state")
+        val url = buildAutopilotUrl("state")
         if (url == null) {
             showConnectionError()
             return
         }
         val payload = """{ "value": "$mode" }"""
         executePut(url, payload, R.string.nautical_toast_mode_changed, showToast = true)
+    }
+
+    fun adjustHeading(deltaDegrees: Double) {
+        val currentState = NauticalPlugin.engine?.getCurrentState()
+        val currentTarget = currentState?.targetHeading ?: currentState?.headingTrue ?: 0.0
+        
+        // SignalK uses radians for heading
+        val newTargetRad = (currentTarget + Math.toRadians(deltaDegrees)) % (2 * Math.PI)
+        val finalTarget = if (newTargetRad < 0) newTargetRad + (2 * Math.PI) else newTargetRad
+        
+        val url = buildAutopilotUrl("target/headingTrue")
+        if (url == null) {
+            showConnectionError()
+            return
+        }
+        val payload = """{ "value": $finalTarget }"""
+        executePut(url, payload, null, showToast = false)
+    }
+
+    fun setSeaState(level: Int) {
+        val url = buildAutopilotUrl("seaState")
+        if (url == null) {
+            showConnectionError()
+            return
+        }
+        val payload = """{ "value": $level }"""
+        executePut(url, payload, null, showToast = true)
+    }
+
+    fun executePattern(pattern: String) {
+        val url = buildAutopilotUrl("pattern")
+        if (url == null) {
+            showConnectionError()
+            return
+        }
+        val payload = """{ "value": "$pattern" }"""
+        executePut(url, payload, null, showToast = true)
     }
 
     private fun showConnectionError() {

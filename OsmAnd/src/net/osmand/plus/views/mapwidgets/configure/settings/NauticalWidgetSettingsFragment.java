@@ -5,7 +5,7 @@ import androidx.annotation.NonNull;
 import net.osmand.plus.R;
 import net.osmand.plus.views.mapwidgets.WidgetType;
 
-public class NauticalWidgetSettingsFragment extends BaseResizableWidgetSettingFragment {
+public class NauticalWidgetSettingsFragment extends BaseSimpleWidgetInfoFragment {
 
     @NonNull
     @Override
@@ -13,15 +13,10 @@ public class NauticalWidgetSettingsFragment extends BaseResizableWidgetSettingFr
         return widgetInfo.widget.getWidgetType();
     }
 
-    // Instead of overriding setupInfo which seems to be causing the override error,
-    // we use the standard setupMainContent override which is the intended
-    // entry point for custom widget settings UI.
     @Override
     protected void setupMainContent(@NonNull android.view.ViewGroup container) {
         super.setupMainContent(container);
 
-        // This is where we safely inject our description text
-        // without touching the core fragments' setupInfo logic.
         TextView tvDesc = view.findViewById(R.id.widget_description);
         if (tvDesc != null) {
             WidgetType widgetType = widgetInfo.widget.getWidgetType();
@@ -33,6 +28,7 @@ public class NauticalWidgetSettingsFragment extends BaseResizableWidgetSettingFr
         }
 
         if (getWidget() == WidgetType.NAUTICAL_PILOT) {
+            net.osmand.plus.helpers.AndroidUiHelper.updateVisibility(view.findViewById(R.id.main_container), true);
             setupPilotExtraInfo(container);
         }
     }

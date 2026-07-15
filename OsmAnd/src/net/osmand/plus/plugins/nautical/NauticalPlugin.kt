@@ -23,7 +23,6 @@ import net.osmand.plus.views.mapwidgets.WidgetType
 import net.osmand.plus.views.mapwidgets.WidgetsPanel
 import net.osmand.plus.views.mapwidgets.widgets.MapWidget
 import net.osmand.plus.views.mapwidgets.widgets.MarineTextWidget
-import net.osmand.plus.views.mapwidgets.widgets.NauticalGraphWidget
 import net.osmand.plus.views.mapwidgets.widgets.NauticalPilotWidget
 import net.osmand.plus.settings.enums.DayNightMode
 import net.osmand.plus.settings.fragments.SettingsScreenType
@@ -109,10 +108,6 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app) {
             WidgetType.NAUTICAL_VMG,
             WidgetType.NAUTICAL_COG,
         -> MarineTextWidget(mapActivity, widgetType, customId, widgetsPanel)
-            WidgetType.NAUTICAL_DEPTH_GRAPH,
-            WidgetType.NAUTICAL_WIND_GRAPH,
-            WidgetType.NAUTICAL_VMG_GRAPH,
-        -> NauticalGraphWidget(mapActivity, widgetType, customId, widgetsPanel)
             WidgetType.NAUTICAL_PILOT -> NauticalPilotWidget(mapActivity, widgetType, customId, widgetsPanel)
             else -> null
         }
@@ -169,7 +164,7 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app) {
 
             if ((nauticalMapLayer == null) && (mapView != null)) {
                 nauticalMapLayer = NauticalMapLayer(app)
-                NauticalActionBottomSheet.addNauticalLayer(mapView, nauticalMapLayer!!)
+                mapView.addLayer(nauticalMapLayer!!, 5.0f)
             }
 
             if (locationProvider == null) locationProvider = NauticalLocationProvider(app, engine)
@@ -206,9 +201,7 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app) {
             app.settings.NAUTICAL_RECEIVE_IN_BACKGROUND.removeListener(receiveInBackgroundPrefListener)
             stopNauticalBackgroundService()
             nauticalMapLayer?.let { layer ->
-                mapView?.let {
-                    NauticalActionBottomSheet.removeNauticalLayer(it, layer)
-                }
+                mapView?.removeLayer(layer)
                 nauticalMapLayer = null
             }
             shutdownResources()
@@ -345,7 +338,8 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app) {
                     title = mapActivity.getString(R.string.nautical_steer_here)
                     icon = R.drawable.ic_action_direction_compass
                     setListener { _, _, _, _ ->
-                        NauticalActionBottomSheet.newInstance(lat, lon).show(mapActivity.supportFragmentManager, NauticalActionBottomSheet.TAG)
+                        autopilot?.sendActiveWaypoint(lat, lon)
+                        app.showToastMessage(R.string.nautical_command_sent)
                         true
                     }
                 }

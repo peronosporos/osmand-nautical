@@ -15,13 +15,9 @@ import net.osmand.plus.R
 import net.osmand.plus.activities.MapActivity
 import net.osmand.plus.plugins.nautical.NauticalPlugin
 import net.osmand.plus.plugins.nautical.engine.MarineState
-import net.osmand.plus.settings.backend.preferences.OsmandPreference
-import net.osmand.plus.settings.enums.WidgetSize
 import net.osmand.plus.views.layers.base.OsmandMapLayer
 import net.osmand.plus.views.mapwidgets.WidgetType
 import net.osmand.plus.views.mapwidgets.WidgetsPanel
-import net.osmand.plus.views.mapwidgets.widgetinterfaces.ISupportWidgetResizing
-import net.osmand.plus.views.mapwidgets.widgetstates.ResizableWidgetState
 import java.util.*
 import kotlin.math.abs
 
@@ -30,14 +26,7 @@ class NauticalPilotWidget(
     widgetType: WidgetType,
     customId: String?,
     panel: WidgetsPanel?,
-) : TextInfoWidget(mapActivity, widgetType, customId, panel), ISupportWidgetResizing {
-
-    private val widgetSizePref: OsmandPreference<WidgetSize> = ResizableWidgetState.registerWidgetSizePref(
-        mapActivity.app,
-        customId,
-        widgetType,
-        WidgetSize.MEDIUM,
-    )
+) : SimpleWidget(mapActivity, widgetType, customId, panel) {
 
     private var statusIconView: AppCompatImageView? = null
     private var progressBar: ProgressBar? = null
@@ -47,20 +36,11 @@ class NauticalPilotWidget(
 
     private val marineStateListener: (MarineState) -> Unit = {
         mapActivity.runOnUiThread {
-            updateInfo(view, null)
+            updateInfo(null)
         }
     }
 
-    override fun getLayoutId(): Int = R.layout.map_hud_pilot_widget
-
-    override fun getWidgetSizePref(): OsmandPreference<WidgetSize> = widgetSizePref
-
-    override fun allowResize(): Boolean = true
-
-    override fun recreateView() {
-        setupView(view)
-        updateInfo(view, null)
-    }
+    override fun getContentLayoutId(): Int = R.layout.map_hud_pilot_widget
 
     @SuppressLint("ClickableViewAccessibility")
     override fun setupView(view: View) {
@@ -88,6 +68,11 @@ class NauticalPilotWidget(
                 return true
             }
 
+            override fun onDoubleTap(e: MotionEvent): Boolean {
+                triggerCommand("STOP")
+                return true
+            }
+
             override fun onLongPress(e: MotionEvent) {
                 progressBar?.visibility = View.VISIBLE
                 holdProgress = 0
@@ -104,8 +89,9 @@ class NauticalPilotWidget(
                             holdHandler.postDelayed(this, 50)
                         }
                     }
-                })
-            }
+                },
+            )
+        }
         })
 
         view.setOnTouchListener { _, event ->
@@ -172,10 +158,11 @@ class NauticalPilotWidget(
         }
     }
 
-    override fun updateInfo(view: View, drawSettings: OsmandMapLayer.DrawSettings?) {
-        super.updateInfo(view, drawSettings)
-
+    override fun updateSimpleWidgetInfo(drawSettings: OsmandMapLayer.DrawSettings?) {
         val engine = NauticalPlugin.engine
+        
+        updateIcon()
+
         if (engine == null) {
             setText(mapActivity.getString(R.string.nautical_status_off), mapActivity.getString(R.string.nautical_mode_ap))
             setStatusIcon(0)
@@ -197,10 +184,15 @@ class NauticalPilotWidget(
             setText(String.format(Locale.US, "%.2f", xte), mapActivity.getString(R.string.nautical_xte_label, mapActivity.getString(R.string.nautical_unit_nm)))
             setStatusIcon(R.drawable.ic_action_alert)
         } else {
-            when (state.autopilotState.lowercase(Locale.US)) {
-                "auto", "wind" -> {
+            when (val mode = state.autopilotState.lowercase(Locale.US)) {
+                "auto", "wind", "route", "track" -> {
                     setStatusIcon(R.drawable.ic_action_play_dark)
-                    setText(mapActivity.getString(R.string.nautical_mode_auto), mapActivity.getString(R.string.nautical_mode_ap))
+                    val modeLabel = when (mode) {
+                        "wind" -> "WIND"
+                        "route", "track" -> "TRACK"
+                        else -> "AUTO"
+                    }
+                    setText(modeLabel, mapActivity.getString(R.string.nautical_mode_ap))
                 }
                 "emergency", "stop" -> {
                     setStatusIcon(R.drawable.ic_action_stop)

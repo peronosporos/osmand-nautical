@@ -6,13 +6,9 @@ import net.osmand.plus.R
 import net.osmand.plus.activities.MapActivity
 import net.osmand.plus.plugins.nautical.NauticalPlugin
 import net.osmand.plus.plugins.nautical.engine.MarineState
-import net.osmand.plus.settings.backend.preferences.OsmandPreference
-import net.osmand.plus.settings.enums.WidgetSize
 import net.osmand.plus.views.layers.base.OsmandMapLayer
 import net.osmand.plus.views.mapwidgets.WidgetType
 import net.osmand.plus.views.mapwidgets.WidgetsPanel
-import net.osmand.plus.views.mapwidgets.widgetinterfaces.ISupportWidgetResizing
-import net.osmand.plus.views.mapwidgets.widgetstates.ResizableWidgetState
 import net.osmand.shared.settings.enums.MetricsConstants
 import net.osmand.shared.units.SpeedUnits
 import java.util.*
@@ -22,17 +18,7 @@ class MarineTextWidget(
     widgetType: WidgetType,
     customId: String?,
     panel: WidgetsPanel?
-) : TextInfoWidget(mapActivity, widgetType, customId, panel), ISupportWidgetResizing {
-
-    private val widgetSizePref: OsmandPreference<WidgetSize> = ResizableWidgetState.registerWidgetSizePref(
-        mapActivity.app,
-        customId,
-        widgetType,
-        WidgetSize.MEDIUM
-    )
-
-    private var lastDisplayedText = ""
-    private var lastDisplayedSmallText = ""
+) : SimpleWidget(mapActivity, widgetType, customId, panel) {
 
     private var lastUpdateTime = 0L
     private val marineStateListener: (MarineState) -> Unit = {
@@ -40,18 +26,9 @@ class MarineTextWidget(
         if (now - lastUpdateTime > 200) { // Throttle 5Hz
             lastUpdateTime = now
             mapActivity.runOnUiThread {
-                updateInfo(view, null)
+                updateInfo(null)
             }
         }
-    }
-
-    override fun getWidgetSizePref(): OsmandPreference<WidgetSize> = widgetSizePref
-
-    override fun allowResize(): Boolean = true
-
-    override fun recreateView() {
-        setupView(view)
-        updateInfo(view, null)
     }
 
     override fun setupView(view: View) {
@@ -66,8 +43,10 @@ class MarineTextWidget(
                 NauticalPlugin.engine?.unregisterListener(marineStateListener)
             }
         })
+    }
 
-        view.setOnClickListener {
+    override fun getOnClickListener(): View.OnClickListener? {
+        return View.OnClickListener {
             if (!mapActivity.isFinishing) {
                 val dialog = NauticalDataBottomSheet.newInstance(this.widgetType)
                 dialog.show(mapActivity.supportFragmentManager, "nautical_graph")
@@ -76,16 +55,16 @@ class MarineTextWidget(
     }
 
     @SuppressLint("DefaultLocale")
-    override fun updateInfo(view: View, drawSettings: OsmandMapLayer.DrawSettings?) {
-        super.updateInfo(view, drawSettings)
-
+    override fun updateSimpleWidgetInfo(drawSettings: OsmandMapLayer.DrawSettings?) {
         val engine = NauticalPlugin.engine ?: return
         val state = engine.getCurrentState()
 
+        updateIcon()
+
         if (state == null || state.connectionStatus == net.osmand.plus.plugins.nautical.engine.ConnectionStatus.DISCONNECTED) {
-            updateText(mapActivity.getString(R.string.nautical_status_off), mapActivity.getString(R.string.n_a))
+            setText(mapActivity.getString(R.string.nautical_status_off), mapActivity.getString(R.string.n_a))
         } else if (state.connectionStatus == net.osmand.plus.plugins.nautical.engine.ConnectionStatus.STALE) {
-            updateText(mapActivity.getString(R.string.nautical_connection_stale), "")
+            setText(mapActivity.getString(R.string.nautical_connection_stale), "")
         } else {
             val settings = mapActivity.app.settings
             val metrics = settings.METRIC_SYSTEM.get()
@@ -93,13 +72,11 @@ class MarineTextWidget(
             when (widgetType) {
                 WidgetType.NAUTICAL_DEPTH -> handleDepthUpdate(state, metrics)
                 WidgetType.NAUTICAL_WIND -> handleWindUpdate(state, metrics)
-                WidgetType.NAUTICAL_PILOT -> handlePilotUpdate(state)
                 WidgetType.NAUTICAL_VMG -> handleVmgUpdate(state, metrics)
                 WidgetType.NAUTICAL_COG -> handleCogUpdate(state)
                 else -> {}
             }
         }
-        view.invalidate()
     }
 
     private fun handleVmgUpdate(state: MarineState, metrics: MetricsConstants) {
@@ -113,36 +90,20 @@ class MarineTextWidget(
                 SpeedUnits.MILES_PER_HOUR -> mapActivity.getString(R.string.mile_per_hour)
                 else -> mapActivity.getString(R.string.m_s)
             }
-            updateText(String.format(Locale.US, "%.1f", converted), unitStr)
+            setText(String.format(Locale.US, "%.1f", converted), unitStr)
         } else {
-            updateText(mapActivity.getString(R.string.n_a), mapActivity.getString(R.string.nautical_unit_knots))
+            setText(mapActivity.getString(R.string.n_a), mapActivity.getString(R.string.nautical_unit_knots))
         }
     }
 
     private fun handleCogUpdate(state: MarineState) {
         val cog = state.courseOverGroundTrue
         if (cog != null) {
-            // SignalK angles are in radians
             val cogDeg = Math.toDegrees(cog)
-            updateText(String.format(Locale.US, "%.0f°", cogDeg), mapActivity.getString(R.string.nautical_widget_cog_label))
+            setText(String.format(Locale.US, "%.0f°", cogDeg), mapActivity.getString(R.string.nautical_widget_cog_label))
         } else {
-            updateText(mapActivity.getString(R.string.n_a), mapActivity.getString(R.string.nautical_widget_cog_label))
+            setText(mapActivity.getString(R.string.n_a), mapActivity.getString(R.string.nautical_widget_cog_label))
         }
-    }
-
-    private fun updateText(text: String?, smallText: String?) {
-        val t = text ?: ""
-        val st = smallText ?: ""
-        if (lastDisplayedText != t || lastDisplayedSmallText != st) {
-            setText(t, st)
-            lastDisplayedText = t
-            lastDisplayedSmallText = st
-        }
-    }
-
-    private fun handlePilotUpdate(state: MarineState) {
-        val mode = state.autopilotMode
-        updateText(mode.uppercase(Locale.US), "")
     }
 
     private fun handleDepthUpdate(state: MarineState, metrics: MetricsConstants) {
@@ -152,9 +113,9 @@ class MarineTextWidget(
             val unit = if (useFeet) mapActivity.getString(R.string.nautical_unit_feet) else mapActivity.getString(R.string.nautical_unit_meters)
 
             if (useFeet) depth *= 3.28084
-            updateText(String.format(Locale.US, "%.1f", depth), unit)
+            setText(String.format(Locale.US, "%.1f", depth), unit)
         } else {
-            updateText(mapActivity.getString(R.string.n_a), mapActivity.getString(R.string.nautical_unit_meters))
+            setText(mapActivity.getString(R.string.n_a), mapActivity.getString(R.string.nautical_unit_meters))
         }
     }
 
@@ -169,9 +130,9 @@ class MarineTextWidget(
                 SpeedUnits.MILES_PER_HOUR -> mapActivity.getString(R.string.mile_per_hour)
                 else -> mapActivity.getString(R.string.m_s)
             }
-            updateText(String.format(Locale.US, "%.1f", converted), unitStr)
+            setText(String.format(Locale.US, "%.1f", converted), unitStr)
         } else {
-            updateText(mapActivity.getString(R.string.n_a), mapActivity.getString(R.string.nautical_unit_knots))
+            setText(mapActivity.getString(R.string.n_a), mapActivity.getString(R.string.nautical_unit_knots))
         }
     }
 }

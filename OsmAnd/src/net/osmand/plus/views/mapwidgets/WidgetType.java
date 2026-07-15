@@ -149,15 +149,11 @@ public enum WidgetType {
 	GLIDE_TARGET("glide_ratio_to_target", R.string.glide_ratio_to_target, R.string.map_widget_glide_target_desc, R.drawable.widget_glide_ratio_to_target_day, R.drawable.widget_glide_ratio_to_target_night, 0, GLIDE, RIGHT),
 	GLIDE_AVERAGE("average_glide_ratio", R.string.average_glide_ratio, R.string.map_widget_glide_average_desc, R.drawable.widget_glide_ratio_average_day, R.drawable.widget_glide_ratio_average_night, 0, GLIDE, RIGHT),
 
-	NAUTICAL_DEPTH("nautical_depth", R.string.nautical_widget_depth_label, R.string.nautical_depth_desc, R.drawable.ic_action_nautical_depth, R.drawable.ic_action_nautical_depth, 0, WidgetGroup.NAUTICAL, RIGHT),
-	NAUTICAL_WIND("nautical_wind", R.string.nautical_widget_wind_label, R.string.nautical_wind_desc, R.drawable.ic_action_wind, R.drawable.ic_action_wind, 0, WidgetGroup.NAUTICAL, RIGHT),
+	NAUTICAL_DEPTH("nautical_depth", R.string.nautical_widget_depth_label, R.string.nautical_depth_desc, R.drawable.ic_action_nautical_depth_colored_day, R.drawable.ic_action_nautical_depth_colored_night, 0, WidgetGroup.NAUTICAL, RIGHT),
+	NAUTICAL_WIND("nautical_wind", R.string.nautical_widget_wind_label, R.string.nautical_wind_desc, R.drawable.widget_weather_wind_day, R.drawable.widget_weather_wind_night, 0, WidgetGroup.NAUTICAL, RIGHT),
 	NAUTICAL_PILOT("nautical_pilot", R.string.nautical_pilot_title, R.string.nautical_pilot_desc, R.drawable.ic_action_sail_boat_dark, R.drawable.ic_action_sail_boat_dark, 0, WidgetGroup.NAUTICAL, RIGHT),
 	NAUTICAL_VMG("nautical_vmg", R.string.nautical_widget_vmg_label, R.string.nautical_vmg_desc, R.drawable.ic_action_vmg, R.drawable.ic_action_vmg, 0, WidgetGroup.NAUTICAL, RIGHT),
 	NAUTICAL_COG("nautical_cog", R.string.nautical_widget_cog_label, R.string.nautical_cog_desc, R.drawable.ic_action_cog, R.drawable.ic_action_cog, 0, WidgetGroup.NAUTICAL, RIGHT),
-
-	NAUTICAL_DEPTH_GRAPH("nautical_depth_graph", R.string.nautical_title_depth, R.string.nautical_depth_desc, R.drawable.ic_action_nautical_depth, R.drawable.ic_action_nautical_depth, 0, WidgetGroup.NAUTICAL, RIGHT),
-	NAUTICAL_WIND_GRAPH("nautical_wind_graph", R.string.nautical_title_wind, R.string.nautical_wind_desc, R.drawable.ic_action_wind, R.drawable.ic_action_wind, 0, WidgetGroup.NAUTICAL, RIGHT),
-	NAUTICAL_VMG_GRAPH("nautical_vmg_graph", R.string.nautical_title_vmg, R.string.nautical_vmg_desc, R.drawable.ic_action_vmg, R.drawable.ic_action_vmg, 0, WidgetGroup.NAUTICAL, RIGHT),
 
 	// Bottom panel
 	ROUTE_INFO("route_info", R.string.map_widget_route_information, R.string.map_widget_route_information_desc, R.drawable.widget_route_info_day, R.drawable.widget_route_info_night, 0, null, NAVIGATION_POINTS, BOTTOM),
@@ -250,8 +246,7 @@ public enum WidgetType {
 			SRTMPlugin plugin = PluginsHelper.getActivePlugin(SRTMPlugin.class);
 			return plugin != null && plugin.is3DReliefAllowed();
 		}
-		if (this == NAUTICAL_DEPTH || this == NAUTICAL_WIND || this == NAUTICAL_PILOT || this == NAUTICAL_VMG || this == NAUTICAL_COG
-				|| this == NAUTICAL_DEPTH_GRAPH || this == NAUTICAL_WIND_GRAPH || this == NAUTICAL_VMG_GRAPH) {
+		if (this == NAUTICAL_DEPTH || this == NAUTICAL_WIND || this == NAUTICAL_PILOT || this == NAUTICAL_VMG || this == NAUTICAL_COG) {
 			return PluginsHelper.getActivePlugin(net.osmand.plus.plugins.nautical.NauticalPlugin.class) != null;
 		}
 		return true;
@@ -408,8 +403,7 @@ public enum WidgetType {
 			return new RouteInfoWidgetInfoFragment();
 		} else if (this == STREET_NAME) {
 			return new StreetNameWidgetInfoFragment();
-		} else if (this == NAUTICAL_DEPTH || this == NAUTICAL_WIND || this == NAUTICAL_PILOT || this == NAUTICAL_VMG || this == NAUTICAL_COG
-				|| this == NAUTICAL_DEPTH_GRAPH || this == NAUTICAL_WIND_GRAPH || this == NAUTICAL_VMG_GRAPH) {
+		} else if (this == NAUTICAL_DEPTH || this == NAUTICAL_WIND || this == NAUTICAL_PILOT || this == NAUTICAL_VMG || this == NAUTICAL_COG) {
 			return new NauticalWidgetSettingsFragment();
 		}
 

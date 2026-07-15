@@ -31,6 +31,11 @@ data class MarineState(
     val autopilotHeadingSet: Double? = null,
     val connectionStatus: ConnectionStatus = ConnectionStatus.DISCONNECTED,
 
+    // Professional Autopilot Data
+    val rudderAngle: Double? = null,
+    val targetHeading: Double? = null,
+    val seaState: Int? = null, // Sensitivity (1-5)
+
     // Telemetry Data (Phase 3)
     val depthBelowTransducer: Double? = null,
     val windSpeedTrue: Double? = null,

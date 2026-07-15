@@ -129,7 +129,7 @@ class SignalKEngine {
 
     private fun resetWatchdog() {
         lastUpdateTimestamp = System.currentTimeMillis()
-        if (watchdogJob == null || !watchdogJob!!.isActive) {
+        if (watchdogJob == null || !(watchdogJob!!.isActive)) {
             startWatchdog()
         }
     }
@@ -273,6 +273,27 @@ class SignalKEngine {
                                 "steering.autopilot.state" -> {
                                     state = state.copy(autopilotState = valueItem.optString("value", "standby"))
                                     stateUpdated = true
+                                }
+                                "steering.rudderAngle" -> {
+                                    val rudder = valueItem.optDouble("value", Double.NaN)
+                                    if (!rudder.isNaN()) {
+                                        state = state.copy(rudderAngle = rudder)
+                                        stateUpdated = true
+                                    }
+                                }
+                                "steering.autopilot.target.headingTrue" -> {
+                                    val target = valueItem.optDouble("value", Double.NaN)
+                                    if (!target.isNaN()) {
+                                        state = state.copy(targetHeading = target)
+                                        stateUpdated = true
+                                    }
+                                }
+                                "steering.autopilot.seaState" -> {
+                                    val level = valueItem.optInt("value", -1)
+                                    if (level != -1) {
+                                        state = state.copy(seaState = level)
+                                        stateUpdated = true
+                                    }
                                 }
                                 "environment.depth.belowTransducer" -> {
                                     val depth = valueItem.optDouble("value", Double.NaN)
