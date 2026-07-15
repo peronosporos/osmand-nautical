@@ -3,6 +3,15 @@ package net.osmand.plus.plugins.nautical.engine
 import java.util.Locale
 import java.io.Serializable
 
+data class AisTarget(
+    val mmsi: Int,
+    var latitude: Double? = null,
+    var longitude: Double? = null,
+    var speedOverGround: Float? = null,
+    var courseOverGround: Float? = null,
+    var headingTrue: Float? = null,
+)
+
 /**
  * Single source of truth for the vessel's status.
  */
@@ -14,18 +23,29 @@ data class MarineState(
     val longitude: Double? = null,
     val headingTrue: Double? = null,
     val speedOverGround: Double? = null,
+    val courseOverGroundTrue: Double? = null,
+    val velocityMadeGood: Double? = null,
 
     // Status Data
     val autopilotState: String = "standby",
     val autopilotHeadingSet: Double? = null,
+    val connectionStatus: ConnectionStatus = ConnectionStatus.DISCONNECTED,
 
     // Telemetry Data (Phase 3)
     val depthBelowTransducer: Double? = null,
     val windSpeedTrue: Double? = null,
+    val windDirectionTrue: Double? = null,
+    val windDirectionApparent: Double? = null,
 
     // Navigation Deviation (Cross-Track Error)
-    val crossTrackError: Double? = null
+    val crossTrackError: Double? = null,
 ) : Serializable {
     val autopilotMode: String
         get() = autopilotState.uppercase(Locale.US)
+}
+
+enum class ConnectionStatus {
+    CONNECTED,
+    DISCONNECTED,
+    STALE
 }

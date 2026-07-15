@@ -6,7 +6,7 @@ import net.osmand.plus.routing.IRouteInformationListener
 import net.osmand.plus.routing.RoutingHelper
 
 class AutopilotRouteListener(
-    private val routingHelper: RoutingHelper
+    private val routingHelper: RoutingHelper,
 ) : IRouteInformationListener {
 
     override fun newRouteIsCalculated(newRoute: Boolean, showToast: ValueHolder<Boolean>) {

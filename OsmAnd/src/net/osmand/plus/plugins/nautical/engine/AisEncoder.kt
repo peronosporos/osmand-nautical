@@ -84,7 +84,7 @@ class AisEncoder {
         private var size = 0
 
         fun append(value: Long, bitCount: Int) {
-            for (i in bitCount - 1 downTo 0) {
+            for (i in (bitCount - 1) downTo 0) {
                 bits[size++] = ((value ushr i) and 1L) == 1L
             }
         }
@@ -98,7 +98,7 @@ class AisEncoder {
         fun toSixBitAscii(): String {
             val sb = StringBuilder()
             // Pad to multiple of 6
-            val paddedSize = if (size % 6 == 0) size else size + (6 - (size % 6))
+            val paddedSize = if ((size % 6) == 0) size else size + (6 - (size % 6))
 
             for (i in 0 until paddedSize step 6) {
                 var value = 0

@@ -3548,6 +3548,14 @@ public class OsmandSettings {
 	// Nautical Plugin Settings
 	public final CommonPreference<String> NAUTICAL_SERVER_IP = registerStringPreference("server_ip", "");
 	public final CommonPreference<String> NAUTICAL_SERVER_PORT = registerStringPreference("server_port", "3000");
+	public final CommonPreference<String> NAUTICAL_SERVER_USERNAME = registerStringPreference("server_username", "");
+	public final CommonPreference<String> NAUTICAL_SERVER_PASSWORD = registerStringPreference("server_password", "");
+	public final CommonPreference<Boolean> NAUTICAL_USE_SECURE_CONNECTION = registerBooleanPreference("server_secure", false);
+	public final CommonPreference<Boolean> NAUTICAL_SHOW_LAYLINES = registerBooleanPreference("nautical_show_laylines", true);
+	public final CommonPreference<Boolean> NAUTICAL_SHOW_WIND_SHIFTS = registerBooleanPreference("nautical_show_wind_shifts", true);
+	public final CommonPreference<Boolean> NAUTICAL_SHOW_TRAJECTORY = registerBooleanPreference("nautical_show_trajectory", true);
+	public final CommonPreference<Float> NAUTICAL_XTE_THRESHOLD = registerFloatPreference("nautical_xte_threshold", 0.1f).makeGlobal();
+	public final CommonPreference<Boolean> NAUTICAL_RECEIVE_IN_BACKGROUND = registerBooleanPreference("ais_receive_in_background", true);
 
 	@NonNull
 	public OsmandPreference<Boolean> getAllowPrivatePreference(@NonNull ApplicationMode appMode) {

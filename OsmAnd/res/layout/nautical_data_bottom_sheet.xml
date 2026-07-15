@@ -1,42 +1,56 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:maxWidth="500dp"
-    android:orientation="vertical"
-    android:padding="16dp">
+    android:fitsSystemWindows="true"
+    android:background="?attr/list_background_color"
+    tools:context="net.osmand.plus.views.mapwidgets.widgets.NauticalDataBottomSheet">
 
-    <View
-        android:id="@+id/connection_dot"
-        android:layout_width="16dp"
-        android:layout_height="16dp"
-        android:layout_gravity="center_horizontal"
-        android:layout_marginBottom="8dp" />
-
-    <TextView
-        android:id="@+id/tv_pilot_status"
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:padding="8dp"
-        android:text="@string/status_standby"
-        android:textAlignment="center"
-        android:background="#EEEEEE"
-        android:textColor="#333333"
-        android:textStyle="bold" />
+        android:orientation="vertical"
+        android:paddingLeft="24dp"
+        android:paddingRight="24dp"
+        android:paddingTop="32dp"
+        android:paddingBottom="48dp"
+        android:gravity="center_horizontal">
 
-    <TextView
-        android:id="@+id/graph_title"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:gravity="center"
-        android:text="@string/nautical_graph_title"
-        android:textAppearance="@style/TextAppearance.AppCompat.Medium" />
+        <View
+            android:id="@+id/connection_dot"
+            android:layout_width="16dp"
+            android:layout_height="16dp"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginBottom="16dp"
+            android:background="?attr/divider_color_basic" />
 
-    <view
-        class="net.osmand.plus.views.mapwidgets.widgets.NauticalGraphView"
-        android:id="@+id/graph_view"
-        android:layout_width="match_parent"
-        android:layout_height="200dp"
-        android:layout_marginTop="16dp" />
+        <TextView
+            android:id="@+id/tv_pilot_status"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:padding="12dp"
+            android:text="@string/nautical_status_standby"
+            android:textAlignment="center"
+            android:background="?attr/activity_background_color"
+            android:textColor="?android:attr/textColorPrimary"
+            android:textStyle="bold" />
 
-</LinearLayout>
+        <TextView
+            android:id="@+id/graph_title"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:text="@string/nautical_graph_title"
+            android:textAppearance="@style/TextAppearance.AppCompat.Medium"
+            android:textColor="?android:attr/textColorPrimary"
+            android:layout_marginTop="24dp" />
+
+        <net.osmand.plus.views.mapwidgets.widgets.NauticalGraphView
+            android:id="@+id/graph_view"
+            android:layout_width="match_parent"
+            android:layout_height="200dp"
+            android:layout_marginTop="16dp" />
+
+    </LinearLayout>
+</androidx.core.widget.NestedScrollView>

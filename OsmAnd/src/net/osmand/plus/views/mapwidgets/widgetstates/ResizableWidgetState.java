@@ -24,19 +24,29 @@ public class ResizableWidgetState extends WidgetState {
 	}
 
 	@NonNull
-	private OsmandPreference<WidgetSize> registerWidgetSizePref(@Nullable String customId, @NonNull WidgetType widgetType, @NonNull WidgetSize defaultWidgetSize) {
+	public static OsmandPreference<WidgetSize> registerWidgetSizePref(@NonNull OsmandApplication app, @Nullable String customId, @NonNull WidgetType widgetType, @NonNull WidgetSize defaultWidgetSize) {
 		String prefId = SIMPLE_WIDGET_SIZE_ID;
 		prefId += widgetType.id;
 		if (!Algorithms.isEmpty(customId)) {
 			prefId += customId;
 		}
-		return settings.registerEnumStringPreference(prefId, defaultWidgetSize, WidgetSize.values(), WidgetSize.class)
+		return app.getSettings().registerEnumStringPreference(prefId, defaultWidgetSize, WidgetSize.values(), WidgetSize.class)
 				.makeProfile();
 	}
 
 	@NonNull
+	public static OsmandPreference<WidgetSize> registerWidgetSizePref(@NonNull OsmandApplication app, @Nullable String customId, @NonNull WidgetType widgetType) {
+		return registerWidgetSizePref(app, customId, widgetType, WidgetSize.MEDIUM);
+	}
+
+	@NonNull
+	private OsmandPreference<WidgetSize> registerWidgetSizePref(@Nullable String customId, @NonNull WidgetType widgetType, @NonNull WidgetSize defaultWidgetSize) {
+		return registerWidgetSizePref(app, customId, widgetType, defaultWidgetSize);
+	}
+
+	@NonNull
 	private OsmandPreference<WidgetSize> registerWidgetSizePref(@Nullable String customId, @NonNull WidgetType widgetType) {
-		return registerWidgetSizePref(customId, widgetType, WidgetSize.MEDIUM);
+		return registerWidgetSizePref(app, customId, widgetType, WidgetSize.MEDIUM);
 	}
 
 	@NonNull
