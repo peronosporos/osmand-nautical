@@ -20,6 +20,7 @@
 	<string name="nautical_mode_wind">Wind Mode</string>
 	<string name="nautical_mode_track">Track Mode</string>
 	<string name="nautical_mode_pattern">Pattern Mode</string>
+	<string name="nautical_mode_stop">STOP</string>
 	<string name="nautical_sea_state">Sea State</string>
 	<string name="nautical_sea_state_label">Sensitivity: %1$d</string>
 	<string name="nautical_adjust_course">Course Adjustment</string>
@@ -114,10 +115,7 @@
 	<string name="nautical_unit_meters">m</string>
 	<string name="nautical_unit_feet">ft</string>
 
-	<string name="nautical_mode_ap">AP</string>
-	<string name="nautical_mode_auto">AUTO</string>
-	<string name="nautical_mode_stby">STBY</string>
-	<string name="nautical_mode_stop">STOP</string>
+
 
 	<string name="nautical_toast_heading_sent">Heading sent to autopilot</string>
 	<string name="nautical_toast_stopped">Autopilot stopped</string>
