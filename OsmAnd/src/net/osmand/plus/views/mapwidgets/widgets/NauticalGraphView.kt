@@ -151,8 +151,8 @@ class NauticalGraphView @JvmOverloads constructor(
             
             // X-Axis Timespan Labels
             textPaint.textAlign = Paint.Align.CENTER
-            canvas.drawText("-6m", paddingH, height - (4 * density), textPaint)
-            canvas.drawText("-3m", paddingH + (graphW / 2), height - (4 * density), textPaint)
+            canvas.drawText("-1h", paddingH, height - (4 * density), textPaint)
+            canvas.drawText("-30m", paddingH + (graphW / 2), height - (4 * density), textPaint)
             canvas.drawText("Now", width - paddingH, height - (4 * density), textPaint)
 
             textPaint.clearShadowLayer()

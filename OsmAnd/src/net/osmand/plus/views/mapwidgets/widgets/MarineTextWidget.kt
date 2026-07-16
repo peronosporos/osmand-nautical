@@ -20,6 +20,27 @@ class MarineTextWidget(
     panel: WidgetsPanel?
 ) : SimpleWidget(mapActivity, widgetType, customId, panel) {
 
+    val useNauticalStandardPref = mapActivity.app.settings.registerBooleanPreference(
+        "nautical_widget_use_standard_${widgetType.id}${customId ?: ""}",
+        true
+    ).makeProfile()
+
+    init {
+        setIcons(widgetType)
+    }
+
+    override fun updateIcon() {
+        val iconId = iconId
+        if (iconId != 0) {
+            if (widgetType == WidgetType.NAUTICAL_DEPTH || widgetType == WidgetType.NAUTICAL_WIND) {
+                setImageDrawable(iconId)
+            } else {
+                val color = settings.applicationMode.getProfileColor(isNightMode)
+                setImageDrawable(iconsCache.getPaintedIcon(iconId, color))
+            }
+        }
+    }
+
     private var lastUpdateTime = 0L
     private val marineStateListener: (MarineState) -> Unit = {
         val now = System.currentTimeMillis()
@@ -82,7 +103,7 @@ class MarineTextWidget(
     private fun handleVmgUpdate(state: MarineState, metrics: MetricsConstants) {
         val vmg = state.velocityMadeGood
         if (vmg != null) {
-            val speedUnit = metrics.getSpeedUnit()
+            val speedUnit = if (useNauticalStandardPref.get()) SpeedUnits.KNOTS else metrics.getSpeedUnit()
             val converted = vmg * speedUnit.conversionCoefficient
             val unitStr = when (speedUnit) {
                 SpeedUnits.KNOTS -> mapActivity.getString(R.string.nautical_unit_knots)
@@ -92,7 +113,14 @@ class MarineTextWidget(
             }
             setText(String.format(Locale.US, "%.1f", converted), unitStr)
         } else {
-            setText(mapActivity.getString(R.string.n_a), mapActivity.getString(R.string.nautical_unit_knots))
+            val speedUnit = if (useNauticalStandardPref.get()) SpeedUnits.KNOTS else metrics.getSpeedUnit()
+            val unitStr = when (speedUnit) {
+                SpeedUnits.KNOTS -> mapActivity.getString(R.string.nautical_unit_knots)
+                SpeedUnits.KILOMETERS_PER_HOUR -> mapActivity.getString(R.string.km_h)
+                SpeedUnits.MILES_PER_HOUR -> mapActivity.getString(R.string.mile_per_hour)
+                else -> mapActivity.getString(R.string.m_s)
+            }
+            setText(mapActivity.getString(R.string.n_a), unitStr)
         }
     }
 
@@ -100,29 +128,31 @@ class MarineTextWidget(
         val cog = state.courseOverGroundTrue
         if (cog != null) {
             val cogDeg = Math.toDegrees(cog)
-            setText(String.format(Locale.US, "%.0f°", cogDeg), mapActivity.getString(R.string.nautical_widget_cog_label))
+            setText(String.format(Locale.US, "%.0f°", cogDeg), "")
         } else {
-            setText(mapActivity.getString(R.string.n_a), mapActivity.getString(R.string.nautical_widget_cog_label))
+            setText(mapActivity.getString(R.string.n_a), "")
         }
     }
 
     private fun handleDepthUpdate(state: MarineState, metrics: MetricsConstants) {
         var depth = state.depthBelowTransducer
         if (depth != null) {
-            val useFeet = metrics.shouldUseFeet()
+            val useFeet = if (useNauticalStandardPref.get()) false else metrics.shouldUseFeet()
             val unit = if (useFeet) mapActivity.getString(R.string.nautical_unit_feet) else mapActivity.getString(R.string.nautical_unit_meters)
 
             if (useFeet) depth *= 3.28084
             setText(String.format(Locale.US, "%.1f", depth), unit)
         } else {
-            setText(mapActivity.getString(R.string.n_a), mapActivity.getString(R.string.nautical_unit_meters))
+            val useFeet = if (useNauticalStandardPref.get()) false else metrics.shouldUseFeet()
+            val unit = if (useFeet) mapActivity.getString(R.string.nautical_unit_feet) else mapActivity.getString(R.string.nautical_unit_meters)
+            setText(mapActivity.getString(R.string.n_a), unit)
         }
     }
 
     private fun handleWindUpdate(state: MarineState, metrics: MetricsConstants) {
         val wind = state.windSpeedTrue
         if (wind != null) {
-            val speedUnit = metrics.getSpeedUnit()
+            val speedUnit = if (useNauticalStandardPref.get()) SpeedUnits.KNOTS else metrics.getSpeedUnit()
             val converted = wind * speedUnit.conversionCoefficient
             val unitStr = when (speedUnit) {
                 SpeedUnits.KNOTS -> mapActivity.getString(R.string.nautical_unit_knots)
@@ -132,7 +162,14 @@ class MarineTextWidget(
             }
             setText(String.format(Locale.US, "%.1f", converted), unitStr)
         } else {
-            setText(mapActivity.getString(R.string.n_a), mapActivity.getString(R.string.nautical_unit_knots))
+            val speedUnit = if (useNauticalStandardPref.get()) SpeedUnits.KNOTS else metrics.getSpeedUnit()
+            val unitStr = when (speedUnit) {
+                SpeedUnits.KNOTS -> mapActivity.getString(R.string.nautical_unit_knots)
+                SpeedUnits.KILOMETERS_PER_HOUR -> mapActivity.getString(R.string.km_h)
+                SpeedUnits.MILES_PER_HOUR -> mapActivity.getString(R.string.mile_per_hour)
+                else -> mapActivity.getString(R.string.m_s)
+            }
+            setText(mapActivity.getString(R.string.n_a), unitStr)
         }
     }
 }

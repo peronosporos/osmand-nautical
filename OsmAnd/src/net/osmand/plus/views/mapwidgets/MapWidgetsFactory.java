@@ -110,6 +110,12 @@ public class MapWidgetsFactory {
 				return new MarineTextWidget(mapActivity, widgetType, customId, panel);
 			case NAUTICAL_WIND:
 				return new MarineTextWidget(mapActivity, widgetType, customId, panel);
+			case NAUTICAL_VMG:
+				return new MarineTextWidget(mapActivity, widgetType, customId, panel);
+			case NAUTICAL_COG:
+				return new MarineTextWidget(mapActivity, widgetType, customId, panel);
+			case NAUTICAL_NIGHT_VISION:
+				return new NauticalNightVisionWidget(mapActivity, widgetType, customId, panel);
 			case NAUTICAL_PILOT:
 				return new NauticalPilotWidget(mapActivity, widgetType, customId, panel);
 			case AIDL_WIDGET:

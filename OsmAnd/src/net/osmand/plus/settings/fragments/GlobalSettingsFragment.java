@@ -32,6 +32,7 @@ import net.osmand.plus.settings.datastorage.item.StorageItem;
 import net.osmand.plus.settings.enums.LocationSource;
 import net.osmand.plus.settings.preferences.ListPreferenceEx;
 import net.osmand.plus.settings.preferences.SwitchPreferenceEx;
+import net.osmand.plus.views.mapwidgets.widgets.NauticalCompassWizardDialog;
 
 import java.util.Map;
 
@@ -66,6 +67,7 @@ public class GlobalSettingsFragment extends BaseSettingsFragment
 		setupAutoBackupPref();
 		setupAutoCopyMediaPref();
 		setupUninstallSpeedCamerasPref();
+		setupSensorsAndHardwarePref();
 	}
 
 	@Override
@@ -192,6 +194,8 @@ public class GlobalSettingsFragment extends BaseSettingsFragment
 			}
 		} else if (prefId.equals(MAP_RENDERING_ENGINE_ID)) {
 			new MapRenderingEngineDialog(app, getActivity()).showDialog(this::setupMapRenderingEnginePref);
+		} else if (prefId.equals("nautical_compass_wizard")) {
+			NauticalCompassWizardDialog.show(this);
 		}
 
 		return super.onPreferenceClick(preference);
@@ -334,6 +338,13 @@ public class GlobalSettingsFragment extends BaseSettingsFragment
 			uninstallSpeedCameras.setIcon(getActiveIcon(R.drawable.ic_speed_camera_disabled));
 		}
 		uninstallSpeedCameras.setTitle(uninstalled ? R.string.speed_cameras_removed_descr : R.string.uninstall_speed_cameras);
+	}
+
+	private void setupSensorsAndHardwarePref() {
+		Preference preference = findPreference("nautical_compass_wizard");
+		if (preference != null) {
+			preference.setIcon(getContentIcon(R.drawable.ic_action_direction_compass));
+		}
 	}
 
 	@Override

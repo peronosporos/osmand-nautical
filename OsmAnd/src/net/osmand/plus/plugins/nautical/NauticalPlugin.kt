@@ -5,7 +5,6 @@ import android.os.Looper
 import net.osmand.PlatformUtil
 import net.osmand.StateChangedListener
 import android.view.View
-import android.view.ViewGroup
 import android.net.Uri
 import android.graphics.ColorMatrix
 import android.graphics.ColorMatrixColorFilter
@@ -23,7 +22,10 @@ import net.osmand.plus.views.mapwidgets.WidgetType
 import net.osmand.plus.views.mapwidgets.WidgetsPanel
 import net.osmand.plus.views.mapwidgets.widgets.MapWidget
 import net.osmand.plus.views.mapwidgets.widgets.MarineTextWidget
+import net.osmand.plus.views.mapwidgets.widgets.NauticalNightVisionWidget
 import net.osmand.plus.views.mapwidgets.widgets.NauticalPilotWidget
+import net.osmand.plus.views.mapwidgets.widgets.NauticalGraphWidget
+import net.osmand.plus.settings.backend.preferences.CommonPreference
 import net.osmand.plus.settings.enums.DayNightMode
 import net.osmand.plus.settings.fragments.SettingsScreenType
 import net.osmand.plus.widgets.ctxmenu.ContextMenuAdapter
@@ -88,7 +90,8 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app) {
     private val retryHandler = Handler(Looper.getMainLooper())
     private val retryRunnable = Runnable { startEngine() }
     private var isAlertActive = false
-    private var nauticalMapLayer: NauticalMapLayer? = null
+    var nauticalMapLayer: NauticalMapLayer? = null
+        private set
     private val receiveInBackgroundPrefListener = StateChangedListener<Boolean> { state: Boolean? ->
         if (state == true) {
             updateNauticalBackgroundService()
@@ -100,14 +103,24 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app) {
         }
     }
     private var pluginScope: CoroutineScope? = null
+    
+    val nauticalNightVisionEnabled: CommonPreference<Boolean> = registerBooleanPreference("nautical_night_vision_enabled", false).makeProfile()
+    private val previousDayNightMode: CommonPreference<DayNightMode> = registerEnumStringPreference(
+        "nautical_previous_daynight_mode",
+        DayNightMode.AUTO,
+        DayNightMode.entries.toTypedArray(),
+        DayNightMode::class.java,
+    ).makeProfile()
 
     override fun createMapWidgetForParams(mapActivity: MapActivity, widgetType: WidgetType, customId: String?, widgetsPanel: WidgetsPanel?): MapWidget? {
         return when (widgetType) {
-            WidgetType.NAUTICAL_DEPTH,
-            WidgetType.NAUTICAL_WIND,
             WidgetType.NAUTICAL_VMG,
             WidgetType.NAUTICAL_COG,
         -> MarineTextWidget(mapActivity, widgetType, customId, widgetsPanel)
+            WidgetType.NAUTICAL_DEPTH,
+            WidgetType.NAUTICAL_WIND,
+        -> NauticalGraphWidget(mapActivity, widgetType, customId, widgetsPanel)
+            WidgetType.NAUTICAL_NIGHT_VISION -> NauticalNightVisionWidget(mapActivity, widgetType, customId, widgetsPanel)
             WidgetType.NAUTICAL_PILOT -> NauticalPilotWidget(mapActivity, widgetType, customId, widgetsPanel)
             else -> null
         }
@@ -130,9 +143,12 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app) {
         override fun onReceive(context: android.content.Context, intent: android.content.Intent) {
             when (intent.action) {
                 android.content.Intent.ACTION_SCREEN_OFF -> {
-                    if ((engine?.isFollowingRoute != true) && !app.settings.NAUTICAL_RECEIVE_IN_BACKGROUND.get()) {
-                        connection.disconnect()
-                    } else if (app.settings.NAUTICAL_RECEIVE_IN_BACKGROUND.get()) {
+                    if (!app.settings.NAUTICAL_RECEIVE_IN_BACKGROUND.get()) {
+                        if (engine?.isFollowingRoute != true) {
+                            connection.disconnect()
+                        }
+                        stopNauticalBackgroundService()
+                    } else {
                         updateNauticalBackgroundService()
                     }
                 }
@@ -148,6 +164,7 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app) {
     override fun setEnabled(enabled: Boolean) {
         super.setEnabled(enabled)
         val mapView = app.osmandMap?.mapView
+        val mapActivity = app.osmandMap?.mapView?.mapActivity
 
         if (enabled) {
             instanceRef = WeakReference(this)
@@ -196,6 +213,11 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app) {
             }
             app.registerReceiver(screenStateReceiver, filter)
 
+            if (nauticalNightVisionEnabled.get()) {
+                app.runInUIThread {
+                    mapActivity?.let { toggleNightVision(it, enable = true) }
+                }
+            }
         } else {
             instanceRef = null
             app.settings.NAUTICAL_RECEIVE_IN_BACKGROUND.removeListener(receiveInBackgroundPrefListener)
@@ -227,24 +249,51 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app) {
 
     fun toggleNightVision(mapActivity: MapActivity, enable: Boolean) {
         this.isNightVisionEnabled = enable
-        val container = mapActivity.findViewById<ViewGroup>(android.R.id.content)
+        nauticalNightVisionEnabled.set(enable)
+        val decorView = mapActivity.window.decorView
 
         if (enable) {
+            val currentMode = app.settings.DAYNIGHT_MODE.get()
+            if (currentMode != DayNightMode.NIGHT) {
+                previousDayNightMode.set(currentMode)
+                app.settings.DAYNIGHT_MODE.set(DayNightMode.NIGHT)
+            }
+            
             val paint = Paint().apply {
                 colorFilter = ColorMatrixColorFilter(RED_FILTER_MATRIX)
             }
-            container.setLayerType(View.LAYER_TYPE_HARDWARE, paint)
+            decorView.setLayerType(View.LAYER_TYPE_HARDWARE, paint)
+            
             net.osmand.plus.helpers.AndroidUiHelper.setStatusBarColor(mapActivity, android.graphics.Color.BLACK)
             net.osmand.plus.helpers.AndroidUiHelper.setNavigationBarColor(mapActivity, android.graphics.Color.BLACK, false)
-            if (app.settings.DAYNIGHT_MODE.get() != DayNightMode.NIGHT) {
-                app.settings.DAYNIGHT_MODE.set(DayNightMode.NIGHT)
-            }
         } else {
-            container.setLayerType(View.LAYER_TYPE_NONE, null)
+            decorView.setLayerType(View.LAYER_TYPE_NONE, null)
+            
+            val prevMode = previousDayNightMode.get()
+            app.settings.DAYNIGHT_MODE.set(prevMode)
+            
             mapActivity.updateStatusBarColor()
             mapActivity.updateNavigationBarColor()
         }
+        
+        app.osmandMap.mapView.refreshMap()
         app.notificationHelper.refreshNotification(net.osmand.plus.notifications.OsmandNotification.NotificationType.NAUTICAL)
+        
+        // Update all widgets
+        mapActivity.app.runInUIThread {
+            mapActivity.app.osmandMap.mapLayers.mapInfoLayer.recreateAllControls(mapActivity)
+        }
+    }
+
+    fun applyNightVisionFilter(view: View) {
+        if (isNightVisionEnabled) {
+            val paint = Paint().apply {
+                colorFilter = ColorMatrixColorFilter(RED_FILTER_MATRIX)
+            }
+            view.setLayerType(View.LAYER_TYPE_HARDWARE, paint)
+        } else {
+            view.setLayerType(View.LAYER_TYPE_NONE, null)
+        }
     }
 
     private fun startEngine() {
@@ -412,5 +461,6 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app) {
                 it.stopIfNeeded(app, net.osmand.plus.NavigationService.USED_BY_NAUTICAL)
             }
         }
+        app.notificationHelper.refreshNotification(net.osmand.plus.notifications.OsmandNotification.NotificationType.NAUTICAL)
     }
 }

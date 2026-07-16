@@ -57,6 +57,17 @@ class AutopilotController(
         executePut(url, """{ "value": $heading }""", null, showToast = false)
     }
 
+    fun setTargetHeading(degrees: Double) {
+        val rad = Math.toRadians(degrees)
+        val url = buildAutopilotUrl("target/headingTrue")
+        if (url == null) {
+            showConnectionError()
+            return
+        }
+        val payload = """{ "value": $rad }"""
+        executePut(url, payload, null, showToast = false)
+    }
+
     private fun buildUrl(path: String): String? {
         val ip = app.settings.NAUTICAL_SERVER_IP.get() ?: ""
         val port = app.settings.NAUTICAL_SERVER_PORT.get() ?: "3000"
@@ -116,6 +127,36 @@ class AutopilotController(
         executePut(url, payload, null, showToast = true)
     }
 
+    fun setRudderGain(gain: Double) {
+        val url = buildAutopilotUrl("rudderGain")
+        url?.let { executePut(it, """{ "value": $gain }""", null, false) }
+    }
+
+    fun setCounterRudder(value: Double) {
+        val url = buildAutopilotUrl("counterRudder")
+        url?.let { executePut(it, """{ "value": $value }""", null, false) }
+    }
+
+    fun setAutoTrim(value: Double) {
+        val url = buildAutopilotUrl("autoTrim")
+        url?.let { executePut(it, """{ "value": $value }""", null, false) }
+    }
+
+    fun setFilterSensitivity(value: Double) {
+        val url = buildAutopilotUrl("filterSensitivity")
+        url?.let { executePut(it, """{ "value": $value }""", null, false) }
+    }
+
+    fun setRudderLimit(degrees: Double) {
+        val url = buildAutopilotUrl("rudderLimit")
+        url?.let { executePut(it, """{ "value": ${Math.toRadians(degrees)} }""", null, false) }
+    }
+
+    fun setOffCourseAlarm(degrees: Double) {
+        val url = buildAutopilotUrl("offCourseAlarm")
+        url?.let { executePut(it, """{ "value": ${Math.toRadians(degrees)} }""", null, false) }
+    }
+
     fun executePattern(pattern: String) {
         val url = buildAutopilotUrl("pattern")
         if (url == null) {
@@ -124,6 +165,28 @@ class AutopilotController(
         }
         val payload = """{ "value": "$pattern" }"""
         executePut(url, payload, null, showToast = true)
+    }
+
+    fun tack(port: Boolean) {
+        val url = buildAutopilotUrl("actions/tack")
+        if (url == null) {
+            showConnectionError()
+            return
+        }
+        val value = if (port) "port" else "starboard"
+        val payload = """{ "value": "$value" }"""
+        executePut(url, payload, R.string.nautical_command_sent, showToast = true)
+    }
+
+    fun gybe(port: Boolean) {
+        val url = buildAutopilotUrl("actions/gybe")
+        if (url == null) {
+            showConnectionError()
+            return
+        }
+        val value = if (port) "port" else "starboard"
+        val payload = """{ "value": "$value" }"""
+        executePut(url, payload, R.string.nautical_command_sent, showToast = true)
     }
 
     private fun showConnectionError() {

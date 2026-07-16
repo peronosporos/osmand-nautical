@@ -30,17 +30,17 @@ class SignalKEngine {
     private var lastUpdateTimestamp: Long = 0
 
     private val engineScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
-    private val depthBuffer = CircularBuffer<Double>(360)
-    private val windBuffer = CircularBuffer<Double>(360)
-    private val windDirectionBuffer = CircularBuffer<Double>(360)
-    private val vmgBuffer = CircularBuffer<Double>(360)
+    private val depthBuffer = CircularBuffer<Double>(3600)
+    private val windBuffer = CircularBuffer<Double>(3600)
+    private val windDirectionBuffer = CircularBuffer<Double>(3600)
+    private val vmgBuffer = CircularBuffer<Double>(3600)
+    private val cogBuffer = CircularBuffer<Double>(3600)
     private val trajectoryBuffer = CircularBuffer<Pair<Double, Double>>(100)
     private val routeQueue = java.util.concurrent.ConcurrentLinkedQueue<Pair<Double, Double>>()
     var isFollowingRoute: Boolean = false
         private set
 
     fun getCurrentState(): MarineState? = _currentState
-    fun isDataStale(): Boolean = (System.currentTimeMillis() - lastUpdateTimestamp) > 5000
 
     fun stop() {
         watchdogJob?.cancel()
@@ -73,6 +73,10 @@ class SignalKEngine {
         saveToFile(
             File(context.filesDir, "vmg_buffer.dat"),
             vmgBuffer.getAll() as Serializable,
+        )
+        saveToFile(
+            File(context.filesDir, "cog_buffer.dat"),
+            cogBuffer.getAll() as Serializable,
         )
         saveToFile(
             File(context.filesDir, "trajectory_buffer.dat"),
@@ -108,6 +112,7 @@ class SignalKEngine {
         load<Double>("wind_buffer.dat") { windBuffer.add(it) }
         load<Double>("wind_direction_buffer.dat") { windDirectionBuffer.add(it) }
         load<Double>("vmg_buffer.dat") { vmgBuffer.add(it) }
+        load<Double>("cog_buffer.dat") { cogBuffer.add(it) }
         load<Pair<Double, Double>>("trajectory_buffer.dat") { trajectoryBuffer.add(it) }
     }
 
@@ -129,7 +134,7 @@ class SignalKEngine {
 
     private fun resetWatchdog() {
         lastUpdateTimestamp = System.currentTimeMillis()
-        if (watchdogJob == null || !(watchdogJob!!.isActive)) {
+        if (watchdogJob?.isActive != true) {
             startWatchdog()
         }
     }
@@ -168,6 +173,7 @@ class SignalKEngine {
     fun getWindHistory(): List<Double> = windBuffer.getAll()
     fun getWindDirectionHistory(): List<Double> = windDirectionBuffer.getAll()
     fun getVmgHistory(): List<Double> = vmgBuffer.getAll()
+    fun getCogHistory(): List<Double> = cogBuffer.getAll()
 
     fun addTrajectoryPoint(lat: Double, lon: Double) {
         val history = trajectoryBuffer.getAll()
@@ -259,6 +265,7 @@ class SignalKEngine {
                                     val cog = valueItem.optDouble("value", Double.NaN)
                                     if (!cog.isNaN()) {
                                         state = state.copy(courseOverGroundTrue = cog)
+                                        cogBuffer.add(cog)
                                         stateUpdated = true
                                     }
                                 }

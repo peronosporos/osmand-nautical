@@ -36,14 +36,15 @@ class NauticalGraphWidget(
 
         view.addOnAttachStateChangeListener(
             object : View.OnAttachStateChangeListener {
-            override fun onViewAttachedToWindow(v: View) {
-                NauticalPlugin.engine?.registerListener(marineStateListener)
-            }
+                override fun onViewAttachedToWindow(v: View) {
+                    NauticalPlugin.engine?.registerListener(marineStateListener)
+                }
 
-            override fun onViewDetachedFromWindow(v: View) {
-                NauticalPlugin.engine?.unregisterListener(marineStateListener)
-            }
-        }, )
+                override fun onViewDetachedFromWindow(v: View) {
+                    NauticalPlugin.engine?.unregisterListener(marineStateListener)
+                }
+            },
+        )
 
         view.setOnClickListener {
             val dialog = NauticalDataBottomSheet.newInstance(this.widgetType)

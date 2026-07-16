@@ -1,25 +1,20 @@
 package net.osmand.plus.views.mapwidgets.widgets
 
-import android.graphics.Color
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
-import androidx.core.content.ContextCompat
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import net.osmand.plus.R
 import net.osmand.plus.plugins.nautical.NauticalPlugin
 import net.osmand.plus.plugins.nautical.engine.MarineState
 import net.osmand.plus.views.mapwidgets.WidgetType
-import java.util.*
 
 class NauticalDataBottomSheet : BottomSheetDialogFragment() {
 
     private var type: WidgetType? = null
     private var graph: NauticalGraphView? = null
-    private var dot: View? = null
-    private var statusView: TextView? = null
     private var myListener: ((MarineState) -> Unit)? = null
 
     companion object {
@@ -52,10 +47,8 @@ class NauticalDataBottomSheet : BottomSheetDialogFragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        statusView = view.findViewById(R.id.tv_pilot_status)
         val titleView = view.findViewById<TextView>(R.id.graph_title)
         graph = view.findViewById(R.id.graph_view)
-        dot = view.findViewById(R.id.connection_dot)
 
         if (type == null) {
             dismiss()
@@ -74,36 +67,9 @@ class NauticalDataBottomSheet : BottomSheetDialogFragment() {
     override fun onStart() {
         super.onStart()
 
-        myListener = { state ->
-            val isConnected = NauticalPlugin.autopilot?.isConnected() == true
-            val isStale = NauticalPlugin.engine?.isDataStale() == true
-            val mode = state.autopilotState
-
+        myListener = { _ ->
             view?.post {
                 if (!isAdded) return@post
-
-                dot?.let {
-                    val color = when {
-                        !isConnected -> Color.RED
-                        isStale -> Color.YELLOW
-                        else -> Color.GREEN
-                    }
-                    it.setBackgroundColor(color)
-                }
-
-                statusView?.let { tv ->
-                    tv.text = getString(R.string.nautical_active_mode, mode.uppercase(Locale.US))
-
-                    val bgColor = when {
-                        mode.equals("auto", ignoreCase = true) -> 
-                            ContextCompat.getColor(requireContext(), R.color.nautical_status_bg_active)
-                        mode.equals("emergency", ignoreCase = true) || mode.equals("stop", ignoreCase = true) ->
-                            ContextCompat.getColor(requireContext(), R.color.nautical_status_bg_emergency)
-                        else -> ContextCompat.getColor(requireContext(), R.color.nautical_status_bg_standby)
-                    }
-                    tv.setBackgroundColor(bgColor)
-                }
-
                 updateGraphData()
             }
         }
@@ -125,6 +91,7 @@ class NauticalDataBottomSheet : BottomSheetDialogFragment() {
             WidgetType.NAUTICAL_DEPTH -> g.setData(engine.getDepthHistory(), getString(R.string.nautical_unit_meters))
             WidgetType.NAUTICAL_WIND -> g.setData(engine.getWindHistory(), getString(R.string.nautical_unit_knots))
             WidgetType.NAUTICAL_VMG -> g.setData(engine.getVmgHistory().map { it * 1.94384 }, getString(R.string.nautical_unit_knots))
+            WidgetType.NAUTICAL_COG -> g.setData(engine.getCogHistory().map { Math.toDegrees(it) }, "°")
             else -> {}
         }
     }

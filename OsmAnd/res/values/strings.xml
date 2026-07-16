@@ -12,6 +12,18 @@
 	Thx - Hardy
 -->
 	<!-- Nautical plugin-->
+	<string name="nautical_tack_port">TACK PORT</string>
+	<string name="nautical_tack_stbd">TACK STBD</string>
+	<string name="nautical_confirm_tack">Confirm Tack?</string>
+	<string name="nautical_tacking">TACKING</string>
+	<string name="nautical_gybing">GYBING</string>
+	<string name="nautical_mode_label">%1$s MODE</string>
+	<string name="nautical_disengage_standby">DISENGAGE / STANDBY</string>
+	<string name="nautical_engage_auto">ENGAGE AUTO</string>
+	<string name="nautical_sea_calm">CALM</string>
+	<string name="nautical_sea_heavy">HEAVY</string>
+	<string name="nautical_advanced_settings">Advanced Settings</string>
+	<string name="nautical_off_course">OFF COURSE</string>
 	<string name="nautical_plugin_name">Nautical Marine Controls</string>
 	<string name="nautical_plugin_description">SignalK integration for marine navigation and autopilot control.</string>
 	<string name="nautical_settings_title">SignalK Server Settings</string>
@@ -56,7 +68,9 @@
 	<string name="nautical_no_trajectory_data">No trajectory data available</string>
 	<string name="nautical_export_trajectory_failed">Failed to export trajectory</string>
 
-	<string name="nautical_toggle_night_vision">Toggle Night Vision</string>
+	<string name="nautical_toggle_night_vision" translatable="false">Toggle Night Vision</string>
+	<string name="nautical_night_vision" translatable="false">Night Vision</string>
+	<string name="nautical_night_vision_desc" translatable="false">Apply red filter to the entire screen for better night vision</string>
 	<string name="nautical_follow_gpx_route">Follow GPX Route</string>
 	<string name="nautical_select_track">Select Track</string>
 	<string name="nautical_no_tracks_found">No tracks found.</string>
@@ -76,6 +90,9 @@
 	<string name="nautical_error_emergency_stop_not_implemented">Emergency stop not implemented</string>
 	<string name="nautical_autopilot_not_connected">Autopilot not connected: check settings</string>
 
+	<string name="nautical_use_standard_units">Nautical standard units</string>
+	<string name="nautical_use_standard_units_desc">Force knots and nautical miles regardless of locale settings</string>
+
 	<string name="nautical_pilot_title">Nautical Pilot</string>
 	<string name="nautical_pilot_desc">Control the autopilot state</string>
 	<string name="nautical_engage_autopilot">ENGAGE AUTOPILOT</string>
@@ -91,6 +108,38 @@
 	<string name="nautical_target_coordinates">Target: %1$.5f, %2$.5f</string>
 	<string name="nautical_emergency_stop_label">EMERGENCY STOP</string>
 	<string name="nautical_status_standby">Status: Standby</string>
+
+	<!-- Nautical Advanced Settings -->
+	<string name="nautical_advanced_calibration_dynamics">Calibration &amp; Dynamics</string>
+	<string name="nautical_advanced_lock">Lock</string>
+	<string name="nautical_advanced_vessel_dynamics">VESSEL DYNAMICS</string>
+	<string name="nautical_advanced_rudder_gain">Correction Speed (Rudder Gain)</string>
+	<string name="nautical_advanced_counter_rudder">Counter Rudder</string>
+	<string name="nautical_advanced_auto_trim">Auto-Trim (Integral)</string>
+	<string name="nautical_advanced_sensor_hardware">SENSOR &amp; HARDWARE</string>
+	<string name="nautical_advanced_compass_wizard">Swing Compass Wizard</string>
+	<string name="nautical_advanced_filter_sensitivity">Filter Sensitivity</string>
+	<string name="nautical_advanced_rudder_limit">Rudder Limit</string>
+	<string name="nautical_advanced_safety_thresholds">SAFETY THRESHOLDS</string>
+	<string name="nautical_advanced_off_course_threshold">Off-Course Alarm Threshold</string>
+	<string name="nautical_advanced_reset_defaults">Reset to Defaults</string>
+	<string name="nautical_advanced_cancel">Cancel</string>
+	<string name="nautical_advanced_apply_save">Apply &amp; Save</string>
+	<string name="nautical_advanced_response_preview">RESPONSE PREVIEW</string>
+
+	<!-- Compass Wizard -->
+	<string name="nautical_compass_wizard_title">Compass Calibration</string>
+	<string name="nautical_compass_wizard_msg">Please steer the vessel in a slow, steady 360-degree circle to swing the compass. Ensure no magnetic interference is nearby.\n\nEstimated time: 2 minutes.</string>
+	<string name="nautical_compass_wizard_start">Start</string>
+	<string name="nautical_compass_wizard_step_1">Step 1: Preparation</string>
+	<string name="nautical_compass_wizard_step_1_msg">Clear any magnetic objects from the vicinity of the compass sensor. Find a clear area of water to perform a circle.</string>
+	<string name="nautical_compass_wizard_step_2">Step 2: Calibrating</string>
+	<string name="nautical_compass_wizard_step_2_msg">Slowly rotate the vessel. Keep speed below 2 knots.</string>
+	<string name="nautical_compass_wizard_step_3">Step 3: Complete</string>
+	<string name="nautical_compass_wizard_step_3_msg">Calibration finished successfully. Magnetic deviation has been compensated.</string>
+	<string name="nautical_compass_wizard_next">Next</string>
+	<string name="nautical_compass_wizard_finish">Finish</string>
+
 	<string name="nautical_data_telemetry">Data Telemetry</string>
 	<string name="nautical_confirm_tactical_move">Confirm Tactical Move?</string>
 	<string name="nautical_confirm">CONFIRM</string>

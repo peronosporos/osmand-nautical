@@ -137,6 +137,21 @@
 		android:selectable="false" />
 
 	<PreferenceCategory
+		android:key="sensors_and_hardware"
+		android:layout="@layout/preference_category_with_descr"
+		android:title="@string/nautical_advanced_sensor_hardware" />
+
+	<Preference
+		android:key="nautical_compass_wizard"
+		android:layout="@layout/preference_with_descr"
+		android:title="@string/nautical_advanced_compass_wizard"
+		tools:icon="@drawable/ic_action_direction_compass" />
+
+	<Preference
+		android:layout="@layout/simple_divider_item"
+		android:selectable="false" />
+
+	<PreferenceCategory
 		android:key="legal"
 		android:layout="@layout/preference_category_with_descr"
 		android:title="@string/shared_string_legal" />

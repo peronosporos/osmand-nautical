@@ -151,9 +151,10 @@ public enum WidgetType {
 
 	NAUTICAL_DEPTH("nautical_depth", R.string.nautical_widget_depth_label, R.string.nautical_depth_desc, R.drawable.ic_action_nautical_depth_colored_day, R.drawable.ic_action_nautical_depth_colored_night, 0, WidgetGroup.NAUTICAL, RIGHT),
 	NAUTICAL_WIND("nautical_wind", R.string.nautical_widget_wind_label, R.string.nautical_wind_desc, R.drawable.widget_weather_wind_day, R.drawable.widget_weather_wind_night, 0, WidgetGroup.NAUTICAL, RIGHT),
-	NAUTICAL_PILOT("nautical_pilot", R.string.nautical_pilot_title, R.string.nautical_pilot_desc, R.drawable.ic_action_sail_boat_dark, R.drawable.ic_action_sail_boat_dark, 0, WidgetGroup.NAUTICAL, RIGHT),
+	NAUTICAL_PILOT("nautical_pilot", R.string.nautical_pilot_title, R.string.nautical_pilot_desc, R.drawable.ic_plugin_nautical_map, R.drawable.ic_plugin_nautical_map, 0, WidgetGroup.NAUTICAL, RIGHT),
 	NAUTICAL_VMG("nautical_vmg", R.string.nautical_widget_vmg_label, R.string.nautical_vmg_desc, R.drawable.ic_action_vmg, R.drawable.ic_action_vmg, 0, WidgetGroup.NAUTICAL, RIGHT),
 	NAUTICAL_COG("nautical_cog", R.string.nautical_widget_cog_label, R.string.nautical_cog_desc, R.drawable.ic_action_cog, R.drawable.ic_action_cog, 0, WidgetGroup.NAUTICAL, RIGHT),
+	NAUTICAL_NIGHT_VISION("nautical_night_vision", R.string.nautical_night_vision, R.string.nautical_night_vision_desc, R.drawable.ic_action_red_filter_overlay_on, R.drawable.ic_action_red_filter_off, 0, WidgetGroup.NAUTICAL, RIGHT),
 
 	// Bottom panel
 	ROUTE_INFO("route_info", R.string.map_widget_route_information, R.string.map_widget_route_information_desc, R.drawable.widget_route_info_day, R.drawable.widget_route_info_night, 0, null, NAVIGATION_POINTS, BOTTOM),

@@ -26,6 +26,20 @@ class NauticalMapLayer(context: Context) : OsmandMapLayer(context) {
     private val lastPressPoint = PointF()
     private val waypointIcon: Drawable? = ContextCompat.getDrawable(context, R.drawable.ic_action_waypoint)
 
+    var projectionHeading: Double? = null
+        set(value) {
+            field = value
+            (context.applicationContext as? net.osmand.plus.OsmandApplication)?.osmandMap?.refreshMap()
+        }
+
+    private val projectionPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.WHITE
+        strokeWidth = 6f
+        style = Paint.Style.STROKE
+        pathEffect = DashPathEffect(floatArrayOf(30f, 15f), 0f)
+        alpha = 180
+    }
+
     private val laylinePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.YELLOW
         strokeWidth = 4f
@@ -45,6 +59,11 @@ class NauticalMapLayer(context: Context) : OsmandMapLayer(context) {
 
         val engine = NauticalPlugin.engine ?: return
         val osmandSettings = (context.applicationContext as net.osmand.plus.OsmandApplication).settings
+        val plugin = NauticalPlugin.getInstance()
+
+        if (plugin?.isNightVisionEnabled == true) {
+            canvas.drawColor(0x33FF0000, android.graphics.PorterDuff.Mode.MULTIPLY)
+        }
 
         if (osmandSettings.NAUTICAL_SHOW_TRAJECTORY.get()) {
             val history = engine.getTrajectory()
@@ -88,6 +107,29 @@ class NauticalMapLayer(context: Context) : OsmandMapLayer(context) {
         if (osmandSettings.NAUTICAL_SHOW_WIND_SHIFTS.get()) {
             drawWindShifts(canvas, tileBox, engine)
         }
+
+        projectionHeading?.let { heading ->
+            drawProjectionLine(canvas, tileBox, engine.getCurrentState(), heading)
+        }
+    }
+
+    private fun drawProjectionLine(canvas: Canvas, tileBox: RotatedTileBox, state: net.osmand.plus.plugins.nautical.engine.MarineState?, headingDeg: Double) {
+        val lat = state?.latitude ?: return
+        val lon = state.longitude ?: return
+        
+        val centerX = tileBox.getPixXFromLatLon(lat, lon)
+        val centerY = tileBox.getPixYFromLatLon(lat, lon)
+        
+        val angleRad = Math.toRadians(headingDeg)
+        val lineLength = 3000f // Long line to represent projected path
+        
+        val px = centerX + (lineLength * sin(angleRad).toFloat())
+        val py = centerY - (lineLength * cos(angleRad).toFloat())
+        
+        canvas.drawLine(centerX, centerY, px, py, projectionPaint)
+        
+        // Optionally draw an arrow or dot at the end or some markers
+        canvas.drawCircle(centerX, centerY, 15f, Paint().apply { color = Color.WHITE; style = Paint.Style.FILL; alpha = 200 })
     }
 
     private fun drawWindShifts(canvas: Canvas, tileBox: RotatedTileBox, engine: net.osmand.plus.plugins.nautical.engine.SignalKEngine) {

@@ -11,6 +11,7 @@ import android.view.ViewGroup
 import android.widget.PopupWindow
 import android.widget.ProgressBar
 import androidx.appcompat.widget.AppCompatImageView
+import androidx.core.content.ContextCompat
 import net.osmand.plus.R
 import net.osmand.plus.activities.MapActivity
 import net.osmand.plus.plugins.nautical.NauticalPlugin
@@ -18,6 +19,7 @@ import net.osmand.plus.plugins.nautical.engine.MarineState
 import net.osmand.plus.views.layers.base.OsmandMapLayer
 import net.osmand.plus.views.mapwidgets.WidgetType
 import net.osmand.plus.views.mapwidgets.WidgetsPanel
+import net.osmand.plus.settings.backend.preferences.CommonPreference
 import java.util.*
 import kotlin.math.abs
 
@@ -27,6 +29,23 @@ class NauticalPilotWidget(
     customId: String?,
     panel: WidgetsPanel?,
 ) : SimpleWidget(mapActivity, widgetType, customId, panel) {
+
+    val useNauticalStandardPref: CommonPreference<Boolean> = mapActivity.app.settings.registerBooleanPreference(
+        "nautical_widget_use_standard_${widgetType.id}${customId ?: ""}",
+        true,
+    ).makeProfile()
+
+    init {
+        setIcons(widgetType)
+    }
+
+    override fun updateIcon() {
+        val iconId = iconId
+        if (iconId != 0) {
+            val color = settings.applicationMode.getProfileColor(isNightMode)
+            setImageDrawable(iconsCache.getPaintedIcon(iconId, color))
+        }
+    }
 
     private var statusIconView: AppCompatImageView? = null
     private var progressBar: ProgressBar? = null
@@ -51,15 +70,16 @@ class NauticalPilotWidget(
 
         view.addOnAttachStateChangeListener(
             object : View.OnAttachStateChangeListener {
-            override fun onViewAttachedToWindow(v: View) {
-                NauticalPlugin.engine?.registerListener(marineStateListener)
-            }
+                override fun onViewAttachedToWindow(v: View) {
+                    NauticalPlugin.engine?.registerListener(marineStateListener)
+                }
 
-            override fun onViewDetachedFromWindow(v: View) {
-                NauticalPlugin.engine?.unregisterListener(marineStateListener)
-                holdHandler.removeCallbacksAndMessages(null)
+                override fun onViewDetachedFromWindow(v: View) {
+                    NauticalPlugin.engine?.unregisterListener(marineStateListener)
+                    holdHandler.removeCallbacksAndMessages(null)
+                }
             }
-        })
+        )
 
         gestureDetector = GestureDetector(mapActivity, object : GestureDetector.SimpleOnGestureListener() {
             override fun onSingleTapConfirmed(e: MotionEvent): Boolean {
@@ -89,9 +109,8 @@ class NauticalPilotWidget(
                             holdHandler.postDelayed(this, 50)
                         }
                     }
-                },
-            )
-        }
+                })
+            }
         })
 
         view.setOnTouchListener { _, event ->
@@ -127,7 +146,7 @@ class NauticalPilotWidget(
             popupView,
             ViewGroup.LayoutParams.WRAP_CONTENT,
             ViewGroup.LayoutParams.WRAP_CONTENT,
-            true
+            true,
         )
 
         val dismissHandler = Handler(Looper.getMainLooper())
@@ -161,17 +180,17 @@ class NauticalPilotWidget(
     override fun updateSimpleWidgetInfo(drawSettings: OsmandMapLayer.DrawSettings?) {
         val engine = NauticalPlugin.engine
         
-        updateIcon()
-
         if (engine == null) {
-            setText(mapActivity.getString(R.string.nautical_status_off), mapActivity.getString(R.string.nautical_mode_ap))
+            setText(mapActivity.getString(R.string.nautical_status_off), "")
+            setImageDrawable(iconsCache.getPaintedIcon(R.drawable.ic_action_sail_boat_dark, ContextCompat.getColor(app, if (isNightMode) R.color.icon_color_default_dark else R.color.icon_color_default_light)))
             setStatusIcon(0)
             return
         }
 
         val state = engine.getCurrentState()
         if (state == null) {
-            setText(mapActivity.getString(R.string.nautical_status_off), mapActivity.getString(R.string.nautical_mode_ap))
+            setText(mapActivity.getString(R.string.nautical_status_off), "")
+            setImageDrawable(iconsCache.getPaintedIcon(R.drawable.ic_action_sail_boat_dark, ContextCompat.getColor(app, if (isNightMode) R.color.icon_color_default_dark else R.color.icon_color_default_light)))
             setStatusIcon(0)
             return
         }
@@ -181,28 +200,36 @@ class NauticalPilotWidget(
         val isOffCourse = abs(xte) > threshold.toDouble()
 
         if (isOffCourse) {
-            setText(String.format(Locale.US, "%.2f", xte), mapActivity.getString(R.string.nautical_xte_label, mapActivity.getString(R.string.nautical_unit_nm)))
-            setStatusIcon(R.drawable.ic_action_alert)
-        } else {
-            when (val mode = state.autopilotState.lowercase(Locale.US)) {
-                "auto", "wind", "route", "track" -> {
-                    setStatusIcon(R.drawable.ic_action_play_dark)
-                    val modeLabel = when (mode) {
-                        "wind" -> "WIND"
-                        "route", "track" -> "TRACK"
-                        else -> "AUTO"
-                    }
-                    setText(modeLabel, mapActivity.getString(R.string.nautical_mode_ap))
-                }
-                "emergency", "stop" -> {
-                    setStatusIcon(R.drawable.ic_action_stop)
-                    setText(mapActivity.getString(R.string.nautical_emg_stop), mapActivity.getString(R.string.nautical_mode_stop))
-                }
-                else -> {
-                    setStatusIcon(R.drawable.ic_pause)
-                    setText(mapActivity.getString(R.string.nautical_mode_stby), mapActivity.getString(R.string.nautical_mode_ap))
-                }
+            val distStr = if (useNauticalStandardPref.get()) {
+                String.format(Locale.US, "%.2f NM", abs(xte))
+            } else {
+                net.osmand.plus.utils.OsmAndFormatter.getFormattedDistance(abs(xte).toFloat() * 1852f, app)
             }
+            setText(mapActivity.getString(R.string.nautical_off_course), distStr)
+            setImageDrawable(iconsCache.getPaintedIcon(R.drawable.ic_action_alert, ContextCompat.getColor(app, R.color.text_color_negative)))
+            setStatusIcon(0)
+        } else {
+            val mode = state.autopilotState.lowercase(Locale.US)
+            val heading = state.targetHeading ?: state.headingTrue ?: 0.0
+            val headingStr = if (mode == "standby") "STBY" else String.format(Locale.US, "%d°", Math.toDegrees(heading).toInt())
+
+            val iconRes = when (mode) {
+                "auto" -> R.drawable.ic_action_direction_compass
+                "wind" -> R.drawable.ic_action_sail_boat_dark
+                "route", "track" -> R.drawable.ic_action_track_16
+                "emergency", "stop" -> R.drawable.ic_action_stop
+                else -> R.drawable.ic_action_direction_compass
+            }
+            
+            val iconColor = ContextCompat.getColor(app, if (isNightMode) R.color.icon_color_default_dark else R.color.icon_color_default_light)
+            setImageDrawable(iconsCache.getPaintedIcon(iconRes, iconColor))
+            setText(headingStr, "")
+            
+            val statusIcon = when (mode) {
+                "auto", "wind", "route", "track" -> R.drawable.ic_action_play_dark
+                else -> 0
+            }
+            setStatusIcon(statusIcon)
         }
     }
 }

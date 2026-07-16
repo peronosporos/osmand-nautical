@@ -91,6 +91,9 @@ class NauticalSettingsFragment : BaseSettingsFragment() {
             setIcon(R.drawable.ic_action_play_dark)
             entries = arrayOf(getString(R.string.shared_string_yes), getString(R.string.shared_string_no))
             entryValues = arrayOf(true.toString(), false.toString())
+            val isEnabled = settings.NAUTICAL_RECEIVE_IN_BACKGROUND.get()
+            value = isEnabled.toString()
+            summary = if (isEnabled) getString(R.string.shared_string_yes) else getString(R.string.shared_string_no)
             setDescription(R.string.nautical_receive_in_background_description)
         }
     }
@@ -109,6 +112,11 @@ class NauticalSettingsFragment : BaseSettingsFragment() {
                 "nautical_show_laylines" -> settings.NAUTICAL_SHOW_LAYLINES.set(newValue as Boolean)
                 "nautical_show_wind_shifts" -> settings.NAUTICAL_SHOW_WIND_SHIFTS.set(newValue as Boolean)
                 "nautical_show_trajectory" -> settings.NAUTICAL_SHOW_TRAJECTORY.set(newValue as Boolean)
+                settings.NAUTICAL_RECEIVE_IN_BACKGROUND.id -> {
+                    val isEnabled = newString.toBoolean()
+                    settings.NAUTICAL_RECEIVE_IN_BACKGROUND.set(isEnabled)
+                    preference.summary = if (isEnabled) getString(R.string.shared_string_yes) else getString(R.string.shared_string_no)
+                }
                 "nautical_xte_threshold" -> {
                     val floatValue = newString.toFloatOrNull() ?: 0.1f
                     settings.NAUTICAL_XTE_THRESHOLD.set(floatValue)
