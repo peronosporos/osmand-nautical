@@ -5344,9 +5344,9 @@
     <string name="open_issue_on_github_descr">Galdetu, funtzioak proposatu</string>
     <string name="open_issue_on_github">Ireki arazoa GitHub-en</string>
     <string name="with_waypoints">Bide-puntuekin</string>
-    <string name="track_filter_range_selected_format">%s - %s, %s</string>
+    <string name="track_filter_range_selected_format">%1$s - %2$s, %3$s</string>
     <string name="max_altitude">Gehienezko altitudea</string>
-    <string name="track_filter_date_selected_format">%s - %s</string>
+    <string name="track_filter_date_selected_format">%1$s - %2$s</string>
     <string name="app_mode_paragliding">Parapentea</string>
     <string name="filter_by_name">Iragazi izenaren arabera</string>
     <string name="shared_string_reset_all">Berrezarri dena</string>

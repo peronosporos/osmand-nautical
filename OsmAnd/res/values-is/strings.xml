@@ -4967,13 +4967,13 @@
     <string name="key_event_action_zoom_in">Renna að</string>
     <string name="sort_country_name_descending">Landsheiti: Ö-A</string>
     <string name="shared_string_cache">Skyndiminni</string>
-    <string name="track_filter_range_selected_format">%s - %s, %s</string>
+    <string name="track_filter_range_selected_format">%1$s - %2$s, %3$s</string>
     <string name="row_number">Röð %1$s</string>
     <string name="shared_string_additional">Viðbótar</string>
     <string name="shared_string_rows">Raðir</string>
     <string name="shared_string_button">Hnappur</string>
     <string name="shared_string_action">Aðgerð</string>
-    <string name="track_filter_date_selected_format">%s - %s</string>
+    <string name="track_filter_date_selected_format">%1$s - %2$s</string>
     <string name="sort_country_name_ascending">Landsheiti: A-Ö</string>
     <string name="battery_optimization">Bestun rafhlöðu</string>
     <string name="map_widget_sun_position">Sólstaða</string>

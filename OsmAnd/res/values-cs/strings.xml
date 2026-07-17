@@ -4955,11 +4955,11 @@
     <string name="sort_size_descending">Nejdříve velká velikost</string>
     <string name="delete_map">Smazat mapu</string>
     <string name="help_article_purchases_giveaway_name">Dárek</string>
-    <string name="track_filter_range_selected_format">%s - %s, %s</string>
+    <string name="track_filter_range_selected_format">%1$s - %2$s, %3$s</string>
     <string name="standard_maps">Standardní mapy</string>
     <string name="max_altitude">Max. nadmořská výška</string>
     <string name="help_article_navigation_guidance_voice_navigation_name">Hlasové výzvy / upozornění</string>
-    <string name="track_filter_date_selected_format">%s - %s</string>
+    <string name="track_filter_date_selected_format">%1$s - %2$s</string>
     <string name="shared_string_created">Vytvořeno</string>
     <string name="help_article_map_tracks_on_map_name">Stopy a trasy</string>
     <string name="app_mode_paragliding">Paragliding</string>

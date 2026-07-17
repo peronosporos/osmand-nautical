@@ -5027,9 +5027,9 @@
     <string name="open_issue_on_github">Fehler auf GitHub melden</string>
     <string name="most_viewed">Meistgesehen</string>
     <string name="with_waypoints">Mit Wegpunkten</string>
-    <string name="track_filter_range_selected_format">%s - %s, %s</string>
+    <string name="track_filter_range_selected_format">%1$s - %2$s, %3$s</string>
     <string name="max_altitude">Maximale Höhe</string>
-    <string name="track_filter_date_selected_format">%s - %s</string>
+    <string name="track_filter_date_selected_format">%1$s - %2$s</string>
     <string name="filter_by_name">Nach Namen filtern</string>
     <string name="shared_string_reset_all">Alles zurücksetzen</string>
     <string name="filter_tracks_count">Filter: %d</string>

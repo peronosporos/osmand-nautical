@@ -1,0 +1,7 @@
+- [x] Fix implicit dependency for `extractDeepLinks` task in `OsmAnd/build.gradle`
+- [x] Fix multiple substitutions in non-positional format for string resources
+    - [x] `track_filter_date_selected_format`
+    - [x] `track_filter_range_selected_format`
+    - [x] `wikipedia_names_pattern`
+- [x] Suppress unsupported AGP option warnings in `gradle.properties`
+- [x] Verify changes

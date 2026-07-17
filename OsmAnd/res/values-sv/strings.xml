@@ -4582,8 +4582,8 @@
     <string name="change_application_profile">Byt app-profil</string>
     <string name="glide_ratio_to_target">Glidtal till mål</string>
     <string name="routing_attr_avoid_low_emission_zone_description">Undvik miljözoner</string>
-    <string name="track_filter_range_selected_format">%s - %s, %s</string>
-    <string name="track_filter_date_selected_format">%s - %s</string>
+    <string name="track_filter_range_selected_format">%1$s - %2$s, %3$s</string>
+    <string name="track_filter_date_selected_format">%1$s - %2$s</string>
     <string name="average_glide_ratio">Genomsnittligt glidtal</string>
     <string name="release_4_6">• Android Auto: Lade till 3D-läge\n\n• Spår: Introducerade filter och smarta mappar, optimerat minne för större filer\n\n• Förbättrade widgetpaneler uppe och nedre för att hantera alla widgetar\n\n• Förbättrad lokal resurshantering\n\n• Anpassningsbar knappmappning för externa styrenheter\n\n• Nya widgetar: \"Glidförhållande\" och \"Solposition\"\n\n• OsmAnd Cloud: Nu åtkomst till raderade filer\n\n• Förbättrad spårfärgning i lutningsläge med ny symmetrisk gradient\n\n• Åtgärdade problem med transparent statusfält\n\n• Lade till stöd för ANT+ temperaturwidget\n\n• Introducerade widgeten \"Tillgängligt RAM\"</string>
     <string name="help_article_navigation_guidance_map_during_navigation_name">Kartvy under navigering</string>

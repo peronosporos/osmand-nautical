@@ -5404,9 +5404,9 @@
     <string name="sensor_temperature_desc">Menampilkan suhu dari sensor</string>
     <string name="app_mode_baby_transport">Transportasi bayi</string>
     <string name="with_waypoints">Dengan titik jalur</string>
-    <string name="track_filter_range_selected_format">%s - %s, %s</string>
+    <string name="track_filter_range_selected_format">%1$s - %2$s, %3$s</string>
     <string name="max_altitude">Ketinggian maks</string>
-    <string name="track_filter_date_selected_format">%s - %s</string>
+    <string name="track_filter_date_selected_format">%1$s - %2$s</string>
     <string name="app_mode_paragliding">Paralayang</string>
     <string name="filter_by_name">Saring berdasarkan nama</string>
     <string name="shared_string_reset_all">Atur ulang semua</string>

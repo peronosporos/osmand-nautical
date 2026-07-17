@@ -3748,7 +3748,7 @@
     <string name="delete_map">Διαγραφή χάρτη</string>
     <string name="help_article_start_with_first_steps_name">Πρώτα βήματα</string>
     <string name="help_article_search_search_poi_name">Αναζήτηση ΣΕ</string>
-    <string name="track_filter_range_selected_format">%s - %s, %s</string>
+    <string name="track_filter_range_selected_format">%1$s - %2$s, %3$s</string>
     <string name="standard_maps">Τυπικοί χάρτες</string>
     <string name="ant_plus_pair_new_sensor_ant_plus">Σύζευξη αισθητήρα ANT+</string>
     <string name="shared_string_show_less">Δείξε λιγότερα</string>
@@ -3765,7 +3765,7 @@
     <string name="max_altitude">Μέγιστο υψόμετρο</string>
     <string name="external_device_details_connect">Σύνδεση</string>
     <string name="select_data_to_export">Επιλέξτε τα δεδομένα που θα εξαχθούν στο αρχείο.</string>
-    <string name="track_filter_date_selected_format">%s - %s</string>
+    <string name="track_filter_date_selected_format">%1$s - %2$s</string>
     <string name="shared_string_foot">Πόδι</string>
     <string name="map_3d_mode_action">Λειτουργία 3D</string>
     <string name="folder">Φάκελος</string>

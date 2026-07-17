@@ -4894,9 +4894,9 @@
     <string name="sensor_temperature_desc">Muestra la temperatura del sensor</string>
     <string name="app_mode_baby_transport">Transporte de bebés</string>
     <string name="with_waypoints">Con puntos de ruta</string>
-    <string name="track_filter_range_selected_format">%s - %s, %s</string>
+    <string name="track_filter_range_selected_format">%1$s - %2$s, %3$s</string>
     <string name="max_altitude">Altitud máx.</string>
-    <string name="track_filter_date_selected_format">%s - %s</string>
+    <string name="track_filter_date_selected_format">%1$s - %2$s</string>
     <string name="app_mode_paragliding">Parapente</string>
     <string name="filter_by_name">Filtrar por nombre</string>
     <string name="shared_string_reset_all">Restablecer todo</string>

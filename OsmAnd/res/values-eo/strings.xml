@@ -5021,10 +5021,10 @@
     <string name="with_waypoints">Kun navigadpunktoj</string>
     <string name="sort_size_descending">grando (malkreskante)</string>
     <string name="delete_map">Forigi mapon</string>
-    <string name="track_filter_range_selected_format">%s - %s, %s</string>
+    <string name="track_filter_range_selected_format">%1$s - %2$s, %3$s</string>
     <string name="standard_maps">Normaj mapoj</string>
     <string name="max_altitude">Maksimuma altitudo</string>
-    <string name="track_filter_date_selected_format">%s - %s</string>
+    <string name="track_filter_date_selected_format">%1$s - %2$s</string>
     <string name="shared_string_created">Kreita</string>
     <string name="app_mode_paragliding">Glisparaŝutado</string>
     <string name="filter_by_name">Filtri laŭ nomo</string>

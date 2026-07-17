@@ -4984,7 +4984,7 @@
     <string name="help_article_purchases_giveaway_name">Oferta</string>
     <string name="help_article_start_with_first_steps_name">Primeiros passos</string>
     <string name="help_article_search_search_poi_name">Pesquisar POI</string>
-    <string name="track_filter_range_selected_format">%s - %s, %s</string>
+    <string name="track_filter_range_selected_format">%1$s - %2$s, %3$s</string>
     <string name="standard_maps">Mapas padrão</string>
     <string name="shared_string_show_less">Mostrar menos</string>
     <string name="help_article_troubleshooting_general_name">Geral</string>
@@ -4993,7 +4993,7 @@
     <string name="free_versions_descr">Descarregue e instale a versão gratuita do OsmAnd</string>
     <string name="max_altitude">Altitude máxima</string>
     <string name="help_article_navigation_guidance_voice_navigation_name">Avisos por voz / notificações</string>
-    <string name="track_filter_date_selected_format">%s - %s</string>
+    <string name="track_filter_date_selected_format">%1$s - %2$s</string>
     <string name="folder">Pasta</string>
     <string name="delete_all_items">Eliminar todos os itens</string>
     <string name="change_key_binding">Alterar vinculação das teclas</string>

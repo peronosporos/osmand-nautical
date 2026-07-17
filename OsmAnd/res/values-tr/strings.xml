@@ -4815,8 +4815,8 @@
     <string name="help_article_widgets_nav_widgets_name">Navigasyon widget\'ları</string>
     <string name="help_article_widgets_map_buttons_name">Harita düğmeleri</string>
     <string name="clear_key_assignment_desc">Seçilen eylem için tuş ataması silinecek ve \"Yok\" olarak ayarlanacaktır.</string>
-    <string name="track_filter_date_selected_format">%s - %s</string>
-    <string name="track_filter_range_selected_format">%s - %s, %s</string>
+    <string name="track_filter_date_selected_format">%1$s - %2$s</string>
+    <string name="track_filter_range_selected_format">%1$s - %2$s, %3$s</string>
     <string name="help_article_widgets_name">Harita Widget\'ları</string>
     <string name="user_guide">Kullanıcı kılavuzu</string>
     <string name="help_article_search_search_poi_name">POI Ara</string>

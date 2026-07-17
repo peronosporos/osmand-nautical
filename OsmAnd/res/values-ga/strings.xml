@@ -277,7 +277,7 @@
     <string name="osmand_parking_hours">Uair</string>
     <string name="share_crash_log">Roinn loga na n-earráidí</string>
     <string name="map_widget_parking">Páirceáil</string>
-    <string name="track_filter_range_selected_format">%s - %s, %s</string>
+    <string name="track_filter_range_selected_format">%1$s - %2$s, %3$s</string>
     <string name="lang_uk">Úcráinis</string>
     <string name="modified_file">Athraíodh an comhad</string>
     <string name="standard_maps">Léarscáileanna caighdeánacha</string>
@@ -309,7 +309,7 @@
     <string name="lang_jv">Iáivis</string>
     <string name="external_device_details_connect">Ceangail</string>
     <string name="backup_promocode">Cód bolscaireachta</string>
-    <string name="track_filter_date_selected_format">%s - %s</string>
+    <string name="track_filter_date_selected_format">%1$s - %2$s</string>
     <string name="shared_string_foot">Cos</string>
     <string name="choose_what_to_sync">Roghnaigh céard a shioncronú</string>
     <string name="north_north_west">ó thuaidh siar ó thuaidh</string>

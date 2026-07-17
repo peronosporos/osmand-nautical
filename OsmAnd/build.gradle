@@ -205,6 +205,11 @@ android {
 			println(osmandTask.getName() + " process navigation resources")
 			osmandTask.dependsOn(collectExternalResources)
 		}
+		def extractDeepLinks = "extractDeepLinks${taskName}"
+		tasks.matching { it.name == extractDeepLinks }.configureEach { osmandTask ->
+			println(osmandTask.getName() + " extract deep links")
+			osmandTask.dependsOn(collectExternalResources)
+		}
 	}
 }
 

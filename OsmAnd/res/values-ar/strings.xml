@@ -5097,10 +5097,10 @@
     <string name="maps_and_resources">خرائط ومصادر</string>
     <string name="shared_string_cache">الذاكرة المؤقتة</string>
     <string name="with_waypoints">مع نقاط الطريق</string>
-    <string name="track_filter_range_selected_format">%s - %s, %s</string>
+    <string name="track_filter_range_selected_format">%1$s - %2$s, %3$s</string>
     <string name="standard_maps">الخرائط العادية</string>
     <string name="max_altitude">أقصى ارتفاع</string>
-    <string name="track_filter_date_selected_format">%s - %s</string>
+    <string name="track_filter_date_selected_format">%1$s - %2$s</string>
     <string name="app_mode_paragliding">الطيران المظلي</string>
     <string name="filter_by_name">فلترة حسب الاسم</string>
     <string name="shared_string_reset_all">إعادة ضبط الجميع للافتراضي</string>

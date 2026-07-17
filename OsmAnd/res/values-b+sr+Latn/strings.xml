@@ -5093,8 +5093,8 @@
     <string name="empty_smart_folder_title">Nema odgovarajuće staze</string>
     <string name="empty_smart_folder_description">Odgovarajuće trase automatski će se pojaviti ovde</string>
     <string name="smart_folder_saved">Pametan folder je snimljen</string>
-    <string name="track_filter_range_selected_format">%s - %s, %s</string>
-    <string name="track_filter_date_selected_format">%s - %s</string>
+    <string name="track_filter_range_selected_format">%1$s - %2$s, %3$s</string>
+    <string name="track_filter_date_selected_format">%1$s - %2$s</string>
     <string name="delete_trash_item_confirmation_desc">Brišeš \"%1$s\" trajno?</string>
     <string name="no_config_smart_folder_title">Nije konfigurisano</string>
     <string name="not_specified">Nije naznačeno</string>

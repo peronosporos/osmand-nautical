@@ -4983,8 +4983,8 @@
     <string name="with_waypoints">Amb fites</string>
     <string name="shared_string_reset_all">Restableix-ho tot</string>
     <string name="date_of_creation">Data de creació</string>
-    <string name="track_filter_date_selected_format">%s - %s</string>
-    <string name="track_filter_range_selected_format">\'%s - %s, %s</string>
+    <string name="track_filter_date_selected_format">%1$s - %2$s</string>
+    <string name="track_filter_range_selected_format">\'%1$s - %2$s, %3$s</string>
     <string name="filter_by_name">Filtra per nom</string>
     <string name="filter_tracks_count">Filtre: %d</string>
     <string name="map_widget_group_glide_desc">Els ginys mostren la relació de lliscament amb l\'objectiu o la relació mitjana de lliscament per al viatge actual.</string>

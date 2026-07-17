@@ -4849,9 +4849,9 @@
     <string name="sensor_temperature_desc">顯示來自偵測器的溫度</string>
     <string name="app_mode_baby_transport">嬰兒車</string>
     <string name="with_waypoints">有路徑節點</string>
-    <string name="track_filter_range_selected_format">%s - %s, %s</string>
+    <string name="track_filter_range_selected_format">%1$s - %2$s, %3$s</string>
     <string name="max_altitude">最高海拔</string>
-    <string name="track_filter_date_selected_format">%s - %s</string>
+    <string name="track_filter_date_selected_format">%1$s - %2$s</string>
     <string name="app_mode_paragliding">飛行傘</string>
     <string name="filter_by_name">依名稱篩選</string>
     <string name="shared_string_reset_all">重設所有</string>

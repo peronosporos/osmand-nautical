@@ -5018,9 +5018,9 @@
     <string name="shared_string_temperature">Температура</string>
     <string name="sensor_temperature_desc">Показує температуру з сенсорів</string>
     <string name="with_waypoints">З маршрутними точками</string>
-    <string name="track_filter_range_selected_format">%s - %s, %s</string>
+    <string name="track_filter_range_selected_format">%1$s - %2$s, %3$s</string>
     <string name="max_altitude">Максимальна висоті</string>
-    <string name="track_filter_date_selected_format">%s - %s</string>
+    <string name="track_filter_date_selected_format">%1$s - %2$s</string>
     <string name="app_mode_paragliding">Парапланеризм</string>
     <string name="app_mode_baby_transport">Транспортування дітей</string>
     <string name="filter_by_name">Фільтрувати за назвою</string>

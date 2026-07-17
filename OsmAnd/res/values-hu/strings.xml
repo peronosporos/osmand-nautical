@@ -4930,9 +4930,9 @@
     <string name="app_mode_paragliding">Siklóernyőzés</string>
     <string name="app_mode_hang_gliding">Sárkányrepülés</string>
     <string name="with_waypoints">Útpontokkal</string>
-    <string name="track_filter_range_selected_format">%s - %s, %s</string>
+    <string name="track_filter_range_selected_format">%1$s - %2$s, %3$s</string>
     <string name="max_altitude">Legnagyobb magasság</string>
-    <string name="track_filter_date_selected_format">%s - %s</string>
+    <string name="track_filter_date_selected_format">%1$s - %2$s</string>
     <string name="filter_by_name">Szűrés név alapján</string>
     <string name="shared_string_reset_all">Összes visszaállítása</string>
     <string name="filter_tracks_count">Szűrő: %d</string>

@@ -850,7 +850,7 @@
     <string name="help_article_navigation_routing_direct_to_point_routing_name">Tìm đường trực tiếp đến điểm (Tàu thuỷ)</string>
     <string name="shared_string_created">Đã tạo</string>
     <string name="shared_string_reset_all">Đặt lại tất cả</string>
-    <string name="track_filter_date_selected_format">%s - %s</string>
+    <string name="track_filter_date_selected_format">%1$s - %2$s</string>
     <string name="date_of_creation">Ngày tạo</string>
     <string name="empty_name">Làm trống tên</string>
     <string name="edit_filter">Chỉnh sửa bộ lọc</string>
@@ -870,7 +870,7 @@
     <string name="help_article_navigation_routing_public_transport_navigation_name">Tìm đường cho phương tiện công cộng</string>
     <string name="shared_string_setup">Thiết lập</string>
     <string name="shared_string_loading">Đang tải</string>
-    <string name="track_filter_range_selected_format">%s - %s, %s</string>
+    <string name="track_filter_range_selected_format">%1$s - %2$s, %3$s</string>
     <string name="filter_by_name">Lọc theo tên</string>
     <string name="app_mode_baby_transport">Vận chuyển trẻ em</string>
     <string name="smart_folder_saved">Thư mục Thông minh đã được lưu</string>

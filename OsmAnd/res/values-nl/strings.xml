@@ -5544,9 +5544,9 @@
     <string name="help_article_start_with_first_steps_name">Eerste stappen</string>
     <string name="help_article_search_search_coordinates_name">Coördinaten zoeken</string>
     <string name="folder">Map</string>
-    <string name="track_filter_date_selected_format">%s - %s</string>
+    <string name="track_filter_date_selected_format">%1$s - %2$s</string>
     <string name="shared_string_reset_all">Alles herstellen</string>
-    <string name="track_filter_range_selected_format">%s - %s, %s</string>
+    <string name="track_filter_range_selected_format">%1$s - %2$s, %3$s</string>
     <string name="filter_tracks_count">Filter: %d</string>
     <string name="help_article_troubleshooting_track_recording_issues_name">Trackregistratie</string>
     <string name="local_indexes_category_terrain">Terreinkaarten (3D)</string>

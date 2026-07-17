@@ -5050,9 +5050,9 @@
     <string name="app_mode_paragliding">Paragliding</string>
     <string name="app_mode_hang_gliding">Hanggliding</string>
     <string name="with_waypoints">Med rutepunkter</string>
-    <string name="track_filter_range_selected_format">%s - %s, %s</string>
+    <string name="track_filter_range_selected_format">%1$s - %2$s, %3$s</string>
     <string name="max_altitude">Maks højde</string>
-    <string name="track_filter_date_selected_format">%s - %s</string>
+    <string name="track_filter_date_selected_format">%1$s - %2$s</string>
     <string name="filter_by_name">Filtrér efter navn</string>
     <string name="shared_string_reset_all">Nulstil alle</string>
     <string name="filter_tracks_count">Filter: %d</string>

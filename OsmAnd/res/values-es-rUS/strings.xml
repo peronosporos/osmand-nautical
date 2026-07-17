@@ -4957,10 +4957,10 @@
     <string name="with_waypoints">Con puntos de ruta</string>
     <string name="sort_size_descending">Más largo primero</string>
     <string name="delete_map">Borrar mapa</string>
-    <string name="track_filter_range_selected_format">%s - %s, %s</string>
+    <string name="track_filter_range_selected_format">%1$s - %2$s, %3$s</string>
     <string name="standard_maps">Mapas estándar</string>
     <string name="max_altitude">Altitud máx.</string>
-    <string name="track_filter_date_selected_format">%s - %s</string>
+    <string name="track_filter_date_selected_format">%1$s - %2$s</string>
     <string name="shared_string_created">Creado</string>
     <string name="release_4_6">• Android Auto: Se agregó el modo 3D\n\n• Trazas: Se agregaron filtros y carpetas inteligentes para las trazas y se optimizó la memoria para archivos grandes\n\n• Se agregaron filas para los paneles de widget superior e inferior, con admisión a todos los widgets\n\n• Se mejoró la gestión local de recursos\n\n• Se agregó la capacidad de cambiar los atajos de teclado para dispositivos de entrada externos.\n\n• Se agregó el widget «Relación de planeo» y «Ubicación del Sol»\n\n• OsmAnd Cloud: Ahora puedes acceder a archivos borrados\n\n• Se mejoró la coloración de trazas en modo pendiente con un nuevo gradiente simétrico\n\n• Se corrigieron los problemas de transparencia en la barra de estado\n\n• Se agregó el widget de temperatura en ANT+\n\n• Se agregó el widget «RAM disponible»</string>
     <string name="app_mode_paragliding">Parapente</string>
