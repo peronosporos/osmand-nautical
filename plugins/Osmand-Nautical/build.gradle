@@ -26,11 +26,8 @@ android {
 		targetSdkVersion osmand_targetSdk
 	}
 
-	lintOptions {
-		abortOnError false
-	}
 
-	sourceSets {
+    sourceSets {
 		main {
 			manifest.srcFile "AndroidManifest.xml"
 			jni.srcDirs = []
@@ -54,6 +51,9 @@ android {
 	buildFeatures {
 		aidl true
 	}
+    lint {
+        abortOnError false
+    }
 }
 
 repositories {

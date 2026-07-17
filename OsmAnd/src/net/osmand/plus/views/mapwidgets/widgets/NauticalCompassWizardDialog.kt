@@ -70,6 +70,8 @@ class NauticalCompassWizardDialog : BottomSheetDialogFragment() {
 
     companion object {
         const val TAG = "NauticalCompassWizardDialog"
+
+        @JvmStatic
         fun show(fragment: androidx.fragment.app.Fragment) {
             NauticalCompassWizardDialog().show(fragment.childFragmentManager, TAG)
         }
