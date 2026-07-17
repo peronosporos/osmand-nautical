@@ -15,7 +15,6 @@ import com.google.android.material.slider.Slider
 import com.google.android.material.switchmaterial.SwitchMaterial
 import net.osmand.plus.R
 import net.osmand.plus.plugins.nautical.NauticalPlugin
-import net.osmand.plus.plugins.nautical.engine.AutopilotController
 
 class NauticalAdvancedSettingsBottomSheet : BottomSheetDialogFragment() {
 

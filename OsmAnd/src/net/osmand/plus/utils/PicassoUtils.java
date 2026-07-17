@@ -14,7 +14,6 @@ import com.squareup.picasso.Picasso;
 import com.squareup.picasso.RequestCreator;
 
 import net.osmand.PlatformUtil;
-import net.osmand.plus.BuildConfig;
 import net.osmand.plus.OsmandApplication;
 import net.osmand.plus.helpers.AndroidUiHelper;
 import net.osmand.plus.wikivoyage.WikivoyageUtils;
