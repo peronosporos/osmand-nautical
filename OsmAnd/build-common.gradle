@@ -1,5 +1,21 @@
 apply from: rootProject.file("versions.gradle")
 
+// Consolidated task to avoid "Sync fighting" and constant re-indexing
+tasks.register('copyIcons', Sync) {
+	duplicatesStrategy = DuplicatesStrategy.INCLUDE
+	into layout.buildDirectory.dir("generated/osmand/res")
+	from("../../resources/rendering_styles/style-icons/map-shaders-vector") {
+		into "drawable"
+	}
+	from("../../resources/rendering_styles/style-icons/map-icons-vector") {
+		into "drawable"
+	}
+	from("../../resources/rendering_styles/style-icons/poi-icons-vector") {
+		into "drawable"
+	}
+	include "**/*.png", "**/*.xml"
+}
+
 tasks.register('printc') {
 	configurations.each { if (it.isCanBeResolved()) println it.name }
 }
@@ -44,7 +60,7 @@ android {
 			aidl.srcDirs = ["src"]
 			java.srcDirs = ["src"]
 			resources.srcDirs = ["src"]
-			res.srcDirs = ["res", layout.buildDirectory.dir("generated/osmand/res")]
+			res.srcDirs = ["res", tasks.named('copyIcons')]
 			assets.srcDirs = ["assets", layout.buildDirectory.dir("generated/osmand/assets")]
 		}
 		androidTest {
@@ -261,15 +277,6 @@ tasks.register('copyRouteActivities', Copy) {
 	into layout.buildDirectory.dir("generated/osmand/assets")
 }
 
-// Consolidated task to avoid "Sync fighting" and constant re-indexing
-tasks.register('copyIcons', Sync) {
-	duplicatesStrategy = DuplicatesStrategy.INCLUDE
-	from("../../resources/rendering_styles/style-icons/map-shaders-vector")
-	from("../../resources/rendering_styles/style-icons/map-icons-vector")
-	from("../../resources/rendering_styles/style-icons/poi-icons-vector")
-	into layout.buildDirectory.dir("generated/osmand/res/drawable")
-	include "**/*.png", "**/*.xml"
-}
 
 tasks.register('collectTestResources', Copy) {
 	into "test/assets/"

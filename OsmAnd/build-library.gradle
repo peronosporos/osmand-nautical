@@ -73,6 +73,11 @@ android {
 			println(osmandTask.getName() + " generate resources")
 			osmandTask.dependsOn(copyIcons)
 		}
+		def processNavigationResources = "process${taskName}NavigationResources"
+		tasks.matching { it.name == processNavigationResources }.configureEach { osmandTask ->
+			println(osmandTask.getName() + " process navigation resources")
+			osmandTask.dependsOn(copyIcons)
+		}
 	}
 }
 
