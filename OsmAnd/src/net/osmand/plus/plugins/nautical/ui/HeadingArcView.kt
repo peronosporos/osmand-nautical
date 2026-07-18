@@ -65,9 +65,10 @@ class HeadingArcView @JvmOverloads constructor(
     private val tickPaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val actualPath = Path()
     private val centerPath = Path()
-    private val osmandOrange = Color.parseColor("#FF8800")
+    private var osmandOrange = Color.parseColor("#FF8800")
 
     init {
+        osmandOrange = ContextCompat.getColor(context, R.color.icon_color_osmand_light)
         paint.strokeWidth = 4f
         paint.style = Paint.Style.STROKE
         paint.strokeCap = Paint.Cap.ROUND

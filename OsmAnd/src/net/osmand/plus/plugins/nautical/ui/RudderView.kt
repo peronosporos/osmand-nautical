@@ -8,6 +8,8 @@ import android.graphics.Path
 import android.graphics.Typeface
 import android.util.AttributeSet
 import android.view.View
+import androidx.core.content.ContextCompat
+import net.osmand.plus.R
 
 class RudderView @JvmOverloads constructor(
     context: Context,
@@ -21,10 +23,12 @@ class RudderView @JvmOverloads constructor(
     private val pointerPath = Path()
     private var isNightMode = false
 
-    private val colorPort = Color.parseColor("#E71D36")
-    private val colorStarboard = Color.parseColor("#5BAF3F")
+    private var colorPort = Color.parseColor("#E71D36")
+    private var colorStarboard = Color.parseColor("#5BAF3F")
 
     init {
+        colorPort = ContextCompat.getColor(context, R.color.text_color_negative)
+        colorStarboard = ContextCompat.getColor(context, R.color.text_color_positive)
         paint.strokeWidth = 2f
         textPaint.textSize = 24f
         textPaint.textAlign = Paint.Align.CENTER

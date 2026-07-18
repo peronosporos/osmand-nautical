@@ -186,13 +186,16 @@ class NauticalPilotBottomSheet : BottomSheetDialogFragment() {
                 }
 
                 // Telemetry
-                txtSog.text = String.format(Locale.US, "%.1f kn", (state.speedOverGround ?: 0.0) * 1.94384)
-                txtDepth.text = String.format(Locale.US, "%.1f m", state.depthBelowTransducer ?: 0.0)
+                val unitKnots = getString(R.string.nautical_unit_knots)
+                val unitMeters = getString(R.string.nautical_unit_meters)
+                
+                txtSog.text = String.format(Locale.US, "%.1f %s", (state.speedOverGround ?: 0.0) * 1.94384, unitKnots)
+                txtDepth.text = String.format(Locale.US, "%.1f %s", state.depthBelowTransducer ?: 0.0, unitMeters)
                 
                 val xte = state.crossTrackError
                 if (xte != null) {
                     val xteNm = abs(xte) * 0.000539957 // meters to NM
-                    val side = if (xte < 0) "L" else "R"
+                    val side = if (xte < 0) getString(R.string.nautical_xte_side_left) else getString(R.string.nautical_xte_side_right)
                     txtXte.text = String.format(Locale.US, "%.2f %s", xteNm, side)
                 } else {
                     txtXte.text = "---"
