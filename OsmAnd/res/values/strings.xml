@@ -40,7 +40,6 @@
 	<string name="nautical_settings_title">SignalK Server Settings</string>
 
 	<string name="nautical_mode_auto">Heading Hold</string>
-	<string name="nautical_mode_wind">Wind Mode</string>
 	<string name="nautical_mode_track">Track Mode</string>
 	<string name="nautical_mode_pattern">Pattern Mode</string>
 	<string name="nautical_mode_stop">STOP</string>
