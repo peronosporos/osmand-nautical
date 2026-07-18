@@ -210,6 +210,11 @@ public class AisTrackerPlugin extends OsmandPlugin {
 		}
 	}
 
+	@NonNull
+	public OsmandApplication getMyApplication() {
+		return app;
+	}
+
 	public AisTrackerPlugin(@NonNull OsmandApplication app) {
 		super(app);
 		aisImagesCache = new AisImagesCache(app);

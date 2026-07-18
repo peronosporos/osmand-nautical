@@ -12,20 +12,44 @@
     <net.osmand.plus.settings.preferences.EditTextPreferenceEx
         android:key="server_ip"
         android:layout="@layout/preference_with_descr"
-        android:title="@string/ais_address_nmea_server"
-        android:dialogTitle="@string/ais_address_nmea_server" />
+        android:title="@string/nautical_server_ip_desc"
+        android:dialogTitle="@string/nautical_server_ip_desc" />
 
     <net.osmand.plus.settings.preferences.EditTextPreferenceEx
         android:key="server_port"
         android:layout="@layout/preference_with_descr"
-        android:title="@string/ais_port_nmea_server"
-        android:dialogTitle="@string/ais_port_nmea_server" />
+        android:title="@string/nautical_server_port_desc"
+        android:dialogTitle="@string/nautical_server_port_desc" />
+
+    <net.osmand.plus.settings.preferences.SwitchPreferenceEx
+        android:key="server_secure"
+        android:layout="@layout/preference_with_descr"
+        android:title="@string/nautical_server_secure_desc" />
+
+    <PreferenceCategory
+        android:layout="@layout/preference_category_with_descr"
+        android:title="@string/nautical_advanced_settings" />
+
+    <net.osmand.plus.settings.preferences.SwitchPreferenceEx
+        android:key="nautical_show_laylines"
+        android:layout="@layout/preference_with_descr"
+        android:title="@string/nautical_show_laylines" />
+
+    <net.osmand.plus.settings.preferences.SwitchPreferenceEx
+        android:key="nautical_show_wind_shifts"
+        android:layout="@layout/preference_with_descr"
+        android:title="@string/nautical_show_wind_shifts" />
+
+    <net.osmand.plus.settings.preferences.SwitchPreferenceEx
+        android:key="nautical_show_trajectory"
+        android:layout="@layout/preference_with_descr"
+        android:title="@string/nautical_show_trajectory" />
 
     <net.osmand.plus.settings.preferences.EditTextPreferenceEx
         android:key="nautical_xte_threshold"
         android:layout="@layout/preference_with_descr"
-        android:title="XTE Threshold (NM)"
-        android:dialogTitle="XTE Threshold (NM)" />
+        android:title="@string/nautical_xte_threshold_desc"
+        android:dialogTitle="@string/nautical_xte_threshold_desc" />
 
     <net.osmand.plus.settings.preferences.ListPreferenceEx
         android:key="ais_receive_in_background"

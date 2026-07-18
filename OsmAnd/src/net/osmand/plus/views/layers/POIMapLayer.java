@@ -50,6 +50,7 @@ import net.osmand.plus.mapcontextmenu.MapContextMenu;
 import net.osmand.plus.plugins.PluginsHelper;
 import net.osmand.plus.poi.PoiFilterUtils;
 import net.osmand.plus.poi.PoiUIFilter;
+import net.osmand.plus.plugins.nautical.NauticalPlugin;
 import net.osmand.plus.render.RenderingIcons;
 import net.osmand.plus.render.TravelRendererHelper;
 import net.osmand.plus.render.TravelRendererHelper.OnFileVisibilityChangeListener;
@@ -801,6 +802,13 @@ public class POIMapLayer extends OsmandMapLayer implements IContextMenuProvider,
 		List<Amenity> fullObjects = new ArrayList<>();
 		List<LatLon> fullObjectsLatLon = new ArrayList<>();
 		List<LatLon> smallObjectsLatLon = new ArrayList<>();
+		boolean isNightVision = NauticalPlugin.isNightVision(app);
+		if (isNightVision) {
+			Paint dimPaint = new Paint();
+			dimPaint.setColorFilter(NauticalPlugin.DIM_FILTER);
+			canvas.saveLayer(null, dimPaint);
+		}
+
 		if (shouldDraw(zoom)) {
 			data.queryNewData(tileBox);
 			List<Amenity> objects = data.getDisplayedResults();
@@ -851,6 +859,9 @@ public class POIMapLayer extends OsmandMapLayer implements IContextMenuProvider,
 				this.fullObjectsLatLon = fullObjectsLatLon;
 				this.smallObjectsLatLon = smallObjectsLatLon;
 			}
+		}
+		if (isNightVision) {
+			canvas.restore();
 		}
 		mapTextLayer.putData(this, fullObjects);
 		mapActivityInvalidated = false;

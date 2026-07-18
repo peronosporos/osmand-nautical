@@ -65,7 +65,9 @@ public class BaseSimpleWidgetInfoFragment extends BaseResizableWidgetSettingFrag
 
 	@Override
 	protected void applySettings() {
-		shouldShowIconPref.set(showIcon);
+		if (shouldShowIconPref != null) {
+			shouldShowIconPref.set(showIcon);
+		}
 		if (widgetInfo != null) {
 			if (widgetInfo.widget instanceof SimpleWidget simpleWidget) {
 				simpleWidget.updateWidgetView();

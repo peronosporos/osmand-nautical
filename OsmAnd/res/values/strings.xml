@@ -12,20 +12,31 @@
 	Thx - Hardy
 -->
 	<!-- Nautical plugin-->
+	<string name="nautical_vessel_type">Vessel Type</string>
+	<string name="nautical_vessel_conventional">Conventional</string>
+	<string name="nautical_vessel_proa">Proa</string>
+	<string name="nautical_shunt">SHUNT</string>
+	<string name="nautical_confirm_shunt">Confirm Shunt?</string>
+	<string name="nautical_shunting">SHUNTING</string>
 	<string name="nautical_tack_port">TACK PORT</string>
 	<string name="nautical_tack_stbd">TACK STBD</string>
+	<string name="nautical_gybe_port">GYBE PORT</string>
+	<string name="nautical_gybe_stbd">GYBE STBD</string>
 	<string name="nautical_confirm_tack">Confirm Tack?</string>
+	<string name="nautical_confirm_gybe">Confirm Gybe?</string>
 	<string name="nautical_tacking">TACKING</string>
 	<string name="nautical_gybing">GYBING</string>
 	<string name="nautical_mode_label">%1$s MODE</string>
 	<string name="nautical_disengage_standby">DISENGAGE / STANDBY</string>
 	<string name="nautical_engage_auto">ENGAGE AUTO</string>
+	<string name="nautical_awa_target">Target AWA: %1$.0f°</string>
+	<string name="nautical_awa_current">AWA: %1$.0f°</string>
 	<string name="nautical_sea_calm">CALM</string>
 	<string name="nautical_sea_heavy">HEAVY</string>
 	<string name="nautical_advanced_settings">Advanced Settings</string>
 	<string name="nautical_off_course">OFF COURSE</string>
-	<string name="nautical_plugin_name">Nautical Marine Controls</string>
-	<string name="nautical_plugin_description">SignalK integration for marine navigation and autopilot control.</string>
+	<string name="nautical_plugin_name">SignalK Marine Controls</string>
+	<string name="nautical_plugin_description">SignalK integration for marine navigation. Support for instruments data and autopilot control.</string>
 	<string name="nautical_settings_title">SignalK Server Settings</string>
 
 	<string name="nautical_mode_auto">Heading Hold</string>

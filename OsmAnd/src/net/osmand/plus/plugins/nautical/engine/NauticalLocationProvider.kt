@@ -110,7 +110,7 @@ class NauticalLocationProvider(
 
     private fun injectMarineStateAsLocation(state: MarineState) {
         // 1. Guard clause: Ensure we have the data we need
-        if (state.latitude == null || state.longitude == null) return
+        if ((state.latitude == null) || (state.longitude == null)) return
 
         // 2. Throttle to 1Hz (1000ms) for OsmAnd stability
         val currentTime = System.currentTimeMillis()

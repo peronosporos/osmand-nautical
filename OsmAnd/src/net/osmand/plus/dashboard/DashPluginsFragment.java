@@ -22,7 +22,7 @@ import net.osmand.plus.plugins.OsmandPlugin;
 import net.osmand.plus.plugins.PluginsFragment;
 import net.osmand.plus.plugins.PluginsHelper;
 import net.osmand.plus.plugins.development.OsmandDevelopmentPlugin;
-import net.osmand.plus.plugins.openseamaps.NauticalMapsPlugin;
+import net.osmand.plus.plugins.nautical.NauticalPlugin;
 import net.osmand.plus.plugins.skimaps.SkiMapsPlugin;
 
 import java.util.ArrayList;
@@ -73,12 +73,12 @@ public class DashPluginsFragment extends DashBaseFragment {
 	private void initPlugins() {
 		List<OsmandPlugin> notFunctionalPlugins = PluginsHelper.getNotActivePlugins();
 		notFunctionalPlugins.remove(PluginsHelper.getPlugin(SkiMapsPlugin.class));
-		notFunctionalPlugins.remove(PluginsHelper.getPlugin(NauticalMapsPlugin.class));
+		notFunctionalPlugins.remove(PluginsHelper.getPlugin(NauticalPlugin.class));
 		Collections.shuffle(notFunctionalPlugins);
 
 		List<OsmandPlugin> enabledPlugins = PluginsHelper.getActivePlugins();
 		enabledPlugins.remove(PluginsHelper.getPlugin(SkiMapsPlugin.class));
-		enabledPlugins.remove(PluginsHelper.getPlugin(NauticalMapsPlugin.class));
+		enabledPlugins.remove(PluginsHelper.getPlugin(NauticalPlugin.class));
 
 		plugins = new ArrayList<>();
 		Iterator<OsmandPlugin> nit = notFunctionalPlugins.iterator();

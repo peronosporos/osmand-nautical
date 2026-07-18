@@ -57,9 +57,20 @@ class NauticalGraphWidget(
         val g = graphView ?: return
 
         when (widgetType) {
-            WidgetType.NAUTICAL_DEPTH -> g.setData(engine.getDepthHistory(), mapActivity.getString(R.string.nautical_unit_meters))
-            WidgetType.NAUTICAL_WIND -> g.setData(engine.getWindHistory(), mapActivity.getString(R.string.nautical_unit_knots))
-            WidgetType.NAUTICAL_VMG -> g.setData(engine.getVmgHistory().map { it * 1.94384 }, mapActivity.getString(R.string.nautical_unit_knots))
+            WidgetType.NAUTICAL_DEPTH -> {
+                val unit = mapActivity.getString(R.string.nautical_unit_meters)
+                g.setData(engine.getDepthHistory(), unit)
+            }
+            WidgetType.NAUTICAL_WIND -> {
+                val unit = mapActivity.getString(R.string.nautical_unit_knots)
+                val coeff = 1.94384
+                g.setData(engine.getWindHistory().map { it * coeff }, unit)
+            }
+            WidgetType.NAUTICAL_VMG -> {
+                val unit = mapActivity.getString(R.string.nautical_unit_knots)
+                val coeff = 1.94384
+                g.setData(engine.getVmgHistory().map { it * coeff }, unit)
+            }
             else -> {}
         }
     }

@@ -29,6 +29,7 @@ import net.osmand.core.jni.VectorLinesCollection;
 import net.osmand.data.LatLon;
 import net.osmand.data.RotatedTileBox;
 import net.osmand.plus.R;
+import net.osmand.plus.plugins.nautical.NauticalPlugin;
 import net.osmand.plus.utils.NativeUtilities;
 import net.osmand.plus.views.OsmandMapTileView;
 import net.osmand.shared.aistracker.AisCpa;
@@ -213,7 +214,9 @@ public class AisObjectDrawable {
 	}
 
 	private void setColor(boolean vesselAtRest) {
-		if (isOwn()) {
+		if (NauticalPlugin.isNightVision(plugin.getMyApplication())) {
+			this.bitmapColor = Color.RED;
+		} else if (isOwn()) {
 			this.bitmapColor = Color.BLACK; // show own AIS object in black
 		} else if (ais.isLost(getPlugin().getVesselLostTimeoutInMinutes()) && !vesselAtRest) {
 			if (ais.isMovable()) {

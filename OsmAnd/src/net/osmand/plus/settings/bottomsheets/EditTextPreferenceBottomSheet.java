@@ -107,7 +107,8 @@ public class EditTextPreferenceBottomSheet extends BasePreferenceBottomSheet {
 	}
 
 	private EditTextPreferenceEx getEditTextPreference() {
-		return (EditTextPreferenceEx) getPreference();
+		Object preference = getPreference();
+		return preference instanceof EditTextPreferenceEx ? (EditTextPreferenceEx) preference : null;
 	}
 
 	public static boolean showInstance(@NonNull FragmentManager fragmentManager, String key, Fragment target,

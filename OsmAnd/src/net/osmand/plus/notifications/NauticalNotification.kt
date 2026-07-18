@@ -3,6 +3,7 @@ package net.osmand.plus.notifications
 import android.app.Service
 import android.content.Intent
 import androidx.core.app.NotificationCompat
+import net.osmand.plus.NavigationService
 import net.osmand.plus.OsmandApplication
 import net.osmand.plus.R
 import net.osmand.plus.activities.MapActivity
@@ -17,9 +18,12 @@ class NauticalNotification(app: OsmandApplication) : OsmandNotification(app, GRO
 
     override fun getPriority(): Int = NotificationCompat.PRIORITY_LOW
 
-    override fun isActive(): Boolean = app.navigationService?.isUsedBy(net.osmand.plus.NavigationService.USED_BY_NAUTICAL) == true
+    override fun isActive(): Boolean = false
 
-    override fun isUsedByService(service: Service?): Boolean = true
+    override fun isUsedByService(service: Service?): Boolean {
+        val navService = service as? NavigationService ?: app.navigationService
+        return navService?.isUsedBy(NavigationService.USED_BY_NAUTICAL) == true
+    }
 
     override fun getContentIntent(): Intent {
         val intent = Intent(app, MapActivity::class.java)

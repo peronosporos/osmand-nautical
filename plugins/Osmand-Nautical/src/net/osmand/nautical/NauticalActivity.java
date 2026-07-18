@@ -9,6 +9,7 @@ import android.content.pm.ResolveInfo;
 import android.net.Uri;
 import android.os.Bundle;
 import android.text.Html;
+import androidx.core.text.HtmlCompat;
 import android.widget.TextView;
 
 import net.osmand.nauticalPlugin.R;
@@ -24,8 +25,8 @@ public class NauticalActivity extends Activity {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.main);
 
-		TextView descriptionTextView = (TextView) findViewById(R.id.descriptionTextView);
-		descriptionTextView.setText(Html.fromHtml(getString(R.string.plugin_description)));
+		TextView descriptionTextView = findViewById(R.id.descriptionTextView);
+		descriptionTextView.setText(HtmlCompat.fromHtml(getString(R.string.plugin_description), HtmlCompat.FROM_HTML_MODE_LEGACY));
 
 		Intent intentPlus = new Intent();
 		intentPlus.setComponent(new ComponentName(OSMAND_COMPONENT_PLUS, OSMAND_ACTIVITY));
@@ -65,10 +66,6 @@ public class NauticalActivity extends Activity {
 	}
 
 	public void logEvent(Activity ctx, String event) {
-		try {
-			// not implemented yet
-		} catch (Exception e) {
-			//ignore
-		}
+		// not implemented yet
 	}
 }

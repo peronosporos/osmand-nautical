@@ -46,6 +46,7 @@ import net.osmand.plus.mapcontextmenu.MapContextMenu;
 import net.osmand.plus.mapcontextmenu.other.MapMultiSelectionMenu;
 import net.osmand.plus.plugins.PluginsHelper;
 import net.osmand.plus.plugins.weather.WeatherPlugin;
+import net.osmand.plus.plugins.nautical.NauticalPlugin;
 import net.osmand.plus.routepreparationmenu.ChooseRouteFragment;
 import net.osmand.plus.routepreparationmenu.MapRouteInfoMenu;
 import net.osmand.plus.utils.AndroidUtils;
@@ -194,6 +195,13 @@ public class ContextMenuLayer extends OsmandMapLayer implements ChangeMarkerPosi
         if (mapActivity == null) {
             return;
         }
+
+        if (NauticalPlugin.isNightVision(getApplication())) {
+            outlinePaint.setColor(android.graphics.Color.RED);
+        } else {
+            outlinePaint.setColor(getColor(R.color.osmand_orange));
+        }
+
         boolean carView = getApplication().getOsmandMap().getMapView().isCarView();
         boolean carViewChanged = this.carView != carView;
         this.carView = carView;
@@ -328,7 +336,9 @@ public class ContextMenuLayer extends OsmandMapLayer implements ChangeMarkerPosi
                     OsmandApplication app = getApplication();
                     Integer customColor = app.getAppCustomization().getHighlight3dObjectsColor();
                     int color = customColor != null ? customColor : outlinePaint.getColor();
-
+                    if (NauticalPlugin.isNightVision(app)) {
+                        color = android.graphics.Color.RED;
+                    }
                     add3DObjectColor(latLon, color);
                 }
             }

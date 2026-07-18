@@ -19,7 +19,6 @@ import net.osmand.plus.plugins.nautical.engine.MarineState
 import net.osmand.plus.views.layers.base.OsmandMapLayer
 import net.osmand.plus.views.mapwidgets.WidgetType
 import net.osmand.plus.views.mapwidgets.WidgetsPanel
-import net.osmand.plus.settings.backend.preferences.CommonPreference
 import java.util.*
 import kotlin.math.abs
 
@@ -30,14 +29,11 @@ class NauticalPilotWidget(
     panel: WidgetsPanel?,
 ) : SimpleWidget(mapActivity, widgetType, customId, panel) {
 
-    val useNauticalStandardPref: CommonPreference<Boolean> = mapActivity.app.settings.registerBooleanPreference(
-        "nautical_widget_use_standard_${widgetType.id}${customId ?: ""}",
-        true,
-    ).makeProfile()
-
     init {
         setIcons(widgetType)
     }
+
+    override fun getWidgetName(): String? = null
 
     override fun updateIcon() {
         val iconId = iconId
@@ -96,8 +92,7 @@ class NauticalPilotWidget(
             override fun onLongPress(e: MotionEvent) {
                 progressBar?.visibility = View.VISIBLE
                 holdProgress = 0
-                holdHandler.post(
-                    object : Runnable {
+                val holdRunnable = object : Runnable {
                     override fun run() {
                         holdProgress += 4
                         progressBar?.progress = holdProgress
@@ -109,7 +104,8 @@ class NauticalPilotWidget(
                             holdHandler.postDelayed(this, 50)
                         }
                     }
-                })
+                }
+                holdHandler.post(holdRunnable)
             }
         })
 
@@ -195,17 +191,12 @@ class NauticalPilotWidget(
             return
         }
 
-        val xte = state.crossTrackError ?: 0.0
-        val threshold = mapActivity.app.settings.NAUTICAL_XTE_THRESHOLD.get() ?: 0.1f
-        val isOffCourse = abs(xte) > threshold.toDouble()
+        val xteMeters = state.crossTrackError ?: 0.0
+        val thresholdNm = mapActivity.app.settings.NAUTICAL_XTE_THRESHOLD.get() ?: 0.1f
+        val isOffCourse = (abs(xteMeters) / 1852.0) > thresholdNm.toDouble()
 
         if (isOffCourse) {
-            val distStr = if (useNauticalStandardPref.get()) {
-                String.format(Locale.US, "%.2f NM", abs(xte))
-            } else {
-                net.osmand.plus.utils.OsmAndFormatter.getFormattedDistance(abs(xte).toFloat() * 1852f, app)
-            }
-            setText(mapActivity.getString(R.string.nautical_off_course), distStr)
+            setText(mapActivity.getString(R.string.nautical_off_course), "")
             setImageDrawable(iconsCache.getPaintedIcon(R.drawable.ic_action_alert, ContextCompat.getColor(app, R.color.text_color_negative)))
             setStatusIcon(0)
         } else {

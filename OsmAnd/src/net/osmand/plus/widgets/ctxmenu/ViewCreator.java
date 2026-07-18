@@ -26,7 +26,7 @@ import net.osmand.plus.R;
 import net.osmand.plus.activities.actions.AppModeDialog;
 import net.osmand.plus.helpers.AndroidUiHelper;
 import net.osmand.plus.plugins.PluginsHelper;
-import net.osmand.plus.plugins.openseamaps.NauticalMapsPlugin;
+import net.osmand.plus.plugins.nautical.NauticalPlugin;
 import net.osmand.plus.settings.backend.ApplicationMode;
 import net.osmand.plus.settings.backend.OsmandSettings;
 import net.osmand.plus.utils.AndroidUtils;
@@ -268,7 +268,7 @@ public class ViewCreator {
 		});
 		View button = view.findViewById(R.id.button_get);
 		UiUtilities.setupDialogButton(nightMode, button, DialogButtonType.SECONDARY_ACTIVE, R.string.shared_string_get);
-		AndroidUiHelper.updateVisibility(view.findViewById(R.id.bottom_divider), PluginsHelper.isEnabled(NauticalMapsPlugin.class));
+		AndroidUiHelper.updateVisibility(view.findViewById(R.id.bottom_divider), PluginsHelper.isEnabled(NauticalPlugin.class));
 		return view;
 	}
 

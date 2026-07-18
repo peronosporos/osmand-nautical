@@ -8,6 +8,7 @@ import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.io.IOException
+import java.util.Locale
 
 class AutopilotController(
     private val app: OsmandApplication,
@@ -68,6 +69,17 @@ class AutopilotController(
         executePut(url, payload, null, showToast = false)
     }
 
+    fun setTargetWindAngle(degrees: Double) {
+        val rad = Math.toRadians(degrees)
+        val url = buildAutopilotUrl("target/windAngleApparent")
+        if (url == null) {
+            showConnectionError()
+            return
+        }
+        val payload = """{ "value": $rad }"""
+        executePut(url, payload, null, showToast = false)
+    }
+
     private fun buildUrl(path: String): String? {
         val ip = app.settings.NAUTICAL_SERVER_IP.get() ?: ""
         val port = app.settings.NAUTICAL_SERVER_PORT.get() ?: "3000"
@@ -102,19 +114,21 @@ class AutopilotController(
 
     fun adjustHeading(deltaDegrees: Double) {
         val currentState = NauticalPlugin.engine?.getCurrentState()
-        val currentTarget = currentState?.targetHeading ?: currentState?.headingTrue ?: 0.0
-        
-        // SignalK uses radians for heading
-        val newTargetRad = (currentTarget + Math.toRadians(deltaDegrees)) % (2 * Math.PI)
-        val finalTarget = if (newTargetRad < 0) newTargetRad + (2 * Math.PI) else newTargetRad
-        
-        val url = buildAutopilotUrl("target/headingTrue")
-        if (url == null) {
-            showConnectionError()
-            return
+        val mode = currentState?.autopilotState?.uppercase(Locale.US) ?: "STANDBY"
+
+        if (mode == "WIND") {
+            val currentTarget = currentState?.targetWindAngleApparent ?: currentState?.windDirectionApparent ?: 0.0
+            var newTargetRad = currentTarget + Math.toRadians(deltaDegrees)
+            // Keep within -PI to PI for AWA
+            if (newTargetRad > Math.PI) newTargetRad -= 2 * Math.PI
+            if (newTargetRad < -Math.PI) newTargetRad += 2 * Math.PI
+            setTargetWindAngle(Math.toDegrees(newTargetRad))
+        } else {
+            val currentTarget = currentState?.targetHeading ?: currentState?.headingTrue ?: 0.0
+            val newTargetRad = (currentTarget + Math.toRadians(deltaDegrees)) % (2 * Math.PI)
+            val finalTarget = if (newTargetRad < 0) newTargetRad + (2 * Math.PI) else newTargetRad
+            setTargetHeading(Math.toDegrees(finalTarget))
         }
-        val payload = """{ "value": $finalTarget }"""
-        executePut(url, payload, null, showToast = false)
     }
 
     fun setSeaState(level: Int) {
@@ -129,43 +143,34 @@ class AutopilotController(
 
     fun setRudderGain(gain: Double) {
         val url = buildAutopilotUrl("rudderGain")
-        url?.let { executePut(it, """{ "value": $gain }""", null, false) }
+        url?.let { executePut(it, """{ "value": $gain }""", null, showToast = false) }
     }
 
     fun setCounterRudder(value: Double) {
         val url = buildAutopilotUrl("counterRudder")
-        url?.let { executePut(it, """{ "value": $value }""", null, false) }
+        url?.let { executePut(it, """{ "value": $value }""", null, showToast = false) }
     }
 
     fun setAutoTrim(value: Double) {
         val url = buildAutopilotUrl("autoTrim")
-        url?.let { executePut(it, """{ "value": $value }""", null, false) }
+        url?.let { executePut(it, """{ "value": $value }""", null, showToast = false) }
     }
 
     fun setFilterSensitivity(value: Double) {
         val url = buildAutopilotUrl("filterSensitivity")
-        url?.let { executePut(it, """{ "value": $value }""", null, false) }
+        url?.let { executePut(it, """{ "value": $value }""", null, showToast = false) }
     }
 
     fun setRudderLimit(degrees: Double) {
         val url = buildAutopilotUrl("rudderLimit")
-        url?.let { executePut(it, """{ "value": ${Math.toRadians(degrees)} }""", null, false) }
+        url?.let { executePut(it, """{ "value": ${Math.toRadians(degrees)} }""", null, showToast = false) }
     }
 
     fun setOffCourseAlarm(degrees: Double) {
         val url = buildAutopilotUrl("offCourseAlarm")
-        url?.let { executePut(it, """{ "value": ${Math.toRadians(degrees)} }""", null, false) }
+        url?.let { executePut(it, """{ "value": ${Math.toRadians(degrees)} }""", null, showToast = false) }
     }
 
-    fun executePattern(pattern: String) {
-        val url = buildAutopilotUrl("pattern")
-        if (url == null) {
-            showConnectionError()
-            return
-        }
-        val payload = """{ "value": "$pattern" }"""
-        executePut(url, payload, null, showToast = true)
-    }
 
     fun tack(port: Boolean) {
         val url = buildAutopilotUrl("actions/tack")
@@ -189,6 +194,16 @@ class AutopilotController(
         executePut(url, payload, R.string.nautical_command_sent, showToast = true)
     }
 
+    fun shunt() {
+        val url = buildAutopilotUrl("actions/shunt")
+        if (url == null) {
+            showConnectionError()
+            return
+        }
+        val payload = """{ "value": "true" }"""
+        executePut(url, payload, R.string.nautical_command_sent, showToast = true)
+    }
+
     private fun showConnectionError() {
         app.runInUIThread {
             app.showToastMessage(R.string.nautical_autopilot_not_connected)
@@ -201,30 +216,30 @@ class AutopilotController(
         client.newCall(request).enqueue(
             object : Callback {
                 override fun onFailure(call: Call, e: IOException) {
-                log.error("Request failed: ${e.message}")
-                if (showToast) {
-                    app.runInUIThread {
-                        app.showToastMessage(R.string.nautical_toast_conn_failed)
-                    }
-                }
-            }
-
-            override fun onResponse(call: Call, response: Response) {
-                if (!response.isSuccessful) {
-                    log.error("Server error: ${response.code}")
+                    log.error("Request failed: ${e.message}")
                     if (showToast) {
                         app.runInUIThread {
-                            app.showToastMessage(R.string.nautical_toast_server_error, response.code)
+                            app.showToastMessage(R.string.nautical_toast_conn_failed)
                         }
                     }
-                } else if (successToastRes != null) {
-                    app.runInUIThread {
-                        app.showToastMessage(successToastRes)
-                    }
                 }
-                response.close()
-            }
-        },
+
+                override fun onResponse(call: Call, response: Response) {
+                    if (!response.isSuccessful) {
+                        log.error("Server error: ${response.code}")
+                        if (showToast) {
+                            app.runInUIThread {
+                                app.showToastMessage(R.string.nautical_toast_server_error, response.code)
+                            }
+                        }
+                    } else if (successToastRes != null) {
+                        app.runInUIThread {
+                            app.showToastMessage(successToastRes)
+                        }
+                    }
+                    response.close()
+                }
+            },
         )
     }
 }

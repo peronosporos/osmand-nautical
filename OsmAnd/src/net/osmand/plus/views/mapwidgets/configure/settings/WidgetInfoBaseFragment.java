@@ -321,7 +321,9 @@ public class WidgetInfoBaseFragment extends BaseFullScreenFragment {
 				tvDesc.setText(connectedApp.getName());
 			}
 		} else {
-			tvDesc.setText(widgetType.descId);
+			if (widgetType.descId != 0) {
+				tvDesc.setText(widgetType.descId);
+			}
 			MapActivity mapActivity = getMapActivity();
 			if (!widgetType.isPurchased(app) && mapActivity != null) {
 				AndroidUiHelper.updateVisibility(promoBannerContainer, true);

@@ -29,34 +29,34 @@ class OkHttpSignalKConnection(private val client: OkHttpClient) : SignalKConnect
             request,
             object : WebSocketListener() {
                 override fun onOpen(webSocket: WebSocket, response: Response) {
-                log.debug("WebSocket Connected Successfully!")
-                isConnected = true
+                    log.debug("WebSocket Connected Successfully!")
+                    isConnected = true
 
-                // Send the required SignalK Hello
-                val hello = """{"name":"OsmAnd-Nautical","version":"1.0.0"}"""
-                webSocket.send(hello)
-            }
+                    // Send the required SignalK Hello
+                    val hello = """{"name":"OsmAnd-Nautical","version":"1.0.0"}"""
+                    webSocket.send(hello)
+                }
 
-            override fun onMessage(webSocket: WebSocket, text: String) {
-                log.debug("Message received: $text")
-                onMessageReceived(text)
-            }
+                override fun onMessage(webSocket: WebSocket, text: String) {
+                    log.debug("Message received: $text")
+                    onMessageReceived(text)
+                }
 
-            override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
-                log.error("WebSocket Failure: ${t.message}")
-                isConnected = false
-            }
+                override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
+                    log.error("WebSocket Failure: ${t.message}")
+                    isConnected = false
+                }
 
-            override fun onClosing(webSocket: WebSocket, code: Int, reason: String) {
-                webSocket.close(1000, null)
-                log.debug("WebSocket Closing: $reason")
-                isConnected = false
-            }
+                override fun onClosing(webSocket: WebSocket, code: Int, reason: String) {
+                    webSocket.close(1000, null)
+                    log.debug("WebSocket Closing: $reason")
+                    isConnected = false
+                }
 
-            override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
-                isConnected = false
-            }
-        },
+                override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
+                    isConnected = false
+                }
+            },
         )
     }
 

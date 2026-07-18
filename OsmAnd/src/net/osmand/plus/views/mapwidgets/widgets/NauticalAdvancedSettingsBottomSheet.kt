@@ -10,11 +10,12 @@ import com.github.mikephil.charting.charts.LineChart
 import com.github.mikephil.charting.data.Entry
 import com.github.mikephil.charting.data.LineData
 import com.github.mikephil.charting.data.LineDataSet
-import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.google.android.material.slider.Slider
 import com.google.android.material.switchmaterial.SwitchMaterial
+import net.osmand.plus.base.BottomSheetDialogFragment
 import net.osmand.plus.R
 import net.osmand.plus.plugins.nautical.NauticalPlugin
+import net.osmand.plus.settings.enums.VesselType
 
 class NauticalAdvancedSettingsBottomSheet : BottomSheetDialogFragment() {
 
@@ -24,7 +25,6 @@ class NauticalAdvancedSettingsBottomSheet : BottomSheetDialogFragment() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setStyle(STYLE_NORMAL, R.style.BottomSheet_Dialog)
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
@@ -48,8 +48,11 @@ class NauticalAdvancedSettingsBottomSheet : BottomSheetDialogFragment() {
         val sliderFilterSensitivity = view.findViewById<Slider>(R.id.slider_filter_sensitivity)
         val sliderRudderLimit = view.findViewById<Slider>(R.id.slider_rudder_limit)
         val sliderOffCourse = view.findViewById<Slider>(R.id.slider_off_course)
+        val vesselTypeToggle = view.findViewById<com.google.android.material.button.MaterialButtonToggleGroup>(R.id.vessel_type_toggle)
 
         val chart = view.findViewById<LineChart>(R.id.pid_preview_chart)
+
+        vesselTypeToggle.check(if (settings.NAUTICAL_VESSEL_TYPE.get() == VesselType.PROA) R.id.btn_vessel_proa else R.id.btn_vessel_conv)
 
         val btnCompassCalib = view.findViewById<Button>(R.id.btn_compass_calib)
         val btnReset = view.findViewById<Button>(R.id.btn_reset_defaults)
@@ -71,7 +74,7 @@ class NauticalAdvancedSettingsBottomSheet : BottomSheetDialogFragment() {
                 chart,
                 sliderRudderGain.value.toDouble(),
                 sliderCounterRudder.value.toDouble(),
-                sliderAutoTrim.value.toDouble()
+                sliderAutoTrim.value.toDouble(),
             )
         }
 
@@ -89,6 +92,7 @@ class NauticalAdvancedSettingsBottomSheet : BottomSheetDialogFragment() {
             sliderFilterSensitivity.value = 3.0f
             sliderRudderLimit.value = 30.0f
             sliderOffCourse.value = 15.0f
+            vesselTypeToggle.check(R.id.btn_vessel_conv)
             updateChart()
         }
 
@@ -100,11 +104,14 @@ class NauticalAdvancedSettingsBottomSheet : BottomSheetDialogFragment() {
             autopilot.setRudderLimit(sliderRudderLimit.value.toDouble())
             autopilot.setOffCourseAlarm(sliderOffCourse.value.toDouble())
             
-            dismiss()
+            val selectedVesselType = if (vesselTypeToggle.checkedButtonId == R.id.btn_vessel_proa) VesselType.PROA else VesselType.CONVENTIONAL
+            settings.NAUTICAL_VESSEL_TYPE.set(selectedVesselType)
+
+            dismissAllowingStateLoss()
         }
 
         btnCancel.setOnClickListener {
-            dismiss()
+            dismissAllowingStateLoss()
         }
     }
 

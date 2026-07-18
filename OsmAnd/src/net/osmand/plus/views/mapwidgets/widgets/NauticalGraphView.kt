@@ -5,6 +5,7 @@ import android.graphics.*
 import android.util.AttributeSet
 import android.util.TypedValue
 import android.view.View
+import androidx.core.graphics.toColorInt
 import net.osmand.plus.R
 import net.osmand.plus.plugins.nautical.NauticalPlugin
 import java.util.*
@@ -90,11 +91,11 @@ class NauticalGraphView @JvmOverloads constructor(
                 return
             }
 
-            val isNightVision = NauticalPlugin.getInstance()?.isNightVisionEnabled == true
+            val isNightVision = NauticalPlugin.isNightVision(context.applicationContext as? net.osmand.plus.OsmandApplication)
             if (isNightVision) {
                 linePaint.color = Color.RED
                 textPaint.color = Color.RED
-                gridPaint.color = Color.DKGRAY
+                gridPaint.color = "#330000".toColorInt() // Very dark red for grid
             }
 
             val width = width.toFloat()

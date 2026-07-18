@@ -30,7 +30,7 @@
     <View
         android:layout_width="match_parent"
         android:layout_height="1dp"
-        android:background="?attr/dividerColor" />
+        android:background="?attr/divider_color_basic" />
 
     <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
@@ -102,7 +102,34 @@
                     android:value="0.1" />
             </LinearLayout>
 
-            <View android:layout_width="match_parent" android:layout_height="1dp" android:background="?attr/dividerColor" android:layout_marginBottom="16dp" />
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingBottom="16dp">
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/nautical_vessel_type" />
+                <com.google.android.material.button.MaterialButtonToggleGroup
+                    android:id="@+id/vessel_type_toggle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    app:singleSelection="true">
+                    <Button
+                        android:id="@+id/btn_vessel_conv"
+                        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/nautical_vessel_conventional" />
+                    <Button
+                        android:id="@+id/btn_vessel_proa"
+                        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/nautical_vessel_proa" />
+                </com.google.android.material.button.MaterialButtonToggleGroup>
+            </LinearLayout>
+
+            <View android:layout_width="match_parent" android:layout_height="1dp" android:background="?attr/divider_color_basic" android:layout_marginBottom="16dp" />
 
             <!-- Sensor & Hardware -->
             <TextView
@@ -155,7 +182,7 @@
                     android:value="30.0" />
             </LinearLayout>
 
-            <View android:layout_width="match_parent" android:layout_height="1dp" android:background="?attr/dividerColor" android:layout_marginBottom="16dp" />
+            <View android:layout_width="match_parent" android:layout_height="1dp" android:background="?attr/divider_color_basic" android:layout_marginBottom="16dp" />
 
             <!-- Safety Thresholds -->
             <TextView

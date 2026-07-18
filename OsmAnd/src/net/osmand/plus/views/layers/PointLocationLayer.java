@@ -47,6 +47,7 @@ import net.osmand.plus.R;
 import net.osmand.plus.activities.MapActivity;
 import net.osmand.plus.base.MapViewTrackingUtilities;
 import net.osmand.plus.helpers.Model3dHelper;
+import net.osmand.plus.plugins.nautical.NauticalPlugin;
 import net.osmand.plus.profiles.LocationIcon;
 import net.osmand.plus.profiles.ProfileIconColors;
 import net.osmand.plus.routing.RoutingHelper;
@@ -783,9 +784,15 @@ public class PointLocationLayer extends OsmandMapLayer
 	private void updateParams(ApplicationMode appMode, boolean nighMode, boolean locationOutdated) {
 		boolean hasMapRenderer = hasMapRenderer();
 		Context ctx = getContext();
-		int profileColor = locationOutdated ?
+		int locProfileColor = locationOutdated ?
 				ContextCompat.getColor(ctx, ProfileIconColors.getOutdatedLocationColor(nighMode)) :
 				appMode.getProfileColor(nighMode);
+
+		if (NauticalPlugin.isNightVision(getApplication())) {
+			locProfileColor = android.graphics.Color.RED;
+		}
+		final int profileColor = locProfileColor;
+
 		String locationIconName = getLocationIconName(appMode);
 		String navigationIconName = getNavigationIconName(appMode);
 		float textScale = getTextScale();

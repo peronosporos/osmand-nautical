@@ -35,7 +35,7 @@ class NauticalSettingsFragment : BaseSettingsFragment() {
     }
 
     private fun setupIpAddress() {
-        findPreference<EditTextPreferenceEx>("server_ip")?.apply {
+        findPreference<EditTextPreferenceEx>(settings.NAUTICAL_SERVER_IP.id)?.apply {
             setIcon(R.drawable.ic_action_world_globe)
             description = getString(R.string.nautical_server_ip_desc)
             summary = settings.NAUTICAL_SERVER_IP.get().ifEmpty { getString(R.string.nautical_server_ip_desc) }
@@ -43,7 +43,7 @@ class NauticalSettingsFragment : BaseSettingsFragment() {
     }
 
     private fun setupPort() {
-        findPreference<EditTextPreferenceEx>("server_port")?.apply {
+        findPreference<EditTextPreferenceEx>(settings.NAUTICAL_SERVER_PORT.id)?.apply {
             setIcon(R.drawable.ic_action_settings)
             description = getString(R.string.nautical_server_port_desc)
             summary = settings.NAUTICAL_SERVER_PORT.get().ifEmpty { getString(R.string.nautical_server_port_desc) }
@@ -51,7 +51,7 @@ class NauticalSettingsFragment : BaseSettingsFragment() {
     }
 
     private fun setupUsername() {
-        findPreference<EditTextPreferenceEx>("server_username")?.apply {
+        findPreference<EditTextPreferenceEx>(settings.NAUTICAL_SERVER_USERNAME.id)?.apply {
             setIcon(R.drawable.ic_action_user)
             description = getString(R.string.nautical_server_username_desc)
             summary = settings.NAUTICAL_SERVER_USERNAME.get().ifEmpty { getString(R.string.nautical_server_username_desc) }
@@ -59,7 +59,7 @@ class NauticalSettingsFragment : BaseSettingsFragment() {
     }
 
     private fun setupPassword() {
-        findPreference<EditTextPreferenceEx>("server_password")?.apply {
+        findPreference<EditTextPreferenceEx>(settings.NAUTICAL_SERVER_PASSWORD.id)?.apply {
             setIcon(R.drawable.ic_action_lock)
             description = getString(R.string.nautical_server_password_desc)
             summary = if (settings.NAUTICAL_SERVER_PASSWORD.get().isEmpty()) {
@@ -71,7 +71,7 @@ class NauticalSettingsFragment : BaseSettingsFragment() {
     }
 
     private fun setupSecureConnection() {
-        findPreference<net.osmand.plus.settings.preferences.SwitchPreferenceEx>("server_secure")?.apply {
+        findPreference<net.osmand.plus.settings.preferences.SwitchPreferenceEx>(settings.NAUTICAL_USE_SECURE_CONNECTION.id)?.apply {
             setIcon(R.drawable.ic_action_lock)
             description = getString(R.string.nautical_server_secure_desc)
             isChecked = settings.NAUTICAL_USE_SECURE_CONNECTION.get()
@@ -79,7 +79,7 @@ class NauticalSettingsFragment : BaseSettingsFragment() {
     }
 
     private fun setupXteThreshold() {
-        findPreference<EditTextPreferenceEx>("nautical_xte_threshold")?.apply {
+        findPreference<EditTextPreferenceEx>(settings.NAUTICAL_XTE_THRESHOLD.id)?.apply {
             setIcon(R.drawable.ic_action_anchor)
             description = getString(R.string.nautical_xte_threshold_desc)
             summary = "${settings.NAUTICAL_XTE_THRESHOLD.get()} ${getString(R.string.nautical_unit_nm)}"
@@ -104,20 +104,20 @@ class NauticalSettingsFragment : BaseSettingsFragment() {
             val key = preference.key
             val newString = newValue?.toString() ?: ""
             when (key) {
-                "server_ip" -> preference.summary = newString.ifEmpty { getString(R.string.nautical_server_ip_desc) }
-                "server_port" -> preference.summary = newString.ifEmpty { getString(R.string.nautical_server_port_desc) }
-                "server_username" -> preference.summary = newString.ifEmpty { getString(R.string.nautical_server_username_desc) }
-                "server_password" -> preference.summary = if (newString.isEmpty()) getString(R.string.nautical_server_password_desc) else getString(R.string.nautical_password_mask)
-                "server_secure" -> settings.NAUTICAL_USE_SECURE_CONNECTION.set(newValue as Boolean)
-                "nautical_show_laylines" -> settings.NAUTICAL_SHOW_LAYLINES.set(newValue as Boolean)
-                "nautical_show_wind_shifts" -> settings.NAUTICAL_SHOW_WIND_SHIFTS.set(newValue as Boolean)
-                "nautical_show_trajectory" -> settings.NAUTICAL_SHOW_TRAJECTORY.set(newValue as Boolean)
+                settings.NAUTICAL_SERVER_IP.id -> preference.summary = newString.ifEmpty { getString(R.string.nautical_server_ip_desc) }
+                settings.NAUTICAL_SERVER_PORT.id -> preference.summary = newString.ifEmpty { getString(R.string.nautical_server_port_desc) }
+                settings.NAUTICAL_SERVER_USERNAME.id -> preference.summary = newString.ifEmpty { getString(R.string.nautical_server_username_desc) }
+                settings.NAUTICAL_SERVER_PASSWORD.id -> preference.summary = if (newString.isEmpty()) getString(R.string.nautical_server_password_desc) else getString(R.string.nautical_password_mask)
+                settings.NAUTICAL_USE_SECURE_CONNECTION.id -> settings.NAUTICAL_USE_SECURE_CONNECTION.set(newValue as Boolean)
+                settings.NAUTICAL_SHOW_LAYLINES.id -> settings.NAUTICAL_SHOW_LAYLINES.set(newValue as Boolean)
+                settings.NAUTICAL_SHOW_WIND_SHIFTS.id -> settings.NAUTICAL_SHOW_WIND_SHIFTS.set(newValue as Boolean)
+                settings.NAUTICAL_SHOW_TRAJECTORY.id -> settings.NAUTICAL_SHOW_TRAJECTORY.set(newValue as Boolean)
                 settings.NAUTICAL_RECEIVE_IN_BACKGROUND.id -> {
                     val isEnabled = newString.toBoolean()
                     settings.NAUTICAL_RECEIVE_IN_BACKGROUND.set(isEnabled)
                     preference.summary = if (isEnabled) getString(R.string.shared_string_yes) else getString(R.string.shared_string_no)
                 }
-                "nautical_xte_threshold" -> {
+                settings.NAUTICAL_XTE_THRESHOLD.id -> {
                     val floatValue = newString.toFloatOrNull() ?: 0.1f
                     settings.NAUTICAL_XTE_THRESHOLD.set(floatValue)
                     preference.summary = "$floatValue ${getString(R.string.nautical_unit_nm)}"

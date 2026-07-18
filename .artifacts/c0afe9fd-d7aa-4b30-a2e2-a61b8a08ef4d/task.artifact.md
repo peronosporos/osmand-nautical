@@ -1,0 +1,7 @@
+- [x] Fix warnings and logic in `NauticalPlugin.kt`
+- [x] Refactor `NauticalMapLayer.kt` for performance and night vision
+- [x] Update `SignalKEngine.kt` with improved math and cleanup
+- [x] Clean up `AutopilotController.kt`
+- [x] Update unit handling in `NauticalDataBottomSheet.kt`
+- [x] Update `NauticalGraphView.kt` night vision colors
+- [x] Fix `NauticalActivity.java` warnings

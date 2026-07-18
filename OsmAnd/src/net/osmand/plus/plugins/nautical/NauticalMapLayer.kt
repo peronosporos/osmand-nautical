@@ -52,36 +52,53 @@ class NauticalMapLayer(context: Context) : OsmandMapLayer(context) {
         style = Paint.Style.FILL
     }
 
+    private val trajectoryPath = Path()
+    private var lastTrajectorySize = 0
+
     override fun drawInScreenPixels(): Boolean = true
 
-    override fun onDraw(canvas: Canvas, tileBox: RotatedTileBox, settings: DrawSettings) {
+    override fun onDraw(canvas: Canvas, tileBox: RotatedTileBox, settings: OsmandMapLayer.DrawSettings) {
         this.lastKnownTileBox = tileBox
 
         val engine = NauticalPlugin.engine ?: return
-        val osmandSettings = (context.applicationContext as net.osmand.plus.OsmandApplication).settings
-        val plugin = NauticalPlugin.getInstance()
+        val app = context.applicationContext as net.osmand.plus.OsmandApplication
+        val osmandSettings = app.settings
 
-        if (plugin?.isNightVisionEnabled == true) {
-            canvas.drawColor(0x33FF0000, android.graphics.PorterDuff.Mode.MULTIPLY)
+        val isNightVision = NauticalPlugin.isNightVision(app)
+        if (isNightVision) {
+            trailPaint.color = Color.RED
+            projectionPaint.color = Color.RED
+            laylinePaint.color = Color.RED
+            windShiftPaint.color = Color.RED
+            windShiftPaint.alpha = 60
+        } else {
+            trailPaint.color = Color.MAGENTA
+            projectionPaint.color = Color.WHITE
+            laylinePaint.color = Color.YELLOW
+            windShiftPaint.color = Color.CYAN
+            windShiftPaint.alpha = 60
         }
 
         if (osmandSettings.NAUTICAL_SHOW_TRAJECTORY.get()) {
             val history = engine.getTrajectory()
             if (history.size >= 2) {
-                val path = Path()
-                var first = true
-                for (point in history) {
-                    val x = tileBox.getPixXFromLatLon(point.first, point.second)
-                    val y = tileBox.getPixYFromLatLon(point.first, point.second)
-                    if (first) {
-                        path.moveTo(x, y)
-                        first = false
-                    } else {
-                        path.lineTo(x, y)
+                if (history.size != lastTrajectorySize) {
+                    trajectoryPath.reset()
+                    var first = true
+                    for (point in history) {
+                        val x = tileBox.getPixXFromLatLon(point.first, point.second)
+                        val y = tileBox.getPixYFromLatLon(point.first, point.second)
+                        if (first) {
+                            trajectoryPath.moveTo(x, y)
+                            first = false
+                        } else {
+                            trajectoryPath.lineTo(x, y)
+                        }
                     }
+                    lastTrajectorySize = history.size
                 }
                 trailPaint.alpha = 200
-                canvas.drawPath(path, trailPaint)
+                canvas.drawPath(trajectoryPath, trailPaint)
             }
         }
 

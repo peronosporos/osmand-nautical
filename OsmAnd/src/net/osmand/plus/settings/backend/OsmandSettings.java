@@ -3556,6 +3556,7 @@ public class OsmandSettings {
 	public final CommonPreference<Boolean> NAUTICAL_SHOW_TRAJECTORY = registerBooleanPreference("nautical_show_trajectory", true);
 	public final CommonPreference<Float> NAUTICAL_XTE_THRESHOLD = registerFloatPreference("nautical_xte_threshold", 0.1f).makeGlobal();
 	public final CommonPreference<Boolean> NAUTICAL_RECEIVE_IN_BACKGROUND = registerBooleanPreference("ais_receive_in_background", true);
+	public final CommonPreference<VesselType> NAUTICAL_VESSEL_TYPE = registerEnumStringPreference("nautical_vessel_type", VesselType.CONVENTIONAL, VesselType.values(), VesselType.class).makeGlobal();
 
 	@NonNull
 	public OsmandPreference<Boolean> getAllowPrivatePreference(@NonNull ApplicationMode appMode) {

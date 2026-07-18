@@ -34,6 +34,7 @@ data class MarineState(
     // Professional Autopilot Data
     val rudderAngle: Double? = null,
     val targetHeading: Double? = null,
+    val targetWindAngleApparent: Double? = null,
     val seaState: Int? = null, // Sensitivity (1-5)
 
     // Telemetry Data (Phase 3)

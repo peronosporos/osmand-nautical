@@ -56,11 +56,11 @@ class NauticalDataBottomSheet : BottomSheetDialogFragment() {
         }
 
         titleView?.text = when (type) {
-            WidgetType.NAUTICAL_DEPTH -> getString(R.string.nautical_title_depth)
-            WidgetType.NAUTICAL_WIND -> getString(R.string.nautical_title_wind)
-            WidgetType.NAUTICAL_VMG -> getString(R.string.nautical_title_vmg)
-            WidgetType.NAUTICAL_COG -> getString(R.string.nautical_widget_cog_label)
-            else -> getString(R.string.nautical_title_telemetry)
+            WidgetType.NAUTICAL_DEPTH -> context?.getString(R.string.nautical_title_depth)
+            WidgetType.NAUTICAL_WIND -> context?.getString(R.string.nautical_title_wind)
+            WidgetType.NAUTICAL_VMG -> context?.getString(R.string.nautical_title_vmg)
+            WidgetType.NAUTICAL_COG -> context?.getString(R.string.nautical_widget_cog_label)
+            else -> context?.getString(R.string.nautical_title_telemetry)
         }
     }
 
@@ -84,13 +84,15 @@ class NauticalDataBottomSheet : BottomSheetDialogFragment() {
     }
 
     private fun updateGraphData() {
+        if (!isAdded) return
         val engine = NauticalPlugin.engine ?: return
         val g = graph ?: return
+        val ctx = context ?: return
 
         when (type) {
-            WidgetType.NAUTICAL_DEPTH -> g.setData(engine.getDepthHistory(), getString(R.string.nautical_unit_meters))
-            WidgetType.NAUTICAL_WIND -> g.setData(engine.getWindHistory(), getString(R.string.nautical_unit_knots))
-            WidgetType.NAUTICAL_VMG -> g.setData(engine.getVmgHistory().map { it * 1.94384 }, getString(R.string.nautical_unit_knots))
+            WidgetType.NAUTICAL_DEPTH -> g.setData(engine.getDepthHistory(), ctx.getString(R.string.nautical_unit_meters))
+            WidgetType.NAUTICAL_WIND -> g.setData(engine.getWindHistory().map { it * 1.94384 }, ctx.getString(R.string.nautical_unit_knots))
+            WidgetType.NAUTICAL_VMG -> g.setData(engine.getVmgHistory().map { it * 1.94384 }, ctx.getString(R.string.nautical_unit_knots))
             WidgetType.NAUTICAL_COG -> g.setData(engine.getCogHistory().map { Math.toDegrees(it) }, "°")
             else -> {}
         }

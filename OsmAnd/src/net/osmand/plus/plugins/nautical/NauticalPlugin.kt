@@ -1,39 +1,41 @@
 package net.osmand.plus.plugins.nautical
 
-import android.os.Handler
-import android.os.Looper
-import net.osmand.PlatformUtil
-import net.osmand.StateChangedListener
-import android.view.View
-import android.net.Uri
+import android.graphics.Color
 import android.graphics.ColorMatrix
 import android.graphics.ColorMatrixColorFilter
 import android.graphics.Paint
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.launch
+import android.graphics.drawable.Drawable
+import android.net.Uri
+import android.os.Handler
+import android.os.Looper
+import android.view.View
+import androidx.core.content.ContextCompat
+import kotlinx.coroutines.*
+import net.osmand.PlatformUtil
+import net.osmand.StateChangedListener
 import net.osmand.plus.OsmandApplication
 import net.osmand.plus.R
 import net.osmand.plus.activities.MapActivity
+import net.osmand.plus.dashboard.DashboardType
+import net.osmand.plus.helpers.AndroidUiHelper
 import net.osmand.plus.plugins.OsmandPlugin
 import net.osmand.plus.plugins.nautical.engine.*
-import net.osmand.plus.views.mapwidgets.WidgetType
-import net.osmand.plus.views.mapwidgets.WidgetsPanel
-import net.osmand.plus.views.mapwidgets.widgets.MapWidget
-import net.osmand.plus.views.mapwidgets.widgets.MarineTextWidget
-import net.osmand.plus.views.mapwidgets.widgets.NauticalNightVisionWidget
-import net.osmand.plus.views.mapwidgets.widgets.NauticalPilotWidget
-import net.osmand.plus.views.mapwidgets.widgets.NauticalGraphWidget
+import net.osmand.plus.settings.backend.ApplicationMode
 import net.osmand.plus.settings.backend.preferences.CommonPreference
 import net.osmand.plus.settings.enums.DayNightMode
+import net.osmand.plus.settings.enums.ThemeUsageContext
 import net.osmand.plus.settings.fragments.SettingsScreenType
+import net.osmand.plus.utils.AndroidUtils
+import net.osmand.plus.views.mapwidgets.WidgetType
+import net.osmand.plus.views.mapwidgets.WidgetsPanel
+import net.osmand.plus.views.mapwidgets.widgets.*
 import net.osmand.plus.widgets.ctxmenu.ContextMenuAdapter
 import net.osmand.plus.widgets.ctxmenu.data.ContextMenuItem
-import kotlin.math.abs
-import java.lang.ref.WeakReference
-import kotlinx.coroutines.cancel
 import okhttp3.OkHttpClient
+import java.io.File
+import java.lang.ref.WeakReference
+import java.util.*
+import kotlin.math.abs
 
 class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app) {
     private val log = PlatformUtil.getLog(NauticalPlugin::class.java)
@@ -47,9 +49,26 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app) {
                 0.33f, 0.33f, 0.33f, 0f, 0f,
                 0f, 0f, 0f, 0f, 0f,
                 0f, 0f, 0f, 0f, 0f,
-                0f, 0f, 0f, 1f, 0f,
-            ),
+                0f, 0f, 0f, 1f, 0f
+            )
         )
+
+        @JvmField
+        val NIGHT_VISION_FILTER = ColorMatrixColorFilter(RED_FILTER_MATRIX)
+
+        @JvmField
+        val DIM_FILTER = ColorMatrixColorFilter(
+            ColorMatrix().apply {
+                setScale(0.5f, 0.5f, 0.5f, 1.0f)
+            }
+        )
+
+        @JvmStatic
+        fun isNightVision(app: OsmandApplication?): Boolean {
+            if (app == null) return false
+            val plugin = getInstance()
+            return plugin != null && plugin.isActive && plugin.isNightVisionEnabled
+        }
 
         @JvmStatic
         var engine: SignalKEngine? = null
@@ -103,14 +122,8 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app) {
         }
     }
     private var pluginScope: CoroutineScope? = null
-    
+
     val nauticalNightVisionEnabled: CommonPreference<Boolean> = registerBooleanPreference("nautical_night_vision_enabled", false).makeProfile()
-    private val previousDayNightMode: CommonPreference<DayNightMode> = registerEnumStringPreference(
-        "nautical_previous_daynight_mode",
-        DayNightMode.AUTO,
-        DayNightMode.entries.toTypedArray(),
-        DayNightMode::class.java,
-    ).makeProfile()
 
     override fun createMapWidgetForParams(mapActivity: MapActivity, widgetType: WidgetType, customId: String?, widgetsPanel: WidgetsPanel?): MapWidget? {
         return when (widgetType) {
@@ -128,7 +141,7 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app) {
 
     override fun getSettingsScreenType(): SettingsScreenType = SettingsScreenType.NAUTICAL_SETTINGS
 
-    override fun getPrefsDescription(): String = app.getString(R.string.nautical_plugin_description)
+    override fun getPrefsDescription(): String = app.getString(R.string.plugin_nautical_descr, app.getString(R.string.docs_plugin_nautical))
 
     init {
         instanceRef = WeakReference(this)
@@ -136,8 +149,33 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app) {
 
     override fun getId(): String = NAUTICAL_ID
     override fun getName(): String = app.getString(R.string.nautical_plugin_name)
-    override fun getDescription(linksEnabled: Boolean): CharSequence = app.getString(R.string.nautical_plugin_description)
+    override fun getDescription(linksEnabled: Boolean): CharSequence =
+        app.getString(R.string.nautical_plugin_description)
+
     override fun getLogoResourceId(): Int = R.drawable.ic_action_sail_boat_dark
+
+    override fun getAssetResourceImage(): Drawable? = ContextCompat.getDrawable(app, R.drawable.ic_action_sail_boat_dark)
+
+    override fun isMarketPlugin(): Boolean = false
+
+    override fun mapActivityResume(activity: MapActivity) {
+        if (!connection.isConnected()) {
+            startEngine()
+        }
+        updateNauticalBackgroundService()
+        if (app.settings.NAUTICAL_RECEIVE_IN_BACKGROUND.get()) {
+            AndroidUtils.requestNotificationPermissionIfNeeded(activity)
+        }
+    }
+
+    override fun mapActivityPause(activity: MapActivity) {
+        if (!app.settings.NAUTICAL_RECEIVE_IN_BACKGROUND.get()) {
+            connection.disconnect()
+            stopNauticalBackgroundService()
+        } else {
+            updateNauticalBackgroundService()
+        }
+    }
 
     private val screenStateReceiver = object : android.content.BroadcastReceiver() {
         override fun onReceive(context: android.content.Context, intent: android.content.Intent) {
@@ -163,8 +201,9 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app) {
 
     override fun setEnabled(enabled: Boolean) {
         super.setEnabled(enabled)
-        val mapView = app.osmandMap?.mapView
-        val mapActivity = app.osmandMap?.mapView?.mapActivity
+        val osmandMap = app.osmandMap
+        val mapView = osmandMap?.mapView
+        val mapActivity = mapView?.mapActivity
 
         if (enabled) {
             instanceRef = WeakReference(this)
@@ -231,13 +270,14 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app) {
     }
 
     private fun checkOffCourseAlert(state: MarineState) {
-        val xte = state.crossTrackError ?: return
-        val threshold = (app.settings.NAUTICAL_XTE_THRESHOLD.get() ?: 0.1f).toDouble()
+        val xteMeters = state.crossTrackError ?: return
+        val thresholdNm = (app.settings.NAUTICAL_XTE_THRESHOLD.get() ?: 0.1f).toDouble()
+        val xteNm = abs(xteMeters) / 1852.0
 
-        if (abs(xte) > threshold) {
+        if (xteNm > thresholdNm) {
             if (!isAlertActive) {
                 isAlertActive = true
-                log.warn("OFF COURSE ALERT: $xte NM")
+                log.warn(String.format(Locale.US, "OFF COURSE ALERT: %.2f NM", xteNm))
             }
         } else {
             isAlertActive = false
@@ -253,32 +293,23 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app) {
         val decorView = mapActivity.window.decorView
 
         if (enable) {
-            val currentMode = app.settings.DAYNIGHT_MODE.get()
-            if (currentMode != DayNightMode.NIGHT) {
-                previousDayNightMode.set(currentMode)
-                app.settings.DAYNIGHT_MODE.set(DayNightMode.NIGHT)
-            }
-            
             val paint = Paint().apply {
                 colorFilter = ColorMatrixColorFilter(RED_FILTER_MATRIX)
             }
             decorView.setLayerType(View.LAYER_TYPE_HARDWARE, paint)
-            
-            net.osmand.plus.helpers.AndroidUiHelper.setStatusBarColor(mapActivity, android.graphics.Color.BLACK)
-            net.osmand.plus.helpers.AndroidUiHelper.setNavigationBarColor(mapActivity, android.graphics.Color.BLACK, false)
+
+            AndroidUiHelper.setStatusBarColor(mapActivity, Color.RED)
+            AndroidUiHelper.setNavigationBarColor(mapActivity, Color.RED, false)
+            AndroidUiHelper.setStatusBarContentColor(decorView, false)
         } else {
             decorView.setLayerType(View.LAYER_TYPE_NONE, null)
-            
-            val prevMode = previousDayNightMode.get()
-            app.settings.DAYNIGHT_MODE.set(prevMode)
-            
             mapActivity.updateStatusBarColor()
             mapActivity.updateNavigationBarColor()
         }
-        
+
         app.osmandMap.mapView.refreshMap()
         app.notificationHelper.refreshNotification(net.osmand.plus.notifications.OsmandNotification.NotificationType.NAUTICAL)
-        
+
         // Update all widgets
         mapActivity.app.runInUIThread {
             mapActivity.app.osmandMap.mapLayers.mapInfoLayer.recreateAllControls(mapActivity)
@@ -346,18 +377,7 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app) {
     }
 
     override fun registerMapContextMenuActions(mapActivity: MapActivity, lat: Double, lon: Double, adapter: ContextMenuAdapter, obj: Any?, conf: Boolean) {
-        if (app.settings.APPLICATION_MODE.get() != net.osmand.plus.settings.backend.ApplicationMode.BOAT) return
-
-        adapter.addItem(
-            ContextMenuItem("nautical_night_vision").apply {
-                title = mapActivity.getString(R.string.nautical_toggle_night_vision)
-                icon = if (isNightVisionEnabled) R.drawable.ic_action_red_filter_overlay_on else R.drawable.ic_action_red_filter_off
-                setListener { _, _, _, _ ->
-                    toggleNightVision(mapActivity, !isNightVisionEnabled)
-                    true
-                }
-            }
-        )
+        if (app.settings.APPLICATION_MODE.get() != ApplicationMode.BOAT) return
 
         adapter.addItem(
             ContextMenuItem("nautical_follow_gpx").apply {

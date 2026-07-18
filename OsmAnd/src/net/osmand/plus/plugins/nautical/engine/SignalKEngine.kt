@@ -2,11 +2,11 @@ package net.osmand.plus.plugins.nautical.engine
 
 import net.osmand.PlatformUtil
 import kotlinx.coroutines.*
+import net.osmand.shared.util.KMapUtils
 import org.json.JSONObject
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.absoluteValue
 import kotlin.time.Duration.Companion.seconds
-import kotlin.math.hypot
 import android.content.Context
 import java.io.File
 import java.io.ObjectInputStream
@@ -57,31 +57,32 @@ class SignalKEngine {
     }
 
     fun saveBuffersToDisk(context: Context) {
-        // We save the contents of the buffers as Lists, which are natively Serializable
-        saveToFile(
-            File(context.filesDir, "depth_buffer.dat"),
-            depthBuffer.getAll() as Serializable,
-        )
-        saveToFile(
-            File(context.filesDir, "wind_buffer.dat"),
-            windBuffer.getAll() as Serializable,
-        )
-        saveToFile(
-            File(context.filesDir, "wind_direction_buffer.dat"),
-            windDirectionBuffer.getAll() as Serializable,
-        )
-        saveToFile(
-            File(context.filesDir, "vmg_buffer.dat"),
-            vmgBuffer.getAll() as Serializable,
-        )
-        saveToFile(
-            File(context.filesDir, "cog_buffer.dat"),
-            cogBuffer.getAll() as Serializable,
-        )
-        saveToFile(
-            File(context.filesDir, "trajectory_buffer.dat"),
-            trajectoryBuffer.getAll() as Serializable,
-        )
+        engineScope.launch(Dispatchers.IO) {
+            saveToFile(
+                File(context.filesDir, "depth_buffer.dat"),
+                depthBuffer.getAll() as Serializable,
+            )
+            saveToFile(
+                File(context.filesDir, "wind_buffer.dat"),
+                windBuffer.getAll() as Serializable,
+            )
+            saveToFile(
+                File(context.filesDir, "wind_direction_buffer.dat"),
+                windDirectionBuffer.getAll() as Serializable,
+            )
+            saveToFile(
+                File(context.filesDir, "vmg_buffer.dat"),
+                vmgBuffer.getAll() as Serializable,
+            )
+            saveToFile(
+                File(context.filesDir, "cog_buffer.dat"),
+                cogBuffer.getAll() as Serializable,
+            )
+            saveToFile(
+                File(context.filesDir, "trajectory_buffer.dat"),
+                trajectoryBuffer.getAll() as Serializable,
+            )
+        }
     }
 
     private fun saveToFile(file: File, data: Serializable) {
@@ -94,26 +95,27 @@ class SignalKEngine {
 
     @Suppress("UNCHECKED_CAST")
     fun loadBuffersFromDisk(context: Context) {
-        // Helper to safely load and add
-        fun <T> load(fileName: String, action: (T) -> Unit) {
-            val file = File(context.filesDir, fileName)
-            if (!file.exists()) return
-            try {
-                ObjectInputStream(file.inputStream()).use { ois ->
-                    val data = ois.readObject() as Collection<T>
-                    data.forEach { action(it) }
+        engineScope.launch(Dispatchers.IO) {
+            fun <T> load(fileName: String, action: (T) -> Unit) {
+                val file = File(context.filesDir, fileName)
+                if (!file.exists()) return
+                try {
+                    ObjectInputStream(file.inputStream()).use { ois ->
+                        val data = ois.readObject() as Collection<T>
+                        data.forEach { action(it) }
+                    }
+                } catch (e: Exception) {
+                    log.error("Failed to load $fileName: ${e.message}")
                 }
-            } catch (e: Exception) {
-                log.error("Failed to load $fileName: ${e.message}")
             }
-        }
 
-        load<Double>("depth_buffer.dat") { depthBuffer.add(it) }
-        load<Double>("wind_buffer.dat") { windBuffer.add(it) }
-        load<Double>("wind_direction_buffer.dat") { windDirectionBuffer.add(it) }
-        load<Double>("vmg_buffer.dat") { vmgBuffer.add(it) }
-        load<Double>("cog_buffer.dat") { cogBuffer.add(it) }
-        load<Pair<Double, Double>>("trajectory_buffer.dat") { trajectoryBuffer.add(it) }
+            load<Double>("depth_buffer.dat") { depthBuffer.add(it) }
+            load<Double>("wind_buffer.dat") { windBuffer.add(it) }
+            load<Double>("wind_direction_buffer.dat") { windDirectionBuffer.add(it) }
+            load<Double>("vmg_buffer.dat") { vmgBuffer.add(it) }
+            load<Double>("cog_buffer.dat") { cogBuffer.add(it) }
+            load<Pair<Double, Double>>("trajectory_buffer.dat") { trajectoryBuffer.add(it) }
+        }
     }
 
     fun clearRoute() {
@@ -180,9 +182,9 @@ class SignalKEngine {
         val last = history.lastOrNull()
 
         if (last != null) {
-            val delta = hypot(lat - last.first, lon - last.second)
-            if (delta > 0.1) {
-                log.warn("Jump detected! Discarding point: $lat, $lon")
+            val dist = KMapUtils.getDistance(last.first, last.second, lat, lon)
+            if (dist > 500.0) { // 500 meters is a reasonable "jump" threshold for a boat
+                log.warn("Jump detected ($dist m)! Discarding point: $lat, $lon")
                 return
             }
         }
@@ -277,6 +279,15 @@ class SignalKEngine {
                                         stateUpdated = true
                                     }
                                 }
+                                "navigation.crossTrackError",
+                                "navigation.courseRhumbline.crossTrackError",
+                                "navigation.courseGreatCircle.crossTrackError" -> {
+                                    val xte = valueItem.optDouble("value", Double.NaN)
+                                    if (!xte.isNaN()) {
+                                        state = state.copy(crossTrackError = xte)
+                                        stateUpdated = true
+                                    }
+                                }
                                 "steering.autopilot.state" -> {
                                     state = state.copy(autopilotState = valueItem.optString("value", "standby"))
                                     stateUpdated = true
@@ -292,6 +303,13 @@ class SignalKEngine {
                                     val target = valueItem.optDouble("value", Double.NaN)
                                     if (!target.isNaN()) {
                                         state = state.copy(targetHeading = target)
+                                        stateUpdated = true
+                                    }
+                                }
+                                "steering.autopilot.target.windAngleApparent" -> {
+                                    val target = valueItem.optDouble("value", Double.NaN)
+                                    if (!target.isNaN()) {
+                                        state = state.copy(targetWindAngleApparent = target)
                                         stateUpdated = true
                                     }
                                 }
@@ -377,10 +395,10 @@ class SignalKEngine {
         if (!isFollowingRoute || routeQueue.isEmpty()) return
 
         val target = routeQueue.peek() ?: return
-        // Using Haversine-lite distance (0.02 NM is ~37 meters)
-        val distance = hypot(currentLat - target.first, currentLon - target.second) * 60.0
+        val distance = KMapUtils.getDistance(currentLat, currentLon, target.first, target.second)
 
-        if (distance < 0.02) {
+        // 0.02 NM is ~37 meters
+        if (distance < 37.0) {
             routeQueue.poll() // Arrived! Remove this point
             log.info("Waypoint reached. Next in queue: ${routeQueue.size}")
             onRouteStepProcessed?.invoke()
