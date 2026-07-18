@@ -12,36 +12,55 @@
     <View
         android:id="@+id/header_bg"
         android:layout_width="0dp"
-        android:layout_height="56dp"
+        android:layout_height="64dp"
         android:background="?attr/activity_background_color"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
+
+    <com.google.android.material.button.MaterialButtonToggleGroup
+        android:id="@+id/mode_toggle_group"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        app:layout_constraintBottom_toBottomOf="@id/header_bg"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="@id/header_bg"
+        app:singleSelection="true">
+
+        <Button
+            android:id="@+id/btn_mode_compass"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:paddingHorizontal="12dp"
+            android:text="@string/nautical_mode_compass"
+            android:textSize="12sp" />
+
+        <Button
+            android:id="@+id/btn_mode_wind"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:paddingHorizontal="12dp"
+            android:text="@string/nautical_mode_wind"
+            android:textSize="12sp" />
+    </com.google.android.material.button.MaterialButtonToggleGroup>
 
     <com.google.android.material.chip.Chip
         android:id="@+id/mode_badge"
         style="@style/Widget.MaterialComponents.Chip.Action"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginStart="16dp"
         android:clickable="false"
+        android:textAppearance="?attr/textAppearanceSubtitle2"
+        android:textStyle="bold"
         app:chipBackgroundColor="@color/active_color_secondary_light"
         app:layout_constraintBottom_toBottomOf="@id/header_bg"
-        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toStartOf="@id/btn_advanced"
+        app:layout_constraintStart_toEndOf="@id/mode_toggle_group"
         app:layout_constraintTop_toTopOf="@id/header_bg"
-        tools:text="AUTO MODE" />
-
-    <TextView
-        android:id="@+id/pilot_title"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/nautical_pilot_title"
-        android:textAppearance="?attr/textAppearanceHeadline6"
-        android:textStyle="bold"
-        app:layout_constraintBottom_toBottomOf="@id/header_bg"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="@id/header_bg" />
+        tools:text="AUTO" />
 
     <ImageButton
         android:id="@+id/btn_advanced"
@@ -49,128 +68,216 @@
         android:layout_height="48dp"
         android:layout_marginEnd="8dp"
         android:background="?attr/selectableItemBackgroundBorderless"
+        android:contentDescription="@string/shared_string_settings"
         app:layout_constraintBottom_toBottomOf="@id/header_bg"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="@id/header_bg"
         app:srcCompat="@drawable/ic_action_settings" />
 
-    <!-- Steering Instrument Area -->
+    <!-- Telemetry Pane -->
+    <androidx.gridlayout.widget.GridLayout
+        android:id="@+id/telemetry_pane"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:paddingHorizontal="16dp"
+        app:columnCount="3"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/header_bg">
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            app:layout_columnWeight="1"
+            android:gravity="center"
+            android:orientation="vertical">
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/nautical_sog_label"
+                android:textAppearance="?attr/textAppearanceCaption"
+                android:textColor="?attr/text_color_secondary" />
+            <TextView
+                android:id="@+id/txt_sog_value"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textAppearance="?attr/textAppearanceHeadline6"
+                android:textStyle="bold"
+                tools:text="6.4 kn" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            app:layout_columnWeight="1"
+            android:gravity="center"
+            android:orientation="vertical">
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/nautical_depth_label"
+                android:textAppearance="?attr/textAppearanceCaption"
+                android:textColor="?attr/text_color_secondary" />
+            <TextView
+                android:id="@+id/txt_depth_value"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textAppearance="?attr/textAppearanceHeadline6"
+                android:textStyle="bold"
+                tools:text="12.5 m" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            app:layout_columnWeight="1"
+            android:gravity="center"
+            android:orientation="vertical">
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/nautical_xte_label"
+                android:textAppearance="?attr/textAppearanceCaption"
+                android:textColor="?attr/text_color_secondary" />
+            <TextView
+                android:id="@+id/txt_xte_value"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textAppearance="?attr/textAppearanceHeadline6"
+                android:textStyle="bold"
+                tools:text="0.02 L" />
+        </LinearLayout>
+    </androidx.gridlayout.widget.GridLayout>
+
+    <!-- Steering Command Center -->
     <net.osmand.plus.plugins.nautical.ui.HeadingArcView
         android:id="@+id/heading_arc_view"
         android:layout_width="0dp"
-        android:layout_height="180dp"
+        android:layout_height="120dp"
+        android:layout_marginTop="16dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/header_bg" />
+        app:layout_constraintTop_toBottomOf="@id/telemetry_pane" />
 
-    <!-- Sailing Specific Info -->
+    <Button
+        android:id="@+id/btn_minus_10"
+        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+        android:layout_width="56dp"
+        android:layout_height="56dp"
+        android:layout_marginStart="16dp"
+        android:insetLeft="0dp"
+        android:insetTop="0dp"
+        android:insetRight="0dp"
+        android:insetBottom="0dp"
+        app:cornerRadius="28dp"
+        app:icon="@drawable/ic_arrow_back"
+        app:iconGravity="textStart"
+        app:iconPadding="0dp"
+        app:layout_constraintBottom_toBottomOf="@id/heading_arc_view"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="@id/heading_arc_view" />
+
+    <Button
+        android:id="@+id/btn_minus_1"
+        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_marginStart="8dp"
+        android:insetLeft="0dp"
+        android:insetTop="0dp"
+        android:insetRight="0dp"
+        android:insetBottom="0dp"
+        app:cornerRadius="24dp"
+        app:icon="@drawable/ic_action_trim_left"
+        app:iconGravity="textStart"
+        app:iconPadding="0dp"
+        app:layout_constraintBottom_toBottomOf="@id/heading_arc_view"
+        app:layout_constraintStart_toEndOf="@id/btn_minus_10"
+        app:layout_constraintTop_toTopOf="@id/heading_arc_view" />
+
+    <Button
+        android:id="@+id/btn_plus_10"
+        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+        android:layout_width="56dp"
+        android:layout_height="56dp"
+        android:layout_marginEnd="16dp"
+        android:insetLeft="0dp"
+        android:insetTop="0dp"
+        android:insetRight="0dp"
+        android:insetBottom="0dp"
+        app:cornerRadius="28dp"
+        app:icon="@drawable/ic_arrow_forward"
+        app:iconGravity="textStart"
+        app:iconPadding="0dp"
+        app:layout_constraintBottom_toBottomOf="@id/heading_arc_view"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="@id/heading_arc_view" />
+
+    <Button
+        android:id="@+id/btn_plus_1"
+        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_marginEnd="8dp"
+        android:insetLeft="0dp"
+        android:insetTop="0dp"
+        android:insetRight="0dp"
+        android:insetBottom="0dp"
+        app:cornerRadius="24dp"
+        app:icon="@drawable/ic_action_trim_right"
+        app:iconGravity="textStart"
+        app:iconPadding="0dp"
+        app:layout_constraintBottom_toBottomOf="@id/heading_arc_view"
+        app:layout_constraintEnd_toStartOf="@id/btn_plus_10"
+        app:layout_constraintTop_toTopOf="@id/heading_arc_view" />
+
+    <net.osmand.plus.plugins.nautical.ui.RudderView
+        android:id="@+id/rudder_view"
+        android:layout_width="0dp"
+        android:layout_height="32dp"
+        android:layout_marginHorizontal="64dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/heading_arc_view" />
+
+    <!-- Sailing Info (Overlay when needed) -->
     <LinearLayout
         android:id="@+id/sailing_info_container"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
+        android:layout_marginTop="4dp"
         android:orientation="horizontal"
         android:visibility="gone"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/heading_arc_view">
-
+        app:layout_constraintTop_toBottomOf="@id/rudder_view">
         <TextView
             android:id="@+id/txt_awa_current"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginEnd="16dp"
+            android:layout_marginEnd="8dp"
             android:textAppearance="?attr/textAppearanceCaption"
-            android:textColor="@color/active_color_primary_light"
             tools:text="AWA: 45°" />
-
         <TextView
             android:id="@+id/txt_awa_target"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:textAppearance="?attr/textAppearanceCaption"
             android:textStyle="bold"
-            tools:text="Target: 42°" />
+            tools:text="TGT: 42°" />
     </LinearLayout>
-
-    <!-- Fine Steering Controls -->
-    <LinearLayout
-        android:id="@+id/steering_controls"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="16dp"
-        android:layout_marginEnd="16dp"
-        android:gravity="center"
-        android:orientation="horizontal"
-        app:layout_constraintBottom_toBottomOf="@id/heading_arc_view"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent">
-
-        <Button
-            android:id="@+id/btn_minus_10"
-            style="@style/Widget.MaterialComponents.Button.TextButton"
-            android:layout_width="60dp"
-            android:layout_height="60dp"
-            android:text="@string/nautical_adjust_minus_10"
-            android:textSize="16sp"
-            android:textStyle="bold" />
-
-        <Button
-            android:id="@+id/btn_minus_1"
-            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-            android:layout_width="64dp"
-            android:layout_height="64dp"
-            android:layout_marginStart="8dp"
-            android:text="@string/nautical_adjust_minus_1"
-            android:textSize="20sp"
-            android:textStyle="bold" />
-
-        <Space
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1" />
-
-        <Button
-            android:id="@+id/btn_plus_1"
-            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-            android:layout_width="64dp"
-            android:layout_height="64dp"
-            android:layout_marginEnd="8dp"
-            android:text="@string/nautical_adjust_plus_1"
-            android:textSize="20sp"
-            android:textStyle="bold" />
-
-        <Button
-            android:id="@+id/btn_plus_10"
-            style="@style/Widget.MaterialComponents.Button.TextButton"
-            android:layout_width="60dp"
-            android:layout_height="60dp"
-            android:text="@string/nautical_adjust_plus_10"
-            android:textSize="16sp"
-            android:textStyle="bold" />
-    </LinearLayout>
-
-    <net.osmand.plus.plugins.nautical.ui.RudderView
-        android:id="@+id/rudder_view"
-        android:layout_width="0dp"
-        android:layout_height="60dp"
-        android:layout_marginStart="48dp"
-        android:layout_marginEnd="48dp"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/heading_arc_view" />
 
     <!-- Action Bar -->
     <FrameLayout
         android:id="@+id/action_container"
         android:layout_width="0dp"
-        android:layout_height="72dp"
-        android:layout_marginStart="16dp"
+        android:layout_height="64dp"
+        android:layout_marginHorizontal="16dp"
         android:layout_marginTop="16dp"
-        android:layout_marginEnd="16dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/rudder_view">
+        app:layout_constraintTop_toBottomOf="@id/sailing_info_container">
 
         <Button
             android:id="@+id/btn_standby"
@@ -179,68 +286,23 @@
             android:insetTop="0dp"
             android:insetBottom="0dp"
             android:textAllCaps="true"
-            android:textSize="18sp"
+            android:textSize="16sp"
             android:textStyle="bold"
             app:cornerRadius="12dp"
-            tools:backgroundTint="@color/nautical_status_red"
-            tools:text="DISENGAGE / STANDBY" />
+            tools:backgroundTint="#FF8800"
+            tools:text="ENGAGE / STANDBY" />
 
         <com.google.android.material.progressindicator.CircularProgressIndicator
             android:id="@+id/standby_progress"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
             android:layout_gravity="center_vertical|end"
-            android:layout_marginEnd="24dp"
+            android:layout_marginEnd="16dp"
             android:visibility="gone"
             app:indicatorColor="@android:color/white"
-            app:indicatorSize="36dp"
+            app:indicatorSize="32dp"
             app:trackColor="#40FFFFFF"
             app:trackThickness="4dp" />
     </FrameLayout>
-
-    <!-- Tuning & Environmental -->
-    <TextView
-        android:id="@+id/sea_state_label"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="24dp"
-        android:text="@string/nautical_sea_state"
-        android:textAppearance="?attr/textAppearanceCaption"
-        android:textStyle="bold"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/action_container" />
-
-    <com.google.android.material.button.MaterialButtonToggleGroup
-        android:id="@+id/sea_state_toggle_group"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/sea_state_label"
-        app:singleSelection="true">
-
-        <Button
-            android:id="@+id/btn_sea_calm"
-            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/nautical_sea_calm" />
-
-        <Button
-            android:id="@+id/btn_sea_auto"
-            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/nautical_mode_auto" />
-
-        <Button
-            android:id="@+id/btn_sea_heavy"
-            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/nautical_sea_heavy" />
-    </com.google.android.material.button.MaterialButtonToggleGroup>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

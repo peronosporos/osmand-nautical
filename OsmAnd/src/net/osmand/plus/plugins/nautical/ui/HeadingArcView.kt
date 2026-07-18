@@ -62,22 +62,22 @@ class HeadingArcView @JvmOverloads constructor(
 
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val textPaint = Paint(Paint.ANTI_ALIAS_FLAG)
-    private val arcRect = RectF()
     private val tickPaint = Paint(Paint.ANTI_ALIAS_FLAG)
-    private val windPath = Path()
+    private val actualPath = Path()
+    private val centerPath = Path()
+    private val osmandOrange = Color.parseColor("#FF8800")
 
     init {
-        paint.strokeWidth = 14f
+        paint.strokeWidth = 4f
         paint.style = Paint.Style.STROKE
         paint.strokeCap = Paint.Cap.ROUND
         
-        textPaint.color = ContextCompat.getColor(context, R.color.text_color_primary_light)
-        textPaint.textSize = 84f
+        textPaint.textSize = 80f
         textPaint.textAlign = Paint.Align.CENTER
-        textPaint.typeface = Typeface.create("sans-serif-condensed-light", Typeface.BOLD)
+        textPaint.typeface = Typeface.create("sans-serif-condensed", Typeface.BOLD)
 
         tickPaint.style = Paint.Style.STROKE
-        tickPaint.strokeWidth = 3f
+        tickPaint.strokeWidth = 2f
     }
 
     override fun onDraw(canvas: Canvas) {
@@ -85,104 +85,87 @@ class HeadingArcView @JvmOverloads constructor(
         val w = width.toFloat()
         val h = height.toFloat()
         val centerX = w / 2f
-        val radius = min(w, h * 2) * 0.42f
-        val centerY = h * 0.9f
+        val centerY = h / 2f
 
-        arcRect.left = centerX - radius
-        arcRect.top = centerY - radius
-        arcRect.right = centerX + radius
-        arcRect.bottom = centerY + radius
-
-        val startAngle = 210f
-        val sweepAngle = 120f
-
-        // Draw background track
-        paint.color = Color.GRAY
-        paint.alpha = 40
-        canvas.drawArc(arcRect, startAngle, sweepAngle, false, paint)
-
-        // Draw detailed ticks
+        // Draw Linear Heading Tape
+        val pixelsPerDegree = w / 60f // Show 60 degrees window
+        
         tickPaint.color = if (isNightMode) Color.LTGRAY else Color.DKGRAY
-        for (i in -60..60 step 5) {
-            val angle = i.toFloat()
-            val rad = Math.toRadians((angle - 90).toDouble())
-            val innerR = if (i % 10 == 0) radius - 30f else radius - 15f
-            val outerR = radius + 5f
+        tickPaint.alpha = 100
+        
+        // Draw baseline
+        canvas.drawLine(0f, centerY + 20f, w, centerY + 20f, tickPaint)
+
+        // Draw Ticks
+        val startH = targetHeading - 30
+        val endH = targetHeading + 30
+        
+        for (i in startH..endH) {
+            val hValue = (i + 360) % 360
+            val x = centerX + (i - targetHeading) * pixelsPerDegree
             
-            val startX = centerX + (innerR * cos(rad)).toFloat()
-            val startY = centerY + (innerR * sin(rad)).toFloat()
-            val endX = centerX + (outerR * cos(rad)).toFloat()
-            val endY = centerY + (outerR * sin(rad)).toFloat()
-            
-            tickPaint.alpha = if (i % 10 == 0) 200 else 100
-            canvas.drawLine(startX, startY, endX, endY, tickPaint)
-        }
-
-        // Target Heading Shadow (Actual)
-        actualHeading?.let { actual ->
-            val diff = ((actual - targetHeading + 540) % 360) - 180
-            if (abs(diff) < 60) {
-                paint.color = Color.RED
-                paint.alpha = 150
-                paint.strokeWidth = 20f
-                canvas.drawArc(arcRect, 270f + diff - 1f, 2f, false, paint)
-                paint.strokeWidth = 14f
-            }
-        }
-
-        // Draw center indicator (Target)
-        paint.color = ContextCompat.getColor(context, R.color.active_color_primary_light)
-        paint.alpha = 255
-        paint.strokeWidth = 18f
-        canvas.drawArc(arcRect, 269f, 2f, false, paint)
-        paint.strokeWidth = 14f
-
-        // Draw Wind Indicator
-        actualHeading?.let { actual ->
-            windAngleApparent?.let { wind ->
-                val diff = ((actual - targetHeading + 540) % 360) - 180
-                val windAngleRel = diff.toFloat() + wind.toFloat()
-                if (abs(windAngleRel) < 70f) {
-                    val rad = Math.toRadians((windAngleRel - 90f).toDouble())
-                    val arrowR = radius + 20f
-                    val arrowX = centerX + (arrowR * cos(rad)).toFloat()
-                    val arrowY = centerY + (arrowR * sin(rad)).toFloat()
-                    
+            if (hValue % 5 == 0) {
+                val tickH = if (hValue % 10 == 0) 40f else 20f
+                tickPaint.alpha = if (hValue % 10 == 0) 255 else 150
+                canvas.drawLine(x, centerY + 20f, x, centerY + 20f - tickH, tickPaint)
+                
+                if (hValue % 10 == 0) {
                     paint.style = Paint.Style.FILL
-                    paint.color = Color.CYAN
+                    paint.textSize = 24f
+                    paint.textAlign = Paint.Align.CENTER
+                    paint.color = tickPaint.color
                     paint.alpha = 200
-                    
-                    // Draw a small wind arrow
-                    windPath.reset()
-                    windPath.moveTo(arrowX, arrowY)
-                    windPath.lineTo(arrowX - 15f, arrowY + 25f)
-                    windPath.lineTo(arrowX + 15f, arrowY + 25f)
-                    windPath.close()
-                    
-                    canvas.save()
-                    canvas.rotate(windAngleRel, arrowX, arrowY)
-                    canvas.drawPath(windPath, paint)
-                    canvas.restore()
-                    
-                    paint.style = Paint.Style.STROKE
-                    paint.strokeWidth = 14f
+                    canvas.drawText(hValue.toString(), x, centerY + 50f, paint)
                 }
             }
         }
 
-        // Maneuver Visualization
-        if (isTacking) {
-            paint.color = Color.YELLOW
-            paint.alpha = 80
-            paint.strokeWidth = 30f
-            // Highlight a 45 degree sector indicating the turn
-            canvas.drawArc(arcRect, 270f - 22.5f, 45f, false, paint)
-            paint.strokeWidth = 14f
+        // Draw Actual Heading Indicator (if different from target)
+        actualHeading?.let { actual ->
+            val diff = ((actual.toFloat() - targetHeading.toFloat() + 540f) % 360f) - 180f
+            if (abs(diff) <= 30) {
+                val x = centerX + diff * pixelsPerDegree
+                paint.color = Color.RED
+                paint.style = Paint.Style.FILL
+                paint.alpha = 180
+                // Draw a small triangle for actual heading
+                actualPath.reset()
+                actualPath.moveTo(x, centerY + 20f)
+                actualPath.lineTo(x - 10f, centerY + 40f)
+                actualPath.lineTo(x + 10f, centerY + 40f)
+                actualPath.close()
+                canvas.drawPath(actualPath, paint)
+            }
         }
 
-        // Draw heading text
+        // Draw Target Center Indicator (Static)
+        paint.color = osmandOrange
+        paint.style = Paint.Style.FILL
+        paint.alpha = 255
+        centerPath.reset()
+        centerPath.moveTo(centerX, centerY + 20f)
+        centerPath.lineTo(centerX - 15f, centerY - 10f)
+        centerPath.lineTo(centerX + 15f, centerY - 10f)
+        centerPath.close()
+        canvas.drawPath(centerPath, paint)
+
+        // Draw Central Digital Readout
         textPaint.color = ContextCompat.getColor(context, if (isNightMode) R.color.text_color_primary_dark else R.color.text_color_primary_light)
-        canvas.drawText("${targetHeading}°", centerX, centerY - radius * 0.35f, textPaint)
+        canvas.drawText("${targetHeading}°", centerX, centerY - 40f, textPaint)
+
+        // Draw Wind Indicator on Tape
+        windAngleApparent?.let { wind ->
+            val actual = actualHeading?.toDouble() ?: targetHeading.toDouble()
+            val diffActual = ((actual.toFloat() - targetHeading.toFloat() + 540f) % 360f) - 180f
+            val windAngleRel = diffActual + wind.toFloat()
+            
+            if (abs(windAngleRel) <= 30f) {
+                val x = centerX + windAngleRel * pixelsPerDegree
+                paint.color = Color.CYAN
+                paint.alpha = 150
+                canvas.drawCircle(x, centerY + 20f, 8f, paint)
+            }
+        }
     }
 
     private var isNightMode: Boolean = false
@@ -207,8 +190,8 @@ class HeadingArcView @JvmOverloads constructor(
             }
             MotionEvent.ACTION_MOVE -> {
                 val deltaX = event.x - lastX
-                if (abs(deltaX) > 8) {
-                    val change = (deltaX / 12).toInt()
+                if (abs(deltaX) > 4) {
+                    val change = -(deltaX / 8).toInt() // Reverse direction for natural tape scrolling
                     if (change != 0) {
                         val oldHeading = targetHeading
                         targetHeading = (targetHeading + change + 360) % 360

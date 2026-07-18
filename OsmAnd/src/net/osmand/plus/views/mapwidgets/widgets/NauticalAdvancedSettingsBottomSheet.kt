@@ -35,9 +35,9 @@ class NauticalAdvancedSettingsBottomSheet : BottomSheetDialogFragment() {
         super.onViewCreated(view, savedInstanceState)
 
         val autopilot = NauticalPlugin.autopilot ?: return
-        val plugin = NauticalPlugin.getInstance()
+        val plugin = NauticalPlugin.getInstance() ?: return
         
-        plugin?.applyNightVisionFilter(view)
+        plugin.applyNightVisionFilter(view)
 
         val safetyLock = view.findViewById<SwitchMaterial>(R.id.safety_lock)
         val settingsContainer = view.findViewById<ViewGroup>(R.id.settings_container)
@@ -48,10 +48,13 @@ class NauticalAdvancedSettingsBottomSheet : BottomSheetDialogFragment() {
         val sliderFilterSensitivity = view.findViewById<Slider>(R.id.slider_filter_sensitivity)
         val sliderRudderLimit = view.findViewById<Slider>(R.id.slider_rudder_limit)
         val sliderOffCourse = view.findViewById<Slider>(R.id.slider_off_course)
+        val sliderXteThreshold = view.findViewById<Slider>(R.id.slider_xte_threshold)
         val vesselTypeToggle = view.findViewById<com.google.android.material.button.MaterialButtonToggleGroup>(R.id.vessel_type_toggle)
 
         val chart = view.findViewById<LineChart>(R.id.pid_preview_chart)
 
+        sliderXteThreshold.value = settings.NAUTICAL_XTE_THRESHOLD.get().coerceIn(0.01f, 1.0f)
+        
         vesselTypeToggle.check(if (settings.NAUTICAL_VESSEL_TYPE.get() == VesselType.PROA) R.id.btn_vessel_proa else R.id.btn_vessel_conv)
 
         val btnCompassCalib = view.findViewById<Button>(R.id.btn_compass_calib)
@@ -92,6 +95,7 @@ class NauticalAdvancedSettingsBottomSheet : BottomSheetDialogFragment() {
             sliderFilterSensitivity.value = 3.0f
             sliderRudderLimit.value = 30.0f
             sliderOffCourse.value = 15.0f
+            sliderXteThreshold.value = 0.1f
             vesselTypeToggle.check(R.id.btn_vessel_conv)
             updateChart()
         }
@@ -103,6 +107,7 @@ class NauticalAdvancedSettingsBottomSheet : BottomSheetDialogFragment() {
             autopilot.setFilterSensitivity(sliderFilterSensitivity.value.toDouble())
             autopilot.setRudderLimit(sliderRudderLimit.value.toDouble())
             autopilot.setOffCourseAlarm(sliderOffCourse.value.toDouble())
+            settings.NAUTICAL_XTE_THRESHOLD.set(sliderXteThreshold.value)
             
             val selectedVesselType = if (vesselTypeToggle.checkedButtonId == R.id.btn_vessel_proa) VesselType.PROA else VesselType.CONVENTIONAL
             settings.NAUTICAL_VESSEL_TYPE.set(selectedVesselType)

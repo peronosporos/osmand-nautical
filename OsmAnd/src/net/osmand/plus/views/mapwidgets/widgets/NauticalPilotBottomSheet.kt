@@ -1,5 +1,6 @@
 package net.osmand.plus.views.mapwidgets.widgets
 
+import android.content.res.ColorStateList
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -8,9 +9,9 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
-import android.widget.Button
 import android.widget.TextView
 import androidx.core.content.ContextCompat
+import com.google.android.material.button.MaterialButton
 import com.google.android.material.button.MaterialButtonToggleGroup
 import com.google.android.material.chip.Chip
 import com.google.android.material.progressindicator.CircularProgressIndicator
@@ -48,10 +49,6 @@ class NauticalPilotBottomSheet : BottomSheetDialogFragment() {
         }
     }
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-    }
-
     override fun onStart() {
         super.onStart()
         dialog?.window?.let { window ->
@@ -69,27 +66,24 @@ class NauticalPilotBottomSheet : BottomSheetDialogFragment() {
 
     private fun updateTackButtons() {
         val view = view ?: return
-        val minus1Btn = view.findViewById<Button>(R.id.btn_minus_1)
-        val plus1Btn = view.findViewById<Button>(R.id.btn_plus_1)
-        val state = NauticalPlugin.engine?.getCurrentState()
-        val wind = state?.windDirectionApparent ?: 0.0
-        val isDownwind = abs(Math.toDegrees(wind)) > 90
-        val isProa = settings.NAUTICAL_VESSEL_TYPE.get() == VesselType.PROA
+        val minus1Btn = view.findViewById<MaterialButton>(R.id.btn_minus_1)
+        val plus1Btn = view.findViewById<MaterialButton>(R.id.btn_plus_1)
 
         if (isArmedPort) {
-            minus1Btn.text = getString(if (isProa) R.string.nautical_confirm_shunt else if (isDownwind) R.string.nautical_confirm_gybe else R.string.nautical_confirm_tack)
-            minus1Btn.setTextColor(ContextCompat.getColor(requireContext(), R.color.text_color_negative))
+            // Confirm tack/gybe/shunt
+            minus1Btn.setIconResource(R.drawable.ic_action_done)
+            minus1Btn.setIconTintResource(R.color.text_color_negative)
         } else {
-            minus1Btn.text = getString(if (isProa) R.string.nautical_shunt else if (isDownwind) R.string.nautical_gybe_port else R.string.nautical_tack_port)
-            minus1Btn.setTextColor(ContextCompat.getColor(requireContext(), R.color.text_color_primary_light))
+            minus1Btn.setIconResource(R.drawable.ic_action_trim_left)
+            minus1Btn.setIconTintResource(R.color.icon_color_default_light)
         }
 
         if (isArmedStbd) {
-            plus1Btn.text = getString(if (isProa) R.string.nautical_confirm_shunt else if (isDownwind) R.string.nautical_confirm_gybe else R.string.nautical_confirm_tack)
-            plus1Btn.setTextColor(ContextCompat.getColor(requireContext(), R.color.text_color_negative))
+            plus1Btn.setIconResource(R.drawable.ic_action_done)
+            plus1Btn.setIconTintResource(R.color.text_color_negative)
         } else {
-            plus1Btn.text = getString(if (isProa) R.string.nautical_shunt else if (isDownwind) R.string.nautical_gybe_stbd else R.string.nautical_tack_stbd)
-            plus1Btn.setTextColor(ContextCompat.getColor(requireContext(), R.color.text_color_primary_light))
+            plus1Btn.setIconResource(R.drawable.ic_action_trim_right)
+            plus1Btn.setIconTintResource(R.color.icon_color_default_light)
         }
     }
 
@@ -112,17 +106,22 @@ class NauticalPilotBottomSheet : BottomSheetDialogFragment() {
         plugin?.applyNightVisionFilter(view)
 
         val modeBadge = view.findViewById<Chip>(R.id.mode_badge)
-        val standbyBtn = view.findViewById<Button>(R.id.btn_standby)
+        val standbyBtn = view.findViewById<MaterialButton>(R.id.btn_standby)
         val arcView = view.findViewById<HeadingArcView>(R.id.heading_arc_view)
-        val seaStateGroup = view.findViewById<MaterialButtonToggleGroup>(R.id.sea_state_toggle_group)
+        val modeToggleGroup = view.findViewById<MaterialButtonToggleGroup>(R.id.mode_toggle_group)
         val advancedBtn = view.findViewById<View>(R.id.btn_advanced)
-        val minus1Btn = view.findViewById<Button>(R.id.btn_minus_1)
-        val plus1Btn = view.findViewById<Button>(R.id.btn_plus_1)
-        val minus10Btn = view.findViewById<Button>(R.id.btn_minus_10)
-        val plus10Btn = view.findViewById<Button>(R.id.btn_plus_10)
+        
+        val minus1Btn = view.findViewById<MaterialButton>(R.id.btn_minus_1)
+        val plus1Btn = view.findViewById<MaterialButton>(R.id.btn_plus_1)
+        val minus10Btn = view.findViewById<MaterialButton>(R.id.btn_minus_10)
+        val plus10Btn = view.findViewById<MaterialButton>(R.id.btn_plus_10)
+        
+        val txtSog = view.findViewById<TextView>(R.id.txt_sog_value)
+        val txtDepth = view.findViewById<TextView>(R.id.txt_depth_value)
+        val txtXte = view.findViewById<TextView>(R.id.txt_xte_value)
+        
         val rudderView = view.findViewById<RudderView>(R.id.rudder_view)
         val standbyProgress = view.findViewById<CircularProgressIndicator>(R.id.standby_progress)
-        val headerBg = view.findViewById<View>(R.id.header_bg)
         val sailingInfo = view.findViewById<View>(R.id.sailing_info_container)
         val awaCurrentTxt = view.findViewById<TextView>(R.id.txt_awa_current)
         val awaTargetTxt = view.findViewById<TextView>(R.id.txt_awa_target)
@@ -142,7 +141,6 @@ class NauticalPilotBottomSheet : BottomSheetDialogFragment() {
                     standbyProgress.progress = 100
                     standbyProgress.visibility = View.GONE
                     autopilot.stopNavigation()
-                    standbyBtn.performClick()
                     view.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS)
                 } else {
                     standbyProgress.progress = progress
@@ -157,37 +155,47 @@ class NauticalPilotBottomSheet : BottomSheetDialogFragment() {
                 resetAutoDismissTimer()
 
                 val rawMode = state.autopilotState.uppercase(Locale.US)
-                val modeLabel = when (rawMode) {
-                    "TACKING" -> getString(R.string.nautical_tacking)
-                    "GYBING" -> getString(R.string.nautical_gybing)
-                    "SHUNTING" -> getString(R.string.nautical_shunting)
-                    else -> rawMode
-                }
-                modeBadge.text = getString(R.string.nautical_mode_label, modeLabel)
+                modeBadge.text = rawMode
+
+                val osmandOrange = ContextCompat.getColor(requireContext(), R.color.icon_color_osmand_light)
 
                 when (rawMode) {
                     "STANDBY" -> {
-                        standbyBtn.text = getString(R.string.nautical_engage_auto)
-                        standbyBtn.setBackgroundColor(ContextCompat.getColor(requireContext(), R.color.active_color_primary_light))
-                        headerBg.setBackgroundColor(ContextCompat.getColor(requireContext(), if (nightMode) R.color.activity_background_color_dark else R.color.activity_background_color_light))
-                        modeBadge.setChipBackgroundColorResource(R.color.nautical_status_bg_standby)
+                        standbyBtn.text = getString(R.string.nautical_engage_autopilot_btn)
+                        standbyBtn.backgroundTintList = ColorStateList.valueOf(osmandOrange)
+                        modeBadge.setChipBackgroundColorResource(R.color.icon_color_default_light)
+                        modeToggleGroup.uncheck(R.id.btn_mode_compass)
+                        modeToggleGroup.uncheck(R.id.btn_mode_wind)
                     }
                     "AUTO" -> {
-                        standbyBtn.text = getString(R.string.nautical_disengage_standby)
-                        standbyBtn.setBackgroundColor(ContextCompat.getColor(requireContext(), R.color.text_color_negative))
-                        headerBg.setBackgroundColor(ContextCompat.getColor(requireContext(), R.color.nautical_status_bg_active))
-                        modeBadge.setChipBackgroundColorResource(R.color.nautical_status_green)
+                        standbyBtn.text = getString(R.string.nautical_stop_label)
+                        standbyBtn.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(requireContext(), R.color.text_color_negative))
+                        modeBadge.setChipBackgroundColorResource(R.color.icon_color_osmand_light)
+                        modeToggleGroup.check(R.id.btn_mode_compass)
                     }
                     "WIND" -> {
-                        standbyBtn.text = getString(R.string.nautical_disengage_standby)
-                        standbyBtn.setBackgroundColor(ContextCompat.getColor(requireContext(), R.color.text_color_negative))
-                        headerBg.setBackgroundColor(ContextCompat.getColor(requireContext(), R.color.active_color_secondary_light))
+                        standbyBtn.text = getString(R.string.nautical_stop_label)
+                        standbyBtn.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(requireContext(), R.color.text_color_negative))
                         modeBadge.setChipBackgroundColorResource(R.color.active_color_primary_light)
+                        modeToggleGroup.check(R.id.btn_mode_wind)
                     }
                     else -> {
-                        standbyBtn.text = getString(R.string.nautical_disengage_standby)
-                        standbyBtn.setBackgroundColor(ContextCompat.getColor(requireContext(), R.color.text_color_negative))
+                        standbyBtn.text = getString(R.string.nautical_stop_label)
+                        standbyBtn.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(requireContext(), R.color.text_color_negative))
                     }
+                }
+
+                // Telemetry
+                txtSog.text = String.format(Locale.US, "%.1f kn", (state.speedOverGround ?: 0.0) * 1.94384)
+                txtDepth.text = String.format(Locale.US, "%.1f m", state.depthBelowTransducer ?: 0.0)
+                
+                val xte = state.crossTrackError
+                if (xte != null) {
+                    val xteNm = abs(xte) * 0.000539957 // meters to NM
+                    val side = if (xte < 0) "L" else "R"
+                    txtXte.text = String.format(Locale.US, "%.2f %s", xteNm, side)
+                } else {
+                    txtXte.text = "---"
                 }
 
                 val targetHeading = state.targetHeading ?: state.headingTrue ?: 0.0
@@ -201,33 +209,19 @@ class NauticalPilotBottomSheet : BottomSheetDialogFragment() {
 
                 state.rudderAngle?.let { rudderView?.setRudderAngle(it) }
 
-                val seaState = state.seaState ?: 2
-                when (seaState) {
-                    1 -> seaStateGroup.check(R.id.btn_sea_calm)
-                    2, 3 -> seaStateGroup.check(R.id.btn_sea_auto)
-                    4, 5 -> seaStateGroup.check(R.id.btn_sea_heavy)
-                }
-
                 // Dynamic buttons for Wind Mode
                 if (rawMode == "WIND") {
                     updateTackButtons()
-                    minus10Btn.visibility = View.INVISIBLE
-                    plus10Btn.visibility = View.INVISIBLE
                     sailingInfo.visibility = View.VISIBLE
-                    
                     state.windDirectionApparent?.let {
-                        awaCurrentTxt.text = getString(R.string.nautical_awa_current, Math.toDegrees(it))
+                        awaCurrentTxt.text = getString(R.string.nautical_awa_current, Math.toDegrees(it).toInt())
                     }
                     state.targetWindAngleApparent?.let {
-                        awaTargetTxt.text = getString(R.string.nautical_awa_target, Math.toDegrees(it))
+                        awaTargetTxt.text = getString(R.string.nautical_awa_target, Math.toDegrees(it).toInt())
                     }
                 } else {
-                    minus1Btn.text = getString(R.string.nautical_adjust_minus_1)
-                    plus1Btn.text = getString(R.string.nautical_adjust_plus_1)
-                    minus1Btn.setTextColor(ContextCompat.getColor(requireContext(), R.color.text_color_primary_light))
-                    plus1Btn.setTextColor(ContextCompat.getColor(requireContext(), R.color.text_color_primary_light))
-                    minus10Btn.visibility = View.VISIBLE
-                    plus10Btn.visibility = View.VISIBLE
+                    minus1Btn.setIconResource(R.drawable.ic_action_trim_left)
+                    plus1Btn.setIconResource(R.drawable.ic_action_trim_right)
                     sailingInfo.visibility = View.GONE
                 }
             }
@@ -236,6 +230,15 @@ class NauticalPilotBottomSheet : BottomSheetDialogFragment() {
         engine.registerListener(listener!!)
         listener?.invoke(engine.getCurrentState() ?: MarineState())
 
+        modeToggleGroup.addOnButtonCheckedListener { _, checkedId, isChecked ->
+            if (isChecked) {
+                when (checkedId) {
+                    R.id.btn_mode_compass -> autopilot.setAutopilotMode("auto")
+                    R.id.btn_mode_wind -> autopilot.setAutopilotMode("wind")
+                }
+            }
+        }
+
         val mapView = (activity as? MapActivity)?.mapView
         mapTouchListener = OsmandMapTileView.TouchListener { resetAutoDismissTimer() }
         mapTouchListener?.let { mapView?.addTouchListener(it) }
@@ -243,14 +246,13 @@ class NauticalPilotBottomSheet : BottomSheetDialogFragment() {
         @android.annotation.SuppressLint("ClickableViewAccessibility")
         standbyBtn.setOnTouchListener { v: View, event: MotionEvent ->
             val currentState = engine.getCurrentState()
-            val isStandby = currentState?.autopilotState?.uppercase(Locale.US) == "STANDBY"
+            val isStandby = currentState?.autopilotState?.lowercase(Locale.US) == "standby"
 
             when (event.action) {
                 MotionEvent.ACTION_DOWN -> {
                     if (isStandby) {
                         autopilot.setAutopilotMode("auto")
                         v.performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY)
-                        v.performClick()
                     } else {
                         holdStartTime = System.currentTimeMillis()
                         standbyProgress.progress = 0
@@ -308,7 +310,7 @@ class NauticalPilotBottomSheet : BottomSheetDialogFragment() {
             resetAutoDismissTimer()
             val state = NauticalPlugin.engine?.getCurrentState()
             if (state?.autopilotState?.uppercase(Locale.US) == "WIND") {
-                val isDownwind = Math.abs(Math.toDegrees(state.windDirectionApparent ?: 0.0)) > 90
+                val isDownwind = abs(Math.toDegrees(state.windDirectionApparent ?: 0.0)) > 90
                 if (isArmedStbd) {
                     val isProa = settings.NAUTICAL_VESSEL_TYPE.get() == VesselType.PROA
                     if (isProa) {
@@ -342,18 +344,6 @@ class NauticalPilotBottomSheet : BottomSheetDialogFragment() {
             resetAutoDismissTimer()
             autopilot.adjustHeading(10.0)
             it.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS)
-        }
-
-        seaStateGroup.addOnButtonCheckedListener { _, checkedId: Int, isChecked: Boolean ->
-            if (isChecked) {
-                val level = when (checkedId) {
-                    R.id.btn_sea_calm -> 1
-                    R.id.btn_sea_auto -> 2
-                    R.id.btn_sea_heavy -> 4
-                    else -> 2
-                }
-                autopilot.setSeaState(level)
-            }
         }
 
         advancedBtn.setOnClickListener {

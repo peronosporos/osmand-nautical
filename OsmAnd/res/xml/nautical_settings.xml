@@ -45,12 +45,6 @@
         android:layout="@layout/preference_with_descr"
         android:title="@string/nautical_show_trajectory" />
 
-    <net.osmand.plus.settings.preferences.EditTextPreferenceEx
-        android:key="nautical_xte_threshold"
-        android:layout="@layout/preference_with_descr"
-        android:title="@string/nautical_xte_threshold_desc"
-        android:dialogTitle="@string/nautical_xte_threshold_desc" />
-
     <net.osmand.plus.settings.preferences.ListPreferenceEx
         android:key="ais_receive_in_background"
         android:layout="@layout/preference_with_descr"

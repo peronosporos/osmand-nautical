@@ -105,6 +105,11 @@
 	<string name="nautical_use_standard_units_desc">Force knots and nautical miles regardless of locale settings</string>
 
 	<string name="nautical_pilot_title">Nautical Pilot</string>
+	<string name="nautical_sog_label">SOG</string>
+	<string name="nautical_depth_label">DEPTH</string>
+	<string name="nautical_xte_label">XTE</string>
+	<string name="nautical_mode_compass">COMPASS</string>
+	<string name="nautical_mode_wind">WIND</string>
 	<string name="nautical_pilot_desc">Control the autopilot state</string>
 	<string name="nautical_engage_autopilot">ENGAGE AUTOPILOT</string>
 	<string name="nautical_engage_autopilot_btn">Engage Autopilot</string>

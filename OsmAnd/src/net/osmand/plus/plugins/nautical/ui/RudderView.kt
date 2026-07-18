@@ -21,9 +21,12 @@ class RudderView @JvmOverloads constructor(
     private val pointerPath = Path()
     private var isNightMode = false
 
+    private val colorPort = Color.parseColor("#E71D36")
+    private val colorStarboard = Color.parseColor("#5BAF3F")
+
     init {
-        paint.strokeWidth = 3f
-        textPaint.textSize = 28f
+        paint.strokeWidth = 2f
+        textPaint.textSize = 24f
         textPaint.textAlign = Paint.Align.CENTER
         textPaint.typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
     }
@@ -43,55 +46,51 @@ class RudderView @JvmOverloads constructor(
 
         val w = width.toFloat()
         val h = height.toFloat()
-        val centerY = h * 0.4f
+        val centerY = h * 0.7f
         val centerX = w / 2f
-        val padding = 40f
+        val padding = 20f
         val scaleWidth = w - (padding * 2)
 
-        textPaint.color = if (isNightMode) Color.LTGRAY else Color.DKGRAY
-
-        // Draw horizontal scale track
+        // Draw minimalist scale line
         paint.color = if (isNightMode) Color.DKGRAY else Color.LTGRAY
-        paint.strokeWidth = 2f
         canvas.drawLine(padding, centerY, w - padding, centerY, paint)
 
-        // Draw scale ticks
-        for (i in -30..30 step 10) {
+        // Draw Port (Red) and Starboard (Green) indicators
+        paint.strokeWidth = 4f
+        paint.color = colorPort
+        canvas.drawLine(padding, centerY, centerX, centerY, paint)
+        paint.color = colorStarboard
+        canvas.drawLine(centerX, centerY, w - padding, centerY, paint)
+
+        // Draw ticks
+        paint.color = if (isNightMode) Color.WHITE else Color.BLACK
+        paint.strokeWidth = 2f
+        for (i in -30..30 step 15) {
             val ratio = (i + 30) / 60f
             val x = padding + (ratio * scaleWidth)
-            val tickH = if (i % 30 == 0) 20f else 10f
-            canvas.drawLine(x, centerY - tickH, x, centerY + tickH, paint)
-            
-            if (i % 30 == 0) {
-                val label = when {
-                    i < 0 -> "P"
-                    i > 0 -> "S"
-                    else -> "0"
-                }
-                canvas.drawText(label, x, centerY + 45f, textPaint)
-            }
+            canvas.drawLine(x, centerY - 8f, x, centerY + 2f, paint)
         }
 
         // Calculate pointer position
-        val maxVisualAngle = Math.toRadians(30.0)
+        val maxVisualAngle = Math.toRadians(35.0)
         val ratio = (rudderAngle.coerceIn(-maxVisualAngle, maxVisualAngle) / maxVisualAngle).toFloat()
         val pointerX = centerX + (ratio * (scaleWidth / 2f))
 
-        // Draw pointer (Modern triangle)
-        paint.color = Color.parseColor("#E71D36") // Professional Red
+        // Draw pointer (Triangle)
+        paint.color = if (isNightMode) Color.WHITE else Color.BLACK
         paint.style = Paint.Style.FILL
         pointerPath.reset()
-        pointerPath.moveTo(pointerX, centerY - 15f)
-        pointerPath.lineTo(pointerX - 10f, centerY + 5f)
-        pointerPath.lineTo(pointerX + 10f, centerY + 5f)
+        pointerPath.moveTo(pointerX, centerY)
+        pointerPath.lineTo(pointerX - 8f, centerY + 15f)
+        pointerPath.lineTo(pointerX + 8f, centerY + 15f)
         pointerPath.close()
         canvas.drawPath(pointerPath, paint)
         
         // Draw angle digital readout
         val deg = Math.toDegrees(rudderAngle).toInt()
         val label = if (deg == 0) "MID" else "${kotlin.math.abs(deg)}° ${if (deg < 0) "P" else "S"}"
-        textPaint.textSize = 32f
+        textPaint.textSize = 28f
         textPaint.color = if (isNightMode) Color.WHITE else Color.BLACK
-        canvas.drawText(label, pointerX, centerY - 25f, textPaint)
+        canvas.drawText(label, pointerX, centerY - 15f, textPaint)
     }
 }
