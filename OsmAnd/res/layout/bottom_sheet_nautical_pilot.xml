@@ -16,7 +16,7 @@
         android:background="?attr/activity_background_color"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_top_toTopOf="parent" />
+        app:layout_constraintTop_toTopOf="parent" />
 
     <com.google.android.material.chip.Chip
         android:id="@+id/mode_badge"
@@ -28,7 +28,7 @@
         app:chipBackgroundColor="@color/active_color_secondary_light"
         app:layout_constraintBottom_toBottomOf="@id/header_bg"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_top_toTopOf="@id/header_bg"
+        app:layout_constraintTop_toTopOf="@id/header_bg"
         tools:text="AUTO MODE" />
 
     <TextView
@@ -41,7 +41,7 @@
         app:layout_constraintBottom_toBottomOf="@id/header_bg"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_top_toTopOf="@id/header_bg" />
+        app:layout_constraintTop_toTopOf="@id/header_bg" />
 
     <ImageButton
         android:id="@+id/btn_advanced"
@@ -51,7 +51,7 @@
         android:background="?attr/selectableItemBackgroundBorderless"
         app:layout_constraintBottom_toBottomOf="@id/header_bg"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_top_toTopOf="@id/header_bg"
+        app:layout_constraintTop_toTopOf="@id/header_bg"
         app:srcCompat="@drawable/ic_action_settings" />
 
     <!-- Steering Instrument Area -->
@@ -61,7 +61,7 @@
         android:layout_height="180dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_top_toBottomOf="@id/header_bg" />
+        app:layout_constraintTop_toBottomOf="@id/header_bg" />
 
     <!-- Sailing Specific Info -->
     <LinearLayout
@@ -73,7 +73,7 @@
         android:visibility="gone"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_top_toBottomOf="@id/heading_arc_view">
+        app:layout_constraintTop_toBottomOf="@id/heading_arc_view">
 
         <TextView
             android:id="@+id/txt_awa_current"
@@ -158,7 +158,7 @@
         android:layout_marginEnd="48dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_top_toBottomOf="@id/heading_arc_view" />
+        app:layout_constraintTop_toBottomOf="@id/heading_arc_view" />
 
     <!-- Action Bar -->
     <FrameLayout
@@ -170,7 +170,7 @@
         android:layout_marginEnd="16dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_top_toBottomOf="@id/rudder_view">
+        app:layout_constraintTop_toBottomOf="@id/rudder_view">
 
         <Button
             android:id="@+id/btn_standby"
@@ -209,7 +209,7 @@
         android:textStyle="bold"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_top_toBottomOf="@id/action_container" />
+        app:layout_constraintTop_toBottomOf="@id/action_container" />
 
     <com.google.android.material.button.MaterialButtonToggleGroup
         android:id="@+id/sea_state_toggle_group"
@@ -218,7 +218,7 @@
         android:layout_marginTop="8dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_top_toBottomOf="@id/sea_state_label"
+        app:layout_constraintTop_toBottomOf="@id/sea_state_label"
         app:singleSelection="true">
 
         <Button

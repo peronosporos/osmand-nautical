@@ -1,0 +1,3 @@
+- `[x]` Fix ConstraintLayout attribute typos in `bottom_sheet_nautical_pilot.xml`
+- `[x]` Verify changes with `analyze_file`
+- `[x]` Run `gradle_sync` to ensure IDE is happy
