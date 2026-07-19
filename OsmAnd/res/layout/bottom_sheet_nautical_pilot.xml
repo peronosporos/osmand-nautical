@@ -12,7 +12,7 @@
         android:layout_height="wrap_content"
         android:paddingBottom="24dp">
 
-        <!-- Dashboard Header -->
+        <!-- 1. Dashboard Header (Mode Toggles + Settings) -->
         <View
             android:id="@+id/header_bg"
             android:layout_width="0dp"
@@ -85,24 +85,38 @@
             app:layout_constraintTop_toTopOf="@id/header_bg"
             app:srcCompat="@drawable/ic_action_settings" />
 
-        <!-- Heading Error Dial (Pro Analog Visual) -->
+        <!-- 2. Steering Command Center (HeadingArcView + HeadingErrorDialView clustered) -->
+        <!-- Using Vertical Packed Chain to keep them as a single visual block -->
+        <net.osmand.plus.plugins.nautical.ui.HeadingArcView
+            android:id="@+id/heading_arc_view"
+            android:layout_width="0dp"
+            android:layout_height="120dp"
+            android:layout_marginTop="16dp"
+            app:layout_constraintBottom_toTopOf="@+id/heading_error_dial"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/header_bg"
+            app:layout_constraintVertical_chainStyle="packed" />
+
         <net.osmand.plus.plugins.nautical.ui.HeadingErrorDialView
             android:id="@+id/heading_error_dial"
             android:layout_width="160dp"
             android:layout_height="160dp"
-            android:layout_marginTop="16dp"
+            android:layout_marginTop="8dp"
+            app:layout_constraintBottom_toTopOf="@+id/telemetry_pane"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/header_bg" />
+            app:layout_constraintTop_toBottomOf="@id/heading_arc_view" />
 
-        <!-- Telemetry Pane (3x2 Matrix) -->
+        <!-- 3. Telemetry Pane (3x2 Matrix) -->
         <androidx.gridlayout.widget.GridLayout
             android:id="@+id/telemetry_pane"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
+            android:layout_marginTop="24dp"
             android:paddingHorizontal="16dp"
             app:columnCount="3"
+            app:layout_constraintBottom_toTopOf="@+id/adjustment_container"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/heading_error_dial">
@@ -249,25 +263,16 @@
             </LinearLayout>
         </androidx.gridlayout.widget.GridLayout>
 
-        <!-- Steering Command Center -->
-        <net.osmand.plus.plugins.nautical.ui.HeadingArcView
-            android:id="@+id/heading_arc_view"
-            android:layout_width="0dp"
-            android:layout_height="120dp"
-            android:layout_marginTop="24dp"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/telemetry_pane" />
-
-        <!-- Adjustment Buttons (User Friendly & Clear) -->
+        <!-- 4. Adjustment Buttons (Controls) -->
         <LinearLayout
             android:id="@+id/adjustment_container"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
+            android:layout_marginTop="24dp"
             android:gravity="center"
             android:orientation="horizontal"
-            app:layout_constraintTop_toBottomOf="@id/heading_arc_view">
+            app:layout_constraintBottom_toTopOf="@+id/rudder_view"
+            app:layout_constraintTop_toBottomOf="@id/telemetry_pane">
 
             <Button
                 android:id="@+id/btn_minus_10"
@@ -325,6 +330,7 @@
                 app:cornerRadius="32dp" />
         </LinearLayout>
 
+        <!-- 5. RudderView (Health Bar at the bottom) -->
         <net.osmand.plus.plugins.nautical.ui.RudderView
             android:id="@+id/rudder_view"
             android:layout_width="0dp"
@@ -334,33 +340,6 @@
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/adjustment_container" />
-
-        <!-- Sailing Info (Overlay when needed) -->
-        <LinearLayout
-            android:id="@+id/sailing_info_container"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
-            android:orientation="horizontal"
-            android:visibility="gone"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/rudder_view">
-            <TextView
-                android:id="@+id/txt_awa_current"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginEnd="8dp"
-                android:textAppearance="?attr/textAppearanceCaption"
-                tools:text="AWA: 45°" />
-            <TextView
-                android:id="@+id/txt_awa_target"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:textAppearance="?attr/textAppearanceCaption"
-                android:textStyle="bold"
-                tools:text="TGT: 42°" />
-        </LinearLayout>
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 </androidx.core.widget.NestedScrollView>

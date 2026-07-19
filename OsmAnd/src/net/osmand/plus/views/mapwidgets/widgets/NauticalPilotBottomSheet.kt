@@ -47,6 +47,9 @@ class NauticalPilotBottomSheet : BottomSheetDialogFragment() {
     private val autoDismissRunnable = Runnable { dismissAllowingStateLoss() }
     private var mapTouchListener: OsmandMapTileView.TouchListener? = null
 
+    private lateinit var errorDial: HeadingErrorDialView
+    private lateinit var arcView: HeadingArcView
+
     companion object {
         @JvmStatic
         fun newInstance(): NauticalPilotBottomSheet {
@@ -105,8 +108,8 @@ class NauticalPilotBottomSheet : BottomSheetDialogFragment() {
 
         plugin?.applyNightVisionFilter(view)
 
-        val errorDial = view.findViewById<HeadingErrorDialView>(R.id.heading_error_dial)
-        val arcView = view.findViewById<HeadingArcView>(R.id.heading_arc_view)
+        errorDial = view.findViewById(R.id.heading_error_dial)
+        arcView = view.findViewById(R.id.heading_arc_view)
         val modeToggleGroup = view.findViewById<MaterialButtonToggleGroup>(R.id.mode_toggle_group)
         val advancedBtn = view.findViewById<View>(R.id.btn_advanced)
 
@@ -131,9 +134,6 @@ class NauticalPilotBottomSheet : BottomSheetDialogFragment() {
         val val23 = view.findViewById<TextView>(R.id.txt_value_2_3)
 
         val rudderView = view.findViewById<RudderView>(R.id.rudder_view)
-        val sailingInfo = view.findViewById<View>(R.id.sailing_info_container)
-        val awaCurrentTxt = view.findViewById<TextView>(R.id.txt_awa_current)
-        val awaTargetTxt = view.findViewById<TextView>(R.id.txt_awa_target)
 
         arcView.setNightMode(nightMode)
         errorDial.setNightMode(nightMode)
@@ -176,15 +176,7 @@ class NauticalPilotBottomSheet : BottomSheetDialogFragment() {
 
                 if (rawMode == "WIND") {
                     updateTackButtons()
-                    sailingInfo.visibility = View.VISIBLE
-                    state.windDirectionApparent?.let {
-                        awaCurrentTxt.text = getString(R.string.nautical_awa_current, Math.toDegrees(it).toInt())
-                    }
-                    state.targetWindAngleApparent?.let {
-                        awaTargetTxt.text = getString(R.string.nautical_awa_target, Math.toDegrees(it).toInt())
-                    }
                 } else {
-                    sailingInfo.visibility = View.GONE
                     minus1Btn.setTextColor(ContextCompat.getColor(requireContext(), if (nightMode) R.color.text_color_primary_dark else R.color.text_color_primary_light))
                     plus1Btn.setTextColor(ContextCompat.getColor(requireContext(), if (nightMode) R.color.text_color_primary_dark else R.color.text_color_primary_light))
                 }
@@ -202,14 +194,14 @@ class NauticalPilotBottomSheet : BottomSheetDialogFragment() {
                     R.id.btn_mode_wind -> autopilot.setAutopilotMode("wind")
                     R.id.btn_mode_route -> {
                         GpxDialogs.selectGPXFile(requireActivity(), false, false, object : CallbackWithObject<Array<GpxFile>> {
-                            override fun processResult(result: Array<GpxFile>?) {
+                            override fun processResult(result: Array<GpxFile>?): Boolean {
                                 if (result != null && result.isNotEmpty()) {
                                     val gpx = result[0]
                                     val points = mutableListOf<Pair<Double, Double>>()
                                     gpx.tracks.forEach { track ->
                                         track.segments.forEach { segment ->
                                             segment.points.forEach { pt ->
-                                                points.add(Pair(pt.latitude, pt.longitude))
+                                                points.add(Pair(pt.lat, pt.lon))
                                             }
                                         }
                                     }
@@ -218,6 +210,7 @@ class NauticalPilotBottomSheet : BottomSheetDialogFragment() {
                                         autopilot.setAutopilotMode("route")
                                     }
                                 }
+                                return true
                             }
                         }, false)
                     }
@@ -297,8 +290,8 @@ class NauticalPilotBottomSheet : BottomSheetDialogFragment() {
         when (mode) {
             "WIND" -> {
                 l11.text = "TWS"; v11.text = String.format(Locale.US, "%.1f %s", (state.windSpeedTrue ?: 0.0) * 1.94384, knots)
-                l12.text = "WIND ERR"; v12.text = String.format(Locale.US, "%.1f°", Math.toDegrees(state.targetWindAngleApparent ?: 0.0) - Math.toDegrees(state.windDirectionApparent ?: 0.0))
-                l13.text = "TGT TWA"; v13.text = String.format(Locale.US, "%.0f°", Math.toDegrees(state.targetWindAngleApparent ?: 0.0))
+                l12.text = "AWA CURR"; v12.text = String.format(Locale.US, "%d°", state.windDirectionApparent?.let { Math.toDegrees(it).toInt() } ?: 0)
+                l13.text = "AWA TGT"; v13.text = String.format(Locale.US, "%d°", state.targetWindAngleApparent?.let { Math.toDegrees(it).toInt() } ?: 0)
                 
                 l21.text = "STW"; v21.text = String.format(Locale.US, "%.1f %s", (state.speedThroughWater ?: 0.0) * 1.94384, knots)
                 l22.text = "TWA"; v22.text = String.format(Locale.US, "%.0f°", Math.toDegrees(state.trueWindAngle ?: 0.0))
@@ -315,7 +308,7 @@ class NauticalPilotBottomSheet : BottomSheetDialogFragment() {
             }
             else -> { // Heading Mode
                 l11.text = "SOG"; v11.text = String.format(Locale.US, "%.1f %s", (state.speedOverGround ?: 0.0) * 1.94384, knots)
-                l12.text = "HDG ERR"; v12.text = String.format(Locale.US, "%.1f°", arcView?.calculateError(arcView.actualHeading ?: 0, arcView.targetHeading))
+                l12.text = "HDG ERR"; v12.text = String.format(Locale.US, "%.1f°", arcView.calculateError(arcView.actualHeading ?: 0, arcView.targetHeading))
                 l13.text = "TGT HDG"; v13.text = String.format(Locale.US, "%d°", state.targetHeading?.let { Math.toDegrees(it).toInt() } ?: 0)
                 
                 l21.text = "STW"; v21.text = String.format(Locale.US, "%.1f %s", (state.speedThroughWater ?: 0.0) * 1.94384, knots)
