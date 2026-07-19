@@ -46,6 +46,7 @@
         <attr name="stroked_buttons_and_links_outline" format="color" />
 		<attr name="widget_background_color" format="reference" />
 		<attr name="icon_color_primary" format="reference" />
+		<attr name="icon_color_secondary" format="reference" />
 		<attr name="active_color_secondary" format="reference" />
 
 	    <attr name="text_color_secondary" format="reference" />

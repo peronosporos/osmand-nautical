@@ -17,6 +17,8 @@
 		<item name="list_background_color">@color/list_background_color_dark</item>
 		<item name="activity_background_color">@color/activity_background_color_dark</item>
 		<item name="card_and_list_background_basic">@color/card_and_list_background_dark</item>
+		<item name="icon_color_primary">@color/icon_color_primary_dark</item>
+		<item name="icon_color_secondary">@color/icon_color_secondary_dark</item>
 		<item name="default_icon_color">@color/icon_color_default_dark</item>
 		<item name="secondary_icon_color">@color/icon_color_secondary_dark</item>
 		<item name="icon_color_active">@color/icon_color_active_dark</item>

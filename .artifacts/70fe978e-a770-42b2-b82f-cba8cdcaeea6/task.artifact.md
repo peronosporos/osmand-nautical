@@ -1,0 +1,5 @@
+- [x] Define `icon_color_secondary` in `attrs.xml`
+- [x] Map `icon_color_secondary` in `osmand_light_style.xml`
+- [x] Map `icon_color_secondary` in `osmand_dark_style.xml`
+- [x] Map `icon_color_primary` and `icon_color_secondary` in `osmand_material_light_style.xml`
+- [x] Map `icon_color_primary` and `icon_color_secondary` in `osmand_material_dark_style.xml`
