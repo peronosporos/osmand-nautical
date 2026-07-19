@@ -26,12 +26,6 @@ class NauticalMapLayer(context: Context) : OsmandMapLayer(context) {
     private val lastPressPoint = PointF()
     private val waypointIcon: Drawable? = ContextCompat.getDrawable(context, R.drawable.ic_action_waypoint)
 
-    var projectionHeading: Double? = null
-        set(value) {
-            field = value
-            (context.applicationContext as? net.osmand.plus.OsmandApplication)?.osmandMap?.refreshMap()
-        }
-
     private val projectionPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.WHITE
         strokeWidth = 6f
@@ -52,8 +46,21 @@ class NauticalMapLayer(context: Context) : OsmandMapLayer(context) {
         style = Paint.Style.FILL
     }
 
+    private val cogPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.GREEN
+        strokeWidth = 5f
+        style = Paint.Style.STROKE
+    }
+
+    private val currentPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.BLUE
+        strokeWidth = 3f
+        style = Paint.Style.STROKE
+    }
+
     private val trajectoryPath = Path()
     private var lastTrajectorySize = 0
+    private var lastDrawTileBox: RotatedTileBox? = null
 
     override fun drawInScreenPixels(): Boolean = true
 
@@ -71,18 +78,28 @@ class NauticalMapLayer(context: Context) : OsmandMapLayer(context) {
             laylinePaint.color = Color.RED
             windShiftPaint.color = Color.RED
             windShiftPaint.alpha = 60
+            cogPaint.color = Color.RED
+            currentPaint.color = Color.RED
         } else {
             trailPaint.color = Color.MAGENTA
             projectionPaint.color = Color.WHITE
             laylinePaint.color = Color.YELLOW
             windShiftPaint.color = Color.CYAN
             windShiftPaint.alpha = 60
+            cogPaint.color = Color.GREEN
+            currentPaint.color = Color.BLUE
         }
 
         if (osmandSettings.NAUTICAL_SHOW_TRAJECTORY.get()) {
             val history = engine.getTrajectory()
             if (history.size >= 2) {
-                if (history.size != lastTrajectorySize) {
+                val tb = tileBox
+                val lastTb = lastDrawTileBox
+                val tileBoxChanged = lastTb == null || 
+                    lastTb.getLatFromPixel(0f, 0f) != tb.getLatFromPixel(0f, 0f) ||
+                    lastTb.getLonFromPixel(0f, 0f) != tb.getLonFromPixel(0f, 0f)
+                
+                if (history.size != lastTrajectorySize || tileBoxChanged) {
                     trajectoryPath.reset()
                     var first = true
                     for (point in history) {
@@ -96,6 +113,7 @@ class NauticalMapLayer(context: Context) : OsmandMapLayer(context) {
                         }
                     }
                     lastTrajectorySize = history.size
+                    lastDrawTileBox = tileBox
                 }
                 trailPaint.alpha = 200
                 canvas.drawPath(trajectoryPath, trailPaint)
@@ -125,28 +143,78 @@ class NauticalMapLayer(context: Context) : OsmandMapLayer(context) {
             drawWindShifts(canvas, tileBox, engine)
         }
 
-        projectionHeading?.let { heading ->
-            drawProjectionLine(canvas, tileBox, engine.getCurrentState(), heading)
+        drawVesselProjections(canvas, tileBox, engine, osmandSettings)
+    }
+
+    private fun drawVesselProjections(
+        canvas: Canvas,
+        tileBox: RotatedTileBox,
+        engine: net.osmand.plus.plugins.nautical.engine.SignalKEngine,
+        settings: net.osmand.plus.settings.backend.OsmandSettings
+    ) {
+        val state = engine.getCurrentState() ?: return
+        val lat = state.latitude ?: return
+        val lon = state.longitude ?: return
+        val lookAheadMin = settings.NAUTICAL_LOOK_AHEAD_TIME.get()
+        val lookAheadSec = lookAheadMin * 60.0
+
+        val startX = tileBox.getPixXFromLatLon(lat, lon)
+        val startY = tileBox.getPixYFromLatLon(lat, lon)
+
+        // 1. Heading Line
+        if (settings.NAUTICAL_SHOW_HEADING_LINE.get()) {
+            val hdg = state.headingTrue
+            val stw = state.speedThroughWater
+            if (hdg != null && stw != null) {
+                val dist = stw * lookAheadSec
+                val endPoint = net.osmand.util.MapUtils.greatCircleDestinationPoint(lat, lon, dist, Math.toDegrees(hdg))
+                val endX = tileBox.getPixXFromLatLon(endPoint.latitude, endPoint.longitude)
+                val endY = tileBox.getPixYFromLatLon(endPoint.latitude, endPoint.longitude)
+                canvas.drawLine(startX, startY, endX, endY, projectionPaint)
+            }
+        }
+
+        // 2. COG Line
+        if (settings.NAUTICAL_SHOW_COG_LINE.get()) {
+            val cog = state.courseOverGroundTrue
+            val sog = state.speedOverGround
+            if (cog != null && sog != null) {
+                val dist = sog * lookAheadSec
+                val endPoint = net.osmand.util.MapUtils.greatCircleDestinationPoint(lat, lon, dist, Math.toDegrees(cog))
+                val endX = tileBox.getPixXFromLatLon(endPoint.latitude, endPoint.longitude)
+                val endY = tileBox.getPixYFromLatLon(endPoint.latitude, endPoint.longitude)
+                canvas.drawLine(startX, startY, endX, endY, cogPaint)
+                drawArrowHead(canvas, startX, startY, endX, endY, cogPaint)
+            }
+        }
+
+        // 3. Current Vector
+        if (settings.NAUTICAL_SHOW_CURRENT_VECTOR.get()) {
+            val set = state.setTrue
+            val drift = state.drift
+            if (set != null && drift != null) {
+                val dist = drift * lookAheadSec
+                val endPoint = net.osmand.util.MapUtils.greatCircleDestinationPoint(lat, lon, dist, Math.toDegrees(set))
+                val endX = tileBox.getPixXFromLatLon(endPoint.latitude, endPoint.longitude)
+                val endY = tileBox.getPixYFromLatLon(endPoint.latitude, endPoint.longitude)
+                canvas.drawLine(startX, startY, endX, endY, currentPaint)
+                drawArrowHead(canvas, startX, startY, endX, endY, currentPaint)
+            }
         }
     }
 
-    private fun drawProjectionLine(canvas: Canvas, tileBox: RotatedTileBox, state: net.osmand.plus.plugins.nautical.engine.MarineState?, headingDeg: Double) {
-        val lat = state?.latitude ?: return
-        val lon = state.longitude ?: return
-        
-        val centerX = tileBox.getPixXFromLatLon(lat, lon)
-        val centerY = tileBox.getPixYFromLatLon(lat, lon)
-        
-        val angleRad = Math.toRadians(headingDeg)
-        val lineLength = 3000f // Long line to represent projected path
-        
-        val px = centerX + (lineLength * sin(angleRad).toFloat())
-        val py = centerY - (lineLength * cos(angleRad).toFloat())
-        
-        canvas.drawLine(centerX, centerY, px, py, projectionPaint)
-        
-        // Optionally draw an arrow or dot at the end or some markers
-        canvas.drawCircle(centerX, centerY, 15f, Paint().apply { color = Color.WHITE; style = Paint.Style.FILL; alpha = 200 })
+    private fun drawArrowHead(canvas: Canvas, x1: Float, y1: Float, x2: Float, y2: Float, paint: Paint) {
+        val angle = atan2((y2 - y1).toDouble(), (x2 - x1).toDouble())
+        val headLength = 30f
+        val headAngle = PI / 6
+
+        val p1x = x2 - headLength * cos(angle - headAngle).toFloat()
+        val p1y = y2 - headLength * sin(angle - headAngle).toFloat()
+        val p2x = x2 - headLength * cos(angle + headAngle).toFloat()
+        val p2y = y2 - headLength * sin(angle + headAngle).toFloat()
+
+        canvas.drawLine(x2, y2, p1x, p1y, paint)
+        canvas.drawLine(x2, y2, p2x, p2y, paint)
     }
 
     private fun drawWindShifts(canvas: Canvas, tileBox: RotatedTileBox, engine: net.osmand.plus.plugins.nautical.engine.SignalKEngine) {
@@ -156,19 +224,33 @@ class NauticalMapLayer(context: Context) : OsmandMapLayer(context) {
         val history = engine.getWindDirectionHistory()
         if (history.isEmpty()) return
 
-        val minWind = history.minOrNull() ?: return
-        val maxWind = history.maxOrNull() ?: return
-
         val centerX = tileBox.getPixXFromLatLon(lat, lon)
         val centerY = tileBox.getPixYFromLatLon(lat, lon)
         val radius = 300f
 
         val rect = android.graphics.RectF(centerX - radius, centerY - radius, centerX + radius, centerY + radius)
         
-        // SignalK wind direction is 0 at North, clockwise.
-        // Android drawArc: 0 is East, clockwise.
-        val startAngle = Math.toDegrees(minWind) - 90.0
-        val sweepAngle = Math.toDegrees(maxWind - minWind)
+        // Find smallest arc covering all points
+        val sortedAngles = history.map { 
+            val deg = Math.toDegrees(it)
+            (deg % 360.0 + 360.0) % 360.0 
+        }.sorted()
+        
+        var maxGap = 0.0
+        var startOfMaxGap = sortedAngles.last()
+        
+        for (i in 0 until sortedAngles.size) {
+            val a1 = sortedAngles[i]
+            val a2 = if (i + 1 < sortedAngles.size) sortedAngles[i + 1] else sortedAngles[0] + 360.0
+            val gap = a2 - a1
+            if (gap > maxGap) {
+                maxGap = gap
+                startOfMaxGap = a1
+            }
+        }
+
+        val sweepAngle = (360.0 - maxGap).coerceAtLeast(1.0)
+        val startAngle = (startOfMaxGap + maxGap) - 90.0
         
         canvas.drawArc(rect, startAngle.toFloat(), sweepAngle.toFloat(), true, windShiftPaint)
     }
@@ -178,11 +260,13 @@ class NauticalMapLayer(context: Context) : OsmandMapLayer(context) {
         val lon = state.longitude ?: return
         val windDir = state.windDirectionTrue ?: return
 
+        val app = context.applicationContext as net.osmand.plus.OsmandApplication
+        val tackAngleDeg = app.settings.NAUTICAL_LAYLINES_TACK_ANGLE.get().toDouble()
+        val tackAngle = Math.toRadians(tackAngleDeg)
+
         val centerX = tileBox.getPixXFromLatLon(lat, lon)
         val centerY = tileBox.getPixYFromLatLon(lat, lon)
 
-        // Typically 45 degrees upwind
-        val tackAngle = Math.toRadians(45.0)
         val lineLength = 2000f // Screen pixels
 
         // Port Layline

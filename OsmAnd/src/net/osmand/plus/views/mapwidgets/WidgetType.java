@@ -156,6 +156,38 @@ public enum WidgetType {
 	NAUTICAL_PILOT("nautical_pilot", R.string.nautical_pilot_title, R.string.nautical_pilot_desc, R.drawable.ic_plugin_nautical_map, R.drawable.ic_plugin_nautical_map, 0, WidgetGroup.NAUTICAL, RIGHT),
 	NAUTICAL_VMG("nautical_vmg", R.string.nautical_widget_vmg_label, R.string.nautical_vmg_desc, R.drawable.ic_action_vmg, R.drawable.ic_action_vmg, 0, WidgetGroup.NAUTICAL, RIGHT),
 	NAUTICAL_COG("nautical_cog", R.string.nautical_widget_cog_label, R.string.nautical_cog_desc, R.drawable.ic_action_cog, R.drawable.ic_action_cog, 0, WidgetGroup.NAUTICAL, RIGHT),
+	NAUTICAL_HEADING_MAGNETIC("nautical_heading_magnetic", R.string.nautical_heading_magnetic, R.string.nautical_heading_magnetic_desc, R.drawable.ic_action_bearing, R.drawable.ic_action_bearing, 0, WidgetGroup.NAUTICAL, RIGHT),
+	NAUTICAL_LOG("nautical_log", R.string.nautical_log, R.string.nautical_log_desc, R.drawable.ic_action_distance, R.drawable.ic_action_distance, 0, WidgetGroup.NAUTICAL, RIGHT),
+	NAUTICAL_TRIP_LOG("nautical_trip_log", R.string.nautical_trip_log, R.string.nautical_trip_log_desc, R.drawable.ic_action_distance, R.drawable.ic_action_distance, 0, WidgetGroup.NAUTICAL, RIGHT),
+	NAUTICAL_ROLL("nautical_roll", R.string.nautical_roll, R.string.nautical_roll_desc, R.drawable.ic_action_nautical_roll, R.drawable.ic_action_nautical_roll, 0, WidgetGroup.NAUTICAL, RIGHT),
+	NAUTICAL_PITCH("nautical_pitch", R.string.nautical_pitch, R.string.nautical_pitch_desc, R.drawable.ic_action_nautical_pitch, R.drawable.ic_action_nautical_pitch, 0, WidgetGroup.NAUTICAL, RIGHT),
+	NAUTICAL_DEPTH_KEEL("nautical_depth_keel", R.string.nautical_depth_keel, R.string.nautical_depth_keel_desc, R.drawable.ic_action_nautical_depth_colored_day, R.drawable.ic_action_nautical_depth_colored_night, 0, WidgetGroup.NAUTICAL, RIGHT),
+	NAUTICAL_WATER_TEMP("nautical_water_temp", R.string.nautical_water_temp, R.string.nautical_water_temp_desc, R.drawable.widget_weather_temperature_day, R.drawable.widget_weather_temperature_night, 0, WidgetGroup.NAUTICAL, RIGHT),
+	NAUTICAL_OUTSIDE_TEMP("nautical_outside_temp", R.string.nautical_outside_temp, R.string.nautical_outside_temp_desc, R.drawable.widget_weather_temperature_day, R.drawable.widget_weather_temperature_night, 0, WidgetGroup.NAUTICAL, RIGHT),
+	NAUTICAL_PRESSURE("nautical_pressure", R.string.nautical_pressure, R.string.nautical_pressure_desc, R.drawable.widget_weather_air_pressure_day, R.drawable.widget_weather_air_pressure_night, 0, WidgetGroup.NAUTICAL, RIGHT),
+	NAUTICAL_ENGINE_RPM("nautical_engine_rpm", R.string.nautical_engine_rpm, R.string.nautical_engine_rpm_desc, R.drawable.ic_action_obd_engine_speed, R.drawable.ic_action_obd_engine_speed, 0, WidgetGroup.NAUTICAL, RIGHT),
+	NAUTICAL_ENGINE_TEMP("nautical_engine_temp", R.string.nautical_engine_temp, R.string.nautical_engine_temp_desc, R.drawable.ic_action_obd_temperature_engine_oil, R.drawable.ic_action_obd_temperature_engine_oil, 0, WidgetGroup.NAUTICAL, RIGHT),
+	NAUTICAL_BATTERY_VOLT("nautical_battery_volt", R.string.nautical_battery_volt, R.string.nautical_battery_volt_desc, R.drawable.ic_action_battery, R.drawable.ic_action_battery, 0, WidgetGroup.NAUTICAL, RIGHT),
+	NAUTICAL_BATTERY_SOC("nautical_battery_soc", R.string.nautical_battery_soc, R.string.nautical_battery_soc_desc, R.drawable.ic_action_nautical_battery_soc, R.drawable.ic_action_nautical_battery_soc, 0, WidgetGroup.NAUTICAL, RIGHT),
+	NAUTICAL_FUEL_LEVEL("nautical_fuel_level", R.string.nautical_fuel_level, R.string.nautical_fuel_level_desc, R.drawable.ic_action_fuel_tank, R.drawable.ic_action_fuel_tank, 0, WidgetGroup.NAUTICAL, RIGHT),
+	NAUTICAL_FRESH_WATER_LEVEL("nautical_fresh_water_level", R.string.nautical_fresh_water_level, R.string.nautical_fresh_water_level_desc, R.drawable.ic_action_nautical_water_tank, R.drawable.ic_action_nautical_water_tank, 0, WidgetGroup.NAUTICAL, RIGHT),
+	NAUTICAL_WASTE_WATER_LEVEL("nautical_waste_water_level", R.string.nautical_waste_water_level, R.string.nautical_waste_water_level_desc, R.drawable.ic_action_nautical_waste_tank, R.drawable.ic_action_nautical_waste_tank, 0, WidgetGroup.NAUTICAL, RIGHT),
+	NAUTICAL_POLAR_RATIO("nautical_polar_ratio", R.string.nautical_polar_ratio, R.string.nautical_polar_ratio_desc, R.drawable.ic_action_vmg, R.drawable.ic_action_vmg, 0, WidgetGroup.NAUTICAL, RIGHT),
+	NAUTICAL_ROT("nautical_rot", R.string.nautical_rot, R.string.nautical_rot_desc, R.drawable.ic_action_nautical_rot, R.drawable.ic_action_nautical_rot, 0, WidgetGroup.NAUTICAL, RIGHT),
+	NAUTICAL_XTE("nautical_xte", R.string.nautical_xte, R.string.nautical_xte_desc, R.drawable.ic_action_nautical_xte, R.drawable.ic_action_nautical_xte, 0, WidgetGroup.NAUTICAL, RIGHT),
+	NAUTICAL_TTW("nautical_ttw", R.string.nautical_ttw, R.string.nautical_ttw_desc, R.drawable.widget_time_day, R.drawable.widget_time_night, 0, WidgetGroup.NAUTICAL, RIGHT),
+	NAUTICAL_DTW("nautical_dtw", R.string.nautical_dtw, R.string.nautical_dtw_desc, R.drawable.ic_action_distance, R.drawable.ic_action_distance, 0, WidgetGroup.NAUTICAL, RIGHT),
+	NAUTICAL_ETA("nautical_eta", R.string.nautical_eta, R.string.nautical_eta_desc, R.drawable.widget_time_day, R.drawable.widget_time_night, 0, WidgetGroup.NAUTICAL, RIGHT),
+	NAUTICAL_AWA("nautical_awa", R.string.nautical_awa, R.string.nautical_awa_desc, R.drawable.widget_weather_wind_day, R.drawable.widget_weather_wind_night, 0, WidgetGroup.NAUTICAL, RIGHT),
+	NAUTICAL_AWS("nautical_aws", R.string.nautical_aws, R.string.nautical_aws_desc, R.drawable.widget_weather_wind_day, R.drawable.widget_weather_wind_night, 0, WidgetGroup.NAUTICAL, RIGHT),
+	NAUTICAL_TWA("nautical_twa", R.string.nautical_twa, R.string.nautical_twa_desc, R.drawable.widget_weather_wind_day, R.drawable.widget_weather_wind_night, 0, WidgetGroup.NAUTICAL, RIGHT),
+	NAUTICAL_TWD("nautical_twd", R.string.nautical_twd, R.string.nautical_twd_desc, R.drawable.widget_weather_wind_day, R.drawable.widget_weather_wind_night, 0, WidgetGroup.NAUTICAL, RIGHT),
+	NAUTICAL_OIL_PRESSURE("nautical_oil_pressure", R.string.nautical_oil_pressure, R.string.nautical_oil_pressure_desc, R.drawable.ic_action_nautical_oil, R.drawable.ic_action_nautical_oil, 0, WidgetGroup.NAUTICAL, RIGHT),
+	NAUTICAL_ENGINE_LOAD("nautical_engine_load", R.string.nautical_engine_load, R.string.nautical_engine_load_desc, R.drawable.widget_obd_engine_calculated_load_day, R.drawable.widget_obd_engine_calculated_load_night, 0, WidgetGroup.NAUTICAL, RIGHT),
+	NAUTICAL_BATTERY_CURRENT("nautical_battery_current", R.string.nautical_battery_current, R.string.nautical_battery_current_desc, R.drawable.ic_action_nautical_battery_current, R.drawable.ic_action_nautical_battery_current, 0, WidgetGroup.NAUTICAL, RIGHT),
+	NAUTICAL_SOLAR_CURRENT("nautical_solar_current", R.string.nautical_solar_current, R.string.nautical_solar_current_desc, R.drawable.ic_action_nautical_solar, R.drawable.ic_action_nautical_solar, 0, WidgetGroup.NAUTICAL, RIGHT),
+	NAUTICAL_ENGINE_RUNTIME("nautical_engine_runtime", R.string.nautical_engine_runtime, R.string.nautical_engine_runtime_desc, R.drawable.widget_obd_engine_runtime_day, R.drawable.widget_obd_engine_runtime_night, 0, WidgetGroup.NAUTICAL, RIGHT),
+	NAUTICAL_SET_DRIFT("nautical_set_drift_widget", R.string.nautical_set_drift, R.string.nautical_set_drift, R.drawable.ic_action_bearing, R.drawable.ic_action_bearing, 0, WidgetGroup.NAUTICAL, RIGHT),
 	NAUTICAL_NIGHT_VISION("nautical_night_vision", R.string.nautical_night_vision, R.string.nautical_night_vision_desc, R.drawable.ic_action_red_filter_overlay_on, R.drawable.ic_action_red_filter_off, 0, WidgetGroup.NAUTICAL, RIGHT),
 
 	// Bottom panel
@@ -249,7 +281,17 @@ public enum WidgetType {
 			SRTMPlugin plugin = PluginsHelper.getActivePlugin(SRTMPlugin.class);
 			return plugin != null && plugin.is3DReliefAllowed();
 		}
-		if (this == NAUTICAL_DEPTH || this == NAUTICAL_WIND || this == NAUTICAL_PILOT || this == NAUTICAL_VMG || this == NAUTICAL_COG) {
+		if (this == NAUTICAL_DEPTH || this == NAUTICAL_WIND || this == NAUTICAL_PILOT || this == NAUTICAL_VMG || this == NAUTICAL_COG
+				|| this == NAUTICAL_HEADING_MAGNETIC || this == NAUTICAL_LOG || this == NAUTICAL_TRIP_LOG
+				|| this == NAUTICAL_ROLL || this == NAUTICAL_PITCH || this == NAUTICAL_DEPTH_KEEL
+				|| this == NAUTICAL_WATER_TEMP || this == NAUTICAL_OUTSIDE_TEMP || this == NAUTICAL_PRESSURE
+				|| this == NAUTICAL_ENGINE_RPM || this == NAUTICAL_ENGINE_TEMP || this == NAUTICAL_BATTERY_VOLT
+				|| this == NAUTICAL_BATTERY_SOC || this == NAUTICAL_FUEL_LEVEL || this == NAUTICAL_FRESH_WATER_LEVEL
+				|| this == NAUTICAL_WASTE_WATER_LEVEL || this == NAUTICAL_POLAR_RATIO
+				|| this == NAUTICAL_ROT || this == NAUTICAL_XTE || this == NAUTICAL_TTW || this == NAUTICAL_DTW
+				|| this == NAUTICAL_ETA || this == NAUTICAL_AWA || this == NAUTICAL_AWS || this == NAUTICAL_TWA || this == NAUTICAL_TWD
+				|| this == NAUTICAL_OIL_PRESSURE || this == NAUTICAL_ENGINE_LOAD || this == NAUTICAL_BATTERY_CURRENT
+				|| this == NAUTICAL_SOLAR_CURRENT || this == NAUTICAL_ENGINE_RUNTIME) {
 			return PluginsHelper.getActivePlugin(net.osmand.plus.plugins.nautical.NauticalPlugin.class) != null;
 		}
 		return true;
@@ -406,7 +448,17 @@ public enum WidgetType {
 			return new RouteInfoWidgetInfoFragment();
 		} else if (this == STREET_NAME) {
 			return new StreetNameWidgetInfoFragment();
-		} else if (this == NAUTICAL_DEPTH || this == NAUTICAL_WIND || this == NAUTICAL_PILOT || this == NAUTICAL_VMG || this == NAUTICAL_COG) {
+		} else if (this == NAUTICAL_DEPTH || this == NAUTICAL_WIND || this == NAUTICAL_PILOT || this == NAUTICAL_VMG || this == NAUTICAL_COG
+				|| this == NAUTICAL_HEADING_MAGNETIC || this == NAUTICAL_LOG || this == NAUTICAL_TRIP_LOG
+				|| this == NAUTICAL_ROLL || this == NAUTICAL_PITCH || this == NAUTICAL_DEPTH_KEEL
+				|| this == NAUTICAL_WATER_TEMP || this == NAUTICAL_OUTSIDE_TEMP || this == NAUTICAL_PRESSURE
+				|| this == NAUTICAL_ENGINE_RPM || this == NAUTICAL_ENGINE_TEMP || this == NAUTICAL_BATTERY_VOLT
+				|| this == NAUTICAL_BATTERY_SOC || this == NAUTICAL_FUEL_LEVEL || this == NAUTICAL_FRESH_WATER_LEVEL
+				|| this == NAUTICAL_WASTE_WATER_LEVEL || this == NAUTICAL_POLAR_RATIO
+				|| this == NAUTICAL_ROT || this == NAUTICAL_XTE || this == NAUTICAL_TTW || this == NAUTICAL_DTW
+				|| this == NAUTICAL_ETA || this == NAUTICAL_AWA || this == NAUTICAL_AWS || this == NAUTICAL_TWA || this == NAUTICAL_TWD
+				|| this == NAUTICAL_OIL_PRESSURE || this == NAUTICAL_ENGINE_LOAD || this == NAUTICAL_BATTERY_CURRENT
+				|| this == NAUTICAL_SOLAR_CURRENT || this == NAUTICAL_ENGINE_RUNTIME) {
 			return new NauticalWidgetSettingsFragment();
 		}
 

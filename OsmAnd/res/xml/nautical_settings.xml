@@ -26,24 +26,62 @@
         android:layout="@layout/preference_with_descr"
         android:title="@string/nautical_server_secure_desc" />
 
+    <net.osmand.plus.settings.preferences.EditTextPreferenceEx
+        android:key="server_username"
+        android:layout="@layout/preference_with_descr"
+        android:title="@string/nautical_server_username_desc"
+        android:dialogTitle="@string/nautical_server_username_desc"
+        android:dependency="server_secure" />
+
+    <net.osmand.plus.settings.preferences.EditTextPreferenceEx
+        android:key="server_password"
+        android:layout="@layout/preference_with_descr"
+        android:title="@string/nautical_server_password_desc"
+        android:dialogTitle="@string/nautical_server_password_desc"
+        android:dependency="server_secure" />
+
+    <net.osmand.plus.settings.preferences.SwitchPreferenceEx
+        android:key="server_trust_all"
+        android:layout="@layout/preference_with_descr"
+        android:title="@string/nautical_server_trust_all"
+        android:dependency="server_secure" />
+
     <PreferenceCategory
         android:layout="@layout/preference_category_with_descr"
         android:title="@string/nautical_advanced_settings" />
 
-    <net.osmand.plus.settings.preferences.SwitchPreferenceEx
-        android:key="nautical_show_laylines"
+    <net.osmand.plus.settings.preferences.EditTextPreferenceEx
+        android:key="nautical_xte_threshold"
         android:layout="@layout/preference_with_descr"
-        android:title="@string/nautical_show_laylines" />
+        android:title="@string/nautical_xte_threshold_desc"
+        android:dialogTitle="@string/nautical_xte_threshold_desc" />
+
+    <net.osmand.plus.settings.preferences.EditTextPreferenceEx
+        android:key="nautical_laylines_tack_angle"
+        android:layout="@layout/preference_with_descr"
+        android:title="@string/nautical_laylines_tack_angle"
+        android:dialogTitle="@string/nautical_laylines_tack_angle" />
 
     <net.osmand.plus.settings.preferences.SwitchPreferenceEx
-        android:key="nautical_show_wind_shifts"
+        android:key="nautical_show_heading_line"
         android:layout="@layout/preference_with_descr"
-        android:title="@string/nautical_show_wind_shifts" />
+        android:title="@string/nautical_show_heading_line" />
 
     <net.osmand.plus.settings.preferences.SwitchPreferenceEx
-        android:key="nautical_show_trajectory"
+        android:key="nautical_show_cog_line"
         android:layout="@layout/preference_with_descr"
-        android:title="@string/nautical_show_trajectory" />
+        android:title="@string/nautical_show_cog_line" />
+
+    <net.osmand.plus.settings.preferences.SwitchPreferenceEx
+        android:key="nautical_show_current_vector"
+        android:layout="@layout/preference_with_descr"
+        android:title="@string/nautical_show_current_vector" />
+
+    <net.osmand.plus.settings.preferences.EditTextPreferenceEx
+        android:key="nautical_look_ahead_time"
+        android:layout="@layout/preference_with_descr"
+        android:title="@string/nautical_look_ahead_time"
+        android:dialogTitle="@string/nautical_look_ahead_time" />
 
     <net.osmand.plus.settings.preferences.ListPreferenceEx
         android:key="ais_receive_in_background"

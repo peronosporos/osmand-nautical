@@ -44,6 +44,8 @@
 		<item name="android:textColorPrimary">@color/text_color_primary_light</item>
 		<item name="android:textColorSecondary">@color/text_color_secondary_light</item>
 
+		<item name="textAppearanceLabelLarge">?attr/textAppearanceSubtitle2</item>
+		<item name="shapeAppearanceCornerMedium">@style/Shape.Card12</item>
 
 		<item name="enableEdgeToEdge">true</item>
 		<item name="android:windowBackground">@android:color/transparent</item>

@@ -377,7 +377,7 @@ tasks.register('appStart', Exec) {
 }
 
 dependencies {
-	implementation project(path: ':OsmAnd-java', configuration: 'android')
+	implementation project(':OsmAnd-java')
 	implementation project(':OsmAnd-api')
 
 	implementation project(':OsmAnd-shared')

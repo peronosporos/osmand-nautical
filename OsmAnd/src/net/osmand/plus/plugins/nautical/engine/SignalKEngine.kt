@@ -5,7 +5,7 @@ import kotlinx.coroutines.*
 import net.osmand.shared.util.KMapUtils
 import org.json.JSONObject
 import java.util.concurrent.ConcurrentHashMap
-import kotlin.math.absoluteValue
+import kotlin.math.*
 import kotlin.time.Duration.Companion.seconds
 import android.content.Context
 import java.io.File
@@ -37,7 +37,36 @@ class SignalKEngine {
     private val cogBuffer = CircularBuffer<Double>(3600)
     private val sogBuffer = CircularBuffer<Double>(3600)
     private val stwBuffer = CircularBuffer<Double>(3600)
-    private val trajectoryBuffer = CircularBuffer<Pair<Double, Double>>(100)
+    private val rpmBuffer = CircularBuffer<Double>(3600)
+    private val tempEngineBuffer = CircularBuffer<Double>(3600)
+    private val voltBuffer = CircularBuffer<Double>(3600)
+    private val socBuffer = CircularBuffer<Double>(3600)
+    private val xteBuffer = CircularBuffer<Double>(3600)
+    private val waterTempBuffer = CircularBuffer<Double>(3600)
+    private val outsideTempBuffer = CircularBuffer<Double>(3600)
+    private val pressureBuffer = CircularBuffer<Double>(3600)
+    private val rollBuffer = CircularBuffer<Double>(3600)
+    private val pitchBuffer = CircularBuffer<Double>(3600)
+    private val awaBuffer = CircularBuffer<Double>(3600)
+    private val awsBuffer = CircularBuffer<Double>(3600)
+    private val twaBuffer = CircularBuffer<Double>(3600)
+    private val rotBuffer = CircularBuffer<Double>(3600)
+    private val ttwBuffer = CircularBuffer<Double>(3600)
+    private val dtwBuffer = CircularBuffer<Double>(3600)
+    private val polarRatioBuffer = CircularBuffer<Double>(3600)
+    private val magHdgBuffer = CircularBuffer<Double>(3600)
+    private val logBuffer = CircularBuffer<Double>(3600)
+    private val tripLogBuffer = CircularBuffer<Double>(3600)
+    private val depthKeelBuffer = CircularBuffer<Double>(3600)
+    private val fuelBuffer = CircularBuffer<Double>(3600)
+    private val freshWaterBuffer = CircularBuffer<Double>(3600)
+    private val wasteBuffer = CircularBuffer<Double>(3600)
+    private val oilPressureBuffer = CircularBuffer<Double>(3600)
+    private val engineLoadBuffer = CircularBuffer<Double>(3600)
+    private val batteryCurrentBuffer = CircularBuffer<Double>(3600)
+    private val solarCurrentBuffer = CircularBuffer<Double>(3600)
+    private val twdBuffer = CircularBuffer<Double>(3600)
+    private val trajectoryBuffer = CircularBuffer<Pair<Double, Double>>(1000)
     private val routeQueue = java.util.concurrent.ConcurrentLinkedQueue<Pair<Double, Double>>()
     var isFollowingRoute: Boolean = false
         private set
@@ -89,6 +118,122 @@ class SignalKEngine {
                 stwBuffer.getAll() as Serializable,
             )
             saveToFile(
+                File(context.filesDir, "rpm_buffer.dat"),
+                rpmBuffer.getAll() as Serializable,
+            )
+            saveToFile(
+                File(context.filesDir, "temp_engine_buffer.dat"),
+                tempEngineBuffer.getAll() as Serializable,
+            )
+            saveToFile(
+                File(context.filesDir, "volt_buffer.dat"),
+                voltBuffer.getAll() as Serializable,
+            )
+            saveToFile(
+                File(context.filesDir, "soc_buffer.dat"),
+                socBuffer.getAll() as Serializable,
+            )
+            saveToFile(
+                File(context.filesDir, "xte_buffer.dat"),
+                xteBuffer.getAll() as Serializable,
+            )
+            saveToFile(
+                File(context.filesDir, "water_temp_buffer.dat"),
+                waterTempBuffer.getAll() as Serializable,
+            )
+            saveToFile(
+                File(context.filesDir, "outside_temp_buffer.dat"),
+                outsideTempBuffer.getAll() as Serializable,
+            )
+            saveToFile(
+                File(context.filesDir, "pressure_buffer.dat"),
+                pressureBuffer.getAll() as Serializable,
+            )
+            saveToFile(
+                File(context.filesDir, "roll_buffer.dat"),
+                rollBuffer.getAll() as Serializable,
+            )
+            saveToFile(
+                File(context.filesDir, "pitch_buffer.dat"),
+                pitchBuffer.getAll() as Serializable,
+            )
+            saveToFile(
+                File(context.filesDir, "awa_buffer.dat"),
+                awaBuffer.getAll() as Serializable,
+            )
+            saveToFile(
+                File(context.filesDir, "aws_buffer.dat"),
+                awsBuffer.getAll() as Serializable,
+            )
+            saveToFile(
+                File(context.filesDir, "twa_buffer.dat"),
+                twaBuffer.getAll() as Serializable,
+            )
+            saveToFile(
+                File(context.filesDir, "rot_buffer.dat"),
+                rotBuffer.getAll() as Serializable,
+            )
+            saveToFile(
+                File(context.filesDir, "ttw_buffer.dat"),
+                ttwBuffer.getAll() as Serializable,
+            )
+            saveToFile(
+                File(context.filesDir, "dtw_buffer.dat"),
+                dtwBuffer.getAll() as Serializable,
+            )
+            saveToFile(
+                File(context.filesDir, "polar_ratio_buffer.dat"),
+                polarRatioBuffer.getAll() as Serializable,
+            )
+            saveToFile(
+                File(context.filesDir, "mag_hdg_buffer.dat"),
+                magHdgBuffer.getAll() as Serializable,
+            )
+            saveToFile(
+                File(context.filesDir, "log_buffer.dat"),
+                logBuffer.getAll() as Serializable,
+            )
+            saveToFile(
+                File(context.filesDir, "trip_log_buffer.dat"),
+                tripLogBuffer.getAll() as Serializable,
+            )
+            saveToFile(
+                File(context.filesDir, "depth_keel_buffer.dat"),
+                depthKeelBuffer.getAll() as Serializable,
+            )
+            saveToFile(
+                File(context.filesDir, "fuel_buffer.dat"),
+                fuelBuffer.getAll() as Serializable,
+            )
+            saveToFile(
+                File(context.filesDir, "fresh_water_buffer.dat"),
+                freshWaterBuffer.getAll() as Serializable,
+            )
+            saveToFile(
+                File(context.filesDir, "waste_buffer.dat"),
+                wasteBuffer.getAll() as Serializable,
+            )
+            saveToFile(
+                File(context.filesDir, "oil_pressure_buffer.dat"),
+                oilPressureBuffer.getAll() as Serializable,
+            )
+            saveToFile(
+                File(context.filesDir, "engine_load_buffer.dat"),
+                engineLoadBuffer.getAll() as Serializable,
+            )
+            saveToFile(
+                File(context.filesDir, "battery_current_buffer.dat"),
+                batteryCurrentBuffer.getAll() as Serializable,
+            )
+            saveToFile(
+                File(context.filesDir, "solar_current_buffer.dat"),
+                solarCurrentBuffer.getAll() as Serializable,
+            )
+            saveToFile(
+                File(context.filesDir, "twd_buffer.dat"),
+                twdBuffer.getAll() as Serializable,
+            )
+            saveToFile(
                 File(context.filesDir, "trajectory_buffer.dat"),
                 trajectoryBuffer.getAll() as Serializable,
             )
@@ -126,6 +271,35 @@ class SignalKEngine {
             load<Double>("cog_buffer.dat") { cogBuffer.add(it) }
             load<Double>("sog_buffer.dat") { sogBuffer.add(it) }
             load<Double>("stw_buffer.dat") { stwBuffer.add(it) }
+            load<Double>("rpm_buffer.dat") { rpmBuffer.add(it) }
+            load<Double>("temp_engine_buffer.dat") { tempEngineBuffer.add(it) }
+            load<Double>("volt_buffer.dat") { voltBuffer.add(it) }
+            load<Double>("soc_buffer.dat") { socBuffer.add(it) }
+            load<Double>("xte_buffer.dat") { xteBuffer.add(it) }
+            load<Double>("water_temp_buffer.dat") { waterTempBuffer.add(it) }
+            load<Double>("outside_temp_buffer.dat") { outsideTempBuffer.add(it) }
+            load<Double>("pressure_buffer.dat") { pressureBuffer.add(it) }
+            load<Double>("roll_buffer.dat") { rollBuffer.add(it) }
+            load<Double>("pitch_buffer.dat") { pitchBuffer.add(it) }
+            load<Double>("awa_buffer.dat") { awaBuffer.add(it) }
+            load<Double>("aws_buffer.dat") { awsBuffer.add(it) }
+            load<Double>("twa_buffer.dat") { twaBuffer.add(it) }
+            load<Double>("rot_buffer.dat") { rotBuffer.add(it) }
+            load<Double>("ttw_buffer.dat") { ttwBuffer.add(it) }
+            load<Double>("dtw_buffer.dat") { dtwBuffer.add(it) }
+            load<Double>("polar_ratio_buffer.dat") { polarRatioBuffer.add(it) }
+            load<Double>("mag_hdg_buffer.dat") { magHdgBuffer.add(it) }
+            load<Double>("log_buffer.dat") { logBuffer.add(it) }
+            load<Double>("trip_log_buffer.dat") { tripLogBuffer.add(it) }
+            load<Double>("depth_keel_buffer.dat") { depthKeelBuffer.add(it) }
+            load<Double>("fuel_buffer.dat") { fuelBuffer.add(it) }
+            load<Double>("fresh_water_buffer.dat") { freshWaterBuffer.add(it) }
+            load<Double>("waste_buffer.dat") { wasteBuffer.add(it) }
+            load<Double>("oil_pressure_buffer.dat") { oilPressureBuffer.add(it) }
+            load<Double>("engine_load_buffer.dat") { engineLoadBuffer.add(it) }
+            load<Double>("battery_current_buffer.dat") { batteryCurrentBuffer.add(it) }
+            load<Double>("solar_current_buffer.dat") { solarCurrentBuffer.add(it) }
+            load<Double>("twd_buffer.dat") { twdBuffer.add(it) }
             load<Pair<Double, Double>>("trajectory_buffer.dat") { trajectoryBuffer.add(it) }
         }
     }
@@ -190,6 +364,35 @@ class SignalKEngine {
     fun getCogHistory(): List<Double> = cogBuffer.getAll()
     fun getSogHistory(): List<Double> = sogBuffer.getAll()
     fun getStwHistory(): List<Double> = stwBuffer.getAll()
+    fun getRpmHistory(): List<Double> = rpmBuffer.getAll()
+    fun getTempEngineHistory(): List<Double> = tempEngineBuffer.getAll()
+    fun getVoltHistory(): List<Double> = voltBuffer.getAll()
+    fun getSocHistory(): List<Double> = socBuffer.getAll()
+    fun getXteHistory(): List<Double> = xteBuffer.getAll()
+    fun getWaterTempHistory(): List<Double> = waterTempBuffer.getAll()
+    fun getOutsideTempHistory(): List<Double> = outsideTempBuffer.getAll()
+    fun getPressureHistory(): List<Double> = pressureBuffer.getAll()
+    fun getRollHistory(): List<Double> = rollBuffer.getAll()
+    fun getPitchHistory(): List<Double> = pitchBuffer.getAll()
+    fun getAwaHistory(): List<Double> = awaBuffer.getAll()
+    fun getAwsHistory(): List<Double> = awsBuffer.getAll()
+    fun getTwaHistory(): List<Double> = twaBuffer.getAll()
+    fun getRotHistory(): List<Double> = rotBuffer.getAll()
+    fun getTtwHistory(): List<Double> = ttwBuffer.getAll()
+    fun getDtwHistory(): List<Double> = dtwBuffer.getAll()
+    fun getPolarRatioHistory(): List<Double> = polarRatioBuffer.getAll()
+    fun getMagHdgHistory(): List<Double> = magHdgBuffer.getAll()
+    fun getLogHistory(): List<Double> = logBuffer.getAll()
+    fun getTripLogHistory(): List<Double> = tripLogBuffer.getAll()
+    fun getDepthKeelHistory(): List<Double> = depthKeelBuffer.getAll()
+    fun getFuelHistory(): List<Double> = fuelBuffer.getAll()
+    fun getFreshWaterHistory(): List<Double> = freshWaterBuffer.getAll()
+    fun getWasteHistory(): List<Double> = wasteBuffer.getAll()
+    fun getOilPressureHistory(): List<Double> = oilPressureBuffer.getAll()
+    fun getEngineLoadHistory(): List<Double> = engineLoadBuffer.getAll()
+    fun getBatteryCurrentHistory(): List<Double> = batteryCurrentBuffer.getAll()
+    fun getSolarCurrentHistory(): List<Double> = solarCurrentBuffer.getAll()
+    fun getTwdHistory(): List<Double> = twdBuffer.getAll()
 
     fun addTrajectoryPoint(lat: Double, lon: Double) {
         val history = trajectoryBuffer.getAll()
@@ -270,6 +473,45 @@ class SignalKEngine {
                                         stateUpdated = true
                                     }
                                 }
+                                "navigation.headingMagnetic" -> {
+                                    val heading = valueItem.optDouble("value", Double.NaN)
+                                    if (!heading.isNaN()) {
+                                        state = state.copy(headingMagnetic = heading)
+                                        magHdgBuffer.add(heading)
+                                        stateUpdated = true
+                                    }
+                                }
+                                "navigation.log" -> {
+                                    val logVal = valueItem.optDouble("value", Double.NaN)
+                                    if (!logVal.isNaN()) {
+                                        state = state.copy(log = logVal)
+                                        logBuffer.add(logVal)
+                                        stateUpdated = true
+                                    }
+                                }
+                                "navigation.trip.log" -> {
+                                    val logVal = valueItem.optDouble("value", Double.NaN)
+                                    if (!logVal.isNaN()) {
+                                        state = state.copy(tripLog = logVal)
+                                        tripLogBuffer.add(logVal)
+                                        stateUpdated = true
+                                    }
+                                }
+                                "navigation.attitude" -> {
+                                    if (valueObj is JSONObject) {
+                                        val roll = valueObj.optDouble("roll", Double.NaN)
+                                        val pitch = valueObj.optDouble("pitch", Double.NaN)
+                                        val yaw = valueObj.optDouble("yaw", Double.NaN)
+                                        state = state.copy(
+                                            roll = if (roll.isNaN()) state.roll else roll,
+                                            pitch = if (pitch.isNaN()) state.pitch else pitch,
+                                            yaw = if (yaw.isNaN()) state.yaw else yaw
+                                        )
+                                        if (!roll.isNaN()) rollBuffer.add(roll)
+                                        if (!pitch.isNaN()) pitchBuffer.add(pitch)
+                                        stateUpdated = true
+                                    }
+                                }
                                 "navigation.speedOverGround" -> {
                                     val sog = valueItem.optDouble("value", Double.NaN)
                                     if (!sog.isNaN()) {
@@ -290,6 +532,7 @@ class SignalKEngine {
                                     val rot = valueItem.optDouble("value", Double.NaN)
                                     if (!rot.isNaN()) {
                                         state = state.copy(rateOfTurn = rot)
+                                        rotBuffer.add(rot)
                                         stateUpdated = true
                                     }
                                 }
@@ -329,6 +572,7 @@ class SignalKEngine {
                                     val xte = valueItem.optDouble("value", Double.NaN)
                                     if (!xte.isNaN()) {
                                         state = state.copy(crossTrackError = xte)
+                                        xteBuffer.add(xte)
                                         stateUpdated = true
                                     }
                                 }
@@ -372,6 +616,38 @@ class SignalKEngine {
                                         stateUpdated = true
                                     }
                                 }
+                                "environment.depth.belowKeel" -> {
+                                    val depth = valueItem.optDouble("value", Double.NaN)
+                                    if (!depth.isNaN()) {
+                                        state = state.copy(depthBelowKeel = depth)
+                                        depthKeelBuffer.add(depth)
+                                        stateUpdated = true
+                                    }
+                                }
+                                "environment.water.temperature" -> {
+                                    val temp = valueItem.optDouble("value", Double.NaN)
+                                    if (!temp.isNaN()) {
+                                        state = state.copy(waterTemperature = temp)
+                                        waterTempBuffer.add(temp)
+                                        stateUpdated = true
+                                    }
+                                }
+                                "environment.outside.temperature" -> {
+                                    val temp = valueItem.optDouble("value", Double.NaN)
+                                    if (!temp.isNaN()) {
+                                        state = state.copy(outsideTemperature = temp)
+                                        outsideTempBuffer.add(temp)
+                                        stateUpdated = true
+                                    }
+                                }
+                                "environment.outside.pressure" -> {
+                                    val press = valueItem.optDouble("value", Double.NaN)
+                                    if (!press.isNaN()) {
+                                        state = state.copy(outsidePressure = press)
+                                        pressureBuffer.add(press)
+                                        stateUpdated = true
+                                    }
+                                }
                                 "environment.wind.speedTrue" -> {
                                     val wind = valueItem.optDouble("value", Double.NaN)
                                     if (!wind.isNaN()) {
@@ -385,6 +661,7 @@ class SignalKEngine {
                                     if (!dir.isNaN()) {
                                         state = state.copy(windDirectionTrue = dir)
                                         windDirectionBuffer.add(dir)
+                                        twdBuffer.add(dir)
                                         stateUpdated = true
                                     }
                                 }
@@ -392,6 +669,7 @@ class SignalKEngine {
                                     val dir = valueItem.optDouble("value", Double.NaN)
                                     if (!dir.isNaN()) {
                                         state = state.copy(windDirectionApparent = dir)
+                                        awaBuffer.add(dir)
                                         stateUpdated = true
                                     }
                                 }
@@ -399,6 +677,7 @@ class SignalKEngine {
                                     val speed = valueItem.optDouble("value", Double.NaN)
                                     if (!speed.isNaN()) {
                                         state = state.copy(windSpeedApparent = speed)
+                                        awsBuffer.add(speed)
                                         stateUpdated = true
                                     }
                                 }
@@ -406,6 +685,7 @@ class SignalKEngine {
                                     val dir = valueItem.optDouble("value", Double.NaN)
                                     if (!dir.isNaN()) {
                                         state = state.copy(trueWindAngle = dir)
+                                        twaBuffer.add(dir)
                                         stateUpdated = true
                                     }
                                 }
@@ -416,12 +696,106 @@ class SignalKEngine {
                                         stateUpdated = true
                                     }
                                 }
+                                "performance.polarSpeedRatio" -> {
+                                    val ratio = valueItem.optDouble("value", Double.NaN)
+                                    if (!ratio.isNaN()) {
+                                        state = state.copy(polarSpeedRatio = ratio)
+                                        polarRatioBuffer.add(ratio)
+                                        stateUpdated = true
+                                    }
+                                }
                                 "navigation.courseRhumbline.timeToWaypoint",
                                 "navigation.courseGreatCircle.timeToWaypoint" -> {
                                     val ttw = valueItem.optDouble("value", Double.NaN)
                                     if (!ttw.isNaN()) {
                                         state = state.copy(timeToWaypoint = ttw)
+                                        ttwBuffer.add(ttw)
                                         stateUpdated = true
+                                    }
+                                }
+                                "navigation.courseRhumbline.distanceToWaypoint",
+                                "navigation.courseGreatCircle.distanceToWaypoint" -> {
+                                    val dtw = valueItem.optDouble("value", Double.NaN)
+                                    if (!dtw.isNaN()) {
+                                        state = state.copy(distanceToWaypoint = dtw)
+                                        dtwBuffer.add(dtw)
+                                        stateUpdated = true
+                                    }
+                                }
+                                else -> {
+                                    val value = valueItem.optDouble("value", Double.NaN)
+                                    if (path.startsWith("propulsion.") && path.endsWith(".revolutions")) {
+                                        if (!value.isNaN()) {
+                                            state = state.copy(engineRpm = value * 60.0) // Hz to RPM
+                                            rpmBuffer.add(value * 60.0)
+                                            stateUpdated = true
+                                        }
+                                    } else if (path.startsWith("propulsion.") && path.endsWith(".temperature")) {
+                                        if (!value.isNaN()) {
+                                            state = state.copy(engineTemperature = value)
+                                            tempEngineBuffer.add(value)
+                                            stateUpdated = true
+                                        }
+                                    } else if (path.startsWith("propulsion.") && path.endsWith(".oilPressure")) {
+                                        if (!value.isNaN()) {
+                                            state = state.copy(engineOilPressure = value)
+                                            oilPressureBuffer.add(value)
+                                            stateUpdated = true
+                                        }
+                                    } else if (path.startsWith("propulsion.") && path.endsWith(".engineLoad")) {
+                                        if (!value.isNaN()) {
+                                            state = state.copy(engineLoad = value)
+                                            engineLoadBuffer.add(value)
+                                            stateUpdated = true
+                                        }
+                                    } else if (path.startsWith("propulsion.") && path.endsWith(".runTime")) {
+                                        if (!value.isNaN()) {
+                                            state = state.copy(engineRunTime = value)
+                                            stateUpdated = true
+                                        }
+                                    } else if (path.startsWith("electrical.batteries.") && path.endsWith(".voltage")) {
+                                        if (!value.isNaN()) {
+                                            state = state.copy(batteryVoltage = value)
+                                            voltBuffer.add(value)
+                                            stateUpdated = true
+                                        }
+                                    } else if (path.startsWith("electrical.batteries.") && path.endsWith(".current")) {
+                                        if (!value.isNaN()) {
+                                            state = state.copy(batteryCurrent = value)
+                                            batteryCurrentBuffer.add(value)
+                                            stateUpdated = true
+                                        }
+                                    } else if (path.startsWith("electrical.batteries.") && path.endsWith(".capacity.stateOfCharge")) {
+                                        if (!value.isNaN()) {
+                                            state = state.copy(batterySoc = value)
+                                            socBuffer.add(value)
+                                            stateUpdated = true
+                                        }
+                                    } else if (path.startsWith("electrical.solar.") && path.endsWith(".current")) {
+                                        if (!value.isNaN()) {
+                                            state = state.copy(solarCurrent = value)
+                                            solarCurrentBuffer.add(value)
+                                            stateUpdated = true
+                                        }
+                                    }
+else if (path.startsWith("tanks.fuel.") && path.endsWith(".currentLevel")) {
+                                        if (!value.isNaN()) {
+                                            state = state.copy(fuelLevel = value)
+                                            fuelBuffer.add(value)
+                                            stateUpdated = true
+                                        }
+                                    } else if (path.startsWith("tanks.freshWater.") && path.endsWith(".currentLevel")) {
+                                        if (!value.isNaN()) {
+                                            state = state.copy(freshWaterLevel = value)
+                                            freshWaterBuffer.add(value)
+                                            stateUpdated = true
+                                        }
+                                    } else if (path.startsWith("tanks.wasteWater.") && path.endsWith(".currentLevel")) {
+                                        if (!value.isNaN()) {
+                                            state = state.copy(wasteWaterLevel = value)
+                                            wasteBuffer.add(value)
+                                            stateUpdated = true
+                                        }
                                     }
                                 }
                             }
@@ -444,14 +818,41 @@ class SignalKEngine {
             }
 
             if (isSelf && stateUpdated) {
-                _currentState = state
-                notifyListeners(state)
+                val finalState = calculateSetAndDrift(state)
+                _currentState = finalState
+                notifyListeners(finalState)
             } else if ((aisTarget != null) && (aisTarget.latitude != null) && (aisTarget.longitude != null)) {
                 engineScope.launch { aisListener?.invoke(aisTarget) }
             }
         } catch (e: Exception) {
             log.error("JSON parsing error: ${e.message}")
         }
+    }
+
+    private fun calculateSetAndDrift(state: MarineState): MarineState {
+        if (state.drift != null && state.setTrue != null) return state
+
+        val sog = state.speedOverGround ?: return state
+        val cog = state.courseOverGroundTrue ?: return state
+        val stw = state.speedThroughWater ?: return state
+        val hdg = state.headingTrue ?: return state
+
+        // Vector B (COG/SOG): Track over ground
+        val bx = sog * sin(cog)
+        val by = sog * cos(cog)
+
+        // Vector A (HDG/STW): Movement through water
+        val ax = stw * sin(hdg)
+        val ay = stw * cos(hdg)
+
+        // Vector C = B - A (Current vector)
+        val cx = bx - ax
+        val cy = by - ay
+
+        val drift = sqrt(cx * cx + cy * cy)
+        val set = (atan2(cx, cy) + 2 * PI) % (2 * PI)
+
+        return state.copy(drift = drift, setTrue = set)
     }
 
     fun loadRoute(route: List<Pair<Double, Double>>) {

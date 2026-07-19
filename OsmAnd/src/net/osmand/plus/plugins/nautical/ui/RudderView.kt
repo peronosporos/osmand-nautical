@@ -2,10 +2,12 @@ package net.osmand.plus.plugins.nautical.ui
 
 import android.content.Context
 import android.graphics.Canvas
+import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Typeface
 import android.util.AttributeSet
 import android.view.View
+import android.view.accessibility.AccessibilityNodeInfo
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.toColorInt
 import net.osmand.plus.R
@@ -25,6 +27,8 @@ class RudderView @JvmOverloads constructor(
     private var colorStarboard = "#5BAF3F".toColorInt()
 
     init {
+        isClickable = true
+        isFocusable = true
         colorPort = ContextCompat.getColor(context, R.color.text_color_negative)
         colorStarboard = ContextCompat.getColor(context, R.color.text_color_positive)
         paint.strokeWidth = 2f
@@ -43,6 +47,15 @@ class RudderView @JvmOverloads constructor(
         invalidate()
     }
 
+    override fun onInitializeAccessibilityNodeInfo(info: AccessibilityNodeInfo) {
+        super.onInitializeAccessibilityNodeInfo(info)
+        info.className = RudderView::class.java.name
+        val deg = Math.toDegrees(rudderAngle).toInt()
+        val label = if (deg == 0) context.getString(R.string.nautical_rudder_mid) 
+                    else "${kotlin.math.abs(deg)}° ${if (deg < 0) context.getString(R.string.nautical_rudder_port) else context.getString(R.string.nautical_rudder_stbd)}"
+        info.contentDescription = context.getString(R.string.nautical_rudder_angle) + ": " + label
+    }
+
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
 
@@ -53,10 +66,14 @@ class RudderView @JvmOverloads constructor(
         val centerX = w / 2f
         val padding = 45f
         val scaleWidth = w - (padding * 2)
+        
+        val textColorPrimary = ContextCompat.getColor(context, if (isNightMode) R.color.text_color_primary_dark else R.color.text_color_primary_light)
+        val textColorSecondary = ContextCompat.getColor(context, if (isNightMode) R.color.text_color_secondary_dark else R.color.text_color_secondary_light)
 
         // Draw minimalist scale line
         paint.strokeWidth = 1.5f
-        paint.color = ContextCompat.getColor(context, if (isNightMode) R.color.divider_color_dark else R.color.divider_color_light)
+        paint.color = textColorPrimary
+        paint.alpha = 100
         canvas.drawLine(padding, centerY, w - padding, centerY, paint)
 
         // Draw Port and Starboard subtle color accents
@@ -68,7 +85,7 @@ class RudderView @JvmOverloads constructor(
         canvas.drawLine(centerX + 6f, centerY, w - padding, centerY, paint)
 
         // Draw minimalist ticks
-        paint.color = ContextCompat.getColor(context, if (isNightMode) R.color.text_color_secondary_dark else R.color.text_color_secondary_light)
+        paint.color = textColorPrimary
         paint.strokeWidth = 1f
         paint.alpha = 120
         for (i in -30..30 step 15) {
@@ -83,7 +100,7 @@ class RudderView @JvmOverloads constructor(
         val pointerX = centerX + (ratio * (scaleWidth / 2f))
 
         // Draw pointer (Modern Sleek Line)
-        paint.color = ContextCompat.getColor(context, if (isNightMode) R.color.text_color_primary_dark else R.color.text_color_primary_light)
+        paint.color = textColorPrimary
         paint.alpha = 255
         paint.strokeWidth = 4f
         paint.strokeCap = Paint.Cap.ROUND
@@ -91,17 +108,19 @@ class RudderView @JvmOverloads constructor(
         
         // Draw angle digital readout (Moved baseline to fit)
         val deg = Math.toDegrees(rudderAngle).toInt()
-        val label = if (deg == 0) "MID" else "${kotlin.math.abs(deg)}° ${if (deg < 0) "PORT" else "STBD"}"
+        val label = if (deg == 0) context.getString(R.string.nautical_rudder_mid) 
+                    else "${kotlin.math.abs(deg)}° ${if (deg < 0) context.getString(R.string.nautical_rudder_port) else context.getString(R.string.nautical_rudder_stbd)}"
         textPaint.textSize = 24f
-        textPaint.color = paint.color
+        textPaint.color = textColorPrimary
         textPaint.typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
         // Baseline at centerY - 20f ensures text doesn't hit the top (0dp)
         canvas.drawText(label, pointerX, centerY - 22f, textPaint)
         
         // Label the ends
         textPaint.textSize = 18f
+        textPaint.color = textColorSecondary
         textPaint.alpha = 150
-        canvas.drawText("P", padding - 20f, centerY + 6f, textPaint)
-        canvas.drawText("S", w - padding + 20f, centerY + 6f, textPaint)
+        canvas.drawText(context.getString(R.string.nautical_rudder_p_short), padding - 20f, centerY + 6f, textPaint)
+        canvas.drawText(context.getString(R.string.nautical_rudder_s_short), w - padding + 20f, centerY + 6f, textPaint)
     }
 }

@@ -16,14 +16,11 @@ import net.osmand.StateChangedListener
 import net.osmand.plus.OsmandApplication
 import net.osmand.plus.R
 import net.osmand.plus.activities.MapActivity
-import net.osmand.plus.dashboard.DashboardType
 import net.osmand.plus.helpers.AndroidUiHelper
 import net.osmand.plus.plugins.OsmandPlugin
 import net.osmand.plus.plugins.nautical.engine.*
 import net.osmand.plus.settings.backend.ApplicationMode
 import net.osmand.plus.settings.backend.preferences.CommonPreference
-import net.osmand.plus.settings.enums.DayNightMode
-import net.osmand.plus.settings.enums.ThemeUsageContext
 import net.osmand.plus.settings.fragments.SettingsScreenType
 import net.osmand.plus.utils.AndroidUtils
 import net.osmand.plus.views.mapwidgets.WidgetType
@@ -31,8 +28,8 @@ import net.osmand.plus.views.mapwidgets.WidgetsPanel
 import net.osmand.plus.views.mapwidgets.widgets.*
 import net.osmand.plus.widgets.ctxmenu.ContextMenuAdapter
 import net.osmand.plus.widgets.ctxmenu.data.ContextMenuItem
+import net.osmand.render.RenderingRuleProperty
 import okhttp3.OkHttpClient
-import java.io.File
 import java.lang.ref.WeakReference
 import java.util.*
 import kotlin.math.abs
@@ -49,7 +46,7 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app) {
                 0.33f, 0.33f, 0.33f, 0f, 0f,
                 0f, 0f, 0f, 0f, 0f,
                 0f, 0f, 0f, 0f, 0f,
-                0f, 0f, 0f, 1f, 0f
+                0f, 0f, 0f, 1f, 0f,
             )
         )
 
@@ -92,8 +89,8 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app) {
         }
     }
 
-    private val okHttpClient = OkHttpClient.Builder().build()
-    private val connection = OkHttpSignalKConnection(okHttpClient)
+    private lateinit var okHttpClient: OkHttpClient
+    private lateinit var connection: OkHttpSignalKConnection
     private var locationProvider: NauticalLocationProvider? = null
     private var aisEmitter: AisUdpEmitter? = null
     private val aisEncoder = AisEncoder()
@@ -117,7 +114,9 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app) {
         } else {
             stopNauticalBackgroundService()
             if (!app.settings.MAP_ACTIVITY_ENABLED) {
-                connection.disconnect()
+                if (::connection.isInitialized) {
+                    connection.disconnect()
+                }
             }
         }
     }
@@ -125,10 +124,78 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app) {
 
     val nauticalNightVisionEnabled: CommonPreference<Boolean> = registerBooleanPreference("nautical_night_vision_enabled", false).makeProfile()
 
+    init {
+        instanceRef = WeakReference(this)
+        initConnection()
+    }
+
+    private fun initConnection() {
+        val trustAll = app.settings.NAUTICAL_TRUST_ALL_CERTIFICATES.get()
+        okHttpClient = createHttpClient(trustAll)
+        connection = OkHttpSignalKConnection(okHttpClient)
+    }
+
+    private fun createHttpClient(trustAll: Boolean): OkHttpClient {
+        val builder = OkHttpClient.Builder()
+        if (trustAll) {
+            try {
+                val trustAllCerts = arrayOf<javax.net.ssl.TrustManager>(
+                    object : javax.net.ssl.X509TrustManager {
+                        override fun checkClientTrusted(chain: Array<java.security.cert.X509Certificate>, authType: String) {}
+                        override fun checkServerTrusted(chain: Array<java.security.cert.X509Certificate>, authType: String) {}
+                        override fun getAcceptedIssuers(): Array<java.security.cert.X509Certificate> = arrayOf()
+                    }
+                )
+                val sslContext = javax.net.ssl.SSLContext.getInstance("SSL")
+                sslContext.init(null, trustAllCerts, java.security.SecureRandom())
+                builder.sslSocketFactory(sslContext.socketFactory, trustAllCerts[0] as javax.net.ssl.X509TrustManager)
+                builder.hostnameVerifier { _, _ -> true }
+                log.warn("Nautical: Using trust-all SSL configuration. Security is reduced.")
+            } catch (e: Exception) {
+                log.error("Failed to create trust-all SSL client", e)
+            }
+        }
+        return builder.build()
+    }
+
     override fun createMapWidgetForParams(mapActivity: MapActivity, widgetType: WidgetType, customId: String?, widgetsPanel: WidgetsPanel?): MapWidget? {
         return when (widgetType) {
             WidgetType.NAUTICAL_VMG,
             WidgetType.NAUTICAL_COG,
+            WidgetType.NAUTICAL_SOG,
+            WidgetType.NAUTICAL_STW,
+            WidgetType.NAUTICAL_SET_DRIFT,
+            WidgetType.NAUTICAL_HEADING_MAGNETIC,
+            WidgetType.NAUTICAL_LOG,
+            WidgetType.NAUTICAL_TRIP_LOG,
+            WidgetType.NAUTICAL_ROLL,
+            WidgetType.NAUTICAL_PITCH,
+            WidgetType.NAUTICAL_DEPTH_KEEL,
+            WidgetType.NAUTICAL_WATER_TEMP,
+            WidgetType.NAUTICAL_OUTSIDE_TEMP,
+            WidgetType.NAUTICAL_PRESSURE,
+            WidgetType.NAUTICAL_ENGINE_RPM,
+            WidgetType.NAUTICAL_ENGINE_TEMP,
+            WidgetType.NAUTICAL_BATTERY_VOLT,
+            WidgetType.NAUTICAL_BATTERY_SOC,
+            WidgetType.NAUTICAL_FUEL_LEVEL,
+            WidgetType.NAUTICAL_FRESH_WATER_LEVEL,
+            WidgetType.NAUTICAL_WASTE_WATER_LEVEL,
+            WidgetType.NAUTICAL_POLAR_RATIO,
+            WidgetType.NAUTICAL_ROT,
+            WidgetType.NAUTICAL_XTE,
+            WidgetType.NAUTICAL_TTW,
+            WidgetType.NAUTICAL_DTW,
+            WidgetType.NAUTICAL_ETA,
+            WidgetType.NAUTICAL_AWA,
+            WidgetType.NAUTICAL_AWS,
+            WidgetType.NAUTICAL_TWA,
+            WidgetType.NAUTICAL_TWD,
+            WidgetType.NAUTICAL_OIL_PRESSURE,
+            WidgetType.NAUTICAL_ENGINE_LOAD,
+            WidgetType.NAUTICAL_BATTERY_CURRENT,
+            WidgetType.NAUTICAL_SOLAR_CURRENT,
+            WidgetType.NAUTICAL_ENGINE_RUNTIME,
         -> MarineTextWidget(mapActivity, widgetType, customId, widgetsPanel)
             WidgetType.NAUTICAL_DEPTH,
             WidgetType.NAUTICAL_WIND,
@@ -142,10 +209,6 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app) {
     override fun getSettingsScreenType(): SettingsScreenType = SettingsScreenType.NAUTICAL_SETTINGS
 
     override fun getPrefsDescription(): String = app.getString(R.string.plugin_nautical_descr, app.getString(R.string.docs_plugin_nautical))
-
-    init {
-        instanceRef = WeakReference(this)
-    }
 
     override fun getId(): String = NAUTICAL_ID
     override fun getName(): String = app.getString(R.string.nautical_plugin_name)
@@ -336,6 +399,8 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app) {
 
         if (ip.isNullOrEmpty()) return
 
+        initConnection()
+
         val protocol = if (useSecure) "wss" else "ws"
         val wsUrl = "$protocol://$ip:$port/signalk/v1/stream?subscribe=all"
         engine?.onConnectionLost = {
@@ -345,6 +410,53 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app) {
 
         connection.disconnect()
         connection.connect(wsUrl, username, password) { message -> engine?.handleIncomingMessage(message) }
+    }
+
+    override fun registerConfigureMapCategoryActions(
+        adapter: ContextMenuAdapter,
+        mapActivity: MapActivity,
+        customRules: MutableList<RenderingRuleProperty>,
+    ) {
+        if (isActive) {
+            adapter.addItem(
+                ContextMenuItem("nautical_category").apply {
+                    isCategory = true
+                    setTitleId(R.string.nautical_category, mapActivity)
+                    setLayout(R.layout.list_group_title_with_switch)
+                }
+            )
+
+            // Overlays Group
+            adapter.addItem(ContextMenuItem("nautical_overlays_group").apply {
+                title = app.getString(R.string.nautical_map_overlays)
+            })
+            adapter.addItem(createToggle(R.string.nautical_show_laylines, app.settings.NAUTICAL_SHOW_LAYLINES, mapActivity))
+            adapter.addItem(createToggle(R.string.nautical_show_wind_shifts, app.settings.NAUTICAL_SHOW_WIND_SHIFTS, mapActivity))
+            adapter.addItem(createToggle(R.string.nautical_show_trajectory, app.settings.NAUTICAL_SHOW_TRAJECTORY, mapActivity))
+
+            // Vessel Projections Group
+            adapter.addItem(ContextMenuItem("nautical_vessel_group").apply {
+                title = app.getString(R.string.nautical_vessel_indicators)
+            })
+            adapter.addItem(createToggle(R.string.nautical_show_heading_line, app.settings.NAUTICAL_SHOW_HEADING_LINE, mapActivity))
+            adapter.addItem(createToggle(R.string.nautical_show_cog_line, app.settings.NAUTICAL_SHOW_COG_LINE, mapActivity))
+            adapter.addItem(createToggle(R.string.nautical_show_current_vector, app.settings.NAUTICAL_SHOW_CURRENT_VECTOR, mapActivity))
+        }
+    }
+
+    private fun createToggle(titleId: Int, pref: CommonPreference<Boolean>, mapActivity: MapActivity): ContextMenuItem {
+        return ContextMenuItem("nautical_item_${titleId}").apply {
+            setTitleId(titleId, mapActivity)
+            setSelected(pref.get())
+            setIcon(R.drawable.ic_action_additional_option)
+            setListener { uiAdapter, _, item, isChecked ->
+                pref.set(isChecked)
+                item.selected = isChecked
+                uiAdapter.onDataSetChanged()
+                app.osmandMap?.refreshMap()
+                true
+            }
+        }
     }
 
     private fun shutdownResources() {
@@ -359,7 +471,9 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app) {
         aisEmitter = null
         locationProvider?.stop()
         locationProvider = null
-        connection.disconnect()
+        if (::connection.isInitialized) {
+            connection.disconnect()
+        }
         engine?.let {
             it.unregisterListener(marineStateListener)
             it.registerAisListener(null)

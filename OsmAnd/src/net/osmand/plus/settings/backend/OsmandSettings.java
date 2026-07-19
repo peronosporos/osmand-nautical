@@ -3551,10 +3551,16 @@ public class OsmandSettings {
 	public final CommonPreference<String> NAUTICAL_SERVER_USERNAME = registerStringPreference("server_username", "");
 	public final CommonPreference<String> NAUTICAL_SERVER_PASSWORD = registerStringPreference("server_password", "");
 	public final CommonPreference<Boolean> NAUTICAL_USE_SECURE_CONNECTION = registerBooleanPreference("server_secure", false);
+	public final CommonPreference<Boolean> NAUTICAL_TRUST_ALL_CERTIFICATES = registerBooleanPreference("server_trust_all", false);
 	public final CommonPreference<Boolean> NAUTICAL_SHOW_LAYLINES = registerBooleanPreference("nautical_show_laylines", true);
 	public final CommonPreference<Boolean> NAUTICAL_SHOW_WIND_SHIFTS = registerBooleanPreference("nautical_show_wind_shifts", true);
 	public final CommonPreference<Boolean> NAUTICAL_SHOW_TRAJECTORY = registerBooleanPreference("nautical_show_trajectory", true);
+	public final CommonPreference<Float> NAUTICAL_LAYLINES_TACK_ANGLE = registerFloatPreference("nautical_laylines_tack_angle", 45.0f).makeProfile();
 	public final CommonPreference<Float> NAUTICAL_XTE_THRESHOLD = registerFloatPreference("nautical_xte_threshold", 0.1f).makeGlobal();
+	public final CommonPreference<Boolean> NAUTICAL_SHOW_HEADING_LINE = registerBooleanPreference("nautical_show_heading_line", true);
+	public final CommonPreference<Boolean> NAUTICAL_SHOW_COG_LINE = registerBooleanPreference("nautical_show_cog_line", true);
+	public final CommonPreference<Boolean> NAUTICAL_SHOW_CURRENT_VECTOR = registerBooleanPreference("nautical_show_current_vector", true);
+	public final CommonPreference<Integer> NAUTICAL_LOOK_AHEAD_TIME = registerIntPreference("nautical_look_ahead_time", 10).makeProfile();
 	public final CommonPreference<Boolean> NAUTICAL_RECEIVE_IN_BACKGROUND = registerBooleanPreference("ais_receive_in_background", true);
 	public final CommonPreference<VesselType> NAUTICAL_VESSEL_TYPE = registerEnumStringPreference("nautical_vessel_type", VesselType.CONVENTIONAL, VesselType.values(), VesselType.class).makeGlobal();
 

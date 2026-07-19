@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.*
 import android.util.AttributeSet
 import android.view.View
+import android.view.accessibility.AccessibilityNodeInfo
 import androidx.core.content.ContextCompat
 import android.view.HapticFeedbackConstants
 import android.view.MotionEvent
@@ -32,6 +33,8 @@ class HeadingErrorDialView @JvmOverloads constructor(
     private var osmandOrange = Color.parseColor("#FF8800")
 
     init {
+        isClickable = true
+        isFocusable = true
         osmandOrange = ContextCompat.getColor(context, R.color.icon_color_osmand_light)
         paint.strokeCap = Paint.Cap.ROUND
         textPaint.textAlign = Paint.Align.CENTER
@@ -51,12 +54,15 @@ class HeadingErrorDialView @JvmOverloads constructor(
         val centerY = h / 2f
 
         dialRect.set(centerX - radius, centerY - radius, centerX + radius, centerY + radius)
+        
+        val textColorPrimary = ContextCompat.getColor(context, if (isNightMode) R.color.text_color_primary_dark else R.color.text_color_primary_light)
+        val textColorSecondary = ContextCompat.getColor(context, if (isNightMode) R.color.text_color_secondary_dark else R.color.text_color_secondary_light)
 
         // 1. Background Arc (Modern thin line)
         paint.style = Paint.Style.STROKE
         paint.strokeWidth = 3f
-        paint.color = ContextCompat.getColor(context, if (isNightMode) R.color.divider_color_dark else R.color.divider_color_light)
-        paint.alpha = 180
+        paint.color = textColorPrimary
+        paint.alpha = 100
         canvas.drawArc(dialRect, 140f, 260f, false, paint)
 
         // 2. Modern Ticks
@@ -70,11 +76,12 @@ class HeadingErrorDialView @JvmOverloads constructor(
             val endY = centerY + (radius + 8f) * sin(rad).toFloat()
             
             paint.alpha = if (i == 0) 255 else 120
+            paint.color = textColorPrimary
             canvas.drawLine(startX, startY, endX, endY, paint)
             
             if (i % 30 == 0) {
                 textPaint.textSize = 22f
-                textPaint.color = paint.color
+                textPaint.color = textColorPrimary
                 textPaint.alpha = 180
                 textPaint.typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
                 val labelRadius = radius + 30f
@@ -106,15 +113,22 @@ class HeadingErrorDialView @JvmOverloads constructor(
         
         // Digital Readout
         textPaint.textSize = 64f
-        textPaint.color = ContextCompat.getColor(context, if (isNightMode) R.color.text_color_primary_dark else R.color.text_color_primary_light)
+        textPaint.color = textColorPrimary
         textPaint.typeface = Typeface.create("sans-serif-condensed", Typeface.BOLD)
         val errorText = String.format(Locale.US, "%.1f°", headingError)
         canvas.drawText(errorText, centerX, centerY + 15f, textPaint)
         
         textPaint.textSize = 18f
-        textPaint.color = ContextCompat.getColor(context, if (isNightMode) R.color.text_color_secondary_dark else R.color.text_color_secondary_light)
+        textPaint.color = textColorSecondary
+        textPaint.alpha = 150
         textPaint.typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
-        canvas.drawText("HEADING ERROR", centerX, centerY + 45f, textPaint)
+        canvas.drawText(context.getString(R.string.nautical_hdg_err_label), centerX, centerY + 45f, textPaint)
+    }
+
+    override fun onInitializeAccessibilityNodeInfo(info: AccessibilityNodeInfo) {
+        super.onInitializeAccessibilityNodeInfo(info)
+        info.className = HeadingErrorDialView::class.java.name
+        info.contentDescription = context.getString(R.string.nautical_hdg_err) + ": " + String.format(Locale.US, "%.1f°", headingError)
     }
 
     private var lastAngle = 0.0

@@ -1,5 +1,6 @@
 package net.osmand.plus.views.mapwidgets.widgets
 
+import android.graphics.Color
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -12,7 +13,7 @@ import android.widget.TextView
 import androidx.core.content.ContextCompat
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.button.MaterialButtonToggleGroup
-import net.osmand.plus.base.BottomSheetDialogFragment
+import net.osmand.plus.base.BaseMaterialBottomSheetDialogFragment
 import net.osmand.plus.R
 import net.osmand.plus.plugins.nautical.NauticalPlugin
 import net.osmand.plus.plugins.nautical.engine.MarineState
@@ -25,7 +26,7 @@ import net.osmand.shared.gpx.GpxFile
 import java.util.*
 import kotlin.math.abs
 
-class NauticalPilotBottomSheet : BottomSheetDialogFragment() {
+class NauticalPilotBottomSheet : BaseMaterialBottomSheetDialogFragment() {
 
     private var listener: ((MarineState) -> Unit)? = null
     private var isArmedPort = false
@@ -89,16 +90,18 @@ class NauticalPilotBottomSheet : BottomSheetDialogFragment() {
         val minus1Btn = view.findViewById<MaterialButton>(R.id.btn_minus_1)
         val plus1Btn = view.findViewById<MaterialButton>(R.id.btn_plus_1)
 
+        val defaultColor = ContextCompat.getColor(requireContext(), if (nightMode) R.color.text_color_primary_dark_v2 else R.color.text_color_primary_light_v2)
+
         if (isArmedPort) {
             minus1Btn.setTextColor(ContextCompat.getColor(requireContext(), R.color.text_color_negative))
         } else {
-            minus1Btn.setTextColor(ContextCompat.getColor(requireContext(), if (nightMode) R.color.text_color_primary_dark else R.color.text_color_primary_light))
+            minus1Btn.setTextColor(defaultColor)
         }
 
         if (isArmedStbd) {
             plus1Btn.setTextColor(ContextCompat.getColor(requireContext(), R.color.text_color_negative))
         } else {
-            plus1Btn.setTextColor(ContextCompat.getColor(requireContext(), if (nightMode) R.color.text_color_primary_dark else R.color.text_color_primary_light))
+            plus1Btn.setTextColor(defaultColor)
         }
     }
 
@@ -210,8 +213,9 @@ class NauticalPilotBottomSheet : BottomSheetDialogFragment() {
                 if (rawMode == "WIND") {
                     updateTackButtons()
                 } else {
-                    minus1Btn.setTextColor(ContextCompat.getColor(requireContext(), if (nightMode) R.color.text_color_primary_dark else R.color.text_color_primary_light))
-                    plus1Btn.setTextColor(ContextCompat.getColor(requireContext(), if (nightMode) R.color.text_color_primary_dark else R.color.text_color_primary_light))
+                    val defaultColor = ContextCompat.getColor(requireContext(), if (nightMode) R.color.text_color_primary_dark_v2 else R.color.text_color_primary_light_v2)
+                    minus1Btn.setTextColor(defaultColor)
+                    plus1Btn.setTextColor(defaultColor)
                 }
             }
         }
@@ -281,7 +285,7 @@ class NauticalPilotBottomSheet : BottomSheetDialogFragment() {
             val state = NauticalPlugin.engine?.getCurrentState()
             if (state?.autopilotState?.uppercase(Locale.US) == "WIND") {
                 if (isArmedPort) {
-                    val isProa = settings.NAUTICAL_VESSEL_TYPE.get() == VesselType.PROA
+                    val isProa = osmandSettings.NAUTICAL_VESSEL_TYPE.get() == VesselType.PROA
                     if (isProa) autopilot.shunt() else autopilot.tack(port = true)
                     isArmedPort = false
                     armHandler.removeCallbacks(resetArmRunnable)
@@ -302,7 +306,7 @@ class NauticalPilotBottomSheet : BottomSheetDialogFragment() {
             val state = NauticalPlugin.engine?.getCurrentState()
             if (state?.autopilotState?.uppercase(Locale.US) == "WIND") {
                 if (isArmedStbd) {
-                    val isProa = settings.NAUTICAL_VESSEL_TYPE.get() == VesselType.PROA
+                    val isProa = osmandSettings.NAUTICAL_VESSEL_TYPE.get() == VesselType.PROA
                     if (isProa) autopilot.shunt() else autopilot.tack(port = false)
                     isArmedStbd = false
                     armHandler.removeCallbacks(resetArmRunnable)
@@ -343,11 +347,13 @@ class NauticalPilotBottomSheet : BottomSheetDialogFragment() {
                                     l23: TextView, v23: TextView, i23: ImageView,
                                     sogTrend: String, stwTrend: String) {
         val knots = getString(R.string.nautical_unit_knots)
+        val nm = getString(R.string.nautical_unit_nm)
+        val knotsCoeff = net.osmand.shared.units.SpeedConstants.KNOTS
         
         when (mode) {
             "WIND" -> {
-                l11.text = getString(R.string.nautical_tws); v11.text = String.format(Locale.US, "%.1f %s", (state.windSpeedTrue ?: 0.0) * 1.94384, knots)
-                i11.setImageResource(R.drawable.ic_action_wind)
+                l11.text = getString(R.string.nautical_tws); v11.text = String.format(Locale.US, "%.1f %s", (state.windSpeedTrue ?: 0.0) * knotsCoeff, knots)
+                i11.setImageResource(R.drawable.widget_weather_wind_day)
                 
                 val awaDeg = state.windDirectionApparent?.let { Math.toDegrees(it).toInt() } ?: 0
                 val targetAwaDeg = state.targetWindAngleApparent?.let { Math.toDegrees(it).toInt() } ?: 0
@@ -360,30 +366,40 @@ class NauticalPilotBottomSheet : BottomSheetDialogFragment() {
                 l13.text = getString(R.string.nautical_target_twa); v13.text = String.format(Locale.US, "%d°", targetAwaDeg)
                 i13.setImageResource(R.drawable.ic_action_target_direction_on)
                 
-                l21.text = getString(R.string.nautical_stw); v21.text = String.format(Locale.US, "%.1f%s %s", (state.speedThroughWater ?: 0.0) * 1.94384, stwTrend, knots)
+                l21.text = getString(R.string.nautical_stw); v21.text = String.format(Locale.US, "%.1f%s %s", (state.speedThroughWater ?: 0.0) * knotsCoeff, stwTrend, knots)
                 i21.setImageResource(R.drawable.ic_action_sensor_speed_outlined)
                 l22.text = getString(R.string.nautical_twa); v22.text = String.format(Locale.US, "%.0f°", Math.toDegrees(state.trueWindAngle ?: 0.0))
-                i22.setImageResource(R.drawable.ic_action_direction_movement)
-                l23.text = getString(R.string.nautical_polar_target); v23.text = String.format(Locale.US, "%.1f %s", (state.polarTargetSpeed ?: 0.0) * 1.94384, knots)
-                i23.setImageResource(R.drawable.ic_action_speed_max)
+                i22.setImageResource(R.drawable.widget_weather_wind_day)
+                l23.text = getString(R.string.nautical_polar_target); v23.text = String.format(Locale.US, "%.1f %s", (state.polarTargetSpeed ?: 0.0) * knotsCoeff, knots)
+                i23.setImageResource(R.drawable.ic_action_vmg)
             }
             "TRACK", "ROUTE" -> {
-                l11.text = getString(R.string.nautical_sog); v11.text = String.format(Locale.US, "%.1f%s %s", (state.speedOverGround ?: 0.0) * 1.94384, sogTrend, knots)
+                l11.text = getString(R.string.nautical_sog); v11.text = String.format(Locale.US, "%.1f%s %s", (state.speedOverGround ?: 0.0) * knotsCoeff, sogTrend, knots)
                 i11.setImageResource(R.drawable.ic_action_speed)
-                l12.text = getString(R.string.nautical_xte); v12.text = String.format(Locale.US, "%.2f NM", (state.crossTrackError ?: 0.0) * 0.000539957)
-                i12.setImageResource(R.drawable.ic_action_distance)
+                l12.text = getString(R.string.nautical_xte); v12.text = String.format(Locale.US, "%.3f %s", (state.crossTrackError ?: 0.0) / 1852.0, nm)
+                i12.setImageResource(R.drawable.ic_action_nautical_xte)
                 l13.text = getString(R.string.nautical_btw); v13.text = String.format(Locale.US, "%.0f°", Math.toDegrees(state.targetHeading ?: 0.0))
                 i13.setImageResource(R.drawable.ic_action_bearing)
                 
-                l21.text = getString(R.string.nautical_dtw); v21.text = "---"
-                i21.setImageResource(R.drawable.ic_action_route_distance)
+                val dtw = state.distanceToWaypoint
+                l21.text = getString(R.string.nautical_dtw); v21.text = if (dtw != null) String.format(Locale.US, "%.2f %s", dtw / 1852.0, nm) else "---"
+                i21.setImageResource(R.drawable.ic_action_distance)
                 l22.text = getString(R.string.nautical_cog); v22.text = String.format(Locale.US, "%.0f°", Math.toDegrees(state.courseOverGroundTrue ?: 0.0))
-                i22.setImageResource(R.drawable.ic_action_direction_movement)
-                l23.text = getString(R.string.nautical_ttw); v23.text = String.format(Locale.US, "%.0fm", (state.timeToWaypoint ?: 0.0) / 60.0)
-                i23.setImageResource(R.drawable.ic_action_time)
+                i22.setImageResource(R.drawable.ic_action_cog)
+                
+                val ttw = state.timeToWaypoint
+                l23.text = getString(R.string.nautical_ttw)
+                if (ttw != null) {
+                    val h = (ttw / 3600).toInt()
+                    val m = ((ttw % 3600) / 60).toInt()
+                    v23.text = String.format(Locale.US, "%02d:%02d %s", h, m, getString(R.string.nautical_unit_hour_short))
+                } else {
+                    v23.text = "---"
+                }
+                i23.setImageResource(R.drawable.widget_time_day)
             }
             else -> {
-                l11.text = getString(R.string.nautical_sog); v11.text = String.format(Locale.US, "%.1f%s %s", (state.speedOverGround ?: 0.0) * 1.94384, sogTrend, knots)
+                l11.text = getString(R.string.nautical_sog); v11.text = String.format(Locale.US, "%.1f%s %s", (state.speedOverGround ?: 0.0) * knotsCoeff, sogTrend, knots)
                 i11.setImageResource(R.drawable.ic_action_speed)
                 
                 val hdgErr = arcView.calculateError(arcView.actualHeading ?: 0, arcView.targetHeading)
@@ -392,12 +408,12 @@ class NauticalPilotBottomSheet : BottomSheetDialogFragment() {
                 l13.text = getString(R.string.nautical_target_heading); v13.text = String.format(Locale.US, "%d°", state.targetHeading?.let { Math.toDegrees(it).toInt() } ?: 0)
                 i13.setImageResource(R.drawable.ic_action_target_direction_on)
                 
-                l21.text = getString(R.string.nautical_stw); v21.text = String.format(Locale.US, "%.1f%s %s", (state.speedThroughWater ?: 0.0) * 1.94384, stwTrend, knots)
+                l21.text = getString(R.string.nautical_stw); v21.text = String.format(Locale.US, "%.1f%s %s", (state.speedThroughWater ?: 0.0) * knotsCoeff, stwTrend, knots)
                 i21.setImageResource(R.drawable.ic_action_sensor_speed_outlined)
-                l22.text = getString(R.string.nautical_set_drift); v22.text = String.format(Locale.US, "%.0f/%.1f", Math.toDegrees(state.setTrue ?: 0.0), (state.drift ?: 0.0) * 1.94384)
+                l22.text = getString(R.string.nautical_set_drift); v22.text = String.format(Locale.US, "%03.0f°/%.1f", Math.toDegrees(state.setTrue ?: 0.0), (state.drift ?: 0.0) * knotsCoeff)
                 i22.setImageResource(R.drawable.ic_action_bearing)
-                l23.text = getString(R.string.nautical_rot); v23.text = String.format(Locale.US, "%.1f°/s", Math.toDegrees(state.rateOfTurn ?: 0.0))
-                i23.setImageResource(R.drawable.ic_action_direction_arrow)
+                l23.text = getString(R.string.nautical_rot); v23.text = String.format(Locale.US, "%.1f %s", Math.toDegrees(state.rateOfTurn ?: 0.0) * 60.0, getString(R.string.nautical_unit_rot_short))
+                i23.setImageResource(R.drawable.ic_action_nautical_rot)
             }
         }
     }

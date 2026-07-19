@@ -22,9 +22,17 @@ data class MarineState(
     val latitude: Double? = null,
     val longitude: Double? = null,
     val headingTrue: Double? = null,
+    val headingMagnetic: Double? = null,
     val speedOverGround: Double? = null,
     val courseOverGroundTrue: Double? = null,
     val velocityMadeGood: Double? = null,
+    val log: Double? = null,
+    val tripLog: Double? = null,
+
+    // Attitude
+    val roll: Double? = null,
+    val pitch: Double? = null,
+    val yaw: Double? = null,
 
     // Status Data
     val autopilotState: String = "standby",
@@ -39,6 +47,7 @@ data class MarineState(
 
     // Telemetry Data (Phase 3)
     val depthBelowTransducer: Double? = null,
+    val depthBelowKeel: Double? = null,
     val windSpeedTrue: Double? = null,
     val windDirectionTrue: Double? = null,
     val windDirectionApparent: Double? = null,
@@ -51,8 +60,36 @@ data class MarineState(
     val polarTargetSpeed: Double? = null,
     val timeToWaypoint: Double? = null,
 
+    // Environment
+    val waterTemperature: Double? = null,
+    val outsideTemperature: Double? = null,
+    val outsidePressure: Double? = null,
+
+    // Propulsion
+    val engineRpm: Double? = null,
+    val engineTemperature: Double? = null,
+    val engineOilPressure: Double? = null,
+    val fuelRate: Double? = null,
+    val engineRunTime: Double? = null,
+    val engineLoad: Double? = null,
+
+    // Electrical
+    val batteryVoltage: Double? = null,
+    val batteryCurrent: Double? = null,
+    val batterySoc: Double? = null,
+    val solarCurrent: Double? = null,
+
+    // Tanks
+    val fuelLevel: Double? = null,
+    val freshWaterLevel: Double? = null,
+    val wasteWaterLevel: Double? = null,
+
+    // Performance
+    val polarSpeedRatio: Double? = null,
+
     // Navigation Deviation (Cross-Track Error)
     val crossTrackError: Double? = null,
+    val distanceToWaypoint: Double? = null,
 ) : Serializable {
     val autopilotMode: String
         get() = autopilotState.uppercase(Locale.US)

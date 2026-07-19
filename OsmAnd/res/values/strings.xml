@@ -12,25 +12,82 @@
 	Thx - Hardy
 -->
 	<!-- Nautical plugin-->
-	<string name="nautical_tws" translatable="false">TWS</string>
-	<string name="nautical_twa" translatable="false">TWA</string>
-	<string name="nautical_stw" translatable="false">STW</string>
-	<string name="nautical_stw_desc" translatable="false">Speed Through Water</string>
-	<string name="nautical_sog" translatable="false">SOG</string>
-	<string name="nautical_sog_desc" translatable="false">Speed Over Ground</string>
-	<string name="nautical_cog" translatable="false">COG</string>
-	<string name="nautical_xte" translatable="false">XTE</string>
-	<string name="nautical_btw" translatable="false">BTW</string>
-	<string name="nautical_dtw" translatable="false">DTW</string>
-	<string name="nautical_ttw" translatable="false">TTW</string>
-	<string name="nautical_rot" translatable="false">ROT</string>
-	<string name="nautical_set_drift" translatable="false">SET/DRFT</string>
-	<string name="nautical_polar_target" translatable="false">POLAR TGT</string>
-	<string name="nautical_wind_err" translatable="false">WIND ERR</string>
-	<string name="nautical_hdg_err" translatable="false">HDG ERR</string>
-	<string name="nautical_target_heading" translatable="false">TARGET</string>
-	<string name="nautical_new_heading" translatable="false">New heading: %1$d degrees</string>
-	<string name="nautical_target_twa" translatable="false">TGT TWA</string>
+	<string name="nautical_laylines_tack_angle">Laylines tack angle</string>
+	<string name="nautical_laylines_tack_angle_desc">The angle relative to the wind for upwind tacks (typically 45°)</string>
+	<string name="nautical_vessel_indicators">Vessel Indicators</string>
+	<string name="nautical_map_overlays">Map Overlays</string>
+	<string name="nautical_show_heading_line">Show Heading Line</string>
+	<string name="nautical_show_cog_line">Show COG Line</string>
+	<string name="nautical_show_current_vector">Show Current Vector</string>
+	<string name="nautical_look_ahead_time">Projection time (min)</string>
+	<string name="nautical_unit_deg">°</string>
+	<string name="nautical_server_trust_all">Trust all certificates</string>
+	<string name="nautical_server_trust_all_desc">Bypass SSL certificate validation. WARNING: This makes the connection susceptible to Man-in-the-Middle attacks. Use only in trusted local networks.</string>
+	<string name="nautical_category">Nautical</string>
+	<string name="nautical_cardinal_n">N</string>
+	<string name="nautical_cardinal_ne">NE</string>
+	<string name="nautical_cardinal_e">E</string>
+	<string name="nautical_cardinal_se">SE</string>
+	<string name="nautical_cardinal_s">S</string>
+	<string name="nautical_cardinal_sw">SW</string>
+	<string name="nautical_cardinal_w">W</string>
+	<string name="nautical_cardinal_nw">NW</string>
+	<string name="nautical_tws">TWS</string>
+	<string name="nautical_twa">TWA</string>
+	<string name="nautical_stw">STW</string>
+	<string name="nautical_stw_desc">Speed Through Water</string>
+	<string name="nautical_sog">SOG</string>
+	<string name="nautical_sog_desc">Speed Over Ground</string>
+	<string name="nautical_cog">COG</string>
+	<string name="nautical_heading_magnetic">HDG MAG</string>
+	<string name="nautical_log">LOG</string>
+	<string name="nautical_trip_log">TRIP</string>
+	<string name="nautical_roll">ROLL</string>
+	<string name="nautical_pitch">PITCH</string>
+	<string name="nautical_depth_keel">DBK</string>
+	<string name="nautical_water_temp">SEA TEMP</string>
+	<string name="nautical_outside_temp">AIR TEMP</string>
+	<string name="nautical_pressure">BARO</string>
+	<string name="nautical_engine_rpm">RPM</string>
+	<string name="nautical_engine_temp">ENG TEMP</string>
+	<string name="nautical_battery_volt">VOLT</string>
+	<string name="nautical_battery_soc">SOC</string>
+	<string name="nautical_fuel_level">FUEL</string>
+	<string name="nautical_fresh_water_level">WATER</string>
+	<string name="nautical_waste_water_level">WASTE</string>
+	<string name="nautical_polar_ratio">PERF %</string>
+	<string name="nautical_xte">XTE</string>
+	<string name="nautical_btw">BTW</string>
+	<string name="nautical_dtw">DTW</string>
+	<string name="nautical_ttw">TTW</string>
+	<string name="nautical_rot">ROT</string>
+	<string name="nautical_set_drift">SET/DRFT</string>
+	<string name="nautical_polar_target">POLAR TGT</string>
+	<string name="nautical_wind_err">WIND ERR</string>
+	<string name="nautical_hdg_err">HDG ERR</string>
+	<string name="nautical_target_heading">TARGET</string>
+	<string name="nautical_target_twa">TGT TWA</string>
+	<string name="nautical_awa">AWA</string>
+	<string name="nautical_aws">AWS</string>
+	<string name="nautical_twd">TWD</string>
+	<string name="nautical_eta">ETA</string>
+	<string name="nautical_oil_pressure">OIL PRESS</string>
+	<string name="nautical_engine_load">ENG LOAD</string>
+	<string name="nautical_battery_current">BATT CURR</string>
+	<string name="nautical_solar_current">SOLAR CURR</string>
+	<string name="nautical_engine_runtime">ENG HOURS</string>
+
+	<string name="nautical_tws_desc">True Wind Speed</string>
+	<string name="nautical_twa_desc">True Wind Angle</string>
+	<string name="nautical_awa_desc">Apparent Wind Angle</string>
+	<string name="nautical_aws_desc">Apparent Wind Speed</string>
+	<string name="nautical_twd_desc">True Wind Direction</string>
+	<string name="nautical_xte_desc">Cross-Track Error</string>
+	<string name="nautical_rot_desc">Rate of Turn</string>
+	<string name="nautical_dtw_desc">Distance to Waypoint</string>
+	<string name="nautical_ttw_desc">Time to Waypoint</string>
+	<string name="nautical_eta_desc">Estimated Time of Arrival</string>
+	<string name="nautical_btw_desc">Bearing to Waypoint</string>
 	<string name="nautical_vessel_type">Vessel Type</string>
 	<string name="nautical_vessel_conventional">Conventional</string>
 	<string name="nautical_vessel_proa">Proa</string>
@@ -65,12 +122,20 @@
 	<string name="nautical_sea_state">Sea State</string>
 	<string name="nautical_sea_state_label">Sensitivity: %1$d</string>
 	<string name="nautical_adjust_course">Course Adjustment</string>
-	<string name="nautical_adjust_minus_10" translatable="false">-10°</string>
-	<string name="nautical_adjust_minus_1" translatable="false">-1°</string>
-	<string name="nautical_adjust_plus_1" translatable="false">+1°</string>
-	<string name="nautical_adjust_plus_10" translatable="false">+10°</string>
+	<string name="nautical_adjust_minus_10">-10°</string>
+	<string name="nautical_adjust_minus_1">-1°</string>
+	<string name="nautical_adjust_plus_1">+1°</string>
+	<string name="nautical_adjust_plus_10">+10°</string>
 	<string name="nautical_target_heading_val">Target: %1$.0f°</string>
 	<string name="nautical_rudder_angle">Rudder Angle</string>
+	<string name="nautical_rudder_mid">MID</string>
+	<string name="nautical_rudder_port">PORT</string>
+	<string name="nautical_rudder_stbd">STBD</string>
+	<string name="nautical_rudder_p_short">P</string>
+	<string name="nautical_rudder_s_short">S</string>
+	<string name="nautical_set_heading_label">SET HEADING</string>
+	<string name="nautical_hdg_err_label">HEADING ERROR</string>
+	<string name="nautical_awa_label">AWA</string>
 	<string name="nautical_mode_stby">STBY</string>
 	<string name="nautical_mode_ap">AP</string>
 	<string name="nautical_group_title">Nautical</string>
@@ -97,9 +162,9 @@
 	<string name="nautical_no_trajectory_data">No trajectory data available</string>
 	<string name="nautical_export_trajectory_failed">Failed to export trajectory</string>
 
-	<string name="nautical_toggle_night_vision" translatable="false">Toggle Night Vision</string>
-	<string name="nautical_night_vision" translatable="false">Night Vision</string>
-	<string name="nautical_night_vision_desc" translatable="false">Apply red filter to the entire screen for better night vision</string>
+	<string name="nautical_toggle_night_vision">Toggle Night Vision</string>
+	<string name="nautical_night_vision">Night Vision</string>
+	<string name="nautical_night_vision_desc">Apply red filter to the entire screen for better night vision</string>
 	<string name="nautical_follow_gpx_route">Follow GPX Route</string>
 	<string name="nautical_select_track">Select Track</string>
 	<string name="nautical_no_tracks_found">No tracks found.</string>
@@ -125,8 +190,8 @@
 	<string name="nautical_sog_label">SOG</string>
 	<string name="nautical_depth_label">DEPTH</string>
 	<string name="nautical_xte_label">XTE</string>
-	<string name="nautical_xte_side_left" translatable="false">L</string>
-	<string name="nautical_xte_side_right" translatable="false">R</string>
+	<string name="nautical_xte_side_left">L</string>
+	<string name="nautical_xte_side_right">R</string>
 	<string name="nautical_mode_compass">COMPASS</string>
 	<string name="nautical_mode_wind">WIND</string>
 	<string name="nautical_pilot_desc">Control the autopilot state</string>
@@ -180,24 +245,70 @@
 	<string name="nautical_confirm">CONFIRM</string>
 
 	<string name="nautical_widget_vmg_label">VMG</string>
-	<string name="nautical_vmg_desc">Displays Velocity Made Good</string>
+	<string name="nautical_vmg_desc">Velocity Made Good</string>
 	<string name="nautical_widget_cog_label">COG</string>
-	<string name="nautical_cog_desc">Displays Course Over Ground</string>
+	<string name="nautical_cog_desc">Course Over Ground</string>
 	<string name="nautical_widget_depth_label">Depth</string>
-	<string name="nautical_depth_desc">Displays depth below transducer</string>
+	<string name="nautical_depth_desc">Depth below transducer</string>
 	<string name="nautical_widget_wind_label">Wind</string>
-	<string name="nautical_wind_desc">Displays true wind speed</string>
+	<string name="nautical_wind_desc">True wind speed</string>
+
+	<string name="nautical_heading_magnetic_desc">Magnetic heading</string>
+	<string name="nautical_log_desc">Cumulative distance (Odometer)</string>
+	<string name="nautical_trip_log_desc">Trip distance</string>
+	<string name="nautical_roll_desc">Vessel heel (Roll)</string>
+	<string name="nautical_pitch_desc">Vessel trim (Pitch)</string>
+	<string name="nautical_depth_keel_desc">Depth below keel</string>
+	<string name="nautical_water_temp_desc">Sea water temperature</string>
+	<string name="nautical_outside_temp_desc">Outside air temperature</string>
+	<string name="nautical_pressure_desc">Barometric pressure</string>
+	<string name="nautical_engine_rpm_desc">Engine revolutions per minute</string>
+	<string name="nautical_engine_temp_desc">Engine temperature</string>
+	<string name="nautical_battery_volt_desc">Battery voltage</string>
+	<string name="nautical_battery_soc_desc">Battery state of charge</string>
+	<string name="nautical_fuel_level_desc">Fuel tank level</string>
+	<string name="nautical_fresh_water_level_desc">Fresh water tank level</string>
+	<string name="nautical_waste_water_level_desc">Waste water tank level</string>
+	<string name="nautical_polar_ratio_desc">Actual speed vs polar target ratio</string>
+	<string name="nautical_rot_desc">Rate of turn</string>
+	<string name="nautical_xte_desc">Cross-track error</string>
+	<string name="nautical_ttw_desc">Time to waypoint</string>
+	<string name="nautical_dtw_desc">Distance to waypoint</string>
+	<string name="nautical_eta_desc">Estimated time of arrival</string>
+	<string name="nautical_awa_desc">Apparent wind angle</string>
+	<string name="nautical_aws_desc">Apparent wind speed</string>
+	<string name="nautical_twa_desc">True wind angle</string>
+	<string name="nautical_twd_desc">True wind direction</string>
+	<string name="nautical_oil_pressure_desc">Engine oil pressure</string>
+	<string name="nautical_engine_load_desc">Engine load percentage</string>
+	<string name="nautical_battery_current_desc">Battery charge/discharge current</string>
+	<string name="nautical_solar_current_desc">Solar panel charge current</string>
+	<string name="nautical_engine_runtime_desc">Total engine hours</string>
 
 	<string name="nautical_title_depth">Depth History</string>
 	<string name="nautical_title_wind">Wind Speed History</string>
 	<string name="nautical_title_vmg">VMG History</string>
 	<string name="nautical_title_telemetry">Telemetry History</string>
+	<string name="nautical_history_title_pattern">%1$s History</string>
 	<string name="nautical_graph_title">Data History (Last 1 Hour)</string>
 
 	<string name="nautical_unit_nm">NM</string>
 	<string name="nautical_unit_knots">kn</string>
 	<string name="nautical_unit_meters">m</string>
 	<string name="nautical_unit_feet">ft</string>
+	<string name="nautical_unit_hpa">hPa</string>
+	<string name="nautical_unit_rpm">rpm</string>
+	<string name="nautical_unit_percent">%</string>
+	<string name="nautical_unit_celsius">°C</string>
+	<string name="nautical_unit_rot_short">°/m</string>
+	<string name="nautical_unit_volt">V</string>
+	<string name="nautical_unit_ampere">A</string>
+	<string name="nautical_unit_bar">bar</string>
+	<string name="nautical_unit_mag_short">M</string>
+	<string name="nautical_unit_true_short">T</string>
+	<string name="nautical_unit_apparent_short">A</string>
+	<string name="nautical_unit_hour_short">h</string>
+	<string name="nautical_unit_min_short">min</string>
 
 
 

@@ -1,0 +1,7 @@
+- [x] Add localized labels to `strings.xml`
+- [x] Map `shapeAppearanceCornerMedium` in Material themes
+- [x] Update `bottom_sheet_nautical_pilot.xml` steering buttons
+- [x] Refine `HeadingArcView.kt` (localization + accessibility)
+- [x] Refine `HeadingErrorDialView.kt` (localization + accessibility)
+- [x] Refine `RudderView.kt` (localization + accessibility)
+- [x] Verify final UI and accessibility compliance

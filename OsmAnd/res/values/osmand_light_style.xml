@@ -61,6 +61,7 @@
         <item name="android:windowBackground">@color/color_transparent</item>
         <item name="android:backgroundDimAmount">0.3</item>
         <item name="android:backgroundDimEnabled">true</item>
+        <item name="textAppearanceLabelLarge">?attr/textAppearanceSubtitle2</item>
     </style>
 
     <style name="OsmandLightTheme.NoAnimation">
@@ -68,6 +69,7 @@
     </style>
 
     <style name="OsmandLightTheme" parent="Theme.MaterialComponents.Light">
+        <item name="textAppearanceLabelLarge">?attr/textAppearanceSubtitle2</item>
         <item name="alert_dialog_theme">@style/OsmandLightTheme</item>
         <item name="android:buttonStyle">@style/Widget.AppCompat.Button.Colored</item>
         <item name="buttonStyle">@style/Widget.AppCompat.Button.Colored</item>

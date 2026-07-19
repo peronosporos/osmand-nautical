@@ -1,0 +1,21 @@
+# Task List - 100% Nautical Telemetry Parity & Refinement
+
+- [x] Create new nautical icons
+    - [x] `ic_action_nautical_solar.xml`
+    - [x] `ic_action_nautical_oil.xml`
+    - [x] `ic_action_nautical_rot.xml`
+    - [x] `ic_action_nautical_xte.xml`
+    - [x] `ic_action_nautical_battery_current.xml`
+- [x] Update `SignalKEngine` data handling
+    - [x] Add history buffers for Oil Pressure, Load, Battery Current, Solar Current, TWD
+    - [x] Implement SignalK parsing for new engine and power paths
+    - [x] Update buffer persistence (save/load)
+- [x] Refine localization and strings
+    - [x] Add `nautical_history_title_pattern`
+    - [x] Add localized labels and descriptions for new widgets
+    - [x] Add unit strings for Amperes, Bar, and Hours
+- [x] Finalize Widget Registration in `WidgetType.java`
+- [x] Implement UI logic
+    - [x] `MarineTextWidget`: Handlers for new types and unit conversions
+    - [x] `NauticalDataBottomSheet`: Programmatic titles and full instrument graphing
+- [x] Final visual audit and consistency check

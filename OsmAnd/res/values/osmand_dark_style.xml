@@ -24,6 +24,7 @@
         <item name="android:windowBackground">@color/color_transparent</item>
         <item name="android:backgroundDimAmount">0.3</item>
         <item name="android:backgroundDimEnabled">true</item>
+        <item name="textAppearanceLabelLarge">?attr/textAppearanceSubtitle2</item>
     </style>
 
     <style name="OsmandDarkTheme.NoActionbar">
@@ -46,6 +47,7 @@
 
 
     <style name="OsmandDarkTheme" parent="Theme.MaterialComponents">
+        <item name="textAppearanceLabelLarge">?attr/textAppearanceSubtitle2</item>
         <item name="alert_dialog_theme">@style/OsmandDarkTheme</item>
         <item name="bottom_bar_background_color">@color/card_and_list_background_dark</item>
         <item name="android:textDirection">locale</item>

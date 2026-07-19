@@ -5,33 +5,24 @@ import net.osmand.plus.R
 import net.osmand.plus.settings.fragments.BaseSettingsFragment
 import net.osmand.plus.settings.preferences.EditTextPreferenceEx
 import net.osmand.plus.settings.preferences.ListPreferenceEx
+import net.osmand.plus.settings.preferences.SwitchPreferenceEx
 
 class NauticalSettingsFragment : BaseSettingsFragment() {
 
     override fun setupPreferences() {
         setupIpAddress()
         setupPort()
+        setupSecureConnection()
         setupUsername()
         setupPassword()
-        setupSecureConnection()
-        setupOverlayToggles()
+        setupTrustAll()
         setupXteThreshold()
+        setupLaylinesTackAngle()
+        setupProjectionLines()
+        setupLookAheadTime()
         setupReceiveInBackground()
-    }
 
-    private fun setupOverlayToggles() {
-        findPreference<net.osmand.plus.settings.preferences.SwitchPreferenceEx>("nautical_show_laylines")?.apply {
-            description = getString(R.string.nautical_show_laylines)
-            isChecked = settings.NAUTICAL_SHOW_LAYLINES.get()
-        }
-        findPreference<net.osmand.plus.settings.preferences.SwitchPreferenceEx>("nautical_show_wind_shifts")?.apply {
-            description = getString(R.string.nautical_show_wind_shifts)
-            isChecked = settings.NAUTICAL_SHOW_WIND_SHIFTS.get()
-        }
-        findPreference<net.osmand.plus.settings.preferences.SwitchPreferenceEx>("nautical_show_trajectory")?.apply {
-            description = getString(R.string.nautical_show_trajectory)
-            isChecked = settings.NAUTICAL_SHOW_TRAJECTORY.get()
-        }
+        updateSecureSettingsVisibility(settings.NAUTICAL_USE_SECURE_CONNECTION.get())
     }
 
     private fun setupIpAddress() {
@@ -71,10 +62,18 @@ class NauticalSettingsFragment : BaseSettingsFragment() {
     }
 
     private fun setupSecureConnection() {
-        findPreference<net.osmand.plus.settings.preferences.SwitchPreferenceEx>(settings.NAUTICAL_USE_SECURE_CONNECTION.id)?.apply {
+        findPreference<SwitchPreferenceEx>(settings.NAUTICAL_USE_SECURE_CONNECTION.id)?.apply {
             setIcon(R.drawable.ic_action_lock)
             description = getString(R.string.nautical_server_secure_desc)
             isChecked = settings.NAUTICAL_USE_SECURE_CONNECTION.get()
+        }
+    }
+
+    private fun setupTrustAll() {
+        findPreference<SwitchPreferenceEx>(settings.NAUTICAL_TRUST_ALL_CERTIFICATES.id)?.apply {
+            setIcon(R.drawable.ic_action_additional_option)
+            description = getString(R.string.nautical_server_trust_all_desc)
+            isChecked = settings.NAUTICAL_TRUST_ALL_CERTIFICATES.get()
         }
     }
 
@@ -83,6 +82,36 @@ class NauticalSettingsFragment : BaseSettingsFragment() {
             setIcon(R.drawable.ic_action_anchor)
             description = getString(R.string.nautical_xte_threshold_desc)
             summary = "${settings.NAUTICAL_XTE_THRESHOLD.get()} ${getString(R.string.nautical_unit_nm)}"
+        }
+    }
+
+    private fun setupLaylinesTackAngle() {
+        findPreference<EditTextPreferenceEx>(settings.NAUTICAL_LAYLINES_TACK_ANGLE.id)?.apply {
+            setIcon(R.drawable.ic_action_additional_option)
+            description = getString(R.string.nautical_laylines_tack_angle_desc)
+            summary = "${settings.NAUTICAL_LAYLINES_TACK_ANGLE.get()}${getString(R.string.nautical_unit_deg)}"
+        }
+    }
+
+    private fun setupProjectionLines() {
+        findPreference<SwitchPreferenceEx>(settings.NAUTICAL_SHOW_HEADING_LINE.id)?.apply {
+            setIcon(R.drawable.ic_action_direction_compass)
+            isChecked = settings.NAUTICAL_SHOW_HEADING_LINE.get()
+        }
+        findPreference<SwitchPreferenceEx>(settings.NAUTICAL_SHOW_COG_LINE.id)?.apply {
+            setIcon(R.drawable.ic_action_direction_movement)
+            isChecked = settings.NAUTICAL_SHOW_COG_LINE.get()
+        }
+        findPreference<SwitchPreferenceEx>(settings.NAUTICAL_SHOW_CURRENT_VECTOR.id)?.apply {
+            setIcon(R.drawable.ic_action_bearing)
+            isChecked = settings.NAUTICAL_SHOW_CURRENT_VECTOR.get()
+        }
+    }
+
+    private fun setupLookAheadTime() {
+        findPreference<EditTextPreferenceEx>(settings.NAUTICAL_LOOK_AHEAD_TIME.id)?.apply {
+            setIcon(R.drawable.ic_action_time)
+            summary = "${settings.NAUTICAL_LOOK_AHEAD_TIME.get()} ${getString(R.string.shared_string_min)}"
         }
     }
 
@@ -98,6 +127,12 @@ class NauticalSettingsFragment : BaseSettingsFragment() {
         }
     }
 
+    private fun updateSecureSettingsVisibility(useSecure: Boolean) {
+        findPreference<Preference>(settings.NAUTICAL_SERVER_USERNAME.id)?.isVisible = useSecure
+        findPreference<Preference>(settings.NAUTICAL_SERVER_PASSWORD.id)?.isVisible = useSecure
+        findPreference<Preference>(settings.NAUTICAL_TRUST_ALL_CERTIFICATES.id)?.isVisible = useSecure
+    }
+
     override fun onPreferenceChange(preference: Preference, newValue: Any?): Boolean {
         val changed = super.onPreferenceChange(preference, newValue)
         if (changed) {
@@ -108,10 +143,12 @@ class NauticalSettingsFragment : BaseSettingsFragment() {
                 settings.NAUTICAL_SERVER_PORT.id -> preference.summary = newString.ifEmpty { getString(R.string.nautical_server_port_desc) }
                 settings.NAUTICAL_SERVER_USERNAME.id -> preference.summary = newString.ifEmpty { getString(R.string.nautical_server_username_desc) }
                 settings.NAUTICAL_SERVER_PASSWORD.id -> preference.summary = if (newString.isEmpty()) getString(R.string.nautical_server_password_desc) else getString(R.string.nautical_password_mask)
-                settings.NAUTICAL_USE_SECURE_CONNECTION.id -> settings.NAUTICAL_USE_SECURE_CONNECTION.set(newValue as Boolean)
-                settings.NAUTICAL_SHOW_LAYLINES.id -> settings.NAUTICAL_SHOW_LAYLINES.set(newValue as Boolean)
-                settings.NAUTICAL_SHOW_WIND_SHIFTS.id -> settings.NAUTICAL_SHOW_WIND_SHIFTS.set(newValue as Boolean)
-                settings.NAUTICAL_SHOW_TRAJECTORY.id -> settings.NAUTICAL_SHOW_TRAJECTORY.set(newValue as Boolean)
+                settings.NAUTICAL_USE_SECURE_CONNECTION.id -> {
+                    val useSecure = newValue as Boolean
+                    settings.NAUTICAL_USE_SECURE_CONNECTION.set(useSecure)
+                    updateSecureSettingsVisibility(useSecure)
+                }
+                settings.NAUTICAL_TRUST_ALL_CERTIFICATES.id -> settings.NAUTICAL_TRUST_ALL_CERTIFICATES.set(newValue as Boolean)
                 settings.NAUTICAL_RECEIVE_IN_BACKGROUND.id -> {
                     val isEnabled = newString.toBoolean()
                     settings.NAUTICAL_RECEIVE_IN_BACKGROUND.set(isEnabled)
@@ -121,6 +158,19 @@ class NauticalSettingsFragment : BaseSettingsFragment() {
                     val floatValue = newString.toFloatOrNull() ?: 0.1f
                     settings.NAUTICAL_XTE_THRESHOLD.set(floatValue)
                     preference.summary = "$floatValue ${getString(R.string.nautical_unit_nm)}"
+                }
+                settings.NAUTICAL_LAYLINES_TACK_ANGLE.id -> {
+                    val floatValue = newString.toFloatOrNull() ?: 45.0f
+                    settings.NAUTICAL_LAYLINES_TACK_ANGLE.set(floatValue)
+                    preference.summary = "$floatValue${getString(R.string.nautical_unit_deg)}"
+                }
+                settings.NAUTICAL_SHOW_HEADING_LINE.id -> settings.NAUTICAL_SHOW_HEADING_LINE.set(newValue as Boolean)
+                settings.NAUTICAL_SHOW_COG_LINE.id -> settings.NAUTICAL_SHOW_COG_LINE.set(newValue as Boolean)
+                settings.NAUTICAL_SHOW_CURRENT_VECTOR.id -> settings.NAUTICAL_SHOW_CURRENT_VECTOR.set(newValue as Boolean)
+                settings.NAUTICAL_LOOK_AHEAD_TIME.id -> {
+                    val intValue = newString.toIntOrNull() ?: 10
+                    settings.NAUTICAL_LOOK_AHEAD_TIME.set(intValue)
+                    preference.summary = "$intValue ${getString(R.string.shared_string_min)}"
                 }
             }
         }

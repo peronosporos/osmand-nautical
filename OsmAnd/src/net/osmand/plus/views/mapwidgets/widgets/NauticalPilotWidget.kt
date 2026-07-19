@@ -173,7 +173,8 @@ class NauticalPilotWidget(
     }
 
     private fun executeRoutineCommand(command: String) {
-        mapActivity.app.showToastMessage("${mapActivity.getString(R.string.nautical_command_sent)}: $command")
+        val msg = mapActivity.getString(R.string.nautical_command_sent) + ": " + command
+        mapActivity.app.showToastMessage(msg)
     }
 
     private fun setStatusIcon(iconResId: Int) {
@@ -216,7 +217,7 @@ class NauticalPilotWidget(
         } else {
             val mode = state.autopilotState.lowercase(Locale.US)
             val heading = state.targetHeading ?: state.headingTrue ?: 0.0
-            val headingStr = if (mode == "standby") "STBY" else String.format(Locale.US, "%d°", Math.toDegrees(heading).toInt())
+            val headingStr = if (mode == "standby") mapActivity.getString(R.string.nautical_mode_stby) else String.format(Locale.US, "%d°", Math.toDegrees(heading).toInt())
 
             val iconRes = when (mode) {
                 "auto" -> R.drawable.ic_action_direction_compass
