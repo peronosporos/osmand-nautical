@@ -1,0 +1,24 @@
+# Tasks - Advanced Autopilot Console & Telemetry
+
+- [ ] Refine `bottom_sheet_nautical_pilot.xml` UI
+    - [ ] Update adjustment buttons to rounded-rectangular (8dp radius)
+    - [ ] Set ±10 buttons to 60x52dp and ±1 buttons to 52x44dp
+    - [ ] Optimize hit targets and fix text wrapping
+- [ ] Enhance `HeadingErrorDialView.kt`
+    - [ ] Implement rotary gesture steering in `onTouchEvent`
+    - [ ] Add high-intensity haptic feedback for large course jumps
+- [ ] Polish `RudderView.kt`
+    - [ ] Fix KTX color and parentheses warnings
+    - [ ] Recalibrate drawing to ensure zero clipping at 48dp height
+- [ ] Update `NauticalPilotBottomSheet.kt`
+    - [ ] Integrate Voice Feedback (TTS) for course changes
+    - [ ] Implement Trend Tracking logic for SOG/STW
+    - [ ] Clean up `CallbackWithObject` resolution and unused imports
+- [ ] Extend OsmAnd Widget Framework
+    - [ ] Register `NAUTICAL_SOG` and `NAUTICAL_STW` in `WidgetType.java`
+    - [ ] Update `MarineTextWidget.kt` with speed trend indicators
+    - [ ] Update `NauticalGraphWidget.kt` to support SOG/STW history
+- [ ] Verification
+    - [ ] Verify Light and Night modes
+    - [ ] Test rotary gestures and voice announcements
+    - [ ] Verify trend arrows on map widgets

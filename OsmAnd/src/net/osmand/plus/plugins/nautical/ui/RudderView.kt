@@ -2,13 +2,12 @@ package net.osmand.plus.plugins.nautical.ui
 
 import android.content.Context
 import android.graphics.Canvas
-import android.graphics.Color
 import android.graphics.Paint
-import android.graphics.Path
 import android.graphics.Typeface
 import android.util.AttributeSet
 import android.view.View
 import androidx.core.content.ContextCompat
+import androidx.core.graphics.toColorInt
 import net.osmand.plus.R
 
 class RudderView @JvmOverloads constructor(
@@ -20,11 +19,10 @@ class RudderView @JvmOverloads constructor(
     private var rudderAngle: Double = 0.0 // Radians
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val textPaint = Paint(Paint.ANTI_ALIAS_FLAG)
-    private val pointerPath = Path()
     private var isNightMode = false
 
-    private var colorPort = Color.parseColor("#E71D36")
-    private var colorStarboard = Color.parseColor("#5BAF3F")
+    private var colorPort = "#E71D36".toColorInt()
+    private var colorStarboard = "#5BAF3F".toColorInt()
 
     init {
         colorPort = ContextCompat.getColor(context, R.color.text_color_negative)
@@ -50,29 +48,33 @@ class RudderView @JvmOverloads constructor(
 
         val w = width.toFloat()
         val h = height.toFloat()
-        val centerY = h * 0.7f
+        //centerY shifted down to accommodate label on top
+        val centerY = h * 0.65f 
         val centerX = w / 2f
-        val padding = 20f
+        val padding = 45f
         val scaleWidth = w - (padding * 2)
 
         // Draw minimalist scale line
-        paint.color = if (isNightMode) Color.DKGRAY else Color.LTGRAY
+        paint.strokeWidth = 1.5f
+        paint.color = ContextCompat.getColor(context, if (isNightMode) R.color.divider_color_dark else R.color.divider_color_light)
         canvas.drawLine(padding, centerY, w - padding, centerY, paint)
 
-        // Draw Port (Red) and Starboard (Green) indicators
-        paint.strokeWidth = 4f
+        // Draw Port and Starboard subtle color accents
+        paint.strokeWidth = 3f
         paint.color = colorPort
-        canvas.drawLine(padding, centerY, centerX, centerY, paint)
+        paint.alpha = 180
+        canvas.drawLine(padding, centerY, centerX - 6f, centerY, paint)
         paint.color = colorStarboard
-        canvas.drawLine(centerX, centerY, w - padding, centerY, paint)
+        canvas.drawLine(centerX + 6f, centerY, w - padding, centerY, paint)
 
-        // Draw ticks
-        paint.color = if (isNightMode) Color.WHITE else Color.BLACK
-        paint.strokeWidth = 2f
+        // Draw minimalist ticks
+        paint.color = ContextCompat.getColor(context, if (isNightMode) R.color.text_color_secondary_dark else R.color.text_color_secondary_light)
+        paint.strokeWidth = 1f
+        paint.alpha = 120
         for (i in -30..30 step 15) {
             val ratio = (i + 30) / 60f
             val x = padding + (ratio * scaleWidth)
-            canvas.drawLine(x, centerY - 8f, x, centerY + 2f, paint)
+            canvas.drawLine(x, centerY - 6f, x, centerY + 6f, paint)
         }
 
         // Calculate pointer position
@@ -80,21 +82,26 @@ class RudderView @JvmOverloads constructor(
         val ratio = (rudderAngle.coerceIn(-maxVisualAngle, maxVisualAngle) / maxVisualAngle).toFloat()
         val pointerX = centerX + (ratio * (scaleWidth / 2f))
 
-        // Draw pointer (Triangle)
-        paint.color = if (isNightMode) Color.WHITE else Color.BLACK
-        paint.style = Paint.Style.FILL
-        pointerPath.reset()
-        pointerPath.moveTo(pointerX, centerY)
-        pointerPath.lineTo(pointerX - 8f, centerY + 15f)
-        pointerPath.lineTo(pointerX + 8f, centerY + 15f)
-        pointerPath.close()
-        canvas.drawPath(pointerPath, paint)
+        // Draw pointer (Modern Sleek Line)
+        paint.color = ContextCompat.getColor(context, if (isNightMode) R.color.text_color_primary_dark else R.color.text_color_primary_light)
+        paint.alpha = 255
+        paint.strokeWidth = 4f
+        paint.strokeCap = Paint.Cap.ROUND
+        canvas.drawLine(pointerX, centerY - 14f, pointerX, centerY + 14f, paint)
         
-        // Draw angle digital readout
+        // Draw angle digital readout (Moved baseline to fit)
         val deg = Math.toDegrees(rudderAngle).toInt()
-        val label = if (deg == 0) "MID" else "${kotlin.math.abs(deg)}° ${if (deg < 0) "P" else "S"}"
-        textPaint.textSize = 28f
-        textPaint.color = if (isNightMode) Color.WHITE else Color.BLACK
-        canvas.drawText(label, pointerX, centerY - 15f, textPaint)
+        val label = if (deg == 0) "MID" else "${kotlin.math.abs(deg)}° ${if (deg < 0) "PORT" else "STBD"}"
+        textPaint.textSize = 24f
+        textPaint.color = paint.color
+        textPaint.typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+        // Baseline at centerY - 20f ensures text doesn't hit the top (0dp)
+        canvas.drawText(label, pointerX, centerY - 22f, textPaint)
+        
+        // Label the ends
+        textPaint.textSize = 18f
+        textPaint.alpha = 150
+        canvas.drawText("P", padding - 20f, centerY + 6f, textPaint)
+        canvas.drawText("S", w - padding + 20f, centerY + 6f, textPaint)
     }
 }

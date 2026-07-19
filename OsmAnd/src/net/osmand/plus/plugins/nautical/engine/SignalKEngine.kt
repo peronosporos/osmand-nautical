@@ -35,6 +35,8 @@ class SignalKEngine {
     private val windDirectionBuffer = CircularBuffer<Double>(3600)
     private val vmgBuffer = CircularBuffer<Double>(3600)
     private val cogBuffer = CircularBuffer<Double>(3600)
+    private val sogBuffer = CircularBuffer<Double>(3600)
+    private val stwBuffer = CircularBuffer<Double>(3600)
     private val trajectoryBuffer = CircularBuffer<Pair<Double, Double>>(100)
     private val routeQueue = java.util.concurrent.ConcurrentLinkedQueue<Pair<Double, Double>>()
     var isFollowingRoute: Boolean = false
@@ -79,6 +81,14 @@ class SignalKEngine {
                 cogBuffer.getAll() as Serializable,
             )
             saveToFile(
+                File(context.filesDir, "sog_buffer.dat"),
+                sogBuffer.getAll() as Serializable,
+            )
+            saveToFile(
+                File(context.filesDir, "stw_buffer.dat"),
+                stwBuffer.getAll() as Serializable,
+            )
+            saveToFile(
                 File(context.filesDir, "trajectory_buffer.dat"),
                 trajectoryBuffer.getAll() as Serializable,
             )
@@ -114,6 +124,8 @@ class SignalKEngine {
             load<Double>("wind_direction_buffer.dat") { windDirectionBuffer.add(it) }
             load<Double>("vmg_buffer.dat") { vmgBuffer.add(it) }
             load<Double>("cog_buffer.dat") { cogBuffer.add(it) }
+            load<Double>("sog_buffer.dat") { sogBuffer.add(it) }
+            load<Double>("stw_buffer.dat") { stwBuffer.add(it) }
             load<Pair<Double, Double>>("trajectory_buffer.dat") { trajectoryBuffer.add(it) }
         }
     }
@@ -176,6 +188,8 @@ class SignalKEngine {
     fun getWindDirectionHistory(): List<Double> = windDirectionBuffer.getAll()
     fun getVmgHistory(): List<Double> = vmgBuffer.getAll()
     fun getCogHistory(): List<Double> = cogBuffer.getAll()
+    fun getSogHistory(): List<Double> = sogBuffer.getAll()
+    fun getStwHistory(): List<Double> = stwBuffer.getAll()
 
     fun addTrajectoryPoint(lat: Double, lon: Double) {
         val history = trajectoryBuffer.getAll()
@@ -260,6 +274,7 @@ class SignalKEngine {
                                     val sog = valueItem.optDouble("value", Double.NaN)
                                     if (!sog.isNaN()) {
                                         state = state.copy(speedOverGround = sog)
+                                        sogBuffer.add(sog)
                                         stateUpdated = true
                                     }
                                 }
@@ -267,6 +282,7 @@ class SignalKEngine {
                                     val stw = valueItem.optDouble("value", Double.NaN)
                                     if (!stw.isNaN()) {
                                         state = state.copy(speedThroughWater = stw)
+                                        stwBuffer.add(stw)
                                         stateUpdated = true
                                     }
                                 }

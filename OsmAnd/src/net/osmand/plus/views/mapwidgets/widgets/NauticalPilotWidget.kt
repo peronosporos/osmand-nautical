@@ -192,7 +192,7 @@ class NauticalPilotWidget(
         
         if (engine == null) {
             setText(mapActivity.getString(R.string.nautical_status_off), "")
-            setImageDrawable(iconsCache.getPaintedIcon(R.drawable.ic_action_sail_boat_dark, ContextCompat.getColor(app, if (isNightMode) R.color.icon_color_default_dark else R.color.icon_color_default_light)))
+            setImageDrawable(iconsCache.getPaintedIcon(R.drawable.ic_plugin_nautical_map, ContextCompat.getColor(app, if (isNightMode) R.color.icon_color_default_dark else R.color.icon_color_default_light)))
             setStatusIcon(0)
             return
         }
@@ -200,7 +200,7 @@ class NauticalPilotWidget(
         val state = engine.getCurrentState()
         if (state == null) {
             setText(mapActivity.getString(R.string.nautical_status_off), "")
-            setImageDrawable(iconsCache.getPaintedIcon(R.drawable.ic_action_sail_boat_dark, ContextCompat.getColor(app, if (isNightMode) R.color.icon_color_default_dark else R.color.icon_color_default_light)))
+            setImageDrawable(iconsCache.getPaintedIcon(R.drawable.ic_plugin_nautical_map, ContextCompat.getColor(app, if (isNightMode) R.color.icon_color_default_dark else R.color.icon_color_default_light)))
             setStatusIcon(0)
             return
         }
@@ -220,7 +220,7 @@ class NauticalPilotWidget(
 
             val iconRes = when (mode) {
                 "auto" -> R.drawable.ic_action_direction_compass
-                "wind" -> R.drawable.ic_action_sail_boat_dark
+                "wind" -> R.drawable.ic_action_wind
                 "route", "track" -> R.drawable.ic_action_track_16
                 "emergency", "stop" -> R.drawable.ic_action_stop
                 else -> R.drawable.ic_action_direction_compass

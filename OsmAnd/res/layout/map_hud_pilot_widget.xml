@@ -11,16 +11,16 @@
 	<View
 		android:id="@+id/hud_rudder_indicator"
 		android:layout_width="match_parent"
-		android:layout_height="2dp"
+		android:layout_height="4dp"
 		android:layout_gravity="top"
-		android:background="?attr/divider_color" />
+		android:background="@android:color/white" />
 
 	<View
 		android:id="@+id/hud_rudder_marker"
 		android:layout_width="6dp"
 		android:layout_height="6dp"
 		android:layout_gravity="top|center_horizontal"
-		android:background="@color/icon_color_osmand_light" />
+		android:background="@android:color/black" />
 
 	<LinearLayout
 		android:id="@+id/container"
@@ -43,7 +43,7 @@
 				android:layout_marginStart="@dimen/map_widget_icon_margin"
 				android:layout_marginEnd="@dimen/map_widget_icon_margin"
 				android:gravity="center"
-				app:srcCompat="@drawable/ic_action_sail_boat_dark" />
+				app:srcCompat="@drawable/ic_plugin_nautical_map" />
 
 			<FrameLayout
 				android:layout_width="wrap_content"

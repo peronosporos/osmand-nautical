@@ -1,0 +1,15 @@
+- [x] Icons and Branding Consistency
+    - [x] Update wind mode icon to `ic_action_wind` in `NauticalPilotBottomSheet.kt`
+    - [x] Update wind mode icon to `ic_action_wind` in `NauticalPilotWidget.kt`
+    - [x] Update icons and sizes in `bottom_sheet_nautical_pilot.xml`
+    - [x] Update HUD rudder marker styling in `map_hud_pilot_widget.xml`
+- [x] Telemetry Matrix Implementation
+    - [x] Fix mode selection logic in `NauticalPilotBottomSheet.kt` (immediate UI feedback)
+    - [x] Implement new 3-column matrix in `updateTelemetryGrid`
+    - [x] Add Wind Error calculation
+- [x] UI Refinements
+    - [x] Update `RudderView.kt` colors for consistency
+- [x] Verification
+    - [x] Verify icons and sizes
+    - [x] Verify matrix switching for all 3 modes
+    - [x] Verify HUD rudder visibility

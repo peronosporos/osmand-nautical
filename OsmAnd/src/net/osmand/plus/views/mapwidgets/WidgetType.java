@@ -149,6 +149,8 @@ public enum WidgetType {
 	GLIDE_TARGET("glide_ratio_to_target", R.string.glide_ratio_to_target, R.string.map_widget_glide_target_desc, R.drawable.widget_glide_ratio_to_target_day, R.drawable.widget_glide_ratio_to_target_night, 0, GLIDE, RIGHT),
 	GLIDE_AVERAGE("average_glide_ratio", R.string.average_glide_ratio, R.string.map_widget_glide_average_desc, R.drawable.widget_glide_ratio_average_day, R.drawable.widget_glide_ratio_average_night, 0, GLIDE, RIGHT),
 
+	NAUTICAL_SOG("nautical_sog", R.string.nautical_sog, R.string.nautical_sog_desc, R.drawable.ic_action_speed, R.drawable.ic_action_speed, 0, WidgetGroup.NAUTICAL, RIGHT),
+	NAUTICAL_STW("nautical_stw", R.string.nautical_stw, R.string.nautical_stw_desc, R.drawable.ic_action_sensor_speed_outlined, R.drawable.ic_action_sensor_speed_outlined, 0, WidgetGroup.NAUTICAL, RIGHT),
 	NAUTICAL_DEPTH("nautical_depth", R.string.nautical_widget_depth_label, R.string.nautical_depth_desc, R.drawable.ic_action_nautical_depth_colored_day, R.drawable.ic_action_nautical_depth_colored_night, 0, WidgetGroup.NAUTICAL, RIGHT),
 	NAUTICAL_WIND("nautical_wind", R.string.nautical_widget_wind_label, R.string.nautical_wind_desc, R.drawable.widget_weather_wind_day, R.drawable.widget_weather_wind_night, 0, WidgetGroup.NAUTICAL, RIGHT),
 	NAUTICAL_PILOT("nautical_pilot", R.string.nautical_pilot_title, R.string.nautical_pilot_desc, R.drawable.ic_plugin_nautical_map, R.drawable.ic_plugin_nautical_map, 0, WidgetGroup.NAUTICAL, RIGHT),

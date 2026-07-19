@@ -12,6 +12,25 @@
 	Thx - Hardy
 -->
 	<!-- Nautical plugin-->
+	<string name="nautical_tws" translatable="false">TWS</string>
+	<string name="nautical_twa" translatable="false">TWA</string>
+	<string name="nautical_stw" translatable="false">STW</string>
+	<string name="nautical_stw_desc" translatable="false">Speed Through Water</string>
+	<string name="nautical_sog" translatable="false">SOG</string>
+	<string name="nautical_sog_desc" translatable="false">Speed Over Ground</string>
+	<string name="nautical_cog" translatable="false">COG</string>
+	<string name="nautical_xte" translatable="false">XTE</string>
+	<string name="nautical_btw" translatable="false">BTW</string>
+	<string name="nautical_dtw" translatable="false">DTW</string>
+	<string name="nautical_ttw" translatable="false">TTW</string>
+	<string name="nautical_rot" translatable="false">ROT</string>
+	<string name="nautical_set_drift" translatable="false">SET/DRFT</string>
+	<string name="nautical_polar_target" translatable="false">POLAR TGT</string>
+	<string name="nautical_wind_err" translatable="false">WIND ERR</string>
+	<string name="nautical_hdg_err" translatable="false">HDG ERR</string>
+	<string name="nautical_target_heading" translatable="false">TARGET</string>
+	<string name="nautical_new_heading" translatable="false">New heading: %1$d degrees</string>
+	<string name="nautical_target_twa" translatable="false">TGT TWA</string>
 	<string name="nautical_vessel_type">Vessel Type</string>
 	<string name="nautical_vessel_conventional">Conventional</string>
 	<string name="nautical_vessel_proa">Proa</string>

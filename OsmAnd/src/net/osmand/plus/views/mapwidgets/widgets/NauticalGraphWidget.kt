@@ -71,6 +71,16 @@ class NauticalGraphWidget(
                 val coeff = 1.94384
                 g.setData(engine.getVmgHistory().map { it * coeff }, unit)
             }
+            WidgetType.NAUTICAL_SOG -> {
+                val unit = mapActivity.getString(R.string.nautical_unit_knots)
+                val coeff = 1.94384
+                g.setData(engine.getSogHistory().map { it * coeff }, unit)
+            }
+            WidgetType.NAUTICAL_STW -> {
+                val unit = mapActivity.getString(R.string.nautical_unit_knots)
+                val coeff = 1.94384
+                g.setData(engine.getStwHistory().map { it * coeff }, unit)
+            }
             else -> {}
         }
     }

@@ -1,20 +1,17 @@
 package net.osmand.plus.views.mapwidgets.widgets
 
-import android.content.res.ColorStateList
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.view.LayoutInflater
-import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
+import android.widget.ImageView
 import android.widget.TextView
 import androidx.core.content.ContextCompat
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.button.MaterialButtonToggleGroup
-import com.google.android.material.chip.Chip
-import com.google.android.material.progressindicator.CircularProgressIndicator
 import net.osmand.plus.base.BottomSheetDialogFragment
 import net.osmand.plus.R
 import net.osmand.plus.plugins.nautical.NauticalPlugin
@@ -22,13 +19,9 @@ import net.osmand.plus.plugins.nautical.engine.MarineState
 import net.osmand.plus.plugins.nautical.ui.HeadingArcView
 import net.osmand.plus.plugins.nautical.ui.HeadingErrorDialView
 import net.osmand.plus.plugins.nautical.ui.RudderView
-import net.osmand.plus.activities.MapActivity
-import net.osmand.plus.views.OsmandMapTileView
 import net.osmand.plus.settings.enums.VesselType
 import net.osmand.plus.track.GpxDialogs
-import net.osmand.CallbackWithObject
 import net.osmand.shared.gpx.GpxFile
-import net.osmand.shared.gpx.primitives.WptPt
 import java.util.*
 import kotlin.math.abs
 
@@ -45,7 +38,26 @@ class NauticalPilotBottomSheet : BottomSheetDialogFragment() {
     }
     private var autoDismissHandler = Handler(Looper.getMainLooper())
     private val autoDismissRunnable = Runnable { dismissAllowingStateLoss() }
-    private var mapTouchListener: OsmandMapTileView.TouchListener? = null
+    private var selectedModeOverride: String? = null
+    private var lastSog: Double? = null
+    private var lastStw: Double? = null
+    private var lastVoiceHeading: Int? = null
+    private val voiceHandler = Handler(Looper.getMainLooper())
+    private val speakRunnable = Runnable {
+        lastVoiceHeading?.let { heading ->
+            val app = requireActivity().application as net.osmand.plus.OsmandApplication
+            app.player?.let { player ->
+                val text = getString(R.string.nautical_new_heading, heading)
+                player.playCommands(player.newCommandBuilder().attention(text))
+            }
+        }
+    }
+
+    private fun speakHeading(heading: Int) {
+        lastVoiceHeading = heading
+        voiceHandler.removeCallbacks(speakRunnable)
+        voiceHandler.postDelayed(speakRunnable, 1000) // 1 second debounce
+    }
 
     private lateinit var errorDial: HeadingErrorDialView
     private lateinit var arcView: HeadingArcView
@@ -69,7 +81,7 @@ class NauticalPilotBottomSheet : BottomSheetDialogFragment() {
 
     private fun resetAutoDismissTimer() {
         autoDismissHandler.removeCallbacks(autoDismissRunnable)
-        autoDismissHandler.postDelayed(autoDismissRunnable, 20000) // 20 seconds for overhaul
+        autoDismissHandler.postDelayed(autoDismissRunnable, 20000)
     }
 
     private fun updateTackButtons() {
@@ -118,20 +130,26 @@ class NauticalPilotBottomSheet : BottomSheetDialogFragment() {
         val minus10Btn = view.findViewById<MaterialButton>(R.id.btn_minus_10)
         val plus10Btn = view.findViewById<MaterialButton>(R.id.btn_plus_10)
 
-        // Telemetry Grid
+        // Telemetry Grid Bindings
         val label11 = view.findViewById<TextView>(R.id.txt_label_1_1)
         val val11 = view.findViewById<TextView>(R.id.txt_value_1_1)
+        val icon11 = view.findViewById<ImageView>(R.id.img_icon_1_1)
         val label12 = view.findViewById<TextView>(R.id.txt_label_1_2)
         val val12 = view.findViewById<TextView>(R.id.txt_value_1_2)
+        val icon12 = view.findViewById<ImageView>(R.id.img_icon_1_2)
         val label13 = view.findViewById<TextView>(R.id.txt_label_1_3)
         val val13 = view.findViewById<TextView>(R.id.txt_value_1_3)
+        val icon13 = view.findViewById<ImageView>(R.id.img_icon_1_3)
         
         val label21 = view.findViewById<TextView>(R.id.txt_label_2_1)
         val val21 = view.findViewById<TextView>(R.id.txt_value_2_1)
+        val icon21 = view.findViewById<ImageView>(R.id.img_icon_2_1)
         val label22 = view.findViewById<TextView>(R.id.txt_label_2_2)
         val val22 = view.findViewById<TextView>(R.id.txt_value_2_2)
+        val icon22 = view.findViewById<ImageView>(R.id.img_icon_2_2)
         val label23 = view.findViewById<TextView>(R.id.txt_label_2_3)
         val val23 = view.findViewById<TextView>(R.id.txt_value_2_3)
+        val icon23 = view.findViewById<ImageView>(R.id.img_icon_2_3)
 
         val rudderView = view.findViewById<RudderView>(R.id.rudder_view)
 
@@ -154,7 +172,6 @@ class NauticalPilotBottomSheet : BottomSheetDialogFragment() {
                     "TRACK", "ROUTE" -> modeToggleGroup.check(R.id.btn_mode_route)
                 }
 
-                // Centralized Error Calculation
                 val actualH = state.headingTrue?.let { Math.toDegrees(it) } ?: 0.0
                 val targetH = (state.targetHeading ?: state.headingTrue)?.let { Math.toDegrees(it) } ?: 0.0
                 var hdgErr = (actualH - targetH).toFloat()
@@ -169,10 +186,26 @@ class NauticalPilotBottomSheet : BottomSheetDialogFragment() {
                 state.targetWindAngleApparent?.let { arcView.targetWindAngleApparent = Math.toDegrees(it).toInt() }
                 state.rudderAngle?.let { rudderView?.setRudderAngle(it) }
 
-                // Telemetry Matrix Switching
-                updateTelemetryGrid(state, rawMode, 
-                    label11, val11, label12, val12, label13, val13,
-                    label21, val21, label22, val22, label23, val23)
+                val sogTrend = when {
+                    state.speedOverGround == null || lastSog == null || Math.abs(state.speedOverGround - lastSog!!) < 0.01 -> ""
+                    state.speedOverGround > lastSog!! -> " ↑"
+                    else -> " ↓"
+                }
+                lastSog = state.speedOverGround
+
+                val stwTrend = when {
+                    state.speedThroughWater == null || lastStw == null || Math.abs(state.speedThroughWater - lastStw!!) < 0.01 -> ""
+                    state.speedThroughWater > lastStw!! -> " ↑"
+                    else -> " ↓"
+                }
+                lastStw = state.speedThroughWater
+
+                updateTelemetryGrid(
+                    state, selectedModeOverride ?: rawMode,
+                    label11, val11, icon11, label12, val12, icon12, label13, val13, icon13,
+                    label21, val21, icon21, label22, val22, icon22, label23, val23, icon23,
+                    sogTrend, stwTrend
+                )
 
                 if (rawMode == "WIND") {
                     updateTackButtons()
@@ -190,12 +223,19 @@ class NauticalPilotBottomSheet : BottomSheetDialogFragment() {
             if (isChecked) {
                 resetAutoDismissTimer()
                 when (checkedId) {
-                    R.id.btn_mode_compass -> autopilot.setAutopilotMode("auto")
-                    R.id.btn_mode_wind -> autopilot.setAutopilotMode("wind")
+                    R.id.btn_mode_compass -> {
+                        selectedModeOverride = "AUTO"
+                        autopilot.setAutopilotMode("auto")
+                    }
+                    R.id.btn_mode_wind -> {
+                        selectedModeOverride = "WIND"
+                        autopilot.setAutopilotMode("wind")
+                    }
                     R.id.btn_mode_route -> {
-                        GpxDialogs.selectGPXFile(requireActivity(), false, false, object : CallbackWithObject<Array<GpxFile>> {
+                        selectedModeOverride = "ROUTE"
+                        GpxDialogs.selectGPXFile(requireActivity(), false, false, object : net.osmand.CallbackWithObject<Array<GpxFile>> {
                             override fun processResult(result: Array<GpxFile>?): Boolean {
-                                if (result != null && result.isNotEmpty()) {
+                                if (!result.isNullOrEmpty()) {
                                     val gpx = result[0]
                                     val points = mutableListOf<Pair<Double, Double>>()
                                     gpx.tracks.forEach { track ->
@@ -209,19 +249,31 @@ class NauticalPilotBottomSheet : BottomSheetDialogFragment() {
                                         engine.loadRoute(points)
                                         autopilot.setAutopilotMode("route")
                                     }
+                                } else {
+                                    selectedModeOverride = null
                                 }
                                 return true
                             }
-                        }, false)
+                        }, nightMode)
                     }
-                    R.id.btn_mode_stop -> autopilot.stopNavigation()
+                    R.id.btn_mode_stop -> {
+                        selectedModeOverride = "STANDBY"
+                        autopilot.stopNavigation()
+                    }
                 }
+                listener?.invoke(engine.getCurrentState() ?: MarineState())
             }
         }
 
         arcView.onHeadingChanged = { newHeading: Int ->
             autopilot.setTargetHeading(newHeading.toDouble())
+            speakHeading(newHeading)
             view.performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK)
+        }
+
+        errorDial.onHeadingChanged = { newHeading: Int ->
+            autopilot.setTargetHeading(newHeading.toDouble())
+            speakHeading(newHeading)
         }
 
         minus1Btn.setOnClickListener {
@@ -283,37 +335,69 @@ class NauticalPilotBottomSheet : BottomSheetDialogFragment() {
     }
 
     private fun updateTelemetryGrid(state: MarineState, mode: String,
-                                    l11: TextView, v11: TextView, l12: TextView, v12: TextView, l13: TextView, v13: TextView,
-                                    l21: TextView, v21: TextView, l22: TextView, v22: TextView, l23: TextView, v23: TextView) {
+                                    l11: TextView, v11: TextView, i11: ImageView,
+                                    l12: TextView, v12: TextView, i12: ImageView,
+                                    l13: TextView, v13: TextView, i13: ImageView,
+                                    l21: TextView, v21: TextView, i21: ImageView,
+                                    l22: TextView, v22: TextView, i22: ImageView,
+                                    l23: TextView, v23: TextView, i23: ImageView,
+                                    sogTrend: String, stwTrend: String) {
         val knots = getString(R.string.nautical_unit_knots)
         
         when (mode) {
             "WIND" -> {
-                l11.text = "TWS"; v11.text = String.format(Locale.US, "%.1f %s", (state.windSpeedTrue ?: 0.0) * 1.94384, knots)
-                l12.text = "AWA CURR"; v12.text = String.format(Locale.US, "%d°", state.windDirectionApparent?.let { Math.toDegrees(it).toInt() } ?: 0)
-                l13.text = "AWA TGT"; v13.text = String.format(Locale.US, "%d°", state.targetWindAngleApparent?.let { Math.toDegrees(it).toInt() } ?: 0)
+                l11.text = getString(R.string.nautical_tws); v11.text = String.format(Locale.US, "%.1f %s", (state.windSpeedTrue ?: 0.0) * 1.94384, knots)
+                i11.setImageResource(R.drawable.ic_action_wind)
                 
-                l21.text = "STW"; v21.text = String.format(Locale.US, "%.1f %s", (state.speedThroughWater ?: 0.0) * 1.94384, knots)
-                l22.text = "TWA"; v22.text = String.format(Locale.US, "%.0f°", Math.toDegrees(state.trueWindAngle ?: 0.0))
-                l23.text = "POLAR TGT"; v23.text = String.format(Locale.US, "%.1f %s", (state.polarTargetSpeed ?: 0.0) * 1.94384, knots)
+                val awaDeg = state.windDirectionApparent?.let { Math.toDegrees(it).toInt() } ?: 0
+                val targetAwaDeg = state.targetWindAngleApparent?.let { Math.toDegrees(it).toInt() } ?: 0
+                var windErr = (awaDeg - targetAwaDeg).toFloat()
+                while (windErr > 180) windErr -= 360
+                while (windErr < -180) windErr += 360
+                
+                l12.text = getString(R.string.nautical_wind_err); v12.text = String.format(Locale.US, "%.1f°", windErr)
+                i12.setImageResource(R.drawable.ic_action_relative_bearing)
+                l13.text = getString(R.string.nautical_target_twa); v13.text = String.format(Locale.US, "%d°", targetAwaDeg)
+                i13.setImageResource(R.drawable.ic_action_target_direction_on)
+                
+                l21.text = getString(R.string.nautical_stw); v21.text = String.format(Locale.US, "%.1f%s %s", (state.speedThroughWater ?: 0.0) * 1.94384, stwTrend, knots)
+                i21.setImageResource(R.drawable.ic_action_sensor_speed_outlined)
+                l22.text = getString(R.string.nautical_twa); v22.text = String.format(Locale.US, "%.0f°", Math.toDegrees(state.trueWindAngle ?: 0.0))
+                i22.setImageResource(R.drawable.ic_action_direction_movement)
+                l23.text = getString(R.string.nautical_polar_target); v23.text = String.format(Locale.US, "%.1f %s", (state.polarTargetSpeed ?: 0.0) * 1.94384, knots)
+                i23.setImageResource(R.drawable.ic_action_speed_max)
             }
             "TRACK", "ROUTE" -> {
-                l11.text = "SOG"; v11.text = String.format(Locale.US, "%.1f %s", (state.speedOverGround ?: 0.0) * 1.94384, knots)
-                l12.text = "XTE"; v12.text = String.format(Locale.US, "%.2f NM", (state.crossTrackError ?: 0.0) * 0.000539957)
-                l13.text = "BTW"; v13.text = String.format(Locale.US, "%.0f°", Math.toDegrees(state.targetHeading ?: 0.0))
+                l11.text = getString(R.string.nautical_sog); v11.text = String.format(Locale.US, "%.1f%s %s", (state.speedOverGround ?: 0.0) * 1.94384, sogTrend, knots)
+                i11.setImageResource(R.drawable.ic_action_speed)
+                l12.text = getString(R.string.nautical_xte); v12.text = String.format(Locale.US, "%.2f NM", (state.crossTrackError ?: 0.0) * 0.000539957)
+                i12.setImageResource(R.drawable.ic_action_distance)
+                l13.text = getString(R.string.nautical_btw); v13.text = String.format(Locale.US, "%.0f°", Math.toDegrees(state.targetHeading ?: 0.0))
+                i13.setImageResource(R.drawable.ic_action_bearing)
                 
-                l21.text = "DTW"; v21.text = "---" // Dist to Waypoint not in SignalK message yet
-                l22.text = "COG"; v22.text = String.format(Locale.US, "%.0f°", Math.toDegrees(state.courseOverGroundTrue ?: 0.0))
-                l23.text = "TTW"; v23.text = String.format(Locale.US, "%.0fm", (state.timeToWaypoint ?: 0.0) / 60.0)
+                l21.text = getString(R.string.nautical_dtw); v21.text = "---"
+                i21.setImageResource(R.drawable.ic_action_route_distance)
+                l22.text = getString(R.string.nautical_cog); v22.text = String.format(Locale.US, "%.0f°", Math.toDegrees(state.courseOverGroundTrue ?: 0.0))
+                i22.setImageResource(R.drawable.ic_action_direction_movement)
+                l23.text = getString(R.string.nautical_ttw); v23.text = String.format(Locale.US, "%.0fm", (state.timeToWaypoint ?: 0.0) / 60.0)
+                i23.setImageResource(R.drawable.ic_action_time)
             }
-            else -> { // Heading Mode
-                l11.text = "SOG"; v11.text = String.format(Locale.US, "%.1f %s", (state.speedOverGround ?: 0.0) * 1.94384, knots)
-                l12.text = "HDG ERR"; v12.text = String.format(Locale.US, "%.1f°", arcView.calculateError(arcView.actualHeading ?: 0, arcView.targetHeading))
-                l13.text = "TGT HDG"; v13.text = String.format(Locale.US, "%d°", state.targetHeading?.let { Math.toDegrees(it).toInt() } ?: 0)
+            else -> {
+                l11.text = getString(R.string.nautical_sog); v11.text = String.format(Locale.US, "%.1f%s %s", (state.speedOverGround ?: 0.0) * 1.94384, sogTrend, knots)
+                i11.setImageResource(R.drawable.ic_action_speed)
                 
-                l21.text = "STW"; v21.text = String.format(Locale.US, "%.1f %s", (state.speedThroughWater ?: 0.0) * 1.94384, knots)
-                l22.text = "SET/DRFT"; v22.text = String.format(Locale.US, "%.0f/%.1f", Math.toDegrees(state.setTrue ?: 0.0), (state.drift ?: 0.0) * 1.94384)
-                l23.text = "ROT"; v23.text = String.format(Locale.US, "%.1f°/s", Math.toDegrees(state.rateOfTurn ?: 0.0))
+                val hdgErr = arcView.calculateError(arcView.actualHeading ?: 0, arcView.targetHeading)
+                l12.text = getString(R.string.nautical_hdg_err); v12.text = String.format(Locale.US, "%.1f°", hdgErr)
+                i12.setImageResource(R.drawable.ic_action_relative_bearing)
+                l13.text = getString(R.string.nautical_target_heading); v13.text = String.format(Locale.US, "%d°", state.targetHeading?.let { Math.toDegrees(it).toInt() } ?: 0)
+                i13.setImageResource(R.drawable.ic_action_target_direction_on)
+                
+                l21.text = getString(R.string.nautical_stw); v21.text = String.format(Locale.US, "%.1f%s %s", (state.speedThroughWater ?: 0.0) * 1.94384, stwTrend, knots)
+                i21.setImageResource(R.drawable.ic_action_sensor_speed_outlined)
+                l22.text = getString(R.string.nautical_set_drift); v22.text = String.format(Locale.US, "%.0f/%.1f", Math.toDegrees(state.setTrue ?: 0.0), (state.drift ?: 0.0) * 1.94384)
+                i22.setImageResource(R.drawable.ic_action_bearing)
+                l23.text = getString(R.string.nautical_rot); v23.text = String.format(Locale.US, "%.1f°/s", Math.toDegrees(state.rateOfTurn ?: 0.0))
+                i23.setImageResource(R.drawable.ic_action_direction_arrow)
             }
         }
     }

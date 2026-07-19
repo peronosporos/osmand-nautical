@@ -87,8 +87,46 @@ class MarineTextWidget(
                 WidgetType.NAUTICAL_WIND -> handleWindUpdate(state)
                 WidgetType.NAUTICAL_VMG -> handleVmgUpdate(state)
                 WidgetType.NAUTICAL_COG -> handleCogUpdate(state)
+                WidgetType.NAUTICAL_SOG -> handleSogUpdate(state)
+                WidgetType.NAUTICAL_STW -> handleStwUpdate(state)
                 else -> {}
             }
+        }
+    }
+
+    private var lastSog: Double? = null
+    private fun handleSogUpdate(state: MarineState) {
+        val sog = state.speedOverGround
+        val unitStr = mapActivity.getString(R.string.nautical_unit_knots)
+        if (sog != null) {
+            val converted = sog * SpeedUnits.KNOTS.conversionCoefficient
+            val trend = when {
+                lastSog == null || Math.abs(sog - lastSog!!) < 0.01 -> ""
+                sog > lastSog!! -> " ↑"
+                else -> " ↓"
+            }
+            lastSog = sog
+            setText(String.format(Locale.US, "%.1f%s", converted, trend), unitStr)
+        } else {
+            setText(mapActivity.getString(R.string.n_a), unitStr)
+        }
+    }
+
+    private var lastStw: Double? = null
+    private fun handleStwUpdate(state: MarineState) {
+        val stw = state.speedThroughWater
+        val unitStr = mapActivity.getString(R.string.nautical_unit_knots)
+        if (stw != null) {
+            val converted = stw * SpeedUnits.KNOTS.conversionCoefficient
+            val trend = when {
+                lastStw == null || Math.abs(stw - lastStw!!) < 0.01 -> ""
+                stw > lastStw!! -> " ↑"
+                else -> " ↓"
+            }
+            lastStw = stw
+            setText(String.format(Locale.US, "%.1f%s", converted, trend), unitStr)
+        } else {
+            setText(mapActivity.getString(R.string.n_a), unitStr)
         }
     }
 
