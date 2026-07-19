@@ -8,6 +8,20 @@
 	android:minWidth="@dimen/map_minwidth_widget"
 	tools:background="@drawable/bg_side_widget_day">
 
+	<View
+		android:id="@+id/hud_rudder_indicator"
+		android:layout_width="match_parent"
+		android:layout_height="2dp"
+		android:layout_gravity="top"
+		android:background="?attr/divider_color" />
+
+	<View
+		android:id="@+id/hud_rudder_marker"
+		android:layout_width="6dp"
+		android:layout_height="6dp"
+		android:layout_gravity="top|center_horizontal"
+		android:background="@color/icon_color_osmand_light" />
+
 	<LinearLayout
 		android:id="@+id/container"
 		android:layout_width="match_parent"

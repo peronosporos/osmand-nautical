@@ -45,13 +45,26 @@ class NauticalPilotWidget(
 
     private var statusIconView: AppCompatImageView? = null
     private var progressBar: ProgressBar? = null
+    private var rudderMarker: View? = null
     private var gestureDetector: GestureDetector? = null
     private val holdHandler = Handler(Looper.getMainLooper())
     private var holdProgress = 0
 
-    private val marineStateListener: (MarineState) -> Unit = {
+    private val marineStateListener: (MarineState) -> Unit = { state ->
         mapActivity.runOnUiThread {
             updateInfo(null)
+            state.rudderAngle?.let { angle ->
+                val maxAngle = Math.toRadians(35.0)
+                val ratio = (angle.coerceIn(-maxAngle, maxAngle) / maxAngle).toFloat()
+                rudderMarker?.let { marker ->
+                    val parent = marker.parent as? View
+                    if (parent != null) {
+                        val centerX = parent.width / 2f
+                        val translationX = ratio * (parent.width / 2f - marker.width / 2f)
+                        marker.translationX = translationX
+                    }
+                }
+            }
         }
     }
 
@@ -63,6 +76,7 @@ class NauticalPilotWidget(
 
         statusIconView = view.findViewById(R.id.pilot_status_icon)
         progressBar = view.findViewById(R.id.pilot_progress_bar)
+        rudderMarker = view.findViewById(R.id.hud_rudder_marker)
 
         view.addOnAttachStateChangeListener(
             object : View.OnAttachStateChangeListener {

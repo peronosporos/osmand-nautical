@@ -42,6 +42,14 @@ data class MarineState(
     val windSpeedTrue: Double? = null,
     val windDirectionTrue: Double? = null,
     val windDirectionApparent: Double? = null,
+    val windSpeedApparent: Double? = null,
+    val speedThroughWater: Double? = null,
+    val rateOfTurn: Double? = null,
+    val drift: Double? = null,
+    val setTrue: Double? = null,
+    val trueWindAngle: Double? = null,
+    val polarTargetSpeed: Double? = null,
+    val timeToWaypoint: Double? = null,
 
     // Navigation Deviation (Cross-Track Error)
     val crossTrackError: Double? = null,

@@ -1,308 +1,366 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
-    android:id="@+id/pilot_root"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:background="?attr/list_background_color"
-    android:paddingBottom="24dp">
+    android:background="?attr/list_background_color">
 
-    <!-- Dashboard Header -->
-    <View
-        android:id="@+id/header_bg"
-        android:layout_width="0dp"
-        android:layout_height="64dp"
-        android:background="?attr/activity_background_color"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
-
-    <com.google.android.material.button.MaterialButtonToggleGroup
-        android:id="@+id/mode_toggle_group"
-        android:layout_width="wrap_content"
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/pilot_root"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginStart="16dp"
-        app:layout_constraintBottom_toBottomOf="@id/header_bg"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="@id/header_bg"
-        app:singleSelection="true">
+        android:paddingBottom="24dp">
 
-        <Button
-            android:id="@+id/btn_mode_compass"
-            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+        <!-- Dashboard Header -->
+        <View
+            android:id="@+id/header_bg"
+            android:layout_width="0dp"
+            android:layout_height="64dp"
+            android:background="?attr/activity_background_color"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <com.google.android.material.button.MaterialButtonToggleGroup
+            android:id="@+id/mode_toggle_group"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:paddingHorizontal="12dp"
-            android:text="@string/nautical_mode_compass"
-            android:textSize="12sp" />
+            android:layout_marginStart="16dp"
+            app:layout_constraintBottom_toBottomOf="@id/header_bg"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="@id/header_bg"
+            app:singleSelection="true">
 
-        <Button
-            android:id="@+id/btn_mode_wind"
-            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:paddingHorizontal="12dp"
-            android:text="@string/nautical_mode_wind"
-            android:textSize="12sp" />
-    </com.google.android.material.button.MaterialButtonToggleGroup>
-
-    <com.google.android.material.chip.Chip
-        android:id="@+id/mode_badge"
-        style="@style/Widget.MaterialComponents.Chip.Action"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:clickable="false"
-        android:textAppearance="?attr/textAppearanceSubtitle2"
-        android:textStyle="bold"
-        app:chipBackgroundColor="@color/active_color_secondary_light"
-        app:layout_constraintBottom_toBottomOf="@id/header_bg"
-        app:layout_constraintEnd_toStartOf="@id/btn_advanced"
-        app:layout_constraintStart_toEndOf="@id/mode_toggle_group"
-        app:layout_constraintTop_toTopOf="@id/header_bg"
-        tools:text="AUTO" />
-
-    <ImageButton
-        android:id="@+id/btn_advanced"
-        android:layout_width="48dp"
-        android:layout_height="48dp"
-        android:layout_marginEnd="8dp"
-        android:background="?attr/selectableItemBackgroundBorderless"
-        android:contentDescription="@string/shared_string_settings"
-        app:layout_constraintBottom_toBottomOf="@id/header_bg"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="@id/header_bg"
-        app:srcCompat="@drawable/ic_action_settings" />
-
-    <!-- Telemetry Pane -->
-    <androidx.gridlayout.widget.GridLayout
-        android:id="@+id/telemetry_pane"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:paddingHorizontal="16dp"
-        app:columnCount="3"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/header_bg">
-
-        <LinearLayout
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            app:layout_columnWeight="1"
-            android:gravity="center"
-            android:orientation="vertical">
-            <TextView
-                android:layout_width="wrap_content"
+            <Button
+                android:id="@+id/btn_mode_compass"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="48dp"
                 android:layout_height="wrap_content"
-                android:text="@string/nautical_sog_label"
-                android:textAppearance="?attr/textAppearanceCaption"
-                android:textColor="?attr/text_color_secondary" />
-            <TextView
-                android:id="@+id/txt_sog_value"
-                android:layout_width="wrap_content"
+                android:padding="0dp"
+                app:icon="@drawable/ic_action_direction_compass"
+                app:iconGravity="textStart"
+                app:iconPadding="0dp" />
+
+            <Button
+                android:id="@+id/btn_mode_wind"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="48dp"
                 android:layout_height="wrap_content"
-                android:textAppearance="?attr/textAppearanceHeadline6"
-                android:textStyle="bold"
-                tools:text="6.4 kn" />
-        </LinearLayout>
+                android:padding="0dp"
+                app:icon="@drawable/ic_action_sail_boat_dark"
+                app:iconGravity="textStart"
+                app:iconPadding="0dp" />
 
-        <LinearLayout
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            app:layout_columnWeight="1"
-            android:gravity="center"
-            android:orientation="vertical">
-            <TextView
-                android:layout_width="wrap_content"
+            <Button
+                android:id="@+id/btn_mode_route"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="48dp"
                 android:layout_height="wrap_content"
-                android:text="@string/nautical_depth_label"
-                android:textAppearance="?attr/textAppearanceCaption"
-                android:textColor="?attr/text_color_secondary" />
-            <TextView
-                android:id="@+id/txt_depth_value"
-                android:layout_width="wrap_content"
+                android:padding="0dp"
+                app:icon="@drawable/ic_action_track_16"
+                app:iconGravity="textStart"
+                app:iconPadding="0dp" />
+
+            <Button
+                android:id="@+id/btn_mode_stop"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="48dp"
                 android:layout_height="wrap_content"
-                android:textAppearance="?attr/textAppearanceHeadline6"
-                android:textStyle="bold"
-                tools:text="12.5 m" />
-        </LinearLayout>
+                android:padding="0dp"
+                app:icon="@drawable/ic_action_stop"
+                app:iconGravity="textStart"
+                app:iconPadding="0dp" />
+        </com.google.android.material.button.MaterialButtonToggleGroup>
 
-        <LinearLayout
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            app:layout_columnWeight="1"
-            android:gravity="center"
-            android:orientation="vertical">
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/nautical_xte_label"
-                android:textAppearance="?attr/textAppearanceCaption"
-                android:textColor="?attr/text_color_secondary" />
-            <TextView
-                android:id="@+id/txt_xte_value"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:textAppearance="?attr/textAppearanceHeadline6"
-                android:textStyle="bold"
-                tools:text="0.02 L" />
-        </LinearLayout>
-    </androidx.gridlayout.widget.GridLayout>
-
-    <!-- Steering Command Center -->
-    <net.osmand.plus.plugins.nautical.ui.HeadingArcView
-        android:id="@+id/heading_arc_view"
-        android:layout_width="0dp"
-        android:layout_height="120dp"
-        android:layout_marginTop="16dp"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/telemetry_pane" />
-
-    <Button
-        android:id="@+id/btn_minus_10"
-        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-        android:layout_width="56dp"
-        android:layout_height="56dp"
-        android:layout_marginStart="16dp"
-        android:insetLeft="0dp"
-        android:insetTop="0dp"
-        android:insetRight="0dp"
-        android:insetBottom="0dp"
-        app:cornerRadius="28dp"
-        app:icon="@drawable/ic_arrow_back"
-        app:iconGravity="textStart"
-        app:iconPadding="0dp"
-        app:layout_constraintBottom_toBottomOf="@id/heading_arc_view"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="@id/heading_arc_view" />
-
-    <Button
-        android:id="@+id/btn_minus_1"
-        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-        android:layout_width="48dp"
-        android:layout_height="48dp"
-        android:layout_marginStart="8dp"
-        android:insetLeft="0dp"
-        android:insetTop="0dp"
-        android:insetRight="0dp"
-        android:insetBottom="0dp"
-        app:cornerRadius="24dp"
-        app:icon="@drawable/ic_action_trim_left"
-        app:iconGravity="textStart"
-        app:iconPadding="0dp"
-        app:layout_constraintBottom_toBottomOf="@id/heading_arc_view"
-        app:layout_constraintStart_toEndOf="@id/btn_minus_10"
-        app:layout_constraintTop_toTopOf="@id/heading_arc_view" />
-
-    <Button
-        android:id="@+id/btn_plus_10"
-        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-        android:layout_width="56dp"
-        android:layout_height="56dp"
-        android:layout_marginEnd="16dp"
-        android:insetLeft="0dp"
-        android:insetTop="0dp"
-        android:insetRight="0dp"
-        android:insetBottom="0dp"
-        app:cornerRadius="28dp"
-        app:icon="@drawable/ic_arrow_forward"
-        app:iconGravity="textStart"
-        app:iconPadding="0dp"
-        app:layout_constraintBottom_toBottomOf="@id/heading_arc_view"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="@id/heading_arc_view" />
-
-    <Button
-        android:id="@+id/btn_plus_1"
-        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-        android:layout_width="48dp"
-        android:layout_height="48dp"
-        android:layout_marginEnd="8dp"
-        android:insetLeft="0dp"
-        android:insetTop="0dp"
-        android:insetRight="0dp"
-        android:insetBottom="0dp"
-        app:cornerRadius="24dp"
-        app:icon="@drawable/ic_action_trim_right"
-        app:iconGravity="textStart"
-        app:iconPadding="0dp"
-        app:layout_constraintBottom_toBottomOf="@id/heading_arc_view"
-        app:layout_constraintEnd_toStartOf="@id/btn_plus_10"
-        app:layout_constraintTop_toTopOf="@id/heading_arc_view" />
-
-    <net.osmand.plus.plugins.nautical.ui.RudderView
-        android:id="@+id/rudder_view"
-        android:layout_width="0dp"
-        android:layout_height="32dp"
-        android:layout_marginHorizontal="64dp"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/heading_arc_view" />
-
-    <!-- Sailing Info (Overlay when needed) -->
-    <LinearLayout
-        android:id="@+id/sailing_info_container"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="4dp"
-        android:orientation="horizontal"
-        android:visibility="gone"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/rudder_view">
-        <TextView
-            android:id="@+id/txt_awa_current"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+        <ImageButton
+            android:id="@+id/btn_advanced"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
             android:layout_marginEnd="8dp"
-            android:textAppearance="?attr/textAppearanceCaption"
-            tools:text="AWA: 45°" />
-        <TextView
-            android:id="@+id/txt_awa_target"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/shared_string_settings"
+            app:layout_constraintBottom_toBottomOf="@id/header_bg"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="@id/header_bg"
+            app:srcCompat="@drawable/ic_action_settings" />
+
+        <!-- Heading Error Dial (Pro Analog Visual) -->
+        <net.osmand.plus.plugins.nautical.ui.HeadingErrorDialView
+            android:id="@+id/heading_error_dial"
+            android:layout_width="160dp"
+            android:layout_height="160dp"
+            android:layout_marginTop="16dp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/header_bg" />
+
+        <!-- Telemetry Pane (3x2 Matrix) -->
+        <androidx.gridlayout.widget.GridLayout
+            android:id="@+id/telemetry_pane"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:paddingHorizontal="16dp"
+            app:columnCount="3"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/heading_error_dial">
+
+            <!-- Row 1, Col 1 -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:orientation="vertical"
+                app:layout_columnWeight="1">
+                <TextView
+                    android:id="@+id/txt_label_1_1"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textAppearance="?attr/textAppearanceCaption"
+                    android:textColor="?attr/text_color_secondary"
+                    tools:text="SOG" />
+                <TextView
+                    android:id="@+id/txt_value_1_1"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textAppearance="?attr/textAppearanceHeadline6"
+                    android:textStyle="bold"
+                    tools:text="6.4 kn" />
+            </LinearLayout>
+
+            <!-- Row 1, Col 2 -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:orientation="vertical"
+                app:layout_columnWeight="1">
+                <TextView
+                    android:id="@+id/txt_label_1_2"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textAppearance="?attr/textAppearanceCaption"
+                    android:textColor="?attr/text_color_secondary"
+                    tools:text="HDG ERR" />
+                <TextView
+                    android:id="@+id/txt_value_1_2"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textAppearance="?attr/textAppearanceHeadline6"
+                    android:textStyle="bold"
+                    tools:text="2.1°" />
+            </LinearLayout>
+
+            <!-- Row 1, Col 3 -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:orientation="vertical"
+                app:layout_columnWeight="1">
+                <TextView
+                    android:id="@+id/txt_label_1_3"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textAppearance="?attr/textAppearanceCaption"
+                    android:textColor="?attr/text_color_secondary"
+                    tools:text="TARGET" />
+                <TextView
+                    android:id="@+id/txt_value_1_3"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textAppearance="?attr/textAppearanceHeadline6"
+                    android:textStyle="bold"
+                    tools:text="245°" />
+            </LinearLayout>
+
+            <!-- Row 2, Col 1 -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:gravity="center"
+                android:orientation="vertical"
+                app:layout_columnWeight="1">
+                <TextView
+                    android:id="@+id/txt_label_2_1"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textAppearance="?attr/textAppearanceCaption"
+                    android:textColor="?attr/text_color_secondary"
+                    tools:text="STW" />
+                <TextView
+                    android:id="@+id/txt_value_2_1"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textAppearance="?attr/textAppearanceHeadline6"
+                    android:textStyle="bold"
+                    tools:text="6.2 kn" />
+            </LinearLayout>
+
+            <!-- Row 2, Col 2 -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:gravity="center"
+                android:orientation="vertical"
+                app:layout_columnWeight="1">
+                <TextView
+                    android:id="@+id/txt_label_2_2"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textAppearance="?attr/textAppearanceCaption"
+                    android:textColor="?attr/text_color_secondary"
+                    tools:text="SET/DRFT" />
+                <TextView
+                    android:id="@+id/txt_value_2_2"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textAppearance="?attr/textAppearanceHeadline6"
+                    android:textStyle="bold"
+                    tools:text="240/0.2" />
+            </LinearLayout>
+
+            <!-- Row 2, Col 3 -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:gravity="center"
+                android:orientation="vertical"
+                app:layout_columnWeight="1">
+                <TextView
+                    android:id="@+id/txt_label_2_3"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textAppearance="?attr/textAppearanceCaption"
+                    android:textColor="?attr/text_color_secondary"
+                    tools:text="ROT" />
+                <TextView
+                    android:id="@+id/txt_value_2_3"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textAppearance="?attr/textAppearanceHeadline6"
+                    android:textStyle="bold"
+                    tools:text="0.5°/s" />
+            </LinearLayout>
+        </androidx.gridlayout.widget.GridLayout>
+
+        <!-- Steering Command Center -->
+        <net.osmand.plus.plugins.nautical.ui.HeadingArcView
+            android:id="@+id/heading_arc_view"
+            android:layout_width="0dp"
+            android:layout_height="120dp"
+            android:layout_marginTop="24dp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/telemetry_pane" />
+
+        <!-- Adjustment Buttons (User Friendly & Clear) -->
+        <LinearLayout
+            android:id="@+id/adjustment_container"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:gravity="center"
+            android:orientation="horizontal"
+            app:layout_constraintTop_toBottomOf="@id/heading_arc_view">
+
+            <Button
+                android:id="@+id/btn_minus_10"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="64dp"
+                android:layout_height="64dp"
+                android:insetLeft="0dp"
+                android:insetTop="0dp"
+                android:insetRight="0dp"
+                android:insetBottom="0dp"
+                android:text="-10"
+                android:textSize="16sp"
+                app:cornerRadius="32dp" />
+
+            <Button
+                android:id="@+id/btn_minus_1"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="56dp"
+                android:layout_height="56dp"
+                android:layout_marginStart="16dp"
+                android:insetLeft="0dp"
+                android:insetTop="0dp"
+                android:insetRight="0dp"
+                android:insetBottom="0dp"
+                android:text="-1"
+                android:textSize="16sp"
+                app:cornerRadius="28dp" />
+
+            <Button
+                android:id="@+id/btn_plus_1"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="56dp"
+                android:layout_height="56dp"
+                android:layout_marginStart="16dp"
+                android:insetLeft="0dp"
+                android:insetTop="0dp"
+                android:insetRight="0dp"
+                android:insetBottom="0dp"
+                android:text="+1"
+                android:textSize="16sp"
+                app:cornerRadius="28dp" />
+
+            <Button
+                android:id="@+id/btn_plus_10"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="64dp"
+                android:layout_height="64dp"
+                android:layout_marginStart="16dp"
+                android:insetLeft="0dp"
+                android:insetTop="0dp"
+                android:insetRight="0dp"
+                android:insetBottom="0dp"
+                android:text="+10"
+                android:textSize="16sp"
+                app:cornerRadius="32dp" />
+        </LinearLayout>
+
+        <net.osmand.plus.plugins.nautical.ui.RudderView
+            android:id="@+id/rudder_view"
+            android:layout_width="0dp"
+            android:layout_height="32dp"
+            android:layout_marginTop="16dp"
+            android:layout_marginHorizontal="64dp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/adjustment_container" />
+
+        <!-- Sailing Info (Overlay when needed) -->
+        <LinearLayout
+            android:id="@+id/sailing_info_container"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:textAppearance="?attr/textAppearanceCaption"
-            android:textStyle="bold"
-            tools:text="TGT: 42°" />
-    </LinearLayout>
-
-    <!-- Action Bar -->
-    <FrameLayout
-        android:id="@+id/action_container"
-        android:layout_width="0dp"
-        android:layout_height="64dp"
-        android:layout_marginHorizontal="16dp"
-        android:layout_marginTop="16dp"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/sailing_info_container">
-
-        <Button
-            android:id="@+id/btn_standby"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:insetTop="0dp"
-            android:insetBottom="0dp"
-            android:textAllCaps="true"
-            android:textSize="16sp"
-            android:textStyle="bold"
-            app:cornerRadius="12dp"
-            tools:backgroundTint="#FF8800"
-            tools:text="ENGAGE / STANDBY" />
-
-        <com.google.android.material.progressindicator.CircularProgressIndicator
-            android:id="@+id/standby_progress"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:layout_gravity="center_vertical|end"
-            android:layout_marginEnd="16dp"
+            android:layout_marginTop="4dp"
+            android:orientation="horizontal"
             android:visibility="gone"
-            app:indicatorColor="@android:color/white"
-            app:indicatorSize="32dp"
-            app:trackColor="#40FFFFFF"
-            app:trackThickness="4dp" />
-    </FrameLayout>
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/rudder_view">
+            <TextView
+                android:id="@+id/txt_awa_current"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="8dp"
+                android:textAppearance="?attr/textAppearanceCaption"
+                tools:text="AWA: 45°" />
+            <TextView
+                android:id="@+id/txt_awa_target"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textAppearance="?attr/textAppearanceCaption"
+                android:textStyle="bold"
+                tools:text="TGT: 42°" />
+        </LinearLayout>
 
-</androidx.constraintlayout.widget.ConstraintLayout>
+    </androidx.constraintlayout.widget.ConstraintLayout>
+</androidx.core.widget.NestedScrollView>

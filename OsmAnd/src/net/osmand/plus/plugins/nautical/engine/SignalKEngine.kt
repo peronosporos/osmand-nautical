@@ -263,6 +263,34 @@ class SignalKEngine {
                                         stateUpdated = true
                                     }
                                 }
+                                "navigation.speedThroughWater" -> {
+                                    val stw = valueItem.optDouble("value", Double.NaN)
+                                    if (!stw.isNaN()) {
+                                        state = state.copy(speedThroughWater = stw)
+                                        stateUpdated = true
+                                    }
+                                }
+                                "navigation.rateOfTurn" -> {
+                                    val rot = valueItem.optDouble("value", Double.NaN)
+                                    if (!rot.isNaN()) {
+                                        state = state.copy(rateOfTurn = rot)
+                                        stateUpdated = true
+                                    }
+                                }
+                                "navigation.drift" -> {
+                                    val drift = valueItem.optDouble("value", Double.NaN)
+                                    if (!drift.isNaN()) {
+                                        state = state.copy(drift = drift)
+                                        stateUpdated = true
+                                    }
+                                }
+                                "navigation.setTrue" -> {
+                                    val set = valueItem.optDouble("value", Double.NaN)
+                                    if (!set.isNaN()) {
+                                        state = state.copy(setTrue = set)
+                                        stateUpdated = true
+                                    }
+                                }
                                 "navigation.courseOverGroundTrue" -> {
                                     val cog = valueItem.optDouble("value", Double.NaN)
                                     if (!cog.isNaN()) {
@@ -348,6 +376,35 @@ class SignalKEngine {
                                     val dir = valueItem.optDouble("value", Double.NaN)
                                     if (!dir.isNaN()) {
                                         state = state.copy(windDirectionApparent = dir)
+                                        stateUpdated = true
+                                    }
+                                }
+                                "environment.wind.speedApparent" -> {
+                                    val speed = valueItem.optDouble("value", Double.NaN)
+                                    if (!speed.isNaN()) {
+                                        state = state.copy(windSpeedApparent = speed)
+                                        stateUpdated = true
+                                    }
+                                }
+                                "environment.wind.angleTrue" -> {
+                                    val dir = valueItem.optDouble("value", Double.NaN)
+                                    if (!dir.isNaN()) {
+                                        state = state.copy(trueWindAngle = dir)
+                                        stateUpdated = true
+                                    }
+                                }
+                                "performance.targetSpeed" -> {
+                                    val speed = valueItem.optDouble("value", Double.NaN)
+                                    if (!speed.isNaN()) {
+                                        state = state.copy(polarTargetSpeed = speed)
+                                        stateUpdated = true
+                                    }
+                                }
+                                "navigation.courseRhumbline.timeToWaypoint",
+                                "navigation.courseGreatCircle.timeToWaypoint" -> {
+                                    val ttw = valueItem.optDouble("value", Double.NaN)
+                                    if (!ttw.isNaN()) {
+                                        state = state.copy(timeToWaypoint = ttw)
                                         stateUpdated = true
                                     }
                                 }

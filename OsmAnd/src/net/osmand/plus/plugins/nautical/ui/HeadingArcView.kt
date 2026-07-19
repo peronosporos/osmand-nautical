@@ -8,6 +8,7 @@ import android.view.View
 import android.view.HapticFeedbackConstants
 import androidx.core.content.ContextCompat
 import net.osmand.plus.R
+import java.util.Locale
 import kotlin.math.*
 
 class HeadingArcView @JvmOverloads constructor(
@@ -31,6 +32,10 @@ class HeadingArcView @JvmOverloads constructor(
     var actualHeading: Int? = null
         set(value) {
             if (field != value) {
+                val oldError = field?.let { abs(calculateError(it, targetHeading)) } ?: 0f
+                val newError = value?.let { abs(calculateError(it, targetHeading)) } ?: 0f
+                isRecovering = newError < oldError
+                errorDelta = abs(newError - oldError)
                 field = value
                 invalidate()
             }
@@ -52,13 +57,22 @@ class HeadingArcView @JvmOverloads constructor(
             }
         }
 
-    var isTacking: Boolean = false
+    var currentMode: String = "AUTO"
         set(value) {
-            if (field != value) {
-                field = value
-                invalidate()
-            }
+            field = value.uppercase(Locale.US)
+            invalidate()
         }
+
+    private var isRecovering: Boolean = false
+    private var errorDelta: Float = 0f
+    private var isNightMode: Boolean = false
+
+    fun calculateError(actual: Int, target: Int): Float {
+        var diff = (actual - target).toFloat()
+        while (diff > 180) diff -= 360
+        while (diff < -180) diff += 360
+        return diff
+    }
 
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val textPaint = Paint(Paint.ANTI_ALIAS_FLAG)
@@ -81,6 +95,11 @@ class HeadingArcView @JvmOverloads constructor(
         tickPaint.strokeWidth = 2f
     }
 
+    fun setNightMode(night: Boolean) {
+        this.isNightMode = night
+        invalidate()
+    }
+
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
         val w = width.toFloat()
@@ -88,8 +107,11 @@ class HeadingArcView @JvmOverloads constructor(
         val centerX = w / 2f
         val centerY = h / 2f
 
-        // Draw Linear Heading Tape
-        val pixelsPerDegree = w / 60f // Show 60 degrees window
+        // 1. Zoom logic (Professional Variable Sensitivity)
+        val pixelsPerDegree = when(currentMode) {
+            "TRACK" -> w / 20f // Highly sensitive: +/- 10 degrees window
+            else -> w / 60f    // Standard: +/- 30 degrees window
+        }
         
         tickPaint.color = if (isNightMode) Color.LTGRAY else Color.DKGRAY
         tickPaint.alpha = 100
@@ -97,83 +119,96 @@ class HeadingArcView @JvmOverloads constructor(
         // Draw baseline
         canvas.drawLine(0f, centerY + 20f, w, centerY + 20f, tickPaint)
 
-        // Draw Ticks
-        val startH = targetHeading - 30
-        val endH = targetHeading + 30
-        
-        for (i in startH..endH) {
-            val hValue = (i + 360) % 360
-            val x = centerX + (i - targetHeading) * pixelsPerDegree
+        // 2. Pro-style Ticks (Deviation scale only)
+        val scale = listOf(-20, -10, -5, 0, 5, 10, 20)
+        for (s in scale) {
+            val x = centerX + (s * pixelsPerDegree)
+            if (x < 0 || x > w) continue
+
+            val isCenter = s == 0
+            tickPaint.alpha = if (isCenter) 255 else 150
+            tickPaint.strokeWidth = if (isCenter) 4f else 2f
+            val tickH = if (isCenter) 50f else 30f
             
-            if (hValue % 5 == 0) {
-                val tickH = if (hValue % 10 == 0) 40f else 20f
-                tickPaint.alpha = if (hValue % 10 == 0) 255 else 150
-                canvas.drawLine(x, centerY + 20f, x, centerY + 20f - tickH, tickPaint)
-                
-                if (hValue % 10 == 0) {
-                    paint.style = Paint.Style.FILL
-                    paint.textSize = 24f
-                    paint.textAlign = Paint.Align.CENTER
-                    paint.color = tickPaint.color
-                    paint.alpha = 200
-                    canvas.drawText(hValue.toString(), x, centerY + 50f, paint)
-                }
+            canvas.drawLine(x, centerY + 20f, x, centerY + 20f - tickH, tickPaint)
+            
+            // Label deviations
+            if (!isCenter) {
+                paint.style = Paint.Style.FILL
+                paint.textSize = 20f
+                paint.textAlign = Paint.Align.CENTER
+                paint.color = tickPaint.color
+                paint.alpha = 180
+                canvas.drawText("${abs(s)}", x, centerY + 50f, paint)
             }
         }
 
-        // Draw Actual Heading Indicator (if different from target)
+        // 3. Handling the Marker (The "Professional" Touch)
         actualHeading?.let { actual ->
-            val diff = ((actual.toFloat() - targetHeading.toFloat() + 540f) % 360f) - 180f
-            if (abs(diff) <= 30) {
-                val x = centerX + diff * pixelsPerDegree
-                paint.color = Color.RED
+            val error = calculateError(actual, targetHeading)
+            val window = if (currentMode == "TRACK") 10f else 30f
+            
+            if (abs(error) <= window) {
+                val x = centerX + error * pixelsPerDegree
+                
+                // Color-code based on trend
+                paint.color = if (isRecovering) Color.GREEN else Color.parseColor("#FFBF00") // Green or Amber
                 paint.style = Paint.Style.FILL
-                paint.alpha = 180
-                // Draw a small triangle for actual heading
+                paint.alpha = 200
+                
+                // Damping visual: thickness changes based on stability
+                val baseSize = 15f
+                val jitterModifier = (errorDelta * 5f).coerceIn(0f, 15f)
+                val markerWidth = baseSize - jitterModifier
+                
                 actualPath.reset()
                 actualPath.moveTo(x, centerY + 20f)
-                actualPath.lineTo(x - 10f, centerY + 40f)
-                actualPath.lineTo(x + 10f, centerY + 40f)
+                actualPath.lineTo(x - markerWidth, centerY + 45f)
+                actualPath.lineTo(x + markerWidth, centerY + 45f)
                 actualPath.close()
                 canvas.drawPath(actualPath, paint)
+                
+                // Add a small digital error readout near the marker
+                paint.textSize = 18f
+                paint.alpha = 255
+                canvas.drawText(String.format(Locale.US, "%.1f", error), x, centerY + 65f, paint)
             }
         }
 
-        // Draw Target Center Indicator (Static)
+        // Static Center Target Indicator (The "Lubber Line")
         paint.color = osmandOrange
         paint.style = Paint.Style.FILL
         paint.alpha = 255
         centerPath.reset()
         centerPath.moveTo(centerX, centerY + 20f)
-        centerPath.lineTo(centerX - 15f, centerY - 10f)
-        centerPath.lineTo(centerX + 15f, centerY - 10f)
+        centerPath.lineTo(centerX - 10f, centerY - 5f)
+        centerPath.lineTo(centerX + 10f, centerY - 5f)
         centerPath.close()
         canvas.drawPath(centerPath, paint)
 
-        // Draw Central Digital Readout
+        // Draw Central Digital Readout (Target)
         textPaint.color = ContextCompat.getColor(context, if (isNightMode) R.color.text_color_primary_dark else R.color.text_color_primary_light)
-        canvas.drawText("${targetHeading}°", centerX, centerY - 40f, textPaint)
+        canvas.drawText("${targetHeading}°", centerX, centerY - 45f, textPaint)
+        
+        paint.textSize = 18f
+        paint.color = textPaint.color
+        paint.alpha = 150
+        canvas.drawText("SET", centerX, centerY - 100f, paint)
 
         // Draw Wind Indicator on Tape
         windAngleApparent?.let { wind ->
             val actual = actualHeading?.toDouble() ?: targetHeading.toDouble()
-            val diffActual = ((actual.toFloat() - targetHeading.toFloat() + 540f) % 360f) - 180f
-            val windAngleRel = diffActual + wind.toFloat()
+            val diffActual = calculateError(actual.toInt(), targetHeading)
+            val windAngleRel = diffActual + Math.toDegrees(wind.toDouble()).toFloat()
             
-            if (abs(windAngleRel) <= 30f) {
+            val window = if (currentMode == "TRACK") 10f else 30f
+            if (abs(windAngleRel) <= window) {
                 val x = centerX + windAngleRel * pixelsPerDegree
                 paint.color = Color.CYAN
                 paint.alpha = 150
                 canvas.drawCircle(x, centerY + 20f, 8f, paint)
             }
         }
-    }
-
-    private var isNightMode: Boolean = false
-
-    fun setNightMode(night: Boolean) {
-        this.isNightMode = night
-        invalidate()
     }
 
     override fun performClick(): Boolean {
