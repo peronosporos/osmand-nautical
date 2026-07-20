@@ -68,12 +68,14 @@ android {
 		}
 	}
 
-	// related to kuromoji
-	//packagingOptions {
-	//	exclude '/META-INF/CONTRIBUTORS.md'
-	//	exclude '/META-INF/LICENSE.md'
-	//	exclude '/META-INF/NOTICE.md'
-	//}
+	packaging {
+		resources {
+			exclude '/META-INF/CONTRIBUTORS.md'
+			exclude '/META-INF/LICENSE.md'
+			exclude '/META-INF/NOTICE.md'
+			pickFirst 'com/ibm/icu/impl/data/icudt49b/*.res'
+		}
+	}
 
 	sourceSets {
 		debug {
