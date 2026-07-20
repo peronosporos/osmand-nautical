@@ -46,8 +46,8 @@ class NauticalPilotBottomSheet : BaseMaterialBottomSheetDialogFragment() {
     private val voiceHandler = Handler(Looper.getMainLooper())
     private val speakRunnable = Runnable {
         lastVoiceHeading?.let { heading ->
-            val app = requireActivity().application as net.osmand.plus.OsmandApplication
-            app.player?.let { player ->
+            val app = activity?.application as? net.osmand.plus.OsmandApplication
+            app?.player?.let { player ->
                 val text = getString(R.string.nautical_new_heading, heading)
                 player.playCommands(player.newCommandBuilder().attention(text))
             }

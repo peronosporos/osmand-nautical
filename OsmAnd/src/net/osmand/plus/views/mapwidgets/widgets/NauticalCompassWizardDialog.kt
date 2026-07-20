@@ -6,18 +6,17 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
 import android.widget.TextView
-import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.google.android.material.progressindicator.CircularProgressIndicator
 import net.osmand.plus.R
+import net.osmand.plus.base.BaseMaterialBottomSheetDialogFragment
 import net.osmand.plus.plugins.nautical.NauticalPlugin
 
-class NauticalCompassWizardDialog : BottomSheetDialogFragment() {
+class NauticalCompassWizardDialog : BaseMaterialBottomSheetDialogFragment() {
 
     private var currentStep = 1
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setStyle(STYLE_NORMAL, R.style.BottomSheet_Dialog)
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
