@@ -1,4 +1,4 @@
-apply plugin: 'java'
+apply plugin: 'java-library'
 apply plugin: 'maven-publish'
 apply plugin: 'ivy-publish'
 
@@ -145,6 +145,6 @@ dependencies {
 	// turn off for now
 	//implementation 'com.atilika.kuromoji:kuromoji-ipadic:0.9.0'
 	implementation 'net.sf.kxml:kxml2:2.1.8'
-	implementation fileTree(include: ['*.jar'], dir: 'libs')
+	api fileTree(include: ['*.jar'], dir: 'libs')
 }
 

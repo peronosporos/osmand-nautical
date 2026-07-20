@@ -70,10 +70,10 @@ android {
 
 	packaging {
 		resources {
-			exclude '/META-INF/CONTRIBUTORS.md'
-			exclude '/META-INF/LICENSE.md'
-			exclude '/META-INF/NOTICE.md'
-			pickFirst 'com/ibm/icu/impl/data/icudt49b/*.res'
+			excludes.add('/META-INF/CONTRIBUTORS.md')
+			excludes.add('/META-INF/LICENSE.md')
+			excludes.add('/META-INF/NOTICE.md')
+			pickFirsts.add("com/ibm/icu/impl/data/icudt49b/*.res")
 		}
 	}
 
