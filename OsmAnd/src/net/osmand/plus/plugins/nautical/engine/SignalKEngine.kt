@@ -777,8 +777,7 @@ class SignalKEngine {
                                             solarCurrentBuffer.add(value)
                                             stateUpdated = true
                                         }
-                                    }
-else if (path.startsWith("tanks.fuel.") && path.endsWith(".currentLevel")) {
+                                    } else if (path.startsWith("tanks.fuel.") && path.endsWith(".currentLevel")) {
                                         if (!value.isNaN()) {
                                             state = state.copy(fuelLevel = value)
                                             fuelBuffer.add(value)
