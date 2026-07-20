@@ -6,7 +6,6 @@ import net.osmand.shared.util.KMapUtils
 import org.json.JSONObject
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.*
-import kotlin.time.Duration.Companion.seconds
 import android.content.Context
 import java.io.File
 import java.io.ObjectInputStream
@@ -331,7 +330,7 @@ class SignalKEngine {
         watchdogJob?.cancel()
         watchdogJob = engineScope.launch {
             while (isActive) {
-                delay(1.seconds)
+                delay(1000L)
                 val elapsed = System.currentTimeMillis() - lastUpdateTimestamp
                 if (elapsed > 10000) {
                     _currentState = null
