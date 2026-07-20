@@ -152,7 +152,6 @@
 	<string name="nautical_export_trajectory_failed">Failed to export trajectory</string>
 
 	<string name="nautical_new_heading">New heading: %1$d°</string>
-	<string name="nautical_data_telemetry">Telemetry</string>
 
 	<string name="nautical_toggle_night_vision">Toggle Night Vision</string>
 	<string name="nautical_night_vision">Night Vision</string>
