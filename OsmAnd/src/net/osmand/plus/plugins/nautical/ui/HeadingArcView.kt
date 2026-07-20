@@ -54,6 +54,14 @@ class HeadingArcView @JvmOverloads constructor(
             }
         }
 
+    var targetWindAngleApparent: Int? = null
+        set(value) {
+            if (field != value) {
+                field = value
+                invalidate()
+            }
+        }
+
     var currentMode: String = "AUTO"
         set(value) {
             field = value.uppercase(Locale.US)
@@ -198,7 +206,7 @@ class HeadingArcView @JvmOverloads constructor(
             }
         }
 
-        // 3. Wind Indicator
+        // 3. Wind Indicators
         windAngleApparent?.let { awa ->
             val actual = actualHeading ?: targetHeading
             val absWind = (actual + awa + 360) % 360
@@ -206,6 +214,7 @@ class HeadingArcView @JvmOverloads constructor(
             val x = centerX + windErr * pixelsPerDegree
             if (x in paddingView..(w - paddingView)) {
                 paint.color = Color.CYAN
+                paint.style = Paint.Style.FILL
                 paint.alpha = 180
                 canvas.drawCircle(x, centerY + 20f, 8f, paint)
                 
@@ -218,6 +227,25 @@ class HeadingArcView @JvmOverloads constructor(
                 paint.textSize = 18f
                 paint.alpha = 255
                 canvas.drawText(context.getString(R.string.nautical_awa_label), x, centerY + 2f, paint)
+            }
+        }
+
+        targetWindAngleApparent?.let { targetAwa ->
+            val actual = actualHeading ?: targetHeading
+            val absTargetWind = (actual + targetAwa + 360) % 360
+            val targetWindErr = calculateError(absTargetWind, targetHeading)
+            val x = centerX + targetWindErr * pixelsPerDegree
+            if (x in paddingView..(w - paddingView)) {
+                paint.color = Color.CYAN
+                paint.style = Paint.Style.STROKE
+                paint.strokeWidth = 3f
+                paint.alpha = 220
+                canvas.drawCircle(x, centerY + 20f, 10f, paint)
+                
+                paint.style = Paint.Style.FILL
+                paint.textSize = 14f
+                paint.alpha = 255
+                canvas.drawText("T", x, centerY + 25f, paint)
             }
         }
 
