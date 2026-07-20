@@ -22,10 +22,16 @@ import java.io.IOException;
  */
 public class PlatformUtil {
 
+	public static String TAG = "net.osmand"; //$NON-NLS-1$
+
 	private static OsmandRegions osmandRegions;
 
 	public static Log getLog(Class<?> cl){
 		return LogFactory.getLog(cl);
+	}
+
+	public static Log getLog(String name){
+		return LogFactory.getLog(name);
 	}
 
 	public static void setOsmandRegions(OsmandRegions or) {
@@ -47,6 +53,9 @@ public class PlatformUtil {
 
 	public static XmlSerializer newSerializer() {
 		return new org.kxml2.io.KXmlSerializer();
+	}
+
+	public static void setupZipPathValidator() {
 	}
 
 }
