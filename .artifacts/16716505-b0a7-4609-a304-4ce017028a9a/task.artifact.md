@@ -1,0 +1,5 @@
+- [x] Remove duplicate nautical strings from the first block (lines 80-90)
+- [x] Add missing nautical strings to the second block with consistent case
+- [x] Fix duplicate `rendering_attr_contourLines_description`
+- [x] Verify no duplicates remain in `strings.xml`
+- [x] Verify build passes resource merging (via duplicate check)
