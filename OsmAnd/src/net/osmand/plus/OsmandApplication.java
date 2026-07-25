@@ -394,6 +394,10 @@ public class OsmandApplication extends MultiDexApplication {
 		return rendererRegistry;
 	}
 
+	public SQLiteAPI getSqliteAPI() {
+		return sqliteAPI;
+	}
+
 	public OsmAndTaskManager getTaskManager() {
 		return taskManager;
 	}

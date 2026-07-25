@@ -1,0 +1,3 @@
+- [x] Update `S57SqliteHelper.kt` to support acronym filtering in `queryFeatures`
+- [x] Update `S57SpatialIndex.kt` to delegate to `S57SqliteHelper` and remove in-memory JTS checks
+- [x] Verify changes with `analyze_file`

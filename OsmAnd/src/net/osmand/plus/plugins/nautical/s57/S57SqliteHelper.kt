@@ -134,19 +134,28 @@ class S57SqliteHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAM
         // Better to just delete this once S57IndexManager is updated.
     }
 
-    fun queryFeatures(latMin: Double, latMax: Double, lonMin: Double, lonMax: Double): List<S57Object> {
+    fun queryFeatures(latMin: Double, latMax: Double, lonMin: Double, lonMax: Double, acronyms: Collection<String>? = null): List<S57Object> {
         val db = readableDatabase
         val features = mutableListOf<S57Object>()
         
         val lonCondition = getLonCondition(lonMin, lonMax)
         
+        val args = mutableListOf(latMin.toString(), latMax.toString(), lonMin.toString(), lonMax.toString())
+        var acronymCondition = ""
+        if (acronyms != null && acronyms.isNotEmpty()) {
+            val placeholders = acronyms.joinToString(",") { "?" }
+            acronymCondition = " AND $COLUMN_ACRONYM IN ($placeholders)"
+            args.addAll(acronyms)
+        }
+
         val query = """
             SELECT * FROM $TABLE_FEATURES 
             WHERE ($COLUMN_MAX_LAT >= ? AND $COLUMN_MIN_LAT <= ?) 
             AND $lonCondition
+            $acronymCondition
         """
         
-        val cursor = db.rawQuery(query, arrayOf(latMin.toString(), latMax.toString(), lonMin.toString(), lonMax.toString()))
+        val cursor = db.rawQuery(query, args.toTypedArray())
         
         cursor.use {
             while (it.moveToNext()) {

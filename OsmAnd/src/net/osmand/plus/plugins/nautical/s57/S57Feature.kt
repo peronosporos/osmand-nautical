@@ -1,5 +1,8 @@
 package net.osmand.plus.plugins.nautical.s57
 
+import com.vividsolutions.jts.geom.Coordinate
+import com.vividsolutions.jts.geom.Geometry
+import com.vividsolutions.jts.geom.GeometryFactory
 import net.osmand.data.LatLon
 
 /**
@@ -37,6 +40,37 @@ sealed class S57Geometry {
     data class MultiPoint(val positions: List<LatLon>, val depths: List<Double> = emptyList()) : S57Geometry()
     data class Line(val nodes: List<LatLon>) : S57Geometry()
     data class Area(val boundaries: List<List<LatLon>>) : S57Geometry()
+
+    /**
+     * Converts S-57 geometry to JTS Geometry.
+     */
+    fun toJtsGeometry(factory: GeometryFactory): Geometry? {
+        return when (this) {
+            is Point -> factory.createPoint(Coordinate(position.longitude, position.latitude))
+            is MultiPoint -> {
+                val coords = positions.map { Coordinate(it.longitude, it.latitude) }.toTypedArray()
+                factory.createMultiPoint(coords)
+            }
+            is Line -> {
+                val coords = nodes.map { Coordinate(it.longitude, it.latitude) }.toTypedArray()
+                factory.createLineString(coords)
+            }
+            is Area -> {
+                val shells = boundaries.map { ring ->
+                    val coords = ring.map { Coordinate(it.longitude, it.latitude) }.toTypedArray()
+                    // Ensure closed linear ring
+                    val closedCoords = if (coords.isNotEmpty() && coords.first() != coords.last()) {
+                        coords + coords.first()
+                    } else {
+                        coords
+                    }
+                    factory.createLinearRing(closedCoords)
+                }
+                if (shells.isEmpty()) null
+                else factory.createPolygon(shells.first(), shells.drop(1).toTypedArray())
+            }
+        }
+    }
 }
 
 /**

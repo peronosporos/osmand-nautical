@@ -28,7 +28,7 @@ import net.osmand.plus.plugins.nautical.mob.engine.MobStateMachine
 import net.osmand.plus.plugins.nautical.mob.ui.MobEmergencyHeaderView
 import net.osmand.plus.plugins.nautical.mob.viewmodel.MobAudioAlertManager
 import net.osmand.plus.plugins.nautical.mob.viewmodel.MobViewModel
-import net.osmand.plus.plugins.nautical.s57.S57IndexManager
+import net.osmand.plus.plugins.nautical.s57.S57SpatialIndex
 import net.osmand.plus.plugins.nautical.viewmodel.RoutingViewModel
 import net.osmand.plus.settings.fragments.SettingsScreenType
 import net.osmand.plus.views.mapwidgets.MapWidgetInfo
@@ -45,7 +45,7 @@ import net.osmand.plus.settings.enums.ScreenLayoutMode
 class SailingIntegrationPlugin(app: OsmandApplication) : OsmandPlugin(app) {
 
     private var layerController: SailingMapLayerController? = null
-    var s57IndexManager: S57IndexManager? = null
+    var s57SpatialIndex: S57SpatialIndex? = null
         private set
     var mobViewModel: MobViewModel? = null
         private set
@@ -87,8 +87,8 @@ class SailingIntegrationPlugin(app: OsmandApplication) : OsmandPlugin(app) {
         SailingDependencyContainer.performanceRepository.fetchPolars()
         
         // Initialize S-57 index
-        val indexManager = S57IndexManager(app)
-        s57IndexManager = indexManager
+        val indexManager = S57SpatialIndex(app)
+        s57SpatialIndex = indexManager
         pluginScope.launch {
             indexManager.indexCharts()
         }
@@ -105,8 +105,8 @@ class SailingIntegrationPlugin(app: OsmandApplication) : OsmandPlugin(app) {
         SailingDependencyContainer.performanceRepository.disconnect()
         layerController?.unregisterLayers()
         layerController = null
-        s57IndexManager?.clearCache()
-        s57IndexManager = null
+        s57SpatialIndex?.clearCache()
+        s57SpatialIndex = null
         routingViewModel = null
         
         mobAudioAlertManager.stopAlarm()
@@ -146,7 +146,7 @@ class SailingIntegrationPlugin(app: OsmandApplication) : OsmandPlugin(app) {
 
     override fun registerLayers(context: Context, activity: MapActivity?) {
         if (activity != null) {
-            val controller = SailingMapLayerController(activity, s57IndexManager)
+            val controller = SailingMapLayerController(activity, s57SpatialIndex)
             controller.registerLayers()
             layerController = controller
 

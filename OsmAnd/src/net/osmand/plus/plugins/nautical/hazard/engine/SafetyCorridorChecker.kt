@@ -3,7 +3,7 @@ package net.osmand.plus.plugins.nautical.hazard.engine
 import com.vividsolutions.jts.geom.*
 import com.vividsolutions.jts.operation.buffer.BufferParameters
 import net.osmand.plus.plugins.nautical.s57.S57Object
-import net.osmand.plus.plugins.nautical.s57.S57IndexManager
+import net.osmand.plus.plugins.nautical.s57.S57SpatialIndex
 import net.osmand.plus.plugins.nautical.s57.S57Geometry
 import net.osmand.plus.plugins.nautical.routing.model.Waypoint
 
@@ -11,7 +11,7 @@ import net.osmand.plus.plugins.nautical.routing.model.Waypoint
  * Scans a projected safety corridor along a route for navigational hazards.
  */
 class SafetyCorridorChecker(
-    private val indexManager: S57IndexManager,
+    private val indexManager: S57SpatialIndex,
     private val vesselDraft: Double,
     private val safetyMargin: Double
 ) {

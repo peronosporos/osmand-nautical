@@ -10,7 +10,7 @@ import net.osmand.plus.OsmandApplication
 import net.osmand.plus.mapcontextmenu.MenuController
 import net.osmand.plus.plugins.nautical.NauticalPlugin
 import net.osmand.plus.plugins.nautical.s57.S57Geometry
-import net.osmand.plus.plugins.nautical.s57.S57IndexManager
+import net.osmand.plus.plugins.nautical.s57.S57SpatialIndex
 import net.osmand.plus.plugins.nautical.s57.S57Object
 import net.osmand.plus.plugins.nautical.s57.style.S52SymbolManager
 import net.osmand.plus.plugins.nautical.s57.style.S57FeatureStylizer
@@ -22,7 +22,7 @@ import net.osmand.plus.views.layers.MapSelectionRules
 import net.osmand.plus.views.layers.base.OsmandMapLayer
 import java.util.concurrent.Executors
 
-class S57MapLayer(context: Context, private val indexManager: S57IndexManager) : OsmandMapLayer(context), IContextMenuProvider {
+class S57MapLayer(context: Context, private val indexManager: S57SpatialIndex) : OsmandMapLayer(context), IContextMenuProvider {
 
     private val strokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE

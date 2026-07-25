@@ -7,11 +7,11 @@ import net.osmand.plus.plugins.nautical.laylines.ui.SailingLaylinesMapLayer
 import net.osmand.plus.plugins.nautical.map.layers.WeatherRoutingMapLayer
 import net.osmand.plus.plugins.nautical.mob.ui.MobMapLayer
 import net.osmand.plus.plugins.nautical.raster.MarineRasterMapLayer
-import net.osmand.plus.plugins.nautical.s57.S57IndexManager
+import net.osmand.plus.plugins.nautical.s57.S57SpatialIndex
 import net.osmand.plus.plugins.nautical.s57.ui.S57MapLayer
 import net.osmand.plus.plugins.nautical.ui.anchor.AnchorWatchMapLayer
 
-class SailingMapLayerController(private val mapActivity: MapActivity, s57IndexManager: S57IndexManager? = null) {
+class SailingMapLayerController(private val mapActivity: MapActivity, s57SpatialIndex: S57SpatialIndex? = null) {
 
     val laylinesLayer = SailingLaylinesMapLayer(mapActivity)
     private val weatherRoutingLayer = WeatherRoutingMapLayer(mapActivity)
@@ -20,7 +20,7 @@ class SailingMapLayerController(private val mapActivity: MapActivity, s57IndexMa
     val anchorLayer = AnchorWatchMapLayer(mapActivity)
     val navtexLayer = NavtexMapLayer(mapActivity)
     val rasterLayer = MarineRasterMapLayer(mapActivity)
-    val s57Layer = s57IndexManager?.let { S57MapLayer(mapActivity, it) }
+    val s57Layer = s57SpatialIndex?.let { S57MapLayer(mapActivity, it) }
 
     fun registerLayers() {
         val mapView = mapActivity.mapView
