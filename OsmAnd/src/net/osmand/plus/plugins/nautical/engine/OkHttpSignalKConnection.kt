@@ -2,22 +2,27 @@ package net.osmand.plus.plugins.nautical.engine
 
 import net.osmand.PlatformUtil
 import okhttp3.*
-import java.util.concurrent.TimeUnit
 
 class OkHttpSignalKConnection(private val client: OkHttpClient) : SignalKConnection {
     private val log = PlatformUtil.getLog(OkHttpSignalKConnection::class.java)
 
     private var webSocket: WebSocket? = null
     private var isConnected = false
+    private var isConnecting = false
 
     fun isConnected(): Boolean = isConnected
+    fun isConnecting(): Boolean = isConnecting
 
     override fun connect(
         url: String,
         username: String?,
         password: String?,
+        onFailure: (() -> Unit)?,
         onMessageReceived: (String) -> Unit,
     ) {
+        if (isConnecting || isConnected) return
+        isConnecting = true
+
         val requestBuilder = Request.Builder().url(url)
         if (!username.isNullOrEmpty() && !password.isNullOrEmpty()) {
             val credentials = Credentials.basic(username, password)
@@ -31,6 +36,7 @@ class OkHttpSignalKConnection(private val client: OkHttpClient) : SignalKConnect
                 override fun onOpen(webSocket: WebSocket, response: Response) {
                     log.debug("WebSocket Connected Successfully!")
                     isConnected = true
+                    isConnecting = false
 
                     // Send the required SignalK Hello
                     val hello = """{"name":"OsmAnd-Nautical","version":"1.0.0"}"""
@@ -38,19 +44,22 @@ class OkHttpSignalKConnection(private val client: OkHttpClient) : SignalKConnect
                 }
 
                 override fun onMessage(webSocket: WebSocket, text: String) {
-                    log.debug("Message received: $text")
                     onMessageReceived(text)
                 }
 
                 override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
                     log.error("WebSocket Failure: ${t.message}")
                     isConnected = false
+                    isConnecting = false
+                    onFailure?.invoke()
                 }
 
                 override fun onClosing(webSocket: WebSocket, code: Int, reason: String) {
                     webSocket.close(1000, null)
                     log.debug("WebSocket Closing: $reason")
                     isConnected = false
+                    isConnecting = false
+                    onFailure?.invoke()
                 }
 
                 override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
@@ -71,5 +80,6 @@ class OkHttpSignalKConnection(private val client: OkHttpClient) : SignalKConnect
         webSocket?.close(1000, "User requested disconnect")
         webSocket = null
         isConnected = false
+        isConnecting = false
     }
 }

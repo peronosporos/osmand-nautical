@@ -1,0 +1,29 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- Water surface -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="1"
+        android:pathData="M2,6H22" />
+    <!-- Transducer symbol (small box on boat bottom) -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M11,10H13V12H11Z" />
+    <!-- Sounding Cone -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:fillAlpha="0.3"
+        android:pathData="M12,12L7,20H17Z" />
+    <!-- Vertical measurement line -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="1"
+        android:pathData="M12,12V20" />
+    <!-- Seabed -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M2,20H22L22,22H2Z" />
+</vector>

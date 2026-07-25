@@ -11,7 +11,12 @@ import android.graphics.drawable.Drawable
 import androidx.core.content.ContextCompat
 import net.osmand.data.RotatedTileBox
 import net.osmand.plus.R
+import net.osmand.plus.plugins.nautical.hazard.engine.SafetyCorridorChecker
+import net.osmand.plus.plugins.nautical.hazard.engine.SafetyIssue
+import net.osmand.plus.plugins.nautical.plugin.SailingIntegrationPlugin
+import net.osmand.plus.plugins.nautical.routing.model.Waypoint
 import net.osmand.plus.views.layers.base.OsmandMapLayer
+import java.util.Locale
 import kotlin.math.*
 
 class NauticalMapLayer(context: Context) : OsmandMapLayer(context) {
@@ -23,7 +28,6 @@ class NauticalMapLayer(context: Context) : OsmandMapLayer(context) {
         style = Paint.Style.STROKE
         strokeCap = Paint.Cap.ROUND
     }
-    private val lastPressPoint = PointF()
     private val waypointIcon: Drawable? = ContextCompat.getDrawable(context, R.drawable.ic_action_waypoint)
 
     private val projectionPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -34,75 +38,97 @@ class NauticalMapLayer(context: Context) : OsmandMapLayer(context) {
         alpha = 180
     }
 
-    private val laylinePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.YELLOW
-        strokeWidth = 4f
-        style = Paint.Style.STROKE
-        pathEffect = DashPathEffect(floatArrayOf(20f, 10f), 0f)
-    }
-    private val windShiftPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.CYAN
-        alpha = 60
-        style = Paint.Style.FILL
-    }
-
     private val cogPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.GREEN
         strokeWidth = 5f
         style = Paint.Style.STROKE
+        pathEffect = DashPathEffect(floatArrayOf(20f, 10f), 0f)
     }
 
     private val currentPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.BLUE
         strokeWidth = 3f
         style = Paint.Style.STROKE
+        pathEffect = DashPathEffect(floatArrayOf(10f, 5f), 0f)
+    }
+
+    private val targetHeadingPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.rgb(255, 165, 0) // Orange
+        strokeWidth = 5f
+        style = Paint.Style.STROKE
+        pathEffect = DashPathEffect(floatArrayOf(25f, 15f), 0f)
+        alpha = 200
+    }
+
+    private val routePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.YELLOW
+        strokeWidth = 6f
+        style = Paint.Style.STROKE
+        pathEffect = DashPathEffect(floatArrayOf(30f, 20f), 0f)
+        alpha = 140
+    }
+
+    private val warningPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.RED
+        textAlign = Paint.Align.CENTER
+        textSize = 60f
+        typeface = android.graphics.Typeface.DEFAULT_BOLD
     }
 
     private val trajectoryPath = Path()
-    private var lastTrajectorySize = 0
+    private val trajectoryHistory = mutableListOf<Pair<Double, Double>>()
+    private var lastTrajectoryPoint: Pair<Double, Double>? = null
     private var lastDrawTileBox: RotatedTileBox? = null
+
+    private var cachedSafetyIssues: List<SafetyIssue> = emptyList()
+    private var lastCheckedRoute: List<Pair<Double, Double>>? = null
+    private var lastCheckedVesselPos: Pair<Double, Double>? = null
 
     override fun drawInScreenPixels(): Boolean = true
 
-    override fun onDraw(canvas: Canvas, tileBox: RotatedTileBox, settings: OsmandMapLayer.DrawSettings) {
+    override fun onDraw(canvas: Canvas, tileBox: RotatedTileBox, settings: DrawSettings) {
+        val app = context.applicationContext as net.osmand.plus.OsmandApplication
+        if (app.settings.APPLICATION_MODE.get() != net.osmand.plus.settings.backend.ApplicationMode.BOAT) {
+            return
+        }
         this.lastKnownTileBox = tileBox
 
         val engine = NauticalPlugin.engine ?: return
-        val app = context.applicationContext as net.osmand.plus.OsmandApplication
         val osmandSettings = app.settings
 
         val isNightVision = NauticalPlugin.isNightVision(app)
         if (isNightVision) {
             trailPaint.color = Color.RED
             projectionPaint.color = Color.RED
-            laylinePaint.color = Color.RED
-            windShiftPaint.color = Color.RED
-            windShiftPaint.alpha = 60
+            projectionPaint.alpha = 180
             cogPaint.color = Color.RED
             currentPaint.color = Color.RED
+            targetHeadingPaint.color = Color.RED
+            routePaint.color = Color.RED
         } else {
             trailPaint.color = Color.MAGENTA
             projectionPaint.color = Color.WHITE
-            laylinePaint.color = Color.YELLOW
-            windShiftPaint.color = Color.CYAN
-            windShiftPaint.alpha = 60
+            projectionPaint.alpha = 180
             cogPaint.color = Color.GREEN
             currentPaint.color = Color.BLUE
+            targetHeadingPaint.color = Color.rgb(255, 165, 0)
+            routePaint.color = Color.YELLOW
         }
 
         if (osmandSettings.NAUTICAL_SHOW_TRAJECTORY.get()) {
-            val history = engine.getTrajectory()
-            if (history.size >= 2) {
-                val tb = tileBox
+            engine.copyTrajectoryTo(trajectoryHistory)
+            if (trajectoryHistory.size >= 2) {
+                val lastPoint = trajectoryHistory.last()
                 val lastTb = lastDrawTileBox
-                val tileBoxChanged = lastTb == null || 
-                    lastTb.getLatFromPixel(0f, 0f) != tb.getLatFromPixel(0f, 0f) ||
-                    lastTb.getLonFromPixel(0f, 0f) != tb.getLonFromPixel(0f, 0f)
+                val tileBoxChanged = (lastTb == null) || (lastTb.zoom != tileBox.zoom) || 
+                    (abs(lastTb.rotate - tileBox.rotate) > 0.01f) ||
+                    (abs(lastTb.center31X - tileBox.center31X) > 1) ||
+                    (abs(lastTb.center31Y - tileBox.center31Y) > 1)
                 
-                if (history.size != lastTrajectorySize || tileBoxChanged) {
+                if (lastPoint != lastTrajectoryPoint || tileBoxChanged) {
                     trajectoryPath.reset()
                     var first = true
-                    for (point in history) {
+                    for (point in trajectoryHistory) {
                         val x = tileBox.getPixXFromLatLon(point.first, point.second)
                         val y = tileBox.getPixYFromLatLon(point.first, point.second)
                         if (first) {
@@ -112,7 +138,7 @@ class NauticalMapLayer(context: Context) : OsmandMapLayer(context) {
                             trajectoryPath.lineTo(x, y)
                         }
                     }
-                    lastTrajectorySize = history.size
+                    lastTrajectoryPoint = lastPoint
                     lastDrawTileBox = tileBox
                 }
                 trailPaint.alpha = 200
@@ -121,13 +147,20 @@ class NauticalMapLayer(context: Context) : OsmandMapLayer(context) {
         }
 
         if (engine.isFollowingRoute) {
+            drawNavigationPath(canvas, tileBox, engine)
             engine.getNextWaypoint()?.let { nextPoint ->
                 val x = tileBox.getPixXFromLatLon(nextPoint.first, nextPoint.second)
                 val y = tileBox.getPixYFromLatLon(nextPoint.first, nextPoint.second)
 
                 waypointIcon?.let {
-                    val iconSize = 40
-                    it.setBounds((x - iconSize).toInt(), (y - iconSize).toInt(), (x + iconSize).toInt(), (y + iconSize).toInt())
+                    val density = context.resources.displayMetrics.density
+                    val iconSize = (20 * density).toInt()
+                    it.setBounds(x.toInt() - iconSize, y.toInt() - iconSize, x.toInt() + iconSize, y.toInt() + iconSize)
+                    if (isNightVision) {
+                        it.setTint(Color.RED)
+                    } else {
+                        it.setTintList(null)
+                    }
                     it.draw(canvas)
                 } ?: run {
                     // Fallback to circle if icon is missing
@@ -136,21 +169,41 @@ class NauticalMapLayer(context: Context) : OsmandMapLayer(context) {
             }
         }
 
-        if (osmandSettings.NAUTICAL_SHOW_LAYLINES.get()) {
-            drawLaylines(canvas, tileBox, engine.getCurrentState())
-        }
-        if (osmandSettings.NAUTICAL_SHOW_WIND_SHIFTS.get()) {
-            drawWindShifts(canvas, tileBox, engine)
+        if (NauticalPlugin.getInstance()?.isConnectionLostAlertActive == true) {
+            drawConnectionWarning(canvas)
         }
 
         drawVesselProjections(canvas, tileBox, engine, osmandSettings)
+    }
+
+    private fun drawConnectionWarning(canvas: Canvas) {
+        val now = System.currentTimeMillis()
+        if ((now / 500) % 2 == 0L) return // Blink 1Hz
+        
+        val text = context.getString(R.string.nautical_autopilot_data_lost)
+        val x = canvas.width / 2f
+        val y = 200f // Top area
+        
+        val bgPaint = Paint().apply {
+            color = Color.RED
+            alpha = 220
+        }
+        val textWidth = warningPaint.measureText(text)
+        canvas.drawRect(x - textWidth / 2 - 40, y - 80, x + textWidth / 2 + 40, y + 30, bgPaint)
+        
+        val textPaint = Paint(warningPaint).apply {
+            color = Color.WHITE
+            textSize = 70f
+            isFakeBoldText = true
+        }
+        canvas.drawText(text, x, y, textPaint)
     }
 
     private fun drawVesselProjections(
         canvas: Canvas,
         tileBox: RotatedTileBox,
         engine: net.osmand.plus.plugins.nautical.engine.SignalKEngine,
-        settings: net.osmand.plus.settings.backend.OsmandSettings
+        settings: net.osmand.plus.settings.backend.OsmandSettings,
     ) {
         val state = engine.getCurrentState() ?: return
         val lat = state.latitude ?: return
@@ -162,16 +215,14 @@ class NauticalMapLayer(context: Context) : OsmandMapLayer(context) {
         val startY = tileBox.getPixYFromLatLon(lat, lon)
 
         // 1. Heading Line
-        if (settings.NAUTICAL_SHOW_HEADING_LINE.get()) {
-            val hdg = state.headingTrue
-            val stw = state.speedThroughWater
-            if (hdg != null && stw != null) {
-                val dist = stw * lookAheadSec
-                val endPoint = net.osmand.util.MapUtils.greatCircleDestinationPoint(lat, lon, dist, Math.toDegrees(hdg))
-                val endX = tileBox.getPixXFromLatLon(endPoint.latitude, endPoint.longitude)
-                val endY = tileBox.getPixYFromLatLon(endPoint.latitude, endPoint.longitude)
-                canvas.drawLine(startX, startY, endX, endY, projectionPaint)
-            }
+        val hdg = state.headingTrue
+        if (settings.NAUTICAL_SHOW_HEADING_LINE.get() && hdg != null) {
+            val stw = state.speedThroughWater ?: state.speedOverGround ?: 0.0
+            val dist = stw * lookAheadSec
+            val endPoint = net.osmand.util.MapUtils.greatCircleDestinationPoint(lat, lon, dist, Math.toDegrees(hdg))
+            val endX = tileBox.getPixXFromLatLon(endPoint.latitude, endPoint.longitude)
+            val endY = tileBox.getPixYFromLatLon(endPoint.latitude, endPoint.longitude)
+            canvas.drawLine(startX, startY, endX, endY, projectionPaint)
         }
 
         // 2. COG Line
@@ -201,6 +252,18 @@ class NauticalMapLayer(context: Context) : OsmandMapLayer(context) {
                 drawArrowHead(canvas, startX, startY, endX, endY, currentPaint)
             }
         }
+
+        // 4. Target Heading (Autopilot)
+        val targetHdg = state.targetHeading
+        if (targetHdg != null && state.autopilotState.lowercase(Locale.US) != "standby") {
+            val speed = state.speedThroughWater ?: state.speedOverGround ?: 5.0 // Default 5kn length for visibility if stationary
+            val dist = speed * lookAheadSec
+            val endPoint = net.osmand.util.MapUtils.greatCircleDestinationPoint(lat, lon, dist, Math.toDegrees(targetHdg))
+            val endX = tileBox.getPixXFromLatLon(endPoint.latitude, endPoint.longitude)
+            val endY = tileBox.getPixYFromLatLon(endPoint.latitude, endPoint.longitude)
+            canvas.drawLine(startX, startY, endX, endY, targetHeadingPaint)
+            drawArrowHead(canvas, startX, startY, endX, endY, targetHeadingPaint)
+        }
     }
 
     private fun drawArrowHead(canvas: Canvas, x1: Float, y1: Float, x2: Float, y2: Float, paint: Paint) {
@@ -217,87 +280,73 @@ class NauticalMapLayer(context: Context) : OsmandMapLayer(context) {
         canvas.drawLine(x2, y2, p2x, p2y, paint)
     }
 
-    private fun drawWindShifts(canvas: Canvas, tileBox: RotatedTileBox, engine: net.osmand.plus.plugins.nautical.engine.SignalKEngine) {
-        val state = engine.getCurrentState() ?: return
-        val lat = state.latitude ?: return
-        val lon = state.longitude ?: return
-        val history = engine.getWindDirectionHistory()
-        if (history.isEmpty()) return
-
-        val centerX = tileBox.getPixXFromLatLon(lat, lon)
-        val centerY = tileBox.getPixYFromLatLon(lat, lon)
-        val radius = 300f
-
-        val rect = android.graphics.RectF(centerX - radius, centerY - radius, centerX + radius, centerY + radius)
-        
-        // Find smallest arc covering all points
-        val sortedAngles = history.map { 
-            val deg = Math.toDegrees(it)
-            (deg % 360.0 + 360.0) % 360.0 
-        }.sorted()
-        
-        var maxGap = 0.0
-        var startOfMaxGap = sortedAngles.last()
-        
-        for (i in 0 until sortedAngles.size) {
-            val a1 = sortedAngles[i]
-            val a2 = if (i + 1 < sortedAngles.size) sortedAngles[i + 1] else sortedAngles[0] + 360.0
-            val gap = a2 - a1
-            if (gap > maxGap) {
-                maxGap = gap
-                startOfMaxGap = a1
-            }
-        }
-
-        val sweepAngle = (360.0 - maxGap).coerceAtLeast(1.0)
-        val startAngle = (startOfMaxGap + maxGap) - 90.0
-        
-        canvas.drawArc(rect, startAngle.toFloat(), sweepAngle.toFloat(), true, windShiftPaint)
-    }
-
-    private fun drawLaylines(canvas: Canvas, tileBox: RotatedTileBox, state: net.osmand.plus.plugins.nautical.engine.MarineState?) {
-        val lat = state?.latitude ?: return
-        val lon = state.longitude ?: return
-        val windDir = state.windDirectionTrue ?: return
-
-        val app = context.applicationContext as net.osmand.plus.OsmandApplication
-        val tackAngleDeg = app.settings.NAUTICAL_LAYLINES_TACK_ANGLE.get().toDouble()
-        val tackAngle = Math.toRadians(tackAngleDeg)
-
-        val centerX = tileBox.getPixXFromLatLon(lat, lon)
-        val centerY = tileBox.getPixYFromLatLon(lat, lon)
-
-        val lineLength = 2000f // Screen pixels
-
-        // Port Layline
-        val portAngle = windDir + (PI + tackAngle)
-        val px = centerX + (lineLength * sin(portAngle).toFloat())
-        val py = centerY - (lineLength * cos(portAngle).toFloat())
-        canvas.drawLine(centerX, centerY, px, py, laylinePaint)
-
-        // Starboard Layline
-        val stbdAngle = windDir + (PI - tackAngle)
-        val sx = centerX + (lineLength * sin(stbdAngle).toFloat())
-        val sy = centerY - (lineLength * cos(stbdAngle).toFloat())
-        canvas.drawLine(centerX, centerY, sx, sy, laylinePaint)
-    }
-
     fun getTileBox(): RotatedTileBox? = lastKnownTileBox
 
     override fun onSingleTap(point: PointF, tileBox: RotatedTileBox): Boolean {
-        this.lastPressPoint.set(point)
         return false
     }
 
     override fun onLongPressEvent(point: PointF, tileBox: RotatedTileBox): Boolean {
-        val distance = hypot((point.x - lastPressPoint.x).toDouble(), (point.y - lastPressPoint.y).toDouble()).toFloat()
-        if (distance > 20f) return false
+        // Handled via standard Map Context Menu
+        return false
+    }
 
-        NauticalPlugin.engine?.clearRoute()
+    private fun drawNavigationPath(canvas: Canvas, tileBox: RotatedTileBox, engine: net.osmand.plus.plugins.nautical.engine.SignalKEngine) {
+        val route = engine.getRoutePoints()
+        if (route.size < 2) return
 
-        val lat = tileBox.getLatFromPixel(point.x, point.y)
-        val lon = tileBox.getLonFromPixel(point.x, point.y)
-        NauticalPlugin.sendWaypoint(lat, lon)
-        return true
+        val app = context.applicationContext as net.osmand.plus.OsmandApplication
+        val currentState = engine.getCurrentState()
+        val vesselPos = if (currentState?.latitude != null && currentState.longitude != null) {
+            Pair(currentState.latitude, currentState.longitude)
+        } else null
+
+        // Caching logic for safety check
+        val routeChanged = route != lastCheckedRoute
+        val vesselMoved = vesselPos != null && lastCheckedVesselPos != null && 
+            net.osmand.shared.util.KMapUtils.getDistance(vesselPos.first, vesselPos.second, lastCheckedVesselPos!!.first, lastCheckedVesselPos!!.second) > 50.0
+        val needsRecheck = routeChanged || (vesselPos != null && (lastCheckedVesselPos == null || vesselMoved))
+
+        if (needsRecheck) {
+            val sailingPlugin = net.osmand.plus.plugins.PluginsHelper.getPlugin(SailingIntegrationPlugin::class.java)
+            val indexManager = sailingPlugin?.s57IndexManager
+            
+            val checker = indexManager?.let {
+                SafetyCorridorChecker(
+                    it,
+                    app.settings.NAUTICAL_VESSEL_DRAFT.get().toDouble(),
+                    app.settings.NAUTICAL_SAFETY_MARGIN.get().toDouble()
+                )
+            }
+            val corridorWidth = app.settings.NAUTICAL_CORRIDOR_WIDTH.get().toDouble()
+
+            val waypoints = route.map { Waypoint(it.first, it.second) }
+            cachedSafetyIssues = checker?.checkCorridor(waypoints, corridorWidth) ?: emptyList()
+            lastCheckedRoute = route.toList()
+            lastCheckedVesselPos = vesselPos
+        }
+
+        val hazardousSegments = cachedSafetyIssues.map { it.segmentIndex }.toSet()
+        val isNightVision = NauticalPlugin.isNightVision(app)
+
+        for (i in 0 until route.size - 1) {
+            val p1 = route[i]
+            val p2 = route[i + 1]
+            val x1 = tileBox.getPixXFromLatLon(p1.first, p1.second)
+            val y1 = tileBox.getPixYFromLatLon(p1.first, p1.second)
+            val x2 = tileBox.getPixXFromLatLon(p2.first, p2.second)
+            val y2 = tileBox.getPixYFromLatLon(p2.first, p2.second)
+
+            val baseColor = if (isNightVision) Color.RED else Color.YELLOW
+            routePaint.color = if (hazardousSegments.contains(i)) Color.RED else baseColor
+            
+            if (hazardousSegments.contains(i) && !isNightVision) {
+                routePaint.strokeWidth = 12f // Thicker for warning
+            } else {
+                routePaint.strokeWidth = 6f
+            }
+            
+            canvas.drawLine(x1, y1, x2, y2, routePaint)
+        }
     }
 }

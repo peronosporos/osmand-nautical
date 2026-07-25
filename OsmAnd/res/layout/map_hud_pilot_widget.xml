@@ -13,14 +13,15 @@
 		android:layout_width="match_parent"
 		android:layout_height="4dp"
 		android:layout_gravity="top"
-		android:background="@android:color/white" />
+		android:background="?android:attr/textColorSecondary"
+		android:alpha="0.3" />
 
 	<View
 		android:id="@+id/hud_rudder_marker"
 		android:layout_width="6dp"
 		android:layout_height="6dp"
 		android:layout_gravity="top|center_horizontal"
-		android:background="@android:color/black" />
+		android:background="?attr/active_color_primary" />
 
 	<LinearLayout
 		android:id="@+id/container"

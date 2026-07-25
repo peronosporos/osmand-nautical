@@ -16,7 +16,10 @@ class NauticalGraphView @JvmOverloads constructor(
     defStyleAttr: Int = 0,
 ) : View(context, attrs, defStyleAttr) {
 
-    private var data: List<Double> = ArrayList()
+    private var data: MutableList<Pair<Double, Long>> = mutableListOf()
+    private var dataCoeff = 1.0
+    private var dataOffset = 0.0
+    
     private val linePaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val textPaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val gridPaint = Paint(Paint.ANTI_ALIAS_FLAG)
@@ -24,61 +27,66 @@ class NauticalGraphView @JvmOverloads constructor(
     private var unit = ""
     private val graphPath = Path()
 
+    private var defaultLineColor = Color.CYAN
+    private var defaultTextColor = Color.BLACK
+    private var defaultGridColor = Color.LTGRAY
+
     init {
         setWillNotDraw(false)
         val density = resources.displayMetrics.density
 
         if (isInEditMode) {
-            data = listOf(10.0, 15.0, 12.0, 20.0, 18.0)
+            val now = System.currentTimeMillis()
+            data.add(10.0 to (now - 3600000))
+            data.add(15.0 to (now - 2700000))
+            data.add(12.0 to (now - 1800000))
+            data.add(20.0 to (now - 900000))
+            data.add(18.0 to now)
             unit = "kn"
         }
 
         val typedValue = TypedValue()
-        var textColor = Color.BLACK
         if (context.theme?.resolveAttribute(android.R.attr.textColorPrimary, typedValue, true) == true) {
-            textColor = typedValue.data
+            defaultTextColor = typedValue.data
         }
 
-        var gridColor = Color.LTGRAY
         if (context.theme?.resolveAttribute(android.R.attr.colorForeground, typedValue, true) == true) {
-            gridColor = typedValue.data
+            defaultGridColor = typedValue.data
         }
 
-        var activeColor = Color.CYAN
         if (context.theme?.resolveAttribute(R.attr.active_color_primary, typedValue, true) == true) {
-            activeColor = typedValue.data
+            defaultLineColor = typedValue.data
         }
 
-        gridPaint.color = gridColor
-        gridPaint.alpha = 160 // Increased from 80 for better visibility in high contrast
+        gridPaint.color = defaultGridColor
+        gridPaint.alpha = 160
         gridPaint.style = Paint.Style.STROKE
-        gridPaint.strokeWidth = density * 0.5f // Thinner grid lines
+        gridPaint.strokeWidth = density * 0.5f
 
-        textPaint.color = textColor
-        textPaint.textSize = 12f * density // Slightly larger text
-        textPaint.typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD) // Bold for better readability
+        textPaint.color = defaultTextColor
+        textPaint.textSize = 12f * density
+        textPaint.typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
 
-        linePaint.color = activeColor
+        linePaint.color = defaultLineColor
         linePaint.style = Paint.Style.STROKE
         linePaint.strokeWidth = 2.5f * density
         linePaint.strokeCap = Paint.Cap.ROUND
         linePaint.strokeJoin = Paint.Join.ROUND
 
-        dotPaint.color = activeColor
+        dotPaint.color = defaultLineColor
         dotPaint.style = Paint.Style.FILL
     }
 
-    fun setData(newData: List<Double>?, unit: String) {
+    fun setData(newData: List<Pair<Double, Long>>?, unit: String, coeff: Double = 1.0, offset: Double = 0.0) {
         if (newData == null) return
         synchronized(this) {
-            this.data = ArrayList(newData)
+            data.clear()
+            data.addAll(newData)
             this.unit = unit
+            this.dataCoeff = coeff
+            this.dataOffset = offset
         }
         postInvalidate()
-    }
-
-    override fun onDetachedFromWindow() {
-        super.onDetachedFromWindow()
     }
 
     override fun onDraw(canvas: Canvas) {
@@ -95,7 +103,11 @@ class NauticalGraphView @JvmOverloads constructor(
             if (isNightVision) {
                 linePaint.color = Color.RED
                 textPaint.color = Color.RED
-                gridPaint.color = "#330000".toColorInt() // Very dark red for grid
+                gridPaint.color = "#330000".toColorInt()
+            } else {
+                linePaint.color = defaultLineColor
+                textPaint.color = defaultTextColor
+                gridPaint.color = defaultGridColor
             }
 
             val width = width.toFloat()
@@ -107,8 +119,16 @@ class NauticalGraphView @JvmOverloads constructor(
             val graphW = width - (paddingH * 2)
             val graphH = height - (paddingV + paddingBottom)
 
-            var min = data.minOrNull() ?: 0.0
-            var max = data.maxOrNull() ?: 1.0
+            // Optimized min/max calculation and path building in one pass
+            var min = Double.MAX_VALUE
+            var max = -Double.MAX_VALUE
+            
+            for (p in data) {
+                val v = p.first * dataCoeff + dataOffset
+                if (v < min) min = v
+                if (v > max) max = v
+            }
+
             if (min == max) {
                 min -= 1.0
                 max += 1.0
@@ -125,7 +145,8 @@ class NauticalGraphView @JvmOverloads constructor(
             graphPath.reset()
             for (i in data.indices) {
                 val x = paddingH + (i * stepX)
-                val y = (height - paddingBottom - (((data[i] - min) / range) * graphH)).toFloat()
+                val v = data[i].first * dataCoeff + dataOffset
+                val y = (height - paddingBottom - (((v - min) / range) * graphH)).toFloat()
                 if (i == 0) graphPath.moveTo(x, y)
                 else graphPath.lineTo(x, y)
             }
@@ -133,16 +154,8 @@ class NauticalGraphView @JvmOverloads constructor(
 
             // Draw Labels
             textPaint.textAlign = Paint.Align.RIGHT
-            val luminance = if (android.os.Build.VERSION.SDK_INT >= 26) {
-                Color.luminance(textPaint.color)
-            } else {
-                val r = Color.red(textPaint.color) / 255.0
-                val g = Color.green(textPaint.color) / 255.0
-                val b = Color.blue(textPaint.color) / 255.0
-                ((0.2126 * r) + (0.7152 * g) + (0.0722 * b)).toFloat()
-            }
-            val shadowColor = if (luminance > 0.5f) Color.BLACK else Color.WHITE
-            if (!isNightVision) textPaint.setShadowLayer(2f, 1f, 1f, shadowColor) // Add shadow for high contrast
+            val shadowColor = if (!isNightVision && Color.luminance(textPaint.color) > 0.5f) Color.BLACK else Color.WHITE
+            if (!isNightVision) textPaint.setShadowLayer(2f, 1f, 1f, shadowColor)
 
             canvas.drawText(String.format(Locale.US, "%.1f", max), paddingH - (4 * density), paddingV + (4 * density), textPaint)
             canvas.drawText(String.format(Locale.US, "%.1f", min), paddingH - (4 * density), height - paddingBottom, textPaint)
@@ -150,12 +163,18 @@ class NauticalGraphView @JvmOverloads constructor(
             textPaint.textAlign = Paint.Align.LEFT
             canvas.drawText(unit, (width - paddingH) + (4 * density), paddingV + (4 * density), textPaint)
             
-            // X-Axis Timespan Labels
-            textPaint.textAlign = Paint.Align.CENTER
-            canvas.drawText("-1h", paddingH, height - (4 * density), textPaint)
-            canvas.drawText("-30m", paddingH + (graphW / 2), height - (4 * density), textPaint)
-            canvas.drawText("Now", width - paddingH, height - (4 * density), textPaint)
-
+            val now = System.currentTimeMillis()
+            val totalSpanMs = now - data.first().second
+            if (totalSpanMs > 1000) {
+                textPaint.textAlign = Paint.Align.CENTER
+                val spanMinutes = totalSpanMs / 60000
+                if (spanMinutes > 0) {
+                    canvas.drawText("-${spanMinutes}m", paddingH, height - (4 * density), textPaint)
+                    canvas.drawText("-${spanMinutes / 2}m", paddingH + (graphW / 2), height - (4 * density), textPaint)
+                } else {
+                    canvas.drawText("-${totalSpanMs / 1000}s", paddingH, height - (4 * density), textPaint)
+                }
+            }
             textPaint.clearShadowLayer()
         }
     }

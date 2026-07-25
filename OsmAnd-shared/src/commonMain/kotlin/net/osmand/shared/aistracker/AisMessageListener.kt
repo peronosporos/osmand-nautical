@@ -89,6 +89,7 @@ open class AisMessageListener {
 
         networkJob = scope.launch {
             val selectorManager = SelectorManager(Dispatchers.IO)
+            val lineBuffer = StringBuilder()
             while (isActive) {
                 var socket: BoundDatagramSocket? = null
                 try {
@@ -97,11 +98,24 @@ open class AisMessageListener {
                     while (isActive) {
                         val datagram = socket.receive()
                         val text = datagram.packet.readText()
-                        text.lineSequence().forEach { line ->
-                            val trimmed = line.trimEnd('\r')
-                            if (trimmed.isNotEmpty()) {
-                                processLine(trimmed)
+                        
+                        lineBuffer.append(text)
+                        
+                        var lineEnd = lineBuffer.indexOf("\n")
+                        while (lineEnd != -1) {
+                            val fullLine = lineBuffer.substring(0, lineEnd).trim()
+                            if (fullLine.isNotEmpty()) {
+                                processLine(fullLine)
                             }
+                            val remaining = if (lineEnd + 1 < lineBuffer.length) lineBuffer.substring(lineEnd + 1) else ""
+                            lineBuffer.clear()
+                            lineBuffer.append(remaining)
+                            lineEnd = lineBuffer.indexOf("\n")
+                        }
+                        
+                        // Safety: don't let buffer grow indefinitely if no newlines
+                        if (lineBuffer.length > 2048) {
+                            lineBuffer.clear()
                         }
                     }
                 } catch (e: Exception) {

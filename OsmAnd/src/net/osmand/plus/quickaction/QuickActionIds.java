@@ -79,4 +79,8 @@ public class QuickActionIds {
 	public static final int SHOW_HIDE_COORDINATE_GRID_ACTION_ID = 79;
 	public static final int SHOW_HIDE_WEATHER_LAYERS = 80;
 	public static final int SHOW_HIDE_WIND_ANIMATION_LAYER = 81;
+
+	public static final int NAUTICAL_MOB_ACTION_ID = 90;
+	public static final int NAUTICAL_ANCHOR_ACTION_ID = 91;
+	public static final int NAUTICAL_NIGHT_VISION_ACTION_ID = 92;
 }

@@ -13,7 +13,7 @@ object AisObjectConstants {
     const val UNSPECIFIED_AID_TYPE = 0
     const val INVALID_COG = 360.0
     const val INVALID_SOG = 1023.0
-    const val SPEED_CONSIDERED_IN_REST = 0.4
+    const val SPEED_CONSIDERED_IN_REST = 0.5
     const val INVALID_LAT = 91.0
     const val INVALID_LON = 181.0
     const val INVALID_ROT = 128.0

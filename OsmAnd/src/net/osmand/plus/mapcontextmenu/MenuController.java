@@ -46,6 +46,8 @@ import net.osmand.plus.measurementtool.PlanRoutePoint;
 import net.osmand.plus.plugins.OsmandPlugin;
 import net.osmand.plus.plugins.PluginsHelper;
 import net.osmand.plus.plugins.aistracker.AisObjectMenuController;
+import net.osmand.plus.plugins.nautical.s57.S57Object;
+import net.osmand.plus.plugins.nautical.s57.ui.S57ObjectMenuController;
 import net.osmand.plus.plugins.audionotes.AudioVideoNoteMenuController;
 import net.osmand.plus.plugins.audionotes.Recording;
 import net.osmand.plus.plugins.mapillary.MapillaryImage;
@@ -238,6 +240,8 @@ public abstract class MenuController extends BaseMenuController implements Colla
 				menuController = new MapillaryMenuController(mapActivity, pointDescription, (MapillaryImage) object);
 			} else if (object instanceof AisObject) {
 				menuController = new AisObjectMenuController(mapActivity, pointDescription, (AisObject) object);
+			} else if (object instanceof S57Object) {
+				menuController = new S57ObjectMenuController(mapActivity, pointDescription, (S57Object) object);
 			} else if (object instanceof SelectedGpxPoint) {
 				menuController = new SelectedGpxMenuController(mapActivity, pointDescription, (SelectedGpxPoint) object);
 			} else if (object instanceof ClickableWay) {

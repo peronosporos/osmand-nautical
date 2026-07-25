@@ -1,0 +1,15 @@
+- [x] Update `strings.xml` with nautical resources
+- [x] Fix Touch Delegation & Z-Order
+    - [x] `navtex_urgent_hud.xml`
+    - [x] `mob_emergency_hud.xml`
+    - [x] `SailingIntegrationPlugin.kt`
+- [x] Fix Maneuver Overlay UI
+    - [x] `ManeuverOverlayWidget.kt` (size and i18n)
+- [x] Fix remaining i18n in code
+    - [x] `MobEmergencyHeaderView.kt`
+    - [x] `AlarmPriorityManager.kt`
+    - [x] `AbortRecoveryEngine.kt`
+    - [x] `MarineTextWidget.kt`
+    - [x] `SignalKUnitConverter.kt`
+    - [x] `SafetyPreflightController.kt`
+- [x] Verification sweep

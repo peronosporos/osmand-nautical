@@ -17,4 +17,10 @@ class CircularBuffer<T>(private val capacity: Int) {
     fun getAll(): List<T> {
         return ArrayList(buffer)
     }
+
+    @Synchronized
+    fun copyTo(target: MutableList<T>) {
+        target.clear()
+        target.addAll(buffer)
+    }
 }

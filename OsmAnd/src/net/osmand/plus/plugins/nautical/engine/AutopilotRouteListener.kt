@@ -13,23 +13,30 @@ class AutopilotRouteListener(
         updateAutopilot()
     }
 
-    override fun routeWasCancelled() {}
-    override fun routeWasFinished() {}
+    override fun routeWasCancelled() {
+        NauticalPlugin.autopilot?.stopNavigation()
+    }
+
+    override fun routeWasFinished() {
+        NauticalPlugin.autopilot?.stopNavigation()
+    }
 
     private fun updateAutopilot() {
-        // Accessing the TargetPointsHelper from the app instance
         val app = routingHelper.application
         val targetPoints = app.targetPointsHelper
+        val points = mutableListOf<Pair<Double, Double>>()
 
-        // This method retrieves the destination point
-        val point = targetPoints.pointToNavigate
+        // Collect all remaining waypoints including intermediates
+        targetPoints.intermediatePointsNavigation.forEach { pt ->
+            points.add(Pair(pt.latitude, pt.longitude))
+        }
+        targetPoints.pointToNavigate?.let { pt ->
+            points.add(Pair(pt.latitude, pt.longitude))
+        }
 
-        if (point != null) {
-            // Using the correct getter methods for your specific version
-            val latitude = point.latitude
-            val longitude = point.longitude
-
-            NauticalPlugin.autopilot?.sendActiveWaypoint(latitude, longitude)
+        if (points.isNotEmpty()) {
+            NauticalPlugin.engine?.loadRoute(points)
+            NauticalPlugin.autopilot?.engageSmart()
         }
     }
 }

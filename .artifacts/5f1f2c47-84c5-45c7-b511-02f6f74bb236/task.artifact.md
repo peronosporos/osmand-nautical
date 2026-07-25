@@ -1,0 +1,7 @@
+- [x] Implement NMEA Telemetry Logging and Replay Engine
+    - [x] Add UI strings to `strings.xml`
+    - [x] Implement `NmeaStreamRecorder.kt` for raw data logging
+    - [x] Implement `NmeaPlaybackEngine.kt` with timing emulation
+    - [x] Update `DirectNmeaMultiplexer.kt` with recording hooks
+    - [x] Implement `NmeaPlaybackControlBottomSheet.kt` UI
+    - [x] Verify recording and playback functionality

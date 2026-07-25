@@ -1,0 +1,17 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- Boat outline -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M12,4C10,6 8,10 8,15C8,17 9,19 12,19C15,19 16,17 16,15C16,10 14,6 12,4ZM12,6C13.5,8 14.5,11.5 14.5,15C14.5,16.5 14,17.5 12,17.5C10,17.5 9.5,16.5 9.5,15C9.5,11.5 10.5,8 12,6Z" />
+    <!-- Apparent Wind Angle Arrow (Dashed style) -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M19,5L17,7M15,9L13,11M13,11L13,8M13,11L16,11"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="1.5"
+        android:strokeLineCap="round" />
+</vector>

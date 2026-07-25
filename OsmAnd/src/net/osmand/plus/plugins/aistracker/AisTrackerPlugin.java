@@ -29,6 +29,9 @@ import net.osmand.plus.settings.backend.preferences.CommonPreference;
 import net.osmand.plus.settings.fragments.SettingsScreenType;
 import net.osmand.plus.utils.AndroidUtils;
 import net.osmand.plus.views.OsmandMapTileView;
+import net.osmand.shared.aistracker.AisLocation;
+import net.osmand.shared.aistracker.AisObjectConstants;
+import net.osmand.shared.aistracker.AisTrackerMath;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -53,6 +56,7 @@ public class AisTrackerPlugin extends OsmandPlugin {
 	private AisTrackerLayer layer = null;
 	private AisMessageListener aisListener;
 	private final AisDataManager aisDataManager = new AisDataManager();
+	private final AisAudioAlertManager audioAlertManager;
 
 	private static final String COMPONENT = "net.osmand.aistrackerPlugin";
 	public static final String AISTRACKER_ID = "osmand.aistracker";
@@ -117,6 +121,7 @@ public class AisTrackerPlugin extends OsmandPlugin {
 		private static final int AIS_OBJECT_LIST_COUNTER_MAX = 200;
 		private final Map<Integer, AisObject> objects = new HashMap<>();
 		private Timer cleanupTimer;
+		private Timer cpaTimer;
 
 		public interface AisObjectListener {
 			void onAisObjectReceived(@NonNull AisObject ais);
@@ -133,12 +138,81 @@ public class AisTrackerPlugin extends OsmandPlugin {
 			};
 			this.cleanupTimer = new Timer();
 			cleanupTimer.schedule(timerTask, 20000, 30000);
+
+			TimerTask cpaTask = new TimerTask() {
+				@Override
+				public void run() {
+					updateAllCpa();
+				}
+			};
+			this.cpaTimer = new Timer();
+			cpaTimer.schedule(cpaTask, 5000, 10000);
 		}
 
 		private void deinitTimer() {
 			if (cleanupTimer != null) {
 				cleanupTimer.cancel();
 				cleanupTimer = null;
+			}
+			if (cpaTimer != null) {
+				cpaTimer.cancel();
+				cpaTimer = null;
+			}
+		}
+
+		private long lastCpaExecutionTime = 0;
+
+		private void updateAllCpa() {
+			Location ownPosition = getOwnPosition();
+			if (ownPosition == null) return;
+
+			long now = System.currentTimeMillis();
+			boolean isBackground = !settings.MAP_ACTIVITY_ENABLED;
+			boolean isMoving = ownPosition.hasSpeed() && ownPosition.getSpeed() > 0.5f; // > ~1 knot
+			
+			// Battery optimization: reduce frequency in background or when stationary
+			long interval = isBackground ? 30000 : (isMoving ? 5000 : 10000);
+			if (now - lastCpaExecutionTime < interval && !audioAlertManager.isPlaying()) {
+				return;
+			}
+			lastCpaExecutionTime = now;
+
+			AisLocation ownAisLocation = AisObjectAndroidHelperKt.toAisLocation(ownPosition);
+			int cpaWarningTime = getCpaWarningTime();
+			float cpaWarningDistance = getCpaWarningDistance();
+			boolean anyDanger = false;
+
+			synchronized (this) {
+				for (AisObject obj : objects.values()) {
+					if (!obj.isMovable() || obj.getSog() <= AisObjectConstants.SPEED_CONSIDERED_IN_REST) {
+						obj.getCpa().reset();
+						continue;
+					}
+					// Anchorage filtering: navStatus 1 (At anchor) or 5 (Moored)
+					if (obj.getNavStatus() == 1 || obj.getNavStatus() == 5) {
+						obj.getCpa().reset();
+						continue;
+					}
+
+					AisLocation otherLoc = obj.getExtrapolatedLocation(System.currentTimeMillis());
+					if (otherLoc != null) {
+						AisTrackerMath.INSTANCE.getCpa(ownAisLocation, otherLoc, obj.getCpa());
+						if (obj.getCpa().getValid()) {
+							double tcpa = obj.getCpa().getTcpa();
+							if (tcpa > 0 && obj.getCpa().getCpa() <= cpaWarningDistance && (tcpa * 60) <= cpaWarningTime) {
+								if (obj.getCpa().getT1() >= 0 && obj.getCpa().getT2() >= 0) {
+									anyDanger = true;
+								}
+							}
+						}
+					}
+				}
+			}
+
+			if (anyDanger) {
+				audioAlertManager.startAlarm();
+			} else {
+				audioAlertManager.stopAlarm();
 			}
 		}
 
@@ -181,9 +255,25 @@ public class AisTrackerPlugin extends OsmandPlugin {
 		}
 
 		public synchronized void removeLostObjects() {
+			int basePruneTimeout = getMaxObjectAgeInMinutes();
+			int classBPruneTimeout = 18; // Standard Class B prune timeout
+
 			for (Iterator<Map.Entry<Integer, AisObject>> iterator = objects.entrySet().iterator(); iterator.hasNext(); ) {
 				AisObject obj = iterator.next().getValue();
-				if (obj.isLost(AisTrackerPlugin.this.getMaxObjectAgeInMinutes())) {
+				int pruneTimeout = basePruneTimeout;
+				// Check for Class B message types (18, 19, 24)
+				boolean isClassB = false;
+				for (Integer mt : obj.getMsgTypes()) {
+					if (mt == 18 || mt == 19 || mt == 24) {
+						isClassB = true;
+						break;
+					}
+				}
+				if (isClassB) {
+					pruneTimeout = Math.max(pruneTimeout, classBPruneTimeout);
+				}
+
+				if (obj.isLost(pruneTimeout)) {
 					LOG.debug("Remove AIS object with MMSI " + obj.getMmsi());
 					iterator.remove();
 					AisTrackerPlugin.this.onAisObjectRemoved(obj);
@@ -218,6 +308,7 @@ public class AisTrackerPlugin extends OsmandPlugin {
 	public AisTrackerPlugin(@NonNull OsmandApplication app) {
 		super(app);
 		aisImagesCache = new AisImagesCache(app);
+		audioAlertManager = new AisAudioAlertManager(app);
 
 		/* "ais_nmea_protocol" etc. is a reference to the content of xml/ais_settings.xml */
 		AIS_NMEA_PROTOCOL = registerIntPreference(AIS_NMEA_PROTOCOL_ID, AIS_NMEA_PROTOCOL_UDP);

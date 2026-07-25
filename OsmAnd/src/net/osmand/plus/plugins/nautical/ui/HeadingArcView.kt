@@ -11,7 +11,6 @@ import android.view.VelocityTracker
 import android.view.animation.DecelerateInterpolator
 import android.widget.Scroller
 import androidx.core.content.ContextCompat
-import androidx.core.graphics.toColorInt
 import net.osmand.plus.R
 import java.util.Locale
 import kotlin.math.*
@@ -22,9 +21,9 @@ class HeadingArcView @JvmOverloads constructor(
     defStyleAttr: Int = 0,
 ) : View(context, attrs, defStyleAttr) {
 
+    var onCenterClicked: (() -> Unit)? = null
     var onHeadingChanged: ((Int) -> Unit)? = null
-    var onHeadingPreview: ((Int?) -> Unit)? = null
-    var onHeadingCommitted: ((Int) -> Unit)? = null
+    var onWindAngleChanged: ((Int) -> Unit)? = null
     
     var targetHeading: Int = 0
         set(value) {
@@ -38,9 +37,14 @@ class HeadingArcView @JvmOverloads constructor(
     var actualHeading: Int? = null
         set(value) {
             if (field != value) {
-                val oldError = field?.let { abs(calculateError(it, targetHeading)) } ?: 0f
-                val newError = value?.let { abs(calculateError(it, targetHeading)) } ?: 0f
-                isRecovering = newError < oldError
+                val oldTarget = targetHeading
+                val oldActual = field
+                if (oldActual != null && value != null) {
+                    val oldErr = abs(calculateError(oldActual, oldTarget))
+                    val newErr = abs(calculateError(value, oldTarget))
+                    // isRecovering if error is decreasing and still significant
+                    isRecovering = (newErr < oldErr - 0.5f) || (newErr < 2.0f)
+                }
                 field = value
                 invalidate()
             }
@@ -74,12 +78,11 @@ class HeadingArcView @JvmOverloads constructor(
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val textPaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val tickPaint = Paint(Paint.ANTI_ALIAS_FLAG)
-    private val centerPath = Path()
-    private var osmandOrange = "#FF8800".toColorInt()
+    private val pointerPath = Path()
+    private var osmandOrange = Color.TRANSPARENT
     
-    private val scroller = Scroller(context, DecelerateInterpolator())
-    private var velocityTracker: VelocityTracker? = null
-    
+    private var isDragging = false
+
     private val cardinalPoints = mapOf(
         0 to R.string.nautical_cardinal_n,
         45 to R.string.nautical_cardinal_ne,
@@ -99,7 +102,6 @@ class HeadingArcView @JvmOverloads constructor(
         paint.style = Paint.Style.STROKE
         paint.strokeCap = Paint.Cap.ROUND
         
-        textPaint.textSize = 80f
         textPaint.textAlign = Paint.Align.CENTER
         textPaint.typeface = Typeface.create("sans-serif-condensed", Typeface.BOLD)
 
@@ -124,235 +126,203 @@ class HeadingArcView @JvmOverloads constructor(
         val w = width.toFloat()
         val h = height.toFloat()
         val centerX = w / 2f
-        val centerY = h * 0.45f 
-        val paddingView = 20f
-
-        val pixelsPerDegree = when(currentMode) {
-            "TRACK" -> w / 25f 
-            else -> w / 80f    
-        }
+        val centerY = h / 2f
+        val radius = min(w, h) / 2f * 0.85f
         
         val textColorPrimary = ContextCompat.getColor(context, if (isNightMode) R.color.text_color_primary_dark else R.color.text_color_primary_light)
         val textColorSecondary = ContextCompat.getColor(context, if (isNightMode) R.color.text_color_secondary_dark else R.color.text_color_secondary_light)
-        val dividerColor = ContextCompat.getColor(context, if (isNightMode) R.color.divider_color_dark else R.color.divider_color_light)
 
-        tickPaint.color = textColorPrimary
-        tickPaint.alpha = 100
+        // 1. Draw Compass Ring
+        paint.style = Paint.Style.STROKE
+        paint.strokeWidth = 2f
+        paint.color = textColorSecondary
+        paint.alpha = 40
+        canvas.drawCircle(centerX, centerY, radius, paint)
+
+        // 2. Draw Compass Ticks (Rotating the canvas to make drawing easier)
+        canvas.save()
+        canvas.rotate(-targetHeading.toFloat(), centerX, centerY)
         
-        // 1. Draw Absolute Compass Tape
-        val visibleSpan = (w / pixelsPerDegree).toInt() + 10
-        val startH = targetHeading - visibleSpan / 2
-        val endH = targetHeading + visibleSpan / 2
-        
-        for (hDeg in startH..endH) {
-            val normH = (hDeg + 360) % 360
-            val x = centerX + (hDeg - targetHeading) * pixelsPerDegree
+        for (hDeg in 0 until 360 step 5) {
+            val normH = hDeg % 360
+            val angleOnCircle = hDeg.toFloat() - 90f // 0 is top
+            val rad = Math.toRadians(angleOnCircle.toDouble())
             
-            if (x < paddingView || x > (w - paddingView)) continue
-
+            val cosRad = cos(rad).toFloat()
+            val sinRad = sin(rad).toFloat()
+            
             val isCardinal = cardinalPoints.containsKey(normH)
             val isMajor = normH % 10 == 0
             val isMinor = normH % 5 == 0
             
             if (isCardinal || isMajor || isMinor) {
+                tickPaint.color = textColorPrimary
                 tickPaint.alpha = if (isCardinal || isMajor) 200 else 80
                 tickPaint.strokeWidth = if (isCardinal || isMajor) 3f else 1.5f
-                val tickH = if (isCardinal || isMajor) 30f else 15f
-                canvas.drawLine(x, centerY + 20f, x, (centerY + 20f) - tickH, tickPaint)
+                val tickLen = if (isCardinal || isMajor) 24f else 12f
                 
-                if (isCardinal) {
+                val x1 = centerX + radius * cosRad
+                val y1 = centerY + radius * sinRad
+                val x2 = centerX + (radius - tickLen) * cosRad
+                val y2 = centerY + (radius - tickLen) * sinRad
+                canvas.drawLine(x1, y1, x2, y2, tickPaint)
+                
+                if (isCardinal || isMajor) {
                     paint.style = Paint.Style.FILL
-                    paint.textSize = 28f
+                    paint.textSize = if (isCardinal) 28f else 18f
                     paint.textAlign = Paint.Align.CENTER
-                    paint.color = osmandOrange
+                    paint.color = if (isCardinal) osmandOrange else textColorSecondary
                     paint.alpha = 255
-                    paint.typeface = Typeface.create("sans-serif-condensed", Typeface.BOLD)
-                    canvas.drawText(context.getString(cardinalPoints[normH]!!), x, centerY + 58f, paint)
-                } else if (isMajor) {
-                    paint.style = Paint.Style.FILL
-                    paint.textSize = 22f
-                    paint.textAlign = Paint.Align.CENTER
-                    paint.color = textColorSecondary
-                    paint.alpha = 200
-                    paint.typeface = Typeface.create("sans-serif-condensed", Typeface.NORMAL)
-                    canvas.drawText(normH.toString(), x, centerY + 58f, paint)
+                    paint.typeface = if (isCardinal) Typeface.create("sans-serif-condensed", Typeface.BOLD) else Typeface.create("sans-serif-condensed", Typeface.NORMAL)
+                    
+                    val tx = centerX + (radius - 45f) * cosRad
+                    val ty = centerY + (radius - 45f) * sinRad
+                    val label = if (isCardinal) context.getString(cardinalPoints[normH]!!) else normH.toString()
+                    
+                    // Rotate text back so it's upright
+                    canvas.save()
+                    canvas.rotate(targetHeading.toFloat() - hDeg + 90f, tx, ty)
+                    canvas.drawText(label, tx, ty + 8f, paint)
+                    canvas.restore()
                 }
             }
         }
 
-        // 2. Error Marker (Actual Heading Pointer)
+        // 3. Error Marker (Actual Heading)
         actualHeading?.let { actual ->
             val error = calculateError(actual, targetHeading)
-            val x = centerX + error * pixelsPerDegree
-            if (x in paddingView..(w - paddingView)) {
-                val color = if (isRecovering) ContextCompat.getColor(context, R.color.nautical_status_green) 
-                            else ContextCompat.getColor(context, R.color.nautical_status_yellow)
-                paint.color = color
-                paint.style = Paint.Style.FILL
-                paint.alpha = 240
-                
-                canvas.drawCircle(x, centerY + 20f, 6f, paint)
-                paint.strokeWidth = 3f
-                paint.style = Paint.Style.STROKE
-                canvas.drawLine(x, centerY + 20f, x, centerY + 45f, paint)
-                
-                paint.textSize = 22f
-                paint.style = Paint.Style.FILL
-                paint.alpha = 255
-                paint.typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
-                paint.color = color
-                val sign = if (error > 0) "+" else ""
-                canvas.drawText(String.format(Locale.US, "%s%.1f°", sign, error), x, centerY + 72f, paint)
-            }
+            val angleOnCircle = error - 90f
+            val rad = Math.toRadians(angleOnCircle.toDouble())
+            val cosRad = cos(rad).toFloat()
+            val sinRad = sin(rad).toFloat()
+            
+            val x = centerX + radius * cosRad
+            val y = centerY + radius * sinRad
+            
+            val color = if (isRecovering) ContextCompat.getColor(context, R.color.nautical_status_green) 
+                        else ContextCompat.getColor(context, R.color.nautical_status_yellow)
+            paint.color = color
+            paint.style = Paint.Style.FILL
+            paint.alpha = 240
+            
+            canvas.drawCircle(x, y, 8f, paint)
+            paint.strokeWidth = 3f
+            paint.style = Paint.Style.STROKE
+            
+            val x2 = centerX + (radius + 15f) * cosRad
+            val y2 = centerY + (radius + 15f) * sinRad
+            canvas.drawLine(x, y, x2, y2, paint)
         }
 
-        // 3. Wind Indicators
+        // 3b. Wind Markers
         windAngleApparent?.let { awa ->
-            val actual = actualHeading ?: targetHeading
-            val absWind = (actual + awa + 360) % 360
-            val windErr = calculateError(absWind, targetHeading)
-            val x = centerX + windErr * pixelsPerDegree
-            if (x in paddingView..(w - paddingView)) {
-                paint.color = Color.CYAN
-                paint.style = Paint.Style.FILL
-                paint.alpha = 180
-                canvas.drawCircle(x, centerY + 20f, 8f, paint)
-                
-                paint.style = Paint.Style.STROKE
-                paint.strokeWidth = 2f
-                canvas.drawLine(x, centerY + 20f, x, centerY + 5f, paint)
-
-                // AWA Label
-                paint.style = Paint.Style.FILL
-                paint.textSize = 18f
-                paint.alpha = 255
-                canvas.drawText(context.getString(R.string.nautical_awa_label), x, centerY + 2f, paint)
-            }
+            val angleOnCircle = awa.toFloat() - 90f
+            val rad = Math.toRadians(angleOnCircle.toDouble())
+            val x = centerX + (radius + 10f) * cos(rad).toFloat()
+            val y = centerY + (radius + 10f) * sin(rad).toFloat()
+            paint.style = Paint.Style.FILL
+            paint.color = ContextCompat.getColor(context, R.color.nautical_status_blue)
+            paint.alpha = 200
+            canvas.drawCircle(x, y, 6f, paint)
         }
 
-        targetWindAngleApparent?.let { targetAwa ->
-            val actual = actualHeading ?: targetHeading
-            val absTargetWind = (actual + targetAwa + 360) % 360
-            val targetWindErr = calculateError(absTargetWind, targetHeading)
-            val x = centerX + targetWindErr * pixelsPerDegree
-            if (x in paddingView..(w - paddingView)) {
-                paint.color = Color.CYAN
-                paint.style = Paint.Style.STROKE
-                paint.strokeWidth = 3f
-                paint.alpha = 220
-                canvas.drawCircle(x, centerY + 20f, 10f, paint)
-                
-                paint.style = Paint.Style.FILL
-                paint.textSize = 14f
-                paint.alpha = 255
-                canvas.drawText("T", x, centerY + 25f, paint)
-            }
+        targetWindAngleApparent?.let { tawa ->
+            val angleOnCircle = tawa.toFloat() - 90f
+            val rad = Math.toRadians(angleOnCircle.toDouble())
+            val x = centerX + (radius + 10f) * cos(rad).toFloat()
+            val y = centerY + (radius + 10f) * sin(rad).toFloat()
+            paint.style = Paint.Style.STROKE
+            paint.strokeWidth = 2f
+            paint.color = ContextCompat.getColor(context, R.color.nautical_status_blue)
+            paint.alpha = 255
+            canvas.drawCircle(x, y, 8f, paint)
         }
 
-        // Lubber Line
+        canvas.restore()
+
+        // 4. Fixed Lubber Line (Always at top)
         paint.color = osmandOrange
-        paint.style = Paint.Style.STROKE
-        paint.strokeWidth = 4f
-        paint.alpha = 255
-        canvas.drawLine(centerX, centerY + 20f, centerX, centerY - 20f, paint)
-        
         paint.style = Paint.Style.FILL
-        centerPath.reset()
-        centerPath.moveTo(centerX, centerY + 20f)
-        centerPath.lineTo(centerX - 8f, centerY + 32f)
-        centerPath.lineTo(centerX + 8f, centerY + 32f)
-        centerPath.close()
-        canvas.drawPath(centerPath, paint)
+        paint.alpha = 255
+        pointerPath.reset()
+        pointerPath.moveTo(centerX, centerY - radius + 10f)
+        pointerPath.lineTo(centerX - 10f, centerY - radius - 15f)
+        pointerPath.lineTo(centerX + 10f, centerY - radius - 15f)
+        pointerPath.close()
+        canvas.drawPath(pointerPath, paint)
 
-        // Central Digital Readout
+        // 5. Central Digital Readout
         textPaint.color = textColorPrimary
-        textPaint.textSize = 90f
-        canvas.drawText("${targetHeading}°", centerX, centerY - 40f, textPaint)
+        textPaint.textSize = 64f
+        val centralValue = if (currentMode == "WIND") targetWindAngleApparent ?: 0 else targetHeading
+        canvas.drawText(context.getString(R.string.nautical_format_deg, centralValue.toString()), centerX, centerY + 10f, textPaint)
         
-        paint.textSize = 20f
+        paint.textSize = 14f
         paint.color = textColorSecondary
-        paint.alpha = 200
+        paint.alpha = 150
         paint.typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
-        canvas.drawText(context.getString(R.string.nautical_set_heading_label), centerX, centerY - 135f, paint)
+        val label = if (currentMode == "WIND") context.getString(R.string.nautical_awa) else context.getString(R.string.nautical_set_heading_label)
+        canvas.drawText(label, centerX, centerY + 36f, paint)
     }
 
     override fun onInitializeAccessibilityNodeInfo(info: AccessibilityNodeInfo) {
         super.onInitializeAccessibilityNodeInfo(info)
         info.className = HeadingArcView::class.java.name
-        info.contentDescription = context.getString(R.string.nautical_pilot_title) + ": " + targetHeading + "°"
+        info.contentDescription = context.getString(R.string.nautical_pilot_title) + ": " + context.getString(R.string.nautical_format_deg, targetHeading.toString())
     }
-
-    override fun computeScroll() {
-        if (scroller.computeScrollOffset()) {
-            targetHeading = scroller.currX % 360
-            onHeadingChanged?.invoke(targetHeading)
-            postInvalidateOnAnimation()
-        }
-    }
-
-    private var lastX = 0f
-    private var isDragging = false
-    private var accumulatedDelta = 0f
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
-        if (velocityTracker == null) {
-            velocityTracker = VelocityTracker.obtain()
-        }
-        velocityTracker?.addMovement(event)
+        val x = event.x - width / 2f
+        val y = event.y - height / 2f
+        val dist = sqrt(x.pow(2) + y.pow(2))
+        val radius = min(width, height) / 2f * 0.85f
 
         when (event.action) {
             MotionEvent.ACTION_DOWN -> {
-                scroller.forceFinished(true)
-                lastX = event.x
-                accumulatedDelta = 0f
-                isDragging = true
-                performClick()
-                return true
+                if (dist > radius * 0.5f && dist < radius * 1.2f) {
+                    isDragging = true
+                    parent.requestDisallowInterceptTouchEvent(true)
+                    return true
+                }
             }
             MotionEvent.ACTION_MOVE -> {
-                val deltaX = event.x - lastX
-                lastX = event.x
-                
-                val pixelsPerDegree = when(currentMode) {
-                    "TRACK" -> width / 25f 
-                    else -> width / 80f    
-                }
-                
-                accumulatedDelta -= deltaX / pixelsPerDegree
-                val change = accumulatedDelta.toInt()
-                if (change != 0) {
-                    accumulatedDelta -= change
-                    val oldH = targetHeading
-                    targetHeading = (targetHeading + change + 360) % 360
-                    if (targetHeading != oldH) {
-                        if (targetHeading % 10 == 0) performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
-                        else performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
-                        onHeadingChanged?.invoke(targetHeading)
-                        onHeadingPreview?.invoke(targetHeading)
+                if (isDragging) {
+                    val angleRad = atan2(y.toDouble(), x.toDouble())
+                    var angleDeg = Math.toDegrees(angleRad).toInt() + 90
+                    angleDeg = (angleDeg + 360) % 360
+                    
+                    if (currentMode == "WIND") {
+                        // In WIND mode, we calculate relative angle
+                        targetWindAngleApparent = (angleDeg + 360) % 360
+                    } else {
+                        targetHeading = angleDeg
                     }
+                    return true
                 }
             }
-            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                isDragging = false
-                velocityTracker?.let { vt ->
-                    vt.computeCurrentVelocity(1000)
-                    val velocityX = vt.xVelocity
-                    if (abs(velocityX) > 500) {
-                        val pixelsPerDegree = when(currentMode) {
-                            "TRACK" -> width / 25f 
-                            else -> width / 80f    
-                        }
-                        scroller.fling(targetHeading, 0, -(velocityX / pixelsPerDegree).toInt(), 0, -10000, 10000, 0, 0)
-                        postInvalidateOnAnimation()
+            MotionEvent.ACTION_UP -> {
+                if (isDragging) {
+                    isDragging = false
+                    if (currentMode == "WIND") {
+                        targetWindAngleApparent?.let { onWindAngleChanged?.invoke(it) }
+                    } else {
+                        onHeadingChanged?.invoke(targetHeading)
                     }
+                    performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+                    return true
                 }
-                onHeadingPreview?.invoke(null)
-                onHeadingCommitted?.invoke(targetHeading)
-                velocityTracker?.recycle()
-                velocityTracker = null
+                if (dist < (min(width, height) / 4f)) { // Tapped in center 25% area
+                    onCenterClicked?.invoke()
+                    performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                    performClick()
+                    return true
+                }
+            }
+            MotionEvent.ACTION_CANCEL -> {
+                isDragging = false
             }
         }
-        return true
+        return super.onTouchEvent(event)
     }
 
     override fun performClick(): Boolean {

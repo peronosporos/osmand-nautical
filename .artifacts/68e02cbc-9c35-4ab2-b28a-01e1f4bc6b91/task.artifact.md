@@ -1,0 +1,8 @@
+- [x] Update `strings.xml` with Navtex strings
+- [x] Create UI layouts (`navtex_urgent_hud.xml`, `bottom_sheet_navtex_details.xml`)
+- [x] Update `SailingDependencyContainer.kt`
+- [x] Implement `NavtexDetailsBottomSheet.kt`
+- [x] Implement `NavtexMapLayer.kt`
+- [x] Implement `NavtexHudView.kt`
+- [x] Update `SailingMapLayerController.kt`
+- [x] Update `SailingIntegrationPlugin.kt`

@@ -1,0 +1,14 @@
+- [x] Audit & Fix Signal K Data Ingestion
+    - [x] Update `MarineState.kt` with `customValues` and `pathMeta`
+    - [x] Create `SignalKUnitConverter.kt` utility
+    - [x] Fix `angleThreshold` in `SignalKDataBroker.kt`
+    - [x] Enhance `SignalKEngine.kt` ingestion logic
+        - [x] Robust `self` context initialization
+        - [x] `meta` field extraction
+        - [x] Custom path capturing
+    - [x] Refactor UI components to use new converter
+        - [x] `MarineTextWidget.kt`
+        - [x] `NauticalDataBottomSheet.kt`
+    - [x] Verification
+        - [/] Run/Create Unit Tests
+        - [x] Verify build (via analyze_file)

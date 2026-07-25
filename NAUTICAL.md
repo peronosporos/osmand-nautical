@@ -30,14 +30,19 @@ Found in **"Configure Map" > "Nautical" > "Vessel Indicators"**. These lines are
 ### Heading Line (Dashed)
 - Shows the direction the boat's bow is pointing.
 - Length represents the distance the boat will travel through water in the projection time.
+- **Fallback**: If "Speed Through Water" is missing, it uses "Speed Over Ground" for length calculation.
 
-### Course (COG) Line (Solid Green with Arrow)
+### Course (COG) Line (Long Dashed Green with Arrow)
 - Shows the boat's actual path over ground (Course Over Ground).
 - The difference between the Heading and COG lines visualizes the effect of current and leeway.
 
-### Current Vector (Solid Blue with Arrow)
+### Current Vector (Short Dashed Blue with Arrow)
 - Directly visualizes the **Set and Drift** (water current).
 - If not provided by SignalK, it is automatically calculated locally from the vector difference between Heading/STW and COG/SOG.
+
+### Target Heading Line (Orange Dashed with Arrow)
+- Appears only when an autopilot is connected and active.
+- Visualizes the course the autopilot is currently trying to maintain.
 
 ---
 
@@ -69,5 +74,6 @@ The Nautical plugin includes a specialized **Night Vision** mode.
 
 The plugin connects to **SignalK** servers via WebSockets.
 - Supports secure connections (wss://).
+- **Magnetic Heading Fallback**: If the server does not provide True Heading, the plugin automatically calculates it using Magnetic Heading and Variation (if available).
 - **Trust all certificates**: Use this option for local boat networks with self-signed certificates.
 - Local calculation engine ensures a "Single Source of Truth" for all displays, even when server data is incomplete.

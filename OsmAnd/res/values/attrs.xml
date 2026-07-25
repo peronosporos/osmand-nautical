@@ -202,6 +202,8 @@
 	    <attr name="slider_label_text_dark" format="reference" />
 	    <attr name="app_bar_secondary_color" format="reference"/>
 	    <attr name="map_button_icon_color" format="reference"/>
+        <attr name="nautical_alert_bg" format="color|reference"/>
+        <attr name="nautical_alert_text" format="color|reference"/>
     </declare-styleable>
 
     <declare-styleable name="PagerSlidingTabStrip">

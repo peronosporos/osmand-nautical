@@ -11,7 +11,7 @@ class NauticalNightVisionWidget(
     mapActivity: MapActivity,
     widgetType: WidgetType,
     customId: String?,
-    panel: WidgetsPanel?
+    panel: WidgetsPanel?,
 ) : SimpleWidget(mapActivity, widgetType, customId, panel) {
 
     override fun updateSimpleWidgetInfo(drawSettings: OsmandMapLayer.DrawSettings?) {

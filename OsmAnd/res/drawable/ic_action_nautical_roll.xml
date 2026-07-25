@@ -3,13 +3,20 @@
     android:height="24dp"
     android:viewportWidth="24"
     android:viewportHeight="24">
+    <!-- Horizon Line -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="1"
+        android:pathData="M2,12H22" />
+    <!-- Heeled Boat Stern View -->
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M12,2L12,5M12,19L12,22M22,12L19,12M5,12L2,12" />
+        android:pathData="M10,14L14,12L15,14C15,16 13,17 12,17C11,17 9,16 9,14Z"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="1" />
+    <!-- Mast -->
     <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M7,14L17,11L18,13L6,16Z" />
-    <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M12,11L13,7L11,7Z" />
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="1.5"
+        android:pathData="M12,13L14,5" />
 </vector>

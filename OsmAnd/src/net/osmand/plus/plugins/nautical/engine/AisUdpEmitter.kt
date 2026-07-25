@@ -11,9 +11,14 @@ import java.net.InetAddress
 class AisUdpEmitter {
     private val log = PlatformUtil.getLog(AisUdpEmitter::class.java)
     private var socket: DatagramSocket? = null
-    private val targetPort = 10110
+    private var targetPort = 10110
     private var scope: CoroutineScope? = null
     private var messageChannel: Channel<String>? = null
+
+    fun setTargetPort(port: Int) {
+        this.targetPort = port
+        log.debug("AIS UDP Emitter target port set to $targetPort")
+    }
 
     fun start() {
         if (scope != null) return
@@ -29,14 +34,17 @@ class AisUdpEmitter {
                 log.debug("AIS UDP Emitter started on local port $targetPort")
 
                 // The Consumer Loop: Reads from the funnel and transmits continuously
-                messageChannel?.consumeEach { nmeaSentence ->
+                messageChannel?.consumeEach { data ->
                     try {
-                        val payload = "$nmeaSentence\r\n".toByteArray(Charsets.UTF_8)
-                        val packet = DatagramPacket(payload, payload.size, localAddress, targetPort)
-                        socket?.send(packet)
-
-                        // Debug log to confirm it's actually leaving the plugin
-                        log.debug("UDP TX -> $nmeaSentence")
+                        // Split multi-sentence data (e.g. from Class B reports) 
+                        // and send each NMEA sentence in its own UDP packet.
+                        val sentences = data.split("\r\n").filter { it.isNotEmpty() }
+                        for (nmeaSentence in sentences) {
+                            val payload = "$nmeaSentence\r\n".toByteArray(Charsets.UTF_8)
+                            val packet = DatagramPacket(payload, payload.size, localAddress, targetPort)
+                            socket?.send(packet)
+                            log.debug("UDP TX -> $nmeaSentence")
+                        }
                     } catch (e: Exception) {
                         log.error("UDP Transmit Error: ${e.message}")
                     }

@@ -1,0 +1,20 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- SOG - Speed Over Ground (Speedo + Flat Ground) -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="1.5"
+        android:strokeLineCap="round"
+        android:pathData="M4,16C4,11.58 7.58,8 12,8C16.42,8 20,11.58 20,16" />
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:pathData="M12,16L16,11" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M2,18H22L22,20H2Z" />
+</vector>

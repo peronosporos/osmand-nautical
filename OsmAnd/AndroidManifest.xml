@@ -52,6 +52,7 @@
 	<uses-feature android:name="android.hardware.sensor.gyroscope" android:required="false" />
 	<uses-feature android:name="android.hardware.touchscreen" android:required="false" />
 	<uses-feature android:name="android.hardware.bluetooth" android:required="false" />
+	<uses-feature android:name="android.hardware.usb.host" android:required="false" />
 	<uses-feature android:name="com.sec.feature.spen_usp" android:required="false"/>
 
 	<supports-screens android:resizeable="true" android:smallScreens="true" android:normalScreens="true" android:largeScreens="true"
@@ -112,6 +113,13 @@
 		<receiver android:name="net.osmand.plus.mapcontextmenu.other.ShareSheetReceiver" android:exported="false" />
 		<receiver android:name="net.osmand.plus.notifications.NotificationDismissReceiver" android:exported="false" />
 		<receiver android:name="net.osmand.plus.liveupdates.LiveUpdatesAlarmReceiver" android:exported="false" />
+		<receiver android:name="net.osmand.plus.plugins.nautical.nmea.connection.UsbConnectionReceiver" android:exported="true">
+			<intent-filter>
+				<action android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED" />
+				<action android:name="android.hardware.usb.action.USB_DEVICE_DETACHED" />
+			</intent-filter>
+			<meta-data android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED" android:resource="@xml/device_filter" />
+		</receiver>
 		<receiver android:name="net.osmand.plus.plugins.audionotes.MediaRemoteControlReceiver"
 			android:exported="true">
 			<intent-filter>
@@ -1182,6 +1190,16 @@
 		<meta-data android:name="androidx.car.app.minCarApiLevel"
 			android:value="1"
 			tools:ignore="MetadataTagInsideApplicationTag" />
+
+
+
+		<service
+			android:process="${applicationId}"
+			android:name="net.osmand.plus.plugins.nautical.service.SailingDataService"
+			android:exported="false"
+			android:foregroundServiceType="location"
+			android:stopWithTask="false">
+		</service>
 
 		<service
 			android:process="${applicationId}"

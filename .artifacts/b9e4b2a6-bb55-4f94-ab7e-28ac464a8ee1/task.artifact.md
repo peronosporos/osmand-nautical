@@ -1,0 +1,15 @@
+- `[ ]` Update `strings.xml` with missing and corrected entries
+- `[ ]` Refactor `NauticalPlugin.kt`
+    - `[ ]` Fix unresolved resource references
+    - `[ ]` Implement secure `X509TrustManager` handling
+    - `[ ]` Address lint warnings and code style
+- `[ ]` Enhance `AutopilotController.kt`
+    - `[ ]` Implement `engageSmart()` logic
+    - `[ ]` Fix `nautical_auth_failed` resource reference
+- `[ ]` Update `AutopilotRouteListener.kt` for smart engagement
+- `[ ]` Cleanup `NauticalPilotBottomSheet.kt`
+    - `[ ]` Remove hardcoded strings (trends, defaults)
+    - `[ ]` Refactor maneuver logic (Conventional vs Proa, Tack vs Gybe vs Shunt)
+- `[ ]` Cleanup `MarineTextWidget.kt` hardcoded strings
+- `[ ]` Cleanup `NauticalPilotWidget.kt` hardcoded strings
+- `[ ]` Final verification and walkthrough

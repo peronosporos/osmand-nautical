@@ -3,18 +3,19 @@
     android:height="24dp"
     android:viewportWidth="24"
     android:viewportHeight="24">
+    <!-- Planned Track (Dashed center line) -->
     <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M12,2L12,22"
+        android:strokeColor="#FFFFFF"
         android:strokeWidth="1"
-        android:strokeColor="#FFFFFF" />
+        android:pathData="M12,2V4M12,7V9M12,12V14M12,17V19M12,22" />
+    <!-- Off-track Boat -->
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M8,12L4,12L6,10M6,14L4,12" />
+        android:pathData="M6,10C5,11 4,13 4,15C4,17 5,18 6,18C7,18 8,17 8,15C8,13 7,11 6,10Z" />
+    <!-- Error distance arrow -->
     <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M16,12L20,12L18,10M18,14L20,12" />
-    <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M12,12C12,12 11.5,10 12,10C12.5,10 12,12 12,12Z" />
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="1.5"
+        android:strokeLineCap="round"
+        android:pathData="M6,15H12" />
 </vector>

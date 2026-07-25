@@ -6,6 +6,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
+import androidx.core.content.ContextCompat
 import com.github.mikephil.charting.charts.LineChart
 import com.github.mikephil.charting.data.Entry
 import com.github.mikephil.charting.data.LineData
@@ -21,10 +22,6 @@ class NauticalAdvancedSettingsBottomSheet : BottomSheetDialogFragment() {
 
     companion object {
         fun newInstance() = NauticalAdvancedSettingsBottomSheet()
-    }
-
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
@@ -53,6 +50,12 @@ class NauticalAdvancedSettingsBottomSheet : BottomSheetDialogFragment() {
 
         val chart = view.findViewById<LineChart>(R.id.pid_preview_chart)
 
+        sliderRudderGain.value = settings.NAUTICAL_RUDDER_GAIN.get().coerceIn(sliderRudderGain.valueFrom, sliderRudderGain.valueTo)
+        sliderCounterRudder.value = settings.NAUTICAL_COUNTER_RUDDER.get().coerceIn(sliderCounterRudder.valueFrom, sliderCounterRudder.valueTo)
+        sliderAutoTrim.value = settings.NAUTICAL_AUTO_TRIM.get().coerceIn(sliderAutoTrim.valueFrom, sliderAutoTrim.valueTo)
+        sliderFilterSensitivity.value = settings.NAUTICAL_FILTER_SENSITIVITY.get().coerceIn(sliderFilterSensitivity.valueFrom, sliderFilterSensitivity.valueTo)
+        sliderRudderLimit.value = settings.NAUTICAL_RUDDER_LIMIT.get().coerceIn(sliderRudderLimit.valueFrom, sliderRudderLimit.valueTo)
+        sliderOffCourse.value = settings.NAUTICAL_OFF_COURSE_ALARM.get().coerceIn(sliderOffCourse.valueFrom, sliderOffCourse.valueTo)
         sliderXteThreshold.value = settings.NAUTICAL_XTE_THRESHOLD.get().coerceIn(0.01f, 1.0f)
         
         vesselTypeToggle.check(if (settings.NAUTICAL_VESSEL_TYPE.get() == VesselType.PROA) R.id.btn_vessel_proa else R.id.btn_vessel_conv)
@@ -66,6 +69,10 @@ class NauticalAdvancedSettingsBottomSheet : BottomSheetDialogFragment() {
             val alpha = if (isChecked) 0.5f else 1.0f
             settingsContainer.alpha = alpha
             setEnabledRecursive(settingsContainer, !isChecked)
+            
+            if (!isChecked) {
+                app.showToastMessage(R.string.nautical_advanced_settings_unlocked)
+            }
         }
 
         btnCompassCalib.setOnClickListener {
@@ -89,25 +96,32 @@ class NauticalAdvancedSettingsBottomSheet : BottomSheetDialogFragment() {
         updateChart()
 
         btnReset.setOnClickListener {
-            sliderRudderGain.value = 1.0f
-            sliderCounterRudder.value = 2.0f
-            sliderAutoTrim.value = 0.1f
-            sliderFilterSensitivity.value = 3.0f
-            sliderRudderLimit.value = 30.0f
-            sliderOffCourse.value = 15.0f
-            sliderXteThreshold.value = 0.1f
+            sliderRudderGain.value = settings.NAUTICAL_RUDDER_GAIN.defaultValue
+            sliderCounterRudder.value = settings.NAUTICAL_COUNTER_RUDDER.defaultValue
+            sliderAutoTrim.value = settings.NAUTICAL_AUTO_TRIM.defaultValue
+            sliderFilterSensitivity.value = settings.NAUTICAL_FILTER_SENSITIVITY.defaultValue
+            sliderRudderLimit.value = settings.NAUTICAL_RUDDER_LIMIT.defaultValue
+            sliderOffCourse.value = settings.NAUTICAL_OFF_COURSE_ALARM.defaultValue
+            sliderXteThreshold.value = settings.NAUTICAL_XTE_THRESHOLD.defaultValue
             vesselTypeToggle.check(R.id.btn_vessel_conv)
             updateChart()
         }
 
         btnSave.setOnClickListener {
+            settings.NAUTICAL_RUDDER_GAIN.set(sliderRudderGain.value)
+            settings.NAUTICAL_COUNTER_RUDDER.set(sliderCounterRudder.value)
+            settings.NAUTICAL_AUTO_TRIM.set(sliderAutoTrim.value)
+            settings.NAUTICAL_FILTER_SENSITIVITY.set(sliderFilterSensitivity.value)
+            settings.NAUTICAL_RUDDER_LIMIT.set(sliderRudderLimit.value)
+            settings.NAUTICAL_OFF_COURSE_ALARM.set(sliderOffCourse.value)
+            settings.NAUTICAL_XTE_THRESHOLD.set(sliderXteThreshold.value)
+
             autopilot.setRudderGain(sliderRudderGain.value.toDouble())
             autopilot.setCounterRudder(sliderCounterRudder.value.toDouble())
             autopilot.setAutoTrim(sliderAutoTrim.value.toDouble())
             autopilot.setFilterSensitivity(sliderFilterSensitivity.value.toDouble())
             autopilot.setRudderLimit(sliderRudderLimit.value.toDouble())
             autopilot.setOffCourseAlarm(sliderOffCourse.value.toDouble())
-            settings.NAUTICAL_XTE_THRESHOLD.set(sliderXteThreshold.value)
             
             val selectedVesselType = if (vesselTypeToggle.checkedButtonId == R.id.btn_vessel_proa) VesselType.PROA else VesselType.CONVENTIONAL
             settings.NAUTICAL_VESSEL_TYPE.set(selectedVesselType)
@@ -138,7 +152,7 @@ class NauticalAdvancedSettingsBottomSheet : BottomSheetDialogFragment() {
 
         var currentHeading = 0.0
         val targetHeading = 10.0
-        var rudderAngle = 0.0
+        var rudderAngle: Double
         var integral = 0.0
         var lastError = targetHeading
 
@@ -163,12 +177,12 @@ class NauticalAdvancedSettingsBottomSheet : BottomSheetDialogFragment() {
         }
 
         val dataSetHeading = LineDataSet(entriesHeading, "Heading Error").apply {
-            color = Color.CYAN
+            color = ContextCompat.getColor(requireContext(), R.color.nautical_status_blue)
             setDrawCircles(false)
             lineWidth = 2f
         }
         val dataSetRudder = LineDataSet(entriesRudder, "Rudder Angle").apply {
-            color = Color.RED
+            color = ContextCompat.getColor(requireContext(), R.color.nautical_status_red)
             setDrawCircles(false)
             lineWidth = 1f
             enableDashedLine(10f, 10f, 0f)
@@ -178,7 +192,7 @@ class NauticalAdvancedSettingsBottomSheet : BottomSheetDialogFragment() {
         chart.description.isEnabled = false
         chart.xAxis.isEnabled = false
         chart.axisRight.isEnabled = false
-        chart.legend.textColor = Color.GRAY
+        chart.legend.textColor = if (nightMode) Color.LTGRAY else Color.GRAY
         chart.invalidate()
     }
 }

@@ -1,0 +1,24 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- Set & Drift - Double-headed flow arrow -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="1.5"
+        android:strokeLineCap="round"
+        android:pathData="M4,12H20" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M20,12L17,9V15L20,12Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M4,12L7,9V15L4,12Z" />
+    <!-- Water ripples to indicate current -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="1"
+        android:strokeLineCap="round"
+        android:pathData="M6,16C8,16 9,15 10,15C11,15 12,16 14,16C16,16 17,15 18,15" />
+</vector>

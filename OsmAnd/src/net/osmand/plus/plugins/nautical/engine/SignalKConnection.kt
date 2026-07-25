@@ -8,6 +8,7 @@ interface SignalKConnection {
         url: String,
         username: String? = null,
         password: String? = null,
+        onFailure: (() -> Unit)? = null,
         onMessageReceived: (String) -> Unit,
     )
     fun sendDelta(jsonPayload: String)

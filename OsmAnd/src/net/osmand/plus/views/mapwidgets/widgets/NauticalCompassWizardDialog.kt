@@ -44,6 +44,7 @@ class NauticalCompassWizardDialog : BaseMaterialBottomSheetDialogFragment() {
                     
                     // Trigger calibration on server
                     NauticalPlugin.engine?.dispatchCommand("CALIBRATE_COMPASS:START")
+                    net.osmand.plus.utils.AndroidUtils.getApp(requireContext()).showToastMessage(R.string.nautical_compass_calibration_started)
                 }
                 2 -> {
                     currentStep = 3

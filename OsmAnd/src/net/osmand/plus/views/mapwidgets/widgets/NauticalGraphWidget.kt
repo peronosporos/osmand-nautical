@@ -58,110 +58,103 @@ class NauticalGraphWidget(
 
         when (widgetType) {
             WidgetType.NAUTICAL_DEPTH -> {
-                val unit = mapActivity.getString(R.string.nautical_unit_meters)
-                g.setData(engine.getDepthHistory(), unit)
+                g.setData(engine.getDepthHistory(), mapActivity.getString(R.string.nautical_unit_meters))
             }
             WidgetType.NAUTICAL_WIND -> {
-                val unit = mapActivity.getString(R.string.nautical_unit_knots)
-                val coeff = net.osmand.shared.units.SpeedConstants.KNOTS
-                g.setData(engine.getWindHistory().map { it * coeff }, unit)
+                g.setData(engine.getWindHistory(), mapActivity.getString(R.string.nautical_unit_knots), net.osmand.shared.units.SpeedConstants.KNOTS)
             }
             WidgetType.NAUTICAL_VMG -> {
-                val unit = mapActivity.getString(R.string.nautical_unit_knots)
-                val coeff = net.osmand.shared.units.SpeedConstants.KNOTS
-                g.setData(engine.getVmgHistory().map { it * coeff }, unit)
+                g.setData(engine.getVmgHistory(), mapActivity.getString(R.string.nautical_unit_knots), net.osmand.shared.units.SpeedConstants.KNOTS)
             }
             WidgetType.NAUTICAL_SOG -> {
-                val unit = mapActivity.getString(R.string.nautical_unit_knots)
-                val coeff = net.osmand.shared.units.SpeedConstants.KNOTS
-                g.setData(engine.getSogHistory().map { it * coeff }, unit)
+                g.setData(engine.getSogHistory(), mapActivity.getString(R.string.nautical_unit_knots), net.osmand.shared.units.SpeedConstants.KNOTS)
             }
             WidgetType.NAUTICAL_STW -> {
-                val unit = mapActivity.getString(R.string.nautical_unit_knots)
-                val coeff = net.osmand.shared.units.SpeedConstants.KNOTS
-                g.setData(engine.getStwHistory().map { it * coeff }, unit)
+                g.setData(engine.getStwHistory(), mapActivity.getString(R.string.nautical_unit_knots), net.osmand.shared.units.SpeedConstants.KNOTS)
             }
             WidgetType.NAUTICAL_COG -> {
-                g.setData(engine.getCogHistory().map { Math.toDegrees(it) }, "°")
+                g.setData(engine.getCogHistory(), mapActivity.getString(R.string.nautical_unit_deg), Math.toDegrees(1.0))
             }
             WidgetType.NAUTICAL_ENGINE_RPM -> {
-                g.setData(engine.getRpmHistory(), "rpm")
+                g.setData(engine.getRpmHistory(), mapActivity.getString(R.string.nautical_unit_rpm))
             }
             WidgetType.NAUTICAL_BATTERY_VOLT -> {
-                g.setData(engine.getVoltHistory(), "V")
+                g.setData(engine.getVoltHistory(), mapActivity.getString(R.string.nautical_unit_volt))
             }
             WidgetType.NAUTICAL_BATTERY_SOC -> {
-                g.setData(engine.getSocHistory().map { it * 100.0 }, "%")
+                g.setData(engine.getSocHistory(), mapActivity.getString(R.string.nautical_unit_percent), 100.0)
             }
             WidgetType.NAUTICAL_ENGINE_TEMP -> {
-                g.setData(engine.getTempEngineHistory().map { it - 273.15 }, "°C")
+                g.setData(engine.getTempEngineHistory(), mapActivity.getString(R.string.nautical_unit_celsius), 1.0, -273.15)
             }
             WidgetType.NAUTICAL_WATER_TEMP -> {
-                g.setData(engine.getWaterTempHistory().map { it - 273.15 }, "°C")
+                g.setData(engine.getWaterTempHistory(), mapActivity.getString(R.string.nautical_unit_celsius), 1.0, -273.15)
             }
             WidgetType.NAUTICAL_OUTSIDE_TEMP -> {
-                g.setData(engine.getOutsideTempHistory().map { it - 273.15 }, "°C")
+                g.setData(engine.getOutsideTempHistory(), mapActivity.getString(R.string.nautical_unit_celsius), 1.0, -273.15)
             }
             WidgetType.NAUTICAL_PRESSURE -> {
-                g.setData(engine.getPressureHistory().map { it / 100.0 }, "hPa")
+                g.setData(engine.getPressureHistory(), mapActivity.getString(R.string.nautical_unit_hpa), 0.01)
             }
             WidgetType.NAUTICAL_ROLL -> {
-                g.setData(engine.getRollHistory().map { Math.toDegrees(it) }, "°")
+                g.setData(engine.getRollHistory(), mapActivity.getString(R.string.nautical_unit_deg), Math.toDegrees(1.0))
             }
             WidgetType.NAUTICAL_PITCH -> {
-                g.setData(engine.getPitchHistory().map { Math.toDegrees(it) }, "°")
+                g.setData(engine.getPitchHistory(), mapActivity.getString(R.string.nautical_unit_deg), Math.toDegrees(1.0))
             }
             WidgetType.NAUTICAL_ROT -> {
-                g.setData(engine.getRotHistory().map { Math.toDegrees(it) * 60.0 }, "°/m")
+                g.setData(engine.getRotHistory(), mapActivity.getString(R.string.nautical_unit_rot_short), Math.toDegrees(1.0) * 60.0)
             }
             WidgetType.NAUTICAL_XTE -> {
-                g.setData(engine.getXteHistory().map { it / 1852.0 }, "nm")
+                g.setData(engine.getXteHistory(), mapActivity.getString(R.string.nautical_unit_nm), 1.0 / 1852.0)
             }
             WidgetType.NAUTICAL_TTW -> {
-                g.setData(engine.getTtwHistory().map { it / 60.0 }, "min")
+                g.setData(engine.getTtwHistory(), mapActivity.getString(R.string.nautical_unit_min_short), 1.0 / 60.0)
             }
             WidgetType.NAUTICAL_DTW -> {
-                g.setData(engine.getDtwHistory().map { it / 1852.0 }, "nm")
+                g.setData(engine.getDtwHistory(), mapActivity.getString(R.string.nautical_unit_nm), 1.0 / 1852.0)
             }
             WidgetType.NAUTICAL_AWA -> {
-                g.setData(engine.getAwaHistory().map { Math.toDegrees(it) }, "°")
+                g.setData(engine.getAwaHistory(), mapActivity.getString(R.string.nautical_unit_deg), Math.toDegrees(1.0))
             }
             WidgetType.NAUTICAL_AWS -> {
-                val knotsCoeff = net.osmand.shared.units.SpeedConstants.KNOTS
-                g.setData(engine.getAwsHistory().map { it * knotsCoeff }, mapActivity.getString(R.string.nautical_unit_knots))
+                g.setData(engine.getAwsHistory(), mapActivity.getString(R.string.nautical_unit_knots), net.osmand.shared.units.SpeedConstants.KNOTS)
             }
             WidgetType.NAUTICAL_TWA -> {
-                g.setData(engine.getTwaHistory().map { Math.toDegrees(it) }, "°")
+                g.setData(engine.getTwaHistory(), mapActivity.getString(R.string.nautical_unit_deg), Math.toDegrees(1.0))
             }
             WidgetType.NAUTICAL_POLAR_RATIO -> {
-                g.setData(engine.getPolarRatioHistory().map { it * 100.0 }, mapActivity.getString(R.string.nautical_unit_percent))
+                g.setData(engine.getPolarRatioHistory(), mapActivity.getString(R.string.nautical_unit_percent), 100.0)
             }
             WidgetType.NAUTICAL_HEADING_MAGNETIC -> {
-                g.setData(engine.getMagHdgHistory().map { Math.toDegrees(it) }, "°")
+                g.setData(engine.getMagHdgHistory(), mapActivity.getString(R.string.nautical_unit_deg), Math.toDegrees(1.0))
             }
             WidgetType.NAUTICAL_LOG -> {
-                g.setData(engine.getLogHistory().map { it / 1852.0 }, mapActivity.getString(R.string.nautical_unit_nm))
+                g.setData(engine.getLogHistory(), mapActivity.getString(R.string.nautical_unit_nm), 1.0 / 1852.0)
             }
             WidgetType.NAUTICAL_TRIP_LOG -> {
-                g.setData(engine.getTripLogHistory().map { it / 1852.0 }, mapActivity.getString(R.string.nautical_unit_nm))
+                g.setData(engine.getTripLogHistory(), mapActivity.getString(R.string.nautical_unit_nm), 1.0 / 1852.0)
             }
             WidgetType.NAUTICAL_DEPTH_KEEL -> {
                 g.setData(engine.getDepthKeelHistory(), mapActivity.getString(R.string.nautical_unit_meters))
             }
             WidgetType.NAUTICAL_FUEL_LEVEL -> {
-                g.setData(engine.getFuelHistory().map { it * 100.0 }, mapActivity.getString(R.string.nautical_unit_percent))
+                g.setData(engine.getFuelHistory(), mapActivity.getString(R.string.nautical_unit_percent), 100.0)
             }
             WidgetType.NAUTICAL_FRESH_WATER_LEVEL -> {
-                g.setData(engine.getFreshWaterHistory().map { it * 100.0 }, mapActivity.getString(R.string.nautical_unit_percent))
+                g.setData(engine.getFreshWaterHistory(), mapActivity.getString(R.string.nautical_unit_percent), 100.0)
             }
             WidgetType.NAUTICAL_WASTE_WATER_LEVEL -> {
-                g.setData(engine.getWasteHistory().map { it * 100.0 }, mapActivity.getString(R.string.nautical_unit_percent))
+                g.setData(engine.getWasteHistory(), mapActivity.getString(R.string.nautical_unit_percent), 100.0)
             }
             WidgetType.NAUTICAL_OIL_PRESSURE -> {
-                g.setData(engine.getOilPressureHistory().map { it / 100000.0 }, mapActivity.getString(R.string.nautical_unit_bar))
+                g.setData(engine.getOilPressureHistory(), mapActivity.getString(R.string.nautical_unit_bar), 1.0 / 100000.0)
+            }
+            WidgetType.NAUTICAL_ENGINE_COOLANT -> {
+                g.setData(engine.getCoolantTempHistory(), mapActivity.getString(R.string.nautical_unit_celsius), 1.0, -273.15)
             }
             WidgetType.NAUTICAL_ENGINE_LOAD -> {
-                g.setData(engine.getEngineLoadHistory().map { it * 100.0 }, mapActivity.getString(R.string.nautical_unit_percent))
+                g.setData(engine.getEngineLoadHistory(), mapActivity.getString(R.string.nautical_unit_percent), 100.0)
             }
             WidgetType.NAUTICAL_BATTERY_CURRENT -> {
                 g.setData(engine.getBatteryCurrentHistory(), mapActivity.getString(R.string.nautical_unit_ampere))
@@ -169,8 +162,11 @@ class NauticalGraphWidget(
             WidgetType.NAUTICAL_SOLAR_CURRENT -> {
                 g.setData(engine.getSolarCurrentHistory(), mapActivity.getString(R.string.nautical_unit_ampere))
             }
+            WidgetType.NAUTICAL_SET_DRIFT -> {
+                g.setData(engine.getDriftHistory(), mapActivity.getString(R.string.nautical_unit_knots), net.osmand.shared.units.SpeedConstants.KNOTS)
+            }
             WidgetType.NAUTICAL_TWD -> {
-                g.setData(engine.getTwdHistory().map { Math.toDegrees(it) }, "°")
+                g.setData(engine.getTwdHistory(), mapActivity.getString(R.string.nautical_unit_deg), Math.toDegrees(1.0))
             }
             else -> {}
         }

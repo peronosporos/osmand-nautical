@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <PreferenceCategory
+        android:layout="@layout/preference_category_with_descr"
+        android:title="@string/s63_manager_title"
+        app:description="@string/s63_disclaimer" />
+
+    <net.osmand.plus.settings.preferences.EditTextPreferenceEx
+        android:key="s63_m_id"
+        android:layout="@layout/preference_with_descr"
+        android:title="@string/s63_m_id_label"
+        android:dialogTitle="@string/s63_m_id_label" />
+
+    <net.osmand.plus.settings.preferences.EditTextPreferenceEx
+        android:key="s63_m_key"
+        android:layout="@layout/preference_with_descr"
+        android:title="@string/s63_m_key_label"
+        android:dialogTitle="@string/s63_m_key_label" />
+
+    <Preference
+        android:key="s63_user_permit"
+        android:layout="@layout/preference_with_descr"
+        android:title="@string/s63_user_permit_label" />
+
+    <Preference
+        android:key="s63_import_config"
+        android:layout="@layout/preference_with_descr"
+        android:title="@string/s63_import_config" />
+
+    <Preference
+        android:key="s63_load_permit_txt"
+        android:layout="@layout/preference_with_descr"
+        android:title="@string/s63_load_permit_txt" />
+
+</PreferenceScreen>

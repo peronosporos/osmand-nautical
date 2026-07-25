@@ -3,10 +3,18 @@
     android:height="24dp"
     android:viewportWidth="24"
     android:viewportHeight="24">
+    <!-- Battery Body -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="2"
+        android:pathData="M4,10H14V18H4V10ZM14,12H16V16H14" />
+    <!-- Flow arrow -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="1.5"
+        android:strokeLineCap="round"
+        android:pathData="M6,6V4H18V12H20" />
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M2,9.5C2,8.7 2.7,8 3.5,8H4C4,6.9 4.9,6 6,6H20C21.1,6 22,6.9 22,8V16C22,17.1 21.1,18 20,18H6C4.9,18 4,17.1 4,16H3.5C2.7,16 2,15.3 2,14.5V9.5ZM4,10L4,14H6V16H20V8H6V10H4Z" />
-    <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M11,10L13,10L13,8L15,8L15,10L17,10L17,12L15,12L15,14L13,14L13,12L11,12Z" />
+        android:pathData="M20,12L18,10V14Z" />
 </vector>

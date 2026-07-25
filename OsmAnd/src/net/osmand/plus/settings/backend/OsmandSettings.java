@@ -902,6 +902,10 @@ public class OsmandSettings {
 
 	private final OsmandPreference<String> PLUGINS = new StringPreference(this, "enabled_plugins", "").makeGlobal().makeShared();
 
+	public OsmandPreference<String> getEnabledPluginsPreference() {
+		return PLUGINS;
+	}
+
 	public Set<String> getEnabledPlugins() {
 		String plugs = PLUGINS.get();
 		StringTokenizer toks = new StringTokenizer(plugs, ",");
@@ -3546,23 +3550,65 @@ public class OsmandSettings {
 	public final CommonPreference<Boolean> ENABLE_MSAA = new BooleanPreference(this, "enable_msaa", false).makeGlobal().makeShared().cache();
 	public final CommonPreference<Boolean> SPHERICAL_MAP = new BooleanPreference(this, "spherical_map", false).makeProfile().cache();
 	// Nautical Plugin Settings
-	public final CommonPreference<String> NAUTICAL_SERVER_IP = registerStringPreference("server_ip", "");
-	public final CommonPreference<String> NAUTICAL_SERVER_PORT = registerStringPreference("server_port", "3000");
-	public final CommonPreference<String> NAUTICAL_SERVER_USERNAME = registerStringPreference("server_username", "");
-	public final CommonPreference<String> NAUTICAL_SERVER_PASSWORD = registerStringPreference("server_password", "");
-	public final CommonPreference<Boolean> NAUTICAL_USE_SECURE_CONNECTION = registerBooleanPreference("server_secure", false);
-	public final CommonPreference<Boolean> NAUTICAL_TRUST_ALL_CERTIFICATES = registerBooleanPreference("server_trust_all", false);
-	public final CommonPreference<Boolean> NAUTICAL_SHOW_LAYLINES = registerBooleanPreference("nautical_show_laylines", true);
-	public final CommonPreference<Boolean> NAUTICAL_SHOW_WIND_SHIFTS = registerBooleanPreference("nautical_show_wind_shifts", true);
-	public final CommonPreference<Boolean> NAUTICAL_SHOW_TRAJECTORY = registerBooleanPreference("nautical_show_trajectory", true);
+	public final CommonPreference<String> NAUTICAL_SERVER_IP = registerStringPreference("nautical_server_ip", "");
+	public final CommonPreference<String> NAUTICAL_SERVER_PORT = registerStringPreference("nautical_server_port", "3000");
+	public final CommonPreference<String> NAUTICAL_SERVER_USERNAME = registerStringPreference("nautical_server_username", "");
+	public final CommonPreference<String> NAUTICAL_SERVER_PASSWORD = registerStringPreference("nautical_server_password", "");
+	public final CommonPreference<Boolean> NAUTICAL_USE_SECURE_CONNECTION = registerBooleanPreference("nautical_server_secure", false);
+	public final CommonPreference<Boolean> NAUTICAL_TRUST_ALL_CERTIFICATES = registerBooleanPreference("nautical_server_trust_all", false);
+	public final CommonPreference<Boolean> NAUTICAL_SHOW_LAYLINES = registerBooleanPreference("nautical_show_laylines", true).makeProfile();
+	public final CommonPreference<Boolean> NAUTICAL_SHOW_WIND_SHIFTS = registerBooleanPreference("nautical_show_wind_shifts", true).makeProfile();
+	public final CommonPreference<Boolean> NAUTICAL_SHOW_TRAJECTORY = registerBooleanPreference("nautical_show_trajectory", true).makeProfile();
+	public final CommonPreference<Boolean> NAUTICAL_SHOW_TIDES = registerBooleanPreference("nautical_show_tides", true).makeProfile();
 	public final CommonPreference<Float> NAUTICAL_LAYLINES_TACK_ANGLE = registerFloatPreference("nautical_laylines_tack_angle", 45.0f).makeProfile();
+	public final CommonPreference<Float> NAUTICAL_LEEWAY_COEFFICIENT = registerFloatPreference("nautical_leeway_coefficient", 0.0f).makeProfile();
 	public final CommonPreference<Float> NAUTICAL_XTE_THRESHOLD = registerFloatPreference("nautical_xte_threshold", 0.1f).makeGlobal();
-	public final CommonPreference<Boolean> NAUTICAL_SHOW_HEADING_LINE = registerBooleanPreference("nautical_show_heading_line", true);
-	public final CommonPreference<Boolean> NAUTICAL_SHOW_COG_LINE = registerBooleanPreference("nautical_show_cog_line", true);
-	public final CommonPreference<Boolean> NAUTICAL_SHOW_CURRENT_VECTOR = registerBooleanPreference("nautical_show_current_vector", true);
+	public final CommonPreference<Float> NAUTICAL_RUDDER_GAIN = registerFloatPreference("nautical_rudder_gain", 1.0f).makeGlobal();
+	public final CommonPreference<Float> NAUTICAL_COUNTER_RUDDER = registerFloatPreference("nautical_counter_rudder", 2.0f).makeGlobal();
+	public final CommonPreference<Float> NAUTICAL_AUTO_TRIM = registerFloatPreference("nautical_auto_trim", 0.1f).makeGlobal();
+	public final CommonPreference<Float> NAUTICAL_FILTER_SENSITIVITY = registerFloatPreference("nautical_filter_sensitivity", 3.0f).makeGlobal();
+	public final CommonPreference<Float> NAUTICAL_RUDDER_LIMIT = registerFloatPreference("nautical_rudder_limit", 30.0f).makeGlobal();
+	public final CommonPreference<Float> NAUTICAL_OFF_COURSE_ALARM = registerFloatPreference("nautical_off_course_alarm", 15.0f).makeGlobal();
+	public final CommonPreference<Float> NAUTICAL_VESSEL_DRAFT = registerFloatPreference("nautical_vessel_draft", 2.0f).makeGlobal();
+	public final CommonPreference<Float> NAUTICAL_SAFETY_MARGIN = registerFloatPreference("nautical_safety_margin", 1.0f).makeGlobal();
+	public final CommonPreference<Float> NAUTICAL_CORRIDOR_WIDTH = registerFloatPreference("nautical_corridor_width", 0.5f).makeGlobal();
+	public final CommonPreference<Boolean> NAUTICAL_SHOW_HEADING_LINE = registerBooleanPreference("nautical_show_heading_line", true).makeProfile();
+	public final CommonPreference<Boolean> NAUTICAL_SHOW_COG_LINE = registerBooleanPreference("nautical_show_cog_line", true).makeProfile();
+	public final CommonPreference<Boolean> NAUTICAL_SHOW_CURRENT_VECTOR = registerBooleanPreference("nautical_show_current_vector", true).makeProfile();
 	public final CommonPreference<Integer> NAUTICAL_LOOK_AHEAD_TIME = registerIntPreference("nautical_look_ahead_time", 10).makeProfile();
-	public final CommonPreference<Boolean> NAUTICAL_RECEIVE_IN_BACKGROUND = registerBooleanPreference("ais_receive_in_background", true);
+	public final CommonPreference<Boolean> NAUTICAL_RECEIVE_IN_BACKGROUND = registerBooleanPreference("nautical_receive_in_background", true);
+	public final CommonPreference<Boolean> NAUTICAL_NIGHT_VISION_ENABLED = registerBooleanPreference("nautical_night_vision_enabled", false).makeProfile();
 	public final CommonPreference<VesselType> NAUTICAL_VESSEL_TYPE = registerEnumStringPreference("nautical_vessel_type", VesselType.CONVENTIONAL, VesselType.values(), VesselType.class).makeGlobal();
+	public final CommonPreference<Integer> NAUTICAL_PILOT_SEA_STATE = registerIntPreference("nautical_pilot_sea_state", 3).makeProfile();
+	public final CommonPreference<Integer> NAUTICAL_LOGBOOK_INTERVAL = registerIntPreference("nautical_logbook_interval", 0).makeProfile();
+	public final CommonPreference<String> NAUTICAL_ACTIVE_SAIL_PLAN = registerStringPreference("nautical_active_sail_plan", "").makeProfile();
+	public final CommonPreference<String> NAUTICAL_ACTIVE_MANEUVER_ID = registerStringPreference("nautical_active_maneuver_id", "");
+	public final CommonPreference<Double> NAUTICAL_ANCHOR_LAT = registerFloatPreference("nautical_anchor_lat", 0f).map(Float::toDouble, Double::toFloat);
+	public final CommonPreference<Double> NAUTICAL_ANCHOR_LON = registerFloatPreference("nautical_anchor_lon", 0f).map(Float::toDouble, Double::toFloat);
+	public final CommonPreference<Float> NAUTICAL_ANCHOR_RADIUS = registerFloatPreference("nautical_anchor_radius", 0f).makeGlobal();
+	public final CommonPreference<Float> NAUTICAL_ANCHOR_DEPTH = registerFloatPreference("nautical_anchor_depth", 0f).makeProfile();
+	public final CommonPreference<Float> NAUTICAL_ANCHOR_TIDE_RISE = registerFloatPreference("nautical_anchor_tide_rise", 0f).makeProfile();
+	public final CommonPreference<Float> NAUTICAL_ANCHOR_BOW_OFFSET = registerFloatPreference("nautical_anchor_bow_offset", 0f).makeProfile();
+	public final CommonPreference<Float> NAUTICAL_ANCHOR_SAFETY_MARGIN = registerFloatPreference("nautical_anchor_safety_margin", 5f).makeProfile();
+	public final CommonPreference<Float> NAUTICAL_ANCHOR_SCOPE_RATIO = registerFloatPreference("nautical_anchor_scope_ratio", 5f).makeProfile();
+	public final CommonPreference<Boolean> NAUTICAL_SHOW_GRIB_WAVES = registerBooleanPreference("nautical_show_grib_waves", true).makeProfile();
+	public final CommonPreference<Boolean> NAUTICAL_SHOW_GRIB_PRESSURE = registerBooleanPreference("nautical_show_grib_pressure", true).makeProfile();
+	public final CommonPreference<Boolean> NAUTICAL_SHOW_RASTER_CHARTS = registerBooleanPreference("nautical_show_raster_charts", true).makeProfile();
+	public final CommonPreference<Integer> NAUTICAL_RASTER_CHARTS_OPACITY = registerIntPreference("nautical_raster_charts_opacity", 255).makeProfile();
+
+	public final CommonPreference<Double> NAUTICAL_MOB_LAT = registerFloatPreference("nautical_mob_lat", 0f).map(Float::toDouble, Double::toFloat);
+	public final CommonPreference<Double> NAUTICAL_MOB_LON = registerFloatPreference("nautical_mob_lon", 0f).map(Float::toDouble, Double::toFloat);
+	public final CommonPreference<Long> NAUTICAL_MOB_TIMESTAMP = registerLongPreference("nautical_mob_timestamp", 0L);
+	public final CommonPreference<Boolean> NAUTICAL_MOB_ACTIVE = registerBooleanPreference("nautical_mob_active", false);
+
+	public final CommonPreference<Boolean> NAVTEX_ONLY_URGENT = registerBooleanPreference("navtex_only_urgent", false);
+	public final CommonPreference<String> NAVTEX_SUBJECT_FILTER = registerStringPreference("navtex_subject_filter", "");
+	public final CommonPreference<Float> NAVTEX_MAX_DISTANCE = registerFloatPreference("navtex_max_distance", 0f);
+
+	public final CommonPreference<Long> NAUTICAL_DR_START_TIME = registerLongPreference("nautical_dr_start_time", 0L);
+	public final CommonPreference<Double> NAUTICAL_DR_LAST_LAT = registerFloatPreference("nautical_dr_last_lat", 0f).map(Float::toDouble, Double::toFloat);
+	public final CommonPreference<Double> NAUTICAL_DR_LAST_LON = registerFloatPreference("nautical_dr_last_lon", 0f).map(Float::toDouble, Double::toFloat);
+
 
 	@NonNull
 	public OsmandPreference<Boolean> getAllowPrivatePreference(@NonNull ApplicationMode appMode) {

@@ -1,0 +1,18 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- Thermometer -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M12,8C11.45,8 11,8.45 11,9V16.17C10.42,16.53 10,17.22 10,18C10,19.1 10.9,20 12,20C13.1,20 14,19.1 14,18C14,17.22 13.58,16.53 13,16.17V9C13,8.45 12.55,8 12,8Z" />
+    <!-- Sun symbol -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M12,2C10.34,2 9,3.34 9,5C9,6.66 10.34,8 12,8C13.66,8 15,6.66 15,5C15,3.34 13.66,2 12,2ZM12,4C12.55,4 13,4.45 13,5C13,5.55 12.55,6 12,6C11.45,6 11,5.55 11,5C11,4.45 11.45,4 12,4Z" />
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="1"
+        android:pathData="M12,1V2M12,8V9M8.46,2.46L9.17,3.17M14.83,6.83L15.54,7.54M7,5H8M16,5H17M8.46,7.54L9.17,6.83M14.83,3.17L15.54,2.46" />
+</vector>

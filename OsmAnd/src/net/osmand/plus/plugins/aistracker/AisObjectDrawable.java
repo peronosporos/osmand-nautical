@@ -51,7 +51,6 @@ public class AisObjectDrawable {
 	private Bitmap bitmap = null;
 	private boolean bitmapValid = false;
 	private int bitmapColor;
-	private long lastCpaUpdate = 0;
 	private MapMarker activeMarker;
 	private MapMarker restMarker;
 	private MapMarker lostMarker;
@@ -136,14 +135,11 @@ public class AisObjectDrawable {
 	height to draw a line to indicate the speed,
 	otherwise return 0 (no movement)
 	*/
-	private float getMovement() {
-		if (ais.getSog() > 0.0d) {
+	private float getPredictorDistanceMeters() {
+		if (ais.getSog() > 0.0d && ais.getSog() != AisObjectConstants.INVALID_SOG) {
 			if (ais.isMovable()) {
-				if (this.ais.getSog() <  2.0d) { return 0.0f; }
-				if (this.ais.getSog() <  5.0d) { return 1.0f; }
-				if (this.ais.getSog() < 10.0d) { return 2.0f; }
-				if (this.ais.getSog() < 25.0d) { return 3.0f; }
-				return 5.0f;
+				// 10 minute predictor vector
+				return (float) (ais.getSog() * 1852.0 * (10.0 / 60.0));
 			}
 		}
 		return 0.0f;
@@ -165,19 +161,11 @@ public class AisObjectDrawable {
 	 *  (5) the time when the course of the other vessel crosses the own course
 	 *      is not in the past  */
 	private boolean checkCpaWarning() {
-		Location ownPosition = getPlugin().getOwnPosition();
 		int cpaWarningTime = getPlugin().getCpaWarningTime();
 		float cpaWarningDistance = getPlugin().getCpaWarningDistance();
 		if (ais.isMovable() && (ais.getObjectClass() != AIS_AIRPLANE) && (cpaWarningTime > 0) &&
                 (ais.getSog() > AisObjectConstants.SPEED_CONSIDERED_IN_REST)) {
 			AisCpa cpa = ais.getCpa();
-			if (checkForCpaTimeout() && (ownPosition != null)) {
-				AisLocation aisPosition = ais.getExtrapolatedLocation(System.currentTimeMillis());
-				if (aisPosition != null) {
-					AisTrackerMath.INSTANCE.getCpa(AisObjectAndroidHelperKt.toAisLocation(ownPosition), aisPosition, cpa);
-					lastCpaUpdate = System.currentTimeMillis();
-				}
-			}
 			if (cpa.getValid()) {
 				double tcpa = cpa.getTcpa();
 				if (tcpa > 0.0f) {
@@ -191,10 +179,6 @@ public class AisObjectDrawable {
 		return false;
 	}
 
-	private boolean checkForCpaTimeout() {
-		return ((System.currentTimeMillis() - this.lastCpaUpdate) / 1000) > CPA_UPDATE_TIMEOUT_IN_SECONDS;
-	}
-	
 	private void setBitmap() {
 		invalidateBitmap();
 		boolean vesselAtRest = ais.isVesselAtRest();
@@ -351,24 +335,17 @@ public class AisObjectDrawable {
 			} else {
 				boolean needRotation = this.needRotation();
 				float rotation = 0.0f;
-				float speedFactor = getMovement();
+				float predictorDistance = getPredictorDistanceMeters();
 				float fx =  locationX - this.bitmap.getWidth() / 2.0f;
 				float fy =  locationY - this.bitmap.getHeight() / 2.0f;
 				if (needRotation) {
-					// the idea of the directions of the bitmap, vessel shape etc. is:
-					// - draw the bitmap and the direction line in direction of the course (ais_cog) of the vessel
-					//  - if no course is available, use heading (ais_heading) instead
-					//  - if heading is also not available, fallback to "no rotation" (northwards)
-					// - the direction of the shape of the vessel may differ:
-					//  - if heading is given and differs from course, then use heading as direction of the shape
-					//  - in this case the direction of the bitmap (with direction line) differs from the shape direction
 					rotation = ais.getVesselRotation();
 					canvas.rotate(rotation, locationX, locationY);
 				}
 				canvas.drawBitmap(this.bitmap, Math.round(fx), Math.round(fy), paint);
-				if ((tileBox.getZoom() >= AisTrackerLayer.START_ZOOM_SHOW_DIRECTION) && (speedFactor > 0.0f) &&
+				if ((tileBox.getZoom() >= AisTrackerLayer.START_ZOOM_SHOW_DIRECTION) && (predictorDistance > 0.0f) &&
 						(!ais.isLost(getPlugin().getVesselLostTimeoutInMinutes()))) {
-					float lineLength = (float)this.bitmap.getHeight() * speedFactor;
+					float lineLength = predictorDistance * (float) tileBox.getPixDensity();
 					float lineStartY = locationY - this.bitmap.getHeight() / 4.0f;
 					float lineEndY = lineStartY - lineLength;
 					canvas.drawLine((float) locationX, lineStartY, (float) locationX, lineEndY, paint);
@@ -452,10 +429,10 @@ public class AisObjectDrawable {
 		}
 
 		boolean vesselAtRest = ais.isVesselAtRest();
-		float speedFactor = getMovement();
+		float predictorDistance = getPredictorDistanceMeters();
 		boolean lostTimeout = ais.isLost(getPlugin().getVesselLostTimeoutInMinutes()) && !vesselAtRest;
 		boolean drawDirectionLine = currentZoom >= AisTrackerLayer.START_ZOOM_SHOW_DIRECTION
-				&& speedFactor > 0 && !lostTimeout && !vesselAtRest;
+				&& predictorDistance > 0 && !lostTimeout && !vesselAtRest;
 		boolean drawShape = shouldDrawShape(currentZoom) && (!vesselAtRest || ais.getHeading() != INVALID_HEADING);
 
 		activeMarker.setIsHidden(vesselAtRest || lostTimeout);
@@ -487,24 +464,21 @@ public class AisObjectDrawable {
 			restMarker.setPosition(markerLocation);
 			lostMarker.setPosition(markerLocation);
 
-			int inverseZoom = mapView.getMaxZoom() - mapView.getZoom();
-			float lineLength = speedFactor * (float)MapUtils.getPowZoom(inverseZoom) * bitmap.getHeight() * 0.75f;
+			if (drawDirectionLine) {
+				float direction = (ais.getVesselRotation());
+				LatLon endPoint = MapUtils.rhumbDestinationPoint(position.getLatitude(), position.getLongitude(), predictorDistance, direction);
+				PointI directionLineEnd = new PointI(
+						MapUtils.get31TileNumberX(endPoint.getLongitude()),
+						MapUtils.get31TileNumberY(endPoint.getLatitude())
+				);
 
-			double theta = Math.toRadians(rotation);
-			float dx = (float) (-Math.sin(theta) * lineLength);
-			float dy = (float) (Math.cos(theta) * lineLength);
+				QVectorPointI points = new QVectorPointI();
+				points.add(markerLocation);
+				points.add(directionLineEnd);
 
-			PointI directionLineEnd = new PointI(
-					(int) (markerLocation.getX() + Math.ceil(dx)),
-					(int) (markerLocation.getY() + Math.ceil(dy))
-			);
-
-			QVectorPointI points = new QVectorPointI();
-			points.add(markerLocation);
-			points.add(directionLineEnd);
-
-			directionLine.setPoints(points);
-			directionLine.setIsHidden(!drawDirectionLine);
+				directionLine.setPoints(points);
+				directionLine.setIsHidden(false);
+			}
 
 			if (drawShape) {
 				shapeLine.setFillColor(NativeUtilities.createFColorARGB(

@@ -1,0 +1,5 @@
+- [x] Create `SailingLaylinesMapLayer.kt` in `net.osmand.plus.plugins.nautical.laylines.ui`
+- [x] Register `SailingLaylinesMapLayer` in `SailingMapLayerController`
+- [x] Integrate `LaylineViewModel` and Layer updates in `SailingIntegrationPlugin`
+- [x] Optimize rendering to avoid object allocations in `onDraw`
+- [x] Apply fetchability-based styling (Green vs Red/Dashed)

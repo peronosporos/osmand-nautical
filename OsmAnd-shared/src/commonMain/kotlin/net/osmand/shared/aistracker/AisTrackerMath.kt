@@ -8,10 +8,6 @@ import kotlin.math.cos
 import kotlin.math.sin
 
 object AisTrackerMath {
-    private var lastCorrectionUpdate: Long = 0
-    private var correctionFactor: Double = 1.0
-    private const val maxCorrectionUpdateAgeInMin: Long = 60
-
     private class Vector(val x: Double, val y: Double) {
         fun sub(a: Vector): Vector {
             return Vector(this.x - a.x, this.y - a.y)
@@ -22,7 +18,8 @@ object AisTrackerMath {
     }
 
     fun getTcpa(ownLocation: AisLocation, otherLocation: AisLocation): Double {
-        return getTcpa(ownLocation, otherLocation, getLonCorrection(ownLocation))
+        val avgLat = (ownLocation.latitude + otherLocation.latitude) / 2.0
+        return getTcpa(ownLocation, otherLocation, calculateLonCorrection(avgLat))
     }
 
     private fun getTcpa(ownLocation: AisLocation, otherLocation: AisLocation, lonCorrection: Double): Double {
@@ -117,7 +114,8 @@ object AisTrackerMath {
     }
 
     private fun getCrossingTimes(x: AisLocation, y: AisLocation): Pair<Double, Double>? {
-        val lonCorrection = getLonCorrection(x)
+        val avgLat = (x.latitude + y.latitude) / 2.0
+        val lonCorrection = calculateLonCorrection(avgLat)
         val vX = locationToVector(x, lonCorrection)
         val vY = locationToVector(y, lonCorrection)
         val vVX = courseToVector(x.bearing.toDouble(), getSpeedInKnots(x).toDouble())
@@ -133,25 +131,8 @@ object AisTrackerMath {
         return Pair(t1, t2)
     }
 
-    private fun getLonCorrection(loc: AisLocation?): Double {
-        val now = kotlinx.datetime.Clock.System.now().toEpochMilliseconds()
-        if (((now - lastCorrectionUpdate) / 1000 / 60) > maxCorrectionUpdateAgeInMin) {
-            correctionFactor = calculateLonCorrection(loc)
-            lastCorrectionUpdate = now
-        }
-        return correctionFactor
-    }
-
-    private fun calculateLonCorrection(loc: AisLocation?): Double {
-        if (loc != null) {
-            val x = AisLocation(loc.latitude, loc.longitude, knotsToMeterPerSecond(1.0f), 90.0f)
-            val yEast = getNewPosition(x, 1.0)
-            if (yEast != null) {
-                val diffLon = yEast.longitude - x.longitude
-                return diffLon * 60.0
-            }
-        }
-        return 1.0
+    private fun calculateLonCorrection(latitude: Double): Double {
+        return cos(latitude * kotlin.math.PI / 180.0)
     }
 
     fun knotsToMeterPerSecond(speed: Float): Float {
@@ -175,7 +156,7 @@ object AisTrackerMath {
     }
 
     private fun locationToVector(loc: AisLocation, lonCorrection: Double): Vector {
-        return Vector(loc.longitude * 60.0 / lonCorrection, loc.latitude * 60.0)
+        return Vector(loc.longitude * 60.0 * lonCorrection, loc.latitude * 60.0)
     }
 
     private fun checkSpeedAndBearing(x: AisLocation, y: AisLocation): Boolean {

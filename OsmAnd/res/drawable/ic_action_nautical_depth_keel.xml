@@ -1,0 +1,25 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- Water surface -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="1"
+        android:pathData="M2,6H22" />
+    <!-- Boat profile -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M6,6V8C6,11 9,12 12,12C15,12 18,11 18,8V6H6Z" />
+    <!-- Depth line from keel -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="1.5"
+        android:strokeLineCap="round"
+        android:pathData="M12,12V20" />
+    <!-- Seabed -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M2,20H22L22,22H2Z" />
+</vector>

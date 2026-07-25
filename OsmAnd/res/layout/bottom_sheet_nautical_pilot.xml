@@ -34,63 +34,60 @@
             android:layout_marginTop="20dp"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/bottom_sheet_handle"
-            app:singleSelection="true">
+            app:singleSelection="true"
+            app:selectionRequired="true">
 
-            <Button
+            <com.google.android.material.button.MaterialButton
                 android:id="@+id/btn_mode_compass"
                 style="@style/Widget.Material3.Button.OutlinedButton"
-                android:layout_width="56dp"
+                android:layout_width="64dp"
                 android:layout_height="wrap_content"
-                android:padding="0dp"
                 app:icon="@drawable/ic_action_direction_compass"
                 app:iconGravity="textStart"
-                app:iconPadding="0dp"
                 app:iconSize="24dp"
-                app:strokeColor="?attr/active_color_primary"
-                android:contentDescription="@string/nautical_mode_compass"
-                android:text="@null" />
+                app:iconTint="?attr/icon_color_primary"
+                app:strokeColor="@color/nautical_toggle_stroke_color"
+                app:backgroundTint="@color/nautical_toggle_bg_tint"
+                android:contentDescription="@string/nautical_mode_compass" />
 
-            <Button
+            <com.google.android.material.button.MaterialButton
                 android:id="@+id/btn_mode_wind"
                 style="@style/Widget.Material3.Button.OutlinedButton"
-                android:layout_width="56dp"
+                android:layout_width="64dp"
                 android:layout_height="wrap_content"
-                android:padding="0dp"
                 app:icon="@drawable/ic_action_wind"
                 app:iconGravity="textStart"
-                app:iconPadding="0dp"
                 app:iconSize="24dp"
-                app:strokeColor="?attr/active_color_primary"
-                android:contentDescription="@string/nautical_mode_wind"
-                android:text="@null" />
+                app:iconTint="?attr/icon_color_primary"
+                app:strokeColor="@color/nautical_toggle_stroke_color"
+                app:backgroundTint="@color/nautical_toggle_bg_tint"
+                android:contentDescription="@string/nautical_mode_wind" />
 
-            <Button
+            <com.google.android.material.button.MaterialButton
                 android:id="@+id/btn_mode_route"
                 style="@style/Widget.Material3.Button.OutlinedButton"
-                android:layout_width="56dp"
+                android:layout_width="64dp"
                 android:layout_height="wrap_content"
-                android:padding="0dp"
                 app:icon="@drawable/ic_action_track_16"
                 app:iconGravity="textStart"
-                app:iconPadding="0dp"
                 app:iconSize="24dp"
-                app:strokeColor="?attr/active_color_primary"
-                android:contentDescription="@string/nautical_mode_track"
-                android:text="@null" />
+                app:iconTint="?attr/icon_color_primary"
+                app:strokeColor="@color/nautical_toggle_stroke_color"
+                app:backgroundTint="@color/nautical_toggle_bg_tint"
+                android:contentDescription="@string/nautical_mode_track" />
 
-            <Button
+            <com.google.android.material.button.MaterialButton
                 android:id="@+id/btn_mode_stop"
                 style="@style/Widget.Material3.Button.OutlinedButton"
-                android:layout_width="56dp"
+                android:layout_width="64dp"
                 android:layout_height="wrap_content"
-                android:padding="0dp"
                 app:icon="@drawable/ic_action_stop"
                 app:iconGravity="textStart"
-                app:iconPadding="0dp"
                 app:iconSize="24dp"
-                app:strokeColor="?attr/active_color_primary"
-                android:contentDescription="@string/nautical_mode_stop"
-                android:text="@null" />
+                app:iconTint="?attr/icon_color_primary"
+                app:strokeColor="@color/nautical_toggle_stroke_color"
+                app:backgroundTint="@color/nautical_toggle_bg_tint"
+                android:contentDescription="@string/nautical_mode_stop" />
         </com.google.android.material.button.MaterialButtonToggleGroup>
 
         <ImageButton
@@ -122,29 +119,41 @@
             <androidx.constraintlayout.widget.ConstraintLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:paddingVertical="20dp">
+                android:paddingVertical="16dp">
 
-                <net.osmand.plus.plugins.nautical.ui.HeadingArcView
-                    android:id="@+id/heading_arc_view"
+                <!-- Heading Error (Linear Scale) at the TOP -->
+                <net.osmand.plus.plugins.nautical.ui.HeadingErrorLinearView
+                    android:id="@+id/heading_error_linear"
                     android:layout_width="0dp"
-                    android:layout_height="100dp"
+                    android:layout_height="80dp"
+                    android:layout_marginHorizontal="16dp"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toTopOf="parent"
+                    app:layout_constraintTop_toTopOf="parent" />
+
+                <!-- Control Cluster Middle Row -->
+                <net.osmand.plus.plugins.nautical.ui.HeadingArcView
+                    android:id="@+id/heading_arc_view"
+                    android:layout_width="180dp"
+                    android:layout_height="180dp"
+                    android:layout_marginTop="8dp"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/heading_error_linear"
                     android:contentDescription="@string/nautical_pilot_title"
                     android:focusable="true" />
 
-                <!-- Left Control Column -->
+                <!-- Left Controls (Vertical Column) -->
                 <LinearLayout
                     android:id="@+id/left_controls"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="12dp"
+                    android:layout_marginStart="16dp"
                     android:gravity="center_horizontal"
                     android:orientation="vertical"
-                    app:layout_constraintBottom_toBottomOf="@id/heading_error_dial"
+                    app:layout_constraintBottom_toBottomOf="@id/heading_arc_view"
                     app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toTopOf="@id/heading_error_dial">
+                    app:layout_constraintTop_toTopOf="@id/heading_arc_view">
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btn_minus_10"
@@ -168,7 +177,7 @@
                         style="@style/Widget.Material3.Button.OutlinedButton"
                         android:layout_width="56dp"
                         android:layout_height="48dp"
-                        android:layout_marginTop="24dp"
+                        android:layout_marginTop="16dp"
                         android:insetLeft="0dp"
                         android:insetTop="0dp"
                         android:insetRight="0dp"
@@ -181,29 +190,17 @@
                         app:strokeColor="?attr/active_color_primary" />
                 </LinearLayout>
 
-                <net.osmand.plus.plugins.nautical.ui.HeadingErrorDialView
-                    android:id="@+id/heading_error_dial"
-                    android:layout_width="140dp"
-                    android:layout_height="140dp"
-                    android:layout_marginTop="8dp"
-                    app:layout_constraintEnd_toStartOf="@+id/right_controls"
-                    app:layout_constraintStart_toEndOf="@+id/left_controls"
-                    app:layout_constraintTop_toBottomOf="@id/heading_arc_view"
-                    android:contentDescription="@string/nautical_hdg_err"
-                    android:focusable="true"
-                    android:clickable="true" />
-
-                <!-- Right Control Column -->
+                <!-- Right Controls (Vertical Column) -->
                 <LinearLayout
                     android:id="@+id/right_controls"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginEnd="12dp"
+                    android:layout_marginEnd="16dp"
                     android:gravity="center_horizontal"
                     android:orientation="vertical"
-                    app:layout_constraintBottom_toBottomOf="@id/heading_error_dial"
+                    app:layout_constraintBottom_toBottomOf="@id/heading_arc_view"
                     app:layout_constraintEnd_toEndOf="parent"
-                    app:layout_constraintTop_toTopOf="@id/heading_error_dial">
+                    app:layout_constraintTop_toTopOf="@id/heading_arc_view">
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btn_plus_10"
@@ -227,7 +224,7 @@
                         style="@style/Widget.Material3.Button.OutlinedButton"
                         android:layout_width="56dp"
                         android:layout_height="48dp"
-                        android:layout_marginTop="24dp"
+                        android:layout_marginTop="16dp"
                         android:insetLeft="0dp"
                         android:insetTop="0dp"
                         android:insetRight="0dp"
@@ -248,9 +245,81 @@
                     android:layout_marginTop="16dp"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toBottomOf="@id/heading_error_dial"
+                    app:layout_constraintTop_toBottomOf="@id/heading_arc_view"
                     android:contentDescription="@string/nautical_rudder_angle"
                     android:focusable="true" />
+
+                <!-- Sea State Slider -->
+                <LinearLayout
+                    android:id="@+id/sea_state_container"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginHorizontal="32dp"
+                    android:layout_marginTop="20dp"
+                    android:orientation="vertical"
+                    app:layout_constraintTop_toBottomOf="@id/rudder_view"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent">
+
+                    <RelativeLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content">
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/nautical_sea_calm"
+                            android:textAppearance="?attr/textAppearanceCaption"
+                            android:textColor="?attr/text_color_secondary" />
+
+                        <LinearLayout
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_centerHorizontal="true"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal">
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/nautical_sea_state"
+                                android:textAppearance="?attr/textAppearanceCaption"
+                                android:textColor="?attr/colorAccent"
+                                android:textStyle="bold" />
+                            <com.google.android.material.materialswitch.MaterialSwitch
+                                android:id="@+id/switch_auto_sea_state"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="8dp"
+                                android:scaleX="0.8"
+                                android:scaleY="0.8" />
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="AUTO"
+                                android:textAppearance="?attr/textAppearanceCaption"
+                                android:textColor="?attr/text_color_secondary"
+                                android:textSize="11sp" />
+                        </LinearLayout>
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_alignParentEnd="true"
+                            android:text="@string/nautical_sea_heavy"
+                            android:textAppearance="?attr/textAppearanceCaption"
+                            android:textColor="?attr/text_color_secondary" />
+                    </RelativeLayout>
+
+                    <com.google.android.material.slider.Slider
+                        android:id="@+id/slider_sea_state"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:valueFrom="1.0"
+                        android:valueTo="5.0"
+                        android:stepSize="1.0"
+                        android:value="3.0"
+                        app:thumbColor="?attr/colorAccent"
+                        app:trackColorActive="?attr/colorAccent" />
+                </LinearLayout>
 
             </androidx.constraintlayout.widget.ConstraintLayout>
         </com.google.android.material.card.MaterialCardView>
@@ -488,6 +557,34 @@
                 </LinearLayout>
             </LinearLayout>
         </LinearLayout>
+
+        <!-- 4. Digital Switching Section -->
+        <TextView
+            android:id="@+id/switching_title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:layout_marginTop="32dp"
+            android:text="DIGITAL SWITCHING"
+            android:textAppearance="?attr/textAppearanceCaption"
+            android:textColor="?attr/colorAccent"
+            android:textStyle="bold"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/telemetry_pane" />
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/switches_recycler"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:clipToPadding="false"
+            android:orientation="horizontal"
+            android:paddingHorizontal="12dp"
+            app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/switching_title"
+            tools:listitem="@layout/item_nautical_switch" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 </androidx.core.widget.NestedScrollView>

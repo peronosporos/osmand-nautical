@@ -1,0 +1,8 @@
+- [ ] Implement `MBTilesHelper.kt` for standard MBTiles support
+- [ ] Implement `KapChartParser.kt` for BSB header parsing
+- [ ] Implement `RasterChartManager.kt` for spatial indexing
+- [ ] Refactor `MarineRasterImporter.kt` to support both formats
+- [ ] Refactor `MarineRasterMapLayer.kt` for performance and correctness
+    - [ ] Implement viewport culling
+    - [ ] Fix multi-scale layer switching
+    - [ ] Verify transparency and Night Mode

@@ -20,7 +20,6 @@ import net.osmand.plus.activities.MapActivity;
 import net.osmand.plus.mapcontextmenu.MenuController;
 import net.osmand.shared.aistracker.AisCpa;
 import net.osmand.shared.aistracker.AisLatLon;
-import net.osmand.shared.aistracker.AisLocation;
 import net.osmand.shared.aistracker.AisObjType;
 import net.osmand.shared.aistracker.AisObject;
 import net.osmand.shared.aistracker.AisObjectConstants;
@@ -53,38 +52,26 @@ public class AisObjectMenuController extends MenuController {
     }
 
     @SuppressLint("DefaultLocale")
-    private void addCpaInfo(@Nullable Location myLocation, @NonNull Set<Integer> msgTypes) {
+    private void addCpaInfo(@NonNull Set<Integer> msgTypes) {
         if (msgTypes.contains(21) || msgTypes.contains(9)) {
             return;
         }
-        if ((aisObject.getCog() != AisObjectConstants.INVALID_COG) &&
-                (aisObject.getSog() != AisObjectConstants.INVALID_SOG)) {
-            AisCpa cpa = new AisCpa();
-            AisLocation aisLocation = aisObject.getExtrapolatedLocation(System.currentTimeMillis());
-            if (aisLocation != null && myLocation != null) {
-                AisTrackerMath.INSTANCE.getCpa(AisObjectAndroidHelperKt.toAisLocation(myLocation), aisLocation, cpa);
-                if (cpa.getValid()) {
-                    double cpaTime = cpa.getTcpa();
-                    boolean isPositive = cpaTime >= 0;
-                    cpaTime = Math.abs(cpaTime);
-                    if (cpaTime < Long.MAX_VALUE) {
-                        if (isPositive) {
-                            long hours = (long)cpaTime;
-                            double minutes = (cpaTime % 1 - hours) * 60.0;
-                            addMenuItem("CPA", String.format("%.1f nm", cpa.getCpa()));
-                            if (hours >= 2.0) {
-                                addMenuItem("TCPA", String.format("%d hours %.0f min", hours, minutes));
-                            } else if (hours >= 1.0) {
-                                addMenuItem("TCPA", String.format("%d hour %.0f min", hours, minutes));
-                            } else {
-                                addMenuItem("TCPA", String.format("%.0f min", minutes));
-                            }
-                        }
-                        /* else {
-                            addMenuItem("CPA", String.format("%.1f nm", cpa.getCpa()));
-                            addMenuItem("TCPA", String.format("-%.1f hours", cpaTime));
-                        }
-                         */
+        AisCpa cpa = aisObject.getCpa();
+        if (cpa.getValid()) {
+            double cpaTime = cpa.getTcpa();
+            boolean isPositive = cpaTime >= 0;
+            cpaTime = Math.abs(cpaTime);
+            if (cpaTime < Long.MAX_VALUE) {
+                if (isPositive) {
+                    long hours = (long) cpaTime;
+                    double minutes = (cpaTime - hours) * 60.0;
+                    addMenuItem("CPA", String.format("%.1f nm", cpa.getCpa()));
+                    if (hours >= 2.0) {
+                        addMenuItem("TCPA", String.format("%d hours %.0f min", hours, minutes));
+                    } else if (hours >= 1.0) {
+                        addMenuItem("TCPA", String.format("%d hour %.0f min", hours, minutes));
+                    } else {
+                        addMenuItem("TCPA", String.format("%.0f min", minutes));
                     }
                 }
             }
@@ -153,7 +140,7 @@ public class AisObjectMenuController extends MenuController {
 
                 if (distance >= 0.0f) {
                     try {
-                        addMenuItem("Distance",  String.format("%.1f nm", distance));
+                        addMenuItem("Range",  String.format("%.1f nm", distance));
                     } catch (Exception ignore) { }
                 }
                 if (bearing >= 0.0f) {
@@ -161,7 +148,7 @@ public class AisObjectMenuController extends MenuController {
                         addMenuItem("Bearing", String.format("%.0f", bearing));
                     } catch (Exception ignore) { }
                 }
-                addCpaInfo(ownPosition, msgTypes);
+                addCpaInfo(msgTypes);
             }
         }
         if (msgTypes.contains(21)) { // ATON (aid to navigation)

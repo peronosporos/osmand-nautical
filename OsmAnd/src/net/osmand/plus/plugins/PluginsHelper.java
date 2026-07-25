@@ -126,6 +126,7 @@ public class PluginsHelper {
 		allPlugins.add(new AccessibilityPlugin(app));
 		allPlugins.add(new OsmandDevelopmentPlugin(app));
 		allPlugins.add(new NauticalPlugin(app));
+		allPlugins.add(new net.osmand.plus.maneuvers.ManeuverPlugin(app));
 
 		loadCustomPlugins(app);
 		registerAppInitializingDependedProperties(app);
