@@ -389,7 +389,7 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app) {
 
     override fun mapActivityResume(activity: MapActivity) {
         engine?.setPowerSaveMode(false)
-        if (!connection.isConnected()) {
+        if (!::connection.isInitialized || !connection.isConnected()) {
             startEngine()
         }
         updateNauticalBackgroundService()
@@ -436,7 +436,9 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app) {
         }
         
         if (!app.settings.NAUTICAL_RECEIVE_IN_BACKGROUND.get()) {
-            connection.disconnect()
+            if (::connection.isInitialized) {
+                connection.disconnect()
+            }
         }
         updateNauticalBackgroundService()
         app.keyEventHelper.setExternalCallback(null)
@@ -449,13 +451,15 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app) {
                 Intent.ACTION_SCREEN_OFF -> {
                     if (!app.settings.NAUTICAL_RECEIVE_IN_BACKGROUND.get()) {
                         if (engine?.isFollowingRoute != true) {
-                            connection.disconnect()
+                            if (::connection.isInitialized) {
+                                connection.disconnect()
+                            }
                         }
                     }
                     updateNauticalBackgroundService()
                 }
                 Intent.ACTION_SCREEN_ON -> {
-                    if (!connection.isConnected()) {
+                    if (!::connection.isInitialized || !connection.isConnected()) {
                         startEngine()
                     }
                 }

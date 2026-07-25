@@ -1,0 +1,7 @@
+- [x] Fix memory leaks in `SailingIntegrationPlugin.kt`
+    - [x] Implement `mapActivityDestroy` to null out activity-specific resources.
+    - [x] Update `getOrCreateNauticalHud` to prevent container reuse across activities.
+- [x] Safety improvements in `NauticalPlugin.kt`
+    - [x] Add safety null checks in power management.
+- [x] Verification
+    - [x] Perform static analysis check.

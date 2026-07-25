@@ -144,6 +144,19 @@ class SailingIntegrationPlugin(app: OsmandApplication) : OsmandPlugin(app) {
         }
     }
 
+    override fun mapActivityDestroy(activity: MapActivity) {
+        layerController?.unregisterLayers()
+        layerController = null
+        
+        nauticalHudContainer?.let { hud ->
+            (hud.parent as? ViewGroup)?.removeView(hud)
+        }
+        nauticalHudContainer = null
+        mobHeaderView = null
+        drHeaderView = null
+        navtexHudView = null
+    }
+
     override fun registerLayers(context: Context, activity: MapActivity?) {
         if (activity != null) {
             val controller = SailingMapLayerController(activity, s57SpatialIndex)
@@ -158,7 +171,10 @@ class SailingIntegrationPlugin(app: OsmandApplication) : OsmandPlugin(app) {
     }
 
     private fun getOrCreateNauticalHud(activity: MapActivity): ViewGroup? {
-        if (nauticalHudContainer == null) {
+        if (nauticalHudContainer == null || nauticalHudContainer?.context != activity) {
+            nauticalHudContainer?.let { hud ->
+                (hud.parent as? ViewGroup)?.removeView(hud)
+            }
             val mapHudLayout = activity.findViewById<ViewGroup>(R.id.map_hud_layout) ?: return null
             nauticalHudContainer = LinearLayout(activity).apply {
                 orientation = LinearLayout.VERTICAL
