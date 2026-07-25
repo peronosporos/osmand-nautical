@@ -1195,14 +1195,6 @@
 
 		<service
 			android:process="${applicationId}"
-			android:name="net.osmand.plus.plugins.nautical.service.SailingDataService"
-			android:exported="false"
-			android:foregroundServiceType="location"
-			android:stopWithTask="false">
-		</service>
-
-		<service
-			android:process="${applicationId}"
 			android:name="net.osmand.plus.auto.NavigationCarAppService"
 			android:foregroundServiceType="location"
 			android:exported="true">
