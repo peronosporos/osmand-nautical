@@ -1,11 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto">
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
 
     <PreferenceCategory
         android:layout="@layout/preference_category_with_descr"
         android:title="@string/s63_manager_title"
-        app:description="@string/s63_disclaimer" />
+        android:summary="@string/s63_disclaimer" />
 
     <net.osmand.plus.settings.preferences.EditTextPreferenceEx
         android:key="s63_m_id"

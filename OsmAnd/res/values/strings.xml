@@ -11,6 +11,9 @@
 	Strings for OsmAnd core
 	Thx - Hardy
 -->
+	<string name="nautical_status_standby">Standby</string>
+	<string name="nautical_graph_title">Telemetry Graph</string>
+	<string name="navtex_hud_urgent_title">URGENT NAVTEX ALERT</string>
 	<string name="nautical_distance">Distance</string>
 	<string name="nautical_logbook_export_error">Error occurred during logbook export</string>
 	<string name="nautical_format_meters">%s m</string>

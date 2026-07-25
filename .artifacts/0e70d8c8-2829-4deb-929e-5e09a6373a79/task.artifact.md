@@ -1,7 +1,0 @@
-- [x] Refactor `NavtexMessage` and `NavtexDatabaseHelper` for multi-point support
-- [x] Update `NavtexSentenceParser` with `$CZCX` support and polygon extraction
-- [x] Update `NavtexRepository` for deduplication and multi-point storage
-- [x] Update `NavtexMapLayer` to render polygons
-- [x] Fix `NavtexViewModel` filtering logic (urgent bypass)
-- [x] Add sound/vibration alerts to `NavtexHudView`
-- [x] Verify with tests and manual check

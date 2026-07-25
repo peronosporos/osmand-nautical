@@ -1,6 +1,0 @@
-- [x] Implement `mob_emergency_hud.xml` layout
-- [x] Implement `MobMapLayer.kt` for map overlay rendering
-- [x] Implement `MobEmergencyHeaderView.kt` for high-visibility metrics and controls
-- [x] Update `SailingMapLayerController.kt` to include the MOB layer
-- [x] Update `NauticalPlugin.kt` and `SailingIntegrationPlugin.kt` to wire everything together in `MapActivity`
-- [x] Verification of the end-to-end MOB flow

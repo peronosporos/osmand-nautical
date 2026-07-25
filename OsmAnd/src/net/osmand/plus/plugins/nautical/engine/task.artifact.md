@@ -1,6 +1,0 @@
-- [x] Update ManeuverStateMachine and ManeuverEngine with transitionToArmed()
-- [x] Update ManeuverManager to trigger transitionToArmed()
-- [x] Implement MOB autopilot override in ManOverboardManeuver
-- [x] Implement close-quarters autopilot safety in DockingManeuver
-- [x] Implement close-quarters autopilot safety in MooringManeuver
-- [x] Verify MOB and CQ autopilot interactions
