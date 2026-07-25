@@ -1151,9 +1151,10 @@ public class OsmandSettings {
 	}.makeProfile().cache();
 
 	// cache of metrics constants as they are used very often
-	public final EnumStringPreference<MetricsConstants> METRIC_SYSTEM = (EnumStringPreference<MetricsConstants>) new EnumStringPreference<MetricsConstants>(this,
+	public final OsmandPreference<MetricsConstants> METRIC_SYSTEM = new EnumStringPreference<>(this,
 			"default_metric_system", MetricsConstants.KILOMETERS_AND_METERS, MetricsConstants.values()) {
 
+		@Override
 		public MetricsConstants getDefaultValue() {
 			return DRIVING_REGION.get().defMetrics;
 		}
@@ -1164,7 +1165,7 @@ public class OsmandSettings {
 		}
 	}.makeProfile();
 
-	public final EnumStringPreference<AltitudeMetrics> ALTITUDE_METRIC = (EnumStringPreference<AltitudeMetrics>) new EnumStringPreference<AltitudeMetrics>(this,
+	public final OsmandPreference<AltitudeMetrics> ALTITUDE_METRIC = new EnumStringPreference<>(this,
 			"altitude_metrics", AltitudeMetrics.METERS, AltitudeMetrics.values()) {
 
 		@Override
@@ -1174,7 +1175,7 @@ public class OsmandSettings {
 		}
 	}.makeProfile();
 
-	public final OsmandPreference<AngularConstants> ANGULAR_UNITS = new EnumStringPreference<AngularConstants>(this,
+	public final OsmandPreference<AngularConstants> ANGULAR_UNITS = new EnumStringPreference<>(this,
 			"angular_measurement", AngularConstants.DEGREES, AngularConstants.values()).makeProfile();
 
 	public static final String LAST_START_LAT = "last_searched_lat";
@@ -1201,7 +1202,7 @@ public class OsmandSettings {
 				putFloat(LAST_START_LON, (float) lon).commit();
 	}
 
-	public final OsmandPreference<SpeedConstants> SPEED_SYSTEM = new EnumStringPreference<SpeedConstants>(this,
+	public final OsmandPreference<SpeedConstants> SPEED_SYSTEM = new EnumStringPreference<>(this,
 			"default_speed_system", SpeedConstants.KILOMETERS_PER_HOUR, SpeedConstants.values()) {
 
 		@Override
@@ -1795,7 +1796,7 @@ public class OsmandSettings {
 	public final CommonPreference<String> CURRENT_TRACK_3D_LINE_POSITION_TYPE = new StringPreference(this, "currentTrackVisualization3dPositionType", "none").makeGlobal().makeShared().cache();
 	public final CommonPreference<Float> CURRENT_TRACK_ADDITIONAL_EXAGGERATION = new FloatPreference(this, "currentTrackVerticalExaggerationScale", 1f).makeGlobal().makeShared().cache();
 	public final CommonPreference<Float> CURRENT_TRACK_ELEVATION_METERS = new FloatPreference(this, "current_track_elevation_meters", 1000f).makeGlobal().makeShared().cache();
-	public final CommonPreference<String> CURRENT_GRADIENT_PALETTE = new StringPreference(this, "current_track_gradient_palette", PaletteConstants.DEFAULT_NAME).makeGlobal().makeShared().cache();
+	public final CommonPreference<String> CURRENT_GRADIENT_PALETTE = new StringPreference(this, "current_track_gradient_palette", String.valueOf(PaletteConstants.DEFAULT_NAME)).makeGlobal().makeShared().cache();
 	public final CommonPreference<String> CURRENT_TRACK_ROUTE_ACTIVITY = new StringPreference(this, "current_track_route_activity", "").makeProfile().cache();
 
 	{
@@ -3333,7 +3334,7 @@ public class OsmandSettings {
 	public final CommonPreference<ColoringType> ROUTE_COLORING_TYPE = new EnumStringPreference<>(this,
 			"route_line_coloring_type", ColoringType.DEFAULT, ColoringType.Companion.valuesOf(ColoringPurpose.ROUTE_LINE)).cache().makeProfile();
 
-	public final CommonPreference<String> ROUTE_GRADIENT_PALETTE = new StringPreference(this, "route_gradient_palette", PaletteConstants.DEFAULT_NAME).makeProfile().cache();
+	public final CommonPreference<String> ROUTE_GRADIENT_PALETTE = new StringPreference(this, "route_gradient_palette", String.valueOf(PaletteConstants.DEFAULT_NAME)).makeProfile().cache();
 	public final CommonPreference<String> ROUTE_INFO_ATTRIBUTE = new StringPreference(this, "route_info_attribute", null)
 			.cache().makeProfile();
 	public final CommonPreference<String> ROUTE_LINE_WIDTH = new StringPreference(this, "route_line_width", null).makeProfile();
@@ -3583,8 +3584,8 @@ public class OsmandSettings {
 	public final CommonPreference<Integer> NAUTICAL_LOGBOOK_INTERVAL = registerIntPreference("nautical_logbook_interval", 0).makeProfile();
 	public final CommonPreference<String> NAUTICAL_ACTIVE_SAIL_PLAN = registerStringPreference("nautical_active_sail_plan", "").makeProfile();
 	public final CommonPreference<String> NAUTICAL_ACTIVE_MANEUVER_ID = registerStringPreference("nautical_active_maneuver_id", "");
-	public final CommonPreference<Double> NAUTICAL_ANCHOR_LAT = registerFloatPreference("nautical_anchor_lat", 0f).map(Float::toDouble, Double::toFloat);
-	public final CommonPreference<Double> NAUTICAL_ANCHOR_LON = registerFloatPreference("nautical_anchor_lon", 0f).map(Float::toDouble, Double::toFloat);
+	public final CommonPreference<Double> NAUTICAL_ANCHOR_LAT = registerFloatPreference("nautical_anchor_lat", 0f).map(Float::doubleValue, Double::floatValue);
+	public final CommonPreference<Double> NAUTICAL_ANCHOR_LON = registerFloatPreference("nautical_anchor_lon", 0f).map(Float::doubleValue, Double::floatValue);
 	public final CommonPreference<Float> NAUTICAL_ANCHOR_RADIUS = registerFloatPreference("nautical_anchor_radius", 0f).makeGlobal();
 	public final CommonPreference<Float> NAUTICAL_ANCHOR_DEPTH = registerFloatPreference("nautical_anchor_depth", 0f).makeProfile();
 	public final CommonPreference<Float> NAUTICAL_ANCHOR_TIDE_RISE = registerFloatPreference("nautical_anchor_tide_rise", 0f).makeProfile();
@@ -3596,8 +3597,8 @@ public class OsmandSettings {
 	public final CommonPreference<Boolean> NAUTICAL_SHOW_RASTER_CHARTS = registerBooleanPreference("nautical_show_raster_charts", true).makeProfile();
 	public final CommonPreference<Integer> NAUTICAL_RASTER_CHARTS_OPACITY = registerIntPreference("nautical_raster_charts_opacity", 255).makeProfile();
 
-	public final CommonPreference<Double> NAUTICAL_MOB_LAT = registerFloatPreference("nautical_mob_lat", 0f).map(Float::toDouble, Double::toFloat);
-	public final CommonPreference<Double> NAUTICAL_MOB_LON = registerFloatPreference("nautical_mob_lon", 0f).map(Float::toDouble, Double::toFloat);
+	public final CommonPreference<Double> NAUTICAL_MOB_LAT = registerFloatPreference("nautical_mob_lat", 0f).map(Float::doubleValue, Double::floatValue);
+	public final CommonPreference<Double> NAUTICAL_MOB_LON = registerFloatPreference("nautical_mob_lon", 0f).map(Float::doubleValue, Double::floatValue);
 	public final CommonPreference<Long> NAUTICAL_MOB_TIMESTAMP = registerLongPreference("nautical_mob_timestamp", 0L);
 	public final CommonPreference<Boolean> NAUTICAL_MOB_ACTIVE = registerBooleanPreference("nautical_mob_active", false);
 
@@ -3606,8 +3607,8 @@ public class OsmandSettings {
 	public final CommonPreference<Float> NAVTEX_MAX_DISTANCE = registerFloatPreference("navtex_max_distance", 0f);
 
 	public final CommonPreference<Long> NAUTICAL_DR_START_TIME = registerLongPreference("nautical_dr_start_time", 0L);
-	public final CommonPreference<Double> NAUTICAL_DR_LAST_LAT = registerFloatPreference("nautical_dr_last_lat", 0f).map(Float::toDouble, Double::toFloat);
-	public final CommonPreference<Double> NAUTICAL_DR_LAST_LON = registerFloatPreference("nautical_dr_last_lon", 0f).map(Float::toDouble, Double::toFloat);
+	public final CommonPreference<Double> NAUTICAL_DR_LAST_LAT = registerFloatPreference("nautical_dr_last_lat", 0f).map(Float::doubleValue, Double::floatValue);
+	public final CommonPreference<Double> NAUTICAL_DR_LAST_LON = registerFloatPreference("nautical_dr_last_lon", 0f).map(Float::doubleValue, Double::floatValue);
 
 
 	@NonNull

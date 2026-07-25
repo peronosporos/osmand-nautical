@@ -18,6 +18,7 @@ import org.json.JSONObject;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.function.Function;
 
 public abstract class CommonPreference<T> extends PreferenceWithListener<T> {
 
@@ -431,5 +432,64 @@ public abstract class CommonPreference<T> extends PreferenceWithListener<T> {
 	@Override
 	public String toString() {
 		return getId();
+	}
+
+	public <R> CommonPreference<R> map(Function<T, R> getter, Function<R, T> setter) {
+		CommonPreference<R> mapped = new CommonPreference<R>(settings, id, getter.apply(defaultValue)) {
+			@Override
+			public R getValue(@NonNull Object prefs, R defaultValue) {
+				return getter.apply(CommonPreference.this.getValue(prefs, setter.apply(defaultValue)));
+			}
+
+			@Override
+			protected boolean setValue(Object prefs, R val) {
+				return CommonPreference.this.setValue(prefs, setter.apply(val));
+			}
+
+			@Override
+			public R parseString(String s) {
+				return getter.apply(CommonPreference.this.parseString(s));
+			}
+
+			@Override
+			public R get() {
+				return getter.apply(CommonPreference.this.get());
+			}
+
+			@Override
+			public boolean set(R obj) {
+				return CommonPreference.this.set(setter.apply(obj));
+			}
+
+			@Override
+			public R getModeValue(ApplicationMode m) {
+				return getter.apply(CommonPreference.this.getModeValue(m));
+			}
+
+			@Override
+			public boolean setModeValue(ApplicationMode m, R obj) {
+				return CommonPreference.this.setModeValue(m, setter.apply(obj));
+			}
+
+			@Override
+			public CommonPreference<R> copyWithId(@NonNull String newId) {
+				return CommonPreference.this.copyWithId(newId).map(getter, setter);
+			}
+		};
+		if (global) mapped.makeGlobal();
+		if (cache) mapped.cache();
+		if (shared) mapped.makeShared();
+		if (lastModifiedTimeStored) mapped.storeLastModifiedTime();
+		mapped.pluginId = this.pluginId;
+
+		if (defaultValues != null) {
+			for (Map.Entry<ApplicationMode, T> entry : defaultValues.entrySet()) {
+				mapped.setModeDefaultValue(entry.getKey(), getter.apply(entry.getValue()));
+			}
+		}
+
+		this.addListener(v -> mapped.fireEvent(getter.apply(v)));
+
+		return mapped;
 	}
 }
