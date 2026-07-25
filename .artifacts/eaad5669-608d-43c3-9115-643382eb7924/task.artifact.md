@@ -1,3 +1,22 @@
-- [x] Update `S57SqliteHelper.kt` to support acronym filtering in `queryFeatures`
-- [x] Update `S57SpatialIndex.kt` to delegate to `S57SqliteHelper` and remove in-memory JTS checks
-- [x] Verify changes with `analyze_file`
+# Task Checklist - Nautical Plugin Cleanup & Fixes
+
+- [x] **Clean Up `S57IndexManager` References**
+    - [x] Update `NauticalMapLayer.kt`
+    - [x] Update `WeatherRoutingMapLayer.kt`
+    - [x] Remove reference from `S57SqliteHelper.kt` comment
+- [x] **Fix Rendering Allocations in `onDraw()`**
+    - [x] Optimize `S57MapLayer.kt` (Path & String allocations)
+    - [x] Optimize `NauticalMapLayer.kt` (`SafetyCorridorChecker` & `Waypoint` allocations)
+    - [x] Optimize `WeatherRoutingMapLayer.kt` (`SafetyCorridorChecker` & `segmentIndex` allocations)
+- [x] **Fix Coroutine Resource Leaks**
+    - [x] Update `SignalKDataBroker.kt` (Add `stop()`)
+    - [x] Update `SignalKEngine.kt` to call broker stop
+    - [x] Update `TcpNmeaClient.kt` (Add `cancelChildren()`)
+    - [x] Update `SignalKWebSocketClient.kt` (Add `scope.cancel()`)
+- [x] **Restore Fine-Grained JTS Intersection Precision**
+    - [x] Update `SafetyCorridorChecker.kt` (Add `intersects` check)
+    - [x] Update `IsochroneRoutingEngine.kt` (Add `intersects` check)
+- [x] **Final Verification**
+    - [x] Verify no `onDraw` allocations via static check
+    - [x] Verify `CoroutineScope` cancellation logic
+    - [x] Verify JTS intersection logic

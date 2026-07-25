@@ -28,7 +28,12 @@ class WeatherRoutingMapLayer(context: Context) : OsmandMapLayer(context) {
     var optimalRouteResult: OptimalRouteResult? = null
         set(value) {
             field = value
+            needsRecheck = true
         }
+
+    private var safetyCorridorChecker: SafetyCorridorChecker? = null
+    private var hazardousSegments: Set<Int> = emptySet()
+    private var needsRecheck = true
 
     override fun drawInScreenPixels(): Boolean = true
 
@@ -39,18 +44,21 @@ class WeatherRoutingMapLayer(context: Context) : OsmandMapLayer(context) {
 
         val app = context.applicationContext as net.osmand.plus.OsmandApplication
         val sailingPlugin = net.osmand.plus.plugins.PluginsHelper.getPlugin(SailingIntegrationPlugin::class.java)
-        val indexManager = sailingPlugin?.s57IndexManager
+        val indexManager = sailingPlugin?.s57SpatialIndex
 
-        val checker = indexManager?.let {
-            SafetyCorridorChecker(
-                it,
-                app.settings.NAUTICAL_VESSEL_DRAFT.get().toDouble(),
-                app.settings.NAUTICAL_SAFETY_MARGIN.get().toDouble()
-            )
+        if (needsRecheck && indexManager != null) {
+            if (safetyCorridorChecker == null) {
+                safetyCorridorChecker = SafetyCorridorChecker(
+                    indexManager,
+                    app.settings.NAUTICAL_VESSEL_DRAFT.get().toDouble(),
+                    app.settings.NAUTICAL_SAFETY_MARGIN.get().toDouble()
+                )
+            }
+            val corridorWidth = app.settings.NAUTICAL_CORRIDOR_WIDTH.get().toDouble()
+            val issues = safetyCorridorChecker?.checkCorridor(pathPoints, corridorWidth) ?: emptyList()
+            hazardousSegments = issues.map { it.segmentIndex }.toSet()
+            needsRecheck = false
         }
-        val corridorWidth = app.settings.NAUTICAL_CORRIDOR_WIDTH.get().toDouble()
-        val issues = checker?.checkCorridor(pathPoints, corridorWidth) ?: emptyList()
-        val hazardousSegments = issues.map { it.segmentIndex }.toSet()
 
         // Draw isochrone expansion rings (simulated concentric bounds)
         val start = pathPoints.first()

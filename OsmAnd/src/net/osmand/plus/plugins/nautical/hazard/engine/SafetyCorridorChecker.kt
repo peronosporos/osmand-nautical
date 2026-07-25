@@ -43,9 +43,16 @@ class SafetyCorridorChecker(
             
             val candidates = indexManager.queryFeatures(corridor)
             for (hazard in candidates) {
-                val issue = evaluateHazard(hazard, i)
-                if (issue != null) {
-                    issues.add(issue)
+                // Fine-grained intersection check on candidate set
+                val intersects = hazard.geometries.any { geo ->
+                    geo.toJtsGeometry(geometryFactory)?.intersects(corridor) == true
+                }
+                
+                if (intersects) {
+                    val issue = evaluateHazard(hazard, i)
+                    if (issue != null) {
+                        issues.add(issue)
+                    }
                 }
             }
         }

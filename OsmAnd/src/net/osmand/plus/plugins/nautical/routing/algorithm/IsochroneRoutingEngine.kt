@@ -109,7 +109,13 @@ class IsochroneRoutingEngine(
     private fun isLandCollision(lat: Double, lon: Double): Boolean {
         val queryPoint = geometryFactory.createPoint(Coordinate(lon, lat))
         val landFeatures = s57Index.queryByAcronym(queryPoint, setOf("LNDARE"))
-        return landFeatures.isNotEmpty()
+        
+        // Fine-grained precision check: Verify point is actually inside land geometry
+        return landFeatures.any { feature ->
+            feature.geometries.any { geo ->
+                geo.toJtsGeometry(geometryFactory)?.intersects(queryPoint) == true
+            }
+        }
     }
 
     private fun distanceNm(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {

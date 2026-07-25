@@ -98,6 +98,7 @@ class SignalKEngine {
         onConnectionError = null
         onConnectionRestored = null
         onRouteStepProcessed = null
+        dataBroker.stop()
         engineScope.cancel()
         stateListeners.clear()
         aisListener = null

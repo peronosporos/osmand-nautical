@@ -1,9 +1,7 @@
 package net.osmand.plus.plugins.nautical.network
 
 import com.google.gson.Gson
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
@@ -112,5 +110,6 @@ class SignalKWebSocketClient(private val client: OkHttpClient) {
         webSocket?.close(1000, "User requested disconnect")
         webSocket = null
         isConnected = false
+        scope.cancel()
     }
 }

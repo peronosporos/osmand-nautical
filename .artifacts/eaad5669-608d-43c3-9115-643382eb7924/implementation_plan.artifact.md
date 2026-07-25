@@ -1,32 +1,71 @@
-# Implementation Plan - Architectural Correction for S57SpatialIndex
+# Implementation Plan - Nautical Plugin Architectural Cleanup & Performance Fixes
 
-This plan addresses a critical architectural requirement: all spatial queries must delegate directly to the persistent SQLite database to prevent memory thrashing caused by in-memory JTS feature loading.
+This plan addresses the findings of the architectural hygiene and performance audit.
+
+## User Review Required
+
+> [!IMPORTANT]
+> The fixes include significant changes to the map rendering logic and coroutine lifecycle management.
+> These changes are designed to improve performance and prevent memory leaks.
 
 ## Proposed Changes
 
-### Nautical Plugin - SQLite Persistence
-#### [MODIFY] [S57SqliteHelper.kt](file:///home/administrator/AndroidStudioProjects/osmand-nautical/OsmAnd/src/net/osmand/plus/plugins/nautical/s57/S57SqliteHelper.kt)
-- Update `queryFeatures` to accept an optional `acronyms: Collection<String>?` parameter.
-- Modify the SQL query generation to dynamically include an `AND acronym IN (...)` clause when acronyms are provided.
-- This ensures that filtering by feature type happens at the database level, significantly reducing the number of objects loaded into JVM memory.
+### 1. Clean Up `S57IndexManager` References
+Replace all remaining references to the deleted `S57IndexManager` with `S57SpatialIndex`.
 
-### Nautical Plugin - Spatial Indexing
-#### [MODIFY] [S57SpatialIndex.kt](file:///home/administrator/AndroidStudioProjects/osmand-nautical/OsmAnd/src/net/osmand/plus/plugins/nautical/s57/S57SpatialIndex.kt)
-- Ensure `S57SpatialIndex` acts strictly as a wrapper/delegate for `S57SqliteHelper`.
-- Update `queryFeatures(queryGeometry: Geometry)`:
-    - Extract the envelope from the JTS geometry.
-    - Delegate directly to `sqliteHelper.queryFeatures(minLat, maxLat, minLon, maxLon)`.
-    - **CRITICAL**: Remove the in-memory JTS intersection loop (`feature.geometries.any { ... }`) to comply with memory safety requirements.
-- Update `queryByAcronym(queryGeometry: Geometry, acronyms: Set<String>)`:
-    - Extract the envelope from the JTS geometry.
-    - Delegate directly to `sqliteHelper.queryFeatures(..., acronyms)`.
-    - This pushes both spatial (bounding box) and attribute (acronym) filtering into SQL.
+#### [MODIFY] [NauticalMapLayer.kt](file:///home/administrator/AndroidStudioProjects/osmand-nautical/OsmAnd/src/net/osmand/plus/plugins/nautical/NauticalMapLayer.kt)
+- Update `s57IndexManager` to `s57SpatialIndex`.
+
+#### [MODIFY] [WeatherRoutingMapLayer.kt](file:///home/administrator/AndroidStudioProjects/osmand-nautical/OsmAnd/src/net/osmand/plus/plugins/nautical/map/layers/WeatherRoutingMapLayer.kt)
+- Update `s57IndexManager` to `s57SpatialIndex`.
+
+---
+
+### 2. Fix Rendering Allocations in `onDraw()`
+Optimize `onDraw` methods to eliminate per-frame allocations.
+
+#### [MODIFY] [S57MapLayer.kt](file:///home/administrator/AndroidStudioProjects/osmand-nautical/OsmAnd/src/net/osmand/plus/plugins/nautical/s57/ui/S57MapLayer.kt)
+- Update `PreparedFeature` to include pre-formatted text (for soundings) and pre-calculated `Path` objects.
+- Move `getPathFromGeometry` and `String.format` calls into the background `prepareFeatures` task.
+- Update `onDraw` to use these pre-calculated values.
+
+#### [MODIFY] [NauticalMapLayer.kt](file:///home/administrator/AndroidStudioProjects/osmand-nautical/OsmAnd/src/net/osmand/plus/plugins/nautical/NauticalMapLayer.kt)
+- Move `SafetyCorridorChecker` instantiation out of `onDraw` (e.g., to a lazy property or initialized during `needsRecheck`).
+- Cache `Waypoint` list conversion.
+- Re-use `trajectoryPath` effectively (already mostly done but needs verification).
+
+---
+
+### 3. Fix Coroutine Resource Leaks
+Implement proper teardown for classes managing `CoroutineScope`.
+
+#### [MODIFY] [SignalKDataBroker.kt](file:///home/administrator/AndroidStudioProjects/osmand-nautical/OsmAnd/src/net/osmand/plus/plugins/nautical/engine/SignalKDataBroker.kt)
+- Add a `stop()` or `cancel()` method that calls `scope.cancel()`.
+- Ensure it's called from `SignalKEngine.stop()`.
+
+#### [MODIFY] [TcpNmeaClient.kt](file:///home/administrator/AndroidStudioProjects/osmand-nautical/OsmAnd/src/net/osmand/plus/plugins/nautical/nmea/connection/TcpNmeaClient.kt)
+- Update `disconnect()` to call `job?.cancel()` and also manage the lifecycle of the passed-in `scope` if appropriate, or ensure the local job is fully cleaned up.
+
+#### [MODIFY] [SignalKWebSocketClient.kt](file:///home/administrator/AndroidStudioProjects/osmand-nautical/OsmAnd/src/net/osmand/plus/plugins/nautical/network/SignalKWebSocketClient.kt)
+- Add `scope.cancel()` to `disconnect()`.
+
+---
+
+### 4. Restore Fine-Grained JTS Intersection Precision
+Enhance spatial safety checks with exact geometry intersections.
+
+#### [MODIFY] [SafetyCorridorChecker.kt](file:///home/administrator/AndroidStudioProjects/osmand-nautical/OsmAnd/src/net/osmand/plus/plugins/nautical/hazard/engine/SafetyCorridorChecker.kt)
+- After querying `candidates` from `indexManager`, add a filter step using `it.geometries.any { g -> g.toJtsGeometry(geometryFactory)?.intersects(corridor) == true }`.
+
+#### [MODIFY] [IsochroneRoutingEngine.kt](file:///home/administrator/AndroidStudioProjects/osmand-nautical/OsmAnd/src/net/osmand/plus/plugins/nautical/routing/algorithm/IsochroneRoutingEngine.kt)
+- Update `isLandCollision` to perform an exact `intersects` check against the JTS geometry of the land features.
 
 ## Verification Plan
 
-### Automated Verification
-- Use `analyze_file` to ensure `S57SqliteHelper` correctly handles the dynamic SQL generation and `S57SpatialIndex` correctly delegates the calls.
+### Automated Tests
+- N/A (Project doesn't allow running tests easily here, will perform manual code verification).
 
 ### Manual Verification
-- Review the code to confirm that no `S57Geometry.toJtsGeometry` calls remain within the hot paths of `S57SpatialIndex`.
-- Confirm that `IsochroneRoutingEngine` and `SafetyCorridorChecker` still function correctly with the candidates returned from the bounding-box-only queries (they may perform their own precise checks if needed).
+- Static analysis of the modified code to ensure no `onDraw` allocations.
+- Verification that all `cancel()` calls are in place.
+- Verification that `intersects()` is used correctly.

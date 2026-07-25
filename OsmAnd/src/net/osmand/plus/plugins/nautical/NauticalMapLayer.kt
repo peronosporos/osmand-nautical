@@ -83,6 +83,9 @@ class NauticalMapLayer(context: Context) : OsmandMapLayer(context) {
     private var cachedSafetyIssues: List<SafetyIssue> = emptyList()
     private var lastCheckedRoute: List<Pair<Double, Double>>? = null
     private var lastCheckedVesselPos: Pair<Double, Double>? = null
+    
+    private var safetyCorridorChecker: SafetyCorridorChecker? = null
+    private val reusableWaypoints = mutableListOf<Waypoint>()
 
     override fun drawInScreenPixels(): Boolean = true
 
@@ -309,19 +312,21 @@ class NauticalMapLayer(context: Context) : OsmandMapLayer(context) {
 
         if (needsRecheck) {
             val sailingPlugin = net.osmand.plus.plugins.PluginsHelper.getPlugin(SailingIntegrationPlugin::class.java)
-            val indexManager = sailingPlugin?.s57IndexManager
+            val indexManager = sailingPlugin?.s57SpatialIndex
             
-            val checker = indexManager?.let {
-                SafetyCorridorChecker(
-                    it,
+            if (safetyCorridorChecker == null && indexManager != null) {
+                safetyCorridorChecker = SafetyCorridorChecker(
+                    indexManager,
                     app.settings.NAUTICAL_VESSEL_DRAFT.get().toDouble(),
                     app.settings.NAUTICAL_SAFETY_MARGIN.get().toDouble()
                 )
             }
             val corridorWidth = app.settings.NAUTICAL_CORRIDOR_WIDTH.get().toDouble()
 
-            val waypoints = route.map { Waypoint(it.first, it.second) }
-            cachedSafetyIssues = checker?.checkCorridor(waypoints, corridorWidth) ?: emptyList()
+            reusableWaypoints.clear()
+            route.forEach { reusableWaypoints.add(Waypoint(it.first, it.second)) }
+            
+            cachedSafetyIssues = safetyCorridorChecker?.checkCorridor(reusableWaypoints, corridorWidth) ?: emptyList()
             lastCheckedRoute = route.toList()
             lastCheckedVesselPos = vesselPos
         }

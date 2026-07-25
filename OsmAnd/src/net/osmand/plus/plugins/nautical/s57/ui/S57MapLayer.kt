@@ -3,6 +3,7 @@ package net.osmand.plus.plugins.nautical.s57.ui
 import android.content.Context
 import android.graphics.*
 import android.util.LruCache
+import java.util.Locale
 import net.osmand.data.LatLon
 import net.osmand.data.PointDescription
 import net.osmand.data.RotatedTileBox
@@ -44,12 +45,19 @@ class S57MapLayer(context: Context, private val indexManager: S57SpatialIndex) :
     private val preparedFeaturesCache = LruCache<String, List<PreparedFeature>>(20)
     private var lastQueryKey: String? = null
 
+    private data class PreparedGeometry(
+        val geometry: S57Geometry,
+        val path: Path? = null,
+        val soundingText: String? = null,
+        val isSoundingDeep: Boolean = false
+    )
+
     private data class PreparedFeature(
         val originalObject: S57Object,
         val featureId: Long,
         val acronym: String,
         val style: S57StyleRule,
-        val optimizedGeometries: List<S57Geometry>,
+        val preparedGeometries: List<PreparedGeometry>,
         val attributes: Map<String, String>
     )
 
@@ -62,7 +70,8 @@ class S57MapLayer(context: Context, private val indexManager: S57SpatialIndex) :
 
         preparedFeaturesCache.snapshot().values.forEach { list ->
             for (pf in list) {
-                for (geometry in pf.optimizedGeometries) {
+                for (pg in pf.preparedGeometries) {
+                    val geometry = pg.geometry
                     val latLon = when (geometry) {
                         is S57Geometry.Point -> geometry.position
                         is S57Geometry.Line -> geometry.nodes.firstOrNull()
@@ -128,17 +137,18 @@ class S57MapLayer(context: Context, private val indexManager: S57SpatialIndex) :
             if (tileBox.zoom < 12 && (pf.acronym == "DEPCNT" || pf.acronym == "SOUNDG")) continue
 
             val style = pf.style
-            for (geometry in pf.optimizedGeometries) {
+            for (pg in pf.preparedGeometries) {
+                val geometry = pg.geometry
                 when (geometry) {
                     is S57Geometry.Point -> {
                         val x = tileBox.getPixXFromLatLon(geometry.position.latitude, geometry.position.longitude)
                         val y = tileBox.getPixYFromLatLon(geometry.position.latitude, geometry.position.longitude)
                         
                         if (pf.acronym == "SOUNDG") {
-                            val depth = geometry.depth ?: pf.attributes["159"]?.toDoubleOrNull() ?: 0.0
+                            val text = pg.soundingText ?: ""
                             textPaint.color = if (isNight) Color.RED else Color.BLACK
-                            textPaint.typeface = if (depth <= safetyDepth) Typeface.create(Typeface.DEFAULT, Typeface.BOLD) else Typeface.DEFAULT
-                            canvas.drawText("%.1f".format(depth), x, y, textPaint)
+                            textPaint.typeface = if (!pg.isSoundingDeep) Typeface.create(Typeface.DEFAULT, Typeface.BOLD) else Typeface.DEFAULT
+                            canvas.drawText(text, x, y, textPaint)
                         } else if (style.symbolId != null) {
                             S52SymbolManager.drawSymbol(canvas, style.symbolId, x, y, isNight)
                         } else if (style.strokeColor != null) {
@@ -147,23 +157,25 @@ class S57MapLayer(context: Context, private val indexManager: S57SpatialIndex) :
                         }
                     }
                     is S57Geometry.Line -> {
-                        val path = getPathFromGeometry(geometry, tileBox)
-                        if (style.strokeColor != null) {
+                        val path = pg.path
+                        if (path != null && style.strokeColor != null) {
                             strokePaint.color = style.strokeColor.getColor(isNight)
                             strokePaint.strokeWidth = style.strokeWidth
                             canvas.drawPath(path, strokePaint)
                         }
                     }
                     is S57Geometry.Area -> {
-                        val path = getPathFromGeometry(geometry, tileBox)
-                        if (style.fillColor != null) {
-                            fillPaint.color = style.fillColor.getColor(isNight)
-                            canvas.drawPath(path, fillPaint)
-                        }
-                        if (style.strokeColor != null) {
-                            strokePaint.color = style.strokeColor.getColor(isNight)
-                            strokePaint.strokeWidth = style.strokeWidth
-                            canvas.drawPath(path, strokePaint)
+                        val path = pg.path
+                        if (path != null) {
+                            if (style.fillColor != null) {
+                                fillPaint.color = style.fillColor.getColor(isNight)
+                                canvas.drawPath(path, fillPaint)
+                            }
+                            if (style.strokeColor != null) {
+                                strokePaint.color = style.strokeColor.getColor(isNight)
+                                strokePaint.strokeWidth = style.strokeWidth
+                                canvas.drawPath(path, strokePaint)
+                            }
                         }
                     }
                     else -> {}
@@ -184,8 +196,23 @@ class S57MapLayer(context: Context, private val indexManager: S57SpatialIndex) :
 
         val prepared = features.map { feature ->
             val style = S57FeatureStylizer.getStyleForFeature(feature, safetyDepth, shallowDepth)
-            val optimized = feature.geometries.map { S57GeometryOptimizer.optimize(it, tolerance) }
-            PreparedFeature(feature, feature.id, feature.acronym, style, optimized, feature.attributes)
+            val preparedGeoms = feature.geometries.map { geo ->
+                val optimized = S57GeometryOptimizer.optimize(geo, tolerance)
+                var path: Path? = null
+                var soundingText: String? = null
+                var isSoundingDeep = false
+                
+                if (feature.acronym == "SOUNDG" && optimized is S57Geometry.Point) {
+                    val depth = optimized.depth ?: feature.attributes["159"]?.toDoubleOrNull() ?: 0.0
+                    soundingText = "%.1f".format(Locale.US, depth)
+                    isSoundingDeep = depth > safetyDepth
+                } else if (optimized is S57Geometry.Line || optimized is S57Geometry.Area) {
+                    path = getPathFromGeometry(optimized, tileBox)
+                }
+                
+                PreparedGeometry(optimized, path, soundingText, isSoundingDeep)
+            }
+            PreparedFeature(feature, feature.id, feature.acronym, style, preparedGeoms, feature.attributes)
         }.sortedBy { it.style.priority }
 
         preparedFeaturesCache.put(key, prepared)

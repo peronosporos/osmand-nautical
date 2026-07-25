@@ -60,5 +60,6 @@ class TcpNmeaClient(
         isRunning = false
         job?.cancel()
         _isConnected.tryEmit(false)
+        scope.coroutineContext.cancelChildren()
     }
 }

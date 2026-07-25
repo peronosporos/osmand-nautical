@@ -130,8 +130,7 @@ class S57SqliteHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAM
 
     @Deprecated("Use addFeaturesStreaming for memory efficiency", ReplaceWith("addFeaturesStreaming"))
     fun addFeatures(filePath: String, lastModified: Long, features: List<S57Object>) {
-        // Kept for compatibility if needed, but redirects to a manual loop
-        // Better to just delete this once S57IndexManager is updated.
+        // Kept for compatibility if needed.
     }
 
     fun queryFeatures(latMin: Double, latMax: Double, lonMin: Double, lonMax: Double, acronyms: Collection<String>? = null): List<S57Object> {

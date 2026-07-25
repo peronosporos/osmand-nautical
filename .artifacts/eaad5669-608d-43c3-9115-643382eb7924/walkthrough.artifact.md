@@ -1,39 +1,40 @@
-# Walkthrough - Nautical Plugin Compilation Fixes & Architectural Correction
+# Walkthrough - Nautical Plugin Architectural Hygiene & Performance
 
-I have fixed the compilation errors in the Nautical plugin and implemented a critical architectural correction to ensure memory efficiency during spatial queries.
+The following improvements were made to the `net.osmand.plus.plugins.nautical` package to resolve architectural hygiene issues and performance bottlenecks identified in the audit.
 
-## Changes Made
+## 1. Rendering Optimization (Zero-Allocation `onDraw`)
 
-### 1. OsmAnd Core
-- **[OsmandApplication.java](file:///home/administrator/AndroidStudioProjects/osmand-nautical/OsmAnd/src/net/osmand/plus/OsmandApplication.java)**: Added a public getter `getSqliteAPI()` to allow the Nautical plugin's logbook component to access the database layer.
+> [!TIP]
+> Eliminating object allocations in the UI thread's rendering loop is critical for smooth map interaction, especially during high-speed panning and zooming.
 
-### 2. Architectural Correction: Memory-Safe Spatial Queries
-- **[S57SqliteHelper.kt](file:///home/administrator/AndroidStudioProjects/osmand-nautical/OsmAnd/src/net/osmand/plus/plugins/nautical/s57/S57SqliteHelper.kt)**:
-    - Updated `queryFeatures` to support optional acronym filtering in SQL.
-    - This allows pushing both spatial (bounding box) and attribute filtering down to the SQLite level.
-- **[S57SpatialIndex.kt](file:///home/administrator/AndroidStudioProjects/osmand-nautical/OsmAnd/src/net/osmand/plus/plugins/nautical/s57/S57SpatialIndex.kt)**:
-    - Redesigned as a lightweight delegate for `S57SqliteHelper`.
-    - Removed in-memory JTS intersection tests to prevent memory thrashing.
-    - All spatial queries now use SQL-level bounding box and acronym filtering.
+- **[S57MapLayer.kt](file:///home/administrator/AndroidStudioProjects/osmand-nautical/OsmAnd/src/net/osmand/plus/plugins/nautical/s57/ui/S57MapLayer.kt):**
+    - Moved `Path` creation and `String.format` for soundings out of `onDraw`.
+    - These are now pre-calculated in the background `prepareFeatures` worker thread and stored in `PreparedGeometry`.
+- **[NauticalMapLayer.kt](file:///home/administrator/AndroidStudioProjects/osmand-nautical/OsmAnd/src/net/osmand/plus/plugins/nautical/NauticalMapLayer.kt):**
+    - Moved `SafetyCorridorChecker` instantiation out of the hot path.
+    - Implemented `reusableWaypoints` list to avoid repeated `route.map` allocations.
+- **[WeatherRoutingMapLayer.kt](file:///home/administrator/AndroidStudioProjects/osmand-nautical/OsmAnd/src/net/osmand/plus/plugins/nautical/map/layers/WeatherRoutingMapLayer.kt):**
+    - Cached safety corridor results and hazardous segment indexes, only re-calculating when the route changes.
 
-### 3. S-57 Data Model & Conversions
-- **[S57Feature.kt](file:///home/administrator/AndroidStudioProjects/osmand-nautical/OsmAnd/src/net/osmand/plus/plugins/nautical/s57/S57Feature.kt)**:
-    - Added `toJtsGeometry(factory: GeometryFactory)` extension to `S57Geometry`.
-    - This allows callers (like the routing engine or hazard checker) to perform precise intersection tests on the reduced candidate set returned by the database.
+## 2. Resource Lifecycle Management (Coroutine Leaks)
 
-### 4. Component Updates
-Updated components to use the new `S57SpatialIndex` class:
-- **[SafetyCorridorChecker.kt](file:///home/administrator/AndroidStudioProjects/osmand-nautical/OsmAnd/src/net/osmand/plus/plugins/nautical/hazard/engine/SafetyCorridorChecker.kt)**
-- **[SailingMapLayerController.kt](file:///home/administrator/AndroidStudioProjects/osmand-nautical/OsmAnd/src/net/osmand/plus/plugins/nautical/map/controller/SailingMapLayerController.kt)**
-- **[S57MapLayer.kt](file:///home/administrator/AndroidStudioProjects/osmand-nautical/OsmAnd/src/net/osmand/plus/plugins/nautical/s57/ui/S57MapLayer.kt)**
-- **[SailingIntegrationPlugin.kt](file:///home/administrator/AndroidStudioProjects/osmand-nautical/OsmAnd/src/net/osmand/plus/plugins/nautical/plugin/SailingIntegrationPlugin.kt)**
+> [!WARNING]
+> Proper cancellation of background jobs prevents memory leaks and battery drain when plugins or features are disabled.
 
-## Verification Results
+- **[SignalKDataBroker.kt](file:///home/administrator/AndroidStudioProjects/osmand-nautical/OsmAnd/src/net/osmand/plus/plugins/nautical/engine/SignalKDataBroker.kt):** Added `stop()` method to cancel its internal `CoroutineScope`.
+- **[SignalKEngine.kt](file:///home/administrator/AndroidStudioProjects/osmand-nautical/OsmAnd/src/net/osmand/plus/plugins/nautical/engine/SignalKEngine.kt):** Now explicitly stops the `dataBroker` during its own `stop()` sequence.
+- **[TcpNmeaClient.kt](file:///home/administrator/AndroidStudioProjects/osmand-nautical/OsmAnd/src/net/osmand/plus/plugins/nautical/nmea/connection/TcpNmeaClient.kt):** Added `cancelChildren()` to ensure all connection retry jobs are terminated on `disconnect()`.
+- **[SignalKWebSocketClient.kt](file:///home/administrator/AndroidStudioProjects/osmand-nautical/OsmAnd/src/net/osmand/plus/plugins/nautical/network/SignalKWebSocketClient.kt):** Added `scope.cancel()` to `disconnect()`.
 
-### Automated Analysis
-I ran `analyze_file` on all modified files and confirmed that:
-- `sqliteAPI` is now accessible in `LogbookDbHelper.kt`.
-- `S57SpatialIndex` delegates correctly and is cleanly implemented.
-- `queryByAcronym` is correctly used in the routing engine.
+## 3. Spatial Precision (JTS Fine-Grained Intersection)
 
-All critical compilation errors and architectural concerns have been addressed.
+- **[SafetyCorridorChecker.kt](file:///home/administrator/AndroidStudioProjects/osmand-nautical/OsmAnd/src/net/osmand/plus/plugins/nautical/hazard/engine/SafetyCorridorChecker.kt):** Enhanced hazard detection with a secondary JTS `intersects()` check on the candidate features returned from the spatial index.
+- **[IsochroneRoutingEngine.kt](file:///home/administrator/AndroidStudioProjects/osmand-nautical/OsmAnd/src/net/osmand/plus/plugins/nautical/routing/algorithm/IsochroneRoutingEngine.kt):** Updated `isLandCollision` to use exact JTS geometry intersection for precise land avoidance.
+
+## 4. Architectural Cleanup
+
+- Removed all remaining code and comment references to the deprecated `S57IndexManager`.
+- Standardized usage of `S57SpatialIndex` across all nautical layers.
+
+---
+All 4 performance and hygiene criteria identified in the audit have been fully addressed.

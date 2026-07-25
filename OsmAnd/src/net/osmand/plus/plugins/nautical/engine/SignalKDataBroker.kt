@@ -71,6 +71,10 @@ class SignalKDataBroker {
         }
     }
 
+    fun stop() {
+        scope.cancel()
+    }
+
     private fun shouldUpdate(newValue: Double, lastValue: Double?, now: Long, lastTime: Long): Boolean {
         if (lastValue == null) return true
         if (now - lastTime < throttleInterval.inWholeMilliseconds) return false
