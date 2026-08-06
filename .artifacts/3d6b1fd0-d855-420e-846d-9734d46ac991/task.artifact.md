@@ -1,0 +1,9 @@
+- [x] Optimize `WeatherRoutingMapLayer.kt` (Initial)
+- [x] Optimize `OceanographicGribMapLayer.kt` (Initial)
+- [x] Optimize `S57MapLayer.kt` (Initial)
+- [x] Optimize `TidalCurrentsMapLayer.kt` (Initial)
+- [x] REMEDIATE MAP LAYER GC CHURN & CACHE INVALIDATION
+    - [x] Optimize `TidalCurrentsMapLayer.kt`: Pre-allocate and reuse Path
+    - [x] Optimize `WeatherRoutingMapLayer.kt`: Cache geographic coordinates
+    - [x] Optimize `OceanographicGribMapLayer.kt`: Cache geographic coordinates
+    - [x] Optimize `S57MapLayer.kt`: Guard sounding formatting

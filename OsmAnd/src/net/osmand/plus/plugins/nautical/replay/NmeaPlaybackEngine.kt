@@ -5,8 +5,10 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlin.time.Duration.Companion.milliseconds
 import net.osmand.PlatformUtil
-import net.osmand.plus.plugins.nautical.nmea.connection.NmeaClient
+import net.osmand.plus.plugins.nautical.nmea.connection.ConnectionState
+import net.osmand.plus.plugins.nautical.nmea.connection.NmeaTransport
 import okio.FileSystem
 import okio.Path.Companion.toPath
 import okio.buffer
@@ -17,15 +19,15 @@ import java.io.File
  */
 class NmeaPlaybackEngine(
     private val logFile: File,
-    private val scope: CoroutineScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
-) : NmeaClient, java.lang.AutoCloseable {
+    private val scope: CoroutineScope,
+) : NmeaTransport, java.lang.AutoCloseable {
     private val log = PlatformUtil.getLog(NmeaPlaybackEngine::class.java)
 
-    private val _sentences = MutableSharedFlow<String>(extraBufferCapacity = 128)
-    override val sentences = _sentences.asSharedFlow()
+    private val _connectionState = MutableStateFlow(ConnectionState.DISCONNECTED)
+    override val connectionState = _connectionState.asStateFlow()
 
-    private val _isConnected = MutableSharedFlow<Boolean>(replay = 1)
-    override val isConnected = _isConnected.asSharedFlow()
+    private val _sentences = MutableSharedFlow<String>(extraBufferCapacity = 128)
+    override val dataStream = _sentences.asSharedFlow()
 
     private val _playbackState = MutableStateFlow(PlaybackState.PAUSED)
     val playbackState = _playbackState.asStateFlow()
@@ -43,15 +45,23 @@ class NmeaPlaybackEngine(
     override fun connect() {
         if (isRunning) return
         isRunning = true
-        _isConnected.tryEmit(true)
+        _connectionState.value = ConnectionState.CONNECTED
         play()
     }
 
     override fun disconnect() {
         stop()
         isRunning = false
-        _isConnected.tryEmit(false)
+        _connectionState.value = ConnectionState.DISCONNECTED
     }
+
+    override fun emergencyShutdown() {
+        stop()
+        isRunning = false
+        _connectionState.value = ConnectionState.DISCONNECTED
+    }
+
+    private var seekByteOffset = 0L
 
     fun play() {
         if (_playbackState.value == PlaybackState.PLAYING) return
@@ -67,6 +77,17 @@ class NmeaPlaybackEngine(
         }
     }
 
+    fun onAppBackgrounded() {
+        if (_playbackState.value == PlaybackState.PLAYING) {
+            log.info("NmeaPlaybackEngine: Auto-pausing playback in background.")
+            pause()
+        }
+    }
+
+    fun onAppForegrounded() {
+        // We don't auto-resume playback to avoid sudden noise/CPU burst
+    }
+
     fun pause() {
         _playbackState.value = PlaybackState.PAUSED
         playbackJob?.cancel()
@@ -75,6 +96,7 @@ class NmeaPlaybackEngine(
     fun stop() {
         _playbackState.value = PlaybackState.STOPPED
         playbackJob?.cancel()
+        seekByteOffset = 0L
         _progress.value = 0f
     }
 
@@ -87,22 +109,33 @@ class NmeaPlaybackEngine(
         val fileSystem = FileSystem.SYSTEM
         val source = fileSystem.source(logFile.absolutePath.toPath()).buffer()
         
-        var lastSentenceTime = -1L
         val fileSize = logFile.length()
-        var bytesRead = 0L
+        if (seekByteOffset > 0) {
+            source.skip(seekByteOffset.coerceAtMost(fileSize))
+            // Skip partial line if we are in the middle of the file
+            if (seekByteOffset < fileSize) {
+                source.readUtf8Line()
+            }
+        }
+        
+        var lastSentenceTime = -1L
+        var bytesRead = seekByteOffset
+
+        val regex = Regex("\\[(\\d+)] (.*)")
 
         try {
             while (isActive && isRunning) {
                 if (_playbackState.value != PlaybackState.PLAYING) {
-                    delay(100)
+                    delay(100.milliseconds)
                     continue
                 }
 
                 val line = source.readUtf8Line() ?: break
-                bytesRead += line.length + 1 // +1 for newline
-                _progress.value = bytesRead.toFloat() / fileSize
+                val lineLength = line.length + 1L // approximate
+                bytesRead += lineLength
+                seekByteOffset = bytesRead
+                _progress.value = (bytesRead.toFloat() / fileSize).coerceIn(0f, 1f)
 
-                val regex = Regex("\\[(\\d+)\\] (.*)")
                 val match = regex.find(line)
                 
                 if (match != null) {
@@ -112,7 +145,7 @@ class NmeaPlaybackEngine(
                     if (lastSentenceTime != -1L) {
                         val delta = (timestamp - lastSentenceTime).coerceAtLeast(0)
                         if (delta > 0) {
-                            delay((delta / speedMultiplier).toLong())
+                            delay((delta / speedMultiplier).toLong().milliseconds)
                         }
                     }
                     
@@ -122,17 +155,19 @@ class NmeaPlaybackEngine(
             }
         } finally {
             source.close()
-            if (isActive) {
+            if (isActive && bytesRead >= fileSize) {
                 stop()
             }
         }
     }
 
     fun seekTo(progress: Float) {
-        // Simple implementation: stop and let the loop restart (requires state management for file offset)
-        // For now, just reset progress. Real seek would require re-opening and skipping bytes.
-        stop()
+        val wasPlaying = _playbackState.value == PlaybackState.PLAYING
+        pause()
+        this.seekByteOffset = (logFile.length() * progress).toLong()
         this._progress.value = progress
-        // play() would then need to skip to the target byte offset
+        if (wasPlaying) {
+            play()
+        }
     }
 }

@@ -98,6 +98,10 @@ class NauticalDataBottomSheet : BottomSheetDialogFragment() {
             WidgetType.NAUTICAL_SOLAR_CURRENT -> getString(R.string.nautical_solar_current)
             WidgetType.NAUTICAL_ENGINE_RUNTIME -> getString(R.string.nautical_engine_runtime)
             WidgetType.NAUTICAL_ENGINE_COOLANT -> getString(R.string.nautical_engine_coolant)
+            WidgetType.NAUTICAL_HUMIDITY -> getString(R.string.nautical_humidity)
+            WidgetType.NAUTICAL_AC_VOLTAGE -> getString(R.string.nautical_ac_voltage)
+            WidgetType.NAUTICAL_AC_CURRENT -> getString(R.string.nautical_ac_current)
+            WidgetType.NAUTICAL_AC_FREQUENCY -> getString(R.string.nautical_ac_frequency)
             else -> getString(R.string.nautical_data_telemetry)
         }
         titleView?.text = getString(R.string.nautical_history_title_pattern, name)
@@ -166,6 +170,7 @@ class NauticalDataBottomSheet : BottomSheetDialogFragment() {
             WidgetType.NAUTICAL_ENGINE_COOLANT -> g.setData(engine.getCoolantTempHistory(), ctx.getString(R.string.nautical_unit_celsius), 1.0, SignalKUnitConverter.KELVIN_TO_CELSIUS)
             WidgetType.NAUTICAL_SOLAR_CURRENT -> g.setData(engine.getSolarCurrentHistory(), "A")
             WidgetType.NAUTICAL_TWD -> g.setData(engine.getTwdHistory(), "°", Math.toDegrees(1.0))
+            WidgetType.NAUTICAL_HUMIDITY -> g.setData(engine.getHumidityHistory(), "%", 100.0)
             else -> {}
         }
     }

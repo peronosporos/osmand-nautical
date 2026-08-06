@@ -1,11 +1,29 @@
 package net.osmand.plus.plugins.nautical.maneuvers
 
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import net.osmand.plus.OsmandApplication
+import net.osmand.plus.R
+import net.osmand.plus.plugins.nautical.NauticalPlugin
+import net.osmand.plus.plugins.nautical.di.SailingDependencyContainer
+import net.osmand.plus.plugins.nautical.engine.SafetyPreflightController
 
 class ManeuverManager(private val app: OsmandApplication) {
 
+    private val safetyPreflightController by lazy {
+        val broker = NauticalPlugin.engine?.dataBroker
+        val ap = NauticalPlugin.autopilot
+        if ((broker != null) && (ap != null)) {
+            SafetyPreflightController(app, broker, ap)
+        } else {
+            null
+        }
+    }
+
     private val maneuvers = mutableMapOf<String, ManeuverEngine>()
-    private var activeManeuver: ManeuverEngine? = null
+    var activeManeuver: ManeuverEngine? = null
+        private set
 
     var state = ManeuverState.IDLE
         private set
@@ -48,16 +66,39 @@ class ManeuverManager(private val app: OsmandApplication) {
     }
 
     fun arm() {
-        if (state == ManeuverState.IDLE && activeManeuver != null) {
+        if ((state == ManeuverState.IDLE) && (activeManeuver != null)) {
             activeManeuver?.transitionToArmed()
             updateState(ManeuverState.ARMED)
         }
     }
 
-    fun execute() {
+    fun execute(scope: CoroutineScope = CoroutineScope(Dispatchers.Main)) {
         if (state == ManeuverState.ARMED) {
-            activeManeuver?.let {
-                it.transitionToExecuting()
+            val maneuver = activeManeuver ?: return
+            val maneuverId = getManeuverId(maneuver) ?: "maneuver"
+
+            val preflight = safetyPreflightController
+            if (preflight != null) {
+                scope.launch {
+                    val (success, reason) = preflight.runPreflightCheck(maneuverId)
+                    if (success) {
+                        maneuver.transitionToExecuting()
+                        updateState(ManeuverState.EXECUTING)
+                        
+                        // TASK-047: Workflow Touch Lock Integration
+                        if (app.settings.NAUTICAL_LOCK_TOUCH_DURING_MANEUVERS.get() == true) {
+                            NauticalPlugin.getInstance()?.workflowManager?.getScreenTouchLockManager()?.setTouchLockActive(active = true)
+                        }
+                    } else {
+                        val failMsg = reason ?: app.getString(R.string.nautical_error_preflight_failed)
+                        abort(failMsg, isAlarm = true)
+                        app.runInUIThread {
+                            app.showToastMessage(failMsg)
+                        }
+                    }
+                }
+            } else {
+                maneuver.transitionToExecuting()
                 updateState(ManeuverState.EXECUTING)
             }
         }
@@ -65,9 +106,16 @@ class ManeuverManager(private val app: OsmandApplication) {
 
     fun abort(reason: String? = "User cancelled", isAlarm: Boolean = false) {
         if (state != ManeuverState.IDLE) {
-            activeManeuver?.transitionToAborted(reason)
+            val maneuver = activeManeuver
+            val maneuverId = maneuver?.let { getManeuverId(it) } ?: "unknown"
+            
+            maneuver?.transitionToAborted(reason)
             updateState(ManeuverState.IDLE)
             activeManeuver = null
+
+            // Execute recovery logic if available
+            SailingDependencyContainer.recoveryEngine?.executeRecovery(maneuverId, reason)
+
             if (isAlarm) {
                 triggerAlarmPowerState()
             }
@@ -79,7 +127,7 @@ class ManeuverManager(private val app: OsmandApplication) {
     }
 
     private fun triggerAlarmPowerState() {
-        val plugin = net.osmand.plus.plugins.PluginsHelper.getEnabledPlugin(net.osmand.plus.plugins.nautical.NauticalPlugin::class.java)
+        val plugin = net.osmand.plus.plugins.PluginsHelper.getEnabledPlugin(NauticalPlugin::class.java)
         plugin?.forceEmergencyBrightness()
     }
 

@@ -1,6 +1,8 @@
 package net.osmand.plus.plugins.nautical.replay
 
+import android.content.res.Configuration
 import android.os.Bundle
+import android.util.TypedValue
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -8,6 +10,7 @@ import android.widget.SeekBar
 import android.widget.TextView
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.createSavedStateHandle
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.button.MaterialButtonToggleGroup
@@ -34,13 +37,23 @@ class NmeaPlaybackControlBottomSheet : BaseMaterialBottomSheetDialogFragment() {
         val app = requireActivity().application as OsmandApplication
         val factory = object : ViewModelProvider.Factory {
             @Suppress("UNCHECKED_CAST")
-            override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                return NmeaReplayViewModel(app) as T
+            override fun <T : ViewModel> create(modelClass: Class<T>, extras: androidx.lifecycle.viewmodel.CreationExtras): T {
+                val savedStateHandle = extras.createSavedStateHandle()
+                return NmeaReplayViewModel(app, savedStateHandle) as T
             }
         }
-        viewModel = ViewModelProvider(this, factory).get(NmeaReplayViewModel::class.java)
+        viewModel = ViewModelProvider(this, factory)[NmeaReplayViewModel::class.java]
 
-        val txtFilename = view.findViewById<TextView>(R.id.txt_filename)
+        setupUI(view)
+        observeViewModel()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        applyTheme()
+    }
+
+    private fun setupUI(view: View) {
         val seekPlayback = view.findViewById<SeekBar>(R.id.seek_playback)
         val btnPlayPause = view.findViewById<MaterialButton>(R.id.btn_play_pause)
         val btnStop = view.findViewById<MaterialButton>(R.id.btn_stop)
@@ -73,20 +86,17 @@ class NmeaPlaybackControlBottomSheet : BaseMaterialBottomSheetDialogFragment() {
             override fun onStartTrackingTouch(seekBar: SeekBar?) {}
             override fun onStopTrackingTouch(seekBar: SeekBar?) {}
         })
+    }
 
-        // Observe ViewModel State
+    private fun observeViewModel() {
+        val view = view ?: return
+        val btnPlayPause = view.findViewById<MaterialButton>(R.id.btn_play_pause)
+        val seekPlayback = view.findViewById<SeekBar>(R.id.seek_playback)
+        val txtFilename = view.findViewById<TextView>(R.id.txt_filename)
+
         viewLifecycleOwner.lifecycleScope.launch {
             viewModel.engineState.collectLatest { state ->
-                when (state) {
-                    NmeaPlaybackEngine.PlaybackState.PLAYING -> {
-                        btnPlayPause.setText(R.string.nautical_replay_btn_pause)
-                        btnPlayPause.setIconResource(R.drawable.ic_pause)
-                    }
-                    else -> {
-                        btnPlayPause.setText(R.string.nautical_replay_btn_play)
-                        btnPlayPause.setIconResource(R.drawable.ic_action_play_dark)
-                    }
-                }
+                updatePlayPauseButton(btnPlayPause, state)
             }
         }
 
@@ -105,6 +115,37 @@ class NmeaPlaybackControlBottomSheet : BaseMaterialBottomSheetDialogFragment() {
                 }
             }
         }
+    }
+
+    private fun updatePlayPauseButton(btn: MaterialButton, state: NmeaPlaybackEngine.PlaybackState) {
+        if (state == NmeaPlaybackEngine.PlaybackState.PLAYING) {
+            btn.setText(R.string.nautical_replay_btn_pause)
+            btn.setIconResource(R.drawable.ic_pause)
+        } else {
+            btn.setText(R.string.nautical_replay_btn_play)
+            btn.setIconResource(R.drawable.ic_action_play_dark)
+        }
+    }
+
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+        applyTheme()
+    }
+
+    private fun applyTheme() {
+        val view = view ?: return
+        val context = requireContext()
+        val typedValue = TypedValue()
+        
+        context.theme.resolveAttribute(R.attr.colorOnSurface, typedValue, true)
+        val textColor = typedValue.data
+        
+        view.findViewById<TextView>(R.id.txt_filename).setTextColor(textColor)
+        
+        context.theme.resolveAttribute(R.attr.colorPrimary, typedValue, true)
+        
+        view.findViewById<MaterialButton>(R.id.btn_stop).setIconTintResource(typedValue.resourceId)
+        view.findViewById<MaterialButton>(R.id.btn_play_pause).setIconTintResource(typedValue.resourceId)
     }
 
     private fun showFileSelectionDialog() {

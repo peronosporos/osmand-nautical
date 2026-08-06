@@ -236,6 +236,9 @@ public class NavigationService extends Service {
 	}
 
 	private void requestLocationUpdates() {
+		if (settings.LOCATION_SOURCE.get() == LocationSource.EXTERNAL_SIGNALK) {
+			return;
+		}
 		try {
 			LOG.info(">>>> requestLocationUpdates from NavigationService");
 

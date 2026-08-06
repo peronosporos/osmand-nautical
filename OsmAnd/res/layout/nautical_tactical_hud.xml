@@ -1,0 +1,159 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="4dp">
+
+    <LinearLayout
+        android:id="@+id/nautical_emergency_row"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="4dp">
+
+        <ImageButton
+            android:id="@+id/btn_hud_mob"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:background="@drawable/btn_circle_nautical_emergency"
+            android:src="@drawable/ic_action_alert"
+            app:tint="@android:color/white"
+            android:contentDescription="@string/nautical_mob_label" />
+
+        <View
+            android:layout_width="0dp"
+            android:layout_height="1dp"
+            android:layout_weight="1" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_vessel_context"
+            style="@style/Widget.Material3.Button.TonalButton"
+            android:layout_width="wrap_content"
+            android:layout_height="40dp"
+            android:text="SAILING"
+            app:icon="@drawable/ic_action_sail_boat_dark"
+            android:textSize="11sp"
+            app:iconSize="18dp"
+            app:cornerRadius="20dp"
+            android:paddingHorizontal="12dp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_reset_watchdog"
+            style="@style/Widget.Material3.Button.TonalButton"
+            android:layout_width="wrap_content"
+            android:layout_height="40dp"
+            android:text="RESET WATCHDOG"
+            app:icon="@drawable/ic_action_time"
+            android:textSize="11sp"
+            app:iconSize="18dp"
+            app:cornerRadius="20dp"
+            android:paddingHorizontal="12dp"
+            android:visibility="gone"
+            android:layout_marginStart="8dp" />
+
+        <TextView
+            android:id="@+id/gust_indicator"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/nautical_gust_label"
+            android:textColor="@android:color/holo_red_dark"
+            android:textStyle="bold"
+            android:visibility="gone"
+            android:layout_marginStart="8dp" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center">
+
+        <TextView
+            android:id="@+id/rot_value"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:lines="1"
+            android:maxLines="1"
+            app:autoSizeTextType="uniform"
+            android:textColor="?android:attr/textColorPrimary"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:importantForAccessibility="yes" />
+
+        <View
+            android:layout_width="1dp"
+            android:layout_height="16dp"
+            android:background="?android:attr/dividerVertical" />
+
+        <TextView
+            android:id="@+id/drift_value"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:lines="1"
+            android:maxLines="1"
+            app:autoSizeTextType="uniform"
+            android:textColor="?android:attr/textColorPrimary"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:importantForAccessibility="yes" />
+
+        <View
+            android:layout_width="1dp"
+            android:layout_height="16dp"
+            android:background="?android:attr/dividerVertical" />
+
+        <TextView
+            android:id="@+id/set_value"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:lines="1"
+            android:maxLines="1"
+            app:autoSizeTextType="uniform"
+            android:textColor="?android:attr/textColorPrimary"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:importantForAccessibility="yes" />
+    </LinearLayout>
+
+    <net.osmand.plus.plugins.nautical.ui.RudderView
+        android:id="@+id/rudder_view"
+        android:layout_width="match_parent"
+        android:layout_height="32dp"
+        android:layout_marginTop="4dp" />
+
+    <TextView
+        android:id="@+id/forward_hazard_warning"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@android:color/holo_red_dark"
+        android:textColor="@android:color/white"
+        android:gravity="center"
+        android:padding="8dp"
+        android:text="FORWARD HAZARD DETECTED"
+        android:textStyle="bold"
+        android:visibility="gone"
+        android:layout_marginTop="4dp" />
+
+    <TextView
+        android:id="@+id/rigging_load_warning"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@android:color/holo_orange_dark"
+        android:textColor="@android:color/white"
+        android:gravity="center"
+        android:padding="8dp"
+        android:text="RIGGING LOAD EXCEEDED"
+        android:textStyle="bold"
+        android:visibility="gone"
+        android:layout_marginTop="4dp" />
+
+</LinearLayout>

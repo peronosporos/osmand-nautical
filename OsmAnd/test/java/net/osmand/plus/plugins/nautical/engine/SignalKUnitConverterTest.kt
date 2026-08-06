@@ -27,6 +27,8 @@ class SignalKUnitConverterTest {
     @Test
     fun testDistanceConversion() {
         assertEquals(1.0, SignalKUnitConverter.metersToNm(1852.0), 0.001)
+        assertEquals(1852.0, SignalKUnitConverter.nmToMeters(1.0), 0.001)
+        assertEquals(3.2808, SignalKUnitConverter.metersToFeet(1.0), 0.001)
     }
 
     @Test

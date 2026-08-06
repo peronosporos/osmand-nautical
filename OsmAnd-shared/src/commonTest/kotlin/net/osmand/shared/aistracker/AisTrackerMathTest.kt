@@ -4,6 +4,7 @@ import kotlin.test.Test
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 import kotlin.random.Random
+import kotlin.test.assertEquals
 
 class AisTrackerMathTest {
 
@@ -44,6 +45,26 @@ class AisTrackerMathTest {
         
         // They are moving away from each other
         val tcpa = AisTrackerMath.getTcpa(own, other)
-        assertTrue(tcpa == AisObjectConstants.INVALID_TCPA, "Diverging courses should return INVALID_TCPA")
+        assertEquals(
+            tcpa,
+            AisObjectConstants.INVALID_TCPA,
+            "Diverging courses should return INVALID_TCPA"
+        )
+    }
+
+    @Test
+    fun testStationaryTarget() {
+        val own = AisLocation(0.0, 0.0, 5f, 0f, hasSpeed = true, hasBearing = true) // Moving North at 5m/s
+        val other = AisLocation(0.001, 0.0, 0f, 0f, hasSpeed = true, hasBearing = true) // Stationary ahead
+        
+        val tcpa = AisTrackerMath.getTcpa(own, other)
+        
+        // Distance is ~111 meters. At 5m/s, TCPA should be ~22.2 seconds = ~0.006 hours
+        assertTrue(tcpa > 0.0 && tcpa < 0.01, "TCPA should be positive and small for stationary target ahead")
+        
+        val result = AisCpa()
+        AisTrackerMath.getCpa(own, other, result)
+        assertTrue(result.valid, "CPA should be valid for stationary target")
+        assertTrue(result.cpa < 0.001, "CPA distance should be near zero for target directly ahead")
     }
 }

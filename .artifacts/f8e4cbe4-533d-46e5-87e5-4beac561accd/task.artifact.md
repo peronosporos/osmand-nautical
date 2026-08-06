@@ -1,0 +1,6 @@
+- [x] Refactor SSL configuration in `NauticalPlugin.kt`
+    - [x] Create `NauticalTrustManager` internal class
+    - [x] Update `createHttpClient` to use the new trust manager
+    - [x] Relax `hostnameVerifier` only when "Trust All" is enabled
+- [x] Verify compilation and check for remaining warnings
+- [x] Create walkthrough documentation

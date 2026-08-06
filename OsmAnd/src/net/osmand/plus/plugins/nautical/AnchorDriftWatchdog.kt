@@ -1,11 +1,6 @@
 package net.osmand.plus.plugins.nautical
 
-import android.content.Context
-import android.media.AudioAttributes
-import android.media.AudioManager
-import android.media.Ringtone
-import android.media.RingtoneManager
-import android.net.Uri
+import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -15,7 +10,12 @@ import net.osmand.plus.OsmandApplication
 import net.osmand.plus.R
 import net.osmand.plus.plugins.nautical.anchor.AnchorTrackBuffer
 import net.osmand.plus.plugins.nautical.anchor.TrackPoint
+import net.osmand.plus.plugins.nautical.audio.AlarmType
+import net.osmand.plus.plugins.nautical.audio.NauticalAudioArbiter
+import net.osmand.plus.plugins.nautical.engine.ConnectionStatus
+import net.osmand.plus.plugins.nautical.engine.NotificationState
 import net.osmand.shared.util.KMapUtils
+import kotlin.math.abs
 
 /**
  * Background watchdog for anchor drift detection.
@@ -24,10 +24,13 @@ import net.osmand.shared.util.KMapUtils
 class AnchorDriftWatchdog(private val app: OsmandApplication) {
 
     private val log = PlatformUtil.getLog(AnchorDriftWatchdog::class.java)
-    private var alarmRingtone: Ringtone? = null
+    private val arbiter = NauticalAudioArbiter.getInstance(app)
     private var outOfBoundsCount = 0
     private var isAlarmActive = false
     private var isGpsLostAlarmActive = false
+    
+    private var observationJob: Job? = null
+    private val scope = CoroutineScope(NauticalDispatchers.SafetyDispatcher + SupervisorJob())
 
     private val _trackHistory = MutableStateFlow<List<TrackPoint>>(emptyList())
     val trackHistory: StateFlow<List<TrackPoint>> = _trackHistory.asStateFlow()
@@ -38,6 +41,95 @@ class AnchorDriftWatchdog(private val app: OsmandApplication) {
         private const val CONSECUTIVE_PINGS_THRESHOLD = 3
     }
 
+    fun start() {
+        observationJob?.cancel()
+        observationJob = scope.launch {
+            NauticalPlugin.engine?.marineStateFlow?.collect { state ->
+                // 1. Sync with server-side anchor notifications
+                state.notifications["notifications.navigation.anchor"]?.let { notification ->
+                    if ((notification.state == NotificationState.ALARM) || (notification.state == NotificationState.EMERGENCY)) {
+                        if (!isAlarmActive) {
+                            triggerAlarm("[Server] ${notification.message}")
+                        }
+                    } else if ((notification.state == NotificationState.NORMAL) && isAlarmActive) {
+                        // Remote acknowledgement
+                        stopAlarm()
+                    }
+                }
+
+                // 2. Synchronize server-side anchor position with local settings
+                state.anchor?.let { serverAnchor ->
+                    val sLat = serverAnchor.latitude
+                    val sLon = serverAnchor.longitude
+                    val sRadius = serverAnchor.radius ?: serverAnchor.maxDrift
+                    
+                    val isLocked = app.settings.NAUTICAL_ANCHOR_LOCKED_LOCALLY.get()
+                    
+                    if ((!isLocked) && (sLat != null) && (sLon != null) && (sRadius != null)) {
+                        // Only update if they differ significantly to avoid triggering listeners unnecessarily
+                        val currentLat = app.settings.NAUTICAL_ANCHOR_LAT.get()
+                        val currentLon = app.settings.NAUTICAL_ANCHOR_LON.get()
+                        val currentRadius = app.settings.NAUTICAL_ANCHOR_RADIUS.get()
+
+                        if ((KMapUtils.getDistance(currentLat, currentLon, sLat, sLon) > 1.0) || 
+                            (abs(currentRadius - sRadius) > 1.0)) {
+                            log.info("AnchorWatch: Syncing local anchor settings from server.")
+                            app.settings.NAUTICAL_ANCHOR_LAT.set(sLat)
+                            app.settings.NAUTICAL_ANCHOR_LON.set(sLon)
+                            app.settings.NAUTICAL_ANCHOR_RADIUS.set(sRadius.toFloat())
+                            app.runInUIThread { app.osmandMap?.refreshMap() }
+                        }
+                    }
+                }
+
+                // 3. Handle position updates for fallback calculation
+                if (state.connectionStatus == ConnectionStatus.DISCONNECTED) {
+                    onGpsLost()
+                } else {
+                    val lat = state.latitude
+                    val lon = state.longitude
+                    if ((lat != null) && (lon != null)) {
+                        val loc = Location("signalk")
+                        loc.latitude = lat
+                        loc.longitude = lon
+                        loc.accuracy = 5.0f // Filtered data is considered accurate
+                        onLocationChanged(loc)
+                    }
+                }
+            }
+        }
+        log.info("AnchorWatchdog: Started observing MarineState.")
+    }
+
+    fun stop() {
+        observationJob?.cancel()
+        observationJob = null
+        scope.coroutineContext.cancelChildren()
+        reset()
+        // Cleanup legacy phantom preferences to prevent battery drain from background checks
+        app.settings.NAUTICAL_ANCHOR_LAT.set(0.0)
+        app.settings.NAUTICAL_ANCHOR_LON.set(0.0)
+        log.info("AnchorWatchdog: Stopped and coordinates wiped.")
+    }
+
+    fun onAppBackgrounded() {
+        val anchorLat = app.settings.NAUTICAL_ANCHOR_LAT.get()
+        if (anchorLat == 0.0) {
+            log.info("AnchorWatchdog: Suspending location processing in background (Disarmed).")
+            observationJob?.cancel()
+            observationJob = null
+        } else {
+            log.info("AnchorWatchdog: Continuing background processing (Armed).")
+        }
+    }
+
+    fun onAppForegrounded() {
+        if (observationJob == null) {
+            log.info("AnchorWatchdog: Resuming location processing.")
+            start()
+        }
+    }
+
     /**
      * Processes a new location update.
      * Returns true if alarm is triggered or remains active.
@@ -46,45 +138,62 @@ class AnchorDriftWatchdog(private val app: OsmandApplication) {
         if (isGpsLostAlarmActive) {
             onGpsRestored()
         }
+
+        // Feed position to the Snail Trail buffer regardless of mode
+        if (trackBuffer.addPosition(location)) {
+            _trackHistory.value = trackBuffer.getPoints()
+            app.runInUIThread { app.osmandMap?.refreshMap() }
+        }
+
+        val engine = NauticalPlugin.engine
+        val state = engine?.getCurrentState()
+        val connected = state?.connectionStatus == ConnectionStatus.CONNECTED
+
+        if (connected) {
+            // Task 11: Display deployed chain length if available
+            state.rodeDeployed?.let { rode ->
+                log.info("AnchorWatch: Deployed rode: $rode m")
+            }
+            // When connected, we rely EXCLUSIVELY on Signal K notifications for the alarm.
+            // Local calculation is skipped to maintain "Single Source of Truth".
+            return isAlarmActive
+        }
+        
+        // --- FALLBACK MODE: Local Calculation ---
         
         val anchorLat = app.settings.NAUTICAL_ANCHOR_LAT.get()
         val anchorLon = app.settings.NAUTICAL_ANCHOR_LON.get()
         val radius = app.settings.NAUTICAL_ANCHOR_RADIUS.get()
 
-        if (anchorLat == 0.0 || anchorLon == 0.0 || radius <= 0f) {
+        if ((anchorLat == 0.0) || (anchorLon == 0.0) || (radius <= 0f)) {
             reset()
             return false
         }
 
-        // 1. Signal Filtering: Reject low accuracy pings (e.g. below deck or GPS bounce)
-        if (location.hasAccuracy() && location.accuracy > MAX_ACCURACY_METERS) {
+        // 1. Signal Filtering: Reject low accuracy pings
+        if (location.hasAccuracy() && (location.accuracy > MAX_ACCURACY_METERS)) {
             log.info("AnchorWatch: Ignoring low accuracy fix: ${location.accuracy}m")
             return isAlarmActive
         }
 
-        // Feed position to the Snail Trail buffer
-        if (trackBuffer.addPosition(location)) {
-            _trackHistory.value = trackBuffer.getPoints()
-            // Trigger map refresh to show the new snail trail point
-            app.osmandMap?.refreshMap()
-        }
-
         val distance = KMapUtils.getDistance(anchorLat, anchorLon, location.latitude, location.longitude)
+
+        // 2. Swing-Depth Integration
+        checkShallowSwing()
 
         if (distance > radius) {
             outOfBoundsCount++
-            log.warn("AnchorWatch: Vessel outside boundary. Count: $outOfBoundsCount, Dist: ${distance.toInt()}m, Radius: ${radius.toInt()}m")
+            log.warn("AnchorWatch (Local): Vessel outside boundary. Count: $outOfBoundsCount, Dist: ${distance.toInt()}m, Radius: ${radius.toInt()}m")
             
-            // 2. Time-Delayed Trigger: Must be outside for 3 consecutive pings
-            if (outOfBoundsCount >= CONSECUTIVE_PINGS_THRESHOLD && !isAlarmActive) {
+            if ((outOfBoundsCount >= CONSECUTIVE_PINGS_THRESHOLD) && (!isAlarmActive)) {
                 triggerAlarm()
             }
         } else {
             if (outOfBoundsCount > 0) {
-                log.info("AnchorWatch: Vessel back in boundary. Resetting counter.")
+                log.info("AnchorWatch (Local): Vessel back in boundary. Resetting counter.")
                 outOfBoundsCount = 0
             }
-            if (isAlarmActive && distance < radius * 0.9) { // Small hysteresis to stop alarm if we moved back significantly
+            if (isAlarmActive && (distance < (radius * 0.9))) { 
                 stopAlarm()
             }
         }
@@ -107,48 +216,91 @@ class AnchorDriftWatchdog(private val app: OsmandApplication) {
     }
 
     private fun triggerAlarm(customText: String? = null) {
+        val mobActive = NauticalPlugin.engine?.getCurrentState()?.isMobActive == true
+        if (mobActive) {
+            log.warn("AnchorWatch: Active MOB emergency. Anchor drift might be the cause or concurrent!")
+        }
+
         log.error("ANCHOR ALARM TRIGGERED: ${customText ?: "DRIFT"}")
         isAlarmActive = true
         
-        try {
-            val alarmUri: Uri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
-                ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE)
-            
-            val ringtone = RingtoneManager.getRingtone(app, alarmUri)
-            ringtone.audioAttributes = AudioAttributes.Builder()
-                .setUsage(AudioAttributes.USAGE_ALARM)
-                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                .build()
-            
-            // Ensure maximum volume for critical safety alarm
-            val audioManager = app.getSystemService(Context.AUDIO_SERVICE) as AudioManager
-            val maxVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_ALARM)
-            audioManager.setStreamVolume(AudioManager.STREAM_ALARM, maxVolume, 0)
+        val text = customText ?: app.getString(R.string.nautical_anchor_drift_alarm)
+        arbiter.dispatchAlarm(AlarmType.ANCHOR_DRIFT, voiceText = text)
+        
+        // Post critical Android notification
+        NauticalPlugin.getInstance()?.notificationManager?.postCriticalNotification(
+            "anchor_drift",
+            app.getString(R.string.nautical_anchor_label),
+            text,
+        )
+        
+        // Wake screen via Plugin
+        NauticalPlugin.getInstance()?.forceEmergencyBrightness()
 
-            ringtone.play()
-            alarmRingtone = ringtone
-            
-            app.player?.let { player ->
-                val text = customText ?: app.getString(R.string.nautical_anchor_drift_alarm)
-                player.playCommands(player.newCommandBuilder().attention(text))
+        // Single-tap Silence Alarm banner on Map HUD
+        NauticalPlugin.getInstance()?.let {
+            app.runInUIThread {
+                NauticalPlugin.hudManager?.get()?.showBanner(
+                    text,
+                    durationMs = 60000,
+                    label = app.getString(R.string.nautical_silence_alarm),
+                    isWarning = true,
+                ) {
+                    stopAlarm()
+                }
             }
-            
-            // Wake screen via Plugin
-            NauticalPlugin.getInstance()?.forceEmergencyBrightness()
-        } catch (e: Exception) {
-            log.error("Failed to play anchor alarm", e)
         }
     }
 
     fun stopAlarm() {
         if (isAlarmActive || isGpsLostAlarmActive) {
             log.info("Silencing anchor alarm")
-            alarmRingtone?.stop()
-            alarmRingtone = null
+            arbiter.stopAlarm(AlarmType.ANCHOR_DRIFT)
             isAlarmActive = false
             isGpsLostAlarmActive = false
             outOfBoundsCount = 0
         }
+    }
+
+    fun setAnchor(latitude: Double, longitude: Double, radius: Float) {
+        app.settings.NAUTICAL_ANCHOR_LAT.set(latitude)
+        app.settings.NAUTICAL_ANCHOR_LON.set(longitude)
+        app.settings.NAUTICAL_ANCHOR_RADIUS.set(radius)
+        resetCounter()
+        
+        // Task: Write-Back to Signal K
+        val plugin = NauticalPlugin.getInstance()
+        plugin?.pluginScope?.launch {
+            val engine = NauticalPlugin.engine
+            val rest = engine?.getRestService()
+            if (rest != null) {
+                try {
+                    // Modern SK Course v2 Anchor path
+                    val anchor = net.osmand.plus.plugins.nautical.network.SignalKAnchor(
+                        latitude = latitude,
+                        longitude = longitude,
+                        radius = radius.toDouble(),
+                    )
+                    val response = rest.updateCourse(net.osmand.plus.plugins.nautical.network.SignalKCourse(anchor = anchor))
+                    if (response.isSuccessful) {
+                        log.info("AnchorWatch: Successfully pushed local anchor to Signal K.")
+                    } else {
+                        // Fallback to generic delta
+                        engine.sendDelta(
+                            "navigation.anchor",
+                            mapOf(
+                                "latitude" to latitude,
+                                "longitude" to longitude,
+                                "radius" to radius,
+                            ),
+                        )
+                    }
+                } catch (e: Exception) {
+                    log.error("Failed to push anchor to server: ${e.message}")
+                }
+            }
+        }
+        app.runInUIThread { app.osmandMap?.refreshMap() }
     }
 
     /**
@@ -159,13 +311,54 @@ class AnchorDriftWatchdog(private val app: OsmandApplication) {
     fun resetCounter() {
         log.info("AnchorWatch: Resetting watchdog state for new anchor position.")
         outOfBoundsCount = 0
-        // We keep the snail trail history as it shows where the vessel was, 
-        // but we might want to clear it if the anchor drop point is completely new.
-        // For now, just reset the counter.
     }
 
     fun reset() {
         stopAlarm()
         outOfBoundsCount = 0
+    }
+
+    private fun checkShallowSwing() {
+        val state = NauticalPlugin.engine?.getCurrentState() ?: return
+        val depth = state.depthBelowKeel ?: return
+        
+        val safetyContour = app.settings.getCustomRenderProperty("safetyContour", "5.0").get().toDoubleOrNull() ?: 5.0
+        
+        if (depth < safetyContour) {
+            log.warn("AnchorWatch: Shallow swing detected! Depth: ${depth}m < Safety: ${safetyContour}m")
+            triggerAlarm(app.getString(R.string.nautical_anchor_shallow_swing_alarm, depth))
+        }
+
+        // Task 11: Anchor Type Consistency Check (Dragging Suspected)
+        val anchorLat = app.settings.NAUTICAL_ANCHOR_LAT.get()
+        val anchorLon = app.settings.NAUTICAL_ANCHOR_LON.get()
+        if ((anchorLat != 0.0) && (state.latitude != null) && (state.longitude != null)) {
+            val distance = KMapUtils.getDistance(anchorLat, anchorLon, state.latitude, state.longitude)
+            
+            // Advanced Drag Logic: Account for Scope Ratio and Water Depth (TASK-110)
+            val anchorDepth = app.settings.NAUTICAL_ANCHOR_DEPTH.get().toDouble()
+            val freeboard = app.settings.NAUTICAL_ANCHOR_FREEBOARD.get().toDouble()
+            val scopeRatio = app.settings.NAUTICAL_ANCHOR_SCOPE_RATIO.get().toDouble().coerceAtLeast(1.0)
+            
+            val totalVertical = anchorDepth + freeboard
+            
+            // If we have chain counter data, we use it. Otherwise fallback to preferred scope ratio.
+            val effectiveRode = state.rodeDeployed ?: (totalVertical * scopeRatio)
+            
+            val maxTheoreticalSwing = if (effectiveRode > totalVertical) {
+                kotlin.math.sqrt((effectiveRode * effectiveRode) - (totalVertical * totalVertical))
+            } else {
+                5.0 // Minimum safety floor
+            }
+
+            val userSafetyMargin = app.settings.NAUTICAL_ANCHOR_SAFETY_MARGIN.get().toDouble()
+            val totalAllowedDistance = maxTheoreticalSwing + userSafetyMargin
+
+            // If distance > totalAllowedDistance, anchor is dragging
+            if (distance > totalAllowedDistance) {
+                log.error("AnchorWatch: Dragging Suspected! Distance $distance m > Allowed Swing $totalAllowedDistance m")
+                triggerAlarm(app.getString(R.string.nautical_anchor_dragging_alarm, distance, totalAllowedDistance, effectiveRode.toInt(), anchorDepth))
+            }
+        }
     }
 }

@@ -95,6 +95,9 @@ public class SunriseSunsetWidget extends SimpleWidget {
 		}
 		int sunsetStringId = R.string.shared_string_sunset;
 		int sunriseStringId = R.string.shared_string_sunrise;
+		if (sunPositionMode == SunPositionMode.MOON_PHASE_MODE) {
+			return getString(R.string.nautical_moon_phase);
+		}
 		if (WidgetType.SUNSET == widgetType || (WidgetType.SUN_POSITION == widgetType && sunPositionMode == SunPositionMode.SUNSET_MODE)) {
 			return getString(sunsetStringId);
 		} else if (WidgetType.SUN_POSITION == widgetType && sunPositionMode == SunPositionMode.SUN_POSITION_MODE) {
@@ -106,6 +109,18 @@ public class SunriseSunsetWidget extends SimpleWidget {
 
 	@Override
 	protected void updateSimpleWidgetInfo(@Nullable DrawSettings drawSettings) {
+		SunPositionMode mode = widgetState.getSunPositionPreference().get();
+		if (mode == SunPositionMode.MOON_PHASE_MODE) {
+			net.osmand.plus.plugins.nautical.NauticalPlugin plugin = net.osmand.plus.plugins.nautical.NauticalPlugin.getInstance();
+			if (plugin != null && plugin.getEngine() != null) {
+				Double phase = plugin.getEngine().getCurrentState().getMoonPhase();
+				if (phase != null) {
+					setText(String.format(Locale.US, "%.0f%%", phase * 100.0), null);
+					return;
+				}
+			}
+		}
+
 		updateCachedLocation();
 		if (!isUpdateNeeded()) {
 			return;

@@ -4,12 +4,18 @@ import net.osmand.data.ValueHolder
 import net.osmand.plus.plugins.nautical.NauticalPlugin
 import net.osmand.plus.routing.IRouteInformationListener
 import net.osmand.plus.routing.RoutingHelper
+import net.osmand.plus.settings.backend.ApplicationMode
 
 class AutopilotRouteListener(
     private val routingHelper: RoutingHelper,
 ) : IRouteInformationListener {
 
     override fun newRouteIsCalculated(newRoute: Boolean, showToast: ValueHolder<Boolean>) {
+        if (routingHelper.appMode != ApplicationMode.BOAT) {
+            NauticalPlugin.autopilot?.stopNavigation()
+            NauticalPlugin.engine?.clearRoute()
+            return
+        }
         updateAutopilot()
     }
 

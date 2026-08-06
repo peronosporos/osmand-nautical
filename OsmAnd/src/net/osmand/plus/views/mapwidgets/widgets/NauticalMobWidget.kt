@@ -4,7 +4,6 @@ import android.view.View
 import androidx.core.content.ContextCompat
 import net.osmand.plus.R
 import net.osmand.plus.activities.MapActivity
-import net.osmand.plus.plugins.nautical.NauticalPlugin
 import net.osmand.plus.views.layers.base.OsmandMapLayer
 import net.osmand.plus.views.mapwidgets.WidgetType
 import net.osmand.plus.views.mapwidgets.WidgetsPanel
@@ -23,7 +22,7 @@ class NauticalMobWidget(
         val color = if (isActive) {
             ContextCompat.getColor(app, R.color.text_color_negative) // Emergency Red
         } else {
-            ContextCompat.getColor(app, R.color.color_unknown) // Neutral Grey
+            ContextCompat.getColor(app, R.color.map_widget_icon_color)
         }
         setImageDrawable(iconsCache.getPaintedIcon(R.drawable.ic_action_alert, color))
     }
@@ -32,12 +31,18 @@ class NauticalMobWidget(
         super.setupView(view)
         view.setOnClickListener {
             val isActive = settings.NAUTICAL_MOB_ACTIVE.get()
+            if (isActive) {
+                // Clear MOB
+                settings.NAUTICAL_MOB_ACTIVE.set(false)
+                updateInfo(null)
+            }
+        }
+        view.setOnLongClickListener {
+            val isActive = settings.NAUTICAL_MOB_ACTIVE.get()
             if (!isActive) {
                 // Trigger MOB
                 mapActivity.app.runInUIThread {
                     mapActivity.app.showToastMessage(R.string.nautical_mob_label)
-                    // We assume there is a way to trigger MOB in the plugin or settings
-                    // For now, let's just toggle the setting if it exists
                     settings.NAUTICAL_MOB_ACTIVE.set(true)
                     val loc = mapActivity.app.locationProvider.lastKnownLocation
                     if (loc != null) {
@@ -46,11 +51,11 @@ class NauticalMobWidget(
                         settings.NAUTICAL_MOB_TIMESTAMP.set(System.currentTimeMillis())
                     }
                 }
+                updateInfo(null)
+                true
             } else {
-                // Clear MOB
-                settings.NAUTICAL_MOB_ACTIVE.set(false)
+                false
             }
-            updateInfo(null)
         }
     }
 

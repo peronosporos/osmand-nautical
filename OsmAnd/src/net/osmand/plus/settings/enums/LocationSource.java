@@ -10,7 +10,8 @@ import net.osmand.plus.R;
 public enum LocationSource {
 
 	GOOGLE_PLAY_SERVICES(R.string.google_play_services),
-	ANDROID_API(R.string.android_api);
+	ANDROID_API(R.string.android_api),
+	EXTERNAL_SIGNALK(R.string.nautical_nmea_source_signalk);
 
 	@StringRes
 	public final int nameId;

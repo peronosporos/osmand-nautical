@@ -1,92 +1,215 @@
 package net.osmand.plus.plugins.nautical.engine
 
+import android.content.Context
+import android.util.JsonReader
+import android.util.JsonToken
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineExceptionHandler
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
+import net.osmand.Location
 import net.osmand.PlatformUtil
-import kotlinx.coroutines.*
-import kotlin.time.Duration.Companion.milliseconds
+import net.osmand.plus.OsmandApplication
+import net.osmand.plus.R
+import net.osmand.plus.plugins.nautical.NauticalPlugin
+import net.osmand.plus.plugins.nautical.utils.TemporalUtils
+import net.osmand.plus.settings.enums.TtwMode
+import net.osmand.plus.settings.enums.XteDirection
+import net.osmand.shared.aistracker.AisObject
+import net.osmand.shared.extensions.toRadians
 import net.osmand.shared.util.KMapUtils
+import com.auth0.jwt.JWT
+import com.auth0.jwt.exceptions.JWTDecodeException
 import org.json.JSONArray
 import org.json.JSONObject
-import java.util.*
-import java.util.concurrent.ConcurrentHashMap
-import kotlin.math.*
-import android.content.Context
 import java.io.File
 import java.io.ObjectInputStream
-import java.io.Serializable
+import java.io.StringReader
+import java.util.Locale
+import java.util.concurrent.ConcurrentHashMap
+import kotlin.math.PI
+import kotlin.math.abs
+import kotlin.math.absoluteValue
+import kotlin.math.asin
+import kotlin.math.atan2
+import kotlin.math.cos
+import kotlin.math.sin
+import kotlin.math.sqrt
+import kotlin.time.Duration.Companion.milliseconds
 
-class SignalKEngine {
+class SignalKEngine(
+    private val app: OsmandApplication,
+    val engineScope: CoroutineScope,
+    val capabilityManager: CapabilityManager? = null
+) {
     private val log = PlatformUtil.getLog(SignalKEngine::class.java)
-    val dataBroker = SignalKDataBroker()
+    val dataBroker = SignalKDataBroker(app.settings)
+    val controlManager = SignalKControlManager(app, dataBroker, engineScope)
+    val resourceManager = SignalKResourceManager(app, engineScope)
+    var environmentalFilterService: EnvironmentalFilterService? = null
 
-    @Volatile
-    private var _currentState: MarineState? = null
-    private val aisCache = ConcurrentHashMap<Int, AisTarget>()
+    private val engineExceptionHandler = CoroutineExceptionHandler { _, throwable ->
+        log.error("SignalKEngine Global Error: ${throwable.message}", throwable)
+    }
 
-    private val stateLock = Any()
+    // Isolated scope for background parsing tasks to prevent ripple failures
+    private val parsingScope = CoroutineScope(Dispatchers.Default + SupervisorJob() + engineExceptionHandler)
+
+    private val messageChannel = kotlinx.coroutines.channels.Channel<String>(capacity = 128)
+    private var messageProcessingJob: Job? = null
+
+    val marineStateFlow: StateFlow<MarineState> = dataBroker.marineState
+
+    private val _pulseFlow = MutableStateFlow(false)
+    val pulseFlow: StateFlow<Boolean> = _pulseFlow.asStateFlow()
+
+    val aisCache = ConcurrentHashMap<Int, AisObject>()
 
     var onConnectionLost: (() -> Unit)? = null
     var onConnectionError: (() -> Unit)? = null
+    var onAuthError: (() -> Unit)? = null
     var onConnectionRestored: (() -> Unit)? = null
-    var onRouteStepProcessed: (() -> Unit)? = null
+    private val routeStepListeners = java.util.concurrent.CopyOnWriteArraySet<() -> Unit>()
     var deltaSender: ((String) -> Unit)? = null
 
     private val stateListeners = java.util.concurrent.CopyOnWriteArraySet<(MarineState) -> Unit>()
-    private var aisListener: ((AisTarget) -> Unit)? = null
+    private var aisListener: ((AisObject) -> Unit)? = null
+    private val deltaQueue = mutableMapOf<String, Any>()
+    private var deltaFlushJob: Job? = null
 
     private var trueSelfContext: String = "vessels.self"
     private var watchdogJob: Job? = null
     private var cleanupJob: Job? = null
+    private var pulseJob: Job? = null
+    @Volatile
     private var lastUpdateTimestamp: Long = 0
+    private var lastMessageProcessedTime: Long = 0
 
-    private val engineScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
-    private val depthBuffer = CircularBuffer<Pair<Double, Long>>(3600)
-    private val windBuffer = CircularBuffer<Pair<Double, Long>>(3600)
-    private val windDirectionBuffer = CircularBuffer<Pair<Double, Long>>(3600)
-    private val vmgBuffer = CircularBuffer<Pair<Double, Long>>(3600)
-    private val cogBuffer = CircularBuffer<Pair<Double, Long>>(3600)
-    private val sogBuffer = CircularBuffer<Pair<Double, Long>>(3600)
-    private val stwBuffer = CircularBuffer<Pair<Double, Long>>(3600)
-    private val rpmBuffer = CircularBuffer<Pair<Double, Long>>(3600)
-    private val tempEngineBuffer = CircularBuffer<Pair<Double, Long>>(3600)
-    private val voltBuffer = CircularBuffer<Pair<Double, Long>>(3600)
-    private val socBuffer = CircularBuffer<Pair<Double, Long>>(3600)
-    private val xteBuffer = CircularBuffer<Pair<Double, Long>>(3600)
-    private val waterTempBuffer = CircularBuffer<Pair<Double, Long>>(3600)
-    private val outsideTempBuffer = CircularBuffer<Pair<Double, Long>>(3600)
-    private val pressureBuffer = CircularBuffer<Pair<Double, Long>>(3600)
-    private val driftBuffer = CircularBuffer<Pair<Double, Long>>(3600)
-    private val setTrueBuffer = CircularBuffer<Pair<Double, Long>>(3600)
-    private val rollBuffer = CircularBuffer<Pair<Double, Long>>(3600)
-    private val pitchBuffer = CircularBuffer<Pair<Double, Long>>(3600)
-    private val awaBuffer = CircularBuffer<Pair<Double, Long>>(3600)
-    private val awsBuffer = CircularBuffer<Pair<Double, Long>>(3600)
-    private val twaBuffer = CircularBuffer<Pair<Double, Long>>(3600)
-    private val rotBuffer = CircularBuffer<Pair<Double, Long>>(3600)
-    private val ttwBuffer = CircularBuffer<Pair<Double, Long>>(3600)
-    private val dtwBuffer = CircularBuffer<Pair<Double, Long>>(3600)
-    private val polarRatioBuffer = CircularBuffer<Pair<Double, Long>>(3600)
-    private val magHdgBuffer = CircularBuffer<Pair<Double, Long>>(3600)
-    private val logBuffer = CircularBuffer<Pair<Double, Long>>(3600)
-    private val tripLogBuffer = CircularBuffer<Pair<Double, Long>>(3600)
-    private val depthKeelBuffer = CircularBuffer<Pair<Double, Long>>(3600)
-    private val fuelBuffer = CircularBuffer<Pair<Double, Long>>(3600)
-    private val freshWaterBuffer = CircularBuffer<Pair<Double, Long>>(3600)
-    private val wasteBuffer = CircularBuffer<Pair<Double, Long>>(3600)
-    private val oilPressureBuffer = CircularBuffer<Pair<Double, Long>>(3600)
-    private val engineLoadBuffer = CircularBuffer<Pair<Double, Long>>(3600)
-    private val coolantTempBuffer = CircularBuffer<Pair<Double, Long>>(3600)
-    private val batteryCurrentBuffer = CircularBuffer<Pair<Double, Long>>(3600)
-    private val solarCurrentBuffer = CircularBuffer<Pair<Double, Long>>(3600)
-    private val twdBuffer = CircularBuffer<Pair<Double, Long>>(3600)
+    private val telemetryBuffers = ConcurrentHashMap<String, CircularBuffer<Pair<Double, Long>>>()
+
+    private fun getBuffer(path: String): CircularBuffer<Pair<Double, Long>> {
+        val caps = capabilityManager?.capabilities?.value ?: CapabilityManager.ServerCapabilityMap()
+        val capacity = if (caps.hasHistory || caps.hasLogging) 60 else 3600
+        return telemetryBuffers.getOrPut(path) { CircularBuffer(capacity) }
+    }
+
     private val trajectoryBuffer = CircularBuffer<Pair<Double, Double>>(1000)
     private val routeQueue = java.util.concurrent.ConcurrentLinkedQueue<Pair<Double, Double>>()
+    private var lastWaypointLat: Double? = null
+    private var lastWaypointLon: Double? = null
     var isFollowingRoute: Boolean = false
         private set
 
     var xteThresholdNm: Double = 0.1
     var vesselDraft: Double = 0.0
+    var corridorWidthNm: Double = 0.5
+    var safetyCorridorBufferNm: Double = 0.1
+    var arrivalRadiusMeters: Double = 50.0
 
-    fun getCurrentState(): MarineState? = _currentState
+    init {
+        val settings = app.settings
+        xteThresholdNm = settings.NAUTICAL_XTE_THRESHOLD.get().toDouble()
+        vesselDraft = settings.NAUTICAL_VESSEL_DRAFT.get().toDouble()
+        corridorWidthNm = settings.NAUTICAL_CORRIDOR_WIDTH.get().toDouble()
+        safetyCorridorBufferNm = settings.NAUTICAL_SAFETY_CORRIDOR_BUFFER.get().toDouble()
+        arrivalRadiusMeters = settings.NAUTICAL_ARRIVAL_RADIUS.get().toDouble()
+
+        engineScope.launch {
+            capabilityManager?.capabilities?.collect { caps ->
+                val newCapacity = if (caps.hasHistory || caps.hasLogging) 60 else 3600
+                telemetryBuffers.values.forEach { it.setCapacity(newCapacity) }
+            }
+        }
+
+        startMessageProcessing()
+    }
+
+    private fun startMessageProcessing() {
+        messageProcessingJob?.cancel()
+        messageProcessingJob = parsingScope.launch {
+            for (message in messageChannel) {
+                processJsonMessage(message)
+            }
+        }
+    }
+
+    private fun processJsonMessage(jsonMessage: String) {
+        val reader = JsonReader(StringReader(jsonMessage))
+        try {
+            reader.beginObject()
+            var context: String? = null
+            var isHello = false
+
+            while (reader.hasNext()) {
+                val name = reader.nextName()
+                when (name) {
+                    "self" -> {
+                        trueSelfContext = reader.nextString()
+                        handleSelfIdentity(trueSelfContext)
+                        isHello = true
+                    }
+                    "context" -> context = reader.nextString()
+                    "updates" -> {
+                        if (isHello) {
+                            reader.skipValue()
+                        } else {
+                            processUpdates(reader, context ?: "vessels.self")
+                        }
+                    }
+                    else -> reader.skipValue()
+                }
+            }
+            reader.endObject()
+        } catch (e: Exception) {
+            log.error("JsonReader error: ${e.message}")
+        } finally {
+            try { reader.close() } catch (_: Exception) {}
+        }
+    }
+
+    fun getCurrentState(): MarineState = dataBroker.marineState.value
+
+    fun getRestService(): net.osmand.plus.plugins.nautical.network.SignalKRestService? {
+        val plugin = NauticalPlugin.getInstance() ?: return null
+        val client = plugin.okHttpClient ?: return null
+        val ip = app.settings.NAUTICAL_SERVER_IP.get()
+        val port = app.settings.NAUTICAL_SERVER_PORT.get()
+        if (ip.isEmpty()) return null
+
+        val protocol = if (app.settings.NAUTICAL_USE_SECURE_CONNECTION.get()) "https" else "http"
+        return net.osmand.plus.plugins.nautical.network.SignalKRestService.create("$protocol://$ip:$port", client)
+    }
+
+    fun setSwitch(path: String, state: Boolean) = controlManager.setSwitchState(path, state)
+    fun setAutopilotMode(mode: String) = controlManager.setAutopilotMode(mode)
+    fun setAutopilotHeading(radians: Double) = controlManager.setAutopilotTargetHeading(radians)
+    fun setAutopilotHeadingMagnetic(radians: Double) = controlManager.setAutopilotTargetHeadingMagnetic(radians)
+    fun acknowledgeNotification(path: String) = controlManager.acknowledgeNotification(path)
+
+    fun setAnchor(lat: Double, lon: Double, radius: Double) = controlManager.setAnchor(lat, lon, radius)
+    fun disarmAnchor() = controlManager.disarmAnchor()
+
+    fun clearBuffers(context: Context) {
+        telemetryBuffers.clear()
+        trajectoryBuffer.clear()
+        val binFile = File(context.filesDir, "nautical_history.bin")
+        if (binFile.exists()) binFile.delete()
+        val jsonFile = File(context.filesDir, "nautical_history.json")
+        if (jsonFile.exists()) jsonFile.delete()
+        log.info("SignalK historical buffers cleared from disk and memory.")
+    }
 
     @Synchronized
     fun stop() {
@@ -94,105 +217,91 @@ class SignalKEngine {
         watchdogJob = null
         cleanupJob?.cancel()
         cleanupJob = null
+        pulseJob?.cancel()
+        pulseJob = null
+        deltaFlushJob?.cancel()
+        deltaFlushJob = null
+        messageProcessingJob?.cancel()
+        messageProcessingJob = null
+        messageChannel.close()
+        parsingScope.cancel()
+        resourceManager.stopSync()
         onConnectionLost = null
         onConnectionError = null
         onConnectionRestored = null
-        onRouteStepProcessed = null
-        dataBroker.stop()
-        engineScope.cancel()
+        routeStepListeners.clear()
         stateListeners.clear()
+        dataBroker.stop()
         aisListener = null
         aisCache.clear()
         routeQueue.clear()
-        _currentState = null
         isFollowingRoute = false
     }
 
-    @OptIn(DelicateCoroutinesApi::class)
-    fun saveBuffersToDisk(context: Context, sync: Boolean = false) {
-        val saveAction = suspend {
-            val root = JSONObject()
-            
-            fun bufferToJson(buffer: CircularBuffer<Pair<Double, Long>>): JSONArray {
-                val array = JSONArray()
-                buffer.getAll().forEach { (value, time) ->
-                    val obj = JSONObject()
-                    obj.put("v", value)
-                    obj.put("t", time)
-                    array.put(obj)
+    suspend fun saveBuffersToDisk(context: Context) = withContext(Dispatchers.IO + NonCancellable) {
+        val file = File(context.filesDir, "nautical_history.bin")
+        try {
+            java.io.DataOutputStream(file.outputStream().buffered()).use { dos ->
+                dos.writeInt(2) // Version
+
+                fun writeBuffer(path: String) {
+                    val buffer = telemetryBuffers[path] ?: return
+                    val all = buffer.getAll()
+                    if (all.isEmpty()) return
+                    
+                    dos.writeUTF(path)
+                    dos.writeInt(all.size)
+                    all.forEach { (v, t) ->
+                        dos.writeDouble(v)
+                        dos.writeLong(t)
+                    }
                 }
-                return array
-            }
 
-            root.put("depth", bufferToJson(depthBuffer))
-            root.put("wind", bufferToJson(windBuffer))
-            root.put("wind_dir", bufferToJson(windDirectionBuffer))
-            root.put("vmg", bufferToJson(vmgBuffer))
-            root.put("cog", bufferToJson(cogBuffer))
-            root.put("sog", bufferToJson(sogBuffer))
-            root.put("stw", bufferToJson(stwBuffer))
-            root.put("rpm", bufferToJson(rpmBuffer))
-            root.put("temp_eng", bufferToJson(tempEngineBuffer))
-            root.put("volt", bufferToJson(voltBuffer))
-            root.put("soc", bufferToJson(socBuffer))
-            root.put("xte", bufferToJson(xteBuffer))
-            root.put("water_temp", bufferToJson(waterTempBuffer))
-            root.put("outside_temp", bufferToJson(outsideTempBuffer))
-            root.put("pressure", bufferToJson(pressureBuffer))
-            root.put("drift", bufferToJson(driftBuffer))
-            root.put("set_true", bufferToJson(setTrueBuffer))
-            root.put("roll", bufferToJson(rollBuffer))
-            root.put("pitch", bufferToJson(pitchBuffer))
-            root.put("awa", bufferToJson(awaBuffer))
-            root.put("aws", bufferToJson(awsBuffer))
-            root.put("twa", bufferToJson(twaBuffer))
-            root.put("rot", bufferToJson(rotBuffer))
-            root.put("ttw", bufferToJson(ttwBuffer))
-            root.put("dtw", bufferToJson(dtwBuffer))
-            root.put("polar_ratio", bufferToJson(polarRatioBuffer))
-            root.put("mag_hdg", bufferToJson(magHdgBuffer))
-            root.put("log", bufferToJson(logBuffer))
-            root.put("trip_log", bufferToJson(tripLogBuffer))
-            root.put("depth_keel", bufferToJson(depthKeelBuffer))
-            root.put("fuel", bufferToJson(fuelBuffer))
-            root.put("fresh_water", bufferToJson(freshWaterBuffer))
-            root.put("waste", bufferToJson(wasteBuffer))
-            root.put("oil_pressure", bufferToJson(oilPressureBuffer))
-            root.put("engine_load", bufferToJson(engineLoadBuffer))
-            root.put("coolant_temp", bufferToJson(coolantTempBuffer))
-            root.put("battery_current", bufferToJson(batteryCurrentBuffer))
-            root.put("solar_current", bufferToJson(solarCurrentBuffer))
-            root.put("twd", bufferToJson(twdBuffer))
+                dos.writeInt(telemetryBuffers.size)
+                telemetryBuffers.keys.forEach { writeBuffer(it) }
 
-            val trajectoryArray = JSONArray()
-            trajectoryBuffer.getAll().forEach { (lat, lon) ->
-                val obj = JSONObject()
-                obj.put("lat", lat)
-                obj.put("lon", lon)
-                trajectoryArray.put(obj)
-            }
-            root.put("trajectory", trajectoryArray)
-
-            withContext(NonCancellable + Dispatchers.IO) {
-                try {
-                    val file = File(context.filesDir, "nautical_history.json")
-                    file.writeText(root.toString())
-                    File(context.filesDir, "nautical_history.dat").delete()
-                } catch (e: Exception) {
-                    log.error("Failed to save history: ${e.message}")
+                val trajectory = trajectoryBuffer.getAll()
+                dos.writeInt(trajectory.size)
+                trajectory.forEach { (lat, lon) ->
+                    dos.writeDouble(lat)
+                    dos.writeDouble(lon)
                 }
             }
-        }
-
-        if (sync) {
-            runBlocking { saveAction() }
-        } else {
-            engineScope.launch(Dispatchers.IO) { saveAction() }
+            File(context.filesDir, "nautical_history.json").delete()
+        } catch (e: Exception) {
+            log.error("Failed to save history: ${e.message}")
         }
     }
 
-    @Suppress("UNCHECKED_CAST")
     suspend fun loadBuffersFromDisk(context: Context) = withContext(Dispatchers.IO) {
+        val binFile = File(context.filesDir, "nautical_history.bin")
+        if (binFile.exists()) {
+            try {
+                java.io.DataInputStream(binFile.inputStream().buffered()).use { dis ->
+                    val version = dis.readInt()
+                    if (version == 2) {
+                        val bufferCount = dis.readInt()
+                        repeat(bufferCount) {
+                            val path = dis.readUTF()
+                            val size = dis.readInt()
+                            val buffer = getBuffer(path)
+                            repeat(size) {
+                                buffer.add(Pair(dis.readDouble(), dis.readLong()))
+                            }
+                        }
+
+                        val tSize = dis.readInt()
+                        repeat(tSize) {
+                            trajectoryBuffer.add(Pair(dis.readDouble(), dis.readDouble()))
+                        }
+                        return@withContext
+                    }
+                }
+            } catch (e: Exception) {
+                log.error("Failed to load binary history: ${e.message}")
+            }
+        }
+
         val file = File(context.filesDir, "nautical_history.json")
         if (!file.exists()) {
             loadLegacyBuffers(context)
@@ -201,53 +310,54 @@ class SignalKEngine {
         try {
             val root = JSONObject(file.readText())
             
-            fun jsonToBuffer(key: String, buffer: CircularBuffer<Pair<Double, Long>>) {
+            fun jsonToBuffer(key: String, path: String) {
                 val array = root.optJSONArray(key) ?: return
+                val buffer = getBuffer(path)
                 for (i in 0 until array.length()) {
                     val obj = array.getJSONObject(i)
                     buffer.add(Pair(obj.getDouble("v"), obj.getLong("t")))
                 }
             }
 
-            jsonToBuffer("depth", depthBuffer)
-            jsonToBuffer("wind", windBuffer)
-            jsonToBuffer("wind_dir", windDirectionBuffer)
-            jsonToBuffer("vmg", vmgBuffer)
-            jsonToBuffer("cog", cogBuffer)
-            jsonToBuffer("sog", sogBuffer)
-            jsonToBuffer("stw", stwBuffer)
-            jsonToBuffer("rpm", rpmBuffer)
-            jsonToBuffer("temp_eng", tempEngineBuffer)
-            jsonToBuffer("volt", voltBuffer)
-            jsonToBuffer("soc", socBuffer)
-            jsonToBuffer("xte", xteBuffer)
-            jsonToBuffer("water_temp", waterTempBuffer)
-            jsonToBuffer("outside_temp", outsideTempBuffer)
-            jsonToBuffer("pressure", pressureBuffer)
-            jsonToBuffer("drift", driftBuffer)
-            jsonToBuffer("set_true", setTrueBuffer)
-            jsonToBuffer("roll", rollBuffer)
-            jsonToBuffer("pitch", pitchBuffer)
-            jsonToBuffer("awa", awaBuffer)
-            jsonToBuffer("aws", awsBuffer)
-            jsonToBuffer("twa", twaBuffer)
-            jsonToBuffer("rot", rotBuffer)
-            jsonToBuffer("ttw", ttwBuffer)
-            jsonToBuffer("dtw", dtwBuffer)
-            jsonToBuffer("polar_ratio", polarRatioBuffer)
-            jsonToBuffer("mag_hdg", magHdgBuffer)
-            jsonToBuffer("log", logBuffer)
-            jsonToBuffer("trip_log", tripLogBuffer)
-            jsonToBuffer("depth_keel", depthKeelBuffer)
-            jsonToBuffer("fuel", fuelBuffer)
-            jsonToBuffer("fresh_water", freshWaterBuffer)
-            jsonToBuffer("waste", wasteBuffer)
-            jsonToBuffer("oil_pressure", oilPressureBuffer)
-            jsonToBuffer("engine_load", engineLoadBuffer)
-            jsonToBuffer("coolant_temp", coolantTempBuffer)
-            jsonToBuffer("battery_current", batteryCurrentBuffer)
-            jsonToBuffer("solar_current", solarCurrentBuffer)
-            jsonToBuffer("twd", twdBuffer)
+            jsonToBuffer("depth", SignalKPaths.ENV_DEPTH_BELOW_TRANSDUCER)
+            jsonToBuffer("wind", SignalKPaths.ENV_WIND_SPEED_TRUE)
+            jsonToBuffer("wind_dir", SignalKPaths.ENV_WIND_DIRECTION_TRUE)
+            jsonToBuffer("vmg", SignalKPaths.PERF_VMG)
+            jsonToBuffer("cog", SignalKPaths.NAV_COURSE_OVER_GROUND)
+            jsonToBuffer("sog", SignalKPaths.NAV_SPEED_OVER_GROUND)
+            jsonToBuffer("stw", SignalKPaths.NAV_SPEED_THROUGH_WATER)
+            jsonToBuffer("rpm", SignalKPaths.PROPULSION_PREFIX + "0.revolutions")
+            jsonToBuffer("temp_eng", SignalKPaths.PROPULSION_PREFIX + "0.temperature")
+            jsonToBuffer("volt", SignalKPaths.BATTERIES_PREFIX + "0.voltage")
+            jsonToBuffer("soc", SignalKPaths.BATTERIES_PREFIX + "0.capacity.stateOfCharge")
+            jsonToBuffer("xte", SignalKPaths.NAV_XTE)
+            jsonToBuffer("water_temp", SignalKPaths.ENV_WATER_TEMP)
+            jsonToBuffer("outside_temp", SignalKPaths.ENV_OUTSIDE_TEMP)
+            jsonToBuffer("pressure", SignalKPaths.ENV_OUTSIDE_PRESSURE)
+            jsonToBuffer("drift", SignalKPaths.NAV_DRIFT)
+            jsonToBuffer("set_true", SignalKPaths.NAV_SET_TRUE)
+            jsonToBuffer("roll", SignalKPaths.NAV_ATTITUDE + ".roll")
+            jsonToBuffer("pitch", SignalKPaths.NAV_ATTITUDE + ".pitch")
+            jsonToBuffer("awa", SignalKPaths.ENV_WIND_ANGLE_APPARENT)
+            jsonToBuffer("aws", SignalKPaths.ENV_WIND_SPEED_APPARENT)
+            jsonToBuffer("twa", SignalKPaths.ENV_WIND_ANGLE_TRUE)
+            jsonToBuffer("rot", SignalKPaths.NAV_RATE_OF_TURN)
+            jsonToBuffer("ttw", SignalKPaths.NAV_TTW)
+            jsonToBuffer("dtw", SignalKPaths.NAV_DTW)
+            jsonToBuffer("polar_ratio", SignalKPaths.PERF_POLAR_RATIO)
+            jsonToBuffer("mag_hdg", SignalKPaths.NAV_HEADING_MAG)
+            jsonToBuffer("log", SignalKPaths.NAV_LOG)
+            jsonToBuffer("trip_log", SignalKPaths.NAV_TRIP_LOG)
+            jsonToBuffer("depth_keel", SignalKPaths.ENV_DEPTH_BELOW_KEEL)
+            jsonToBuffer("fuel", SignalKPaths.TANKS_PREFIX + "fuel.0.currentLevel")
+            jsonToBuffer("fresh_water", SignalKPaths.TANKS_PREFIX + "freshWater.0.currentLevel")
+            jsonToBuffer("waste", SignalKPaths.TANKS_PREFIX + "wasteWater.0.currentLevel")
+            jsonToBuffer("oil_pressure", SignalKPaths.PROPULSION_PREFIX + "0.oilPressure")
+            jsonToBuffer("engine_load", SignalKPaths.PROPULSION_PREFIX + "0.engineLoad")
+            jsonToBuffer("coolant_temp", SignalKPaths.PROPULSION_PREFIX + "0.coolantTemperature")
+            jsonToBuffer("battery_current", SignalKPaths.BATTERIES_PREFIX + "0.current")
+            jsonToBuffer("solar_current", SignalKPaths.ELECTRICAL_PREFIX + "solar.0.current")
+            jsonToBuffer("twd", SignalKPaths.NAV_TWD)
 
             val trajectoryArray = root.optJSONArray("trajectory")
             if (trajectoryArray != null) {
@@ -270,59 +380,67 @@ class SignalKEngine {
                     val data = ois.readObject()
                     if (data is Collection<*>) {
                         data.forEach { item ->
-                            @Suppress("UNCHECKED_CAST")
                             when {
-                                fileName == "trajectory_buffer.dat" && item is Pair<*, *> -> action(item as T)
-                                item is Pair<*, *> -> action(item as T)
-                                item is Double -> action(Pair(item, System.currentTimeMillis()) as T)
+                                fileName == "trajectory_buffer.dat" && item is Pair<*, *> -> {
+                                    @Suppress("UNCHECKED_CAST")
+                                    action(item as T)
+                                }
+                                item is Pair<*, *> -> {
+                                    @Suppress("UNCHECKED_CAST")
+                                    action(item as T)
+                                }
+                                item is Double -> {
+                                    @Suppress("UNCHECKED_CAST")
+                                    action(Pair(item, TemporalUtils.now()) as T)
+                                }
                             }
                         }
                     }
                 }
-                file.delete() // Clean up legacy file
+                file.delete()
             } catch (e: Exception) {
                 log.error("Failed to load $fileName: ${e.message}")
             }
         }
 
-        load<Pair<Double, Long>>("depth_buffer.dat") { depthBuffer.add(it) }
-        load<Pair<Double, Long>>("wind_buffer.dat") { windBuffer.add(it) }
-        load<Pair<Double, Long>>("wind_direction_buffer.dat") { windDirectionBuffer.add(it) }
-        load<Pair<Double, Long>>("vmg_buffer.dat") { vmgBuffer.add(it) }
-        load<Pair<Double, Long>>("cog_buffer.dat") { cogBuffer.add(it) }
-        load<Pair<Double, Long>>("sog_buffer.dat") { sogBuffer.add(it) }
-        load<Pair<Double, Long>>("stw_buffer.dat") { stwBuffer.add(it) }
-        load<Pair<Double, Long>>("rpm_buffer.dat") { rpmBuffer.add(it) }
-        load<Pair<Double, Long>>("temp_engine_buffer.dat") { tempEngineBuffer.add(it) }
-        load<Pair<Double, Long>>("volt_buffer.dat") { voltBuffer.add(it) }
-        load<Pair<Double, Long>>("soc_buffer.dat") { socBuffer.add(it) }
-        load<Pair<Double, Long>>("xte_buffer.dat") { xteBuffer.add(it) }
-        load<Pair<Double, Long>>("water_temp_buffer.dat") { waterTempBuffer.add(it) }
-        load<Pair<Double, Long>>("outside_temp_buffer.dat") { outsideTempBuffer.add(it) }
-        load<Pair<Double, Long>>("pressure_buffer.dat") { pressureBuffer.add(it) }
-        load<Pair<Double, Long>>("drift_buffer.dat") { driftBuffer.add(it) }
-        load<Pair<Double, Long>>("set_true_buffer.dat") { setTrueBuffer.add(it) }
-        load<Pair<Double, Long>>("roll_buffer.dat") { rollBuffer.add(it) }
-        load<Pair<Double, Long>>("pitch_buffer.dat") { pitchBuffer.add(it) }
-        load<Pair<Double, Long>>("awa_buffer.dat") { awaBuffer.add(it) }
-        load<Pair<Double, Long>>("aws_buffer.dat") { awsBuffer.add(it) }
-        load<Pair<Double, Long>>("twa_buffer.dat") { twaBuffer.add(it) }
-        load<Pair<Double, Long>>("rot_buffer.dat") { rotBuffer.add(it) }
-        load<Pair<Double, Long>>("ttw_buffer.dat") { ttwBuffer.add(it) }
-        load<Pair<Double, Long>>("dtw_buffer.dat") { dtwBuffer.add(it) }
-        load<Pair<Double, Long>>("polar_ratio_buffer.dat") { polarRatioBuffer.add(it) }
-        load<Pair<Double, Long>>("mag_hdg_buffer.dat") { magHdgBuffer.add(it) }
-        load<Pair<Double, Long>>("log_buffer.dat") { logBuffer.add(it) }
-        load<Pair<Double, Long>>("trip_log_buffer.dat") { tripLogBuffer.add(it) }
-        load<Pair<Double, Long>>("depth_keel_buffer.dat") { depthKeelBuffer.add(it) }
-        load<Pair<Double, Long>>("fuel_buffer.dat") { fuelBuffer.add(it) }
-        load<Pair<Double, Long>>("fresh_water_buffer.dat") { freshWaterBuffer.add(it) }
-        load<Pair<Double, Long>>("waste_buffer.dat") { wasteBuffer.add(it) }
-        load<Pair<Double, Long>>("oil_pressure_buffer.dat") { oilPressureBuffer.add(it) }
-        load<Pair<Double, Long>>("engine_load_buffer.dat") { engineLoadBuffer.add(it) }
-        load<Pair<Double, Long>>("battery_current_buffer.dat") { batteryCurrentBuffer.add(it) }
-        load<Pair<Double, Long>>("solar_current_buffer.dat") { solarCurrentBuffer.add(it) }
-        load<Pair<Double, Long>>("twd_buffer.dat") { twdBuffer.add(it) }
+        load<Pair<Double, Long>>("depth_buffer.dat") { getBuffer("environment.depth.belowTransducer").add(it) }
+        load<Pair<Double, Long>>("wind_buffer.dat") { getBuffer("environment.wind.speedTrue").add(it) }
+        load<Pair<Double, Long>>("wind_direction_buffer.dat") { getBuffer("environment.wind.directionTrue").add(it) }
+        load<Pair<Double, Long>>("vmg_buffer.dat") { getBuffer("performance.velocityMadeGood").add(it) }
+        load<Pair<Double, Long>>("cog_buffer.dat") { getBuffer("navigation.courseOverGroundTrue").add(it) }
+        load<Pair<Double, Long>>("sog_buffer.dat") { getBuffer("navigation.speedOverGround").add(it) }
+        load<Pair<Double, Long>>("stw_buffer.dat") { getBuffer("navigation.speedThroughWater").add(it) }
+        load<Pair<Double, Long>>("rpm_buffer.dat") { getBuffer("propulsion.0.revolutions").add(it) }
+        load<Pair<Double, Long>>("temp_engine_buffer.dat") { getBuffer("propulsion.0.temperature").add(it) }
+        load<Pair<Double, Long>>("volt_buffer.dat") { getBuffer("electrical.batteries.0.voltage").add(it) }
+        load<Pair<Double, Long>>("soc_buffer.dat") { getBuffer("electrical.batteries.0.capacity.stateOfCharge").add(it) }
+        load<Pair<Double, Long>>("xte_buffer.dat") { getBuffer("navigation.crossTrackError").add(it) }
+        load<Pair<Double, Long>>("water_temp_buffer.dat") { getBuffer("environment.water.temperature").add(it) }
+        load<Pair<Double, Long>>("outside_temp_buffer.dat") { getBuffer("environment.outside.temperature").add(it) }
+        load<Pair<Double, Long>>("pressure_buffer.dat") { getBuffer("environment.outside.pressure").add(it) }
+        load<Pair<Double, Long>>("drift_buffer.dat") { getBuffer("navigation.drift").add(it) }
+        load<Pair<Double, Long>>("set_true_buffer.dat") { getBuffer("navigation.setTrue").add(it) }
+        load<Pair<Double, Long>>("roll_buffer.dat") { getBuffer("navigation.attitude.roll").add(it) }
+        load<Pair<Double, Long>>("pitch_buffer.dat") { getBuffer("navigation.attitude.pitch").add(it) }
+        load<Pair<Double, Long>>("awa_buffer.dat") { getBuffer("environment.wind.angleApparent").add(it) }
+        load<Pair<Double, Long>>("aws_buffer.dat") { getBuffer("environment.wind.speedApparent").add(it) }
+        load<Pair<Double, Long>>("twa_buffer.dat") { getBuffer("environment.wind.angleTrue").add(it) }
+        load<Pair<Double, Long>>("rot_buffer.dat") { getBuffer("navigation.rateOfTurn").add(it) }
+        load<Pair<Double, Long>>("ttw_buffer.dat") { getBuffer("navigation.timeToWaypoint").add(it) }
+        load<Pair<Double, Long>>("dtw_buffer.dat") { getBuffer("navigation.distanceToWaypoint").add(it) }
+        load<Pair<Double, Long>>("polar_ratio_buffer.dat") { getBuffer("performance.polarSpeedRatio").add(it) }
+        load<Pair<Double, Long>>("mag_hdg_buffer.dat") { getBuffer("navigation.headingMagnetic").add(it) }
+        load<Pair<Double, Long>>("log_buffer.dat") { getBuffer("navigation.log").add(it) }
+        load<Pair<Double, Long>>("trip_log_buffer.dat") { getBuffer("navigation.trip.log").add(it) }
+        load<Pair<Double, Long>>("depth_keel_buffer.dat") { getBuffer("environment.depth.belowKeel").add(it) }
+        load<Pair<Double, Long>>("fuel_buffer.dat") { getBuffer("tanks.fuel.0.currentLevel").add(it) }
+        load<Pair<Double, Long>>("fresh_water_buffer.dat") { getBuffer("tanks.freshWater.0.currentLevel").add(it) }
+        load<Pair<Double, Long>>("waste_buffer.dat") { getBuffer("tanks.wasteWater.0.currentLevel").add(it) }
+        load<Pair<Double, Long>>("oil_pressure_buffer.dat") { getBuffer("propulsion.0.oilPressure").add(it) }
+        load<Pair<Double, Long>>("engine_load_buffer.dat") { getBuffer("propulsion.0.engineLoad").add(it) }
+        load<Pair<Double, Long>>("battery_current_buffer.dat") { getBuffer("electrical.batteries.0.current").add(it) }
+        load<Pair<Double, Long>>("solar_current_buffer.dat") { getBuffer("electrical.solar.0.current").add(it) }
+        load<Pair<Double, Long>>("twd_buffer.dat") { getBuffer("navigation.trueWindDirection").add(it) }
         load<Pair<Double, Double>>("trajectory_buffer.dat") { trajectoryBuffer.add(it) }
     }
 
@@ -332,26 +450,273 @@ class SignalKEngine {
         log.info("Route cleared. Manual control engaged.")
     }
 
+    fun refreshVesselState() {
+        engineScope.launch(Dispatchers.IO) {
+            try {
+                val plugin = NauticalPlugin.getInstance() ?: return@launch
+                val client = plugin.okHttpClient ?: return@launch
+                val ip = app.settings.NAUTICAL_SERVER_IP.get()
+                val port = app.settings.NAUTICAL_SERVER_PORT.get()
+                if (ip.isNullOrEmpty()) return@launch
+
+                val protocol = if (app.settings.NAUTICAL_USE_SECURE_CONNECTION.get()) "https" else "http"
+                val baseUrl = "$protocol://$ip:$port"
+                val restService = net.osmand.plus.plugins.nautical.network.SignalKRestService.create(baseUrl, client)
+
+                val response = restService.getVesselSelf()
+                if (response.isSuccessful) {
+                    val body = response.body()
+                    if (body != null) {
+                        processVesselTree(body)
+                        log.info("Nautical: Immediate background state refresh completed via REST.")
+                    }
+                }
+
+                // Course API Reconciliation (v2)
+                val courseResponse = restService.getCourse()
+                if (courseResponse.isSuccessful) {
+                    courseResponse.body()?.let { processCourseObject(it) }
+                }
+
+                // History backfill if supported
+                if (capabilityManager?.capabilities?.value?.hasHistory == true) {
+                    fetchHistoryFromServer(restService)
+                }
+            } catch (e: Exception) {
+                log.error("Nautical: Failed to reconcile state via REST: ${e.message}")
+            }
+        }
+    }
+
+    private suspend fun fetchHistoryFromServer(restService: net.osmand.plus.plugins.nautical.network.SignalKRestService) {
+        try {
+            val paths = listOf(
+                SignalKPaths.ENV_DEPTH_BELOW_KEEL,
+                SignalKPaths.ENV_WIND_ANGLE_APPARENT,
+                SignalKPaths.ENV_WIND_SPEED_APPARENT,
+                SignalKPaths.NAV_SPEED_OVER_GROUND,
+                SignalKPaths.NAV_COURSE_OVER_GROUND,
+                SignalKPaths.NAV_SPEED_THROUGH_WATER
+            ).joinToString(",")
+            
+            // Fetch last 1 hour of data
+            val from = TemporalUtils.formatIso8601(System.currentTimeMillis() - 3600000)
+            
+            val response = restService.getHistoryValues(paths, from)
+            if (response.isSuccessful) {
+                val body = response.body() ?: return
+                // Process historical values and inject into telemetryBuffers
+                body.forEach { (path, valuesObj) ->
+                    if (valuesObj is List<*>) {
+                        val buffer = getBuffer(path)
+                        valuesObj.forEach { item ->
+                            if (item is Map<*, *>) {
+                                val ts = item["timestamp"]?.toString()?.let { 
+                                    TemporalUtils.parseIso8601(it)
+                                } ?: 0L
+                                val value = (item["value"] as? Number)?.toDouble() ?: Double.NaN
+                                if (ts > 0 && !value.isNaN()) {
+                                    buffer.add(Pair(value, ts))
+                                }
+                            }
+                        }
+                    }
+                }
+                log.info("Nautical: History backfill completed for paths: $paths")
+            }
+        } catch (e: Exception) {
+            log.error("Nautical: Failed to fetch history: ${e.message}")
+        }
+    }
+
+    private fun processVesselTree(tree: Map<String, Any>) {
+        var updated = false
+        var current = dataBroker.marineState.value
+
+        fun extractValue(path: String): Any? {
+            val parts = path.split(".")
+            var node: Any? = tree
+            for (part in parts) {
+                node = (node as? Map<*, *>)?.get(part)
+                if (node == null) break
+            }
+            return (node as? Map<*, *>)?.get("value")
+        }
+
+        // Essential Telemetry Reconciliation
+        extractValue(SignalKPaths.NAV_POSITION)?.let { pos ->
+            if (pos is Map<*, *>) {
+                val lat = (pos["latitude"] as? Number)?.toDouble() ?: Double.NaN
+                val lon = (pos["longitude"] as? Number)?.toDouble() ?: Double.NaN
+                if (MarineStateConstants.isValidLat(lat) && MarineStateConstants.isValidLon(lon)) {
+                    current = current.copy(latitude = lat, longitude = lon)
+                    updated = true
+                }
+            }
+        }
+
+        extractValue(SignalKPaths.NAV_SPEED_OVER_GROUND)?.let { sog ->
+            if (sog is Number && MarineStateConstants.isValidSpeed(sog.toDouble())) {
+                current = current.copy(speedOverGround = sog.toDouble())
+                updated = true
+            }
+        }
+
+        extractValue(SignalKPaths.NAV_COURSE_OVER_GROUND)?.let { cog ->
+            if (cog is Number) {
+                current = current.copy(courseOverGroundTrue = cog.toDouble())
+                updated = true
+            }
+        }
+
+        extractValue(SignalKPaths.NAV_HEADING_TRUE)?.let { hdg ->
+            if (hdg is Number) {
+                current = current.copy(headingTrue = hdg.toDouble())
+                updated = true
+            }
+        }
+
+        extractValue(SignalKPaths.ENV_DEPTH_BELOW_KEEL)?.let { depth ->
+            if (depth is Number && MarineStateConstants.isValidDepth(depth.toDouble())) {
+                current = current.copy(depthBelowKeel = depth.toDouble())
+                updated = true
+            }
+        }
+
+        if (updated) {
+            finalizeAndNotifyState(current)
+        }
+    }
+
+    fun isAuthenticated(): Boolean {
+        val useSecure = app.settings.NAUTICAL_USE_SECURE_CONNECTION.get()
+        val token = app.settings.NAUTICAL_SIGNAL_K_AUTH_TOKEN.get()
+        val user = app.settings.NAUTICAL_SERVER_USERNAME.get()
+        val pass = app.settings.NAUTICAL_SERVER_PASSWORD.get()
+        
+        // Command dispatch requires secure transport AND cryptographic JWT verification or valid encrypted credentials
+        if (!useSecure) {
+            log.error("Authentication rejected: Secure connection is required for state mutation commands.")
+            return false
+        }
+
+        if (token.isNotBlank()) {
+            return validateJwtToken(token)
+        }
+
+        return user.isNotBlank() && pass.isNotBlank()
+    }
+
+    private fun validateJwtToken(token: String): Boolean {
+        return try {
+            val jwt = JWT.decode(token)
+            val expiresAt = jwt.expiresAt
+            if (expiresAt != null && expiresAt.before(java.util.Date())) {
+                log.error("JWT token expired at $expiresAt")
+                false
+            } else {
+                true
+            }
+        } catch (e: JWTDecodeException) {
+            log.error("Failed to decode JWT token: ${e.message}")
+            false
+        }
+    }
+
+    private val lastAuthErrorTime = java.util.concurrent.atomic.AtomicLong(0)
+    private fun triggerAuthError() {
+        val now = System.currentTimeMillis()
+        val last = lastAuthErrorTime.get()
+        if (now - last > 5000) {
+            if (lastAuthErrorTime.compareAndSet(last, now)) {
+                engineScope.launch(Dispatchers.Main) {
+                    onAuthError?.invoke()
+                }
+            }
+        }
+    }
+
+    fun sendDelta(path: String, value: Any) {
+        synchronized(deltaQueue) {
+            deltaQueue[path] = value
+            if (deltaFlushJob == null || deltaFlushJob?.isActive == false) {
+                deltaFlushJob = engineScope.launch {
+                    delay(100.milliseconds) // 100ms batching window
+                    flushDeltas()
+                }
+            }
+        }
+    }
+
     fun dispatchCommand(command: String) {
-        log.debug("Dispatching: $command")
+        if (!isAuthenticated()) {
+            log.error("Rejected state mutation command '$command': Session is unauthenticated or insecure!")
+            triggerAuthError()
+            return
+        }
+
+        net.osmand.plus.plugins.nautical.utils.NauticalLog.auditCommand(command)
+        log.debug("Dispatching authenticated command: $command")
         val parts = command.split(":", limit = 2)
         if (parts.size < 2) return
         
         val path = when (parts[0]) {
             "CALIBRATE_COMPASS" -> "steering.autopilot.actions.calibrateCompass"
+            "TARGET_HEADING" -> "steering.autopilot.target.headingTrue"
+            "STATE" -> "steering.autopilot.state"
+            "SWITCH" -> {
+                val subParts = parts[1].split(":", limit = 2)
+                if (subParts.size < 2) return
+                val switchPath = subParts[0]
+                "electrical.switches.$switchPath.state"
+            }
+            "ANCHOR_STATE" -> "steering.anchor.state"
+            "ANCHOR_POS" -> "steering.anchor.position"
+            "NOTIFICATION" -> parts[1].substringBefore(":")
+            "LOGBOOK_ENTRY" -> "notifications.logbook.entry"
+            "MEDIA" -> "entertainment.media.state"
             else -> return
         }
         
-        val value = parts[1]
+        val value = if (parts[0] == "SWITCH") {
+            parts[1].substringAfter(":")
+        } else if (parts[0] == "NOTIFICATION") {
+            parts[1].substringAfter(":")
+        } else {
+            parts[1]
+        }
+        
+        synchronized(deltaQueue) {
+            deltaQueue[path] = value
+            if (deltaFlushJob == null || deltaFlushJob?.isActive == false) {
+                deltaFlushJob = engineScope.launch {
+                    delay(100.milliseconds) // 100ms batching window
+                    flushDeltas()
+                }
+            }
+        }
+    }
+
+    private fun flushDeltas() {
+        val toSend: Map<String, Any>
+        synchronized(deltaQueue) {
+            if (deltaQueue.isEmpty()) return
+            toSend = deltaQueue.toMap()
+            deltaQueue.clear()
+        }
+
+        val valuesJson = toSend.entries.joinToString(",") { (path, value) ->
+            val v = value.toString()
+            val escapedValue = if (v.startsWith("{") || v.startsWith("[")) v else "\"$v\""
+            """{"path": "$path", "value": $escapedValue}"""
+        }
+
         val payload = """
             {
                 "updates": [
                     {
                         "values": [
-                            {
-                                "path": "$path",
-                                "value": "$value"
-                            }
+                            $valuesJson
                         ]
                     }
                 ]
@@ -361,8 +726,40 @@ class SignalKEngine {
         deltaSender?.invoke(payload)
     }
 
+    private fun resolveSelfIdentity() {
+        engineScope.launch(Dispatchers.IO) {
+            try {
+                withTimeout(5000.milliseconds) {
+                    val plugin = NauticalPlugin.getInstance() ?: return@withTimeout
+                    val client = plugin.okHttpClient ?: return@withTimeout
+                    val ip = app.settings.NAUTICAL_SERVER_IP.get()
+                    val port = app.settings.NAUTICAL_SERVER_PORT.get()
+                    val protocol = if (app.settings.NAUTICAL_USE_SECURE_CONNECTION.get()) "https" else "http"
+                    val restService = net.osmand.plus.plugins.nautical.network.SignalKRestService.create("$protocol://$ip:$port", client)
+                    
+                    val response = restService.getSelfIdentity()
+                    if (response.isSuccessful) {
+                        val body = response.body()
+                        val mmsi = (body?.get("mmsi") as? String)?.toIntOrNull()
+                        val name = body?.get("name") as? String
+                        val uuid = body?.get("uuid") as? String
+                        dataBroker.updateState { s ->
+                            s.copy(
+                                vesselMmsi = mmsi ?: s.vesselMmsi,
+                                vesselName = name ?: s.vesselName,
+                                vesselUuid = uuid ?: s.vesselUuid
+                            )
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                log.error("Failed to resolve self identity (timeout or network): ${e.message}")
+            }
+        }
+    }
+
     private fun resetWatchdog() {
-        lastUpdateTimestamp = System.currentTimeMillis()
+        lastUpdateTimestamp = TemporalUtils.now()
         if (watchdogJob?.isActive != true) {
             startWatchdog()
         }
@@ -370,81 +767,83 @@ class SignalKEngine {
 
     private fun startWatchdog() {
         watchdogJob?.cancel()
+        resourceManager.startSync()
         watchdogJob = engineScope.launch {
             var previouslyDisconnected = false
             while (isActive) {
                 try {
-                    val delayTime = if (powerSaveMode) 5000L else 1000L
+                    val refreshRate = app.settings.NAUTICAL_TELEMETRY_REFRESH_RATE.get().coerceAtLeast(1)
+                    val delayTime = if (powerSaveMode) 5000L else (refreshRate * 1000L)
                     delay(delayTime.milliseconds)
-                    val elapsed = System.currentTimeMillis() - lastUpdateTimestamp
-                    if (elapsed > 10000) {
+                    
+                    // Periodic maintenance of historical buffers
+                    val now = TemporalUtils.now()
+                    telemetryBuffers.values.forEach { it.prune(3600000) { p -> p.second } }
+
+                    val elapsed = now - lastUpdateTimestamp
+                    val watchdogTimeoutMs = app.settings.NAUTICAL_WATCHDOG_TIMEOUT_SEC.get() * 1000L
+                    if (elapsed > watchdogTimeoutMs) {
                         if (!previouslyDisconnected) {
                             previouslyDisconnected = true
-                            _currentState = null
+                            dataBroker.updateState { s ->
+                                s.copy(connectionStatus = ConnectionStatus.DISCONNECTED)
+                            }
                             isFollowingRoute = false
-                            notifyListeners(MarineState(connectionStatus = ConnectionStatus.DISCONNECTED))
-                            log.error("Data timeout!")
+                            notifyListeners(dataBroker.marineState.value)
+                            log.error("Data timeout (${app.settings.NAUTICAL_WATCHDOG_TIMEOUT_SEC.get()}s)! Dispatching DISCONNECTED state.")
                             onConnectionLost?.invoke()
                         }
-                    } else if (elapsed > 5000) {
+                    } else if (elapsed > watchdogTimeoutMs / 2) {
                         previouslyDisconnected = false
-                        if (_currentState?.connectionStatus != ConnectionStatus.STALE) {
-                            _currentState = _currentState?.copy(connectionStatus = ConnectionStatus.STALE)
-                            _currentState?.let { notifyListeners(it) }
+                        if (dataBroker.marineState.value.connectionStatus != ConnectionStatus.STALE) {
+                            dataBroker.updateState { it.copy(connectionStatus = ConnectionStatus.STALE) }
+                            notifyListeners(dataBroker.marineState.value)
                         }
                     } else {
                         if (previouslyDisconnected) {
                             previouslyDisconnected = false
                             onConnectionRestored?.invoke()
                         }
-                        if (_currentState?.connectionStatus != ConnectionStatus.CONNECTED) {
-                            _currentState = _currentState?.copy(connectionStatus = ConnectionStatus.CONNECTED)
+                        if (dataBroker.marineState.value.connectionStatus != ConnectionStatus.CONNECTED) {
+                            dataBroker.updateState { it.copy(connectionStatus = ConnectionStatus.CONNECTED) }
                         }
 
-                        // Per-field selective staleness check
-                        _currentState?.let { current ->
-                            val now = System.currentTimeMillis()
-                            var modified = false
-                            var nextState = current
+                        var modified = false
+                        val current = dataBroker.marineState.value
+                        val nextStalePaths = current.stalePaths.toMutableSet()
+                        val staleThreshold = 5000L
+                        val timestamps = current.timestamps
 
-                            val staleThreshold = 5000L
-                            val timestamps = current.timestamps
+                        fun checkStale(path: String): Boolean {
+                            val isStale = (now - (timestamps[path] ?: 0L)) > staleThreshold
+                            if (isStale) {
+                                if (nextStalePaths.add(path)) modified = true
+                            } else {
+                                if (nextStalePaths.remove(path)) modified = true
+                            }
+                            return isStale
+                        }
 
-                            fun isStale(path: String) = (now - (timestamps[path] ?: 0L)) > staleThreshold
+                        val sogStale = checkStale("navigation.speedOverGround")
+                        val cogStale = checkStale("navigation.courseOverGroundTrue")
+                        val hdgStale = checkStale("navigation.headingTrue") || checkStale("navigation.headingMagnetic")
+                        val depthStale = checkStale("environment.depth.belowTransducer")
+                        val windStale = checkStale("environment.wind.angleApparent") || checkStale("environment.wind.speedTrue") || checkStale("environment.wind.speedApparent")
+                        
+                        checkStale("navigation.speedThroughWater")
+                        checkStale("navigation.crossTrackError")
+                        checkStale("navigation.attitude.roll")
+                        checkStale("navigation.attitude.pitch")
 
-                            if (current.speedOverGround != null && isStale("navigation.speedOverGround")) {
-                                nextState = nextState.copy(speedOverGround = null)
-                                modified = true
-                            }
-                            if (current.courseOverGroundTrue != null && isStale("navigation.courseOverGroundTrue")) {
-                                nextState = nextState.copy(courseOverGroundTrue = null)
-                                modified = true
-                            }
-                            if (current.headingTrue != null && isStale("navigation.headingTrue")) {
-                                nextState = nextState.copy(headingTrue = null)
-                                modified = true
-                            }
-                            if (current.speedThroughWater != null && isStale("navigation.speedThroughWater")) {
-                                nextState = nextState.copy(speedThroughWater = null)
-                                modified = true
-                            }
-                            if (current.depthBelowTransducer != null && isStale("environment.depth.belowTransducer")) {
-                                nextState = nextState.copy(depthBelowTransducer = null)
-                                modified = true
-                            }
-                            if (current.windDirectionApparent != null && isStale("environment.wind.angleApparent")) {
-                                nextState = nextState.copy(windDirectionApparent = null)
-                                modified = true
-                            }
+                        val coreStale = sogStale || cogStale || hdgStale || depthStale || windStale
+                        val nextStatus = if (coreStale) ConnectionStatus.STALE else ConnectionStatus.CONNECTED
 
-                            if (modified) {
-                                _currentState = nextState
-                                notifyListeners(nextState)
-                            } else if (current.connectionStatus != ConnectionStatus.CONNECTED) {
-                                notifyListeners(current.copy(connectionStatus = ConnectionStatus.CONNECTED))
-                            }
+                        if (modified || current.connectionStatus != nextStatus) {
+                            dataBroker.updateState { it.copy(stalePaths = nextStalePaths, connectionStatus = nextStatus) }
+                            notifyListeners(dataBroker.marineState.value)
                         }
                     }
+                    updatePulseLifecycle()
                 } catch (e: Exception) {
                     log.error("Watchdog loop error: ${e.message}")
                     if (e is CancellationException) throw e
@@ -456,14 +855,13 @@ class SignalKEngine {
         cleanupJob = engineScope.launch {
             while (isActive) {
                 try {
-                    delay(60000.milliseconds) // Cleanup every minute
-                    val now = System.currentTimeMillis()
+                    delay(60000.milliseconds)
+                    val now = TemporalUtils.now()
                     val it = aisCache.entries.iterator()
                     while (it.hasNext()) {
                         val entry = it.next()
-                        if (now - entry.value.lastUpdate > 600000) { // 10 minutes TTL
+                        if (now - entry.value.lastUpdate > 1800000) {
                             it.remove()
-                            log.debug("AIS target ${entry.key} expired and removed from cache.")
                         }
                     }
                 } catch (e: Exception) {
@@ -476,56 +874,168 @@ class SignalKEngine {
 
     fun registerListener(listener: (MarineState) -> Unit) { stateListeners.add(listener) }
     fun unregisterListener(listener: (MarineState) -> Unit) { stateListeners.remove(listener) }
-    fun registerAisListener(listener: ((AisTarget) -> Unit)?) { this.aisListener = listener }
+    fun addRouteStepListener(listener: () -> Unit) { routeStepListeners.add(listener) }
+    fun removeRouteStepListener(listener: () -> Unit) { routeStepListeners.remove(listener) }
+    fun registerAisListener(listener: ((AisObject) -> Unit)?) { this.aisListener = listener }
 
     private fun notifyListeners(state: MarineState) {
         stateListeners.forEach { it.invoke(state) }
     }
 
-    fun getDepthHistory(): List<Pair<Double, Long>> = depthBuffer.getAll()
-    fun getWindHistory(): List<Pair<Double, Long>> = windBuffer.getAll()
-    fun getWindDirectionHistory(): List<Pair<Double, Long>> = windDirectionBuffer.getAll()
-    fun getVmgHistory(): List<Pair<Double, Long>> = vmgBuffer.getAll()
-    fun getCogHistory(): List<Pair<Double, Long>> = cogBuffer.getAll()
-    fun getSogHistory(): List<Pair<Double, Long>> = sogBuffer.getAll()
-    fun getStwHistory(): List<Pair<Double, Long>> = stwBuffer.getAll()
-    fun getRpmHistory(): List<Pair<Double, Long>> = rpmBuffer.getAll()
-    fun getTempEngineHistory(): List<Pair<Double, Long>> = tempEngineBuffer.getAll()
-    fun getVoltHistory(): List<Pair<Double, Long>> = voltBuffer.getAll()
-    fun getSocHistory(): List<Pair<Double, Long>> = socBuffer.getAll()
-    fun getXteHistory(): List<Pair<Double, Long>> = xteBuffer.getAll()
-    fun getWaterTempHistory(): List<Pair<Double, Long>> = waterTempBuffer.getAll()
-    fun getOutsideTempHistory(): List<Pair<Double, Long>> = outsideTempBuffer.getAll()
-    fun getPressureHistory(): List<Pair<Double, Long>> = pressureBuffer.getAll()
-    fun getDriftHistory(): List<Pair<Double, Long>> = driftBuffer.getAll()
-    fun getRollHistory(): List<Pair<Double, Long>> = rollBuffer.getAll()
-    fun getPitchHistory(): List<Pair<Double, Long>> = pitchBuffer.getAll()
-    fun getAwaHistory(): List<Pair<Double, Long>> = awaBuffer.getAll()
-    fun getAwsHistory(): List<Pair<Double, Long>> = awsBuffer.getAll()
-    fun getTwaHistory(): List<Pair<Double, Long>> = twaBuffer.getAll()
-    fun getRotHistory(): List<Pair<Double, Long>> = rotBuffer.getAll()
-    fun getTtwHistory(): List<Pair<Double, Long>> = ttwBuffer.getAll()
-    fun getDtwHistory(): List<Pair<Double, Long>> = dtwBuffer.getAll()
-    fun getPolarRatioHistory(): List<Pair<Double, Long>> = polarRatioBuffer.getAll()
-    fun getMagHdgHistory(): List<Pair<Double, Long>> = magHdgBuffer.getAll()
-    fun getLogHistory(): List<Pair<Double, Long>> = logBuffer.getAll()
-    fun getTripLogHistory(): List<Pair<Double, Long>> = tripLogBuffer.getAll()
-    fun getDepthKeelHistory(): List<Pair<Double, Long>> = depthKeelBuffer.getAll()
-    fun getFuelHistory(): List<Pair<Double, Long>> = fuelBuffer.getAll()
-    fun getFreshWaterHistory(): List<Pair<Double, Long>> = freshWaterBuffer.getAll()
-    fun getWasteHistory(): List<Pair<Double, Long>> = wasteBuffer.getAll()
-    fun getOilPressureHistory(): List<Pair<Double, Long>> = oilPressureBuffer.getAll()
-    fun getEngineLoadHistory(): List<Pair<Double, Long>> = engineLoadBuffer.getAll()
-    fun getCoolantTempHistory(): List<Pair<Double, Long>> = coolantTempBuffer.getAll()
-    fun getBatteryCurrentHistory(): List<Pair<Double, Long>> = batteryCurrentBuffer.getAll()
-    fun getSolarCurrentHistory(): List<Pair<Double, Long>> = solarCurrentBuffer.getAll()
-    fun getTwdHistory(): List<Pair<Double, Long>> = twdBuffer.getAll()
+    fun getDepthHistory(): List<Pair<Double, Long>> = getBuffer("environment.depth.belowTransducer").getAll()
+    fun getWindHistory(): List<Pair<Double, Long>> = getBuffer("environment.wind.speedTrue").getAll()
+    fun getWindDirectionHistory(): List<Pair<Double, Long>> = getBuffer("environment.wind.directionTrue").getAll()
+    fun getVmgHistory(): List<Pair<Double, Long>> = getBuffer("performance.velocityMadeGood").getAll()
+    fun getCogHistory(): List<Pair<Double, Long>> = getBuffer("navigation.courseOverGroundTrue").getAll()
+    fun getSogHistory(): List<Pair<Double, Long>> = getBuffer("navigation.speedOverGround").getAll()
+    fun getStwHistory(): List<Pair<Double, Long>> = getBuffer("navigation.speedThroughWater").getAll()
+    fun getRpmHistory(): List<Pair<Double, Long>> = getBuffer("propulsion.0.revolutions").getAll()
+    fun getTempEngineHistory(): List<Pair<Double, Long>> = getBuffer("propulsion.0.temperature").getAll()
+    fun getVoltHistory(): List<Pair<Double, Long>> = getBuffer("electrical.batteries.0.voltage").getAll()
+    fun getSocHistory(): List<Pair<Double, Long>> = getBuffer("electrical.batteries.0.capacity.stateOfCharge").getAll()
+    fun getXteHistory(): List<Pair<Double, Long>> = getBuffer("navigation.crossTrackError").getAll()
+    fun getWaterTempHistory(): List<Pair<Double, Long>> = getBuffer("environment.water.temperature").getAll()
+    fun getOutsideTempHistory(): List<Pair<Double, Long>> = getBuffer("environment.outside.temperature").getAll()
+    fun getPressureHistory(): List<Pair<Double, Long>> = getBuffer("environment.outside.pressure").getAll()
+    fun getDriftHistory(): List<Pair<Double, Long>> = getBuffer("navigation.drift").getAll()
+    fun getRollHistory(): List<Pair<Double, Long>> = getBuffer("navigation.attitude.roll").getAll()
+    fun getPitchHistory(): List<Pair<Double, Long>> = getBuffer("navigation.attitude.pitch").getAll()
+    fun getAwaHistory(): List<Pair<Double, Long>> = getBuffer("environment.wind.angleApparent").getAll()
+    fun getAwsHistory(): List<Pair<Double, Long>> = getBuffer("environment.wind.speedApparent").getAll()
+    fun getTwaHistory(): List<Pair<Double, Long>> = getBuffer("environment.wind.angleTrue").getAll()
+    fun getRotHistory(): List<Pair<Double, Long>> = getBuffer("navigation.rateOfTurn").getAll()
+    fun getTtwHistory(): List<Pair<Double, Long>> = getBuffer("navigation.timeToWaypoint").getAll()
+    fun getDtwHistory(): List<Pair<Double, Long>> = getBuffer("navigation.distanceToWaypoint").getAll()
+    fun getPolarRatioHistory(): List<Pair<Double, Long>> = getBuffer("performance.polarSpeedRatio").getAll()
+    fun getMagHdgHistory(): List<Pair<Double, Long>> = getBuffer("navigation.headingMagnetic").getAll()
+    fun getLogHistory(): List<Pair<Double, Long>> = getBuffer("navigation.log").getAll()
+    fun getTripLogHistory(): List<Pair<Double, Long>> = getBuffer("navigation.trip.log").getAll()
+    fun getDepthKeelHistory(): List<Pair<Double, Long>> = getBuffer("environment.depth.belowKeel").getAll()
+    fun getFuelHistory(): List<Pair<Double, Long>> = getBuffer("tanks.fuel.0.currentLevel").getAll()
+    fun getFreshWaterHistory(): List<Pair<Double, Long>> = getBuffer("tanks.freshWater.0.currentLevel").getAll()
+    fun getWasteHistory(): List<Pair<Double, Long>> = getBuffer("tanks.wasteWater.0.currentLevel").getAll()
+    fun getOilPressureHistory(): List<Pair<Double, Long>> = getBuffer("propulsion.0.oilPressure").getAll()
+    fun getEngineLoadHistory(): List<Pair<Double, Long>> = getBuffer("propulsion.0.engineLoad").getAll()
+    fun getCoolantTempHistory(): List<Pair<Double, Long>> = getBuffer("propulsion.0.coolantTemperature").getAll()
+    fun getBatteryCurrentHistory(): List<Pair<Double, Long>> = getBuffer("electrical.batteries.0.current").getAll()
+    fun getSolarCurrentHistory(): List<Pair<Double, Long>> = getBuffer("electrical.solar.0.current").getAll()
+    fun getTwdHistory(): List<Pair<Double, Long>> = getBuffer("navigation.trueWindDirection").getAll()
+    fun getHumidityHistory(): List<Pair<Double, Long>> = getBuffer("environment.outside.relativeHumidity").getAll()
+
+    suspend fun uploadActiveRouteToSignalK(name: String) = withContext(Dispatchers.IO) {
+        val points = getRoutePoints()
+        if (points.isEmpty()) return@withContext
+
+        try {
+            val plugin = NauticalPlugin.getInstance() ?: return@withContext
+            val client = plugin.okHttpClient ?: return@withContext
+            val ip = app.settings.NAUTICAL_SERVER_IP.get()
+            val port = app.settings.NAUTICAL_SERVER_PORT.get()
+            val protocol = if (app.settings.NAUTICAL_USE_SECURE_CONNECTION.get()) "https" else "http"
+            val restService = net.osmand.plus.plugins.nautical.network.SignalKRestService.create("$protocol://$ip:$port", client)
+
+            val coords = points.map { listOf(it.second, it.first) }
+            val skRoute = net.osmand.plus.plugins.nautical.network.SignalKRoute(
+                name = name,
+                description = "Exported from OsmAnd Nautical",
+                distance = null,
+                feature = net.osmand.plus.plugins.nautical.network.SignalKRouteFeature(
+                    geometry = net.osmand.plus.plugins.nautical.network.SignalKLineString(coordinates = coords)
+                )
+            )
+
+            val response = restService.createRoute(skRoute)
+            if (response.isSuccessful) {
+                val routeId = response.body()?.id
+                log.info("Route uploaded successfully to Signal K v2. Resource ID: $routeId")
+                withContext(Dispatchers.Main) {
+                    app.showToastMessage(R.string.nautical_route_upload_success)
+                }
+            } else {
+                log.error("Failed to upload route to Signal K v2: ${response.code()} ${response.message()}")
+            }
+        } catch (e: Exception) {
+            log.error("Error uploading route: ${e.message}")
+        }
+    }
+
+    suspend fun updateRouteOnServer(routeId: String, name: String, points: List<Pair<Double, Double>>) = withContext(Dispatchers.IO) {
+        try {
+            val plugin = NauticalPlugin.getInstance() ?: return@withContext
+            val client = plugin.okHttpClient ?: return@withContext
+            val ip = app.settings.NAUTICAL_SERVER_IP.get()
+            val port = app.settings.NAUTICAL_SERVER_PORT.get()
+            val protocol = if (app.settings.NAUTICAL_USE_SECURE_CONNECTION.get()) "https" else "http"
+            val restService = net.osmand.plus.plugins.nautical.network.SignalKRestService.create("$protocol://$ip:$port", client)
+
+            val coords = points.map { listOf(it.second, it.first) }
+            val skRoute = net.osmand.plus.plugins.nautical.network.SignalKRoute(
+                name = name,
+                description = "Updated from OsmAnd Nautical",
+                distance = null,
+                feature = net.osmand.plus.plugins.nautical.network.SignalKRouteFeature(
+                    geometry = net.osmand.plus.plugins.nautical.network.SignalKLineString(coordinates = coords)
+                )
+            )
+
+            val response = restService.updateRoute(routeId, skRoute)
+            if (response.isSuccessful) {
+                log.info("Route $routeId updated successfully on Signal K v2.")
+            } else {
+                log.error("Failed to update route $routeId: ${response.code()} ${response.message()}")
+            }
+        } catch (e: Exception) {
+            log.error("Error updating route $routeId: ${e.message}")
+        }
+    }
+
+    suspend fun deleteRouteFromServer(routeId: String) = withContext(Dispatchers.IO) {
+        try {
+            val plugin = NauticalPlugin.getInstance() ?: return@withContext
+            val client = plugin.okHttpClient ?: return@withContext
+            val ip = app.settings.NAUTICAL_SERVER_IP.get()
+            val port = app.settings.NAUTICAL_SERVER_PORT.get()
+            val protocol = if (app.settings.NAUTICAL_USE_SECURE_CONNECTION.get()) "https" else "http"
+            val restService = net.osmand.plus.plugins.nautical.network.SignalKRestService.create("$protocol://$ip:$port", client)
+
+            val response = restService.deleteRoute(routeId)
+            if (response.isSuccessful) {
+                log.info("Route $routeId deleted successfully from Signal K v2.")
+            } else {
+                log.error("Failed to delete route $routeId: ${response.code()} ${response.message()}")
+            }
+        } catch (e: Exception) {
+            log.error("Error deleting route $routeId: ${e.message}")
+        }
+    }
+
+    suspend fun fetchRoutesFromServer(): Map<String, net.osmand.plus.plugins.nautical.network.SignalKRoute>? = withContext(Dispatchers.IO) {
+        try {
+            val plugin = NauticalPlugin.getInstance() ?: return@withContext null
+            val client = plugin.okHttpClient ?: return@withContext null
+            val ip = app.settings.NAUTICAL_SERVER_IP.get()
+            val port = app.settings.NAUTICAL_SERVER_PORT.get()
+            val protocol = if (app.settings.NAUTICAL_USE_SECURE_CONNECTION.get()) "https" else "http"
+            val restService = net.osmand.plus.plugins.nautical.network.SignalKRestService.create("$protocol://$ip:$port", client)
+
+            val response = restService.getRoutes()
+            if (response.isSuccessful) {
+                return@withContext response.body()
+            }
+        } catch (e: Exception) {
+            log.error("Error fetching routes from server: ${e.message}")
+        }
+        return@withContext null
+    }
 
     private var lastTrajectoryTimestamp: Long = 0
     private var lastFollowingUpdateTimestamp: Long = 0
     private var lastSetDriftTimestamp: Long = 0
-    var arrivalRadiusMeters: Double = 35.0
-    
+
+    private val vmgEma = net.osmand.plus.plugins.nautical.utils.EMA(0.2) // standard alpha is usually (1-alpha) in manual math
+    private val driftEma = net.osmand.plus.plugins.nautical.utils.EMA(0.2)
+    private val setAngleEma = net.osmand.plus.plugins.nautical.utils.AngleEMA(0.2)
+
     @Volatile
     private var powerSaveMode: Boolean = false
 
@@ -537,17 +1047,14 @@ class SignalKEngine {
     fun addTrajectoryPoint(lat: Double, lon: Double) {
         val history = trajectoryBuffer.getAll()
         val last = history.lastOrNull()
-        val now = System.currentTimeMillis()
+        val now = TemporalUtils.now()
 
-        if (now - lastTrajectoryTimestamp < 5000) return // Throttle trajectory to 0.2Hz (save battery/disk)
+        if (now - lastTrajectoryTimestamp < 5000) return
 
         if (last != null) {
             val dist = KMapUtils.getDistance(last.first, last.second, lat, lon)
             val timeGap = now - lastTrajectoryTimestamp
-            if (dist > 500.0 && timeGap < 30000) { // 500 meters is a reasonable "jump" threshold for a boat unless it's a long time gap
-                log.warn("Jump detected ($dist m)! Discarding point: $lat, $lon")
-                return
-            }
+            if (dist > 500.0 && timeGap < 30000) return
         }
         trajectoryBuffer.add(Pair(lat, lon))
         lastTrajectoryTimestamp = now
@@ -558,324 +1065,965 @@ class SignalKEngine {
     }
 
     fun handleIncomingMessage(jsonMessage: String) {
-        lastUpdateTimestamp = System.currentTimeMillis()
+        lastUpdateTimestamp = TemporalUtils.now()
         resetWatchdog()
-        engineScope.launch(Dispatchers.Default) {
-            try {
-                val json = JSONObject(jsonMessage)
-                if (json.has("self")) {
-                    trueSelfContext = json.getString("self")
-                    // Extract MMSI from context string: "vessels.urn:mrn:imo:mmsi:235084430"
-                    if (trueSelfContext.startsWith("vessels.urn:mrn:imo:mmsi:")) {
-                        val mmsiStr = trueSelfContext.substringAfterLast(":")
-                        val mmsi = mmsiStr.toIntOrNull()
-                        if (mmsi != null) {
-                            synchronized(stateLock) {
-                                _currentState = (_currentState ?: MarineState()).copy(vesselMmsi = mmsi)
+
+        if (powerSaveMode) {
+            val now = System.currentTimeMillis()
+            if (now - lastMessageProcessedTime < 2000) return
+            lastMessageProcessedTime = now
+        }
+
+        val result = messageChannel.trySend(jsonMessage)
+        if (!result.isSuccess) {
+            log.warn("SignalK message buffer full, message dropped")
+        }
+    }
+
+    private fun handleSelfIdentity(self: String) {
+        if (self.startsWith("vessels.urn:mrn:imo:mmsi:")) {
+            val mmsiStr = self.substringAfterLast(":")
+            val mmsi = mmsiStr.toIntOrNull()
+            if (mmsi != null && MarineStateConstants.isValidMmsi(mmsi)) {
+                dataBroker.updateState { it.copy(vesselMmsi = mmsi) }
+            }
+        } else if (self == "vessels.self") {
+            resolveSelfIdentity()
+        }
+    }
+
+    private fun processUpdates(reader: JsonReader, context: String) {
+        val currentMmsi = dataBroker.marineState.value.vesselMmsi
+        val isSelf = (context == "vessels.self") || (context == "") || (context == trueSelfContext) ||
+                (currentMmsi != null && context == "vessels.urn:mrn:imo:mmsi:$currentMmsi")
+
+        var aisTarget: AisObject? = null
+        if (!isSelf) {
+            val rawId = context.substringAfterLast(":", "")
+            if (rawId.isNotEmpty()) {
+                val numericMmsi = rawId.toIntOrNull() ?: (rawId.hashCode().absoluteValue % 1000000000)
+                aisTarget = aisCache.getOrPut(numericMmsi) { AisObject(numericMmsi, 1, 0.0, 0.0) }
+            }
+        }
+
+        reader.beginArray()
+        var currentBatchState: MarineState? = null
+        var stateUpdated = false
+
+        while (reader.hasNext()) {
+            reader.beginObject()
+            var updateTimestamp = TemporalUtils.now()
+            while (reader.hasNext()) {
+                when (reader.nextName()) {
+                    "timestamp" -> {
+                        val ts = readJsonValue(reader)
+                        if (ts is Number) {
+                            updateTimestamp = TemporalUtils.validate(ts.toLong())
+                        } else if (ts is String) {
+                            val parsed = TemporalUtils.parseIso8601(ts)
+                            if (parsed > 0) {
+                                updateTimestamp = parsed
+                            } else {
+                                log.debug("Signal K: Malformed string timestamp received, using device time: $ts")
                             }
                         }
                     }
-                    return@launch
-                }
-
-                if (!json.has("updates")) return@launch
-
-                val context = json.optString("context", "vessels.self")
-                val updates = json.getJSONArray("updates")
-                
-                val currentMmsi = synchronized(stateLock) { _currentState?.vesselMmsi }
-                val isSelf = (context == "vessels.self") || (context == "") || (context == trueSelfContext) ||
-                             (currentMmsi != null && context == "vessels.urn:mrn:imo:mmsi:$currentMmsi")
-
-                var numericMmsi = 0
-                if (!isSelf) {
-                    val rawId = context.substringAfterLast(":", "")
-                    if (rawId.isEmpty()) return@launch
-                    numericMmsi = rawId.toIntOrNull() ?: (rawId.hashCode().absoluteValue % 1000000000)
-                }
-
-                val aisTarget = if (!isSelf) aisCache.getOrPut(numericMmsi) { AisTarget(numericMmsi) } else null
-                var stateUpdated = false
-                var currentBatchState: MarineState? = null
-
-                for (i in 0 until updates.length()) {
-                    val update = updates.getJSONObject(i)
-                    
-                    // Process metadata if present in the update
-                    if (isSelf && update.has("meta")) {
-                        val metaArray = update.optJSONArray("meta")
-                        if (metaArray != null) {
-                            synchronized(stateLock) {
-                                val currentMeta = _currentState?.pathMeta?.toMutableMap() ?: mutableMapOf()
-                                for (m in 0 until metaArray.length()) {
-                                    val mItem = metaArray.getJSONObject(m)
-                                    val mPath = mItem.optString("path")
-                                    val mValue = mItem.optJSONObject("value")
-                                    if (mPath.isNotEmpty() && mValue != null) {
-                                        val metaMap = mutableMapOf<String, Any>()
-                                        val keys = mValue.keys()
-                                        while (keys.hasNext()) {
-                                            val key = keys.next()
-                                            metaMap[key] = mValue.get(key)
+                    "meta" -> {
+                        if (isSelf) processMeta(reader) else reader.skipValue()
+                    }
+                    "values" -> {
+                        reader.beginArray()
+                        while (reader.hasNext()) {
+                            reader.beginObject()
+                            var path: String? = null
+                            var value: Any? = null
+                            while (reader.hasNext()) {
+                                when (reader.nextName()) {
+                                    "path" -> path = reader.nextString()
+                                    "value" -> {
+                                        if (isSelf && path != null) {
+                                            if (currentBatchState == null) {
+                                                currentBatchState = dataBroker.marineState.value
+                                            }
+                                            // Pass the update timestamp to parsers
+                                            val res = parseOptimizedSelfValue(currentBatchState, path, reader, updateTimestamp)
+                                            if (res != null) {
+                                                currentBatchState = res.first
+                                                if (res.second) stateUpdated = true
+                                                path = null // Handled
+                                            } else {
+                                                value = readJsonValue(reader)
+                                            }
+                                        } else {
+                                            value = readJsonValue(reader)
                                         }
-                                        currentMeta[mPath] = metaMap
+                                    }
+                                    else -> reader.skipValue()
+                                }
+                            }
+                            reader.endObject()
+
+                            if (path != null) {
+                                if (isSelf) {
+                                    if (currentBatchState == null) {
+                                        currentBatchState = dataBroker.marineState.value
+                                    }
+                                    val res = parseSelfValue(currentBatchState, path, value, updateTimestamp)
+                                    currentBatchState = res.first
+                                    if (res.second) stateUpdated = true
+                                } else if (aisTarget != null) {
+                                        if (path == SignalKPaths.AIS_THREAT_LEVEL) {
+                                        val level = (value as? Number)?.toInt() ?: 0
+                                        aisTarget.let {
+                                            NauticalPlugin.getInstance()?.aisManager?.updateAisThreatLevel(it.mmsi, level)
+                                        }
+                                    } else {
+                                        aisTarget = updateAisTarget(aisTarget, path, value, updateTimestamp)
                                     }
                                 }
-                                _currentState = (_currentState ?: MarineState()).copy(pathMeta = currentMeta)
                             }
                         }
+                        reader.endArray()
                     }
-
-                    if (!update.has("values")) continue
-
-                    val values = update.getJSONArray("values")
-                    for (j in 0 until values.length()) {
-                        val valueItem = values.getJSONObject(j)
-                        val path = valueItem.optString("path")
-                        val valueObj = valueItem.opt("value")
-
-                        if (isSelf) {
-                            if (currentBatchState == null) {
-                                synchronized(stateLock) {
-                                    currentBatchState = _currentState ?: MarineState()
-                                }
-                            }
-                            val res = parseSelfValue(currentBatchState!!, path, valueItem, valueObj)
-                            currentBatchState = res.first
-                            if (res.second) stateUpdated = true
-                        } else if (aisTarget != null) {
-                            updateAisTarget(aisTarget, path, valueItem, valueObj)
-                        }
-                    }
+                    else -> reader.skipValue()
                 }
-
-                if (isSelf && stateUpdated && currentBatchState != null) {
-                    val finalState = calculateDepths(calculateSetAndDrift(currentBatchState)).let { s ->
-                        val xteNm = abs(s.crossTrackError ?: 0.0) / 1852.0
-                        val isOff = xteNm > xteThresholdNm && (s.autopilotState.uppercase(Locale.US) == "TRACK")
-                        s.copy(isOffCourse = isOff, connectionStatus = ConnectionStatus.CONNECTED)
-                    }
-                    synchronized(stateLock) {
-                        _currentState = finalState
-                    }
-                    withContext(Dispatchers.Main) {
-                        notifyListeners(finalState)
-                    }
-                } else if ((aisTarget != null) && (aisTarget.latitude != null) && (aisTarget.longitude != null)) {
-                    val copy = aisTarget.copy()
-                    aisListener?.invoke(copy)
-                }
-            } catch (e: Exception) {
-                log.error("JSON parsing error: ${e.message}")
             }
+            reader.endObject()
+        }
+        reader.endArray()
+
+        if (isSelf && stateUpdated && currentBatchState != null) {
+            finalizeAndNotifyState(currentBatchState)
+        } else if (aisTarget != null && aisTarget.position != null) {
+            val copy = AisObject(aisTarget)
+            aisListener?.invoke(copy)
         }
     }
 
-    private fun updateAisTarget(aisTarget: AisTarget, path: String, valueItem: JSONObject, valueObj: Any?) {
-        aisTarget.lastUpdate = System.currentTimeMillis()
-        when (path) {
-            "" -> {
-                val name = valueItem.optString("name", "")
-                if (name.isNotEmpty()) {
-                    aisTarget.name = name
-                } else {
-                    val vName = valueItem.optString("vesselName", "")
-                    if (vName.isNotEmpty()) aisTarget.name = vName
-                }
-                val type = valueItem.optInt("vesselType", -1)
-                if (type != -1) aisTarget.vesselType = type
-            }
-            "name", "vesselName" -> aisTarget.name = valueObj?.toString()
-            "design.type" -> {
-                if (valueObj is JSONObject) {
-                    aisTarget.vesselType = valueObj.optInt("id", -1)
-                } else if (valueObj is Number) {
-                    aisTarget.vesselType = valueObj.toInt()
-                }
-            }
-            "navigation.position" -> {
-                if (valueObj is JSONObject) {
-                    aisTarget.latitude = valueObj.optDouble("latitude", Double.NaN).takeUnless { it.isNaN() }
-                    aisTarget.longitude = valueObj.optDouble("longitude", Double.NaN).takeUnless { it.isNaN() }
-                }
-            }
-            "navigation.speedOverGround" -> aisTarget.speedOverGround = valueItem.optDouble("value", Double.NaN).takeUnless { it.isNaN() }?.toFloat()
-            "navigation.courseOverGroundTrue" -> aisTarget.courseOverGround = valueItem.optDouble("value", Double.NaN).takeUnless { it.isNaN() }?.toFloat()
-            "navigation.headingTrue" -> aisTarget.headingTrue = valueItem.optDouble("value", Double.NaN).takeUnless { it.isNaN() }?.toFloat()
-        }
-    }
-
-    private fun parseSelfValue(s: MarineState, path: String, valueItem: JSONObject, valueObj: Any?): Pair<MarineState, Boolean> {
-        var state = s
-        var updated = false
-        val value = valueItem.optDouble("value", Double.NaN)
-        val now = System.currentTimeMillis()
-        val newTimestamps = state.timestamps.toMutableMap()
+    private fun parseOptimizedSelfValue(s: MarineState, path: String, reader: JsonReader, now: Long): Pair<MarineState, Boolean>? {
+        val newTimestamps = s.timestamps.toMutableMap()
         newTimestamps[path] = now
 
+        return when (path) {
+            SignalKPaths.NAV_POSITION -> {
+                if (reader.peek() == JsonToken.BEGIN_OBJECT) {
+                    var lat = Double.NaN
+                    var lon = Double.NaN
+                    reader.beginObject()
+                    while (reader.hasNext()) {
+                        when (reader.nextName()) {
+                            "latitude" -> lat = reader.nextDouble()
+                            "longitude" -> lon = reader.nextDouble()
+                            else -> reader.skipValue()
+                        }
+                    }
+                    reader.endObject()
+                    if (MarineStateConstants.isValidLat(lat) && MarineStateConstants.isValidLon(lon)) {
+                        val state = s.copy(latitude = lat, longitude = lon, timestamps = newTimestamps, timeOfPositionFix = now)
+                        updateFollowingState(lat, lon)
+                        addTrajectoryPoint(lat, lon)
+                        Pair(state, true)
+                    } else null
+                } else null
+            }
+            SignalKPaths.NAV_ATTITUDE -> {
+                if (reader.peek() == JsonToken.BEGIN_OBJECT) {
+                    var roll = Double.NaN
+                    var pitch = Double.NaN
+                    var yaw = Double.NaN
+                    reader.beginObject()
+                    while (reader.hasNext()) {
+                        when (reader.nextName()) {
+                            "roll" -> roll = reader.nextDouble()
+                            "pitch" -> pitch = reader.nextDouble()
+                            "yaw" -> yaw = reader.nextDouble()
+                            else -> reader.skipValue()
+                        }
+                    }
+                    reader.endObject()
+                    val state = s.copy(
+                        roll = if (roll.isNaN()) s.roll else roll,
+                        pitch = if (pitch.isNaN()) s.pitch else pitch,
+                        yaw = if (yaw.isNaN()) s.yaw else yaw,
+                        timestamps = newTimestamps
+                    )
+                    if (!roll.isNaN()) {
+                        getBuffer(SignalKPaths.NAV_ATTITUDE + ".roll").add(Pair(roll, now))
+                        dataBroker.processRollUpdate(roll)
+                    }
+                    if (!pitch.isNaN()) {
+                        getBuffer(SignalKPaths.NAV_ATTITUDE + ".pitch").add(Pair(pitch, now))
+                        dataBroker.processPitchUpdate(pitch)
+                    }
+                    Pair(state, true)
+                } else null
+            }
+            SignalKPaths.NAV_CLOSEST_APPROACH -> {
+                if (reader.peek() == JsonToken.BEGIN_OBJECT) {
+                    var cpa = Double.NaN
+                    var tcpa = Double.NaN
+                    var name = "Unknown Vessel"
+                    reader.beginObject()
+                    while (reader.hasNext()) {
+                        when (reader.nextName()) {
+                            "cpa" -> cpa = reader.nextDouble()
+                            "tcpa" -> tcpa = reader.nextDouble()
+                            "name" -> name = reader.nextString()
+                            else -> reader.skipValue()
+                        }
+                    }
+                    reader.endObject()
+                    if (!cpa.isNaN() && !tcpa.isNaN()) {
+                        dataBroker.updateClosestApproach(cpa, tcpa, name)
+                        val state = s.copy(cpa = cpa, tcpa = tcpa, threatName = name, timestamps = newTimestamps)
+                        Pair(state, true)
+                    } else null
+                } else null
+            }
+            SignalKPaths.NAV_COURSE_NEXT_POINT -> {
+                if (reader.peek() == JsonToken.BEGIN_OBJECT) {
+                    var lat = Double.NaN
+                    var lon = Double.NaN
+                    reader.beginObject()
+                    while (reader.hasNext()) {
+                        when (reader.nextName()) {
+                            "position" -> {
+                                reader.beginObject()
+                                while (reader.hasNext()) {
+                                    when (reader.nextName()) {
+                                        "latitude" -> lat = reader.nextDouble()
+                                        "longitude" -> lon = reader.nextDouble()
+                                        else -> reader.skipValue()
+                                    }
+                                }
+                                reader.endObject()
+                            }
+                            else -> reader.skipValue()
+                        }
+                    }
+                    reader.endObject()
+                    if (MarineStateConstants.isValidLat(lat) && MarineStateConstants.isValidLon(lon)) {
+                        val state = s.copy(serverNextPoint = net.osmand.plus.plugins.nautical.laylines.engine.LatLon(lat, lon), timestamps = newTimestamps)
+                        Pair(state, true)
+                    } else null
+                } else null
+            }
+            SignalKPaths.FORWARD_WATCH_DETECTIONS -> {
+                if (reader.peek() == JsonToken.BEGIN_ARRAY) {
+                    val hazards = mutableListOf<ForwardHazard>()
+                    reader.beginArray()
+                    while (reader.hasNext()) {
+                        if (reader.peek() == JsonToken.BEGIN_OBJECT) {
+                            var id = ""
+                            var name = "Obstacle"
+                            var dist = 0.0
+                            var bear = 0.0
+                            var severity = NotificationState.NORMAL
+                            var lat = Double.NaN
+                            var lon = Double.NaN
+
+                            reader.beginObject()
+                            while (reader.hasNext()) {
+                                when (reader.nextName()) {
+                                    "id" -> id = reader.nextString()
+                                    "name" -> name = reader.nextString()
+                                    "distance" -> dist = reader.nextDouble()
+                                    "bearing" -> bear = reader.nextDouble()
+                                    "severity" -> severity = when(reader.nextString()) {
+                                        "alert" -> NotificationState.ALERT
+                                        "warn" -> NotificationState.WARN
+                                        "alarm" -> NotificationState.ALARM
+                                        "emergency" -> NotificationState.EMERGENCY
+                                        else -> NotificationState.NORMAL
+                                    }
+                                    "position" -> {
+                                        reader.beginObject()
+                                        while (reader.hasNext()) {
+                                            when (reader.nextName()) {
+                                                "latitude" -> lat = reader.nextDouble()
+                                                "longitude" -> lon = reader.nextDouble()
+                                                else -> reader.skipValue()
+                                            }
+                                        }
+                                        reader.endObject()
+                                    }
+                                    else -> reader.skipValue()
+                                }
+                            }
+                            reader.endObject()
+                            hazards.add(ForwardHazard(id, name, dist, bear, severity, if (lat.isNaN()) null else lat to lon))
+                        } else {
+                            reader.skipValue()
+                        }
+                    }
+                    reader.endArray()
+                    val state = s.copy(forwardHazards = hazards, timestamps = newTimestamps)
+                    NauticalPlugin.getInstance()?.safetyManager?.updateForwardHazards(hazards)
+                    Pair(state, true)
+                } else null
+            }
+            "navigation.course" -> {
+                if (reader.peek() == JsonToken.BEGIN_OBJECT) {
+                    var nextLat = Double.NaN
+                    var nextLon = Double.NaN
+                    var activeRouteHref: String? = null
+                    var radius: Double? = null
+
+                    reader.beginObject()
+                    while (reader.hasNext()) {
+                        when (reader.nextName()) {
+                            "nextPoint" -> {
+                                reader.beginObject()
+                                while (reader.hasNext()) {
+                                    if (reader.nextName() == "position") {
+                                        reader.beginObject()
+                                        while (reader.hasNext()) {
+                                            when (reader.nextName()) {
+                                                "latitude" -> nextLat = reader.nextDouble()
+                                                "longitude" -> nextLon = reader.nextDouble()
+                                                else -> reader.skipValue()
+                                            }
+                                        }
+                                        reader.endObject()
+                                    } else reader.skipValue()
+                                }
+                                reader.endObject()
+                            }
+                            "activeRoute" -> {
+                                reader.beginObject()
+                                while (reader.hasNext()) {
+                                    if (reader.nextName() == "href") activeRouteHref = reader.nextString()
+                                    else reader.skipValue()
+                                }
+                                reader.endObject()
+                            }
+                            "arrivalCircle" -> radius = reader.nextDouble()
+                            else -> reader.skipValue()
+                        }
+                    }
+                    reader.endObject()
+
+                    if (!nextLat.isNaN()) {
+                        dataBroker.updateState { it.copy(serverNextPoint = net.osmand.plus.plugins.nautical.laylines.engine.LatLon(nextLat, nextLon)) }
+                    }
+                    radius?.let { arrivalRadiusMeters = it }
+                    if (activeRouteHref != null) isFollowingRoute = true
+
+                    Pair(s, true)
+                } else null
+            }
+            else -> null
+        }
+    }
+
+    private fun readJsonValue(reader: JsonReader): Any? {
+        return when (reader.peek()) {
+            JsonToken.NUMBER -> {
+                val s = reader.nextString()
+                s.toDoubleOrNull() ?: s.toLongOrNull()
+            }
+            JsonToken.STRING -> reader.nextString()
+            JsonToken.BOOLEAN -> reader.nextBoolean()
+            JsonToken.NULL -> { reader.nextNull(); null }
+            JsonToken.BEGIN_OBJECT -> {
+                val obj = JSONObject()
+                reader.beginObject()
+                while (reader.hasNext()) {
+                    val key = reader.nextName()
+                    obj.put(key, readJsonValue(reader))
+                }
+                reader.endObject()
+                obj
+            }
+            JsonToken.BEGIN_ARRAY -> {
+                val arr = JSONArray()
+                reader.beginArray()
+                while (reader.hasNext()) {
+                    arr.put(readJsonValue(reader))
+                }
+                reader.endArray()
+                arr
+            }
+            else -> { reader.skipValue(); null }
+        }
+    }
+
+    private fun processMeta(reader: JsonReader) {
+        reader.beginArray()
+        val currentMeta = dataBroker.marineState.value.pathMeta.toMutableMap()
+        while (reader.hasNext()) {
+            reader.beginObject()
+            var path: String? = null
+            var value: JSONObject? = null
+            while (reader.hasNext()) {
+                when (reader.nextName()) {
+                    "path" -> path = reader.nextString()
+                    "value" -> value = readJsonValue(reader) as? JSONObject
+                    else -> reader.skipValue()
+                }
+            }
+            reader.endObject()
+            if (path != null && value != null) {
+                val metaMap = mutableMapOf<String, Any>()
+                val keys = value.keys()
+                while (keys.hasNext()) {
+                    val key = keys.next()
+                    metaMap[key] = value.get(key)
+                }
+                currentMeta[path] = metaMap
+            }
+        }
+        dataBroker.updateState { it.copy(pathMeta = currentMeta) }
+        reader.endArray()
+    }
+
+    private var lastStateUpdateTime: Long = 0
+    @Volatile
+    private var pendingFinalState: MarineState? = null
+
+    private fun finalizeAndNotifyState(state: MarineState) {
+        synchronized(this) {
+            pendingFinalState = state
+        }
+        val now = TemporalUtils.now()
+        if (now - lastStateUpdateTime < 100) {
+            return
+        }
+        lastStateUpdateTime = now
+        val currentState = synchronized(this) { pendingFinalState } ?: return
+        
+        // Task 11: Engine Guard Logic
+        val isEngineRunning = currentState.engines.values.any {
+            it.state?.lowercase() == "started" || (it.revolutions != null && it.revolutions > 100.0)
+        }
+        val stateWithEngine = currentState.copy(isEngineRunning = isEngineRunning)
+
+        val caps = capabilityManager?.capabilities?.value ?: CapabilityManager.ServerCapabilityMap()
+
+        val stateWithLeeway = if (caps.hasLeeway || caps.hasDerivedData) {
+            stateWithEngine
+        } else {
+            val leeway = calculateLeeway(stateWithEngine)
+            stateWithEngine.copy(leeway = leeway)
+        }
+
+        val processedState = calculateNavigationMetrics(
+            calculateEfficiencyMetrics(
+                calculateDepths(
+                    if (caps.hasSetAndDrift || caps.hasDerivedData) stateWithLeeway else calculateSetAndDrift(stateWithLeeway, now)
+                )
+            ), now
+        ).let { s ->
+            val xteNm = SignalKUnitConverter.metersToNm(abs(s.crossTrackError ?: 0.0))
+            val isOff = xteNm > xteThresholdNm && (s.autopilotState.uppercase(Locale.US) == "TRACK")
+            s.copy(isOffCourse = isOff, connectionStatus = ConnectionStatus.CONNECTED)
+        }
+
+        val finalState = MultihullShuntManager.transformState(processedState)
+
+        val effectiveStw = if (finalState.isStwUnreliable) finalState.speedOverGround else finalState.speedThroughWater
+
+        val perfData = net.osmand.plus.plugins.nautical.network.LivePerformanceData(
+            speedThroughWater = effectiveStw,
+            windSpeedTrue = finalState.windSpeedTrue,
+            windAngleTrueWater = finalState.trueWindAngle,
+            speedOverGround = finalState.speedOverGround,
+            courseOverGround = finalState.courseOverGroundTrue,
+            latitude = finalState.latitude,
+            longitude = finalState.longitude,
+            headingTrue = finalState.headingTrue,
+            headingMagnetic = finalState.headingMagnetic,
+            magneticVariation = finalState.magneticVariation,
+            leeway = finalState.leeway,
+            depthBelowTransducer = finalState.depthBelowTransducer,
+            polarSpeed = finalState.polarTargetSpeed,
+            targetAngle = finalState.targetWindAngleApparent,
+            polarSpeedRatio = finalState.polarSpeedRatio,
+            roll = finalState.roll,
+            pitch = finalState.pitch,
+            windAngleApparent = finalState.windDirectionApparent,
+            windSpeedApparent = finalState.windSpeedApparent,
+            destinationLatitude = getNextWaypoint()?.first,
+            destinationLongitude = getNextWaypoint()?.second,
+            lastWaypointLatitude = lastWaypointLat,
+            lastWaypointLongitude = lastWaypointLon,
+            distanceToWaypoint = finalState.distanceToWaypoint,
+            drift = finalState.drift,
+            setTrue = finalState.setTrue,
+            timestamp = finalState.timestamps.values.maxOrNull()?.let { TemporalUtils.validate(it) } ?: TemporalUtils.now()
+        )
+
+        dataBroker.updatePerformanceData(perfData)
+        
+        // Task: Bridge to SailingDataAggregator for unification
+        net.osmand.plus.plugins.nautical.di.SailingDependencyContainer.nmeaMultiplexer?.aggregator?.handleLivePerformanceData(perfData)
+
+        dataBroker.updateState { finalState }
+        
+        engineScope.launch(Dispatchers.Main) {
+            notifyListeners(finalState)
+        }
+    }
+
+    private fun updateAisTarget(target: AisObject, path: String, valueObj: Any?, now: Long): AisObject {
+        // APRS / Meshtastic Source Detection
+        val source = dataBroker.marineState.value.pathMeta[path]?.get("source")?.toString() ?: ""
+        val isRemote = source.contains("aprs") || source.contains("meshtastic")
+        if (isRemote) {
+             NauticalPlugin.getInstance()?.aisManager?.markRemoteVessel(target.mmsi)
+        }
+
+        // Task 8.0: Temporal check to prevent out-of-order AIS updates from overwriting newer data
+        if (now < target.lastUpdate) {
+            log.debug("Nautical: Skipping out-of-order AIS update for MMSI ${target.mmsi} (Path: $path)")
+            return target
+        }
+        
+        // AisObject is mutable and its set() / init methods update lastUpdate.
+        val temp = AisObject(target.mmsi, 1, target.position?.latitude ?: 0.0, target.position?.longitude ?: 0.0)
+        temp.set(target)
+
         when (path) {
+            "" -> {
+                if (valueObj is JSONObject) {
+                    val name = valueObj.optString("name", "")
+                    val vName = valueObj.optString("vesselName", "")
+                    val shipName = name.ifEmpty { vName.ifEmpty { null } }
+                    
+                    val type = valueObj.optInt("vesselType", -1)
+                    
+                    // We need to use constructors or a way to set these fields.
+                    // AisObject has no public setters for many fields, they are initialized in constructors or via set(AisObject).
+                    // This is why I'll create a new one with updated fields and use set().
+                    
+                    val updated = AisObject(
+                        target.mmsi, 1,
+                        target.imo, null, shipName,
+                        if (type != -1) type else target.shipType,
+                        target.dimensionToBow, target.dimensionToStern,
+                        target.dimensionToPort, target.dimensionToStarboard,
+                        target.draught, target.destination,
+                        target.etaMon, target.etaDay, target.etaHour, target.etaMin
+                    )
+                    target.set(updated)
+                }
+            }
+            "name", "vesselName" -> {
+                val shipName = valueObj?.toString()
+                val updated = AisObject(
+                    target.mmsi, 1,
+                    target.imo, target.callSign, shipName,
+                    target.shipType,
+                    target.dimensionToBow, target.dimensionToStern,
+                    target.dimensionToPort, target.dimensionToStarboard,
+                    target.draught, target.destination,
+                    target.etaMon, target.etaDay, target.etaHour, target.etaMin
+                )
+                target.set(updated)
+            }
+            "design.type" -> {
+                val type = if (valueObj is JSONObject) valueObj.optInt("id", -1) else (valueObj as? Number)?.toInt() ?: -1
+                if (type != -1) {
+                    val updated = AisObject(
+                        target.mmsi, 1,
+                        target.imo, target.callSign, target.shipName,
+                        type,
+                        target.dimensionToBow, target.dimensionToStern,
+                        target.dimensionToPort, target.dimensionToStarboard,
+                        target.draught, target.destination,
+                        target.etaMon, target.etaDay, target.etaHour, target.etaMin
+                    )
+                    target.set(updated)
+                }
+            }
             "navigation.position" -> {
                 if (valueObj is JSONObject) {
                     val lat = valueObj.optDouble("latitude", Double.NaN)
                     val lon = valueObj.optDouble("longitude", Double.NaN)
-                    if (!lat.isNaN() && !lon.isNaN()) {
-                        state = state.copy(latitude = lat, longitude = lon, timestamps = newTimestamps)
-                        updated = true
-                        updateFollowingState(lat, lon)
-                        addTrajectoryPoint(lat, lon)
+                    if (MarineStateConstants.isValidLat(lat) && MarineStateConstants.isValidLon(lon)) {
+                        // Use the constructor that sets lat/lon
+                        val updated = AisObject(target.mmsi, 1, lat, lon)
+                        target.set(updated)
                     }
-                }
-            }
-            "navigation.headingTrue" -> {
-                val heading = valueItem.optDouble("value", Double.NaN)
-                if (!heading.isNaN()) {
-                    state = state.copy(headingTrue = heading, timestamps = newTimestamps)
-                    dataBroker.processHeadingUpdate(heading)
-                    updated = true
-                }
-            }
-            "navigation.headingMagnetic" -> {
-                val heading = valueItem.optDouble("value", Double.NaN)
-                if (!heading.isNaN()) {
-                    state = state.copy(headingMagnetic = heading, timestamps = newTimestamps)
-                    magHdgBuffer.add(Pair(heading, lastUpdateTimestamp))
-                    updated = true
-                }
-            }
-            "navigation.magneticVariation" -> {
-                val variation = valueItem.optDouble("value", Double.NaN)
-                if (!variation.isNaN()) {
-                    state = state.copy(magneticVariation = variation, timestamps = newTimestamps)
-                    updated = true
-                }
-            }
-            "navigation.log" -> {
-                val logVal = valueItem.optDouble("value", Double.NaN)
-                if (!logVal.isNaN()) {
-                    state = state.copy(log = logVal, timestamps = newTimestamps)
-                    logBuffer.add(Pair(logVal, lastUpdateTimestamp))
-                    updated = true
-                }
-            }
-            "navigation.trip.log" -> {
-                val logVal = valueItem.optDouble("value", Double.NaN)
-                if (!logVal.isNaN()) {
-                    state = state.copy(tripLog = logVal, timestamps = newTimestamps)
-                    tripLogBuffer.add(Pair(logVal, lastUpdateTimestamp))
-                    updated = true
-                }
-            }
-            "navigation.attitude" -> {
-                if (valueObj is JSONObject) {
-                    val roll = valueObj.optDouble("roll", Double.NaN)
-                    val pitch = valueObj.optDouble("pitch", Double.NaN)
-                    val yaw = valueObj.optDouble("yaw", Double.NaN)
-                    state = state.copy(
-                        roll = if (roll.isNaN()) state.roll else roll,
-                        pitch = if (pitch.isNaN()) state.pitch else pitch,
-                        yaw = if (yaw.isNaN()) state.yaw else yaw,
-                        timestamps = newTimestamps
-                    )
-                    if (!roll.isNaN()) rollBuffer.add(Pair(roll, lastUpdateTimestamp))
-                    if (!pitch.isNaN()) pitchBuffer.add(Pair(pitch, lastUpdateTimestamp))
-                    updated = true
                 }
             }
             "navigation.speedOverGround" -> {
-                val sog = valueItem.optDouble("value", Double.NaN)
-                if (!sog.isNaN()) {
-                    state = state.copy(speedOverGround = sog, timestamps = newTimestamps)
-                    sogBuffer.add(Pair(sog, lastUpdateTimestamp))
-                    updated = true
-                }
-            }
-            "navigation.speedThroughWater" -> {
-                val stw = valueItem.optDouble("value", Double.NaN)
-                if (!stw.isNaN()) {
-                    state = state.copy(speedThroughWater = stw, timestamps = newTimestamps)
-                    stwBuffer.add(Pair(stw, lastUpdateTimestamp))
-                    updated = true
-                }
-            }
-            "navigation.rateOfTurn" -> {
-                val rot = valueItem.optDouble("value", Double.NaN)
-                if (!rot.isNaN()) {
-                    state = state.copy(rateOfTurn = rot, timestamps = newTimestamps)
-                    rotBuffer.add(Pair(rot, lastUpdateTimestamp))
-                    updated = true
-                }
-            }
-            "navigation.drift" -> {
-                val drift = valueItem.optDouble("value", Double.NaN)
-                if (!drift.isNaN()) {
-                    state = state.copy(drift = drift, timestamps = newTimestamps)
-                    driftBuffer.add(Pair(drift, lastUpdateTimestamp))
-                    updated = true
-                }
-            }
-            "navigation.closestApproach" -> {
-                if (valueObj is JSONObject) {
-                    val cpa = valueObj.optDouble("cpa", Double.NaN)
-                    val tcpa = valueObj.optDouble("tcpa", Double.NaN)
-                    val name = valueObj.optString("name", "Unknown Vessel")
-                    if (!cpa.isNaN() && !tcpa.isNaN()) {
-                        dataBroker.updateClosestApproach(cpa, tcpa, name)
-                        state = state.copy(timestamps = newTimestamps)
-                        updated = true
-                    }
-                }
-            }
-            "navigation.setTrue" -> {
-                val set = valueItem.optDouble("value", Double.NaN)
-                if (!set.isNaN()) {
-                    state = state.copy(setTrue = set, timestamps = newTimestamps)
-                    setTrueBuffer.add(Pair(set, lastUpdateTimestamp))
-                    updated = true
+                val sogMs = (valueObj as? Number)?.toDouble() ?: Double.NaN
+                if (MarineStateConstants.isValidSpeed(sogMs)) {
+                    val sogKnots = SignalKUnitConverter.msToKnots(sogMs)
+                    val updated = AisObject(
+                        target.mmsi, 1, target.timeStamp, target.navStatus, target.manInd, target.heading,
+                        target.cog, sogKnots, target.position?.latitude ?: 0.0, target.position?.longitude ?: 0.0, target.rot
+                    )
+                    target.set(updated)
                 }
             }
             "navigation.courseOverGroundTrue" -> {
-                val cog = valueItem.optDouble("value", Double.NaN)
-                if (!cog.isNaN()) {
-                    state = state.copy(courseOverGroundTrue = cog, timestamps = newTimestamps)
-                    cogBuffer.add(Pair(cog, lastUpdateTimestamp))
-                    updated = true
+                val cogRad = (valueObj as? Number)?.toDouble() ?: Double.NaN
+                if (!cogRad.isNaN()) {
+                    val cogDeg = SignalKUnitConverter.radToDeg(cogRad)
+                    val updated = AisObject(
+                        target.mmsi, 1, target.timeStamp, target.navStatus, target.manInd, target.heading,
+                        cogDeg, target.sog, target.position?.latitude ?: 0.0, target.position?.longitude ?: 0.0, target.rot
+                    )
+                    target.set(updated)
                 }
             }
-            "performance.velocityMadeGood" -> {
-                val vmg = valueItem.optDouble("value", Double.NaN)
-                if (!vmg.isNaN()) {
-                    state = state.copy(velocityMadeGood = vmg, timestamps = newTimestamps)
-                    vmgBuffer.add(Pair(vmg, lastUpdateTimestamp))
-                    updated = true
+            "navigation.headingTrue" -> {
+                val hdgRad = (valueObj as? Number)?.toDouble() ?: Double.NaN
+                if (!hdgRad.isNaN()) {
+                    val hdgDeg = SignalKUnitConverter.radToDeg(hdgRad).toInt()
+                    val updated = AisObject(
+                        target.mmsi, 1, target.timeStamp, target.navStatus, target.manInd, hdgDeg,
+                        target.cog, target.sog, target.position?.latitude ?: 0.0, target.position?.longitude ?: 0.0, target.rot
+                    )
+                    target.set(updated)
                 }
             }
-            "navigation.crossTrackError" -> {
+            SignalKPaths.NAV_DESTINATION -> {
+                val dest = valueObj?.toString()
+                val updated = AisObject(
+                    target.mmsi, 1, 
+                    target.imo, target.callSign, target.shipName, 
+                    target.shipType,
+                    target.dimensionToBow, target.dimensionToStern,
+                    target.dimensionToPort, target.dimensionToStarboard,
+                    target.draught, dest,
+                    target.etaMon, target.etaDay, target.etaHour, target.etaMin
+                )
+                target.set(updated)
+            }
+            SignalKPaths.NAV_STATE -> {
+                val statusStr = valueObj?.toString() ?: ""
+                val status = when (statusStr.lowercase(Locale.US)) {
+                    "under way using engine", "motoring" -> 0
+                    "at anchor" -> 1
+                    "not under command" -> 2
+                    "restricted manoeuverability" -> 3
+                    "constrained by her draught" -> 4
+                    "moored" -> 5
+                    "aground" -> 6
+                    "engaged in fishing" -> 7
+                    "under way sailing", "sailing" -> 8
+                    else -> target.navStatus
+                }
+                val updated = AisObject(
+                    target.mmsi, 1, target.timeStamp, status, target.manInd, target.heading,
+                    target.cog, target.sog, target.position?.latitude ?: 0.0, target.position?.longitude ?: 0.0, target.rot
+                )
+                target.set(updated)
+            }
+        }
+        return target
+    }
+
+    private fun parseSelfValue(s: MarineState, path: String, valueObj: Any?, now: Long): Pair<MarineState, Boolean> {
+        val newTimestamps = s.timestamps.toMutableMap()
+        newTimestamps[path] = now
+        val stateWithTs = s.copy(timestamps = newTimestamps)
+
+        // Hot Path: High-frequency telemetry
+        return when (path) {
+            SignalKPaths.NAV_HEADING_TRUE -> processHeadingTrue(stateWithTs, valueObj, now)
+            SignalKPaths.NAV_HEADING_MAG -> processHeadingMag(stateWithTs, valueObj, now)
+            SignalKPaths.NAV_SPEED_OVER_GROUND -> processSog(stateWithTs, valueObj, now)
+            SignalKPaths.NAV_SPEED_THROUGH_WATER -> processStw(stateWithTs, valueObj, now)
+            SignalKPaths.ENV_WIND_ANGLE_APPARENT -> processWindAngleApparent(stateWithTs, valueObj, now)
+            SignalKPaths.ENV_WIND_SPEED_APPARENT -> processWindSpeedApparent(stateWithTs, valueObj, now)
+            
+            else -> {
+                // Category-based dispatch
+                when {
+                    path.startsWith("navigation.") -> parseNavigationValue(stateWithTs, path, valueObj, now)
+                    path.startsWith("performance.") -> parsePerformanceValue(stateWithTs, path, valueObj, now)
+                    path.startsWith("steering.") -> parseAutopilotValue(stateWithTs, path, valueObj, now)
+                    path.startsWith("environment.") -> parseEnvironmentValue(stateWithTs, path, valueObj, now)
+                    path.startsWith("propulsion.") || path.startsWith("electrical.") || path.startsWith("tanks.") ->
+                        parseSystemValue(stateWithTs, path, valueObj, now)
+                    else -> {
+                        val res = parseTelemetryValue(stateWithTs, path, valueObj, now)
+                        if (res.second) res else parseOtherValue(stateWithTs, path, valueObj)
+                    }
+                }
+            }
+        }
+    }
+
+    private fun processHeadingTrue(s: MarineState, valueObj: Any?, now: Long): Pair<MarineState, Boolean> {
+        val value = (valueObj as? Number)?.toDouble() ?: Double.NaN
+        return if (!value.isNaN()) {
+            val state = s.copy(headingTrue = value, timeOfHeadingFix = now)
+            dataBroker.processHeadingUpdate(value)
+            Pair(state, true)
+        } else Pair(s, false)
+    }
+
+    private fun processHeadingMag(s: MarineState, valueObj: Any?, now: Long): Pair<MarineState, Boolean> {
+        val value = (valueObj as? Number)?.toDouble() ?: Double.NaN
+        return if (!value.isNaN()) {
+            val state = s.copy(headingMagnetic = value, timeOfHeadingFix = now)
+            dataBroker.processHeadingUpdate(value)
+            dataBroker.processVariationUpdate(state.magneticVariation ?: 0.0)
+            getBuffer(SignalKPaths.NAV_HEADING_MAG).add(Pair(value, now))
+            Pair(state, true)
+        } else Pair(s, false)
+    }
+
+    private fun processSog(s: MarineState, valueObj: Any?, now: Long): Pair<MarineState, Boolean> {
+        val value = (valueObj as? Number)?.toDouble() ?: Double.NaN
+        return if (MarineStateConstants.isValidSpeed(value)) {
+            val state = s.copy(speedOverGround = value, timeOfSogFix = now)
+            getBuffer(SignalKPaths.NAV_SPEED_OVER_GROUND).add(Pair(value, now))
+            dataBroker.processSogUpdate(value)
+            Pair(state, true)
+        } else Pair(s, false)
+    }
+
+    private fun processStw(s: MarineState, valueObj: Any?, now: Long): Pair<MarineState, Boolean> {
+        val value = (valueObj as? Number)?.toDouble() ?: Double.NaN
+        return if (MarineStateConstants.isValidSpeed(value)) {
+            val state = s.copy(speedThroughWater = value, timeOfSogFix = now)
+            getBuffer(SignalKPaths.NAV_SPEED_THROUGH_WATER).add(Pair(value, now))
+            dataBroker.processStwUpdate(value)
+            Pair(state, true)
+        } else Pair(s, false)
+    }
+
+    private fun processWindAngleApparent(s: MarineState, valueObj: Any?, now: Long): Pair<MarineState, Boolean> {
+        val value = (valueObj as? Number)?.toDouble() ?: Double.NaN
+        return if (!value.isNaN()) {
+            val corrected = environmentalFilterService?.correctWindAngle(value, s.roll ?: 0.0, s.pitch ?: 0.0) ?: value
+            val state = s.copy(windDirectionApparent = corrected, timeOfWindFix = now)
+            dataBroker.processWindAngleUpdate(corrected)
+            getBuffer(SignalKPaths.ENV_WIND_ANGLE_APPARENT).add(Pair(corrected, now))
+            Pair(state, true)
+        } else Pair(s, false)
+    }
+
+    private fun processWindSpeedApparent(s: MarineState, valueObj: Any?, now: Long): Pair<MarineState, Boolean> {
+        val value = (valueObj as? Number)?.toDouble() ?: Double.NaN
+        return if (MarineStateConstants.isValidWindSpeed(value)) {
+            val corrected = environmentalFilterService?.correctWindSpeed(value, s.pitch ?: 0.0) ?: value
+            val state = s.copy(windSpeedApparent = corrected, timeOfWindFix = now)
+            dataBroker.processWindSpeedUpdate(corrected)
+            getBuffer(SignalKPaths.ENV_WIND_SPEED_APPARENT).add(Pair(corrected, now))
+            Pair(state, true)
+        } else Pair(s, false)
+    }
+
+    private fun parseNavigationValue(s: MarineState, path: String, valueObj: Any?, now: Long): Pair<MarineState, Boolean> {
+        var state = s
+        var updated = false
+        val value = (valueObj as? Number)?.toDouble() ?: Double.NaN
+
+        when (path) {
+            SignalKPaths.NAV_MAG_VARIATION -> {
                 if (!value.isNaN()) {
-                    if (state.crossTrackError == null) {
-                        state = state.copy(crossTrackError = value, timestamps = newTimestamps)
-                        xteBuffer.add(Pair(value, lastUpdateTimestamp))
+                    state = state.copy(magneticVariation = value)
+                    dataBroker.processVariationUpdate(value)
+                    updated = true
+                }
+            }
+            SignalKPaths.NAV_LOG -> {
+                if (!value.isNaN()) {
+                    state = state.copy(log = value)
+                    getBuffer(SignalKPaths.NAV_LOG).add(Pair(value, now))
+                    updated = true
+                }
+            }
+            SignalKPaths.NAV_TRIP_LOG -> {
+                if (!value.isNaN()) {
+                    state = state.copy(tripLog = value)
+                    getBuffer(SignalKPaths.NAV_TRIP_LOG).add(Pair(value, now))
+                    updated = true
+                }
+            }
+            SignalKPaths.NAV_RATE_OF_TURN -> {
+                if (!value.isNaN()) {
+                    state = state.copy(rateOfTurn = value, timeOfRotFix = now)
+                    getBuffer(SignalKPaths.NAV_RATE_OF_TURN).add(Pair(value, now))
+                    updated = true
+                }
+            }
+            SignalKPaths.NAV_DRIFT -> {
+                if (MarineStateConstants.isValidSpeed(value)) {
+                    state = state.copy(drift = value, timeOfDriftFix = now)
+                    getBuffer(SignalKPaths.NAV_DRIFT).add(Pair(value, now))
+                    updated = true
+                }
+            }
+            SignalKPaths.NAV_SET_TRUE -> {
+                if (!value.isNaN()) {
+                    state = state.copy(setTrue = value, timeOfDriftFix = now)
+                    getBuffer(SignalKPaths.NAV_SET_TRUE).add(Pair(value, now))
+                    updated = true
+                }
+            }
+            SignalKPaths.NAV_COURSE_OVER_GROUND -> {
+                if (!value.isNaN()) {
+                    state = state.copy(courseOverGroundTrue = value)
+                    getBuffer(SignalKPaths.NAV_COURSE_OVER_GROUND).add(Pair(value, now))
+                    updated = true
+                }
+            }
+            SignalKPaths.NAV_XTE -> {
+                if (!value.isNaN() && state.crossTrackError == null) {
+                    state = state.copy(crossTrackError = value)
+                    getBuffer(SignalKPaths.NAV_XTE).add(Pair(value, now))
+                    updated = true
+                }
+            }
+            SignalKPaths.NAV_XTE_RHUMB -> {
+                if (!value.isNaN()) {
+                    state = state.copy(crossTrackError = value)
+                    getBuffer(SignalKPaths.NAV_XTE_RHUMB).add(Pair(value, now))
+                    updated = true
+                }
+            }
+            SignalKPaths.NAV_XTE_GC -> {
+                if (!value.isNaN() && state.crossTrackError == null) {
+                    state = state.copy(crossTrackError = value)
+                    getBuffer(SignalKPaths.NAV_XTE_GC).add(Pair(value, now))
+                    updated = true
+                }
+            }
+            SignalKPaths.NAV_DATETIME_MOON_PHASE -> {
+                if (!value.isNaN()) {
+                    state = state.copy(moonPhase = value)
+                    updated = true
+                }
+            }
+            SignalKPaths.NAV_TWD -> {
+                if (!value.isNaN()) {
+                    state = state.copy(windDirectionTrue = value, timeOfWindFix = now)
+                    getBuffer(SignalKPaths.NAV_TWD).add(Pair(value, now))
+                    updated = true
+                }
+            }
+            SignalKPaths.NAV_ANCHOR_RODE_DEPLOYED -> {
+                if (!value.isNaN()) {
+                    state = state.copy(rodeDeployed = value)
+                    updated = true
+                }
+            }
+            SignalKPaths.NAV_CALLSIGN -> {
+                val callSign = valueObj as? String ?: ""
+                if (callSign.isNotEmpty()) {
+                    state = state.copy(vesselCallSign = callSign)
+                    updated = true
+                }
+            }
+            else -> {
+                if (path.startsWith(SignalKPaths.NAV_GNSS_PREFIX)) {
+                    val currentGnss = state.gnss ?: GnssState()
+                    val newGnss = when {
+                        path.endsWith(".method") -> currentGnss.copy(method = valueObj?.toString())
+                        path.endsWith(".satellites") -> currentGnss.copy(satellites = (valueObj as? Number)?.toInt())
+                        path.endsWith(".horizontalDilution") -> currentGnss.copy(horizontalDilution = value)
+                        path.endsWith(".verticalDilution") -> currentGnss.copy(verticalDilution = value)
+                        path.endsWith(".integrity") -> currentGnss.copy(integrity = valueObj?.toString())
+                        else -> currentGnss
+                    }
+                    state = state.copy(gnss = newGnss)
+                    updated = true
+                } else if (path.startsWith(SignalKPaths.NAV_ANCHOR_PREFIX)) {
+                    val currentAnchor = state.anchor ?: AnchorState()
+                    val newAnchor = when {
+                        path.endsWith(".state") -> currentAnchor.copy(state = valueObj?.toString())
+                        path.endsWith(".maxDrift") -> currentAnchor.copy(maxDrift = value)
+                        path.endsWith(".radius") -> currentAnchor.copy(radius = value)
+                        path.endsWith(".selection") -> currentAnchor.copy(selection = valueObj?.toString())
+                        path.endsWith(".position") -> {
+                            if (valueObj is JSONObject) {
+                                currentAnchor.copy(
+                                    latitude = valueObj.optDouble("latitude", Double.NaN).takeIf { !it.isNaN() },
+                                    longitude = valueObj.optDouble("longitude", Double.NaN).takeIf { !it.isNaN() }
+                                )
+                            } else currentAnchor
+                        }
+                        else -> currentAnchor
+                    }
+                    state = state.copy(anchor = newAnchor)
+                    updated = true
+                }
+            }
+        }
+        return Pair(state, updated)
+    }
+
+    private fun parsePerformanceValue(s: MarineState, path: String, valueObj: Any?, now: Long): Pair<MarineState, Boolean> {
+        var state = s
+        var updated = false
+        val value = (valueObj as? Number)?.toDouble() ?: Double.NaN
+
+        when (path) {
+            SignalKPaths.PERF_VMG -> {
+                if (!value.isNaN()) {
+                    state = state.copy(velocityMadeGood = value)
+                    getBuffer(SignalKPaths.PERF_VMG).add(Pair(value, now))
+                    updated = true
+                }
+            }
+            SignalKPaths.PERF_TACK_ANGLE -> {
+                if (!value.isNaN()) {
+                    state = state.copy(tackAngle = value)
+                    updated = true
+                }
+            }
+            SignalKPaths.PERF_WIND_SHIFT -> {
+                if (!value.isNaN()) {
+                    state = state.copy(windShift = value)
+                    updated = true
+                }
+            }
+            SignalKPaths.PERF_LAYLINES -> {
+                if (valueObj is JSONObject) {
+                    val port = valueObj.optJSONObject("portTackPoint")
+                    val stbd = valueObj.optJSONObject("starboardTackPoint")
+                    val target = valueObj.optJSONObject("targetWaypoint")
+                    if (target != null) {
+                        val laylineData = net.osmand.plus.plugins.nautical.laylines.engine.LaylineData(
+                            portTackPoint = port?.let { net.osmand.plus.plugins.nautical.laylines.engine.LatLon(it.optDouble("latitude"), it.optDouble("longitude")) },
+                            starboardTackPoint = stbd?.let { net.osmand.plus.plugins.nautical.laylines.engine.LatLon(it.optDouble("latitude"), it.optDouble("longitude")) },
+                            isFetchable = valueObj.optBoolean("isFetchable", true),
+                            targetWaypoint = net.osmand.plus.plugins.nautical.laylines.engine.LatLon(target.optDouble("latitude"), target.optDouble("longitude"))
+                        )
+                        state = state.copy(serverLaylines = laylineData)
                         updated = true
                     }
                 }
             }
-            "navigation.courseRhumbline.crossTrackError" -> {
+            SignalKPaths.PERF_POLAR_RATIO -> {
                 if (!value.isNaN()) {
-                    state = state.copy(crossTrackError = value, timestamps = newTimestamps)
-                    xteBuffer.add(Pair(value, lastUpdateTimestamp))
+                    state = state.copy(polarSpeedRatio = value)
+                    getBuffer(SignalKPaths.PERF_POLAR_RATIO).add(Pair(value, now))
                     updated = true
                 }
             }
-            "navigation.courseGreatCircle.crossTrackError" -> {
-                if (!value.isNaN()) {
-                    if (state.crossTrackError == null) {
-                        state = state.copy(crossTrackError = value, timestamps = newTimestamps)
-                        xteBuffer.add(Pair(value, lastUpdateTimestamp))
-                        updated = true
-                    }
+            SignalKPaths.PERF_TARGET_SPEED, "performance.polarSpeed" -> {
+                if (MarineStateConstants.isValidSpeed(value)) {
+                    state = state.copy(polarTargetSpeed = value)
+                    updated = true
                 }
             }
-            "steering.autopilot.state" -> {
-                val raw = valueItem.optString("value", "standby").uppercase(Locale.US)
+            SignalKPaths.PERF_TARGET_ANGLE -> {
+                if (!value.isNaN()) {
+                    state = state.copy(targetWindAngleApparent = value)
+                    updated = true
+                }
+            }
+        }
+        return Pair(state, updated)
+    }
+
+    private fun parseAutopilotValue(s: MarineState, path: String, valueObj: Any?, now: Long): Pair<MarineState, Boolean> {
+        var state = s
+        var updated = false
+        val value = (valueObj as? Number)?.toDouble() ?: Double.NaN
+
+        when (path) {
+            SignalKPaths.STEERING_AUTOPILOT_STATE -> {
+                val raw = (valueObj as? String ?: "standby").uppercase(Locale.US)
                 val normalized = when (raw) {
                     "ROUTE", "TRACK" -> "track"
                     else -> raw.lowercase(Locale.US)
@@ -884,308 +2032,543 @@ class SignalKEngine {
                 if (normalized == nextPendingMode?.lowercase(Locale.US)) {
                     nextPendingMode = null
                 }
-                state = state.copy(autopilotState = normalized, pendingAutopilotState = nextPendingMode, timestamps = newTimestamps)
+                state = state.copy(autopilotState = normalized, pendingAutopilotState = nextPendingMode)
                 dataBroker.updateAutopilotState(normalized)
                 updated = true
             }
-            "steering.rudderAngle" -> {
-                val rudder = valueItem.optDouble("value", Double.NaN)
-                if (!rudder.isNaN()) {
-                    state = state.copy(rudderAngle = rudder, timestamps = newTimestamps)
+            SignalKPaths.STEERING_AUTOPILOT_DUTY_CYCLE -> {
+                if (!value.isNaN()) {
+                    state = state.copy(actuatorDutyCycle = value)
+                    getBuffer(path).add(Pair(value, now))
+                    checkActuatorLoad(state)
                     updated = true
                 }
             }
-            "steering.autopilot.target.headingTrue" -> {
-                val target = valueItem.optDouble("value", Double.NaN)
-                if (!target.isNaN()) {
+            SignalKPaths.STEERING_ACTUATOR_CURRENT -> {
+                if (!value.isNaN()) {
+                    state = state.copy(actuatorCurrent = value)
+                    getBuffer(path).add(Pair(value, now))
+                    updated = true
+                }
+            }
+            SignalKPaths.STEERING_RUDDER_ANGLE -> {
+                if (!value.isNaN()) {
+                    state = state.copy(rudderAngle = value, timeOfRudderFix = now)
+                    dataBroker.processRudderUpdate(value)
+                    updated = true
+                }
+            }
+            SignalKPaths.STEERING_AUTOPILOT_TARGET_HDG_TRUE -> {
+                if (!value.isNaN()) {
                     var nextPendingHeading = state.pendingTargetHeading
-                    if (nextPendingHeading != null && kotlin.math.abs(target - nextPendingHeading) < 0.02) { // ~1 degree
+                    if (nextPendingHeading != null && abs(value - nextPendingHeading) < 0.02) {
                         nextPendingHeading = null
                     }
-                    state = state.copy(targetHeading = target, pendingTargetHeading = nextPendingHeading, timestamps = newTimestamps)
-                    // Push to dataBroker if needed, requirements specifically asked for headingMagnetic
-                    // but we can push headingTrue if that's what's available as a fallback.
+                    state = state.copy(targetHeading = value, pendingTargetHeading = nextPendingHeading)
                     updated = true
                 }
             }
-            "steering.autopilot.target.headingMagnetic" -> {
-                val target = valueItem.optDouble("value", Double.NaN)
-                if (!target.isNaN()) {
-                    dataBroker.updateAutopilotTargetHeadingMag(target)
-                    state = state.copy(timestamps = newTimestamps)
+            SignalKPaths.STEERING_AUTOPILOT_TARGET_HDG_MAG -> {
+                if (!value.isNaN()) {
+                    dataBroker.updateAutopilotTargetHeadingMag(value)
                     updated = true
                 }
             }
-            "steering.autopilot.target.windAngleApparent" -> {
-                val target = valueItem.optDouble("value", Double.NaN)
-                if (!target.isNaN()) {
-                    state = state.copy(targetWindAngleApparent = target, timestamps = newTimestamps)
+            SignalKPaths.STEERING_AUTOPILOT_TARGET_AWA -> {
+                if (!value.isNaN()) {
+                    state = state.copy(targetWindAngleApparent = value)
                     updated = true
                 }
             }
-            "steering.autopilot.seaState" -> {
-                val level = valueItem.optInt("value", -1)
+            SignalKPaths.STEERING_AUTOPILOT_SEA_STATE -> {
+                val level = (valueObj as? Number)?.toInt() ?: -1
                 if (level != -1) {
-                    state = state.copy(seaState = level, timestamps = newTimestamps)
-                    updated = true
-                }
-            }
-            "name" -> {
-                val name = valueItem.optString("value", "")
-                if (name.isNotEmpty()) {
-                    state = state.copy(vesselName = name, timestamps = newTimestamps)
-                    updated = true
-                }
-            }
-            "design.type" -> {
-                val type = if (valueObj is JSONObject) valueObj.optInt("id", -1) else (valueObj as? Number)?.toInt() ?: -1
-                if (type != -1) {
-                    state = state.copy(vesselType = type, timestamps = newTimestamps)
-                    updated = true
-                }
-            }
-            "design.length.overall" -> {
-                val value = valueItem.optDouble("value", Double.NaN)
-                if (!value.isNaN()) {
-                    state = state.copy(vesselLength = value, timestamps = newTimestamps)
-                    updated = true
-                }
-            }
-            "design.beam" -> {
-                val value = valueItem.optDouble("value", Double.NaN)
-                if (!value.isNaN()) {
-                    state = state.copy(vesselBeam = value, timestamps = newTimestamps)
-                    updated = true
-                }
-            }
-            "navigation.callsign" -> {
-                val callSign = valueItem.optString("value", "")
-                if (callSign.isNotEmpty()) {
-                    state = state.copy(vesselCallSign = callSign, timestamps = newTimestamps)
-                    updated = true
-                }
-            }
-            "propulsion.*.coolantTemperature" -> {
-                if (!value.isNaN()) {
-                    state = state.copy(engineCoolantTemperature = value, timestamps = newTimestamps)
-                    updated = true
-                }
-            }
-            "propulsion.*.state" -> {
-                val v = valueItem.optString("value", "")
-                if (v.isNotEmpty()) {
-                    state = state.copy(engineState = v, timestamps = newTimestamps)
+                    state = state.copy(seaState = level)
                     updated = true
                 }
             }
             else -> {
-                val res = parseTelemetryValue(state, path, valueItem, valueObj)
-                state = res.first.copy(timestamps = newTimestamps)
-                updated = res.second
-                
-                // FALLBACK: If not handled by hardcoded paths, store in customValues for dynamic widgets
-                if (!updated && valueObj is Number) {
-                    val custom = state.customValues.toMutableMap()
-                    custom[path] = valueObj.toDouble()
-                    state = state.copy(customValues = custom)
-                    updated = true
+                when {
+                    path.startsWith(SignalKPaths.STEERING_AUTOPILOT_CONFIG_PREFIX) -> {
+                        val field = path.removePrefix(SignalKPaths.STEERING_AUTOPILOT_CONFIG_PREFIX)
+                        state = updatePypilotConfig(state, field, valueObj)
+                        updated = true
+                    }
+                    path.startsWith(SignalKPaths.STEERING_AUTOPILOT_SERVO_PREFIX) -> {
+                        val field = path.removePrefix(SignalKPaths.STEERING_AUTOPILOT_SERVO_PREFIX)
+                        state = updatePypilotServo(state, field, valueObj)
+                        updated = true
+                    }
+                    path.startsWith(SignalKPaths.STEERING_AUTOPILOT_CALIBRATION_PREFIX) -> {
+                        val field = path.removePrefix(SignalKPaths.STEERING_AUTOPILOT_CALIBRATION_PREFIX)
+                        state = updatePypilotCalibration(state, field, valueObj)
+                        updated = true
+                    }
                 }
             }
         }
         return Pair(state, updated)
     }
 
-    private fun parseTelemetryValue(s: MarineState, path: String, valueItem: JSONObject, valueObj: Any?): Pair<MarineState, Boolean> {
+    private fun parseSystemValue(s: MarineState, path: String, valueObj: Any?, now: Long): Pair<MarineState, Boolean> {
         var state = s
         var updated = false
-        val value = valueItem.optDouble("value", Double.NaN)
+        val value = (valueObj as? Number)?.toDouble() ?: Double.NaN
 
         when {
-            path == "environment.depth.belowTransducer" -> {
-                if (!value.isNaN()) {
-                    state = state.copy(depthBelowTransducer = value)
-                    depthBuffer.add(Pair(value, lastUpdateTimestamp))
-                    updated = true
-                }
-            }
-            path == "environment.depth.surfaceToTransducer" -> {
-                if (!value.isNaN()) {
-                    state = state.copy(depthSurfaceToTransducer = value)
-                    updated = true
-                }
-            }
-            path == "environment.depth.belowKeel" -> {
-                if (!value.isNaN()) {
-                    state = state.copy(depthBelowKeel = value)
-                    depthKeelBuffer.add(Pair(value, lastUpdateTimestamp))
-                    updated = true
-                }
-            }
-            path == "environment.water.temperature" -> {
-                if (!value.isNaN()) {
-                    state = state.copy(waterTemperature = value)
-                    waterTempBuffer.add(Pair(value, lastUpdateTimestamp))
-                    updated = true
-                }
-            }
-            path == "environment.outside.temperature" -> {
-                if (!value.isNaN()) {
-                    state = state.copy(outsideTemperature = value)
-                    outsideTempBuffer.add(Pair(value, lastUpdateTimestamp))
-                    updated = true
-                }
-            }
-            path == "environment.outside.pressure" -> {
-                if (!value.isNaN()) {
-                    state = state.copy(outsidePressure = value)
-                    pressureBuffer.add(Pair(value, lastUpdateTimestamp))
-                    updated = true
-                }
-            }
-            path == "environment.wind.speedTrue" -> {
-                if (!value.isNaN()) {
-                    state = state.copy(windSpeedTrue = value)
-                    windBuffer.add(Pair(value, lastUpdateTimestamp))
-                    updated = true
-                }
-            }
-            path == "environment.wind.directionTrue" -> {
-                if (!value.isNaN()) {
-                    state = state.copy(windDirectionTrue = value)
-                    windDirectionBuffer.add(Pair(value, lastUpdateTimestamp))
-                    twdBuffer.add(Pair(value, lastUpdateTimestamp))
-                    updated = true
-                }
-            }
-            path == "environment.wind.angleApparent" -> {
-                if (!value.isNaN()) {
-                    state = state.copy(windDirectionApparent = value)
-                    dataBroker.processWindAngleUpdate(value)
-                    awaBuffer.add(Pair(value, lastUpdateTimestamp))
-                    updated = true
-                }
-            }
-            path == "environment.wind.speedApparent" -> {
-                if (!value.isNaN()) {
-                    state = state.copy(windSpeedApparent = value)
-                    awsBuffer.add(Pair(value, lastUpdateTimestamp))
-                    updated = true
-                }
-            }
-            path == "environment.wind.angleTrue" -> {
-                if (!value.isNaN()) {
-                    state = state.copy(trueWindAngle = value)
-                    twaBuffer.add(Pair(value, lastUpdateTimestamp))
-                    updated = true
-                }
-            }
-            path == "performance.targetSpeed" -> {
-                if (!value.isNaN()) {
-                    state = state.copy(polarTargetSpeed = value)
-                    updated = true
-                }
-            }
-            path == "performance.polarSpeedRatio" -> {
-                if (!value.isNaN()) {
-                    state = state.copy(polarSpeedRatio = value)
-                    polarRatioBuffer.add(Pair(value, lastUpdateTimestamp))
-                    updated = true
-                }
-            }
-            path.startsWith("propulsion.") -> {
-                val instance = path.substringAfter("propulsion.").substringBefore(".")
-                if (state.engineInstance == null || state.engineInstance == instance) {
-                    state = state.copy(engineInstance = instance)
-                } else {
-                    // For now we only track one engine in the summary state. 
-                    // If multiple exist, we prefer 'started' ones or just the first one seen.
-                }
-
-                if (path.endsWith(".revolutions")) {
-                    if (!value.isNaN()) {
-                        state = state.copy(engineRpm = value * 60.0)
-                        rpmBuffer.add(Pair(value * 60.0, lastUpdateTimestamp))
-                        updated = true
+            path.startsWith(SignalKPaths.BATTERIES_PREFIX) -> {
+                val parts = path.split(".")
+                if (parts.size >= 3) {
+                    val instance = parts[2]
+                    state = updateBattery(state, instance) { b: Battery ->
+                        when {
+                            path.endsWith(".voltage") -> b.copy(voltage = value)
+                            path.endsWith(".current") -> b.copy(current = value)
+                            path.endsWith(".temperature") -> b.copy(temperature = value)
+                            path.endsWith(".capacity.stateOfCharge") -> b.copy(stateOfCharge = value)
+                            path.endsWith(".capacity.stateOfHealth") -> b.copy(stateOfHealth = value)
+                            path.endsWith(".capacity.timeRemaining") -> b.copy(timeRemaining = value)
+                            path.endsWith(".capacity.timeToFull") -> b.copy(timeToFull = value)
+                            path.endsWith(".name") -> b.copy(name = valueObj?.toString())
+                            path.endsWith(".cells") -> {
+                                if (valueObj is JSONObject) {
+                                    val cellList = mutableListOf<Double>()
+                                    val keys = valueObj.keys().asSequence().sorted()
+                                    for (key in keys) {
+                                        val cell = valueObj.optJSONObject(key)
+                                        val v = cell?.optDouble("voltage", Double.NaN) ?: Double.NaN
+                                        if (!v.isNaN()) cellList.add(v)
+                                    }
+                                    b.copy(cellVoltages = cellList)
+                                } else b
+                            }
+                            else -> b
+                        }
                     }
-                } else if (path.endsWith(".temperature")) {
-                    if (!value.isNaN()) {
-                        state = state.copy(engineTemperature = value)
-                        tempEngineBuffer.add(Pair(value, lastUpdateTimestamp))
-                        updated = true
-                    }
-                } else if (path.endsWith(".oilPressure")) {
-                    if (!value.isNaN()) {
-                        state = state.copy(engineOilPressure = value)
-                        oilPressureBuffer.add(Pair(value, lastUpdateTimestamp))
-                        updated = true
-                    }
-                } else if (path.endsWith(".engineLoad")) {
-                    if (!value.isNaN()) {
-                        state = state.copy(engineLoad = value)
-                        engineLoadBuffer.add(Pair(value, lastUpdateTimestamp))
-                        updated = true
-                    }
-                } else if (path.endsWith(".coolantTemperature")) {
-                    if (!value.isNaN()) {
-                        state = state.copy(engineCoolantTemperature = value)
-                        coolantTempBuffer.add(Pair(value, lastUpdateTimestamp))
-                        updated = true
-                    }
-                } else if (path.endsWith(".state")) {
-                    val v = valueItem.optString("value", "")
-                    if (v.isNotEmpty()) {
-                        state = state.copy(engineState = v)
-                        updated = true
-                    }
-                } else if (path.endsWith(".runTime")) {
-                    if (!value.isNaN()) {
-                        state = state.copy(engineRunTime = value)
-                        updated = true
-                    }
+                    if (path.endsWith(".voltage")) state = state.copy(batteryVoltage = value)
+                    if (path.endsWith(".current")) state = state.copy(batteryCurrent = value)
+                    if (path.endsWith(".capacity.stateOfCharge")) state = state.copy(batterySoc = value)
+                    updated = true
                 }
             }
-            path.startsWith("electrical.") -> {
-                if (path.endsWith(".state")) {
-                    val v = when (valueObj) {
-                        is Boolean -> valueObj
-                        is Number -> valueObj.toInt() != 0
-                        is String -> valueObj.lowercase(Locale.US) == "on" || valueObj == "1"
-                        else -> false
+            path.startsWith(SignalKPaths.TANKS_PREFIX) -> {
+                val parts = path.split(".")
+                if (parts.size >= 3) {
+                    val type = parts[1]
+                    val instance = parts[2]
+                    val field = parts.last()
+                    state = updateTank(state, instance, type) { t: Tank ->
+                        when (field) {
+                            "currentLevel" -> t.copy(currentLevel = value)
+                            "currentVolume" -> t.copy(currentVolume = value)
+                            "capacity" -> t.copy(capacity = value)
+                            "name" -> t.copy(name = valueObj?.toString())
+                            else -> t
+                        }
                     }
-                    val switchPath = path.removeSuffix(".state")
-                    val updatedSwitches = state.switches.toMutableMap()
-                    updatedSwitches[switchPath] = v
-                    state = state.copy(switches = updatedSwitches)
                     updated = true
-                } else if (path.endsWith(".voltage")) {
-                    if (!value.isNaN()) {
-                        state = state.copy(batteryVoltage = value)
-                        voltBuffer.add(Pair(value, lastUpdateTimestamp))
-                        updated = true
-                    }
-                } else if (path.endsWith(".current")) {
-                    if (path.contains(".solar.")) {
-                        if (!value.isNaN()) {
-                            state = state.copy(solarCurrent = value)
-                            solarCurrentBuffer.add(Pair(value, lastUpdateTimestamp))
-                            updated = true
+                }
+            }
+            path.startsWith(SignalKPaths.PROPULSION_PREFIX) -> {
+                val parts = path.split(".")
+                if (parts.size >= 3) {
+                    val instance = parts[1]
+                    if (instance == "watermaker") {
+                        val watermakerId = parts.getOrNull(2) ?: "0"
+                        val watermakerField = parts.last()
+                        state = updateWatermaker(state, watermakerId) { w: Watermaker ->
+                            when (watermakerField) {
+                                "state" -> w.copy(state = valueObj?.toString())
+                                "rate" -> w.copy(rate = value)
+                                "totalProduction" -> w.copy(totalProduction = value)
+                                "salinity" -> w.copy(salinity = value)
+                                else -> w
+                            }
                         }
                     } else {
+                        val field = parts.last()
+                        state = updateEngine(state, instance) { e: Engine ->
+                            when (field) {
+                                "revolutions" -> {
+                                    val rpm = SignalKUnitConverter.hertzToRpm(value)
+                                    getBuffer(path).add(Pair(rpm, now))
+                                    e.copy(revolutions = rpm)
+                                }
+                                "temperature" -> {
+                                    getBuffer(path).add(Pair(value, now))
+                                    e.copy(temperature = value)
+                                }
+                                "oilPressure" -> {
+                                    getBuffer(path).add(Pair(value, now))
+                                    e.copy(oilPressure = value)
+                                }
+                                "oilTemperature" -> e.copy(oilTemperature = value)
+                                "fuel.rate", "fuelRate" -> e.copy(fuelRate = value)
+                                "fuel.economy" -> e.copy(fuelEconomy = value)
+                                "boostPressure" -> e.copy(boostPressure = value)
+                                "engineLoad", "load" -> {
+                                    getBuffer(path).add(Pair(value, now))
+                                    e.copy(load = value)
+                                }
+                                "coolantTemperature" -> {
+                                    getBuffer(path).add(Pair(value, now))
+                                    e.copy(coolantTemperature = value)
+                                }
+                                "exhaustTemperature" -> e.copy(exhaustTemperature = value)
+                                "runTime" -> {
+                                    state = state.copy(engineHours = value / 3600.0)
+                                    e.copy(runTime = value)
+                                }
+                                "state" -> e.copy(state = valueObj?.toString())
+                                "alternatorVoltage", "voltage" -> e.copy(alternatorVoltage = value)
+                                "alternatorCurrent", "current" -> e.copy(alternatorCurrent = value)
+                                "driveTrimState" -> e.copy(driveTrimState = value)
+                                "transmissionGear", "gear" -> e.copy(transmissionGear = valueObj?.toString())
+                                "transmissionPressure" -> e.copy(transmissionPressure = value)
+                                "transmissionOilTemperature" -> e.copy(transmissionOilTemperature = value)
+                                else -> e
+                            }
+                        }
+                        if (instance == "0" || state.engines.size <= 1) {
+                            state = state.copy(engineInstance = instance)
+                            when (field) {
+                                "revolutions" -> state = state.copy(engineRpm = SignalKUnitConverter.hertzToRpm(value))
+                                "temperature" -> state = state.copy(engineTemperature = value)
+                                "coolantTemperature" -> state = state.copy(engineCoolantTemperature = value)
+                                "oilPressure" -> state = state.copy(engineOilPressure = value)
+                                "fuel.rate", "fuelRate" -> state = state.copy(fuelRate = value)
+                                "engineLoad", "load" -> state = state.copy(engineLoad = value)
+                                "exhaustTemperature" -> state = state.copy(engineExhaustTemperature = value)
+                                "runTime" -> state = state.copy(engineRunTime = value)
+                                "state" -> state = state.copy(engineState = valueObj?.toString())
+                                "alternatorVoltage", "voltage" -> state = state.copy(alternatorVoltage = value)
+                                "alternatorCurrent", "current" -> state = state.copy(alternatorCurrent = value)
+                                "transmissionGear", "gear" -> state = state.copy(transmissionGear = valueObj?.toString())
+                                "transmissionPressure" -> state = state.copy(transmissionPressure = value)
+                                "transmissionOilTemperature" -> state = state.copy(transmissionOilTemperature = value)
+                            }
+                        }
+                    }
+                    updated = true
+                }
+            }
+            path.startsWith("electrical.switches.") || (path.startsWith("electrical.") && path.endsWith(".state")) -> {
+                val switchPath = if (path.startsWith("electrical.switches.")) {
+                    path.removePrefix("electrical.switches.")
+                } else {
+                    path.removePrefix("electrical.").removeSuffix(".state")
+                }
+                val switchState = when (valueObj) {
+                    is Boolean -> valueObj
+                    is Number -> valueObj.toDouble() > 0.5
+                    is String -> valueObj.lowercase(Locale.US) == "on" || valueObj.lowercase(Locale.US) == "true" || valueObj == "1"
+                    else -> false
+                }
+                val switches = state.switches.toMutableMap()
+                switches[switchPath] = switchState
+                state = state.copy(switches = switches)
+                updated = true
+            }
+            path.startsWith(SignalKPaths.ELECTRICAL_AC_PREFIX) -> {
+                when {
+                    path.endsWith(".voltage") -> { if (!value.isNaN()) { state = state.copy(acVoltage = value); updated = true } }
+                    path.endsWith(".current") -> { if (!value.isNaN()) { state = state.copy(acCurrent = value); updated = true } }
+                    path.endsWith(".frequency") -> { if (!value.isNaN()) { state = state.copy(acFrequency = value); updated = true } }
+                    path.endsWith(".selectedSource") || path.endsWith(".source") -> { state = state.copy(acSource = valueObj?.toString()); updated = true }
+                }
+            }
+            path.startsWith(SignalKPaths.INVERTERS_PREFIX) -> {
+                val parts = path.split(".")
+                if (parts.size >= 3) {
+                    val instance = parts[2]
+                    val field = parts.last()
+                    state = updateInverter(state, instance) { i: Inverter ->
+                        when (field) {
+                            "state" -> i.copy(state = valueObj?.toString())
+                            "mode" -> i.copy(mode = valueObj?.toString())
+                            "acVoltage" -> i.copy(acVoltage = value)
+                            "acCurrent" -> i.copy(acCurrent = value)
+                            "load" -> i.copy(load = value)
+                            "name" -> i.copy(name = valueObj?.toString())
+                            else -> i
+                        }
+                    }
+                    if (instance == "0" || state.inverters.size <= 1) {
+                        if (field == "state") state = state.copy(inverterState = valueObj?.toString())
+                    }
+                    updated = true
+                }
+            }
+            path.startsWith(SignalKPaths.CHARGERS_PREFIX) -> {
+                val parts = path.split(".")
+                if (parts.size >= 3) {
+                    val instance = parts[2]
+                    val field = parts.last()
+                    state = updateCharger(state, instance) { c: Charger ->
+                        when (field) {
+                            "state" -> c.copy(state = valueObj?.toString())
+                            "mode" -> c.copy(mode = valueObj?.toString())
+                            "voltage" -> c.copy(voltage = value)
+                            "current" -> c.copy(current = value)
+                            "name" -> c.copy(name = valueObj?.toString())
+                            else -> c
+                        }
+                    }
+                    if (instance == "0" || state.chargers.size <= 1) {
+                        if (field == "state") state = state.copy(chargerState = valueObj?.toString())
+                    }
+                    updated = true
+                }
+            }
+            path.startsWith(SignalKPaths.ELECTRICAL_PREFIX) -> {
+                when {
+                    path.endsWith(".voltage") -> {
                         if (!value.isNaN()) {
-                            state = state.copy(batteryCurrent = value)
-                            batteryCurrentBuffer.add(Pair(value, lastUpdateTimestamp))
+                            state = state.copy(batteryVoltage = value)
+                            getBuffer(path).add(Pair(value, now))
                             updated = true
                         }
                     }
-                } else if (path.endsWith(".capacity.stateOfCharge")) {
-                    if (!value.isNaN()) {
-                        state = state.copy(batterySoc = value)
-                        socBuffer.add(Pair(value, lastUpdateTimestamp))
-                        updated = true
+                    path.endsWith(".current") -> {
+                        if (path.contains(".solar.")) {
+                            if (!value.isNaN()) {
+                                state = state.copy(solarCurrent = value)
+                                getBuffer(path).add(Pair(value, now))
+                                updated = true
+                            }
+                        } else {
+                            if (!value.isNaN()) {
+                                state = state.copy(batteryCurrent = value)
+                                getBuffer(path).add(Pair(value, now))
+                                updated = true
+                            }
+                        }
+                    }
+                    path.endsWith(".capacity.stateOfCharge") -> {
+                        if (!value.isNaN()) {
+                            state = state.copy(batterySoc = value)
+                            getBuffer(path).add(Pair(value, now))
+                            updated = true
+                        }
                     }
                 }
             }
-            path.startsWith("notifications.") -> {
+        }
+        return Pair(state, updated)
+    }
+
+    private fun parseEnvironmentValue(s: MarineState, path: String, valueObj: Any?, now: Long): Pair<MarineState, Boolean> {
+        var state = s
+        var updated = false
+        val value = (valueObj as? Number)?.toDouble() ?: Double.NaN
+
+        when (path) {
+            SignalKPaths.ENV_DEPTH_BELOW_TRANSDUCER -> {
+                if (MarineStateConstants.isValidDepth(value)) {
+                    val buffer = getBuffer(SignalKPaths.ENV_DEPTH_BELOW_TRANSDUCER)
+                    buffer.add(Pair(value, now))
+                    val smoothedValue = buffer.getAverage { it.first }
+                    state = state.copy(depthBelowTransducer = value, timeOfDepthFix = now)
+                    dataBroker.processDepthUpdate(smoothedValue)
+                    updated = true
+                }
+            }
+            SignalKPaths.ENV_DEPTH_SURFACE_TO_TRANSDUCER -> {
+                if (MarineStateConstants.isValidDepth(value)) {
+                    state = state.copy(depthSurfaceToTransducer = value, timeOfDepthFix = now)
+                    updated = true
+                }
+            }
+            SignalKPaths.ENV_DEPTH_BELOW_KEEL -> {
+                if (MarineStateConstants.isValidDepth(value)) {
+                    state = state.copy(depthBelowKeel = value, timeOfDepthFix = now)
+                    getBuffer(SignalKPaths.ENV_DEPTH_BELOW_KEEL).add(Pair(value, now))
+                    updated = true
+                }
+            }
+            SignalKPaths.ENV_WATER_TEMP -> {
+                if (!value.isNaN()) {
+                    state = state.copy(waterTemperature = value)
+                    getBuffer(SignalKPaths.ENV_WATER_TEMP).add(Pair(value, now))
+                    updated = true
+                }
+            }
+            SignalKPaths.ENV_OUTSIDE_TEMP -> {
+                if (!value.isNaN()) {
+                    state = state.copy(outsideTemperature = value)
+                    getBuffer(SignalKPaths.ENV_OUTSIDE_TEMP).add(Pair(value, now))
+                    updated = true
+                }
+            }
+            SignalKPaths.ENV_OUTSIDE_PRESSURE -> {
+                if (!value.isNaN()) {
+                    state = state.copy(outsidePressure = value)
+                    getBuffer(SignalKPaths.ENV_OUTSIDE_PRESSURE).add(Pair(value, now))
+                    updated = true
+                }
+            }
+            SignalKPaths.ENV_OUTSIDE_HUMIDITY -> {
+                if (!value.isNaN()) {
+                    state = state.copy(outsideHumidity = value)
+                    getBuffer(SignalKPaths.ENV_OUTSIDE_HUMIDITY).add(Pair(value, now))
+                    updated = true
+                }
+            }
+            SignalKPaths.ENV_OUTSIDE_ILLUMINANCE -> {
+                if (!value.isNaN()) {
+                    state = state.copy(outsideIlluminance = value)
+                    updated = true
+                }
+            }
+            SignalKPaths.ENV_WATER_SALINITY -> {
+                if (!value.isNaN()) {
+                    state = state.copy(waterSalinity = value)
+                    updated = true
+                }
+            }
+            SignalKPaths.ENV_AIR_DEW_POINT -> {
+                if (!value.isNaN()) {
+                    state = state.copy(airDewPoint = value)
+                    updated = true
+                }
+            }
+            SignalKPaths.ENV_MOON_PHASE -> {
+                if (!value.isNaN()) {
+                    state = state.copy(moonPhase = value)
+                    updated = true
+                }
+            }
+            SignalKPaths.ENV_SUNLIGHT_MODE -> {
+                state = state.copy(sunlightMode = valueObj?.toString())
+                updated = true
+            }
+            SignalKPaths.ENV_WIND_SPEED_TRUE -> {
+                if (MarineStateConstants.isValidWindSpeed(value)) {
+                    state = state.copy(windSpeedTrue = value, timeOfWindFix = now)
+                    getBuffer(SignalKPaths.ENV_WIND_SPEED_TRUE).add(Pair(value, now))
+                    updated = true
+                }
+            }
+            SignalKPaths.ENV_WIND_DIRECTION_TRUE -> {
+                if (!value.isNaN()) {
+                    state = state.copy(windDirectionTrue = value, timeOfWindFix = now)
+                    getBuffer(SignalKPaths.ENV_WIND_DIRECTION_TRUE).add(Pair(value, now))
+                    getBuffer(SignalKPaths.NAV_TWD).add(Pair(value, now))
+                    updated = true
+                }
+            }
+            SignalKPaths.ENV_WIND_ANGLE_APPARENT -> {
+                if (!value.isNaN()) {
+                    val corrected = environmentalFilterService?.correctWindAngle(value, state.roll ?: 0.0, state.pitch ?: 0.0) ?: value
+                    state = state.copy(windDirectionApparent = corrected, timeOfWindFix = now)
+                    dataBroker.processWindAngleUpdate(corrected)
+                    getBuffer(SignalKPaths.ENV_WIND_ANGLE_APPARENT).add(Pair(corrected, now))
+                    updated = true
+                }
+            }
+            SignalKPaths.ENV_WIND_SPEED_APPARENT -> {
+                if (MarineStateConstants.isValidWindSpeed(value)) {
+                    val corrected = environmentalFilterService?.correctWindSpeed(value, state.pitch ?: 0.0) ?: value
+                    state = state.copy(windSpeedApparent = corrected, timeOfWindFix = now)
+                    dataBroker.processWindSpeedUpdate(corrected)
+                    getBuffer(SignalKPaths.ENV_WIND_SPEED_APPARENT).add(Pair(corrected, now))
+                    updated = true
+                }
+            }
+            SignalKPaths.ENV_WIND_ANGLE_TRUE, "environment.wind.angleTrueWater" -> {
+                if (!value.isNaN()) {
+                    state = state.copy(trueWindAngle = value)
+                    getBuffer(SignalKPaths.ENV_WIND_ANGLE_TRUE).add(Pair(value, now))
+                    updated = true
+                }
+            }
+            else -> {
+                when {
+                    path.startsWith(SignalKPaths.ENV_TIDE_PREFIX) -> {
+                        dataBroker.processTideUpdate { currentTide ->
+                            val tide = currentTide ?: TideState()
+                            when {
+                                path.endsWith(".heightNow") -> tide.copy(heightNow = value)
+                                path.endsWith(".stationName") -> tide.copy(stationName = valueObj?.toString())
+                                path.endsWith(".state") -> tide.copy(state = valueObj?.toString())
+                                path.endsWith(".timeToNextExtreme") -> {
+                                    if (!value.isNaN()) tide.copy(nextExtremeTime = now + (value * 1000).toLong()) else tide
+                                }
+                                path.endsWith(".heightHigh") -> tide.copy(nextExtremeHeight = value, nextExtremeType = "High")
+                                path.endsWith(".heightLow") -> tide.copy(nextExtremeHeight = value, nextExtremeType = "Low")
+                                else -> tide
+                            }
+                        }
+                        updated = true
+                    }
+                    path.startsWith(SignalKPaths.ENV_CURRENT_PREFIX) -> {
+                        when {
+                            path.endsWith(".drift") -> {
+                                if (!value.isNaN()) {
+                                    state = state.copy(drift = value, timeOfDriftFix = now)
+                                    updated = true
+                                }
+                            }
+                            path.endsWith(".setTrue") -> {
+                                if (!value.isNaN()) {
+                                    state = state.copy(setTrue = value, timeOfDriftFix = now)
+                                    updated = true
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return Pair(state, updated)
+    }
+
+    private fun parseOtherValue(s: MarineState, path: String, valueObj: Any?): Pair<MarineState, Boolean> {
+        var state = s
+        var updated = false
+        val value = (valueObj as? Number)?.toDouble() ?: Double.NaN
+
+        when {
+            path == SignalKPaths.NAME -> {
+                val name = valueObj as? String ?: ""
+                if (name.isNotEmpty()) {
+                    state = state.copy(vesselName = name)
+                    updated = true
+                }
+            }
+            path == SignalKPaths.FLAG -> {
+                val flag = valueObj as? String ?: ""
+                if (flag.isNotEmpty()) {
+                    state = state.copy(vesselFlag = flag)
+                    updated = true
+                }
+            }
+            path == SignalKPaths.PORT -> {
+                val port = valueObj as? String ?: ""
+                if (port.isNotEmpty()) {
+                    state = state.copy(vesselPort = port)
+                    updated = true
+                }
+            }
+            path == SignalKPaths.UUID -> {
+                val uuid = valueObj as? String ?: ""
+                if (uuid.isNotEmpty()) {
+                    state = state.copy(vesselUuid = uuid)
+                    updated = true
+                }
+            }
+            path == SignalKPaths.NAV_AIS_BUDDIES -> {
+                if (valueObj is JSONArray) {
+                    val buddies = mutableSetOf<Int>()
+                    for (i in 0 until valueObj.length()) {
+                        val mmsi = valueObj.optInt(i, 0)
+                        if (mmsi != 0) buddies.add(mmsi)
+                    }
+                    state = state.copy(aisBuddies = buddies)
+                    updated = true
+                }
+            }
+            path.startsWith(SignalKPaths.NOTIFICATIONS_PREFIX) -> {
                 if (valueObj is JSONObject) {
                     val message = valueObj.optString("message", "")
                     val stateStr = valueObj.optString("state", "normal").lowercase(Locale.US)
@@ -1196,7 +2579,6 @@ class SignalKEngine {
                             methods.add(methodArray.getString(m))
                         }
                     }
-
                     val notificationState = when (stateStr) {
                         "alert" -> NotificationState.ALERT
                         "warn" -> NotificationState.WARN
@@ -1204,17 +2586,19 @@ class SignalKEngine {
                         "emergency" -> NotificationState.EMERGENCY
                         else -> NotificationState.NORMAL
                     }
-
                     val updatedNotifications = state.notifications.toMutableMap()
                     if (notificationState == NotificationState.NORMAL) {
                         updatedNotifications.remove(path)
+                        if (path == SignalKPaths.NOTIFICATIONS_MOB) state = state.copy(isMobActive = false)
                     } else {
                         updatedNotifications[path] = SignalKNotification(message, notificationState, methods)
+                        if (path == SignalKPaths.NOTIFICATIONS_MOB && notificationState == NotificationState.EMERGENCY) {
+                            state = state.copy(isMobActive = true)
+                        }
                     }
                     state = state.copy(notifications = updatedNotifications)
                     updated = true
-                } else if (valueObj == null || (valueObj is JSONObject && valueObj.length() == 0)) {
-                    // Notification cleared
+                } else if (valueObj == null) {
                     if (state.notifications.containsKey(path)) {
                         val updatedNotifications = state.notifications.toMutableMap()
                         updatedNotifications.remove(path)
@@ -1223,41 +2607,258 @@ class SignalKEngine {
                     }
                 }
             }
-            path.startsWith("tanks.") -> {
-                if (path.endsWith(".currentLevel")) {
-                    if (path.contains(".fuel.")) {
-                        if (!value.isNaN()) {
-                            state = state.copy(fuelLevel = value)
-                            fuelBuffer.add(Pair(value, lastUpdateTimestamp))
-                            updated = true
-                        }
-                    } else if (path.contains(".freshWater.")) {
-                        if (!value.isNaN()) {
-                            state = state.copy(freshWaterLevel = value)
-                            freshWaterBuffer.add(Pair(value, lastUpdateTimestamp))
-                            updated = true
-                        }
-                    } else if (path.contains(".wasteWater.")) {
-                        if (!value.isNaN()) {
-                            state = state.copy(wasteWaterLevel = value)
-                            wasteBuffer.add(Pair(value, lastUpdateTimestamp))
-                            updated = true
-                        }
+            path == SignalKPaths.NOTIFICATIONS_WATCHDOG -> {
+                if (valueObj is JSONObject) {
+                    val message = valueObj.optString("message", "")
+                    val stateStr = valueObj.optString("state", "normal").lowercase(Locale.US)
+                    val notificationState = when (stateStr) {
+                        "alert" -> NotificationState.ALERT
+                        "warn" -> NotificationState.WARN
+                        "alarm" -> NotificationState.ALARM
+                        "emergency" -> NotificationState.EMERGENCY
+                        else -> NotificationState.NORMAL
                     }
+                    state = state.copy(watchdogStatus = SignalKNotification(message, notificationState))
+                    updated = true
+                } else if (valueObj == null) {
+                    state = state.copy(watchdogStatus = null)
+                    updated = true
+                }
+            }
+            path == SignalKPaths.COMMUNICATION_VHF_CHANNEL -> {
+                val chan = valueObj?.toString() ?: ""
+                if (chan.isNotEmpty()) {
+                    state = state.copy(vhfChannel = chan)
+                    updated = true
+                }
+            }
+            path == SignalKPaths.COMMUNICATION_CREW_NAMES -> {
+                if (valueObj is JSONArray) {
+                    val names = mutableListOf<String>()
+                    for (i in 0 until valueObj.length()) {
+                        names.add(valueObj.getString(i))
+                    }
+                    state = state.copy(crewNames = names)
+                    updated = true
+                }
+            }
+            path == SignalKPaths.SAILS_INVENTORY -> {
+                if (valueObj is JSONObject) {
+                    val inventory = mutableListOf<Sail>()
+                    val keys = valueObj.keys()
+                    while (keys.hasNext()) {
+                        val key = keys.next()
+                        val obj = valueObj.getJSONObject(key)
+                        inventory.add(Sail(
+                            id = key,
+                            name = obj.optString("name", "Unknown"),
+                            type = obj.optString("type", "Unknown"),
+                            area = obj.optDouble("area", Double.NaN).takeIf { !it.isNaN() },
+                            active = obj.optBoolean("active", false)
+                        ))
+                    }
+                    state = state.copy(sailInventory = inventory)
+                    updated = true
+                }
+            }
+            path == SignalKPaths.SAILS_REEFS -> {
+                if (valueObj is Number) {
+                    state = state.copy(reefs = valueObj.toInt())
+                    updated = true
+                }
+            }
+            path == SignalKPaths.DESIGN_TYPE -> {
+                val type = if (valueObj is JSONObject) valueObj.optInt("id", -1) else (valueObj as? Number)?.toInt() ?: -1
+                if (type != -1) {
+                    state = state.copy(vesselType = type)
+                    updated = true
+                }
+            }
+            path == SignalKPaths.DESIGN_LENGTH_OVERALL -> {
+                if (!value.isNaN()) {
+                    state = state.copy(vesselLength = value)
+                    updated = true
+                }
+            }
+            path == SignalKPaths.DESIGN_BEAM -> {
+                if (!value.isNaN()) {
+                    state = state.copy(vesselBeam = value)
+                    updated = true
+                }
+            }
+            path == SignalKPaths.DESIGN_AIR_DRAFT -> {
+                if (!value.isNaN()) {
+                    state = state.copy(airDraft = value)
+                    updated = true
+                }
+            }
+            path == SignalKPaths.DESIGN_DISPLACEMENT -> {
+                if (!value.isNaN()) {
+                    state = state.copy(displacement = value)
+                    updated = true
+                }
+            }
+            path.startsWith(SignalKPaths.MEDIA_FUSION_PREFIX) -> {
+                val currentMedia = state.mediaInfo ?: MediaInfo()
+                val field = path.removePrefix(SignalKPaths.MEDIA_FUSION_PREFIX)
+                val nextMedia = when (field) {
+                    SignalKPaths.MEDIA_TITLE.removePrefix(SignalKPaths.MEDIA_FUSION_PREFIX) -> currentMedia.copy(title = valueObj?.toString())
+                    SignalKPaths.MEDIA_ARTIST.removePrefix(SignalKPaths.MEDIA_FUSION_PREFIX) -> currentMedia.copy(artist = valueObj?.toString())
+                    SignalKPaths.MEDIA_PLAYBACK_STATE.removePrefix(SignalKPaths.MEDIA_FUSION_PREFIX) -> currentMedia.copy(playbackState = valueObj?.toString()?.lowercase())
+                    SignalKPaths.MEDIA_SOURCE.removePrefix(SignalKPaths.MEDIA_FUSION_PREFIX) -> currentMedia.copy(source = valueObj?.toString())
+                    SignalKPaths.MEDIA_VOLUME.removePrefix(SignalKPaths.MEDIA_FUSION_PREFIX) -> if (!value.isNaN()) currentMedia.copy(volume = value) else currentMedia
+                    else -> {
+                        if (field.startsWith("volumeZones.")) {
+                            val zone = field.removePrefix("volumeZones.")
+                            val zones = currentMedia.volumeZones.toMutableMap()
+                            if (!value.isNaN()) zones[zone] = value
+                            currentMedia.copy(volumeZones = zones)
+                        } else currentMedia
+                    }
+                }
+                state = state.copy(mediaInfo = nextMedia)
+                updated = true
+            }
+            path.startsWith(SignalKPaths.RIGGING_LOAD_PREFIX) -> {
+                if (!value.isNaN()) {
+                    val instance = path.removePrefix(SignalKPaths.RIGGING_LOAD_PREFIX)
+                    val riggingLoads = state.riggingLoads.toMutableMap()
+                    riggingLoads[instance] = value
+                    state = state.copy(riggingLoads = riggingLoads)
+                    updated = true
+                }
+            }
+            else -> {
+                if (valueObj is Number) {
+                    val custom = state.customValues.toMutableMap()
+                    custom[path] = valueObj.toDouble()
+                    state = state.copy(customValues = custom)
+                    updated = true
                 }
             }
         }
         return Pair(state, updated)
     }
 
-    /**
-     * Calculates tidal set and drift by vector subtraction: Current = COG/SOG - HDG/STW.
-     * Also derives True Wind Direction (TWD) if True Wind Angle (TWA) is available but TWD is not.
-     */
-    private fun calculateSetAndDrift(state: MarineState): MarineState {
+    private fun parseTelemetryValue(marineState: MarineState, path: String, valueObj: Any?, now: Long): Pair<MarineState, Boolean> {
+        var state = marineState
+        var updated = false
+        val value = if (valueObj is Number) valueObj.toDouble() else Double.NaN
+
+        when (path) {
+            SignalKPaths.PERF_TARGET_SPEED, "performance.polarSpeed" -> {
+                if (MarineStateConstants.isValidSpeed(value)) {
+                    state = state.copy(polarTargetSpeed = value)
+                    updated = true
+                }
+            }
+            SignalKPaths.PERF_TARGET_ANGLE -> {
+                if (!value.isNaN()) {
+                    state = state.copy(targetWindAngleApparent = value)
+                    updated = true
+                }
+            }
+            SignalKPaths.PERF_POLAR_RATIO -> {
+                if (!value.isNaN()) {
+                    state = state.copy(polarSpeedRatio = value)
+                    getBuffer(SignalKPaths.PERF_POLAR_RATIO).add(Pair(value, now))
+                    updated = true
+                }
+            }
+            else -> {
+                // Unknown telemetry fallback
+            }
+        }
+        return Pair(state, updated)
+    }
+
+    private fun calculateNavigationMetrics(state: MarineState, now: Long): MarineState {
+        var s = state
+        val lat = s.latitude ?: return s
+        val lon = s.longitude ?: return s
+        val target = getNextWaypoint() ?: return s
+        val dtw = KMapUtils.getDistance(lat, lon, target.first, target.second)
+        s = s.copy(distanceToWaypoint = dtw)
+        val sog = s.speedOverGround
+        val cog = s.courseOverGroundTrue
+        val caps = capabilityManager?.capabilities?.value ?: CapabilityManager.ServerCapabilityMap()
+        if (sog != null && cog != null && !caps.hasVmg && !caps.hasDerivedData) {
+            val btw = (KMapUtils.getBearing(lat, lon, target.first, target.second)).toRadians()
+            val rawVmgWp = sog * cos(cog - btw)
+            val smoothedVmg = vmgEma.update(rawVmgWp)
+            s = s.copy(velocityMadeGood = smoothedVmg)
+            getBuffer("performance.velocityMadeGood").add(Pair(smoothedVmg, now))
+        }
+        val sogTtw = if (sog != null && sog > 0.1) dtw / sog else null
+        val vmgTtw = if (s.velocityMadeGood != null && s.velocityMadeGood > 0.1) dtw / s.velocityMadeGood else null
+        val selectedTtw = when (app.settings.NAUTICAL_TTW_MODE.get()) {
+            TtwMode.VMG -> vmgTtw ?: sogTtw
+            TtwMode.SOG -> sogTtw
+            else -> sogTtw ?: vmgTtw
+        }
+        s = s.copy(sogTimeToWaypoint = sogTtw, vmgTimeToWaypoint = vmgTtw, timeToWaypoint = selectedTtw)
+        if (selectedTtw != null) {
+            getBuffer("navigation.timeToWaypoint").add(Pair(selectedTtw, now))
+        }
+        val startLat = lastWaypointLat
+        val startLon = lastWaypointLon
+        if (startLat != null && startLon != null) {
+            val xte = calculateLocalXte(startLat, startLon, target.first, target.second, lat, lon)
+            val xteNm = SignalKUnitConverter.metersToNm(abs(xte))
+            val direction = when {
+                xteNm < 0.0005 -> XteDirection.ON_COURSE
+                xte > 0 -> XteDirection.STARBOARD
+                else -> XteDirection.PORT
+            }
+
+            val halfCorridorWidth = corridorWidthNm / 2.0
+            val isOutsideCorridor = xteNm > (halfCorridorWidth + safetyCorridorBufferNm)
+
+            s = s.copy(
+                xteMeters = abs(xte),
+                xteDirection = direction,
+                crossTrackError = s.crossTrackError ?: xte,
+                isOutsideSafetyCorridor = isOutsideCorridor
+            )
+        }
+        return s
+    }
+
+    private fun calculateEfficiencyMetrics(state: MarineState): MarineState {
+        var s = state
+        val fuelLevel = s.tanks["fuel.0"]?.currentLevel ?: s.tanks.values.find { it.type == "fuel" }?.currentLevel
+        val fuelRate = s.engines["0"]?.fuelRate ?: s.engines.values.find { it.fuelRate != null }?.fuelRate
+        val sog = s.speedOverGround
+        val capacity = app.settings.FUEL_TANK_CAPACITY.get().toDouble()
+        if (fuelLevel != null && fuelRate != null && fuelRate > 0.00001 && sog != null) {
+            val remainingLiters = fuelLevel * capacity
+            val secondsToEmpty = remainingLiters / fuelRate
+            val rangeMeters = secondsToEmpty * sog
+            s = s.copy(estimatedRange = rangeMeters)
+        }
+        return s
+    }
+
+    private fun calculateLocalXte(lat1: Double, lon1: Double, lat2: Double, lon2: Double, lat3: Double, lon3: Double): Double {
+        val radiusMeters = 6371000.0
+        val d13 = KMapUtils.getDistance(lat1, lon1, lat3, lon3) / radiusMeters
+        val theta13 = (KMapUtils.getBearing(lat1, lon1, lat3, lon3))
+        val theta12 = (KMapUtils.getBearing(lat1, lon1, lat2, lon2))
+        var deltaTheta = theta13 - theta12
+        while (deltaTheta > PI) deltaTheta -= 2 * PI
+        while (deltaTheta < -PI) deltaTheta += 2 * PI
+        return asin(sin(d13) * sin(deltaTheta)) * radiusMeters
+    }
+
+    private fun calculateLeeway(state: MarineState): Double {
+        val roll = state.roll ?: 0.0
+        val stw = state.speedThroughWater ?: 0.0
+        val k = app.settings.NAUTICAL_LEEWAY_COEFFICIENT.get()
+        return net.osmand.plus.plugins.nautical.utils.LeewayCalculator.calculateLeewayRadians(roll, stw, k)
+    }
+
+    private fun calculateSetAndDrift(state: MarineState, now: Long): MarineState {
         var updatedState = state
-        
-        // 1. Heading True Fallback (if Variation is known)
         if (updatedState.headingTrue == null) {
             val hdgMag = updatedState.headingMagnetic
             val variation = updatedState.magneticVariation
@@ -1265,91 +2866,53 @@ class SignalKEngine {
                 updatedState = updatedState.copy(headingTrue = (hdgMag + variation + 2 * PI) % (2 * PI))
             }
         }
-
         val sog = updatedState.speedOverGround ?: return updatedState
         val cog = updatedState.courseOverGroundTrue ?: return updatedState
         val stw = updatedState.speedThroughWater ?: return updatedState
         val hdg = updatedState.headingTrue ?: return updatedState
-
-        // Vector B (COG/SOG): Vessel track over ground
-        // 0 rad = North, increasing clockwise
+        val leeway = updatedState.leeway ?: 0.0
         val bx = sog * sin(cog)
         val by = sog * cos(cog)
-
-        // Vector A (HDG/STW): Vessel movement through water
-        val ax = stw * sin(hdg)
-        val ay = stw * cos(hdg)
-
-        // Vector C = B - A (Current vector: Set and Drift)
+        val ax = stw * sin(hdg + leeway)
+        val ay = stw * cos(hdg + leeway)
         val cx = bx - ax
         val cy = by - ay
-
         val drift = sqrt(cx * cx + cy * cy)
         val set = (atan2(cx, cy) + 2 * PI) % (2 * PI)
 
-        val now = System.currentTimeMillis()
-        if (now - lastSetDriftTimestamp > 5000) {
-            driftBuffer.add(Pair(drift, lastUpdateTimestamp))
-            setTrueBuffer.add(Pair(set, lastUpdateTimestamp))
+        val smoothedDrift = driftEma.update(drift)
+        val smoothedSet = setAngleEma.update(set)
+
+        if (now - lastSetDriftTimestamp > 1000) {
+            getBuffer("navigation.drift").add(Pair(smoothedDrift, now))
+            getBuffer("navigation.setTrue").add(Pair(smoothedSet, now))
             lastSetDriftTimestamp = now
         }
-
-        var finalState = updatedState.copy(drift = drift, setTrue = set)
-        
-        // 2. True Wind Direction (TWD) Fallback
-        // TWD = HDG (True) + TWA (True Wind Angle relative to boat heading)
+        var finalState = updatedState.copy(drift = smoothedDrift, setTrue = smoothedSet)
         if (finalState.windDirectionTrue == null) {
             val hdgTrue = finalState.headingTrue
             val twa = finalState.trueWindAngle
             if (hdgTrue != null && twa != null) {
                 val twd = (hdgTrue + twa + 2 * PI) % (2 * PI)
                 finalState = finalState.copy(windDirectionTrue = twd)
-                twdBuffer.add(Pair(twd, lastUpdateTimestamp))
+                getBuffer("navigation.trueWindDirection").add(Pair(twd, now))
             }
         }
-
         return finalState
     }
 
-    /**
-     * Ensures mandatory depth fields (Keel/Surface) are derived if only Transducer is available.
-     * Uses vesselDraft as fallback for transducer offset if not provided by Signal K metadata.
-     */
     private fun calculateDepths(state: MarineState): MarineState {
         var updated = state
         val draft = vesselDraft
-        
-        // If we have belowTransducer but missing belowKeel, we can estimate if we know transducer position.
-        // Signal K usually provides transducer offset via metadata or specific paths.
-        // If not, we use the user-configured vessel draft as the "worst case" offset.
-        
         if (updated.depthBelowKeel == null && updated.depthBelowTransducer != null) {
-            // Assume transducer is at waterline if no other info (fallback)
-            // Or if we know the draft, and assume transducer is somewhat deep... 
-            // Better: If user provided NAUTICAL_VESSEL_DRAFT, and Signal K is only giving depthBelowTransducer
-            // without offset, depthBelowKeel = depthBelowTransducer - (draft - transducer_depth_below_waterline).
-            // Simplification for safety: depthBelowKeel = depthBelowTransducer - draft (if transducer is at surface)
-            // but transducer is usually below surface.
-            
-            // Re-evaluating: depthBelowKeel = depthBelowTransducer - (keel_offset_from_transducer).
-            // If Signal K doesn't give us the offset, we can't be sure.
-            // But we can surface a "Shallow Water" alert based on depthBelowTransducer vs a threshold.
-            
-            // For now, if belowKeel is null, we try to derive it from metadata (transducer offset)
             val meta = updated.pathMeta["environment.depth.belowTransducer"]
             val offset = (meta?.get("offset") as? Number)?.toDouble() ?: 0.0
-            
-            // Signal K Convention: 
-            // offset > 0 -> from transducer to surface
-            // offset < 0 -> from transducer to keel
             if (offset < 0) {
-                 updated = updated.copy(depthBelowKeel = updated.depthBelowTransducer!! + offset)
+                 updated = updated.copy(depthBelowKeel = updated.depthBelowTransducer + offset)
             } else if (draft > 0) {
-                // If no meta offset, use safety margin: assume transducer is at surface and subtract draft
-                updated = updated.copy(depthBelowKeel = updated.depthBelowTransducer!! - draft)
+                updated = updated.copy(depthBelowKeel = updated.depthBelowTransducer - draft)
             }
         }
-        
         return updated
     }
 
@@ -1357,52 +2920,282 @@ class SignalKEngine {
         routeQueue.clear()
         routeQueue.addAll(route)
         isFollowingRoute = true
-        onRouteStepProcessed?.invoke()
+        val current = dataBroker.marineState.value
+        lastWaypointLat = current.latitude
+        lastWaypointLon = current.longitude
+        routeStepListeners.forEach { it.invoke() }
         log.info("Route loaded: ${route.size} points. Following enabled.")
     }
 
     fun getNextWaypoint(): Pair<Double, Double>? = routeQueue.peek()
-
+    fun getSecondNextWaypoint(): Pair<Double, Double>? {
+        val it = routeQueue.iterator()
+        if (it.hasNext()) it.next()
+        return if (it.hasNext()) it.next() else null
+    }
     fun getRoutePoints(): List<Pair<Double, Double>> = routeQueue.toList()
 
     fun setAutoSeaStateEnabled(enabled: Boolean) {
-        _currentState = _currentState?.copy(isAutoSeaStateEnabled = enabled)
-        _currentState?.let { notifyListeners(it) }
+        dataBroker.updateState { it.copy(isAutoSeaStateEnabled = enabled) }
+        notifyListeners(dataBroker.marineState.value)
     }
 
-    fun updatePendingCommand(targetHeading: Double? = null, mode: String? = null) {
-        synchronized(stateLock) {
-            val current = _currentState ?: MarineState()
-            _currentState = current.copy(
-                pendingTargetHeading = targetHeading,
-                pendingAutopilotState = mode,
-                commandSentTimestamp = if (targetHeading != null || mode != null) System.currentTimeMillis() else 0
+    fun setMobActive(active: Boolean, lat: Double? = null, lon: Double? = null) {
+        dataBroker.updateState { it.copy(isMobActive = active, mobLatitude = lat, mobLongitude = lon) }
+        notifyListeners(dataBroker.marineState.value)
+    }
+
+    fun setShunted(shunted: Boolean) {
+        dataBroker.updateState { it.copy(isShunted = shunted) }
+        notifyListeners(dataBroker.marineState.value)
+    }
+
+    fun onInternalLocationUpdate(loc: Location) {
+        val currentStatus = dataBroker.marineState.value.connectionStatus
+        if (currentStatus == ConnectionStatus.CONNECTED) return
+        
+        val now = TemporalUtils.now()
+        dataBroker.updateState { s ->
+            val newTimestamps = s.timestamps.toMutableMap()
+            val lat = loc.latitude
+            val lon = loc.longitude
+            val sog = loc.speed.toDouble()
+            val cog = Math.toRadians(loc.bearing.toDouble())
+            newTimestamps["navigation.position"] = now
+            newTimestamps["navigation.speedOverGround"] = now
+            newTimestamps["navigation.courseOverGroundTrue"] = now
+            
+            addTrajectoryPoint(lat, lon)
+            getBuffer("navigation.speedOverGround").add(Pair(sog, now))
+            getBuffer("navigation.courseOverGroundTrue").add(Pair(cog, now))
+
+            s.copy(
+                latitude = lat,
+                longitude = lon,
+                speedOverGround = sog,
+                courseOverGroundTrue = cog,
+                timestamps = newTimestamps
             )
         }
-        _currentState?.let { notifyListeners(it) }
+        notifyListeners(dataBroker.marineState.value)
+    }
+
+    fun updatePendingCommand(targetHeading: Double? = null, mode: String? = null, path: String? = null) {
+        dataBroker.updateState { current ->
+            current.copy(
+                pendingTargetHeading = targetHeading,
+                pendingAutopilotState = mode,
+                pendingCommandPath = path,
+                commandSentTimestamp = if (targetHeading != null || mode != null || path != null) TemporalUtils.now() else 0
+            )
+        }
+        notifyListeners(dataBroker.marineState.value)
     }
 
     fun updateFollowingState(currentLat: Double, currentLon: Double) {
-        if (!isFollowingRoute || routeQueue.isEmpty()) return
-        
-        val now = System.currentTimeMillis()
-        if (now - lastFollowingUpdateTimestamp < 1000) return // Throttle to 1Hz
-        lastFollowingUpdateTimestamp = now
+        val caps = capabilityManager?.capabilities?.value ?: CapabilityManager.ServerCapabilityMap()
+        if (caps.hasCourseAutoAdvance) return // Offload to server
 
+        if (!isFollowingRoute || routeQueue.isEmpty()) return
+        val now = TemporalUtils.now()
+        if (now - lastFollowingUpdateTimestamp < 1000) return
+        lastFollowingUpdateTimestamp = now
         val target = routeQueue.peek() ?: return
         val distance = KMapUtils.getDistance(currentLat, currentLon, target.first, target.second)
-
-        // Arrival Radius Check
         if (distance < arrivalRadiusMeters) {
-            routeQueue.poll() // Arrived! Remove this point
-            log.info("Waypoint reached. Next in queue: ${routeQueue.size}")
-            onRouteStepProcessed?.invoke()
+            val reached = routeQueue.poll()
+            lastWaypointLat = reached?.first
+            lastWaypointLon = reached?.second
+            routeStepListeners.forEach { it.invoke() }
         }
-
-        // If route finished
         if (routeQueue.isEmpty()) {
             isFollowingRoute = false
-            log.info("Route complete.")
+        }
+    }
+
+    private fun updatePulseLifecycle() {
+        val current = dataBroker.marineState.value
+        val anyAlarm = current.notifications.values.any { it.state == NotificationState.ALARM || it.state == NotificationState.EMERGENCY } || current.isActuatorOverloaded
+        if (anyAlarm && (pulseJob?.isActive != true)) {
+            pulseJob = engineScope.launch {
+                while (isActive) {
+                    _pulseFlow.value = !_pulseFlow.value
+                    delay(500.milliseconds)
+                }
+            }
+        } else if (!anyAlarm) {
+            pulseJob?.cancel()
+            pulseJob = null
+            _pulseFlow.value = false
+        }
+    }
+
+    private fun checkActuatorLoad(state: MarineState) {
+        val buffer = getBuffer(SignalKPaths.STEERING_AUTOPILOT_DUTY_CYCLE)
+        val now = TemporalUtils.now()
+
+        var sum = 0.0
+        var count = 0
+        val data = buffer.getAll()
+        val windowMs = app.settings.NAUTICAL_ACTUATOR_OVERLOAD_WINDOW_SEC.get() * 1000L
+        for (i in data.indices.reversed()) {
+            val item = data[i]
+            if (now - item.second < windowMs) {
+                sum += item.first
+                count++
+                if (count >= 10) break
+            } else {
+                break
+            }
+        }
+
+        if (count < 5) return
+        val avgLoad = sum / count
+        val threshold = app.settings.NAUTICAL_ACTUATOR_ALARM_THRESHOLD.get() / 100.0
+
+        if (avgLoad > threshold) {
+            if (!state.isActuatorOverloaded) {
+                dataBroker.updateState { it.copy(isActuatorOverloaded = true) }
+                net.osmand.plus.plugins.nautical.audio.NauticalAudioArbiter.getInstance(app).dispatchAlarm(net.osmand.plus.plugins.nautical.audio.AlarmType.ACTUATOR_OVERLOAD, voiceText = "Autopilot Actuator Overload!")
+
+                NauticalPlugin.hudManager?.get()?.showBanner(
+                    app.getString(R.string.nautical_actuator_maintenance_required),
+                    0, // Persistent
+                    isWarning = true
+                )
+            }
+        } else if (state.isActuatorOverloaded && avgLoad < (threshold - 0.15)) {
+            dataBroker.updateState { it.copy(isActuatorOverloaded = false) }
+            net.osmand.plus.plugins.nautical.audio.NauticalAudioArbiter.getInstance(app).stopAlarm(net.osmand.plus.plugins.nautical.audio.AlarmType.ACTUATOR_OVERLOAD)
+            NauticalPlugin.hudManager?.get()?.hideBanner()
+        }
+    }
+
+    private fun updateEngine(state: MarineState, instance: String, transform: (Engine) -> Engine): MarineState {
+        val engines = state.engines.toMutableMap()
+        val engine = engines[instance] ?: Engine(instance = instance)
+        engines[instance] = transform(engine)
+        return state.copy(engines = engines)
+    }
+
+    private fun updateBattery(state: MarineState, instance: String, transform: (Battery) -> Battery): MarineState {
+        val batteries = state.batteries.toMutableMap()
+        val battery = batteries[instance] ?: Battery(instance = instance)
+
+        // Enrich with metadata name if available
+        val meta = state.pathMeta["electrical.batteries.$instance"]
+        val displayName = meta?.get("displayName") as? String
+
+        batteries[instance] = transform(battery.copy(name = displayName ?: battery.name))
+        return state.copy(batteries = batteries)
+    }
+
+    private fun updateCharger(state: MarineState, instance: String, transform: (Charger) -> Charger): MarineState {
+        val chargers = state.chargers.toMutableMap()
+        val charger = chargers[instance] ?: Charger(instance = instance)
+
+        val meta = state.pathMeta["electrical.chargers.$instance"]
+        val displayName = meta?.get("displayName") as? String
+
+        chargers[instance] = transform(charger.copy(name = displayName ?: charger.name))
+        return state.copy(chargers = chargers)
+    }
+
+    private fun updateInverter(state: MarineState, instance: String, transform: (Inverter) -> Inverter): MarineState {
+        val inverters = state.inverters.toMutableMap()
+        val inverter = inverters[instance] ?: Inverter(instance = instance)
+
+        val meta = state.pathMeta["electrical.inverters.$instance"]
+        val displayName = meta?.get("displayName") as? String
+
+        inverters[instance] = transform(inverter.copy(name = displayName ?: inverter.name))
+        return state.copy(inverters = inverters)
+    }
+
+    private fun updateTank(state: MarineState, instance: String, type: String, transform: (Tank) -> Tank): MarineState {
+        val tanks = state.tanks.toMutableMap()
+        val key = "$type.$instance"
+        val tank = tanks[key] ?: Tank(instance = instance, type = type)
+
+        val meta = state.pathMeta["tanks.$type.$instance"]
+        val displayName = meta?.get("displayName") as? String
+
+        tanks[key] = transform(tank.copy(name = displayName ?: tank.name))
+        return state.copy(tanks = tanks)
+    }
+
+    private fun updatePypilotConfig(state: MarineState, field: String, value: Any?): MarineState {
+        val config = state.pypilotConfig ?: PypilotConfig()
+        val v = (value as? Number)?.toDouble()
+        val next = when (field) {
+            "p" -> config.copy(p = v)
+            "i" -> config.copy(i = v)
+            "d" -> config.copy(d = v)
+            "dd" -> config.copy(dd = v)
+            "pr" -> config.copy(pr = v)
+            "ff" -> config.copy(ff = v)
+            "wg" -> config.copy(wg = v)
+            "deadzone" -> config.copy(deadzone = v)
+            "profile" -> config.copy(activeProfile = value?.toString())
+            else -> config
+        }
+        return state.copy(pypilotConfig = next)
+    }
+
+    private fun updatePypilotServo(state: MarineState, field: String, value: Any?): MarineState {
+        val servo = state.pypilotServo ?: PypilotServoState()
+        val v = (value as? Number)?.toDouble()
+        val next = when (field) {
+            "voltage" -> servo.copy(voltage = v)
+            "current" -> servo.copy(current = v)
+            "controllerTemp" -> servo.copy(controllerTemp = v)
+            "motorTemp" -> servo.copy(motorTemp = v)
+            "ampHours" -> servo.copy(ampHours = v)
+            "runtime" -> servo.copy(runtime = v)
+            "engagement" -> servo.copy(engagement = value?.toString())
+            else -> servo
+        }
+        return state.copy(pypilotServo = next)
+    }
+
+    private fun updatePypilotCalibration(state: MarineState, field: String, value: Any?): MarineState {
+        val cal = state.pypilotCalibration ?: PypilotCalibrationState()
+        val v = (value as? Number)?.toDouble()
+        val next = when (field) {
+            "compassProgress" -> cal.copy(compassCalibrationProgress = v)
+            "accelProgress" -> cal.copy(accelCalibrationProgress = v)
+            "rudderProgress" -> cal.copy(rudderCalibrationProgress = v)
+            "isCalibrating" -> cal.copy(isCalibrating = value == true || value == "true")
+            else -> cal
+        }
+        return state.copy(pypilotCalibration = next)
+    }
+
+    private fun updateWatermaker(state: MarineState, instance: String, transform: (Watermaker) -> Watermaker): MarineState {
+        val watermakers = state.watermakers.toMutableMap()
+        val watermaker = watermakers[instance] ?: Watermaker(instance = instance)
+        watermakers[instance] = transform(watermaker)
+        return state.copy(watermakers = watermakers)
+    }
+
+    private fun processCourseObject(course: net.osmand.plus.plugins.nautical.network.SignalKCourse) {
+        val nextPoint = course.nextPoint?.position
+        if (nextPoint != null) {
+            val lat = nextPoint.coordinates[1]
+            val lon = nextPoint.coordinates[0]
+            if (MarineStateConstants.isValidLat(lat) && MarineStateConstants.isValidLon(lon)) {
+                dataBroker.updateState { it.copy(serverNextPoint = net.osmand.plus.plugins.nautical.laylines.engine.LatLon(lat, lon)) }
+            }
+        }
+        
+        course.arrivalRadius?.let { radius ->
+            arrivalRadiusMeters = radius
+        }
+
+        course.activeRoute?.href?.let {
+            isFollowingRoute = true
+        } ?: run {
+            if (course.nextPoint == null) isFollowingRoute = false
         }
     }
 }

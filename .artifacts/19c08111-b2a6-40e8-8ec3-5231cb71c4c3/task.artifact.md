@@ -1,0 +1,30 @@
+# Task: Fix Errors and Warnings in Nautical Related Files
+
+- [ ] Fix ViewModels & Utilities
+    - [ ] `SailingPerformanceSettingsViewModel.kt`
+    - [ ] `RoutingViewModel.kt`
+    - [ ] `PolarEditorViewModel.kt`
+    - [ ] `PolarConfigViewModel.kt`
+    - [ ] `NauticalFormatter.kt`
+    - [ ] `WearOsNauticalManager.kt`
+- [ ] Fix UI Fragments & Bottom Sheets
+    - [ ] `PolarEditorFragment.kt`
+    - [ ] `LogbookEntryEditorBottomSheet.kt`
+    - [ ] `MarineLogbookFragment.kt`
+    - [ ] `NauticalChecklistFragment.kt`
+    - [ ] `NauticalSwitchPanelFragment.kt`
+    - [ ] `VhfHistoryBottomSheet.kt`
+- [ ] Fix Views & Layers
+    - [ ] `HeadingArcView.kt`
+    - [ ] `NauticalAisLayer.kt`
+    - [ ] `NauticalAisObjectDrawable.kt`
+    - [ ] `NauticalEnvironmentWidgetView.kt`
+    - [ ] `RudderView.kt`
+    - [ ] `SignalKLogbookLayer.kt`
+    - [ ] `SlideToConfirmView.kt`
+    - [ ] `TacticalHudView.kt`
+    - [ ] `ThermalWarningView.kt`
+- [ ] Fix Pilot Components
+    - [ ] `NauticalPilotWidget.kt`
+    - [ ] `NauticalPilotBottomSheet.kt`
+- [ ] Final Verification

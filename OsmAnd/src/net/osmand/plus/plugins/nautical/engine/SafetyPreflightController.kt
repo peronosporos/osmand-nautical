@@ -4,7 +4,7 @@ import net.osmand.plus.R
 import kotlinx.coroutines.*
 import net.osmand.PlatformUtil
 import net.osmand.plus.OsmandApplication
-import net.osmand.plus.plugins.nautical.NauticalPlugin
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * SafetyPreflightController enforces a 3-second pre-flight verification pass before any maneuver
@@ -28,7 +28,7 @@ class SafetyPreflightController(
      */
     suspend fun runPreflightCheck(maneuverId: String): Pair<Boolean, String?> {
         log.info("Starting 3-second pre-flight safety check for maneuver: $maneuverId...")
-        delay(3000L) // Enforce 3-second system pass
+        delay(3000L.milliseconds) // Enforce 3-second system pass
 
         // 1. Autopilot connection check
         if (!autopilotController.isConnected()) {
@@ -37,9 +37,11 @@ class SafetyPreflightController(
             return Pair(false, reason)
         }
 
+        val state = dataBroker.marineState.value
+
         // 2. AIS CPA threat check (no CPA threat within 5 minutes / 300s)
-        val tcpa = dataBroker.tcpa.value
-        val cpa = dataBroker.cpa.value
+        val tcpa = state.tcpa
+        val cpa = state.cpa
         if (cpa != null && tcpa != null && cpa < 0.8 && tcpa <= 300.0) {
             val reason = app.getString(R.string.nautical_error_ais_threat)
             speak(reason)
@@ -47,12 +49,11 @@ class SafetyPreflightController(
         }
 
         // 3. Data freshness check (< 3.0 seconds)
-        val state = NauticalPlugin.engine?.getCurrentState()
-        val latestTimestamp = state?.timestamps?.values?.maxOrNull() ?: 0L
+        val latestTimestamp = state.timestamps.values.maxOrNull() ?: 0L
         val now = System.currentTimeMillis()
 
-        if (state == null || state.timestamps.isEmpty() || (now - latestTimestamp) > 3000L) {
-            val reason = app.getString(R.string.nautical_error_stale_wind) // Using generic stale data error
+        if (state.timestamps.isEmpty() || (now - latestTimestamp) > 3000L) {
+            val reason = app.getString(R.string.nautical_error_stale_data) 
             speak(reason)
             log.warn("Pre-flight failed: Data is stale or missing. Latest timestamp: $latestTimestamp, Now: $now")
             return Pair(false, reason)
@@ -65,7 +66,7 @@ class SafetyPreflightController(
 
         if (isPowerManeuver) {
             // Check engine revolutions (RPM > 0)
-            val engineRpm = NauticalPlugin.engine?.getCurrentState()?.engineRpm ?: 0.0
+            val engineRpm = state.engineRpm ?: 0.0
             if (engineRpm <= 0.0) {
                 val reason = app.getString(R.string.nautical_error_engine_off)
                 speak(reason)

@@ -4,6 +4,7 @@ import org.json.JSONObject
 import java.io.BufferedReader
 import java.io.InputStream
 import java.io.InputStreamReader
+import java.util.Locale
 import java.util.concurrent.locks.ReentrantReadWriteLock
 import kotlin.concurrent.read
 import kotlin.concurrent.write
@@ -19,16 +20,21 @@ class PolarDiagram {
 
     private val lock = ReentrantReadWriteLock()
 
-    private var twsValues: DoubleArray = doubleArrayOf() // m/s
-    private var twaValues: DoubleArray = doubleArrayOf() // Degrees
-    // 2D grid: speedTable[twaIndex][twsIndex] = target speed (m/s)
-    private var speedTable: Array<DoubleArray> = arrayOf()
+    private class PolarData(
+        val twsValues: DoubleArray,
+        val twaValues: DoubleArray,
+        val speedTable: Array<DoubleArray>
+    )
 
-    var isLoaded: Boolean = false
-        get() = lock.read { field }
-        private set(value) {
+    private val polars = mutableMapOf<String, PolarData>()
+    var activePolarId: String = "default"
+        set(value) {
             lock.write { field = value }
         }
+
+    var isLoaded: Boolean = false
+        get() = lock.read { polars.containsKey(activePolarId) }
+        private set
 
     private val MS_TO_KNOTS = 1.94384
     private val KNOTS_TO_MS = 0.514444
@@ -37,7 +43,7 @@ class PolarDiagram {
      * Parses standard CSV polar diagrams.
      * Assumes speeds in Knots, converts to m/s internally.
      */
-    fun loadFromCsv(inputStream: InputStream): Boolean {
+    fun loadFromCsv(inputStream: InputStream, polarId: String = "default"): Boolean {
         try {
             val reader = BufferedReader(InputStreamReader(inputStream))
             val lines = reader.readLines()
@@ -78,10 +84,14 @@ class PolarDiagram {
             }
 
             lock.write {
-                twsValues = parsedTws.toDoubleArray()
-                twaValues = parsedTwa.toDoubleArray()
-                speedTable = parsedRows.toTypedArray()
-                isLoaded = true
+                polars[polarId] = PolarData(
+                    parsedTws.toDoubleArray(),
+                    parsedTwa.toDoubleArray(),
+                    parsedRows.toTypedArray()
+                )
+                if (activePolarId == "default" || activePolarId == polarId) {
+                    activePolarId = polarId
+                }
             }
             return true
         } catch (_: Exception) {
@@ -91,24 +101,48 @@ class PolarDiagram {
 
     /**
      * Parses Signal K Resources API JSON schema for polars.
-     * Assumes SI units (m/s, Radians).
+     * Supports both SI units (m/s, Radians) and legacy/common metadata (Knots, Degrees).
      */
-    fun loadFromSignalKJson(jsonString: String): Boolean {
+    fun loadFromSignalKJson(jsonString: String, polarId: String = "default"): Boolean {
         try {
             val json = JSONObject(jsonString)
             val root = if (json.has("value")) json.getJSONObject("value") else json
+            
+            // Metadata Unit Check (TASK-015)
+            val meta = root.optJSONObject("meta")
+            val angleUnit = meta?.optString("angleUnit", "rad") ?: "rad"
+            val speedUnit = meta?.optString("speedUnit", "ms") ?: "ms"
 
-            val twsArr = root.optJSONArray("tws") ?: root.optJSONArray("windSpeeds") ?: return false
-            val twaArr = root.optJSONArray("twa") ?: root.optJSONArray("windAngles") ?: return false
-            val speedsArr = root.optJSONArray("speeds") ?: root.optJSONArray("polarTable") ?: return false
+            val twsArr = root.optJSONArray("tws") ?: root.optJSONArray("windSpeeds")
+            val twaArr = root.optJSONArray("twa") ?: root.optJSONArray("windAngles")
+            val speedsArr = root.optJSONArray("speeds") ?: root.optJSONArray("polarTable")
 
-            val parsedTws = DoubleArray(twsArr.length()) { i -> twsArr.getDouble(i) }
-            // If Signal K sends Radians, convert to Degrees for internal table consistency
-            val parsedTwa = DoubleArray(twaArr.length()) { i -> Math.toDegrees(twaArr.getDouble(i)) }
+            if (twsArr == null || twaArr == null || speedsArr == null) {
+                return false
+            }
 
-            val parsedRows = Array(twaArr.length()) { i ->
-                val rowJson = speedsArr.getJSONArray(i)
-                DoubleArray(twsArr.length()) { j -> rowJson.getDouble(j) }
+            val nTws = twsArr.length()
+            val nTwa = twaArr.length()
+            if (nTws == 0 || nTwa == 0 || speedsArr.length() != nTwa) {
+                return false
+            }
+
+            val twsMultiplier = if (speedUnit.lowercase(Locale.US) == "knots") KNOTS_TO_MS else 1.0
+            val twaIsDeg = angleUnit.lowercase(Locale.US) == "deg"
+
+            val parsedTws = DoubleArray(nTws) { i -> twsArr.optDouble(i, 0.0) * twsMultiplier }
+            val parsedTwa = DoubleArray(nTwa) { i -> 
+                val raw = twaArr.optDouble(i, 0.0)
+                if (twaIsDeg) raw else Math.toDegrees(raw)
+            }
+
+            val parsedRows = Array(nTwa) { i ->
+                val rowJson = speedsArr.optJSONArray(i)
+                if (rowJson != null && rowJson.length() >= nTws) {
+                    DoubleArray(nTws) { j -> rowJson.optDouble(j, 0.0) * twsMultiplier }
+                } else {
+                    DoubleArray(nTws) { 0.0 }
+                }
             }
 
             if (parsedTws.isEmpty() || parsedTwa.isEmpty() || parsedRows.isEmpty()) {
@@ -116,10 +150,10 @@ class PolarDiagram {
             }
 
             lock.write {
-                twsValues = parsedTws
-                twaValues = parsedTwa
-                speedTable = parsedRows
-                isLoaded = true
+                polars[polarId] = PolarData(parsedTws, parsedTwa, parsedRows)
+                if (activePolarId == "default" || activePolarId == polarId) {
+                    activePolarId = polarId
+                }
             }
             return true
         } catch (_: Exception) {
@@ -138,13 +172,15 @@ class PolarDiagram {
      * Get target boat speed in m/s for a given TWS (m/s) and TWA (Degrees).
      */
     fun getTargetSpeedDeg(twsMs: Double, twaDeg: Double): Double {
-        val loaded = lock.read { isLoaded }
         val absTwa = abs(twaDeg)
-        if (!loaded) {
-            return defaultTargetSpeed(absTwa)
-        }
-
+        
         lock.read {
+            val data = polars[activePolarId] ?: return defaultTargetSpeed(absTwa)
+            
+            val twsValues = data.twsValues
+            val twaValues = data.twaValues
+            val speedTable = data.speedTable
+
             if (twsValues.isEmpty() || twaValues.isEmpty() || speedTable.isEmpty()) {
                 return defaultTargetSpeed(absTwa)
             }
@@ -200,20 +236,55 @@ class PolarDiagram {
             return if (minTwa < 90.0) 42.0 else 135.0
         }
 
-        var bestTwa = (minTwa + maxTwa) / 2.0
-        var maxVmg = -1.0
-
-        var angle = minTwa
-        while (angle <= maxTwa) {
-            val speed = getTargetSpeedDeg(twsMs, angle)
-            val vmg = speed * abs(cos(Math.toRadians(angle)))
-            if (vmg > maxVmg) {
-                maxVmg = vmg
-                bestTwa = angle
+        // Bimodal Refinement: Multi-start Sampled search + Golden Section refinement (TASK-012)
+        // 1. Coarse sample to avoid local maxima (asymmetric polars)
+        var bestSampleTwa = minTwa
+        var maxSampleVmg = -1.0
+        val steps = 15
+        for (i in 0..steps) {
+            val sampleTwa = minTwa + (maxTwa - minTwa) * (i.toDouble() / steps)
+            val sampleVmg = getVmg(twsMs, sampleTwa)
+            if (sampleVmg > maxSampleVmg) {
+                maxSampleVmg = sampleVmg
+                bestSampleTwa = sampleTwa
             }
-            angle += 0.5
         }
-        return bestTwa
+
+        // 2. Golden Section Refinement around the best sample
+        val range = (maxTwa - minTwa) / steps
+        var a = (bestSampleTwa - range).coerceAtLeast(minTwa)
+        var b = (bestSampleTwa + range).coerceAtMost(maxTwa)
+        
+        val phi = (sqrt(5.0) - 1.0) / 2.0
+        var x1 = b - phi * (b - a)
+        var x2 = a + phi * (b - a)
+        
+        var f1 = getVmg(twsMs, x1)
+        var f2 = getVmg(twsMs, x2)
+
+        repeat(15) { // Fixed iterations for stable precision
+            if (f1 < f2) {
+                a = x1
+                x1 = x2
+                x2 = a + phi * (b - a)
+                f1 = f2
+                f2 = getVmg(twsMs, x2)
+            } else {
+                b = x2
+                x2 = x1
+                x1 = b - phi * (b - a)
+                f2 = f1
+                f1 = getVmg(twsMs, x1)
+            }
+        }
+        return (a + b) / 2.0
+    }
+
+    private fun getVmg(twsMs: Double, twaDeg: Double): Double {
+        val speed = getTargetSpeedDeg(twsMs, twaDeg)
+        // VMG is the component of boat speed along the wind axis.
+        // We use abs(cos) to maximize speed either directly upwind or directly downwind.
+        return speed * abs(cos(Math.toRadians(twaDeg)))
     }
 
     private fun findLowerIndex(array: DoubleArray, value: Double): Int {

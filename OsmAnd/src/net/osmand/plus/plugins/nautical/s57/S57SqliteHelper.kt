@@ -7,6 +7,7 @@ import android.database.sqlite.SQLiteOpenHelper
 import net.osmand.data.LatLon
 import org.json.JSONArray
 import org.json.JSONObject
+import androidx.core.database.sqlite.transaction
 
 /**
  * Persistent storage for S-57 features to avoid re-decrypting and re-parsing cells on every launch.
@@ -15,7 +16,7 @@ class S57SqliteHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAM
 
     companion object {
         private const val DATABASE_NAME = "s57_charts.db"
-        private const val DATABASE_VERSION = 1
+        private const val DATABASE_VERSION = 2
 
         private const val TABLE_FEATURES = "features"
         private const val COLUMN_ID = "id"
@@ -43,7 +44,8 @@ class S57SqliteHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAM
     }
 
     override fun onCreate(db: SQLiteDatabase) {
-        db.execSQL("""
+        db.execSQL(
+            """
             CREATE TABLE $TABLE_FEATURES (
                 $COLUMN_ID INTEGER PRIMARY KEY AUTOINCREMENT,
                 $COLUMN_FILE_PATH TEXT,
@@ -56,22 +58,26 @@ class S57SqliteHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAM
                 $COLUMN_MIN_LON REAL,
                 $COLUMN_MAX_LON REAL
             )
-        """)
+            """,
+        )
         db.execSQL("CREATE INDEX idx_features_bounds ON $TABLE_FEATURES ($COLUMN_MIN_LAT, $COLUMN_MAX_LAT, $COLUMN_MIN_LON, $COLUMN_MAX_LON)")
         db.execSQL("CREATE INDEX idx_features_file ON $TABLE_FEATURES ($COLUMN_FILE_PATH)")
+        db.execSQL("CREATE INDEX idx_features_acronym ON $TABLE_FEATURES ($COLUMN_ACRONYM)")
 
-        db.execSQL("""
+        db.execSQL(
+            """
             CREATE TABLE $TABLE_FILES (
                 $COLUMN_FILE_PATH TEXT PRIMARY KEY,
                 $COLUMN_LAST_MODIFIED INTEGER
             )
-        """)
+            """,
+        )
     }
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
-        db.execSQL("DROP TABLE IF EXISTS $TABLE_FEATURES")
-        db.execSQL("DROP TABLE IF EXISTS $TABLE_FILES")
-        onCreate(db)
+        if (oldVersion < 2) {
+            db.execSQL("CREATE INDEX IF NOT EXISTS idx_features_acronym ON $TABLE_FEATURES ($COLUMN_ACRONYM)")
+        }
     }
 
     fun isFileUpToDate(filePath: String, lastModified: Long): Boolean {
@@ -93,47 +99,84 @@ class S57SqliteHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAM
         }
     }
 
+    fun getChartBounds(): Map<String, DoubleArray> {
+        val db = readableDatabase
+        val bounds = mutableMapOf<String, DoubleArray>()
+        val query = """
+            SELECT $COLUMN_FILE_PATH, MIN($COLUMN_MIN_LAT), MAX($COLUMN_MAX_LAT), MIN($COLUMN_MIN_LON), MAX($COLUMN_MAX_LON)
+            FROM $TABLE_FEATURES
+            GROUP BY $COLUMN_FILE_PATH
+        """
+        db.rawQuery(query, null).use { cursor ->
+            while (cursor.moveToNext()) {
+                val path = cursor.getString(0)
+                val b = doubleArrayOf(cursor.getDouble(1), cursor.getDouble(2), cursor.getDouble(3), cursor.getDouble(4))
+                bounds[path] = b
+            }
+        }
+        return bounds
+    }
+
     fun addFeaturesStreaming(filePath: String, lastModified: Long, reader: S57FileReader) {
-        val db = writableDatabase
-        db.beginTransaction()
-        try {
-            removeFile(filePath)
-            
-            reader.forEachFeature { feature ->
-                val values = ContentValues().apply {
-                    put(COLUMN_FILE_PATH, filePath)
-                    put(COLUMN_ACRONYM, feature.acronym)
-                    put(COLUMN_PRIMITIVE, feature.primitiveType.code)
-                    put(COLUMN_ATTRIBUTES, JSONObject(feature.attributes as Map<*, *>).toString())
-                    put(COLUMN_GEOMETRY, serializeGeometries(feature.geometries))
-                    
-                    val bounds = calculateBounds(feature.geometries)
-                    put(COLUMN_MIN_LAT, bounds[0])
-                    put(COLUMN_MAX_LAT, bounds[1])
-                    put(COLUMN_MIN_LON, bounds[2])
-                    put(COLUMN_MAX_LON, bounds[3])
-                }
-                db.insert(TABLE_FEATURES, null, values)
-            }
-            
-            val fileValues = ContentValues().apply {
-                put(COLUMN_FILE_PATH, filePath)
-                put(COLUMN_LAST_MODIFIED, lastModified)
-            }
-            db.insert(TABLE_FILES, null, fileValues)
-            
-            db.setTransactionSuccessful()
-        } finally {
-            db.endTransaction()
+        addFeaturesInternal(filePath, lastModified) { action ->
+            reader.forEachFeature(action)
         }
     }
 
     @Deprecated("Use addFeaturesStreaming for memory efficiency", ReplaceWith("addFeaturesStreaming"))
     fun addFeatures(filePath: String, lastModified: Long, features: List<S57Object>) {
-        // Kept for compatibility if needed.
+        addFeaturesInternal(filePath, lastModified) { action ->
+            features.forEach(action)
+        }
     }
 
-    fun queryFeatures(latMin: Double, latMax: Double, lonMin: Double, lonMax: Double, acronyms: Collection<String>? = null): List<S57Object> {
+    private fun addFeaturesInternal(
+        filePath: String, 
+        lastModified: Long, 
+        provider: ((S57Object) -> Unit) -> Unit
+    ) {
+        val db = writableDatabase
+        db.transaction {
+            try {
+                removeFile(filePath)
+
+                provider { feature ->
+                    val values = ContentValues().apply {
+                        put(COLUMN_FILE_PATH, filePath)
+                        put(COLUMN_ACRONYM, feature.acronym)
+                        put(COLUMN_PRIMITIVE, feature.primitiveType.code)
+                        put(
+                            COLUMN_ATTRIBUTES,
+                            JSONObject(feature.attributes as Map<*, *>).toString()
+                        )
+                        put(COLUMN_GEOMETRY, serializeGeometries(feature.geometries))
+
+                        val bounds = calculateBounds(feature.geometries)
+                        put(COLUMN_MIN_LAT, bounds[0])
+                        put(COLUMN_MAX_LAT, bounds[1])
+                        put(COLUMN_MIN_LON, bounds[2])
+                        put(COLUMN_MAX_LON, bounds[3])
+                    }
+                    insert(TABLE_FEATURES, null, values)
+                }
+
+                val fileValues = ContentValues().apply {
+                    put(COLUMN_FILE_PATH, filePath)
+                    put(COLUMN_LAST_MODIFIED, lastModified)
+                }
+                insert(TABLE_FILES, null, fileValues)
+
+            } finally {
+            }
+        }
+    }
+
+    fun queryFeatures(
+        latMin: Double, latMax: Double, lonMin: Double, lonMax: Double, 
+        acronyms: Collection<String>? = null,
+        limit: Int = 1000,
+        offset: Int = 0
+    ): List<S57Object> {
         val db = readableDatabase
         val features = mutableListOf<S57Object>()
         
@@ -141,7 +184,7 @@ class S57SqliteHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAM
         
         val args = mutableListOf(latMin.toString(), latMax.toString(), lonMin.toString(), lonMax.toString())
         var acronymCondition = ""
-        if (acronyms != null && acronyms.isNotEmpty()) {
+        if (!acronyms.isNullOrEmpty()) {
             val placeholders = acronyms.joinToString(",") { "?" }
             acronymCondition = " AND $COLUMN_ACRONYM IN ($placeholders)"
             args.addAll(acronyms)
@@ -152,6 +195,7 @@ class S57SqliteHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAM
             WHERE ($COLUMN_MAX_LAT >= ? AND $COLUMN_MIN_LAT <= ?) 
             AND $lonCondition
             $acronymCondition
+            LIMIT $limit OFFSET $offset
         """
         
         val cursor = db.rawQuery(query, args.toTypedArray())

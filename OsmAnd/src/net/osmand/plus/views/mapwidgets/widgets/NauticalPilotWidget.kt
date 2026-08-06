@@ -1,5 +1,6 @@
 package net.osmand.plus.views.mapwidgets.widgets
 
+import android.animation.ValueAnimator
 import android.annotation.SuppressLint
 import android.os.Handler
 import android.os.Looper
@@ -7,20 +8,19 @@ import android.view.GestureDetector
 import android.view.HapticFeedbackConstants
 import android.view.MotionEvent
 import android.view.View
-import android.view.ViewGroup
-import android.widget.PopupWindow
 import android.widget.ProgressBar
-import android.widget.TextView
 import androidx.appcompat.widget.AppCompatImageView
 import androidx.core.content.ContextCompat
 import net.osmand.plus.R
 import net.osmand.plus.activities.MapActivity
 import net.osmand.plus.plugins.nautical.NauticalPlugin
+import net.osmand.plus.plugins.nautical.engine.ConnectionStatus
 import net.osmand.plus.plugins.nautical.engine.MarineState
+import net.osmand.plus.plugins.nautical.engine.NauticalHelmArbitrator
 import net.osmand.plus.views.layers.base.OsmandMapLayer
 import net.osmand.plus.views.mapwidgets.WidgetType
 import net.osmand.plus.views.mapwidgets.WidgetsPanel
-import java.util.*
+import java.util.Locale
 
 class NauticalPilotWidget(
     mapActivity: MapActivity,
@@ -31,12 +31,13 @@ class NauticalPilotWidget(
 
     private var statusIconView: AppCompatImageView? = null
     private var progressBar: ProgressBar? = null
+    private var progressText: View? = null
     private var rudderMarker: View? = null
     private var gestureDetector: GestureDetector? = null
     private val holdHandler = Handler(Looper.getMainLooper())
     private var holdProgress = 0
-    private var lastUpdateTime = 0L
-    private var lastRudderUpdateTime = 0L
+    private var pendingAnimator: ValueAnimator? = null
+    private var lastIsPending = false
 
     init {
         setIcons(widgetType)
@@ -46,7 +47,7 @@ class NauticalPilotWidget(
 
     override fun getIconId(): Int {
         val engine = NauticalPlugin.engine ?: return R.drawable.ic_plugin_nautical_map
-        val state = engine.getCurrentState() ?: return R.drawable.ic_plugin_nautical_map
+        val state = engine.getCurrentState()
 
         if (state.isOffCourse) {
             return R.drawable.ic_action_alert
@@ -67,36 +68,64 @@ class NauticalPilotWidget(
             val engine = NauticalPlugin.engine
             val state = engine?.getCurrentState()
             val mode = state?.autopilotState?.lowercase(Locale.US) ?: "standby"
-            val isStale = (state?.connectionStatus != net.osmand.plus.plugins.nautical.engine.ConnectionStatus.CONNECTED)
+            val isStale = (state?.connectionStatus != ConnectionStatus.CONNECTED)
+            val isLocked = NauticalHelmArbitrator.getInstance(app).isLockedByEmergency()
+            val isPending = (state?.pendingAutopilotState != null) || (state?.pendingTargetHeading != null) || (state?.pendingCommandPath != null)
+
+            updateAnimationState(isPending)
 
             val color = when {
+                isLocked -> ContextCompat.getColor(app, R.color.text_color_negative) // Red/Locked
                 state?.isOffCourse == true -> ContextCompat.getColor(app, R.color.text_color_negative) // Red
-                mode != "standby" && !isStale -> ContextCompat.getColor(app, R.color.color_ok) // Green
-                else -> ContextCompat.getColor(app, R.color.color_unknown) // Dim/Grey
+                ((mode != "standby") && !isStale) -> ContextCompat.getColor(app, R.color.color_ok) // Green
+                else -> ContextCompat.getColor(app, R.color.map_widget_icon_color) // Dim/Grey
             }
+
+
             setImageDrawable(iconsCache.getPaintedIcon(iconId, color))
         }
     }
 
-    private val marineStateListener: (MarineState) -> Unit = { state ->
-        val now = System.currentTimeMillis()
-        if ((now - lastUpdateTime) > 200) {
-            lastUpdateTime = now
-            mapActivity.runOnUiThread { updateInfo(null) }
-        }
-
-        if ((now - lastRudderUpdateTime) > 50) { // Throttle rudder to 20Hz
-            lastRudderUpdateTime = now
-            mapActivity.runOnUiThread {
-                state.rudderAngle?.let { angle ->
-                    val maxAngle = Math.toRadians(35.0)
-                    val ratio = (angle.coerceIn(-maxAngle, maxAngle) / maxAngle).toFloat()
-                    rudderMarker?.let { marker ->
-                        val parent = marker.parent as? View
-                        if (parent != null) {
-                            val translationX = ratio * (parent.width / 2f - marker.width / 2f)
-                            marker.translationX = translationX
+    private fun updateAnimationState(isPending: Boolean) {
+        if (isPending != lastIsPending) {
+            lastIsPending = isPending
+            if (isPending) {
+                if (pendingAnimator == null) {
+                    pendingAnimator = ValueAnimator.ofFloat(0.5f, 1.0f).apply {
+                        duration = 500
+                        repeatCount = ValueAnimator.INFINITE
+                        repeatMode = ValueAnimator.REVERSE
+                        addUpdateListener { animator ->
+                            val alpha = animator.animatedValue as Float
+                            contentView?.alpha = alpha
+                            statusIconView?.alpha = alpha
                         }
+                        start()
+                    }
+                }
+            } else {
+                pendingAnimator?.cancel()
+                pendingAnimator?.removeAllUpdateListeners()
+                pendingAnimator = null
+                contentView?.alpha = 1.0f
+                statusIconView?.alpha = 1.0f
+            }
+        }
+    }
+
+    private val marineStateListener: (MarineState) -> Unit = { state ->
+        mapActivity.runOnUiThread { 
+            updateInfo(null)
+            NauticalPlugin.getInstance()?.checkScreenAlwaysOn()
+            
+            state.rudderAngle?.let { angle ->
+                val maxAngle = Math.toRadians(35.0)
+                val ratio = (angle.coerceIn(-maxAngle, maxAngle) / maxAngle).toFloat()
+                rudderMarker?.let { marker ->
+                    val parent = marker.parent as? View
+                    if (parent != null) {
+                        val translationX = ratio * ((parent.width / 2f) - (marker.width / 2f))
+                        marker.translationX = translationX
                     }
                 }
             }
@@ -111,6 +140,7 @@ class NauticalPilotWidget(
 
         statusIconView = view.findViewById(R.id.pilot_status_icon)
         progressBar = view.findViewById(R.id.pilot_progress_bar)
+        progressText = view.findViewById(R.id.pilot_progress_text)
         rudderMarker = view.findViewById(R.id.hud_rudder_marker)
 
         view.addOnAttachStateChangeListener(
@@ -122,6 +152,10 @@ class NauticalPilotWidget(
                 override fun onViewDetachedFromWindow(v: View) {
                     NauticalPlugin.engine?.unregisterListener(marineStateListener)
                     holdHandler.removeCallbacksAndMessages(null)
+                    pendingAnimator?.cancel()
+                    pendingAnimator?.removeAllUpdateListeners()
+                    pendingAnimator = null
+                    lastIsPending = false
                 }
             },
         )
@@ -129,59 +163,107 @@ class NauticalPilotWidget(
         gestureDetector = GestureDetector(
             mapActivity,
             object : GestureDetector.SimpleOnGestureListener() {
-            override fun onSingleTapConfirmed(e: MotionEvent): Boolean {
-                val engine = NauticalPlugin.engine
-                val state = engine?.getCurrentState()
-                val mode = state?.autopilotState?.lowercase(Locale.US) ?: "standby"
-                
-                if (mode == "standby") {
-                    // Smart Engage
-                    if (engine?.isFollowingRoute == true) {
-                        NauticalPlugin.autopilot?.setAutopilotMode("track")
-                    } else {
-                        NauticalPlugin.autopilot?.setAutopilotMode("auto")
+                override fun onSingleTapConfirmed(e: MotionEvent): Boolean {
+                    if (NauticalHelmArbitrator.getInstance(app).isLockedByEmergency()) {
+                        val maneuver = NauticalHelmArbitrator.getInstance(app).getActiveManeuver()
+                        app.showToastMessage("Helm Locked by $maneuver")
+                        return true
                     }
-                } else {
-                    // Disengage to Standby
-                    NauticalPlugin.autopilot?.setAutopilotMode("standby")
+                    val sheet = NauticalPilotBottomSheet.newInstance()
+                    sheet.show(mapActivity.supportFragmentManager, "pilot_control")
+                    view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                    return true
                 }
-                view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
-                return true
-            }
 
-            override fun onDoubleTap(e: MotionEvent): Boolean {
-                val sheet = NauticalPilotBottomSheet.newInstance()
-                sheet.show(mapActivity.supportFragmentManager, "pilot_control")
-                return true
-            }
+                override fun onLongPress(e: MotionEvent) {
+                    val engine = NauticalPlugin.engine
+                    val mode = engine?.getCurrentState()?.autopilotState?.lowercase(Locale.US) ?: "standby"
+                    if (mode == "standby") return // Only long press to drop to standby from engaged
 
-            override fun onLongPress(e: MotionEvent) {
-                progressBar?.visibility = View.VISIBLE
-                holdProgress = 0
-                val holdRunnable = object : Runnable {
-                    override fun run() {
-                        holdProgress += 4
-                        progressBar?.progress = holdProgress
+                    progressBar?.visibility = View.VISIBLE
+                    progressText?.visibility = View.VISIBLE
+                    holdProgress = 0
+                    val holdRunnable = object : Runnable {
+                        override fun run() {
+                            holdProgress += 4
+                            progressBar?.progress = holdProgress
 
-                        if (holdProgress >= 100) {
-                            progressBar?.visibility = View.GONE
-                            triggerCommand("STOP")
-                        } else {
-                            holdHandler.postDelayed(this, 50)
+                            if (holdProgress >= 100) {
+                                progressBar?.visibility = View.GONE
+                                progressText?.visibility = View.GONE
+                                triggerCommand("STOP")
+                                view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+                            } else {
+                                holdHandler.postDelayed(this, 50)
+                            }
                         }
                     }
+                    holdHandler.post(holdRunnable)
                 }
-                holdHandler.post(holdRunnable)
-            }
-        })
+            },
+        )
 
         view.setOnTouchListener { _, event ->
             if ((event.action == MotionEvent.ACTION_UP) || (event.action == MotionEvent.ACTION_CANCEL)) {
                 holdHandler.removeCallbacksAndMessages(null)
                 progressBar?.visibility = View.GONE
+                progressText?.visibility = View.GONE
             }
             gestureDetector?.onTouchEvent(event) ?: false
         }
+
+        // Accessibility Support
+        view.contentDescription = mapActivity.getString(R.string.nautical_autopilot)
+        androidx.core.view.ViewCompat.addAccessibilityAction(
+            view,
+            mapActivity.getString(R.string.nautical_accessibility_autopilot_disengage),
+        ) { _, _ ->
+            val engine = NauticalPlugin.engine
+            val mode = engine?.getCurrentState()?.autopilotState?.lowercase(Locale.US) ?: "standby"
+            if (mode != "standby") {
+                triggerCommand("STOP")
+                true
+            } else {
+                false
+            }
+        }
+
+
+        // Phase 4: Bind HUD nudge controls
+        val nudgeMinus10 = view.findViewById<View>(R.id.btn_hud_minus_10)
+        val nudgeMinus1 = view.findViewById<View>(R.id.btn_hud_minus_1)
+        val nudgePlus1 = view.findViewById<View>(R.id.btn_hud_plus_1)
+        val nudgePlus10 = view.findViewById<View>(R.id.btn_hud_plus_10)
+
+        nudgeMinus10?.setOnClickListener {
+            if (!checkHelmLock()) return@setOnClickListener
+            NauticalPlugin.autopilot?.adjustHeading(-10.0)
+            it.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+        }
+        nudgeMinus1?.setOnClickListener {
+            if (!checkHelmLock()) return@setOnClickListener
+            NauticalPlugin.autopilot?.adjustHeading(-1.0)
+            it.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+        }
+        nudgePlus1?.setOnClickListener {
+            if (!checkHelmLock()) return@setOnClickListener
+            NauticalPlugin.autopilot?.adjustHeading(1.0)
+            it.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+        }
+        nudgePlus10?.setOnClickListener {
+            if (!checkHelmLock()) return@setOnClickListener
+            NauticalPlugin.autopilot?.adjustHeading(10.0)
+            it.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+        }
+    }
+
+    private fun checkHelmLock(): Boolean {
+        if (NauticalHelmArbitrator.getInstance(app).isLockedByEmergency()) {
+            val maneuver = NauticalHelmArbitrator.getInstance(app).getActiveManeuver()
+            app.showToastMessage("Helm Locked by $maneuver")
+            return false
+        }
+        return true
     }
 
     private fun triggerCommand(command: String) {
@@ -227,37 +309,22 @@ class NauticalPilotWidget(
         val upwind = state?.windDirectionApparent?.let { kotlin.math.abs(Math.toDegrees(it)) < 90.0 } ?: true
         val isSafe = autopilot?.isWindSafeForManeuver(tacking = upwind) ?: true
 
-        val popupView = View.inflate(mapActivity, R.layout.nautical_confirm_popup, null)
-        
-        val msgView = popupView.findViewById<TextView>(R.id.txt_confirm_msg)
-        if (isProa) {
-            msgView?.text = mapActivity.getString(R.string.nautical_confirm_shunt)
+        val msg = if (isProa) {
+            mapActivity.getString(R.string.nautical_confirm_shunt)
         } else {
-            msgView?.text = if (upwind) mapActivity.getString(R.string.nautical_confirm_tack) else mapActivity.getString(R.string.nautical_confirm_gybe)
+            val baseMsg = if (upwind) mapActivity.getString(R.string.nautical_confirm_tack) else mapActivity.getString(R.string.nautical_confirm_gybe)
             if (!isSafe) {
-                msgView?.append("\n\n" + mapActivity.getString(R.string.nautical_warn_unsafe_maneuver))
-                msgView?.setTextColor(ContextCompat.getColor(mapActivity, R.color.text_color_negative))
+                baseMsg + "\n\n" + mapActivity.getString(R.string.nautical_warn_unsafe_maneuver)
+            } else {
+                baseMsg
             }
         }
 
-        val popup = PopupWindow(
-            popupView,
-            ViewGroup.LayoutParams.WRAP_CONTENT,
-            ViewGroup.LayoutParams.WRAP_CONTENT,
-            true,
-        )
+        val label = if (isProa) mapActivity.getString(R.string.nautical_shunt) else if (upwind) mapActivity.getString(R.string.nautical_tack) else mapActivity.getString(R.string.nautical_gybe)
 
-        val dismissHandler = Handler(Looper.getMainLooper())
-        val dismissRunnable = Runnable { if (popup.isShowing) popup.dismiss() }
-        dismissHandler.postDelayed(dismissRunnable, 5000)
-
-        popupView.findViewById<View>(R.id.btn_confirm).setOnClickListener {
-            dismissHandler.removeCallbacks(dismissRunnable)
+        NauticalPlugin.hudManager?.get()?.showBanner(msg, 10000, label, !isSafe) {
             triggerCommand("TACK_EXECUTED")
-            popup.dismiss()
         }
-
-        popup.showAsDropDown(view, 0, -(view.height))
     }
 
     private fun executeRoutineCommand(command: String) {
@@ -287,27 +354,21 @@ class NauticalPilotWidget(
         }
 
         val state = engine.getCurrentState()
-        if (state == null) {
-            setText(mapActivity.getString(R.string.nautical_status_off), "")
-            updateIcon()
-            setStatusIcon(0)
-            return
-        }
-
         if (state.isOffCourse) {
             val xteMeters = state.crossTrackError ?: 0.0
             val xteNm = kotlin.math.abs(xteMeters) / 1852.0
             setText(String.format(Locale.US, "%s: %.2f %s", mapActivity.getString(R.string.nautical_off_course), xteNm, mapActivity.getString(R.string.nautical_unit_nm)), "")
             updateIcon()
             setStatusIcon(0)
+            view.findViewById<View>(R.id.hud_nudge_controls)?.visibility = View.VISIBLE
         } else {
             val mode = state.autopilotState.lowercase(Locale.US)
-            val isStale = (state.connectionStatus != net.osmand.plus.plugins.nautical.engine.ConnectionStatus.CONNECTED)
+            val isStale = (state.connectionStatus != ConnectionStatus.CONNECTED)
             val heading = state.targetHeading ?: state.headingTrue
             
             val headingStr = if (mode == "standby") {
                 mapActivity.getString(R.string.nautical_mode_stby)
-            } else if (heading == null || isStale) {
+            } else if ((heading == null) || isStale) {
                 "--"
             } else {
                 val headingDeg = Math.toDegrees(heading)
@@ -331,6 +392,9 @@ class NauticalPilotWidget(
                 statusIconView?.alpha = 1.0f
                 contentView?.alpha = 1.0f
             }
+
+            val controls = view.findViewById<View>(R.id.hud_nudge_controls)
+            controls?.visibility = if ((mode != "standby") && !isStale) View.VISIBLE else View.GONE
         }
     }
 
@@ -339,9 +403,9 @@ class NauticalPilotWidget(
             R.string.nautical_cardinal_n, R.string.nautical_cardinal_ne,
             R.string.nautical_cardinal_e, R.string.nautical_cardinal_se,
             R.string.nautical_cardinal_s, R.string.nautical_cardinal_sw,
-            R.string.nautical_cardinal_w, R.string.nautical_cardinal_nw
+            R.string.nautical_cardinal_w, R.string.nautical_cardinal_nw,
         )
-        val index = (((course % 360.0 + 360.0) % 360.0 + 22.5) / 45.0).toInt() % 8
+        val index = (((((course % 360.0) + 360.0) % 360.0) + 22.5) / 45.0).toInt() % 8
         return mapActivity.getString(directions[index])
     }
 }

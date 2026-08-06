@@ -12,6 +12,16 @@ class GribInterpolationEngine(private val gridData: GribGridData) {
         return WindVector(u, v)
     }
 
+    fun getCurrentVector(lat: Double, lon: Double, timestamp: Long): WindVector? {
+        val (lower, upper, ratio) = getTimeSteps(timestamp) ?: return null
+        val curAtLower = interpolateCurrent(lat, lon, lower) ?: return null
+        val curAtUpper = interpolateCurrent(lat, lon, upper) ?: return null
+
+        val u = curAtLower.u + ratio * (curAtUpper.u - curAtLower.u)
+        val v = curAtLower.v + ratio * (curAtUpper.v - curAtLower.v)
+        return WindVector(u, v)
+    }
+
     fun getPressure(lat: Double, lon: Double, timestamp: Long): Double? {
         val (lower, upper, ratio) = getTimeSteps(timestamp) ?: return null
         val pAtLower = interpolateScalar(lat, lon, lower.pressureGrid) ?: return null
@@ -27,9 +37,14 @@ class GribInterpolationEngine(private val gridData: GribGridData) {
         val dAtUpper = interpolateScalar(lat, lon, upper.waveDirectionGrid) ?: return null
 
         val h = hAtLower + ratio * (hAtUpper - hAtLower)
-        // Note: Direction interpolation should ideally handle 360/0 wrap-around
-        val d = dAtLower + ratio * (dAtUpper - dAtLower)
-        return WaveVector(h, (d + 360.0) % 360.0)
+        
+        // Wrap-around aware interpolation for degrees
+        var diff = dAtUpper - dAtLower
+        while (diff > 180.0) diff -= 360.0
+        while (diff < -180.0) diff += 360.0
+        val d = (dAtLower + ratio * diff + 360.0) % 360.0
+        
+        return WaveVector(h, d)
     }
 
     private fun getTimeSteps(timestamp: Long): Triple<TimeStepGrid, TimeStepGrid, Double>? {
@@ -51,7 +66,8 @@ class GribInterpolationEngine(private val gridData: GribGridData) {
             }
         }
 
-        val ratio = (timestamp - lower.timestamp).toDouble() / (upper.timestamp - lower.timestamp).toDouble()
+        val stepSpan = upper.timestamp - lower.timestamp
+        val ratio = if (stepSpan > 0) (timestamp - lower.timestamp).toDouble() / stepSpan.toDouble() else 0.0
         return Triple(lower, upper, ratio.coerceIn(0.0, 1.0))
     }
 
@@ -86,6 +102,12 @@ class GribInterpolationEngine(private val gridData: GribGridData) {
     private fun interpolateWind(lat: Double, lon: Double, timeStep: TimeStepGrid): WindVector? {
         val u = interpolateScalar(lat, lon, timeStep.uGrid) ?: return null
         val v = interpolateScalar(lat, lon, timeStep.vGrid) ?: return null
+        return WindVector(u, v)
+    }
+
+    private fun interpolateCurrent(lat: Double, lon: Double, timeStep: TimeStepGrid): WindVector? {
+        val u = interpolateScalar(lat, lon, timeStep.currentUGrid) ?: return null
+        val v = interpolateScalar(lat, lon, timeStep.currentVGrid) ?: return null
         return WindVector(u, v)
     }
 }

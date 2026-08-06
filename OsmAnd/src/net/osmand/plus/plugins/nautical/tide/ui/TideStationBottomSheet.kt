@@ -1,5 +1,6 @@
 package net.osmand.plus.plugins.nautical.tide.ui
 
+import android.content.res.Configuration
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -7,6 +8,8 @@ import android.view.ViewGroup
 import android.widget.TextView
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
+import com.google.android.material.bottomsheet.BottomSheetBehavior
+import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -18,7 +21,6 @@ class TideStationBottomSheet : BottomSheetDialogFragment() {
     private lateinit var viewModel: TideViewModel
     private var graphView: TideGraphView? = null
     private var stationName: TextView? = null
-    private var currentLevel: TextView? = null
 
     companion object {
         private const val LAT = "lat"
@@ -31,6 +33,27 @@ class TideStationBottomSheet : BottomSheetDialogFragment() {
                     putDouble(LAT, lat)
                     putDouble(LON, lon)
                 }
+            }
+        }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        (dialog as? BottomSheetDialog)?.let { sheetDialog ->
+            sheetDialog.findViewById<View>(com.google.android.material.R.id.design_bottom_sheet)?.let { bottomSheet ->
+                val behavior = BottomSheetBehavior.from(bottomSheet)
+                val metrics = resources.displayMetrics
+                val isLandscape = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+                val screenHeightDp = metrics.heightPixels / metrics.density
+                
+                if (isLandscape || (screenHeightDp < 600)) {
+                    behavior.peekHeight = (metrics.heightPixels * 0.7).toInt()
+                    behavior.maxHeight = metrics.heightPixels
+                } else {
+                    behavior.maxHeight = (metrics.heightPixels * 0.6).toInt()
+                    behavior.peekHeight = (metrics.heightPixels * 0.4).toInt()
+                }
+                behavior.state = BottomSheetBehavior.STATE_COLLAPSED
             }
         }
     }
@@ -59,7 +82,7 @@ class TideStationBottomSheet : BottomSheetDialogFragment() {
         graphView = TideGraphView(requireContext()).apply {
             layoutParams = oldGraph?.layoutParams ?: ViewGroup.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, 
-                400
+                400,
             )
         }
         
@@ -75,18 +98,35 @@ class TideStationBottomSheet : BottomSheetDialogFragment() {
 
         val lat = arguments?.getDouble(LAT) ?: 0.0
         val lon = arguments?.getDouble(LON) ?: 0.0
-        
-        viewModel.findNearbyStations(lat, lon)
+        val skStationId = arguments?.getString("signalk_station_id")
+
+        if (skStationId != null) {
+            viewModel.selectSignalKStation(skStationId)
+        } else {
+            viewModel.findNearbyStations(lat, lon)
+        }
 
         lifecycleScope.launch {
             viewModel.selectedStation.collectLatest { station ->
-                stationName?.text = station?.name ?: getString(R.string.tide_dialog_title)
+                val source = if (station?.constituents?.isEmpty() == true) "Signal K" else "Local"
+                val name = station?.name ?: getString(R.string.tide_dialog_title)
+                stationName?.text = getString(R.string.tide_station_title_with_source, name, source)
             }
         }
 
         lifecycleScope.launch {
             viewModel.predictions.collectLatest { predictions ->
                 graphView?.setPredictions(predictions)
+            }
+        }
+
+        lifecycleScope.launch {
+            viewModel.vesselTide.collectLatest { vesselTide ->
+                if (vesselTide?.stationName == viewModel.selectedStation.value?.name) {
+                    graphView?.setVesselTide(vesselTide)
+                } else {
+                    graphView?.setVesselTide(null)
+                }
             }
         }
     }

@@ -29,6 +29,8 @@ import net.osmand.data.PointDescription;
 import net.osmand.data.RotatedTileBox;
 import net.osmand.plus.ChartPointsHelper;
 import net.osmand.plus.plugins.PluginsHelper;
+import net.osmand.plus.plugins.nautical.NauticalPlugin;
+import net.osmand.plus.plugins.nautical.engine.SailingWorkflowState;
 import net.osmand.plus.plugins.aistracker.AisTrackerPlugin.AisDataManager.AisObjectListener;
 import net.osmand.plus.utils.NativeUtilities;
 import net.osmand.plus.views.OsmandMapTileView;
@@ -197,12 +199,30 @@ public class AisTrackerLayer extends OsmandMapLayer implements IContextMenuProvi
 				mapRenderer.addSymbolsProvider(markersCollection);
 				mapRenderer.addSymbolsProvider(vectorLinesCollection);
 
+				// TASK-049: Tactical AIS Dimming logic
+				NauticalPlugin nautical = NauticalPlugin.getInstance();
+				SailingWorkflowState currentWorkflow = (nautical != null && nautical.getWorkflowEngine() != null) 
+					? nautical.getWorkflowEngine().getCurrentWorkflow().getValue() : null;
+				boolean isCloseQuarters = currentWorkflow == SailingWorkflowState.CLOSE_QUARTERS;
+
 				for (AisObject ais : plugin.getAisObjects()) {
 					if (isOwnObjectHidden(ais)) {
 						continue;
 					}
 					AisObjectDrawable drawable = new AisObjectDrawable(plugin, ais);
 					drawable.setOwnObject(isOwnObject(ais));
+					
+					// Apply tactical dimming for distant non-danger targets in Close Quarters
+					if (isCloseQuarters && !ais.getCpa().getValid() && 
+						plugin.getOwnPosition() != null && ais.getPosition() != null) {
+						double dist = net.osmand.util.MapUtils.getDistance(
+							plugin.getOwnPosition().getLatitude(), plugin.getOwnPosition().getLongitude(),
+							ais.getPosition().getLatitude(), ais.getPosition().getLongitude());
+						if (dist > 1000) { // > ~0.5 NM
+							drawable.setAlpha(80); // ~30%
+						}
+					}
+
 					objectDrawables.put(ais.getMmsi(), drawable);
 					drawable.createAisRenderData(getBaseOrder(), bitmapPaint,
 							markersCollection, vectorLinesCollection, aisRestImage);

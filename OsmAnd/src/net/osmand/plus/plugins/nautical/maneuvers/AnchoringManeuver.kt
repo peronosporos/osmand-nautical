@@ -14,40 +14,93 @@ class AnchoringManeuver(app: OsmandApplication) : ManeuverEngine(app) {
         // Run standard checks first
         if (!super.checkSafetyPreconditions(state)) return false
 
-        // Anchoring specific: Ensure we have depth data
-        val depthBelow = state.depthBelowTransducer
-        if (depthBelow == null) {
-             val msg = app.getString(R.string.nautical_depth_unavailable)
-             app.player?.let { player -> player.playCommands(player.newCommandBuilder().attention(msg)) }
-             transitionToAborted(msg)
-             return false
+        // Ensure we have active GPS fix
+        if (state.latitude == null || state.longitude == null || state.stalePaths.contains("navigation.position")) {
+            val msg = app.getString(R.string.nautical_error_no_gps)
+            app.player?.let { player -> player.playCommands(player.newCommandBuilder().attention(msg)) }
+            transitionToAborted(msg)
+            return false
         }
+
         return true
     }
 
     override fun transitionToExecuting() {
+        // Lock Helm for Anchoring
+        net.osmand.plus.plugins.nautical.engine.NauticalHelmArbitrator.getInstance(app).acquireLock(
+            net.osmand.plus.plugins.nautical.engine.NauticalHelmArbitrator.PRIORITY_TACTICAL_MANEUVER, "Anchoring"
+        )
+
         val state = NauticalPlugin.engine?.getCurrentState() ?: return
         
-        val depthBelow = state.depthBelowTransducer ?: 0.0
-        val offset = state.depthSurfaceToTransducer ?: 1.0
-        val totalDepth = depthBelow + offset
+        val depthBelow = state.depthBelowTransducer ?: app.settings.NAUTICAL_ANCHOR_DEPTH.get().toDouble()
+        val tideRise = state.tide?.heightNow ?: app.settings.NAUTICAL_ANCHOR_TIDE_RISE.get().toDouble()
+        val freeboard = app.settings.NAUTICAL_ANCHOR_FREEBOARD.get().toDouble()
         
         val windSpeed = state.windSpeedTrue ?: 0.0
-        val scopeRatio = if (windSpeed > 20.0) 7.0 else 5.0
-        rodeLength = totalDepth * scopeRatio
+        val scopeRatio = if (windSpeed > 10.0) 7.0 else 5.0 // ~20 knots threshold (10 m/s)
+        
+        rodeLength = net.osmand.plus.plugins.nautical.AnchorCalculator.calculateRodeLength(
+            depthBelow, tideRise, freeboard, scopeRatio
+        )
         
         dropCoordinate = state.latitude?.let { lat -> state.longitude?.let { lon -> Pair(lat, lon) } }
         
         app.player?.let { player ->
-            val msg = app.getString(R.string.nautical_anchoring_at_depth, totalDepth.toInt()) +
-                    " Scope set to ${scopeRatio.toInt()}. Paying out ${rodeLength.toInt()} meters of rode."
+            val (depthVal, depthUnit) = net.osmand.plus.plugins.nautical.engine.SignalKUnitConverter.formatValue(app, app.settings, depthBelow, "depth")
+            val (rodeVal, rodeUnit) = net.osmand.plus.plugins.nautical.engine.SignalKUnitConverter.formatValue(app, app.settings, rodeLength, "distance")
+            
+            val msg = app.getString(R.string.nautical_anchoring_at_depth_localized, depthVal, depthUnit) +
+                    " Scope set to ${String.format(java.util.Locale.US, "%.1f", scopeRatio)}. Paying out $rodeVal $rodeUnit of rode."
             player.playCommands(player.newCommandBuilder().attention(msg))
+        }
+        
+        pushInstruction("Dropping Anchor")
+        pushProgress(20)
+
+        // Active Helm Assistance: Point bow into wind
+        val twd = state.windDirectionTrue
+        if (twd != null) {
+            NauticalPlugin.autopilot?.setTargetHeading(Math.toDegrees(twd))
+            NauticalPlugin.autopilot?.setAutopilotMode("auto")
+        }
+
+        // Task 11: Auto-trigger Windlass
+        val caps = NauticalPlugin.getInstance()?.capabilityManager?.capabilities?.value
+        if (caps?.hasWindlassControl == true && state.isEngineRunning) {
+            NauticalPlugin.engine?.setSwitch("electrical.switches.windlass.down", true)
         }
 
         super.transitionToExecuting()
     }
 
+    override fun onStateUpdate(state: MarineState) {
+        if (currentState == ManeuverStateMachine.State.EXECUTING) {
+            val caps = NauticalPlugin.getInstance()?.capabilityManager?.capabilities?.value
+            if (caps?.hasChainCounter == true && state.rodeDeployed != null) {
+                if (state.rodeDeployed >= rodeLength) {
+                    pushInstruction("Target Rode Reached")
+                    if (caps.hasWindlassControl) {
+                        NauticalPlugin.engine?.setSwitch("electrical.switches.windlass.down", false)
+                    }
+                    transitionToCompleted()
+                } else {
+                    val progress = ((state.rodeDeployed / rodeLength) * 100).toInt()
+                    pushProgress(progress)
+                    pushInstruction(String.format(java.util.Locale.US, "Paying out: %.1fm / %.1fm", state.rodeDeployed, rodeLength))
+                }
+            }
+        }
+    }
+
     override fun transitionToCompleted() {
+        val caps = NauticalPlugin.getInstance()?.capabilityManager?.capabilities?.value
+        if (caps?.hasWindlassControl == true) {
+            NauticalPlugin.engine?.setSwitch("electrical.switches.windlass.down", false)
+        }
+        net.osmand.plus.plugins.nautical.engine.NauticalHelmArbitrator.getInstance(app).releaseLock(
+            net.osmand.plus.plugins.nautical.engine.NauticalHelmArbitrator.PRIORITY_TACTICAL_MANEUVER
+        )
         dropCoordinate?.let { (lat, lon) ->
             app.settings.NAUTICAL_ANCHOR_LAT.set(lat)
             app.settings.NAUTICAL_ANCHOR_LON.set(lon)
@@ -59,5 +112,16 @@ class AnchoringManeuver(app: OsmandApplication) : ManeuverEngine(app) {
         }
         
         super.transitionToCompleted()
+    }
+
+    override fun transitionToAborted(reason: String?) {
+        val caps = NauticalPlugin.getInstance()?.capabilityManager?.capabilities?.value
+        if (caps?.hasWindlassControl == true) {
+            NauticalPlugin.engine?.setSwitch("electrical.switches.windlass.down", false)
+        }
+        net.osmand.plus.plugins.nautical.engine.NauticalHelmArbitrator.getInstance(app).releaseLock(
+            net.osmand.plus.plugins.nautical.engine.NauticalHelmArbitrator.PRIORITY_TACTICAL_MANEUVER
+        )
+        super.transitionToAborted(reason)
     }
 }

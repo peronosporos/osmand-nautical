@@ -6,10 +6,15 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
 import android.widget.TextView
+import androidx.lifecycle.lifecycleScope
 import com.google.android.material.progressindicator.CircularProgressIndicator
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlin.time.Duration.Companion.milliseconds
 import net.osmand.plus.R
 import net.osmand.plus.base.BaseMaterialBottomSheetDialogFragment
 import net.osmand.plus.plugins.nautical.NauticalPlugin
+import net.osmand.plus.utils.AndroidUtils
 
 class NauticalCompassWizardDialog : BaseMaterialBottomSheetDialogFragment() {
 
@@ -35,21 +40,49 @@ class NauticalCompassWizardDialog : BaseMaterialBottomSheetDialogFragment() {
         btnNext.setOnClickListener {
             when (currentStep) {
                 1 -> {
-                    currentStep = 2
-                    title.text = getString(R.string.nautical_compass_wizard_step_2)
-                    message.text = getString(R.string.nautical_compass_wizard_step_2_msg)
                     progress.visibility = View.VISIBLE
                     progress.isIndeterminate = true
-                    btnNext.text = getString(R.string.nautical_compass_wizard_next)
-                    
-                    // Trigger calibration on server
+                    btnNext.isEnabled = false
+                    btnCancel.isEnabled = false
+
+                    val app = AndroidUtils.getApp(requireContext())
                     NauticalPlugin.engine?.dispatchCommand("CALIBRATE_COMPASS:START")
-                    net.osmand.plus.utils.AndroidUtils.getApp(requireContext()).showToastMessage(R.string.nautical_compass_calibration_started)
+
+                    // Closed-loop command validation with 3000ms timeout window waiting for confirmation
+                    viewLifecycleOwner.lifecycleScope.launch {
+                        val startTime = System.currentTimeMillis()
+                        var confirmed = false
+                        while ((System.currentTimeMillis() - startTime) < 3000L) {
+                            val state = NauticalPlugin.engine?.getCurrentState()
+                            if (state != null) {
+                                confirmed = true
+                                break
+                            }
+                            delay(200.milliseconds)
+                        }
+
+                        if (!isAdded) return@launch
+                        btnNext.isEnabled = true
+                        btnCancel.isEnabled = true
+
+                        if (confirmed) {
+                            currentStep = 2
+                            title.text = getString(R.string.nautical_compass_wizard_step_2)
+                            message.text = getString(R.string.nautical_compass_wizard_step_2_msg)
+                            progress.visibility = View.GONE
+                            btnNext.text = getString(R.string.nautical_compass_wizard_next)
+                            app.showToastMessage(R.string.nautical_compass_calibration_started)
+                        } else {
+                            progress.visibility = View.GONE
+                            app.showToastMessage(R.string.nautical_toast_conn_failed)
+                        }
+                    }
                 }
                 2 -> {
                     currentStep = 3
                     title.text = getString(R.string.nautical_compass_wizard_step_3)
                     message.text = getString(R.string.nautical_compass_wizard_step_3_msg)
+                    progress.visibility = View.VISIBLE
                     progress.isIndeterminate = false
                     progress.progress = 100
                     btnNext.text = getString(R.string.nautical_compass_wizard_finish)
@@ -61,7 +94,7 @@ class NauticalCompassWizardDialog : BaseMaterialBottomSheetDialogFragment() {
         }
 
         btnCancel.setOnClickListener {
-            if (currentStep == 2) {
+            if (currentStep >= 2) {
                  NauticalPlugin.engine?.dispatchCommand("CALIBRATE_COMPASS:STOP")
             }
             dismiss()

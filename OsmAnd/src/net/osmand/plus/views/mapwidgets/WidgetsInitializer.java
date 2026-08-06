@@ -35,6 +35,8 @@ import static net.osmand.plus.views.mapwidgets.WidgetType.TIME_TO_INTERMEDIATE;
 import static net.osmand.plus.views.mapwidgets.WidgetType.TRUE_BEARING;
 import static net.osmand.plus.views.mapwidgets.WidgetType.NAUTICAL_DEPTH;
 import static net.osmand.plus.views.mapwidgets.WidgetType.NAUTICAL_WIND;
+import static net.osmand.plus.views.mapwidgets.WidgetType.NAUTICAL_MASTER_TELEMETRY;
+import static net.osmand.plus.views.mapwidgets.WidgetType.NAUTICAL_CAMERA;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -133,6 +135,8 @@ public class WidgetsInitializer {
 		addWidgetInfo(GLIDE_AVERAGE);
 		addWidgetInfo(NAUTICAL_DEPTH);
 		addWidgetInfo(NAUTICAL_WIND);
+		addWidgetInfo(NAUTICAL_MASTER_TELEMETRY);
+		addWidgetInfo(NAUTICAL_CAMERA);
 	}
 
 	private void addWidgetInfo(@NonNull WidgetType widgetType) {

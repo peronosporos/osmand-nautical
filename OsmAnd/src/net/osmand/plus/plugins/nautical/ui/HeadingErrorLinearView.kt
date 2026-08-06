@@ -7,7 +7,7 @@ import android.view.View
 import android.view.accessibility.AccessibilityNodeInfo
 import androidx.core.content.ContextCompat
 import net.osmand.plus.R
-import java.util.Locale
+import net.osmand.plus.plugins.nautical.utils.NauticalFormatter
 import kotlin.math.abs
 
 class HeadingErrorLinearView @JvmOverloads constructor(
@@ -38,11 +38,14 @@ class HeadingErrorLinearView @JvmOverloads constructor(
     private var colorYellow = Color.TRANSPARENT
     private var colorRed = Color.TRANSPARENT
     private val indicatorPath = Path()
+    private val degreeBuffer = CharArray(16)
+    private var defaultHdgErrLabel: String
 
     init {
         updateColors()
         paint.strokeCap = Paint.Cap.ROUND
         textPaint.textAlign = Paint.Align.CENTER
+        defaultHdgErrLabel = context.getString(R.string.nautical_hdg_err_label)
     }
 
     private fun updateColors() {
@@ -80,7 +83,7 @@ class HeadingErrorLinearView @JvmOverloads constructor(
         canvas.drawLine(padding, centerY, w - padding, centerY, paint)
 
         // 2. Draw Ticks
-        for (i in -45..45 step 5) {
+        for (i in (-45..45) step 5) {
             val ratio = (i + 45) / 90f
             val x = padding + (ratio * scaleWidth)
             
@@ -98,7 +101,8 @@ class HeadingErrorLinearView @JvmOverloads constructor(
                 textPaint.color = colorSecondary
                 textPaint.alpha = 200
                 textPaint.typeface = Typeface.create("sans-serif-condensed", Typeface.NORMAL)
-                canvas.drawText(abs(i).toString(), x, centerY + tickLen + 24f, textPaint)
+                val count = NauticalFormatter.formatInt(abs(i), degreeBuffer)
+                canvas.drawText(degreeBuffer, 0, count, x, centerY + tickLen + 24f, textPaint)
             }
         }
 
@@ -117,7 +121,9 @@ class HeadingErrorLinearView @JvmOverloads constructor(
         indicatorPath.reset()
         indicatorPath.moveTo(indicatorX, centerY - 4f)
         indicatorPath.lineTo(indicatorX - 10f, centerY - 20f)
-        indicatorPath.lineTo(indicatorX + 10f, centerY - 20f)
+        indicatorX.let { ix ->
+            indicatorPath.lineTo(ix + 10f, centerY - 20f)
+        }
         indicatorPath.close()
         canvas.drawPath(indicatorPath, paint)
 
@@ -125,19 +131,18 @@ class HeadingErrorLinearView @JvmOverloads constructor(
         textPaint.textSize = 32f
         textPaint.color = colorPrimary
         textPaint.typeface = Typeface.create("sans-serif-condensed", Typeface.BOLD)
-        val errorText = String.format(Locale.US, "%.1f°", headingError)
-        canvas.drawText(errorText, centerX, h - 8f, textPaint)
+        NauticalFormatter.drawDeg(canvas, headingError, centerX, h - 8f, textPaint, degreeBuffer)
         
         textPaint.textSize = 14f
         textPaint.color = colorSecondary
         textPaint.alpha = 150
         textPaint.typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
-        canvas.drawText(label ?: context.getString(R.string.nautical_hdg_err_label), padding + 20f, 24f, textPaint)
+        canvas.drawText(label ?: defaultHdgErrLabel, padding + 20f, 24f, textPaint)
     }
 
     override fun onInitializeAccessibilityNodeInfo(info: AccessibilityNodeInfo) {
         super.onInitializeAccessibilityNodeInfo(info)
         info.className = HeadingErrorLinearView::class.java.name
-        info.contentDescription = context.getString(R.string.nautical_hdg_err) + ": " + String.format(Locale.US, "%.1f°", headingError)
+        info.contentDescription = context.getString(R.string.nautical_hdg_err) + ": " + headingError.toString() + "°"
     }
 }

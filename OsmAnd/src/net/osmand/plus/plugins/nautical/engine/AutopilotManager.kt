@@ -1,14 +1,20 @@
 package net.osmand.plus.plugins.nautical.engine
 
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
 import net.osmand.PlatformUtil
 import net.osmand.plus.OsmandApplication
-import net.osmand.plus.R
 import net.osmand.plus.plugins.nautical.NauticalPlugin
-import okhttp3.*
+import okhttp3.Credentials
 import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
+import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
+import org.json.JSONObject
 import java.io.IOException
 
 /**
@@ -32,6 +38,40 @@ class AutopilotManager(
     fun engage() = setAutopilotMode("auto")
     fun disengage() = setAutopilotMode("standby")
 
+    /**
+     * Reconciles local UI state with the physical autopilot actuator.
+     * Prevents desynchronization after app restart or process death.
+     */
+    fun reconcileState() {
+        val url = buildAutopilotUrl("state") ?: return
+        scope.launch {
+            val requestBuilder = Request.Builder().url(url).get()
+            
+            val username = app.settings.NAUTICAL_SERVER_USERNAME.get()
+            val password = app.settings.NAUTICAL_SERVER_PASSWORD.get()
+            if (!username.isNullOrEmpty() && !password.isNullOrEmpty()) {
+                requestBuilder.addHeader("Authorization", Credentials.basic(username, password))
+            }
+
+            try {
+                val response = client.newCall(requestBuilder.build()).execute()
+                if (response.isSuccessful) {
+                    val body = response.body?.string()
+                    if (!body.isNullOrEmpty()) {
+                        val json = JSONObject(body)
+                        val hardwareMode = json.optString("value", "standby").lowercase(java.util.Locale.US)
+                        log.info("Nautical: Autopilot reconciliation: physical state is $hardwareMode")
+                        
+                        dataBroker.updateAutopilotState(hardwareMode)
+                    }
+                }
+                response.close()
+            } catch (e: Exception) {
+                log.error("Autopilot reconciliation failed: ${e.message}")
+            }
+        }
+    }
+
     fun tack(direction: String) {
         val url = buildAutopilotUrl("actions/tack") ?: return
         val payload = """{ "value": "$direction" }"""
@@ -50,6 +90,13 @@ class AutopilotManager(
         NauticalPlugin.engine?.updatePendingCommand(targetHeading = rad)
         val payload = """{ "value": $rad }"""
         executePut(url, payload, "Setting heading to ${angleDegrees.toInt()} degrees")
+    }
+
+    fun setTargetWindAngle(angleDegrees: Double) {
+        val rad = Math.toRadians(angleDegrees)
+        val url = buildAutopilotUrl("target/windAngleApparent") ?: return
+        val payload = """{ "value": $rad }"""
+        executePut(url, payload, "Setting wind angle to ${angleDegrees.toInt()} degrees")
     }
 
     private fun setAutopilotMode(mode: String) {

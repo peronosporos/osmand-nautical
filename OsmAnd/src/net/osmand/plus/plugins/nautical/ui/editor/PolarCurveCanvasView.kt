@@ -8,6 +8,7 @@ import android.view.View
 import androidx.core.content.ContextCompat
 import net.osmand.plus.R
 import kotlin.math.*
+import androidx.core.graphics.toColorInt
 
 class PolarCurveCanvasView @JvmOverloads constructor(
     context: Context,
@@ -69,7 +70,7 @@ class PolarCurveCanvasView @JvmOverloads constructor(
 
         // Draw faint raw scatter points
         paint.style = Paint.Style.FILL
-        paint.color = Color.parseColor("#80BBDEFB")
+        paint.color = "#80BBDEFB".toColorInt()
         for (pt in rawPoints) {
             val rad = Math.toRadians(pt.first)
             val r = (pt.second / 10.0) * maxRadius

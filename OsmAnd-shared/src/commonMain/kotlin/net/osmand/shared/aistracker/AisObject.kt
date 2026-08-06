@@ -88,8 +88,10 @@ class AisObject {
         initObjectClass()
     }
 
-    constructor(mmsi: Int, msgType: Int, timeStamp: Int, navStatus: Int, manInd: Int, heading: Int,
-                cog: Double, sog: Double, lat: Double, lon: Double, rot: Double) {
+    constructor(
+        mmsi: Int, msgType: Int, timeStamp: Int, navStatus: Int, manInd: Int, heading: Int,
+        cog: Double, sog: Double, lat: Double, lon: Double, rot: Double,
+    ) {
         initObj(mmsi, msgType)
         initLatLon(lat, lon)
         this.timeStamp = timeStamp
@@ -102,8 +104,10 @@ class AisObject {
         initObjectClass()
     }
 
-    constructor(mmsi: Int, msgType: Int, timeStamp: Int, altitude: Int,
-                cog: Double, sog: Double, lat: Double, lon: Double) {
+    constructor(
+        mmsi: Int, msgType: Int, timeStamp: Int, altitude: Int,
+        cog: Double, sog: Double, lat: Double, lon: Double,
+    ) {
         initObj(mmsi, msgType)
         initLatLon(lat, lon)
         this.timeStamp = timeStamp
@@ -113,10 +117,12 @@ class AisObject {
         initObjectClass()
     }
 
-    constructor(mmsi: Int, msgType: Int, timeStamp: Int, heading: Int,
-                cog: Double, sog: Double, lat: Double, lon: Double,
-                shipType: Int, dimensionToBow: Int, dimensionToStern: Int,
-                dimensionToPort: Int, dimensionToStarboard: Int) {
+    constructor(
+        mmsi: Int, msgType: Int, timeStamp: Int, heading: Int,
+        cog: Double, sog: Double, lat: Double, lon: Double,
+        shipType: Int, dimensionToBow: Int, dimensionToStern: Int,
+        dimensionToPort: Int, dimensionToStarboard: Int,
+    ) {
         initObj(mmsi, msgType)
         initLatLon(lat, lon)
         initDimensions(dimensionToBow, dimensionToStern, dimensionToPort, dimensionToStarboard)
@@ -139,10 +145,8 @@ class AisObject {
         this.draught = draught
         this.callSign = callSign
         this.shipName = shipName
-        if (destination != null) {
-            if (!destination.matches(Regex("^@+$"))) { // string consisting of only "@" characters is invalid
-                this.destination = destination
-            }
+        if ((destination != null) && !destination.matches(Regex("^@+$"))) { // string consisting of only "@" characters is invalid
+            this.destination = destination
         }
         this.etaMon = etaMon
         this.etaDay = etaDay
@@ -171,9 +175,7 @@ class AisObject {
         if (mmsiString.length > 2) {
             val ccStr = mmsiString.substring(0, 3)
             val ccName = COUNTRY_CODES[ccStr.toIntOrNull() ?: 0]
-            if (ccName != null) {
-                return ccName
-            }
+            return ccName ?: ""
         }
         return ""
     }
@@ -187,7 +189,7 @@ class AisObject {
     }
 
     private fun initLatLon(lat: Double, lon: Double) {
-        if (lat != INVALID_LAT && lon != INVALID_LON) {
+        if ((lat != INVALID_LAT) && (lon != INVALID_LON)) {
             position = AisLatLon(lat, lon)
         }
     }
@@ -455,8 +457,9 @@ class AisObject {
         return AisLocation(
             latitude = pos.latitude,
             longitude = pos.longitude,
-            speed = if (sog != INVALID_SOG) (sog * 1852 / 3600).toFloat() else Float.NaN,
+            speed = if (sog != INVALID_SOG) ((sog * 1852) / 3600).toFloat() else Float.NaN,
             bearing = if (cog != INVALID_COG) cog.toFloat() else Float.NaN,
+            rot = if (rot != INVALID_ROT) rot.toFloat() else null,
             hasSpeed = sog != INVALID_SOG,
             hasBearing = cog != INVALID_COG
         )
@@ -465,10 +468,19 @@ class AisObject {
     fun getExtrapolatedLocation(now: Long): AisLocation? {
         val loc = getAisLocation() ?: return null
         val ageInHours = (now - lastUpdate) / 1000.0 / 3600.0
-        val newPos = AisTrackerMath.getNewPosition(loc, ageInHours)
+        val newPos = if (loc.rot != null && ((kotlin.math.abs(loc.rot!!)) > 1.0)) {
+            AisTrackerMath.getCurvedPosition(loc, ageInHours)
+        } else {
+            AisTrackerMath.getNewPosition(loc, ageInHours)
+        }
         if (newPos != null) {
             loc.latitude = newPos.latitude
             loc.longitude = newPos.longitude
+            // Update bearing based on ROT if available
+            loc.rot?.let { rotVal ->
+                val deltaBearing = (rotVal * ageInHours * 60.0).toFloat()
+                loc.bearing = (loc.bearing + deltaBearing + 360f) % 360f
+            }
         }
         return loc
     }

@@ -18,7 +18,7 @@ import kotlin.math.*
  */
 class EnvironmentalFilterService(
     private val dataBroker: SignalKDataBroker,
-    private val autopilotController: AutopilotController
+    private val autopilotController: AutopilotController,
 ) {
     private val log = PlatformUtil.getLog(EnvironmentalFilterService::class.java)
     private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
@@ -29,7 +29,7 @@ class EnvironmentalFilterService(
     private val _correctedWindSpeedApparent = MutableStateFlow<Double?>(null)
     val correctedWindSpeedApparent: StateFlow<Double?> = _correctedWindSpeedApparent.asStateFlow()
 
-    private val _isGustActive = MutableStateFlow(false)
+    private val _isGustActive = MutableStateFlow(value = false)
     val isGustActive: StateFlow<Boolean> = _isGustActive.asStateFlow()
 
     // History buffer for gust detection (timestamp, wind speed)
@@ -51,7 +51,28 @@ class EnvironmentalFilterService(
             // Combine or collect flows from dataBroker
             launch {
                 dataBroker.windAngleApparent.collect { rawAngle ->
-                    processWindUpdate(rawAngle, null)
+                    val state = dataBroker.marineState.value
+                    var aws = state.windSpeedApparent
+                    
+                    // GRIB Fallback if live data is missing
+                    if ((aws == null) || (aws == 0.0)) {
+                        val lat = state.latitude
+                        val lon = state.longitude
+                        if ((lat != null) && (lon != null)) {
+                            val gribWind = net.osmand.plus.plugins.nautical.di.SailingDependencyContainer.gribRepository?.getWindVector(lat, lon, System.currentTimeMillis())
+                            if (gribWind != null) {
+                                aws = gribWind.speed
+                            }
+                        }
+                    }
+                    
+                    processWindUpdate(rawAngle, aws, state.roll ?: 0.0, state.pitch ?: 0.0)
+                }
+            }
+            launch {
+                dataBroker.windSpeedApparent.collect { rawSpeed ->
+                    val state = dataBroker.marineState.value
+                    processWindUpdate(state.windDirectionApparent, rawSpeed, state.roll ?: 0.0, state.pitch ?: 0.0)
                 }
             }
         }
@@ -63,26 +84,35 @@ class EnvironmentalFilterService(
     fun processWindUpdate(rawAngleApparent: Double?, rawSpeedApparent: Double?, roll: Double = 0.0, pitch: Double = 0.0) {
         if (rawAngleApparent == null) return
 
-        // 1. 3D Motion Correction:
-        // Masthead swing correction based on roll and pitch.
-        // Assuming roll tilts the mast sideways, affecting apparent wind angle by approximately -roll * cos(AWA)
-        // or trigonometric transformation of wind vector through rotation matrices.
-        // Angles roll, pitch, and rawAngleApparent are all assumed to be in Radians.
-        val correction = -roll * cos(rawAngleApparent) - pitch * sin(rawAngleApparent)
-        val correctedAngle = rawAngleApparent + correction
+        val correctedAngle = correctWindAngle(rawAngleApparent, roll, pitch)
         _correctedWindAngleApparent.value = correctedAngle
 
         if (rawSpeedApparent != null) {
-            // Vertical motion / masthead bobbing correction for speed
-            val correctedSpeed = rawSpeedApparent * (1.0 - 0.05 * abs(pitch))
+            val correctedSpeed = correctWindSpeed(rawSpeedApparent, pitch)
             _correctedWindSpeedApparent.value = correctedSpeed
 
             // 2. Gust Response Logic
-            checkGustAndManageAutopilot(correctedSpeed, correctedAngle)
+            checkGustAndManageAutopilot(correctedSpeed)
         }
     }
 
-    private fun checkGustAndManageAutopilot(currentSpeed: Double, currentAngle: Double) {
+    /**
+     * Corrects wind angle for masthead swing based on roll and pitch.
+     * All angles are in Radians.
+     */
+    fun correctWindAngle(rawAngle: Double, roll: Double, pitch: Double): Double {
+        val correction = (-roll * cos(rawAngle)) - (pitch * sin(rawAngle))
+        return rawAngle + correction
+    }
+
+    /**
+     * Corrects wind speed for masthead bobbing based on pitch.
+     */
+    fun correctWindSpeed(rawSpeed: Double, pitch: Double): Double {
+        return rawSpeed * (1.0 - 0.05 * abs(pitch))
+    }
+
+    private fun checkGustAndManageAutopilot(currentSpeed: Double) {
         val now = System.currentTimeMillis()
         speedHistory.addLast(WindSample(now, currentSpeed))
 

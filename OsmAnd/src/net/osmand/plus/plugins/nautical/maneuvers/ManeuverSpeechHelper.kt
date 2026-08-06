@@ -5,7 +5,10 @@ import android.os.Bundle
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
+import kotlinx.coroutines.*
 import net.osmand.plus.OsmandApplication
+import net.osmand.plus.plugins.nautical.audio.AlarmType
+import net.osmand.plus.plugins.nautical.audio.NauticalAudioArbiter
 import java.util.Locale
 
 class ManeuverSpeechHelper(
@@ -14,6 +17,18 @@ class ManeuverSpeechHelper(
 ) : RecognitionListener {
 
     private var speechRecognizer: SpeechRecognizer? = null
+    private val arbiter = NauticalAudioArbiter.getInstance(app)
+    private val speechScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+
+    /**
+     * Dispatches TTS requests asynchronously to avoid blocking the UI thread
+     * during complex string generation or data parsing.
+     */
+    fun speakAsync(text: String, type: AlarmType = AlarmType.TTS_INSTRUCTION) {
+        speechScope.launch {
+            arbiter.dispatchTts(text, type)
+        }
+    }
 
     fun startListening() {
         if (speechRecognizer == null) {
@@ -24,7 +39,6 @@ class ManeuverSpeechHelper(
         val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
             putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
             putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault())
-            // Explicitly enforce offline processing
             putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, true)
         }
         speechRecognizer?.startListening(intent)
@@ -37,6 +51,7 @@ class ManeuverSpeechHelper(
     fun destroy() {
         speechRecognizer?.destroy()
         speechRecognizer = null
+        speechScope.cancel()
     }
 
     override fun onReadyForSpeech(params: Bundle?) {}
@@ -44,9 +59,7 @@ class ManeuverSpeechHelper(
     override fun onRmsChanged(rmsdB: Float) {}
     override fun onBufferReceived(buffer: ByteArray?) {}
     override fun onEndOfSpeech() {}
-    override fun onError(error: Int) {
-        // Handle error, maybe restart listening if needed
-    }
+    override fun onError(error: Int) {}
 
     override fun onResults(results: Bundle?) {
         val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)

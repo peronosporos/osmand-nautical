@@ -1,5 +1,7 @@
 package net.osmand.plus.views.mapwidgets.widgets
 
+import androidx.core.content.ContextCompat
+import net.osmand.plus.R
 import net.osmand.plus.activities.MapActivity
 import net.osmand.plus.plugins.nautical.NauticalPlugin
 import net.osmand.plus.views.layers.base.OsmandMapLayer
@@ -11,18 +13,26 @@ class PolarSpeedRatioWidget(
     mapActivity: MapActivity,
     widgetType: WidgetType,
     customId: String?,
-    panel: WidgetsPanel?
+    panel: WidgetsPanel?,
 ) : SimpleWidget(mapActivity, widgetType, customId, panel) {
 
     init {
         setIcons(widgetType)
     }
 
+    override fun updateIcon() {
+        val iconId = getIconId()
+        if (iconId != 0) {
+            val color = ContextCompat.getColor(app, R.color.map_widget_icon_color)
+            setImageDrawable(iconsCache.getPaintedIcon(iconId, color))
+        }
+    }
+
     override fun updateSimpleWidgetInfo(drawSettings: OsmandMapLayer.DrawSettings?) {
         val engine = NauticalPlugin.engine ?: return
         val state = engine.getCurrentState()
 
-        if (state == null || state.polarSpeedRatio == null) {
+        if (state.polarSpeedRatio == null) {
             setText("--", "%")
             return
         }

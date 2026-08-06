@@ -1,6 +1,5 @@
 package net.osmand.plus.helpers;
 
-import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Context;
 import android.hardware.Sensor;
@@ -101,24 +100,33 @@ public class LockHelper implements SensorEventListener, StateChangedListener<App
 	}
 
 	private void releaseWakeLocks() {
-		if (wakeLock != null) {
-			if (wakeLock.isHeld()) {
-				wakeLock.release();
+		try {
+			if (wakeLock != null) {
+				if (wakeLock.isHeld()) {
+					wakeLock.release();
+				}
 			}
+		} catch (Exception e) {
+			LOG.error("Error releasing wake lock", e);
+		} finally {
 			wakeLock = null;
 		}
 	}
 
-	@SuppressLint("WakelockTimeout")
 	public void unlock() {
 		if (lockUIAdapter != null) {
 			lockUIAdapter.unlock();
 		}
 		PowerManager pm = (PowerManager) app.getSystemService(Context.POWER_SERVICE);
 		if (pm != null) {
+			releaseWakeLocks();
 			wakeLock = pm.newWakeLock(PowerManager.FULL_WAKE_LOCK
 					| PowerManager.ACQUIRE_CAUSES_WAKEUP, "OsmAnd:OnVoiceWakeupTag");
-			wakeLock.acquire();
+			try {
+				wakeLock.acquire(300000L); // 5 minute safety fallback
+			} catch (Exception e) {
+				LOG.error("Failed to acquire wake lock", e);
+			}
 		}
 	}
 

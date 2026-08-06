@@ -100,6 +100,16 @@ object KMapUtils {
 		return getDistance(l.latitude, l.longitude, latitude, longitude)
 	}
 
+	fun getBearing(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
+		val phi1 = lat1.toRadians()
+		val phi2 = lat2.toRadians()
+		val deltaLambda = (lon2 - lon1).toRadians()
+
+		val y = sin(deltaLambda) * cos(phi2)
+		val x = cos(phi1) * sin(phi2) - sin(phi1) * cos(phi2) * cos(deltaLambda)
+		return atan2(y, x)
+	}
+
 	fun scalarMultiplication(
 		xA: Double,
 		yA: Double,

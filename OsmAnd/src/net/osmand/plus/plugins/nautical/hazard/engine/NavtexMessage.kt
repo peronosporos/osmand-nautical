@@ -12,6 +12,7 @@ enum class NavtexSubject(val code: Char) {
     SEARCH_AND_RESCUE('D'),
     METEOROLOGICAL_FORECAST('E'),
     PILOT_SERVICE('F'),
+    NAVIGATIONAL_WARNING_L('L'),
     UNKNOWN('Z');
 
     companion object {

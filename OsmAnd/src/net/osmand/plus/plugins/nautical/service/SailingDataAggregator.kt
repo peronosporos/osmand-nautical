@@ -7,10 +7,13 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import net.osmand.plus.plugins.nautical.network.DeltaMessage
 import net.osmand.plus.plugins.nautical.network.LivePerformanceData
+import net.osmand.plus.plugins.nautical.di.SailingDependencyContainer
 import kotlin.time.Duration.Companion.milliseconds
 
 class SailingDataAggregator {
     private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+    private val environmentalFilterService: net.osmand.plus.plugins.nautical.engine.EnvironmentalFilterService?
+        get() = SailingDependencyContainer.environmentalFilterService
 
     private val _aggregatedData = MutableStateFlow(LivePerformanceData())
     val aggregatedData: StateFlow<LivePerformanceData> = _aggregatedData.asStateFlow()
@@ -69,18 +72,7 @@ class SailingDataAggregator {
                     newTimestamps[path] = lastUpdateTime
                     newSources[path] = sourceLabel
                     
-                    updated = when (path) {
-                        LivePerformanceData.PATH_STW -> updated.copy(speedThroughWater = num)
-                        LivePerformanceData.PATH_TWS -> updated.copy(windSpeedTrue = num)
-                        LivePerformanceData.PATH_TWA -> updated.copy(windAngleTrueWater = num)
-                        LivePerformanceData.PATH_SOG -> updated.copy(speedOverGround = num)
-                        LivePerformanceData.PATH_COG -> updated.copy(courseOverGround = num)
-                        LivePerformanceData.PATH_DEPTH -> updated.copy(depthBelowTransducer = num)
-                        LivePerformanceData.PATH_POLAR_SPEED -> updated.copy(polarSpeed = num)
-                        LivePerformanceData.PATH_TARGET_ANGLE -> updated.copy(targetAngle = num)
-                        LivePerformanceData.PATH_POLAR_SPEED_RATIO -> updated.copy(polarSpeedRatio = num)
-                        else -> updated
-                    }
+                    updated = applyValue(updated, path, num)
                 }
             }
 
@@ -88,12 +80,65 @@ class SailingDataAggregator {
                 updated.copy(
                     timestamp = lastUpdateTime, 
                     timestamps = newTimestamps,
-                    sources = newSources
+                    sources = newSources,
                 )
             } else {
                 current
             }
         }
+    }
+
+    private fun applyValue(current: LivePerformanceData, path: String, num: Double): LivePerformanceData {
+        return when (path) {
+            LivePerformanceData.PATH_STW -> {
+                val leeway = calculateLeeway(num, current.roll ?: 0.0)
+                current.copy(speedThroughWater = num, leeway = leeway)
+            }
+            LivePerformanceData.PATH_TWS -> current.copy(windSpeedTrue = num)
+            LivePerformanceData.PATH_TWA -> current.copy(windAngleTrueWater = num)
+            LivePerformanceData.PATH_SOG -> current.copy(speedOverGround = num)
+            LivePerformanceData.PATH_COG -> current.copy(courseOverGround = num)
+            LivePerformanceData.PATH_DEPTH -> current.copy(depthBelowTransducer = num)
+            LivePerformanceData.PATH_POLAR_SPEED -> current.copy(polarSpeed = num)
+            LivePerformanceData.PATH_TARGET_ANGLE -> current.copy(targetAngle = num)
+            LivePerformanceData.PATH_POLAR_SPEED_RATIO -> current.copy(polarSpeedRatio = num)
+            LivePerformanceData.PATH_ROLL -> {
+                val leeway = calculateLeeway(current.speedThroughWater ?: 0.0, num)
+                current.copy(roll = num, leeway = leeway)
+            }
+            LivePerformanceData.PATH_PITCH -> current.copy(pitch = num)
+            LivePerformanceData.PATH_LEEWAY -> current.copy(leeway = num)
+            LivePerformanceData.PATH_AWA -> {
+                val corrected = environmentalFilterService?.correctWindAngle(num, current.roll ?: 0.0, current.pitch ?: 0.0) ?: num
+                current.copy(windAngleApparent = corrected)
+            }
+            LivePerformanceData.PATH_AWS -> {
+                val corrected = environmentalFilterService?.correctWindSpeed(num, current.pitch ?: 0.0) ?: num
+                current.copy(windSpeedApparent = corrected)
+            }
+            else -> current
+        }
+    }
+
+    /**
+     * Integrates pre-processed performance data (e.g. from SignalKEngine).
+     * Bypasses internal Priority arbitration as it's considered authoritative for SignalK source.
+     */
+    fun handleLivePerformanceData(data: LivePerformanceData) {
+        _aggregatedData.update { current ->
+            // For now, simple merge. Authorized SignalK data takes precedence over existing if fresh.
+            val now = System.currentTimeMillis()
+            data.copy(
+                timestamp = now,
+                sources = current.sources + data.timestamps.mapValues { SOURCE_SIGNALK_WS },
+            )
+        }
+    }
+
+    private fun calculateLeeway(stwMs: Double, rollRad: Double): Double {
+        val plugin = net.osmand.plus.plugins.nautical.NauticalPlugin.getInstance() ?: return 0.0
+        val k = plugin.getSettings().NAUTICAL_LEEWAY_COEFFICIENT.get()
+        return net.osmand.plus.plugins.nautical.utils.LeewayCalculator.calculateLeewayRadians(rollRad, stwMs, k)
     }
 
     private fun startWatchdog() {
@@ -112,6 +157,7 @@ class SailingDataAggregator {
                     var twa = current.windAngleTrueWater
                     var sog = current.speedOverGround
                     var cog = current.courseOverGround
+                    var leeway = current.leeway
                     var depth = current.depthBelowTransducer
                     var polarSpeed = current.polarSpeed
                     var targetAngle = current.targetAngle
@@ -119,7 +165,7 @@ class SailingDataAggregator {
 
                     fun checkStale(path: String, currentVal: Double?): Double? {
                         val last = newTimestamps[path] ?: 0L
-                        return if (now - last > 5000) {
+                        return if ((now - last) > 5000) {
                             if (currentVal != null) updated = true
                             null
                         } else {
@@ -132,6 +178,7 @@ class SailingDataAggregator {
                     twa = checkStale(LivePerformanceData.PATH_TWA, twa)
                     sog = checkStale(LivePerformanceData.PATH_SOG, sog)
                     cog = checkStale(LivePerformanceData.PATH_COG, cog)
+                    leeway = checkStale(LivePerformanceData.PATH_LEEWAY, leeway)
                     depth = checkStale(LivePerformanceData.PATH_DEPTH, depth)
                     polarSpeed = checkStale(LivePerformanceData.PATH_POLAR_SPEED, polarSpeed)
                     targetAngle = checkStale(LivePerformanceData.PATH_TARGET_ANGLE, targetAngle)
@@ -144,6 +191,7 @@ class SailingDataAggregator {
                             windAngleTrueWater = twa,
                             speedOverGround = sog,
                             courseOverGround = cog,
+                            leeway = leeway,
                             depthBelowTransducer = depth,
                             polarSpeed = polarSpeed,
                             targetAngle = targetAngle,

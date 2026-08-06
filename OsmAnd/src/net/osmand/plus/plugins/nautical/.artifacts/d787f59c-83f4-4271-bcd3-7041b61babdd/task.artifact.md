@@ -1,0 +1,27 @@
+# Nautical UI/UX Overhaul Tasks
+
+- `[x]` **Foundational Restructuring**
+    - `[x]` Define Nautical Modules (AIS, Tides, GRIB, etc.) in `NauticalPlugin.kt`
+    - `[x]` Add "Enabled Modules" settings in `OsmandSettings.java`
+    - `[x]` Restructure `NauticalSettingsFragment.kt`: Group by Connection, Vessel, Safety, Performance, Modules
+    - `[x]` Remove duplicate visibility toggles from `NauticalSettingsFragment.kt`
+- `[x]` **Restoration & Refinement**
+    - `[x]` Restore all missing preferences in `nautical_settings.xml`
+    - `[x]` Restore specialized UI logic in `NauticalSettingsFragment.kt`
+    - `[x]` Ensure smart visibility (gatekeeping) for technical settings
+    - `[x]` Restore all Data Managers as direct tools in Settings
+- `[x]` **Enhanced "Configure Map"**
+    - `[x]` Implement Shortcut Gear layout for `ContextMenuItem`
+    - `[x]` Update `NauticalPlugin#registerConfigureMapCategoryActions` with categories and gears
+    - `[x]` Implement dynamic UI pruning based on enabled modules
+- `[x]` **Helm & Operations UI**
+    - `[x]` Refactor `NauticalAdvancedSettingsBottomSheet.kt` into a Tabbed UI
+    - `[x]` Add "Preview on Map" to `AnchorWatchDialogFragment.kt`
+    - `[x]` Implement manual drag for anchor drop point on map
+- `[x]` **Data Manager Upgrades**
+    - `[x]` `S57ChartManagerFragment.kt`: Add coverage map and S-63 status
+    - `[x]` `TideDataManagerFragment.kt`: Add station picker and curve preview
+    - `[x]` `PolarEditorFragment.kt`: Add library management and file import
+- `[x]` **Smart Capabilities**
+    - `[x]` `NauticalMasterTelemetryWidget.kt`: Implement contextual presets (Sailing/Motoring/Docking)
+    - `[x]` Auto-switch presets based on `SailingWorkflowState`

@@ -1,0 +1,37 @@
+- [x] Phase 2: Safety, Alarms & Hazards
+    - [x] Update `SignalKPaths.kt` with new watchdog, AIS threat, and forward watch paths
+    - [x] Update `MarineState.kt` with `forwardHazards` and `watchdogStatus`
+    - [x] Update `SignalKRestService.kt` with waterway closures and PUT actions
+    - [x] Update `SignalKEngine.kt` to parse new safety telemetry
+    - [x] Update `NauticalAisManager.kt` to handle threat levels and muting
+    - [x] Update `AlarmPriorityManager.kt` for solo watchdog alerts
+    - [x] Implement "Reset Watchdog" and hazard alerts in `TacticalHudView.kt`
+    - [x] Implement visual prioritization in `NauticalAisLayer.kt` and `NauticalAisObjectDrawable.kt`
+    - [x] Add "Mute Target Alarms" in `AisTargetBottomSheet.kt`
+    - [x] Integrate waterway closures into `SafetyCorridorChecker.kt` and `SailingMapLayerController.kt`
+- [x] Phase 3: Tactical Performance & Environmental Visuals
+    - [x] Update `SignalKPaths.kt` with performance and rigging paths
+    - [x] Update `MarineState.kt` for windshift, tack angle, server laylines, and rigging loads
+    - [x] Update `SignalKEngine.kt` parser for Phase 3 telemetry
+    - [x] Implement server-side wind trend in `WindTrendHudHeader.kt`
+    - [x] Implement server-side layline rendering in `SailingLaylinesMapLayer.kt`
+    - [x] Add `NAUTICAL_RIGGING_LOAD` to `WidgetType.java`
+    - [x] Update `MarineTextWidget.kt` to support rigging load display
+    - [x] Implement rigging load warnings in `TacticalHudView.kt`
+    - [x] Add RainViewer radar support to `SignalKRasterLayer.kt`
+    - [x] Add "Live Precipitation Radar" toggle to `nautical_settings.xml`
+- [x] Phase 4: Deck Controls & Media Systems
+    - [x] Update `SignalKPaths.kt` with anchor, windlass, and media paths
+    - [x] Update `MarineState.kt` for rode deployed, engine running, and media info
+    - [x] Update `SignalKEngine.kt` to parse Phase 4 telemetry and implement engine guard logic
+    - [x] Update `SignalKControlManager.kt` with media command support
+    - [x] Update `NauticalSwitchPanelFragment.kt` with Windlass Control and engine guard
+    - [x] Create `AnchorWatchHudView.kt` for chain counter display
+    - [x] Update `NauticalMediaPlayerWidget.kt` for Fusion Audio support
+    - [x] Update `AnchorDriftWatchdog.kt` to log rode deployed data
+- [x] Anchor System Full Integration
+    - [x] Auto-trigger Windlass in `AnchoringManeuver.kt`
+    - [x] Auto-trigger Windlass in `WeighingAnchorManeuver.kt`
+    - [x] Update `AnchorWatchDialogFragment.kt` with real-time chain counter and controls
+    - [x] Update `AnchorWatchHudView.kt` with comparison view
+    - [x] Add consistency checks to `AnchorDriftWatchdog.kt`

@@ -21,6 +21,7 @@ class LogbookEntryEditorBottomSheet : BaseMaterialBottomSheetDialogFragment() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        @Suppress("DEPRECATION")
         entry = arguments?.getSerializable(ENTRY_KEY) as? LogbookEntry
         
         val repository = NauticalPlugin.getInstance()?.logbookRepository
@@ -32,7 +33,7 @@ class LogbookEntryEditorBottomSheet : BaseMaterialBottomSheetDialogFragment() {
                 return MarineLogbookViewModel(repository) as T
             }
         }
-        viewModel = ViewModelProvider(this, factory).get(MarineLogbookViewModel::class.java)
+        viewModel = ViewModelProvider(this, factory)[MarineLogbookViewModel::class.java]
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {

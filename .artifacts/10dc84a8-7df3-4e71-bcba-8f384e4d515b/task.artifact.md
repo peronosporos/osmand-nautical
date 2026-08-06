@@ -1,0 +1,6 @@
+- `[x]` Object Pre-allocation in `SailingLaylinesMapLayer.kt`
+- `[x]` Object Pre-allocation in `DeadReckoningMapLayer.kt`
+- `[x]` Bounding-Box Culling and Optimization in `NauticalMapLayer.kt`
+- `[x]` Path Recycling and Culling in `NavtexMapLayer.kt`
+- `[x]` Render Invalidation Throttling in `NauticalPlugin.kt`
+- `[x]` Verification of changes

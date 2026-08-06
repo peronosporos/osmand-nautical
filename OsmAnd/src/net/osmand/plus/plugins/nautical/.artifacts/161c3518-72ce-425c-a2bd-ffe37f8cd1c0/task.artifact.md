@@ -1,0 +1,18 @@
+- [x] **Task 1: Settings & Lifecycle Coordination**
+    - [x] [NauticalPlugin.kt](file:///home/administrator/AndroidStudioProjects/osmand-nautical/OsmAnd/src/net/osmand/plus/plugins/nautical/NauticalPlugin.kt): Deduplicate lifecycle calls and refactor `clearAisLayer()`.
+    - [x] [S63PermitManagerFragment.kt](file:///home/administrator/AndroidStudioProjects/osmand-nautical/OsmAnd/src/net/osmand/plus/plugins/nautical/s63/ui/S63PermitManagerFragment.kt): Break UI update feedback loop.
+    - [x] [NauticalSettingsFragment.kt](file:///home/administrator/AndroidStudioProjects/osmand-nautical/OsmAnd/src/net/osmand/plus/plugins/nautical/NauticalSettingsFragment.kt): Sync converted imperial values with meter persistence.
+- [x] **Task 2: High-Frequency Telemetry & Math Correctness**
+    - [x] [TacticalHudView.kt](file:///home/administrator/AndroidStudioProjects/osmand-nautical/OsmAnd/src/net/osmand/plus/plugins/nautical/ui/TacticalHudView.kt): Zero-allocation UI rendering (cached StringBuilder).
+    - [x] [SignalKDataBroker.kt](file:///home/administrator/AndroidStudioProjects/osmand-nautical/OsmAnd/src/net/osmand/plus/plugins/nautical/engine/SignalKDataBroker.kt): Negative angle modulo fix and STW timer reset.
+    - [x] [TemporalUtils.kt](file:///home/administrator/AndroidStudioProjects/osmand-nautical/OsmAnd/src/net/osmand/plus/plugins/nautical/utils/TemporalUtils.kt): Return 0L for invalid timestamps.
+    - [x] [SignalKEngine.kt](file:///home/administrator/AndroidStudioProjects/osmand-nautical/OsmAnd/src/net/osmand/plus/plugins/nautical/engine/SignalKEngine.kt): Initialize settings in constructor.
+- [x] **Task 3: Networking & Power Management**
+    - [x] [TcpNmeaClient.kt](file:///home/administrator/AndroidStudioProjects/osmand-nautical/OsmAnd/src/net/osmand/plus/plugins/nautical/nmea/connection/TcpNmeaClient.kt): Socket read timeout handling.
+    - [x] [NauticalPlugin.kt](file:///home/administrator/AndroidStudioProjects/osmand-nautical/OsmAnd/src/net/osmand/plus/plugins/nautical/NauticalPlugin.kt): Debounce network callbacks.
+    - [x] [GribRepository.kt](file:///home/administrator/AndroidStudioProjects/osmand-nautical/OsmAnd/src/net/osmand/plus/plugins/nautical/grib/repository/GribRepository.kt): Bounded GRIB cache (LRU).
+- [x] **Task 4: Custom Views & Fragment Lifecycle**
+    - [x] [SlideToConfirmView.kt](file:///home/administrator/AndroidStudioProjects/osmand-nautical/OsmAnd/src/net/osmand/plus/plugins/nautical/ui/SlideToConfirmView.kt): Density-independent dimensions.
+    - [x] [NmeaPlaybackControlBottomSheet.kt](file:///home/administrator/AndroidStudioProjects/osmand-nautical/OsmAnd/src/net/osmand/plus/plugins/nautical/replay/NmeaPlaybackControlBottomSheet.kt): Fragment observer cleanup.
+    - [x] [NauticalMapLayer.kt](file:///home/administrator/AndroidStudioProjects/osmand-nautical/OsmAnd/src/net/osmand/plus/plugins/nautical/NauticalMapLayer.kt): Preferences listener cleanup.
+    - [x] [SailingLaylinesMapLayer.kt](file:///home/administrator/AndroidStudioProjects/osmand-nautical/OsmAnd/src/net/osmand/plus/plugins/nautical/laylines/ui/SailingLaylinesMapLayer.kt): Preferences listener cleanup.

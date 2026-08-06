@@ -6,6 +6,7 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.*
 import net.osmand.plus.OsmandApplication
 import net.osmand.plus.R
+import net.osmand.plus.plugins.nautical.NauticalPlugin
 import net.osmand.plus.plugins.nautical.grib.repository.GribRepository
 import net.osmand.plus.plugins.nautical.laylines.engine.LatLon
 import net.osmand.plus.plugins.nautical.laylines.engine.LaylineMathEngine
@@ -14,6 +15,8 @@ import net.osmand.plus.plugins.nautical.repository.SailingPerformanceRepository
 import net.osmand.plus.helpers.TargetPointsHelper
 import net.osmand.plus.settings.backend.OsmandSettings
 import net.osmand.plus.plugins.nautical.network.LivePerformanceData
+import net.osmand.plus.plugins.nautical.utils.AngleEMA
+import net.osmand.plus.plugins.nautical.utils.EMA
 import kotlin.math.PI
 
 data class LaylineUiState(
@@ -27,9 +30,9 @@ data class LaylineUiState(
 )
 
 class LaylineViewModel(
-    app: OsmandApplication,
+    private val app: OsmandApplication,
     private val performanceRepo: SailingPerformanceRepository,
-    private val gribRepo: GribRepository
+    private val gribRepo: GribRepository?
 ) : ViewModel() {
 
     private val targetPointsHelper: TargetPointsHelper = app.targetPointsHelper
@@ -37,6 +40,9 @@ class LaylineViewModel(
 
     private val _uiState = MutableStateFlow(LaylineUiState())
     val uiState: StateFlow<LaylineUiState> = _uiState.asStateFlow()
+
+    private val twdEma = AngleEMA(0.1) // 5s EMA at 1Hz
+    private val stwEma = EMA(0.1)
 
     init {
         startTracking()
@@ -60,24 +66,52 @@ class LaylineViewModel(
             .onEach { (liveData, polar, leeway) ->
                 val lat = liveData.latitude ?: return@onEach
                 val lon = liveData.longitude ?: return@onEach
+
+                val propManager = net.osmand.plus.plugins.nautical.engine.PropulsionContextManager.getInstance(app)
+                if (propManager.isEngineRunning()) {
+                    _uiState.value = LaylineUiState(boatLat = lat, boatLon = lon)
+                    return@onEach
+                }
+
                 val boatPos = LatLon(lat, lon)
                 
+                val plugin = NauticalPlugin.getInstance()
+                val caps = plugin?.capabilityManager?.capabilities?.value
+                val serverLaylines = NauticalPlugin.engine?.getCurrentState()?.serverLaylines
+
+                if (caps?.hasWindshift == true && serverLaylines != null) {
+                    _uiState.value = LaylineUiState(
+                        boatLat = lat,
+                        boatLon = lon,
+                        portTackPoint = serverLaylines.portTackPoint,
+                        starboardTackPoint = serverLaylines.starboardTackPoint,
+                        isFetchable = serverLaylines.isFetchable,
+                        fetchableStatusResId = if (serverLaylines.isFetchable) 
+                            R.string.layline_status_fetchable 
+                        else 
+                            R.string.layline_status_tack_required,
+                        targetWaypoint = serverLaylines.targetWaypoint
+                    )
+                    return@onEach
+                }
+
                 val targetPoint = targetPointsHelper.pointToNavigate
                 val target = targetPoint?.let { 
                     LatLon(it.latitude, it.longitude) 
                 } ?: return@onEach
 
-                // twa from polar is currently in Degrees? Let's check PolarProfile.
-                // In PolarProfile it's List<Double>. 
-                // In Signal K Resources it's usually degrees or radians? 
-                // Signal K spec says Resources polars use Degrees for twa. 
-                // BUT we want Radians internally.
                 val twaRad = liveData.targetAngle ?: polar?.twa?.firstOrNull()?.let { Math.toRadians(it) } ?: Math.toRadians(45.0)
-                val twdRad = calculateTwdRad(liveData) ?: 0.0
-                val stwMs = liveData.speedThroughWater ?: 0.0
+                val rawTwd = calculateTwdRad(liveData) ?: 0.0
+                val twdRad = twdEma.update(rawTwd)
                 
+                val rawStw = liveData.speedThroughWater ?: 0.0
+                val stwMs = stwEma.update(rawStw)
+                
+                val leewayRad = liveData.leeway?.let { kotlin.math.abs(it) } ?: Math.toRadians(leeway.toDouble())
+
                 // Current Vector from GRIB or fallback to zero
                 val current = getTidalCurrent(lat, lon)
+                val variation = liveData.magneticVariation ?: 0.0
 
                 val result = LaylineMathEngine.calculateApparentLaylines(
                     boatPosition = boatPos,
@@ -86,7 +120,9 @@ class LaylineViewModel(
                     trueWindDirection = twdRad,
                     boatSpeed = stwMs,
                     current = current,
-                    leewayRadians = Math.toRadians(leeway.toDouble())
+                    leewayRadians = leewayRad,
+                    magneticVariation = variation,
+                    isMagneticInput = liveData.headingTrue == null && liveData.headingMagnetic != null
                 )
 
                 _uiState.value = LaylineUiState(
@@ -112,7 +148,17 @@ class LaylineViewModel(
     }
 
     private fun getTidalCurrent(lat: Double, lon: Double): TidalCurrentVector {
-        // GribRepository used as dependency. 
-        return TidalCurrentVector(0.0, 0.0)
+        val now = System.currentTimeMillis()
+        val vector = gribRepo?.getCurrentVector(lat, lon, now)
+        return if (vector != null) {
+            TidalCurrentVector(vector.u, vector.v)
+        } else {
+            TidalCurrentVector(0.0, 0.0)
+        }
     }
+
+    fun clear() {
+        onCleared()
+    }
+
 }

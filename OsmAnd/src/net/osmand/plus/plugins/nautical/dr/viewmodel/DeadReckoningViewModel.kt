@@ -27,8 +27,8 @@ data class DrUiState(
  * Monitors GPS health and transitions to estimated projections if signal is lost.
  */
 class DeadReckoningViewModel(
-    private val app: net.osmand.plus.OsmandApplication,
-    private val repository: SailingPerformanceRepository
+    app: net.osmand.plus.OsmandApplication,
+    private val repository: SailingPerformanceRepository,
 ) : ViewModel() {
 
     private val settings = app.settings
@@ -47,7 +47,7 @@ class DeadReckoningViewModel(
 
     private fun restoreState() {
         val startTime = settings.NAUTICAL_DR_START_TIME.get()
-        if (startTime != 0L && (System.currentTimeMillis() - startTime < 300000)) { // 5 mins
+        if ((startTime != 0L) && (System.currentTimeMillis() - startTime < 300000)) { // 5 mins
             val lat = settings.NAUTICAL_DR_LAST_LAT.get()
             val lon = settings.NAUTICAL_DR_LAST_LON.get()
             if (lat != 0.0 && lon != 0.0) {
@@ -129,10 +129,18 @@ class DeadReckoningViewModel(
                 val lastFix = lastValidGpsFix ?: break
                 val telemetry = repository.livePerformanceData.value
                 
+                val leewayRad = net.osmand.plus.plugins.nautical.utils.LeewayCalculator.calculateLeewayRadians(
+                    telemetry.roll ?: 0.0,
+                    telemetry.speedThroughWater ?: 0.0,
+                    settings.NAUTICAL_LEEWAY_COEFFICIENT.get()
+                )
+
                 val vector = DrVector(
                     speedThroughWater = telemetry.speedThroughWater ?: 0.0,
                     headingDegrees = telemetry.headingTrue ?: 0.0,
-                    leewayDegrees = settings.NAUTICAL_LEEWAY_COEFFICIENT.get().toDouble()
+                    leewayDegrees = Math.toDegrees(leewayRad),
+                    driftSpeedMps = telemetry.drift ?: 0.0,
+                    driftSetDegrees = Math.toDegrees(telemetry.setTrue ?: 0.0)
                 )
                 
                 val now = System.currentTimeMillis()
@@ -173,6 +181,10 @@ class DeadReckoningViewModel(
         settings.NAUTICAL_DR_START_TIME.set(0L)
         settings.NAUTICAL_DR_LAST_LAT.set(0.0)
         settings.NAUTICAL_DR_LAST_LON.set(0.0)
+    }
+
+    fun clear() {
+        onCleared()
     }
 
     override fun onCleared() {

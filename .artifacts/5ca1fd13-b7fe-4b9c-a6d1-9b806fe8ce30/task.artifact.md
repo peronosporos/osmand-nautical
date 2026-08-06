@@ -1,0 +1,23 @@
+# Tasks - Signal K Tides Integration
+
+- [x] Network & Models
+    - [x] Update `SignalKModels.kt` with Tide data classes
+    - [x] Update `SignalKRestService.kt` with Tide endpoints
+- [x] Engine Updates
+    - [x] Update `CapabilityManager.kt` for Tide detection
+    - [x] Update `MarineState.kt` with `TideState`
+    - [x] Update `SignalKDataBroker.kt` with `processTideUpdate`
+    - [x] Update `SignalKEngine.kt` for `environment.tide.*` parsing
+- [x] Tide Management
+    - [x] Implement `SignalKTideManager.kt`
+- [x] UI Components
+    - [x] Implement `SignalKTideLayer.kt`
+    - [x] Update `TideViewModel.kt`
+    - [x] Update `TideStationBottomSheet.kt`
+- [x] Interoperability & Refinement
+    - [x] Unified station search in `TideViewModel`
+    - [x] Integrated Signal K current data in `TidalCurrentsMapLayer`
+    - [x] Updated `TideGraphView` for Speed/Direction support
+    - [x] Added `environment.current.*` parsing in `SignalKEngine`
+- [ ] Verification
+    - [ ] Manual verification with Signal K server

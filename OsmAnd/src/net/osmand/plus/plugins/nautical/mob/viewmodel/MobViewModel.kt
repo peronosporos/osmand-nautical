@@ -2,11 +2,19 @@ package net.osmand.plus.plugins.nautical.mob.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.*
 import net.osmand.data.LatLon
+import net.osmand.plus.R
 import net.osmand.plus.OsmAndLocationProvider
 import net.osmand.plus.OsmandApplication
+import net.osmand.plus.plugins.PluginsHelper
+import net.osmand.plus.plugins.nautical.NauticalPlugin
+import net.osmand.plus.plugins.nautical.maneuvers.ManOverboardManeuver
 import net.osmand.plus.plugins.nautical.mob.engine.*
+import net.osmand.shared.util.KMapUtils
+import kotlin.math.abs
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * UI State for the MOB interface.
@@ -17,8 +25,18 @@ data class MobUiState(
     val bearingDegrees: Double? = null,
     val etaSeconds: Double? = null,
     val mobLocation: LatLon? = null,
-    val state: MobState = MobState.INACTIVE
+    val state: MobState = MobState.INACTIVE,
+    val isMotoring: Boolean = false,
+    val isUpwind: Boolean = true,
+    val isSearching: Boolean = false,
+    val muteUntil: Long = 0L,
+    val activeMobCount: Int = 0,
 )
+
+enum class MobTriggerSource {
+    BUTTON,
+    MAP
+}
 
 /**
  * ViewModel for Man Overboard functionality.
@@ -34,54 +52,78 @@ class MobViewModel(
     val uiState: StateFlow<MobUiState> = _uiState.asStateFlow()
 
     init {
-        // Restore state from preferences if active
-        val settings = app.settings
-        if (settings.NAUTICAL_MOB_ACTIVE.get()) {
-            val lat = settings.NAUTICAL_MOB_LAT.get()
-            val lon = settings.NAUTICAL_MOB_LON.get()
-            
-            if (lat != 0.0 || lon != 0.0) {
-                val restoredLocation = LatLon(lat, lon)
-                stateMachine.triggerMob(restoredLocation)
-                audioManager.startAlarm()
+        // Observe search state from engine
+        NauticalPlugin.engine?.let { engine ->
+            viewModelScope.launch {
+                while (true) {
+                    _uiState.update { it.copy(isSearching = engine.isFollowingRoute) }
+                    kotlinx.coroutines.delay(1000.milliseconds)
+                }
             }
         }
+        
+        // Observe MarineState for propulsion-aware UI
+        NauticalPlugin.engine?.marineStateFlow
+            ?.onEach { state ->
+                val rpm = state.engines.values.maxOfOrNull { it.revolutions ?: 0.0 } ?: 0.0
+                val motoringByState = state.engines.values.any { it.state?.lowercase(java.util.Locale.US) == "started" }
+                val twa = state.trueWindAngle ?: 0.0
+                val twaDeg = Math.toDegrees(twa)
+                _uiState.update { current ->
+                    current.copy(
+                        isMotoring = (rpm > 100) || motoringByState,
+                        isUpwind = abs(twaDeg) < 110.0
+                    )
+                }
+            }
+            ?.launchIn(viewModelScope)
 
         // Observe state machine changes
         stateMachine.mobStatus
             .onEach { status ->
+                val active = status.state == MobState.ACTIVE_EMERGENCY
                 _uiState.update { current ->
                     current.copy(
-                        isMobActive = status.state == MobState.ACTIVE_EMERGENCY,
+                        isMobActive = active,
                         distanceMeters = status.returnVector?.distanceMeters,
                         bearingDegrees = status.returnVector?.bearingDegrees,
                         etaSeconds = status.returnVector?.estimatedTimeToMarkerSeconds,
                         mobLocation = status.event?.dropLocation,
-                        state = status.state
+                        state = status.state,
+                        muteUntil = status.muteUntil,
+                        activeMobCount = status.activeEvents.size
                     )
                 }
+
+                // Unified state update
+                NauticalPlugin.engine?.setMobActive(
+                    active = active,
+                    lat = status.event?.dropLocation?.latitude,
+                    lon = status.event?.dropLocation?.longitude
+                )
+
+                // Notify Event Bus for cross-module coordination
+                net.osmand.plus.plugins.nautical.NauticalEventBus.publishSync(
+                    net.osmand.plus.plugins.nautical.NauticalEvent.MobStateChanged(
+                        active = active,
+                        lat = status.event?.dropLocation?.latitude,
+                        lon = status.event?.dropLocation?.longitude
+                    )
+                )
 
                 // Handle persistence and audio based on state changes
                 when (status.state) {
                     MobState.ACTIVE_EMERGENCY -> {
-                        val event = status.event
-                        if (event != null) {
-                            settings.NAUTICAL_MOB_LAT.set(event.dropLocation.latitude)
-                            settings.NAUTICAL_MOB_LON.set(event.dropLocation.longitude)
-                            settings.NAUTICAL_MOB_TIMESTAMP.set(event.dropTimestamp)
-                            settings.NAUTICAL_MOB_ACTIVE.set(true)
-                        }
+                        app.settings.NAUTICAL_MOB_ACTIVE.set(true)
+                        audioManager.startAlarm() // Ensure alarm is started on activation or restoration
                     }
-                    MobState.RESOLVED, MobState.INACTIVE -> {
-                        // Keep location persisted in RESOLVED for map markers, 
-                        // but set ACTIVE to false for auto-restore
-                        settings.NAUTICAL_MOB_ACTIVE.set(false)
+                    MobState.RESOLVED -> {
+                        app.settings.NAUTICAL_MOB_ACTIVE.set(false)
                         audioManager.stopAlarm()
-                        if (status.state == MobState.INACTIVE) {
-                            settings.NAUTICAL_MOB_LAT.set(0.0)
-                            settings.NAUTICAL_MOB_LON.set(0.0)
-                            settings.NAUTICAL_MOB_TIMESTAMP.set(0L)
-                        }
+                    }
+                    MobState.INACTIVE -> {
+                        app.settings.NAUTICAL_MOB_ACTIVE.set(false)
+                        audioManager.stopAlarm()
                     }
                 }
             }
@@ -89,24 +131,94 @@ class MobViewModel(
 
         // Register for location updates
         app.locationProvider.addLocationListener(this)
+
+        // Restore active MOB state after process death
+        viewModelScope.launch {
+            stateMachine.getStoredStatus()?.let { storedStatus ->
+                if (storedStatus.state == MobState.ACTIVE_EMERGENCY) {
+                    stateMachine.restoreState(storedStatus)
+                    audioManager.startAlarm()
+                }
+            }
+        }
     }
 
     /**
      * Triggers a new MOB emergency.
      */
-    fun triggerMob(location: LatLon) {
-        val sog = app.locationProvider.lastKnownLocation?.speed?.toDouble() ?: 0.0
-        val cog = Math.toRadians(app.locationProvider.lastKnownLocation?.bearing?.toDouble() ?: 0.0)
+    fun triggerMob(location: LatLon, source: MobTriggerSource = MobTriggerSource.BUTTON) {
+        val lastLoc = app.locationProvider.lastKnownLocation
+        val sog = lastLoc?.speed?.toDouble() ?: 0.0
+        val cog = Math.toRadians(lastLoc?.bearing?.toDouble() ?: 0.0)
         
         stateMachine.triggerMob(location, sog, cog)
         audioManager.startAlarm()
+
+        val uiState = _uiState.value
+        if (!uiState.isMotoring) {
+            // Sailing safety: Do not auto-turn without confirmation
+            NauticalPlugin.hudManager?.get()?.showBanner(
+                app.getString(R.string.nautical_mob_prepare_turn),
+                15000,
+                app.getString(R.string.nautical_auto).uppercase(),
+                isWarning = true
+            ) {
+                executeRecommendedTurn(location, source)
+            }
+        } else {
+            executeRecommendedTurn(location, source)
+        }
+    }
+
+    private fun executeRecommendedTurn(location: LatLon, source: MobTriggerSource) {
+        val apc = NauticalPlugin.autopilot ?: return
+        if (!apc.isConnected()) return
+
+        val lastLoc = app.locationProvider.lastKnownLocation ?: return
+        val distanceNm = KMapUtils.getDistance(lastLoc.latitude, lastLoc.longitude, location.latitude, location.longitude) / 1852.0
+        
+        // Integration with Proa shunting
+        if (app.settings.NAUTICAL_VESSEL_TYPE.get() == net.osmand.plus.settings.enums.VesselType.PROA) {
+            apc.shunt()
+            return
+        }
+
+        val cog = lastLoc.bearing.toDouble()
+        val bearingToMob = Math.toDegrees(KMapUtils.getBearing(lastLoc.latitude, lastLoc.longitude, location.latitude, location.longitude))
+        val relBearing = (bearingToMob - cog + 360) % 360
+        val turnsPort = relBearing > 180.0
+
+        // Anderson Turn is for immediate action (person in sight)
+        if (source == MobTriggerSource.BUTTON) {
+            apc.andersonTurn(turnsPort)
+            return
+        }
+
+        // Delayed action selection based on distance
+        if (distanceNm > 0.3) {
+            apc.scharnowTurn(turnsPort)
+        } else {
+            apc.williamsonTurn(turnsPort)
+        }
+    }
+
+    fun requestAndersonTurn() {
+        NauticalPlugin.autopilot?.andersonTurn()
+    }
+
+    fun requestWilliamsonTurn() {
+        NauticalPlugin.autopilot?.williamsonTurn()
+    }
+
+    fun requestScharnowTurn() {
+        NauticalPlugin.autopilot?.scharnowTurn()
     }
 
     /**
      * Silences the audio alarm while keeping the emergency active.
      */
     fun silenceAlarm() {
-        audioManager.stopAlarm()
+        stateMachine.muteSiren()
     }
 
     /**
@@ -119,6 +231,25 @@ class MobViewModel(
             stateMachine.cancelMob()
         }
         audioManager.stopAlarm()
+        
+        // Abort the maneuver engine to reset autopilot state
+        val mm = PluginsHelper.getPlugin(NauticalPlugin::class.java)?.maneuverManager
+        mm?.abort("MOB Emergency Cancelled")
+    }
+
+    fun requestHeaveTo() {
+        val maneuver = PluginsHelper.getPlugin(NauticalPlugin::class.java)?.maneuverManager?.getManeuverById("man_overboard") as? ManOverboardManeuver
+        maneuver?.executeHeaveTo()
+    }
+
+    fun requestMotorReturn() {
+        val maneuver = PluginsHelper.getPlugin(NauticalPlugin::class.java)?.maneuverManager?.getManeuverById("man_overboard") as? ManOverboardManeuver
+        maneuver?.executeMotorReturn()
+    }
+
+    fun requestHoldHeading() {
+        val maneuver = PluginsHelper.getPlugin(NauticalPlugin::class.java)?.maneuverManager?.getManeuverById("man_overboard") as? ManOverboardManeuver
+        maneuver?.executeHoldHeading()
     }
 
     override fun updateLocation(location: net.osmand.Location?) {

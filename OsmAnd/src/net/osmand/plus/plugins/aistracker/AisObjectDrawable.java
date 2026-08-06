@@ -41,6 +41,8 @@ import net.osmand.shared.aistracker.AisObjectConstants;
 import net.osmand.shared.aistracker.AisTrackerMath;
 import net.osmand.util.MapUtils;
 
+import java.util.List;
+
 public class AisObjectDrawable {
 
 	private final AisTrackerPlugin plugin;
@@ -58,6 +60,7 @@ public class AisObjectDrawable {
 	private VectorLine shapeLine;
 
 	private boolean ownObject; // object representing own AIS transmitter (if present)
+	private int alpha = 255;
 
 	public AisObjectDrawable(@NonNull AisTrackerPlugin plugin, @NonNull AisObject ais) {
 		this.plugin = plugin;
@@ -447,8 +450,11 @@ public class AisObjectDrawable {
 			lostMarker.setOnMapSurfaceIconDirection(SwigUtilities.getOnSurfaceIconKey(1), rotation);
 		}
 
-		ColorARGB iconColor = bitmapColor == 0 ? NativeUtilities.createColorARGB(0xFFFFFFFF)
-				: NativeUtilities.createColorARGB(bitmapColor);
+		int colorToModulate = bitmapColor == 0 ? 0xFFFFFFFF : bitmapColor;
+		if (alpha < 255) {
+			colorToModulate = (colorToModulate & 0x00FFFFFF) | (alpha << 24);
+		}
+		ColorARGB iconColor = NativeUtilities.createColorARGB(colorToModulate);
 
 		activeMarker.setOnSurfaceIconModulationColor(iconColor);
 		restMarker.setOnSurfaceIconModulationColor(iconColor);
@@ -466,15 +472,27 @@ public class AisObjectDrawable {
 
 			if (drawDirectionLine) {
 				float direction = (ais.getVesselRotation());
-				LatLon endPoint = MapUtils.rhumbDestinationPoint(position.getLatitude(), position.getLongitude(), predictorDistance, direction);
-				PointI directionLineEnd = new PointI(
-						MapUtils.get31TileNumberX(endPoint.getLongitude()),
-						MapUtils.get31TileNumberY(endPoint.getLatitude())
-				);
-
+				AisLocation loc = ais.getAisLocation();
+				float predictorTimeHours = 10.0f / 60.0f;
+				
 				QVectorPointI points = new QVectorPointI();
-				points.add(markerLocation);
-				points.add(directionLineEnd);
+				Object rotObj = loc != null ? loc.getRot() : null;
+				if (loc != null && rotObj instanceof Number && Math.abs(((Number) rotObj).floatValue()) > 1.0f) {
+					for (AisLatLon p : AisTrackerMath.INSTANCE.getCurvedPathPoints(loc, predictorTimeHours, 5)) {
+						points.add(new PointI(
+								MapUtils.get31TileNumberX(p.getLongitude()),
+								MapUtils.get31TileNumberY(p.getLatitude())
+						));
+					}
+				} else {
+					LatLon endPoint = MapUtils.rhumbDestinationPoint(position.getLatitude(), position.getLongitude(), predictorDistance, direction);
+					PointI directionLineEnd = new PointI(
+							MapUtils.get31TileNumberX(endPoint.getLongitude()),
+							MapUtils.get31TileNumberY(endPoint.getLatitude())
+					);
+					points.add(markerLocation);
+					points.add(directionLineEnd);
+				}
 
 				directionLine.setPoints(points);
 				directionLine.setIsHidden(false);
@@ -505,5 +523,12 @@ public class AisObjectDrawable {
 
 	private boolean isOwn() {
 		return ownObject;
+	}
+
+	public void setAlpha(int alpha) {
+		if (this.alpha != alpha) {
+			this.alpha = alpha;
+			this.invalidateBitmap();
+		}
 	}
 }

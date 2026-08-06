@@ -14,9 +14,9 @@ import android.hardware.usb.UsbManager
 import android.os.Build
 import androidx.core.content.ContextCompat
 import net.osmand.PlatformUtil
+import java.io.IOException
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.*
-import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.asSharedFlow
 
 /**
  * NMEA client that reads from a physical USB-Serial hardware device via OTG.
@@ -26,22 +26,17 @@ class UsbNmeaClient(
     private val context: Context,
     private val device: UsbDevice,
     private val baudRate: Int = 4800,
-    private val scope: CoroutineScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
-) : NmeaClient {
+    scope: CoroutineScope
+) : AbstractNmeaTransport(scope) {
     private val log = PlatformUtil.getLog(UsbNmeaClient::class.java)
     private val usbManager = context.getSystemService(Context.USB_SERVICE) as UsbManager
 
-    private val _sentences = MutableSharedFlow<String>(extraBufferCapacity = 64)
-    override val sentences = _sentences.asSharedFlow()
-
-    private val _isConnected = MutableSharedFlow<Boolean>(replay = 1)
-    override val isConnected = _isConnected.asSharedFlow()
-
-    private var job: Job? = null
-    private var isRunning = false
     private var connection: UsbDeviceConnection? = null
-    private var usbInterface: UsbInterface? = null
+    private val claimedInterfaces = mutableListOf<UsbInterface>()
     private var endpointIn: UsbEndpoint? = null
+    private var receiverRegistered = false
+    private var detachReceiverRegistered = false
+    private val isDisconnecting = AtomicBoolean(false)
 
     companion object {
         private const val ACTION_USB_PERMISSION = "net.osmand.plus.USB_PERMISSION"
@@ -53,7 +48,8 @@ class UsbNmeaClient(
 
     private val usbReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
-            if (ACTION_USB_PERMISSION == intent.action) {
+            val action = intent.action
+            if (ACTION_USB_PERMISSION == action) {
                 synchronized(this) {
                     val usbDevice: UsbDevice? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                         intent.getParcelableExtra(UsbManager.EXTRA_DEVICE, UsbDevice::class.java)
@@ -62,41 +58,76 @@ class UsbNmeaClient(
                         intent.getParcelableExtra(UsbManager.EXTRA_DEVICE)
                     }
                     if (intent.getBooleanExtra(UsbManager.EXTRA_PERMISSION_GRANTED, false)) {
-                        usbDevice?.let { startCommunication() }
+                        usbDevice?.let { superConnect() }
                     } else {
                         log.error("USB permission denied for device ${device.deviceName}")
-                        _isConnected.tryEmit(false)
+                        disconnect()
                     }
                 }
-                context.unregisterReceiver(this)
+                unregisterReceiverSafely()
             }
         }
+    }
+
+    private val detachReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            if (UsbManager.ACTION_USB_DEVICE_DETACHED == intent.action) {
+                val detachedDevice: UsbDevice? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    intent.getParcelableExtra(UsbManager.EXTRA_DEVICE, UsbDevice::class.java)
+                } else {
+                    @Suppress("DEPRECATION")
+                    intent.getParcelableExtra(UsbManager.EXTRA_DEVICE)
+                }
+                if (detachedDevice?.deviceName == device.deviceName) {
+                    log.warn("USB device detached: ${device.deviceName}. Cleaning up.")
+                    disconnect()
+                }
+            }
+        }
+    }
+
+    private fun superConnect() {
+        super.connect()
     }
 
     override fun connect() {
         if (isRunning) return
         isRunning = true
+
+        val detachFilter = IntentFilter(UsbManager.ACTION_USB_DEVICE_DETACHED)
+        ContextCompat.registerReceiver(context, detachReceiver, detachFilter, ContextCompat.RECEIVER_NOT_EXPORTED)
+        detachReceiverRegistered = true
         
         if (usbManager.hasPermission(device)) {
-            startCommunication()
+            super.connect()
         } else {
             val flags = PendingIntent.FLAG_IMMUTABLE
             val permissionIntent = PendingIntent.getBroadcast(context, 0, Intent(ACTION_USB_PERMISSION), flags)
             val filter = IntentFilter(ACTION_USB_PERMISSION)
             ContextCompat.registerReceiver(context, usbReceiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
+            receiverRegistered = true
             usbManager.requestPermission(device, permissionIntent)
         }
     }
 
-    private fun startCommunication() {
-        job = scope.launch {
+    private fun unregisterReceiverSafely() {
+        if (receiverRegistered) {
+            runCatching {
+                context.unregisterReceiver(usbReceiver)
+            }.onFailure { e ->
+                log.error("Error unregistering USB receiver", e)
+            }
+            receiverRegistered = false
+        }
+    }
+
+    override suspend fun runTransport(onSentence: suspend (String) -> Unit) {
+        withContext(Dispatchers.IO) {
             try {
                 if (!setupUsb()) {
-                    _isConnected.emit(false)
-                    return@launch
+                    throw IOException("Failed to setup USB")
                 }
 
-                _isConnected.emit(true)
                 val buffer = ByteArray(1024)
                 val lineBuffer = StringBuilder()
 
@@ -106,30 +137,23 @@ class UsbNmeaClient(
                     
                     val length = conn.bulkTransfer(epIn, buffer, buffer.size, 1000)
                     if (length > 0) {
-                        val text = String(buffer, 0, length, Charsets.US_ASCII)
-                        lineBuffer.append(text)
+                        lineBuffer.append(String(buffer, 0, length, Charsets.US_ASCII))
                         
                         var lineEnd = lineBuffer.indexOf("\n")
                         while (lineEnd != -1) {
                             val line = lineBuffer.substring(0, lineEnd).trim()
                             if (line.isNotEmpty()) {
-                                _sentences.emit(line)
+                                onSentence(line)
                             }
-                            val remaining = if (lineEnd + 1 < lineBuffer.length) lineBuffer.substring(lineEnd + 1) else ""
-                            lineBuffer.setLength(0)
-                            lineBuffer.append(remaining)
+                            lineBuffer.delete(0, lineEnd + 1)
                             lineEnd = lineBuffer.indexOf("\n")
                         }
                     } else if (length < 0) {
-                        log.error("USB read error (transfer failed)")
-                        break
+                        throw IOException("USB read error (transfer failed)")
                     }
                 }
-            } catch (e: Exception) {
-                log.error("USB connection error: ${e.message}", e)
             } finally {
                 teardownUsb()
-                _isConnected.emit(false)
             }
         }
     }
@@ -144,7 +168,7 @@ class UsbNmeaClient(
                 iface.interfaceClass == UsbConstants.USB_CLASS_VENDOR_SPEC) {
                 
                 if (connection?.claimInterface(iface, true) == true) {
-                    usbInterface = iface
+                    claimedInterfaces.add(iface)
                     for (j in 0 until iface.endpointCount) {
                         val ep = iface.getEndpoint(j)
                         if (ep.type == UsbConstants.USB_ENDPOINT_XFER_BULK && 
@@ -187,20 +211,42 @@ class UsbNmeaClient(
 
     private fun teardownUsb() {
         try {
-            usbInterface?.let { connection?.releaseInterface(it) }
-            connection?.close()
+            connection?.let { conn ->
+                claimedInterfaces.forEach { iface ->
+                    conn.releaseInterface(iface)
+                }
+                conn.close()
+            }
         } catch (e: Exception) {
             log.error("USB NMEA teardown error: ${e.message}", e)
         }
         connection = null
-        usbInterface = null
+        claimedInterfaces.clear()
         endpointIn = null
     }
 
     override fun disconnect() {
+        if (!isDisconnecting.compareAndSet(false, true)) return
         isRunning = false
-        job?.cancel()
+        super.disconnect()
+        unregisterReceiverSafely()
+        unregisterDetachReceiverSafely()
         teardownUsb()
-        _isConnected.tryEmit(false)
+    }
+
+    override fun emergencyShutdown() {
+        isRunning = false
+        teardownUsb()
+    }
+
+    private fun unregisterDetachReceiverSafely() {
+        if (detachReceiverRegistered) {
+            runCatching {
+                context.unregisterReceiver(detachReceiver)
+            }.onFailure { e ->
+                log.error("Error unregistering USB detach receiver", e)
+            }
+            detachReceiverRegistered = false
+        }
     }
 }

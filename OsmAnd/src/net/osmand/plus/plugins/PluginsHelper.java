@@ -56,7 +56,6 @@ import net.osmand.plus.plugins.astronomy.AstronomyPlugin;
 import net.osmand.plus.plugins.srtm.SRTMPlugin;
 import net.osmand.plus.plugins.weather.WeatherPlugin;
 import net.osmand.plus.plugins.nautical.NauticalPlugin;
-import net.osmand.plus.plugins.nautical.plugin.SailingIntegrationPlugin;
 import net.osmand.plus.plugins.openseamaps.NauticalMapsPlugin;
 import net.osmand.plus.poi.PoiUIFilter;
 import net.osmand.plus.quickaction.QuickActionType;
@@ -127,7 +126,6 @@ public class PluginsHelper {
 		allPlugins.add(new AccessibilityPlugin(app));
 		allPlugins.add(new OsmandDevelopmentPlugin(app));
 		allPlugins.add(new NauticalPlugin(app));
-		allPlugins.add(new SailingIntegrationPlugin(app));
 
 		loadCustomPlugins(app);
 		registerAppInitializingDependedProperties(app);

@@ -9,22 +9,41 @@ class OkHttpSignalKConnection(private val client: OkHttpClient) : SignalKConnect
     private var webSocket: WebSocket? = null
     private var isConnected = false
     private var isConnecting = false
+    private var lastLatencyMs: Long = 0
+    private var lastPingTime: Long = 0
 
     fun isConnected(): Boolean = isConnected
     fun isConnecting(): Boolean = isConnecting
+
+    override fun getLatencyMs(): Long = lastLatencyMs
 
     override fun connect(
         url: String,
         username: String?,
         password: String?,
         onFailure: (() -> Unit)?,
+        onAuthError: (() -> Unit)?,
+        onMessageReceived: (String) -> Unit,
+    ) {
+        connect(url, username, password, null, onFailure, onAuthError, onMessageReceived)
+    }
+
+    fun connect(
+        url: String,
+        username: String?,
+        password: String?,
+        authToken: String?,
+        onFailure: (() -> Unit)?,
+        onAuthError: (() -> Unit)?,
         onMessageReceived: (String) -> Unit,
     ) {
         if (isConnecting || isConnected) return
         isConnecting = true
-
+        
         val requestBuilder = Request.Builder().url(url)
-        if (!username.isNullOrEmpty() && !password.isNullOrEmpty()) {
+        if (!authToken.isNullOrEmpty()) {
+            requestBuilder.addHeader("Authorization", "Bearer $authToken")
+        } else if (!username.isNullOrEmpty() && !password.isNullOrEmpty()) {
             val credentials = Credentials.basic(username, password)
             requestBuilder.addHeader("Authorization", credentials)
         }
@@ -37,6 +56,7 @@ class OkHttpSignalKConnection(private val client: OkHttpClient) : SignalKConnect
                     log.debug("WebSocket Connected Successfully!")
                     isConnected = true
                     isConnecting = false
+                    lastPingTime = System.currentTimeMillis()
 
                     // Send the required SignalK Hello
                     val hello = """{"name":"OsmAnd-Nautical","version":"1.0.0"}"""
@@ -44,6 +64,10 @@ class OkHttpSignalKConnection(private val client: OkHttpClient) : SignalKConnect
                 }
 
                 override fun onMessage(webSocket: WebSocket, text: String) {
+                    if (text.contains("\"self\"") && (lastPingTime > 0)) {
+                        lastLatencyMs = System.currentTimeMillis() - lastPingTime
+                        lastPingTime = 0 // Reset until next heartbeat
+                    }
                     onMessageReceived(text)
                 }
 
@@ -51,7 +75,11 @@ class OkHttpSignalKConnection(private val client: OkHttpClient) : SignalKConnect
                     log.error("WebSocket Failure: ${t.message}")
                     isConnected = false
                     isConnecting = false
-                    onFailure?.invoke()
+                    if (response?.code == 401) {
+                        onAuthError?.invoke()
+                    } else {
+                        onFailure?.invoke()
+                    }
                 }
 
                 override fun onClosing(webSocket: WebSocket, code: Int, reason: String) {

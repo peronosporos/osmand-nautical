@@ -5,6 +5,7 @@ data class AisLocation(
     var longitude: Double,
     var speed: Float,    // in m/s
     var bearing: Float,  // in degrees
+    var rot: Float? = null, // in degrees/minute
     var hasSpeed: Boolean = true,
     var hasBearing: Boolean = true
 )

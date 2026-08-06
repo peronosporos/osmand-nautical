@@ -33,4 +33,9 @@
         android:layout="@layout/preference_with_descr"
         android:title="@string/s63_load_permit_txt" />
 
+    <Preference
+        android:key="s63_import_charts"
+        android:layout="@layout/preference_with_descr"
+        android:title="@string/s63_import_charts" />
+
 </PreferenceScreen>

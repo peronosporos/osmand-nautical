@@ -1,7 +1,6 @@
 package net.osmand.plus.plugins.nautical.raster
 
 import net.osmand.PlatformUtil
-import net.osmand.data.LatLon
 import net.osmand.data.QuadRect
 import java.io.File
 import java.io.FileInputStream

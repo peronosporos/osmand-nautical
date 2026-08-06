@@ -1,10 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
     android:padding="16dp"
-    android:background="?attr/activity_background_color">
+    android:background="?attr/bg_color">
 
     <TextView
         android:id="@+id/polar_editor_title"
@@ -14,6 +15,31 @@
         android:textStyle="bold"
         android:gravity="center"
         android:paddingBottom="12dp" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginBottom="12dp">
+        <Button
+            android:id="@+id/btn_switch_polar"
+            style="@style/Widget.Material3.Button.TonalButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Library"
+            app:icon="@drawable/ic_action_folder"
+            android:layout_marginEnd="4dp" />
+        <Button
+            android:id="@+id/btn_import_polar"
+            style="@style/Widget.Material3.Button.TonalButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Import"
+            app:icon="@drawable/ic_action_import"
+            android:layout_marginStart="4dp" />
+    </LinearLayout>
 
     <net.osmand.plus.plugins.nautical.ui.editor.PolarCurveCanvasView
         android:id="@+id/polar_canvas_view"

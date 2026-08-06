@@ -18,6 +18,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.collectLatest
 import net.osmand.plus.OsmandApplication
 import net.osmand.plus.R
+import net.osmand.plus.plugins.nautical.NauticalPlugin
 import net.osmand.plus.base.BaseMaterialBottomSheetDialogFragment
 import net.osmand.plus.plugins.nautical.viewmodel.AnchorCalculatorViewModel
 import java.util.Locale
@@ -33,6 +34,18 @@ class AnchorWatchDialogFragment : BaseMaterialBottomSheetDialogFragment() {
         return inflater.inflate(R.layout.dialog_anchor_watch, container, false)
     }
 
+    private var btnDropAnchor: MaterialButton? = null
+    private var btnDisarmAnchor: MaterialButton? = null
+    private var btnPreviewMap: MaterialButton? = null
+    private var txtSensorWarning: TextView? = null
+    private var txtResultRode: TextView? = null
+
+    private var layoutSkInfo: View? = null
+    private var txtRodeDeployed: TextView? = null
+    private var layoutWindlass: View? = null
+    private var btnWindlassUp: MaterialButton? = null
+    private var btnWindlassDown: MaterialButton? = null
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
@@ -43,22 +56,33 @@ class AnchorWatchDialogFragment : BaseMaterialBottomSheetDialogFragment() {
                 return AnchorCalculatorViewModel(app) as T
             }
         }
-        viewModel = ViewModelProvider(this, factory).get(AnchorCalculatorViewModel::class.java)
+        viewModel = ViewModelProvider(this, factory)[AnchorCalculatorViewModel::class.java]
 
         val editDepth = view.findViewById<TextInputEditText>(R.id.edit_depth)
         val editTide = view.findViewById<TextInputEditText>(R.id.edit_tide)
         val editBowOffset = view.findViewById<TextInputEditText>(R.id.edit_bow_offset)
+        val editFreeboard = view.findViewById<TextInputEditText>(R.id.edit_freeboard)
         val editSafetyMargin = view.findViewById<TextInputEditText>(R.id.edit_safety_margin)
         val editLat = view.findViewById<TextInputEditText>(R.id.edit_anchor_lat)
         val editLon = view.findViewById<TextInputEditText>(R.id.edit_anchor_lon)
         val toggleRatio = view.findViewById<MaterialButtonToggleGroup>(R.id.toggle_ratio)
-        val txtResultRode = view.findViewById<TextView>(R.id.txt_result_rode)
-        val btnDropAnchor = view.findViewById<MaterialButton>(R.id.btn_drop_anchor)
+        txtResultRode = view.findViewById(R.id.txt_result_rode)
+        btnDropAnchor = view.findViewById(R.id.btn_drop_anchor)
+        btnDisarmAnchor = view.findViewById(R.id.btn_disarm_anchor)
+        btnPreviewMap = view.findViewById(R.id.btn_preview_map)
+        txtSensorWarning = view.findViewById(R.id.txt_sensor_warning)
+
+        layoutSkInfo = view.findViewById(R.id.layout_sk_anchor_info)
+        txtRodeDeployed = view.findViewById(R.id.txt_rode_deployed)
+        layoutWindlass = view.findViewById(R.id.layout_windlass_quick_control)
+        btnWindlassUp = view.findViewById(R.id.btn_dlg_windlass_up)
+        btnWindlassDown = view.findViewById(R.id.btn_dlg_windlass_down)
 
         // Bind initial values
         editDepth.setText(viewModel.depth.value.toString())
         editTide.setText(viewModel.tideRise.value.toString())
         editBowOffset.setText(viewModel.bowOffset.value.toString())
+        editFreeboard.setText(viewModel.freeboard.value.toString())
         editSafetyMargin.setText(viewModel.safetyMargin.value.toString())
         
         if (viewModel.anchorLat.value != 0.0) editLat.setText(viewModel.anchorLat.value.toString())
@@ -90,6 +114,12 @@ class AnchorWatchDialogFragment : BaseMaterialBottomSheetDialogFragment() {
             }
         })
 
+        editFreeboard.addTextChangedListener(object : SimpleTextWatcher() {
+            override fun afterTextChanged(s: Editable?) {
+                s?.toString()?.toFloatOrNull()?.let { viewModel.setFreeboard(it) }
+            }
+        })
+
         editSafetyMargin.addTextChangedListener(object : SimpleTextWatcher() {
             override fun afterTextChanged(s: Editable?) {
                 s?.toString()?.toFloatOrNull()?.let { viewModel.setSafetyMargin(it) }
@@ -98,13 +128,21 @@ class AnchorWatchDialogFragment : BaseMaterialBottomSheetDialogFragment() {
 
         editLat.addTextChangedListener(object : SimpleTextWatcher() {
             override fun afterTextChanged(s: Editable?) {
-                s?.toString()?.toDoubleOrNull()?.let { viewModel.setAnchorLat(it) }
+                s?.toString()?.toDoubleOrNull()?.let { 
+                    viewModel.setAnchorLat(it)
+                    app.settings.NAUTICAL_ANCHOR_PREVIEW_LAT.set(it)
+                    app.osmandMap?.refreshMap()
+                }
             }
         })
 
         editLon.addTextChangedListener(object : SimpleTextWatcher() {
             override fun afterTextChanged(s: Editable?) {
-                s?.toString()?.toDoubleOrNull()?.let { viewModel.setAnchorLon(it) }
+                s?.toString()?.toDoubleOrNull()?.let { 
+                    viewModel.setAnchorLon(it)
+                    app.settings.NAUTICAL_ANCHOR_PREVIEW_LON.set(it)
+                    app.osmandMap?.refreshMap()
+                }
             }
         })
 
@@ -120,18 +158,133 @@ class AnchorWatchDialogFragment : BaseMaterialBottomSheetDialogFragment() {
             }
         }
 
-        btnDropAnchor.setOnClickListener {
+        btnDropAnchor?.setOnClickListener {
             viewModel.dropAnchor()
+            app.settings.NAUTICAL_ANCHOR_PREVIEW_LAT.set(0.0)
+            app.settings.NAUTICAL_ANCHOR_PREVIEW_LON.set(0.0)
             app.showToastMessage(R.string.nautical_anchor_btn_drop)
             dismiss()
         }
 
-        // Real-time calculation update
+        btnPreviewMap?.setOnClickListener {
+            val currentLat = viewModel.anchorLat.value
+            val currentLon = viewModel.anchorLon.value
+            
+            app.settings.NAUTICAL_ANCHOR_PREVIEW_LAT.set(currentLat)
+            app.settings.NAUTICAL_ANCHOR_PREVIEW_LON.set(currentLon)
+            app.settings.NAUTICAL_ANCHOR_PREVIEW_RADIUS.set(viewModel.recommendedRode.value.toFloat())
+            
+            app.osmandMap?.refreshMap()
+            app.showToastMessage(R.string.nautical_anchor_moved_to_tap)
+            
+            // TASK-049: Implement manual drag via interaction with map layers
+            dismiss()
+        }
+
+        btnDisarmAnchor?.setOnClickListener {
+            androidx.appcompat.app.AlertDialog.Builder(requireContext())
+                .setTitle(R.string.nautical_disarm_anchor_watch)
+                .setMessage(R.string.nautical_confirm_disarm_anchor)
+                .setPositiveButton(R.string.shared_string_yes) { _, _ ->
+                    viewModel.clearAnchor()
+                    app.settings.NAUTICAL_ANCHOR_PREVIEW_LAT.set(0.0)
+                    app.settings.NAUTICAL_ANCHOR_PREVIEW_LON.set(0.0)
+                    dismiss()
+                }
+                .setNegativeButton(R.string.shared_string_no, null)
+                .show()
+        }
+
+        // Real-time calculation and sensor validation
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.STARTED) {
-                viewModel.recommendedRode.collectLatest { rode ->
-                    txtResultRode.text = String.format(Locale.US, "%s %.1f m", getString(R.string.nautical_anchor_result_rode), rode)
+                launch {
+                    viewModel.anchorLat.collectLatest { lat ->
+                        if (editLat.text?.toString()?.toDoubleOrNull() != lat) {
+                            editLat.setText(lat.toString())
+                        }
+                    }
                 }
+                launch {
+                    viewModel.anchorLon.collectLatest { lon ->
+                        if (editLon.text?.toString()?.toDoubleOrNull() != lon) {
+                            editLon.setText(lon.toString())
+                        }
+                    }
+                }
+                launch {
+                    viewModel.recommendedRode.collectLatest { rode ->
+                        txtResultRode?.text = String.format(Locale.US, "%s %.1f m", getString(R.string.nautical_anchor_result_rode), rode)
+                        app.settings.NAUTICAL_ANCHOR_PREVIEW_RADIUS.set(rode.toFloat())
+                    }
+                }
+                launch {
+                    NauticalPlugin.engine?.marineStateFlow?.collectLatest { state ->
+                        val caps = NauticalPlugin.getInstance()?.capabilityManager?.capabilities?.value
+                        
+                        layoutSkInfo?.visibility = if (caps?.hasChainCounter == true || caps?.hasWindlassControl == true) View.VISIBLE else View.GONE
+                        
+                        if (caps?.hasChainCounter == true && state.rodeDeployed != null) {
+                            txtRodeDeployed?.text = String.format(Locale.US, "Rode Deployed: %.1f m", state.rodeDeployed)
+                        } else {
+                            txtRodeDeployed?.text = getString(R.string.nautical_chain_counter_offline)
+                        }
+
+                        layoutWindlass?.visibility = if (caps?.hasWindlassControl == true) View.VISIBLE else View.GONE
+                        val engineOk = state.isEngineRunning
+                        btnWindlassUp?.isEnabled = engineOk
+                        btnWindlassDown?.isEnabled = engineOk
+
+                        setupWindlassButton(btnWindlassUp, "electrical.switches.windlass.up")
+                        setupWindlassButton(btnWindlassDown, "electrical.switches.windlass.down")
+
+                        val hasGps = state.latitude != null && state.longitude != null && !state.stalePaths.contains("navigation.position")
+                        
+                        // Relaxed requirement: Allow manual depth fallback
+                        val isSafe = hasGps
+                        btnDropAnchor?.isEnabled = isSafe
+                        
+                        val hasDepth = state.depthBelowTransducer != null && !state.stalePaths.contains("environment.depth.belowTransducer")
+                        txtSensorWarning?.visibility = if (hasDepth) View.GONE else View.VISIBLE
+                        if (!hasDepth) {
+                            txtSensorWarning?.text = getString(R.string.nautical_depth_unavailable)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        btnDropAnchor = null
+        btnDisarmAnchor = null
+        btnPreviewMap = null
+        txtSensorWarning = null
+        txtResultRode = null
+        layoutSkInfo = null
+        txtRodeDeployed = null
+        layoutWindlass = null
+        btnWindlassUp = null
+        btnWindlassDown = null
+    }
+
+    private fun setupWindlassButton(button: MaterialButton?, path: String) {
+        button?.setOnTouchListener { v, event ->
+            if (!button.isEnabled) return@setOnTouchListener false
+            when (event.action) {
+                android.view.MotionEvent.ACTION_DOWN -> {
+                    NauticalPlugin.engine?.setSwitch(path, true)
+                    v.isPressed = true
+                    true
+                }
+                android.view.MotionEvent.ACTION_UP, android.view.MotionEvent.ACTION_CANCEL -> {
+                    NauticalPlugin.engine?.setSwitch(path, false)
+                    v.isPressed = false
+                    v.performClick()
+                    true
+                }
+                else -> false
             }
         }
     }

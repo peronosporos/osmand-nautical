@@ -12,6 +12,13 @@ object S57FeatureStylizer {
             "DEPCNT" -> styleDepthContour(feature, safetyContour)
             "DEPARE" -> styleDepthArea(feature, safetyContour, shallowContour)
             "LNDARE" -> S57StyleRule(fillColor = NauticalColor.LAND_AREA, priority = 10)
+            "BOYLAT" -> styleBuoyLateral(feature)
+            "BCNLAT" -> styleBuoyLateral(feature)
+            "BOYCAR" -> styleBuoyCardinal(feature)
+            "BCNCAR" -> styleBuoyCardinal(feature)
+            "BOYSAW" -> S57StyleRule(symbolId = SymbolId.SAFE_WATER, priority = 80)
+            "BCNSAW" -> S57StyleRule(symbolId = SymbolId.SAFE_WATER, priority = 80)
+            "BOYISD" -> S57StyleRule(symbolId = SymbolId.ISOLATED_DANGER, priority = 80)
             "LIGHTS" -> styleLight(feature)
             "OBSTRN" -> styleObstruction(feature)
             "UWTROC" -> S57StyleRule(symbolId = SymbolId.ROCK_AWASH, priority = 50)
@@ -41,20 +48,48 @@ object S57FeatureStylizer {
         }
     }
 
+    @Suppress("UNUSED_PARAMETER")
     private fun styleSounding(feature: S57Object, safetyContour: Double): S57StyleRule {
         // Sounding value is usually in SG3D or attributes. 
         // For stylizer, we just define the rule.
         return S57StyleRule(priority = 150) 
     }
 
+    private fun styleBuoyLateral(feature: S57Object): S57StyleRule {
+        val colour = feature.attributes["COLOUR"]?.split(",")?.firstOrNull()
+        val symbol = when (colour) {
+            "3" -> SymbolId.LATERAL_PORT // Red
+            "4" -> SymbolId.LATERAL_STARBOARD // Green
+            else -> SymbolId.SPECIAL_PURPOSE
+        }
+        return S57StyleRule(symbolId = symbol, priority = 80)
+    }
+
+    private fun styleBuoyCardinal(feature: S57Object): S57StyleRule {
+        val category = feature.attributes["CATCAM"] // 1: North, 2: East, 3: South, 4: West
+        val symbol = when (category) {
+            "1" -> SymbolId.CARDINAL_NORTH
+            "2" -> SymbolId.CARDINAL_EAST
+            "3" -> SymbolId.CARDINAL_SOUTH
+            "4" -> SymbolId.CARDINAL_WEST
+            else -> SymbolId.SPECIAL_PURPOSE
+        }
+        return S57StyleRule(symbolId = symbol, priority = 80)
+    }
+
     private fun styleLight(feature: S57Object): S57StyleRule {
-        val colour = feature.attributes["COLOUR"] // e.g., "3" for Red, "4" for Green
-        val symbol = if (feature.attributes["HEIGHT"]?.toDoubleOrNull() ?: 0.0 > 10.0) {
+        val strokeColor = when (feature.attributes["COLOUR"]?.split(",")?.firstOrNull()) {
+            "3" -> NauticalColor.BUOY_PORT
+            "4" -> NauticalColor.BUOY_STARBOARD
+            "11" -> NauticalColor.DANGER // Orange
+            else -> NauticalColor.DEEP_WATER // White
+        }
+        val symbol = if ((feature.attributes["HEIGHT"]?.toDoubleOrNull() ?: 0.0) > 10.0) {
             SymbolId.LIGHT_MAJOR
         } else {
             SymbolId.LIGHT_MINOR
         }
-        return S57StyleRule(symbolId = symbol, priority = 100)
+        return S57StyleRule(symbolId = symbol, strokeColor = strokeColor, priority = 100)
     }
 
     private fun styleObstruction(feature: S57Object): S57StyleRule {

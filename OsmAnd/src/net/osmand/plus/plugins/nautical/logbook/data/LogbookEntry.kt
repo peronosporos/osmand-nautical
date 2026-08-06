@@ -27,5 +27,6 @@ data class LogbookEntry(
     val batteryVoltage: Double?, // Main battery voltage (V)
     val engineHours: Double?, // Total engine hours
     val sailPlan: String = "",
-    val notes: String = ""
+    val notes: String = "",
+    val serverUuid: String? = null
 ) : Serializable

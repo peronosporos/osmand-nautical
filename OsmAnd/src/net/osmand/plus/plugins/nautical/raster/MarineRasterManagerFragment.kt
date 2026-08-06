@@ -1,7 +1,5 @@
 package net.osmand.plus.plugins.nautical.raster
 
-import android.app.Activity
-import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.provider.OpenableColumns
@@ -22,7 +20,6 @@ class MarineRasterManagerFragment : BaseOsmAndFragment() {
     private lateinit var importer: MarineRasterImporter
     private lateinit var adapter: RasterFilesAdapter
     private lateinit var progressBar: ProgressBar
-    private lateinit var emptyView: TextView
 
     private val importLauncher = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         uri?.let { startImport(it) }
@@ -117,7 +114,7 @@ class MarineRasterManagerFragment : BaseOsmAndFragment() {
             .show()
     }
 
-    private inner class RasterFilesAdapter : BaseAdapter() {
+    private class RasterFilesAdapter : BaseAdapter() {
         private var files = emptyList<File>()
 
         fun setFiles(newFiles: List<File>) {
@@ -135,7 +132,8 @@ class MarineRasterManagerFragment : BaseOsmAndFragment() {
             
             val file = files[position]
             view.findViewById<TextView>(R.id.title).text = file.name
-            view.findViewById<TextView>(R.id.description).text = "${file.length() / 1024 / 1024} MB"
+            val sizeMb = file.length() / 1024 / 1024
+            view.findViewById<TextView>(R.id.description).text = parent?.context?.getString(R.string.shared_string_memory_mb_desc, sizeMb.toString())
             view.findViewById<ImageView>(R.id.icon).setImageResource(R.drawable.ic_action_world_globe)
             
             return view

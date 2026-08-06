@@ -2,13 +2,21 @@ package net.osmand.plus.plugins.nautical.hazard.data
 
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.sync.withLock
 import net.osmand.data.LatLon
-import kotlin.time.Duration.Companion.milliseconds
 import net.osmand.plus.OsmandApplication
 import net.osmand.plus.api.SQLiteAPI.SQLiteCursor
+import net.osmand.plus.plugins.nautical.utils.use
+import net.osmand.plus.plugins.nautical.NauticalIOQueue
 import net.osmand.plus.plugins.nautical.hazard.engine.NavtexMessage
 import net.osmand.plus.plugins.nautical.hazard.engine.NavtexSubject
+import kotlin.time.Duration.Companion.milliseconds
 
+/**
+ * Repository for NAVTEX messages with local SQLite persistence.
+ * survival: Survive app restarts and screen wakeups.
+ * expiry: 48 hours for all messages.
+ */
 @OptIn(FlowPreview::class)
 class NavtexRepository(private val app: OsmandApplication) {
 
@@ -27,50 +35,40 @@ class NavtexRepository(private val app: OsmandApplication) {
                     performRefresh()
                 }
         }
+        refreshMessages()
     }
 
     suspend fun upsertMessage(message: NavtexMessage) = withContext(Dispatchers.IO) {
-        val db = dbHelper.openConnection(false) ?: return@withContext
-        try {
-            // Check if message exists to preserve timestamp if content is same
-            val existingCursor = db.rawQuery(
-                "SELECT ${NavtexDatabaseHelper.COL_TIMESTAMP}, ${NavtexDatabaseHelper.COL_BODY} " +
-                "FROM ${NavtexDatabaseHelper.TABLE_NAVTEX} WHERE ${NavtexDatabaseHelper.COL_ID} = ?",
-                arrayOf(message.id)
-            )
-            
-            var finalTimestamp = message.timestamp
-            if (existingCursor != null && existingCursor.moveToFirst()) {
-                val oldBody = existingCursor.getString(1)
-                if (oldBody == message.body) {
-                    finalTimestamp = existingCursor.getLong(0)
-                }
-                existingCursor.close()
+        NauticalIOQueue.writeMutex.withLock {
+            val db = dbHelper.openConnection(false) ?: return@withLock
+            try {
+                db.beginTransactionNonExclusive()
+                val sql = """
+                    INSERT OR REPLACE INTO ${NavtexDatabaseHelper.TABLE_NAVTEX} (
+                        ${NavtexDatabaseHelper.COL_ID}, ${NavtexDatabaseHelper.COL_STATION}, 
+                        ${NavtexDatabaseHelper.COL_SUBJECT}, ${NavtexDatabaseHelper.COL_SEQUENCE}, 
+                        ${NavtexDatabaseHelper.COL_TIMESTAMP}, ${NavtexDatabaseHelper.COL_BODY}, 
+                        ${NavtexDatabaseHelper.COL_POINTS}, ${NavtexDatabaseHelper.COL_URGENT}
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """.trimIndent()
+
+                db.execSQL(sql, arrayOf(
+                    message.id,
+                    message.stationLetter.toString(),
+                    message.subject.code.toString(),
+                    message.sequenceNumber,
+                    message.timestamp,
+                    message.body,
+                    pointsToString(message.points),
+                    if (message.isUrgent) 1 else 0
+                ))
+                cleanupExpiredInternal(db)
+                db.setTransactionSuccessful()
+                refreshTrigger.emit(Unit)
+            } finally {
+                db.endTransaction()
+                db.close()
             }
-
-            val sql = """
-                INSERT OR REPLACE INTO ${NavtexDatabaseHelper.TABLE_NAVTEX} (
-                    ${NavtexDatabaseHelper.COL_ID}, ${NavtexDatabaseHelper.COL_STATION}, 
-                    ${NavtexDatabaseHelper.COL_SUBJECT}, ${NavtexDatabaseHelper.COL_SEQUENCE}, 
-                    ${NavtexDatabaseHelper.COL_TIMESTAMP}, ${NavtexDatabaseHelper.COL_BODY}, 
-                    ${NavtexDatabaseHelper.COL_POINTS}, ${NavtexDatabaseHelper.COL_URGENT}
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            """.trimIndent()
-
-            db.execSQL(sql, arrayOf(
-                message.id,
-                message.stationLetter.toString(),
-                message.subject.code.toString(),
-                message.sequenceNumber,
-                finalTimestamp,
-                message.body,
-                pointsToString(message.points),
-                if (message.isUrgent) 1 else 0
-            ))
-            cleanupExpired()
-            refreshTrigger.emit(Unit)
-        } finally {
-            db.close()
         }
     }
 
@@ -98,15 +96,15 @@ class NavtexRepository(private val app: OsmandApplication) {
         val db = dbHelper.openConnection(true) ?: return@withContext
         try {
             val list = mutableListOf<NavtexMessage>()
-            val cursor = db.rawQuery(
+            db.rawQuery(
                 "SELECT * FROM ${NavtexDatabaseHelper.TABLE_NAVTEX} ORDER BY ${NavtexDatabaseHelper.COL_TIMESTAMP} DESC", 
                 null
-            )
-            if (cursor != null && cursor.moveToFirst()) {
-                do {
-                    list.add(readMessage(cursor))
-                } while (cursor.moveToNext())
-                cursor.close()
+            ).use { cursor ->
+                if (cursor != null && cursor.moveToFirst()) {
+                    do {
+                        list.add(readMessage(cursor))
+                    } while (cursor.moveToNext())
+                }
             }
             _messages.value = list
         } finally {
@@ -114,26 +112,28 @@ class NavtexRepository(private val app: OsmandApplication) {
         }
     }
 
+    private fun cleanupExpiredInternal(db: net.osmand.plus.api.SQLiteAPI.SQLiteConnection) {
+        val now = System.currentTimeMillis()
+        val expiryHours = app.settings.NAUTICAL_NAVTEX_EXPIRY_HOURS.get().toLong()
+        val expiryMs = expiryHours * 60L * 60L * 1000L
+
+        db.execSQL(
+            "DELETE FROM ${NavtexDatabaseHelper.TABLE_NAVTEX} WHERE ${NavtexDatabaseHelper.COL_TIMESTAMP} < ?",
+            arrayOf(now - expiryMs)
+        )
+    }
+
     suspend fun cleanupExpired() = withContext(Dispatchers.IO) {
-        val db = dbHelper.openConnection(false) ?: return@withContext
-        try {
-            val now = System.currentTimeMillis()
-            val hour72 = 72L * 60 * 60 * 1000
-            val hour24 = 24L * 60 * 60 * 1000
-
-            // General cleanup: older than 72h
-            db.execSQL(
-                "DELETE FROM ${NavtexDatabaseHelper.TABLE_NAVTEX} WHERE ${NavtexDatabaseHelper.COL_TIMESTAMP} < ?",
-                arrayOf(now - hour72)
-            )
-
-            // Meteorological warnings cleanup: older than 24h
-            db.execSQL(
-                "DELETE FROM ${NavtexDatabaseHelper.TABLE_NAVTEX} WHERE ${NavtexDatabaseHelper.COL_SUBJECT} = ? AND ${NavtexDatabaseHelper.COL_TIMESTAMP} < ?",
-                arrayOf(NavtexSubject.METEOROLOGICAL_WARNING.code.toString(), now - hour24)
-            )
-        } finally {
-            db.close()
+        NauticalIOQueue.writeMutex.withLock {
+            val db = dbHelper.openConnection(false) ?: return@withLock
+            try {
+                db.beginTransactionNonExclusive()
+                cleanupExpiredInternal(db)
+                db.setTransactionSuccessful()
+            } finally {
+                db.endTransaction()
+                db.close()
+            }
         }
     }
 

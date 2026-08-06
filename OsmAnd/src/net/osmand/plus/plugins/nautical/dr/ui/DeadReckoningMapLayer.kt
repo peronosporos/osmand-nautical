@@ -15,21 +15,23 @@ class DeadReckoningMapLayer(context: Context) : OsmandMapLayer(context) {
 
     private var drUiState: DrUiState? = null
 
+    private val colorAmber = Color.rgb(255, 136, 0)
+
     private val amberPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.rgb(255, 136, 0) // Amber
+        color = colorAmber
         style = Paint.Style.STROKE
         strokeWidth = 6f
     }
 
     private val dashedAmberPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.rgb(255, 136, 0) // Amber
+        color = colorAmber
         style = Paint.Style.STROKE
         strokeWidth = 4f
         pathEffect = DashPathEffect(floatArrayOf(20f, 10f), 0f)
     }
 
     private val fillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.rgb(255, 136, 0)
+        color = colorAmber
         alpha = 100
         style = Paint.Style.FILL
     }

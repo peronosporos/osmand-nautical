@@ -8,7 +8,6 @@ import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.net.Uri;
 import android.os.Bundle;
-import android.text.Html;
 import androidx.core.text.HtmlCompat;
 import android.widget.TextView;
 

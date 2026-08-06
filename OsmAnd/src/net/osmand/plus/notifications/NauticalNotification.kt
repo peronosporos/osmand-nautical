@@ -21,7 +21,7 @@ class NauticalNotification(app: OsmandApplication) : OsmandNotification(app, GRO
     override fun isActive(): Boolean = false
 
     override fun isUsedByService(service: Service?): Boolean {
-        val navService = service as? NavigationService ?: app.navigationService
+        val navService = (service as? NavigationService) ?: app.navigationService
         return navService?.isUsedBy(NavigationService.USED_BY_NAUTICAL) == true
     }
 
@@ -44,7 +44,7 @@ class NauticalNotification(app: OsmandApplication) : OsmandNotification(app, GRO
 
         val plugin = net.osmand.plus.plugins.PluginsHelper.getEnabledPlugin(net.osmand.plus.plugins.nautical.NauticalPlugin::class.java)
         if (plugin?.isNightVisionEnabled == true) {
-            builder.setColor(0xFFFF0000.toInt())
+            builder.color = 0xFFFF0000.toInt()
             builder.setColorized(true)
         }
 

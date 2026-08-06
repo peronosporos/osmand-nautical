@@ -17,15 +17,10 @@ class NauticalGraphWidget(
 ) : MapWidget(mapActivity, widgetType, customId, panel) {
 
     private var graphView: NauticalGraphView? = null
-    private var lastUpdateTime = 0L
 
     private val marineStateListener: (MarineState) -> Unit = {
-        val now = System.currentTimeMillis()
-        if ((now - lastUpdateTime) > 500) { // Throttle 2Hz
-            lastUpdateTime = now
-            mapActivity.runOnUiThread {
-                updateInfo(view, null)
-            }
+        mapActivity.runOnUiThread {
+            updateInfo(view, null)
         }
     }
 
@@ -54,7 +49,59 @@ class NauticalGraphWidget(
 
     override fun updateInfo(view: View, drawSettings: OsmandMapLayer.DrawSettings?) {
         val engine = NauticalPlugin.engine ?: return
+        val state = engine.getCurrentState()
         val g = graphView ?: return
+        val badge = view.findViewById<View>(R.id.stale_badge)
+
+        val path = when (widgetType) {
+            WidgetType.NAUTICAL_DEPTH -> "environment.depth.belowTransducer"
+            WidgetType.NAUTICAL_WIND -> "environment.wind.speedTrue"
+            WidgetType.NAUTICAL_VMG -> "performance.velocityMadeGood"
+            WidgetType.NAUTICAL_SOG -> "navigation.speedOverGround"
+            WidgetType.NAUTICAL_STW -> "navigation.speedThroughWater"
+            WidgetType.NAUTICAL_COG -> "navigation.courseOverGroundTrue"
+            WidgetType.NAUTICAL_ENGINE_RPM -> "propulsion.0.revolutions"
+            WidgetType.NAUTICAL_BATTERY_VOLT -> "electrical.batteries.0.voltage"
+            WidgetType.NAUTICAL_BATTERY_SOC -> "electrical.batteries.0.capacity.stateOfCharge"
+            WidgetType.NAUTICAL_ENGINE_TEMP -> "propulsion.0.temperature"
+            WidgetType.NAUTICAL_WATER_TEMP -> "environment.water.temperature"
+            WidgetType.NAUTICAL_OUTSIDE_TEMP -> "environment.outside.temperature"
+            WidgetType.NAUTICAL_PRESSURE -> "environment.outside.pressure"
+            WidgetType.NAUTICAL_ROLL -> "navigation.attitude.roll"
+            WidgetType.NAUTICAL_PITCH -> "navigation.attitude.pitch"
+            WidgetType.NAUTICAL_ROT -> "navigation.rateOfTurn"
+            WidgetType.NAUTICAL_XTE -> "navigation.crossTrackError"
+            WidgetType.NAUTICAL_TTW -> "navigation.timeToWaypoint"
+            WidgetType.NAUTICAL_DTW -> "navigation.distanceToWaypoint"
+            WidgetType.NAUTICAL_AWA -> "environment.wind.angleApparent"
+            WidgetType.NAUTICAL_AWS -> "environment.wind.speedApparent"
+            WidgetType.NAUTICAL_TWA -> "environment.wind.angleTrue"
+            WidgetType.NAUTICAL_POLAR_RATIO -> "performance.polarSpeedRatio"
+            WidgetType.NAUTICAL_HEADING_MAGNETIC -> "navigation.headingMagnetic"
+            WidgetType.NAUTICAL_LOG -> "navigation.log"
+            WidgetType.NAUTICAL_TRIP_LOG -> "navigation.trip.log"
+            WidgetType.NAUTICAL_DEPTH_KEEL -> "environment.depth.belowKeel"
+            WidgetType.NAUTICAL_FUEL_LEVEL -> "tanks.fuel.0.currentLevel"
+            WidgetType.NAUTICAL_FRESH_WATER_LEVEL -> "tanks.freshWater.0.currentLevel"
+            WidgetType.NAUTICAL_WASTE_WATER_LEVEL -> "tanks.wasteWater.0.currentLevel"
+            WidgetType.NAUTICAL_OIL_PRESSURE -> "propulsion.0.oilPressure"
+            WidgetType.NAUTICAL_ENGINE_COOLANT -> "propulsion.0.coolantTemperature"
+            WidgetType.NAUTICAL_ENGINE_LOAD -> "propulsion.0.engineLoad"
+            WidgetType.NAUTICAL_BATTERY_CURRENT -> "electrical.batteries.0.current"
+            WidgetType.NAUTICAL_SOLAR_CURRENT -> "electrical.solar.0.current"
+            WidgetType.NAUTICAL_SET_DRIFT -> "navigation.drift"
+            WidgetType.NAUTICAL_TWD -> "navigation.trueWindDirection"
+            else -> null
+        }
+
+        val isStale = path != null && state.stalePaths.contains(path)
+        if (isStale) {
+            g.alpha = 0.35f
+            badge?.visibility = View.VISIBLE
+        } else {
+            g.alpha = 1.0f
+            badge?.visibility = View.GONE
+        }
 
         when (widgetType) {
             WidgetType.NAUTICAL_DEPTH -> {

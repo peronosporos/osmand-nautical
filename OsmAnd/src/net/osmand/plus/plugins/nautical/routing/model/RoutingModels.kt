@@ -40,5 +40,6 @@ data class OptimalRouteResult(
     val path: List<Waypoint>,
     val totalTimeHours: Double,
     val totalDistanceNm: Double,
-    val legs: List<PassagePlanLeg> = emptyList()
+    val legs: List<PassagePlanLeg> = emptyList(),
+    val confidenceFactor: Double = 1.0
 )

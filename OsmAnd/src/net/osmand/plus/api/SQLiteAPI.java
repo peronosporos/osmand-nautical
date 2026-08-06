@@ -25,6 +25,14 @@ public interface SQLiteAPI {
 
 		boolean isClosed();
 
+		void beginTransaction();
+
+		void beginTransactionNonExclusive();
+
+		void setTransactionSuccessful();
+
+		void endTransaction();
+
 	}
 	
 	interface SQLiteCursor {

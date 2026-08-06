@@ -3,10 +3,9 @@ package net.osmand.plus.plugins.nautical.engine
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import net.osmand.PlatformUtil
+import net.osmand.plus.R
 import net.osmand.plus.OsmandApplication
 import net.osmand.plus.activities.MapActivity
-import net.osmand.plus.plugins.nautical.NauticalPlugin
-import java.util.Locale
 
 enum class SailingWorkflowState {
     TACTICAL_PASSAGE,
@@ -20,7 +19,7 @@ enum class SailingWorkflowState {
  */
 class SailingWorkflowEngine(
     private val app: OsmandApplication,
-    private val dataBroker: SignalKDataBroker
+    private val dataBroker: SignalKDataBroker,
 ) {
     private val log = PlatformUtil.getLog(SailingWorkflowEngine::class.java)
     private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
@@ -28,7 +27,12 @@ class SailingWorkflowEngine(
     private val _currentWorkflow = MutableStateFlow(SailingWorkflowState.TACTICAL_PASSAGE)
     val currentWorkflow: StateFlow<SailingWorkflowState> = _currentWorkflow.asStateFlow()
 
-    private var pendingWorkflow: SailingWorkflowState? = null
+    private val _pendingWorkflow = MutableStateFlow<SailingWorkflowState?>(null)
+    val pendingWorkflowFlow: StateFlow<SailingWorkflowState?> = _pendingWorkflow.asStateFlow()
+
+    private var pendingWorkflow: SailingWorkflowState?
+        get() = _pendingWorkflow.value
+        set(value) { _pendingWorkflow.value = value }
     private var anchoredTimeStart: Long = 0L
 
     init {
@@ -37,18 +41,13 @@ class SailingWorkflowEngine(
 
     private fun startEvaluation() {
         scope.launch {
-            // Monitor telemetry (SOG, Depth, Distance to destination/land)
-            // Simulated periodic check or flow collection
-            while (isActive) {
-                delay(2000L)
-                evaluateEnvironment()
+            dataBroker.marineState.collect { state ->
+                evaluateEnvironment(state)
             }
         }
     }
 
-    private fun evaluateEnvironment() {
-        val state = NauticalPlugin.engine?.getCurrentState() ?: return
-
+    private fun evaluateEnvironment(state: MarineState) {
         // Retrieve latest metrics from MarineState
         // speedOverGround is in m/s, convert to knots (1 m/s ≈ 1.94384 kn)
         val sog = (state.speedOverGround ?: 0.0) * 1.94384
@@ -56,17 +55,20 @@ class SailingWorkflowEngine(
         val depth = state.depthBelowKeel ?: state.depthBelowTransducer ?: 20.0
         // distanceToWaypoint is in meters, convert to NM (1 NM = 1852 m)
         val distanceToWaypointNM = (state.distanceToWaypoint ?: 10000.0) / 1852.0
+        // Rate of Turn (ROT) in radians/s. 1 deg/s ≈ 0.0174 rad/s. 
+        // 3 deg/s (standard turn) ≈ 0.052 rad/s.
+        val rotAbs = kotlin.math.abs(state.rateOfTurn ?: 0.0)
 
         val detectedState = when {
-            sog < 0.5 && depth < 10.0 -> {
+            ((sog < 0.5) && (depth < 10.0)) -> {
                 if (anchoredTimeStart == 0L) anchoredTimeStart = System.currentTimeMillis()
-                if (System.currentTimeMillis() - anchoredTimeStart > 120000L) {
+                if ((System.currentTimeMillis() - anchoredTimeStart) > 120000L) {
                     SailingWorkflowState.STATIONARY_ANCHORED
                 } else {
                     SailingWorkflowState.TACTICAL_PASSAGE
                 }
             }
-            distanceToWaypointNM < 0.5 || depth < 5.0 -> {
+            (distanceToWaypointNM < 0.3) || (depth < 5.0) || ((sog < 3.0) && (rotAbs > 0.1)) -> {
                 anchoredTimeStart = 0L
                 SailingWorkflowState.CLOSE_QUARTERS
             }
@@ -76,7 +78,7 @@ class SailingWorkflowEngine(
             }
         }
 
-        if (detectedState != _currentWorkflow.value && detectedState != pendingWorkflow) {
+        if ((detectedState != _currentWorkflow.value) && (detectedState != pendingWorkflow)) {
             pendingWorkflow = detectedState
             promptWorkflowTransition(detectedState)
         }
@@ -84,12 +86,13 @@ class SailingWorkflowEngine(
 
     private fun promptWorkflowTransition(newState: SailingWorkflowState) {
         val message = when (newState) {
-            SailingWorkflowState.CLOSE_QUARTERS -> "Approaching marina. Close-quarters workflow ready."
-            SailingWorkflowState.STATIONARY_ANCHORED -> "Stationary near shallow water. Anchor drop workflow ready."
-            SailingWorkflowState.TACTICAL_PASSAGE -> "Open water detected. Tactical passage workflow ready."
+            SailingWorkflowState.CLOSE_QUARTERS -> app.getString(R.string.nautical_workflow_close_quarters)
+            SailingWorkflowState.STATIONARY_ANCHORED -> app.getString(R.string.nautical_workflow_anchored)
+            SailingWorkflowState.TACTICAL_PASSAGE -> app.getString(R.string.nautical_workflow_tactical)
         }
 
         log.info("Workflow transition proposed: $newState. Prompting TTS.")
+        _pendingWorkflow.value = newState
         speak(message)
     }
 
@@ -102,7 +105,7 @@ class SailingWorkflowEngine(
         pendingWorkflow = null
         log.info("Workflow transition confirmed: $target")
         applyCameraAutomation(mapActivity, target)
-        speak("Workflow confirmed.")
+        speak(app.getString(R.string.nautical_workflow_confirmed))
     }
 
     private fun applyCameraAutomation(mapActivity: MapActivity?, workflow: SailingWorkflowState) {
@@ -111,7 +114,8 @@ class SailingWorkflowEngine(
             val mapView = mapActivity.mapView
             when (workflow) {
                 SailingWorkflowState.CLOSE_QUARTERS,
-                SailingWorkflowState.STATIONARY_ANCHORED -> {
+                SailingWorkflowState.STATIONARY_ANCHORED,
+                -> {
                     // Zoom to max scale (e.g. zoom level 19) and center on bow
                     mapView.setZoomWithFloatPart(19, 0f)
                     log.info("Camera automated: Zoom level 19 for Close-Quarters / Stationary.")

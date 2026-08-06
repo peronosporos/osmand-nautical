@@ -16,10 +16,18 @@ class SlipExitManeuver(app: OsmandApplication) : ManeuverEngine(app) {
         val state = NauticalPlugin.engine?.getCurrentState() ?: return
         startLat = state.latitude
         startLon = state.longitude
-        startHeading = state.headingTrue
+        val heading = state.headingTrue?.let { Math.toDegrees(it) } ?: 0.0
+        startHeading = heading
         
+        // Active Helm Assistance: Maintain steady heading until clear
+        NauticalPlugin.autopilot?.setTargetHeading(heading)
+        NauticalPlugin.autopilot?.setAutopilotMode("auto")
+        
+        pushInstruction("Exiting Slip: Holding Heading")
+        pushProgress(0)
+
         app.player?.let { player ->
-            player.playCommands(player.newCommandBuilder().attention("Slip exit maneuver starting."))
+            player.playCommands(player.newCommandBuilder().attention("Slip exit maneuver starting. Holding heading."))
         }
     }
 
@@ -29,8 +37,10 @@ class SlipExitManeuver(app: OsmandApplication) : ManeuverEngine(app) {
             val curLon = state.longitude ?: return
             
             val dist = calculateDistance(startLat!!, startLon!!, curLat, curLon)
-            
+            pushProgress((dist / 30.0 * 100).toInt())
+
             if (dist > 30.0) {
+                pushInstruction("Slip Cleared")
                 transitionToCompleted()
             }
         }

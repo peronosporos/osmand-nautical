@@ -3,13 +3,15 @@ package net.osmand.plus.plugins.nautical.ui.anchor
 import android.content.Context
 import android.graphics.*
 import androidx.core.content.ContextCompat
-import net.osmand.data.LatLon
+import androidx.core.graphics.createBitmap
 import net.osmand.data.RotatedTileBox
 import net.osmand.plus.OsmandApplication
 import net.osmand.plus.R
 import net.osmand.plus.plugins.nautical.NauticalPlugin
 import net.osmand.plus.plugins.nautical.anchor.TrackPoint
 import net.osmand.plus.views.layers.base.OsmandMapLayer
+import net.osmand.plus.utils.AndroidUtils
+import kotlin.math.abs
 
 /**
  * Custom map layer for visualizing the anchor watch boundary and drop point.
@@ -42,7 +44,7 @@ class AnchorWatchMapLayer(context: Context) : OsmandMapLayer(context) {
     private val anchorIcon: Bitmap? by lazy {
         val drawable = ContextCompat.getDrawable(context, R.drawable.ic_action_anchor)
         drawable?.let {
-            val bitmap = Bitmap.createBitmap(it.intrinsicWidth, it.intrinsicHeight, Bitmap.Config.ARGB_8888)
+            val bitmap = createBitmap(it.intrinsicWidth, it.intrinsicHeight, Bitmap.Config.ARGB_8888)
             val canvas = Canvas(bitmap)
             it.setBounds(0, 0, canvas.width, canvas.height)
             it.draw(canvas)
@@ -57,29 +59,26 @@ class AnchorWatchMapLayer(context: Context) : OsmandMapLayer(context) {
         val lon = this.settings.NAUTICAL_ANCHOR_LON.get()
         val radius = this.settings.NAUTICAL_ANCHOR_RADIUS.get()
 
-        if (lat == 0.0 || lon == 0.0 || radius <= 0f) return
-
-        val centerX = tileBox.getPixXFromLatLon(lat, lon)
-        val centerY = tileBox.getPixYFromLatLon(lat, lon)
-
         val isNight = settings.isNightMode
-        val color = if (isNight) Color.parseColor("#B71C1C") else Color.RED
+        val color = if (isNight) AndroidUtils.getColorFromAttr(context, R.attr.colorError) else Color.RED
         boundaryPaint.color = color
         boundaryFillPaint.color = color
         boundaryFillPaint.alpha = if (isNight) 20 else 30
 
-        // 1. Draw boundary circle
-        // Estimate pixel radius by projecting a point 'radius' meters North
-        val northLatLon = net.osmand.util.MapUtils.rhumbDestinationPoint(lat, lon, 0.0, radius.toDouble())
-        val northY = tileBox.getPixYFromLatLon(northLatLon.latitude, northLatLon.longitude)
-        val pixRadius = kotlin.math.abs(centerY - northY)
-        
-        canvas.drawCircle(centerX, centerY, pixRadius, boundaryFillPaint)
-        canvas.drawCircle(centerX, centerY, pixRadius, boundaryPaint)
+        if (lat != 0.0 && lon != 0.0 && radius > 0f) {
+            drawAnchorWatch(canvas, tileBox, lat, lon, radius)
+        }
 
-        // 2. Draw anchor icon
-        anchorIcon?.let { bitmap ->
-            canvas.drawBitmap(bitmap, centerX - bitmap.width / 2f, centerY - bitmap.height / 2f, null)
+        // Draw Preview if active
+        val pLat = this.settings.NAUTICAL_ANCHOR_PREVIEW_LAT.get()
+        val pLon = this.settings.NAUTICAL_ANCHOR_PREVIEW_LON.get()
+        val pRadius = this.settings.NAUTICAL_ANCHOR_PREVIEW_RADIUS.get()
+
+        if (pLat != 0.0 && pLon != 0.0 && pRadius > 0f) {
+            boundaryPaint.color = if (isNight) Color.GRAY else Color.BLUE
+            boundaryFillPaint.color = boundaryPaint.color
+            boundaryFillPaint.alpha = 15
+            drawAnchorWatch(canvas, tileBox, pLat, pLon, pRadius)
         }
 
         // 3. Draw Snail Trail
@@ -88,6 +87,27 @@ class AnchorWatchMapLayer(context: Context) : OsmandMapLayer(context) {
             if (points.size >= 2) {
                 drawSnailTrail(canvas, tileBox, points)
             }
+        }
+    }
+
+    private fun drawAnchorWatch(canvas: Canvas, tileBox: RotatedTileBox, lat: Double, lon: Double, radius: Float) {
+        if ((lat == 0.0) || (lon == 0.0) || (radius <= 0f)) return
+
+        val centerX = tileBox.getPixXFromLatLon(lat, lon)
+        val centerY = tileBox.getPixYFromLatLon(lat, lon)
+
+        // 1. Draw boundary circle
+        // Estimate pixel radius by projecting a point 'radius' meters North
+        val northLatLon = net.osmand.util.MapUtils.rhumbDestinationPoint(lat, lon, 0.0, radius.toDouble())
+        val northY = tileBox.getPixYFromLatLon(northLatLon.latitude, northLatLon.longitude)
+        val pixRadius = abs(centerY - northY)
+        
+        canvas.drawCircle(centerX, centerY, pixRadius, boundaryFillPaint)
+        canvas.drawCircle(centerX, centerY, pixRadius, boundaryPaint)
+
+        // 2. Draw anchor icon
+        anchorIcon?.let { bitmap ->
+            canvas.drawBitmap(bitmap, centerX - bitmap.width / 2f, centerY - bitmap.height / 2f, null)
         }
     }
 
@@ -118,39 +138,60 @@ class AnchorWatchMapLayer(context: Context) : OsmandMapLayer(context) {
     }
 
     private var isDragging = false
+    private var isDraggingPreview = false
 
     override fun onTouchEvent(event: android.view.MotionEvent, tileBox: RotatedTileBox): Boolean {
         val lat = settings.NAUTICAL_ANCHOR_LAT.get()
         val lon = settings.NAUTICAL_ANCHOR_LON.get()
-        if (lat == 0.0 || lon == 0.0) return false
+        
+        val pLat = settings.NAUTICAL_ANCHOR_PREVIEW_LAT.get()
+        val pLon = settings.NAUTICAL_ANCHOR_PREVIEW_LON.get()
 
         val x = event.x
         val y = event.y
-        val anchorX = tileBox.getPixXFromLatLon(lat, lon)
-        val anchorY = tileBox.getPixYFromLatLon(lat, lon)
 
         when (event.action) {
             android.view.MotionEvent.ACTION_DOWN -> {
-                val distSq = (x - anchorX) * (x - anchorX) + (y - anchorY) * (y - anchorY)
-                val touchRadius = 48 * tileBox.density // 48dp touch target
-                if (distSq < touchRadius * touchRadius) {
-                    isDragging = true
-                    return true
+                val touchRadiusSq = (48 * tileBox.density).let { it * it }
+                
+                // Prioritize dragging preview
+                if (pLat != 0.0) {
+                    val pX = tileBox.getPixXFromLatLon(pLat, pLon)
+                    val pY = tileBox.getPixYFromLatLon(pLat, pLon)
+                    if ((x - pX) * (x - pX) + (y - pY) * (y - pY) < touchRadiusSq) {
+                        isDraggingPreview = true
+                        return true
+                    }
+                }
+                
+                if (lat != 0.0) {
+                    val anchorX = tileBox.getPixXFromLatLon(lat, lon)
+                    val anchorY = tileBox.getPixYFromLatLon(lat, lon)
+                    if ((x - anchorX) * (x - anchorX) + (y - anchorY) * (y - anchorY) < touchRadiusSq) {
+                        isDragging = true
+                        return true
+                    }
                 }
             }
             android.view.MotionEvent.ACTION_MOVE -> {
-                if (isDragging) {
+                if (isDragging || isDraggingPreview) {
                     val newLatLon = tileBox.getLatLonFromPixel(x, y)
-                    settings.NAUTICAL_ANCHOR_LAT.set(newLatLon.latitude)
-                    settings.NAUTICAL_ANCHOR_LON.set(newLatLon.longitude)
-                    NauticalPlugin.getInstance()?.anchorWatchdog?.resetCounter()
+                    if (isDraggingPreview) {
+                        settings.NAUTICAL_ANCHOR_PREVIEW_LAT.set(newLatLon.latitude)
+                        settings.NAUTICAL_ANCHOR_PREVIEW_LON.set(newLatLon.longitude)
+                    } else {
+                        settings.NAUTICAL_ANCHOR_LAT.set(newLatLon.latitude)
+                        settings.NAUTICAL_ANCHOR_LON.set(newLatLon.longitude)
+                        NauticalPlugin.getInstance()?.anchorWatchdog?.resetCounter()
+                    }
                     view.refreshMap()
                     return true
                 }
             }
             android.view.MotionEvent.ACTION_UP, android.view.MotionEvent.ACTION_CANCEL -> {
-                if (isDragging) {
+                if (isDragging || isDraggingPreview) {
                     isDragging = false
+                    isDraggingPreview = false
                     return true
                 }
             }
@@ -160,17 +201,26 @@ class AnchorWatchMapLayer(context: Context) : OsmandMapLayer(context) {
 
     override fun onLongPressEvent(point: PointF, tileBox: RotatedTileBox): Boolean {
         val latLon = tileBox.getLatLonFromPixel(point.x, point.y)
-        settings.NAUTICAL_ANCHOR_LAT.set(latLon.latitude)
-        settings.NAUTICAL_ANCHOR_LON.set(latLon.longitude)
         
-        // If not already active, we might want to default radius
-        if (settings.NAUTICAL_ANCHOR_RADIUS.get() <= 0f) {
-             settings.NAUTICAL_ANCHOR_RADIUS.set(50f) // 50m default if long pressed manually
+        // If preview is active, move preview
+        if (settings.NAUTICAL_ANCHOR_PREVIEW_LAT.get() != 0.0) {
+            settings.NAUTICAL_ANCHOR_PREVIEW_LAT.set(latLon.latitude)
+            settings.NAUTICAL_ANCHOR_PREVIEW_LON.set(latLon.longitude)
+            app.showToastMessage(R.string.nautical_anchor_moved_to_tap)
+        } else {
+            settings.NAUTICAL_ANCHOR_LAT.set(latLon.latitude)
+            settings.NAUTICAL_ANCHOR_LON.set(latLon.longitude)
+            
+            // If not already active, we might want to default radius
+            if (settings.NAUTICAL_ANCHOR_RADIUS.get() <= 0f) {
+                 settings.NAUTICAL_ANCHOR_RADIUS.set(50f) // 50m default if long pressed manually
+            }
+            
+            NauticalPlugin.getInstance()?.anchorWatchdog?.resetCounter()
+            app.showToastMessage(R.string.nautical_anchor_btn_drop)
         }
         
-        NauticalPlugin.getInstance()?.anchorWatchdog?.resetCounter()
         view.refreshMap()
-        app.showToastMessage(R.string.nautical_anchor_btn_drop)
         return true
     }
 

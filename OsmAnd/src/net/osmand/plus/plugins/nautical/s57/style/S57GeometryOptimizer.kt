@@ -14,7 +14,14 @@ object S57GeometryOptimizer {
      * Optimizes a geometry by simplifying its points using the Douglas-Peucker algorithm.
      * @param tolerance The maximum allowed deviation in degrees (e.g., 0.00001).
      */
-    fun optimize(geometry: S57Geometry, tolerance: Double): S57Geometry {
+    fun optimize(geometry: S57Geometry, tolerance: Double, acronym: String? = null): S57Geometry {
+        // Safety-Critical Feature Exemptions:
+        // Isolated Rocks (UWTROC), Wrecks (WRECKS), Obstructions (OBSTRN), and Lights (LIGHTS)
+        // MUST NEVER be culled or simplified to preserve navigation safety.
+        if (acronym == "UWTROC" || acronym == "WRECKS" || acronym == "OBSTRN" || acronym == "LIGHTS") {
+            return geometry
+        }
+
         return when (geometry) {
             is S57Geometry.Point -> geometry
             is S57Geometry.MultiPoint -> geometry

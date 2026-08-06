@@ -9,6 +9,7 @@ import javax.crypto.spec.SecretKeySpec
  * Utility for S-63 hashing, HWID generation, and User Permit calculation.
  * Follows the IHO S-63 Data Protection Scheme.
  */
+@Suppress("GetInstance")
 object S63PermitGenerator {
 
     private const val BLOWFISH_ALGORITHM = "Blowfish/ECB/NoPadding"
@@ -82,7 +83,7 @@ object S63PermitGenerator {
         permitTxt.lineSequence().forEach { line ->
             // Format: PERMIT,CellName,ExpiryDate,CellKey1,CellKey2
             val parts = line.split(",")
-            if (parts.size >= 5 && parts[0].trim().uppercase() == "PERMIT") {
+            if ((parts.size >= 5) && (parts[0].trim().uppercase() == "PERMIT")) {
                 val cellName = parts[1].trim()
                 val encKey1 = parts[3].trim()
                 

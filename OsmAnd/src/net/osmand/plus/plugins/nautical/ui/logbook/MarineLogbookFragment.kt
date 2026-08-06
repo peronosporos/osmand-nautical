@@ -4,6 +4,8 @@ import android.os.Bundle
 import android.view.*
 import android.widget.TextView
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.view.MenuProvider
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
@@ -76,8 +78,7 @@ class MarineLogbookFragment : BaseOsmAndFragment() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setHasOptionsMenu(true)
-        
+
         val factory = object : ViewModelProvider.Factory {
             override fun <T : ViewModel> create(modelClass: Class<T>): T {
                 val repository = NauticalPlugin.getInstance()?.logbookRepository
@@ -86,7 +87,7 @@ class MarineLogbookFragment : BaseOsmAndFragment() {
                 return MarineLogbookViewModel(repository) as T
             }
         }
-        viewModel = ViewModelProvider(this, factory).get(MarineLogbookViewModel::class.java)
+        viewModel = ViewModelProvider(this, factory)[MarineLogbookViewModel::class.java]
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
@@ -106,11 +107,53 @@ class MarineLogbookFragment : BaseOsmAndFragment() {
         recyclerView.layoutManager = LinearLayoutManager(requireContext())
         recyclerView.adapter = adapter
         
+        recyclerView.addOnScrollListener(
+            object : RecyclerView.OnScrollListener() {
+                override fun onScrolled(view: RecyclerView, dx: Int, dy: Int) {
+                    val layoutManager = view.layoutManager as LinearLayoutManager
+                    val totalItemCount = layoutManager.itemCount
+                    val lastVisibleItem = layoutManager.findLastVisibleItemPosition()
+                    if ((totalItemCount > 0) && (totalItemCount <= (lastVisibleItem + 5))) {
+                        viewModel.loadNextPage()
+                    }
+                }
+            },
+        )
+
         return view
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
+        requireActivity().addMenuProvider(
+            object : MenuProvider {
+                override fun onCreateMenu(menu: Menu, menuInflater: MenuInflater) {
+                    menu.add(0, EXPORT_CSV_ID, 0, getString(R.string.nautical_logbook_export_csv))
+                        .setShowAsAction(MenuItem.SHOW_AS_ACTION_NEVER)
+                    menu.add(0, EXPORT_GPX_ID, 1, getString(R.string.nautical_logbook_export_gpx))
+                        .setShowAsAction(MenuItem.SHOW_AS_ACTION_NEVER)
+                }
+
+                override fun onMenuItemSelected(menuItem: MenuItem): Boolean {
+                    return when (menuItem.itemId) {
+                        EXPORT_CSV_ID -> {
+                            viewModel.requestExport(MarineLogbookViewModel.ExportFormat.CSV)
+                            true
+                        }
+
+                        EXPORT_GPX_ID -> {
+                            viewModel.requestExport(MarineLogbookViewModel.ExportFormat.GPX)
+                            true
+                        }
+
+                        else -> false
+                    }
+                }
+            },
+            viewLifecycleOwner,
+            Lifecycle.State.RESUMED,
+        )
         
         lifecycleScope.launch {
             viewModel.logEntries.collectLatest { entries ->
@@ -132,24 +175,11 @@ class MarineLogbookFragment : BaseOsmAndFragment() {
         }
     }
 
-    override fun onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {
-        menu.add(0, EXPORT_CSV_ID, 0, getString(R.string.nautical_logbook_export_csv)).setShowAsAction(MenuItem.SHOW_AS_ACTION_NEVER)
-        menu.add(0, EXPORT_GPX_ID, 1, getString(R.string.nautical_logbook_export_gpx)).setShowAsAction(MenuItem.SHOW_AS_ACTION_NEVER)
-    }
+    @Deprecated("Deprecated in Java")
+    override fun onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {}
 
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        return when (item.itemId) {
-            EXPORT_CSV_ID -> {
-                viewModel.requestExport(MarineLogbookViewModel.ExportFormat.CSV)
-                true
-            }
-            EXPORT_GPX_ID -> {
-                viewModel.requestExport(MarineLogbookViewModel.ExportFormat.GPX)
-                true
-            }
-            else -> super.onOptionsItemSelected(item)
-        }
-    }
+    @Deprecated("Deprecated in Java")
+    override fun onOptionsItemSelected(item: MenuItem): Boolean = false
 
     companion object {
         private const val EXPORT_CSV_ID = 1

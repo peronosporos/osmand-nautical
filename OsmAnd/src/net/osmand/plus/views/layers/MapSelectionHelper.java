@@ -100,7 +100,7 @@ public class MapSelectionHelper {
 	}
 
 	@NonNull
-	MapSelectionResult collectObjectsFromMap(@NonNull PointF point, @NonNull RotatedTileBox tileBox,
+	public MapSelectionResult collectObjectsFromMap(@NonNull PointF point, @NonNull RotatedTileBox tileBox,
 	                                         boolean showUnknownLocation) {
 		MapSelectionRules rules = createCustomizedMapSelectionRules(showUnknownLocation);
 		MapSelectionResult result = new MapSelectionResult(app, tileBox, point);

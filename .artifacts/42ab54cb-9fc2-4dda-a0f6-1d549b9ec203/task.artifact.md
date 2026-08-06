@@ -1,0 +1,20 @@
+- `[ ]` 1. Navtex & Native VHF Layer Optimization
+    - `[ ]` `VhfPoiSearchLayer.kt`: Background search and caching
+    - `[ ]` `VhfPoiSearchLayer.kt`: Interactive context menu (copy channel)
+    - `[ ]` `NavtexRepository.kt`: Batch database transactions
+    - `[ ]` `NavtexMapLayer.kt`: Viewport spatial clipping
+- `[ ]` 2. Closed-Loop Autopilot Reconciliation & Actuator Limit
+    - `[ ]` `AutopilotController.kt`: Pending state tracking and 3000ms timeout
+    - `[ ]` `AutopilotController.kt`: Audible rejection alert via `NauticalAudioArbiter`
+    - `[ ]` `ActuatorLoadWidget.kt`: Bind visual alarm to user preference
+- `[ ]` 3. Persistent Hardware ID for S-63 Licensing
+    - `[ ]` `S63PermitGenerator.kt`: KeyStore-backed `HW_ID` persistence
+- `[ ]` 4. Mathematical Corrections & Connection Resiliency
+    - `[ ]` `LaylineMathEngine.kt`: Apply live magnetic variation
+    - `[ ]` `SignalKWebSocketClient.kt`: Exponential backoff reconnect loop
+    - `[ ]` `NmeaSentenceParser.kt`: Strict checksum enforcement
+- `[ ]` 5. Visual Smoothing & WearOS AMOLED Protection
+    - `[ ]` `HeadingArcView.kt`: EMA filtering for heading/wind deltas
+    - `[ ]` `NauticalCompassWidget.kt`: [NEW] adaptive compass widget with smoothing
+    - `[ ]` `WearOsNauticalManager.kt`: Ambient mode state management
+    - `[ ]` `HeartbeatHudView.kt`: High-contrast ambient mode layout

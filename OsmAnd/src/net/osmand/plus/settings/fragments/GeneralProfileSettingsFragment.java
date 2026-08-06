@@ -95,13 +95,13 @@ public class GeneralProfileSettingsFragment extends BaseSettingsFragment {
 		entries.add(getString(R.string.dark_theme));
 		entries.add(getString(R.string.light_theme));
 
-		ArrayList<Integer> values = new ArrayList<>();
-		values.add(OsmandSettings.OSMAND_DARK_THEME);
-		values.add(OsmandSettings.OSMAND_LIGHT_THEME);
+		ArrayList<String> values = new ArrayList<>();
+		values.add(net.osmand.plus.settings.enums.OsmandTheme.DARK.name());
+		values.add(net.osmand.plus.settings.enums.OsmandTheme.LIGHT.name());
 
 		if (settings.isSupportSystemTheme()) {
 			entries.add(getString(R.string.system_default_theme));
-			values.add(OsmandSettings.SYSTEM_DEFAULT_THEME);
+			values.add(net.osmand.plus.settings.enums.OsmandTheme.SYSTEM_DEFAULT.name());
 		}
 
 		String[] entriesStrings = new String[entries.size()];

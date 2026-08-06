@@ -1,0 +1,25 @@
+# Implementation Task List - 100% Professional Nautical Plugin
+
+- [x] **Task 1: Security & Session Integrity**
+    - [x] Add `java-jwt` dependency
+    - [x] Upgrade `validateJwtToken` in `SignalKEngine.kt`
+    - [x] Implement persistent Audit Log in `NauticalLog.kt` and `SignalKEngine.kt`
+- [x] **Task 2: Temporal & Movement Resilience**
+    - [x] Implement high-precision ISO-8601 timestamp parsing in `SignalKEngine.kt`
+    - [x] Implement Dead Reckoning Bridge in `SignalKDataBroker.kt`
+- [x] **Task 3: Professional Safety & Hardware Logic**
+    - [x] Implement scope-aware drag detection in `AnchorDriftWatchdog.kt` (TASK-110)
+    - [x] Finalize physical volume button mapping in `NauticalPlugin.kt` (TASK-301/302)
+    - [x] Integrate Workflow Touch Lock in `NauticalPlugin.kt` (TASK-047)
+    - [x] Implement manual anchor adjustment UI in `AnchorWatchDialogFragment.kt` (TASK-049)
+- [x] **Task 4: Interoperability & Standards**
+    - [x] Implement maritime GPX XML extension in `GpxStreamer.kt` (TASK-052)
+    - [x] Finalize logbook CSV formatting (BOM/Locale) in `LogbookCsvExporter.kt`
+    - [x] Implement two-way Signal K Route synchronization in `SignalKResourceManager.kt` (TASK-03.4)
+- [x] **Task 5: Tactical & UI Refinement**
+    - [x] Implement Golden Section search refinement in `PolarDiagram.kt` (TASK-012)
+    - [x] Implement double-buffered raster rendering in `SignalKRasterLayer.kt` (TASK-006)
+    - [x] Implement universal True/Magnetic transformation in `SignalKUnitConverter.kt` (TASK-08D)
+- [x] **Task 6: Verification**
+    - [x] Run automated tests
+    - [x] Manual verification walkthrough

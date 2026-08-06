@@ -1,0 +1,17 @@
+- [x] Concurrency & Stability Fixes
+    - [x] NauticalAisManager: Synchronize listeners and optimize removals
+    - [x] SignalKEngine: Synchronize callbacks and centralize paths
+    - [x] MarineTextWidget: Fix listener unregistration leaks
+- [x] Performance Optimizations
+    - [x] NauticalPlugin: Refine refresh logic and offload background work
+    - [x] NauticalMapLayer: Optimize trajectory and geodesic path drawing
+- [x] UI/UX & Localization
+    - [x] NauticalPlugin: Localize hardcoded strings
+    - [x] NauticalPlugin: Consolidate Night Vision / Display Mode states
+    - [x] NauticalHudManager: Implement banner auto-dismiss (Added manual close button)
+- [x] Cleanup & Engineering Practices
+    - [x] NauticalBackgroundService: Implement missing teardown logic (Verified existing teardown is sufficient, added logs)
+    - [x] CircularBuffer: Verify and document immutability constraints
+- [x] Verification
+    - [x] Verify build and basic functionality
+    - [x] Manual testing of fixed components

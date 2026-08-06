@@ -16,15 +16,16 @@ class PolarEditorViewModel : ViewModel() {
     val selectedTws: StateFlow<Double> = _selectedTws.asStateFlow()
 
     private val _smoothingIntensity = MutableStateFlow(0.5f)
+    @Suppress("unused")
     val smoothingIntensity: StateFlow<Float> = _smoothingIntensity.asStateFlow()
 
-    private val _rawPoints = MutableStateFlow<List<Pair<Double, Double>>>(
+    private val _rawPoints = MutableStateFlow(
         listOf(
             Pair(40.0, 5.2),
             Pair(60.0, 6.8),
             Pair(90.0, 7.5),
             Pair(120.0, 8.1),
-            Pair(150.0, 6.5)
+            Pair(150.0, 6.5),
         )
     )
     val rawPoints: StateFlow<List<Pair<Double, Double>>> = _rawPoints.asStateFlow()
@@ -36,6 +37,7 @@ class PolarEditorViewModel : ViewModel() {
         recalculateSmoothing()
     }
 
+    @Suppress("unused")
     fun setSelectedTws(tws: Double) {
         _selectedTws.value = tws
         recalculateSmoothing()
@@ -62,12 +64,13 @@ class PolarEditorViewModel : ViewModel() {
         val smoothed = mutableListOf<Pair<Double, Double>>()
         for (i in raw.indices) {
             val current = raw[i]
-            if (intensity == 0f || i == 0 || i == raw.size - 1) {
+            if (intensity == 0f || i == 0 || i == (raw.size - 1)) {
                 smoothed.add(current)
             } else {
                 val prev = raw[i - 1]
                 val next = raw[i + 1]
-                val smoothedSpeed = (prev.second * intensity) + (current.second * (1f - intensity))
+                val avgSpeed = (prev.second + current.second + next.second) / 3.0
+                val smoothedSpeed = (current.second * (1f - intensity)) + (avgSpeed * intensity)
                 smoothed.add(Pair(current.first, smoothedSpeed))
             }
         }

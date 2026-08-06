@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@drawable/bg_side_widget_day"
+    android:orientation="horizontal"
+    android:padding="12dp"
+    android:gravity="center_vertical">
+
+    <ImageView
+        android:layout_width="24dp"
+        android:layout_height="24dp"
+        android:src="@drawable/ic_action_sail_boat_dark"
+        app:tint="?attr/active_color_primary"
+        android:contentDescription="@string/nautical_plugin_name" />
+
+    <TextView
+        android:id="@+id/workflow_title"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="12dp"
+        android:layout_weight="1"
+        android:textColor="?android:attr/textColorPrimary"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        android:shadowColor="#000000"
+        android:shadowDx="1.5"
+        android:shadowDy="1.5"
+        android:shadowRadius="2.0"
+        android:importantForAccessibility="yes" />
+
+    <Button
+        android:id="@+id/btn_workflow_confirm"
+        style="@style/Widget.AppCompat.Button.Borderless"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Confirm"
+        android:textStyle="bold"
+        android:textColor="?attr/active_color_primary"
+        android:shadowColor="#000000"
+        android:shadowDx="1.0"
+        android:shadowDy="1.0"
+        android:shadowRadius="1.5"
+        android:contentDescription="@string/shared_string_ok" />
+
+</LinearLayout>

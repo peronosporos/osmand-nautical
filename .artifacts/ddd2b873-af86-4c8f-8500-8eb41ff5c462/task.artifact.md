@@ -1,0 +1,21 @@
+# Task: Telemetry Abstraction & Lifecycle Consistency
+
+- `[x]` Define new Transport abstractions
+    - `[x]` Create `ConnectionState.kt`
+    - `[x]` Create `NmeaTransport.kt`
+    - `[x]` Create `AbstractNmeaTransport.kt`
+- `[x]` Refactor Transport implementations
+    - `[x]` Refactor `BluetoothNmeaClient.kt`
+    - `[x]` Refactor `TcpNmeaClient.kt`
+    - `[x]` Refactor `UsbNmeaClient.kt`
+    - `[x]` Refactor `NmeaPlaybackEngine.kt`
+    - `[x]` Remove `NmeaClient.kt`
+- `[x]` Enforce Lifecycle Binding
+    - `[x]` Update `DirectNmeaMultiplexer.kt` to accept `CoroutineScope`
+    - `[x]` Update `SignalKEngine.kt` to accept `CoroutineScope`
+- `[x]` Wire up Dependency Injection & Plugin lifecycle
+    - `[x]` Update `SailingDependencyContainer.kt`
+    - `[x]` Update `NauticalPlugin.kt`
+- `[x]` Verification
+    - `[x]` Build check (via analysis)
+    - `[x]` Manual verification of reconnection logic (logic centralized in AbstractNmeaTransport)

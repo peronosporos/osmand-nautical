@@ -1,0 +1,21 @@
+# Tasks: Phase 8.0X - Process Death Recovery & Hardware Synchronization
+
+- [x] **1. Persistent Tactical State & MOB Recovery**
+    - [x] Add `@Serializable` to MOB data models in `MobState.kt`
+    - [x] Update `LogbookDbHelper.kt` to DB version 3 with `TABLE_TACTICAL_STATE`
+    - [x] Add tactical state persistence methods to `MarineLogbookRepository.kt`
+    - [x] Integrate persistence into `MobStateMachine.kt`
+    - [x] Implement state restoration in `NauticalPlugin.kt`
+- [x] **2. Robust Socket Cleanup & Kernel Lock Release**
+    - [x] Add `emergencyShutdown()` to `NmeaTransport` interface
+    - [x] Implement synchronous `emergencyShutdown()` in `UsbNmeaClient.kt`
+    - [x] Implement synchronous `emergencyShutdown()` in `BluetoothNmeaClient.kt`
+    - [x] Add `emergencyShutdown()` to `DirectNmeaMultiplexer.kt`
+    - [x] Connect `emergencyShutdown()` to `NauticalPlugin.kt` crash hook
+- [x] **3. Hardware State Reconciliation on Boot**
+    - [x] Implement `AutopilotManager.reconcileState()` (Signal K GET)
+    - [x] Trigger reconciliation in `SignalKEngine.kt` on `CONNECTED` event
+- [x] **4. Verification**
+    - [x] Verify MOB persistence
+    - [x] Verify crash recovery for hardware sockets
+    - [x] Verify autopilot state sync

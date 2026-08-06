@@ -3,7 +3,9 @@ package net.osmand.plus.plugins.nautical.engine
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import net.osmand.PlatformUtil
+import net.osmand.plus.R
 import net.osmand.plus.OsmandApplication
+import net.osmand.plus.plugins.nautical.audio.NauticalAudioArbiter
 
 /**
  * AlarmPriorityManager enforces strict safety hierarchy:
@@ -12,21 +14,24 @@ import net.osmand.plus.OsmandApplication
  */
 class AlarmPriorityManager(
     private val app: OsmandApplication,
-    private val dataBroker: SignalKDataBroker
+    private val dataBroker: SignalKDataBroker,
 ) {
     private val log = PlatformUtil.getLog(AlarmPriorityManager::class.java)
     private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
 
-    private val _isCollisionAlarmActive = MutableStateFlow(false)
+    private val _isCollisionAlarmActive = MutableStateFlow(value = false)
     val isCollisionAlarmActive: StateFlow<Boolean> = _isCollisionAlarmActive.asStateFlow()
 
     private val _threatDetails = MutableStateFlow<ThreatInfo?>(null)
     val threatDetails: StateFlow<ThreatInfo?> = _threatDetails.asStateFlow()
 
+    private val _activeCriticalNotifications = MutableStateFlow<Map<String, SignalKNotification>>(emptyMap())
+    val activeCriticalNotifications = _activeCriticalNotifications.asStateFlow()
+
     data class ThreatInfo(
         val vesselName: String,
         val cpaNm: Double,
-        val tcpaSeconds: Double
+        val tcpaSeconds: Double,
     )
 
     init {
@@ -36,12 +41,47 @@ class AlarmPriorityManager(
     private fun startMonitoring() {
         scope.launch {
             try {
-                dataBroker.cpa.combine(dataBroker.tcpa) { cpa, tcpa ->
-                    Pair(cpa, tcpa)
-                }.collect { (cpa, tcpa) ->
+                dataBroker.marineState.map { it.notifications }
+                    .distinctUntilChanged()
+                    .collect { notifications ->
+                        val critical = notifications.filter { 
+                            (it.value.state == NotificationState.ALARM) || (it.value.state == NotificationState.EMERGENCY) 
+                        }
+                        _activeCriticalNotifications.value = critical
+
+                        // Task 4: Solo Watchdog Alert
+                        val watchdog = notifications[SignalKPaths.NOTIFICATIONS_WATCHDOG]
+                        if (watchdog != null && (watchdog.state == NotificationState.ALARM || watchdog.state == NotificationState.EMERGENCY)) {
+                            NauticalAudioArbiter.getInstance(app).dispatchAlarm(
+                                net.osmand.plus.plugins.nautical.audio.AlarmType.MOB, // Use high-priority Siren
+                                voiceText = app.getString(R.string.nautical_solo_watchdog_timeout)
+                            )
+                        }
+
+                        // Task 2: Collision Risk from Plugin
+                        val collisionRisk = notifications[SignalKPaths.NOTIFICATIONS_COLLISION_RISK]
+                        if (collisionRisk != null && (collisionRisk.state == NotificationState.ALARM || collisionRisk.state == NotificationState.EMERGENCY)) {
+                            if (!_isCollisionAlarmActive.value) {
+                                _isCollisionAlarmActive.value = true
+                                val vesselName = extractVesselName(collisionRisk.message)
+                                _threatDetails.value = ThreatInfo(vesselName, 0.0, 0.0) // Specifics might be in message
+                                triggerCollisionAlarmAudio(vesselName, 0.1)
+                            }
+                        }
+                    }
+            } catch (e: Exception) {
+                log.error("Notification monitoring error: ${e.message}")
+            }
+        }
+
+        scope.launch {
+            try {
+                dataBroker.marineState.map { Pair(it.cpa, it.tcpa) }
+                    .distinctUntilChanged()
+                    .collect { (cpa, tcpa) ->
                     try {
-                        if (cpa != null && tcpa != null) {
-                            val vesselName = dataBroker.threatName.value ?: app.getString(net.osmand.plus.R.string.nautical_target_vessel)
+                        if ((cpa != null) && (tcpa != null)) {
+                            val vesselName = dataBroker.marineState.value.threatName ?: app.getString(R.string.nautical_target_vessel)
                             evaluateThreat(cpa, tcpa, vesselName)
                         }
                     } catch (e: Exception) {
@@ -80,10 +120,16 @@ class AlarmPriorityManager(
     private fun triggerCollisionAlarmAudio(vesselName: String, cpa: Double) {
         app.runInUIThread {
             app.player?.let { player ->
-                val message = app.getString(net.osmand.plus.R.string.nautical_collision_audio_msg, vesselName, cpa)
+                val message = app.getString(R.string.nautical_collision_audio_msg, vesselName, cpa)
                 player.playCommands(player.newCommandBuilder().attention(message))
             }
         }
+    }
+
+    private fun extractVesselName(message: String): String {
+        // Plugin often formats message as "Collision risk with VesselName"
+        val match = Regex("""with\s+([^,]+)""").find(message)
+        return match?.groupValues?.get(1) ?: app.getString(R.string.nautical_target_vessel)
     }
 
     fun stop() {

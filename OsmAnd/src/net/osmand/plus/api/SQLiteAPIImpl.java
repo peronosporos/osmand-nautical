@@ -199,6 +199,26 @@ public class SQLiteAPIImpl implements SQLiteAPI {
 		public boolean isClosed() {
 			return !ds.isOpen();
 		}
+
+		@Override
+		public void beginTransaction() {
+			ds.beginTransaction();
+		}
+
+		@Override
+		public void beginTransactionNonExclusive() {
+			ds.beginTransactionNonExclusive();
+		}
+
+		@Override
+		public void setTransactionSuccessful() {
+			ds.setTransactionSuccessful();
+		}
+
+		@Override
+		public void endTransaction() {
+			ds.endTransaction();
+		}
 		
 	}
 

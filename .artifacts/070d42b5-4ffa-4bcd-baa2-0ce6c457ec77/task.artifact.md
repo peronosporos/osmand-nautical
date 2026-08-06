@@ -1,0 +1,6 @@
+- [x] Fix `NauticalPlugin.kt`
+- [x] Fix `SignalKEngine.kt`
+- [x] Fix `MobViewModel.kt`
+- [x] Fix `ManOverboardManeuver.kt`
+- [x] Fix `SignalKUnitConverter.kt`
+- [x] Verify changes with `analyze_file`

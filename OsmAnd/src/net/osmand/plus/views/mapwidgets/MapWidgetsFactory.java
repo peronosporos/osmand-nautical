@@ -118,6 +118,12 @@ public class MapWidgetsFactory {
 				return new NauticalNightVisionWidget(mapActivity, widgetType, customId, panel);
 			case NAUTICAL_PILOT:
 				return new NauticalPilotWidget(mapActivity, widgetType, customId, panel);
+			case NAUTICAL_ACTUATOR:
+				return new ActuatorLoadWidget(mapActivity, widgetType, customId, panel);
+			case NAUTICAL_MASTER_TELEMETRY:
+				return new NauticalMasterTelemetryWidget(mapActivity, widgetType, customId, panel);
+			case NAUTICAL_CAMERA:
+				return new NauticalCameraWidget(mapActivity, widgetType, customId, panel);
 			case AIDL_WIDGET:
 				return app.getAidlApi().askCreateExternalWidget(mapActivity, customId, panel);
 			default:

@@ -1,0 +1,21 @@
+# Tasks - Combinatorial State Collisions & Mutex Arbitration
+
+- [x] **Phase 1: Core Engine Infrastructure**
+    - [x] Create `HelmLockedException.kt`
+    - [x] Create `NauticalHelmArbitrator.kt` with priority levels
+    - [x] Create `PropulsionContextManager.kt`
+    - [x] Integrate `NauticalHelmArbitrator` into `AutopilotController.kt`
+- [x] **Phase 2: UI Arbitration & Emergency Locks**
+    - [x] Update `NauticalPilotWidget.kt` for read-only emergency state
+    - [x] Update `NauticalPilotBottomSheet.kt` for helm lock UI
+- [x] **Phase 3: Propulsion-Aware Logic & Maneuvers**
+    - [x] Update `ManOverboardManeuver.kt` (Arbitration priority & Recovery prompt)
+    - [x] Update `LaylineViewModel.kt` (Propulsion suppression)
+    - [x] Update `AnchoringManeuver.kt`, `TackingManeuver.kt`, `ShuntingManeuver.kt` for arbitration
+- [x] **Phase 4: Safety-Hardened Weather Routing**
+    - [x] Update `SafetyCorridorChecker.kt` (Point safety validation)
+    - [x] Update `IsochroneRoutingEngine.kt` (Safe node culling)
+    - [x] Update `RoutingViewModel.kt` and `NauticalPlugin.kt` for safety parameters
+- [x] **Phase 5: Verification**
+    - [x] Verify strings and themes
+    - [x] Final code review

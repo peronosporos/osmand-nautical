@@ -12,24 +12,27 @@ import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.lifecycle.lifecycleScope
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import net.osmand.plus.R
 import net.osmand.plus.base.BaseOsmAndFragment
+import net.osmand.plus.plugins.nautical.NauticalPlugin
+import net.osmand.plus.plugins.nautical.network.SignalKTideStation
 import net.osmand.plus.plugins.nautical.tide.parser.HarmonicDataParser
 import java.io.File
+import java.util.Locale
 
-/**
- * Fragment for managing harmonic tide data ingestion from device storage.
- */
 class TideDataManagerFragment : BaseOsmAndFragment() {
 
     private lateinit var statusText: TextView
     private lateinit var importButton: Button
     private lateinit var progressBar: ProgressBar
+    private lateinit var recyclerView: RecyclerView
 
-    // Launcher for the system document picker (Storage Access Framework)
     private val filePickerLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
             result.data?.data?.let { uri ->
@@ -39,26 +42,37 @@ class TideDataManagerFragment : BaseOsmAndFragment() {
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
-        // Use the themed inflater provided by BaseOsmAndFragment to ensure consistent UI
         val view = themedInflater.inflate(R.layout.fragment_tide_data_manager, container, false)
 
         statusText = view.findViewById(R.id.tide_status_text)
         importButton = view.findViewById(R.id.tide_import_button)
         progressBar = view.findViewById(R.id.tide_progress_bar)
+        recyclerView = view.findViewById(R.id.recycler_view)
+
+        recyclerView.layoutManager = LinearLayoutManager(requireContext())
 
         importButton.setOnClickListener {
             launchFilePicker()
         }
 
         updateStatus()
+        observeStations()
 
         return view
+    }
+
+    private fun observeStations() {
+        val tideManager = NauticalPlugin.getInstance()?.tideManager ?: return
+        viewLifecycleOwner.lifecycleScope.launch {
+            tideManager.stations.collectLatest { stations ->
+                recyclerView.adapter = StationAdapter(stations.values.toList())
+            }
+        }
     }
 
     private fun launchFilePicker() {
         val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
             addCategory(Intent.CATEGORY_OPENABLE)
-            // XTide files are usually text-based, but we allow all types as a fallback
             type = "*/*" 
             val mimeTypes = arrayOf("text/plain", "application/octet-stream", "text/comma-separated-values")
             putExtra(Intent.EXTRA_MIME_TYPES, mimeTypes)
@@ -66,31 +80,27 @@ class TideDataManagerFragment : BaseOsmAndFragment() {
         filePickerLauncher.launch(intent)
     }
 
-    /**
-     * Checks the status of currently loaded harmonic data and updates the UI.
-     */
     private fun updateStatus() {
         val file = File(app.filesDir, "tides/harmonics.txt")
-        if (file.exists()) {
-            viewLifecycleOwner.lifecycleScope.launch {
-                try {
-                    val stationsCount = withContext(Dispatchers.IO) {
+        viewLifecycleOwner.lifecycleScope.launch {
+            try {
+                val stationsCount = withContext(Dispatchers.IO) {
+                    if (file.exists()) {
                         val parser = HarmonicDataParser()
                         file.inputStream().use { parser.parse(it) }.size
-                    }
-                    statusText.text = getString(R.string.tide_import_loaded, stationsCount)
-                } catch (e: Exception) {
-                    statusText.text = getString(R.string.tide_import_error_reading)
+                    } else 0
                 }
+                if (stationsCount > 0) {
+                    statusText.text = getString(R.string.tide_import_loaded, stationsCount)
+                } else {
+                    statusText.text = getString(R.string.tide_import_none)
+                }
+            } catch (_: Exception) {
+                statusText.text = getString(R.string.tide_import_error_reading)
             }
-        } else {
-            statusText.text = getString(R.string.tide_import_none)
         }
     }
 
-    /**
-     * Executes the import process in the background.
-     */
     private fun performImport(uri: Uri) {
         importButton.isEnabled = false
         progressBar.visibility = View.VISIBLE
@@ -111,5 +121,28 @@ class TideDataManagerFragment : BaseOsmAndFragment() {
                 updateStatus()
             }
         }
+    }
+
+    private inner class StationAdapter(private val stations: List<SignalKTideStation>) : RecyclerView.Adapter<StationViewHolder>() {
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): StationViewHolder {
+            val v = LayoutInflater.from(parent.context).inflate(android.R.layout.simple_list_item_2, parent, false)
+            return StationViewHolder(v)
+        }
+        override fun onBindViewHolder(holder: StationViewHolder, position: Int) {
+            val station = stations[position]
+            holder.title.text = station.name
+            holder.info.text = String.format(Locale.US, "Lat: %.4f, Lon: %.4f", station.position.coordinates[1], station.position.coordinates[0])
+            
+            holder.itemView.setOnClickListener {
+                app.settings.setMapLocationToShow(station.position.coordinates[1], station.position.coordinates[0], 13)
+                app.runInUIThread { requireActivity().onBackPressedDispatcher.onBackPressed() }
+            }
+        }
+        override fun getItemCount(): Int = stations.size
+    }
+
+    private class StationViewHolder(v: View) : RecyclerView.ViewHolder(v) {
+        val title: TextView = v.findViewById(android.R.id.text1)
+        val info: TextView = v.findViewById(android.R.id.text2)
     }
 }

@@ -97,20 +97,49 @@ object AisTrackerMath {
         if (loc != null) {
             val speed = loc.speed
             val bearing = loc.bearing
-            // In original Java code, they did:
-            // LatLonPoint b = a.getPoint(loc.getSpeed() * timeInHours * Math.PI / 5556.0, bearingInRad(loc.getBearing()));
-            // Note: 1 nautical mile = 1852 meters. 1 hour = 3600 seconds.
-            // loc.getSpeed() was in meters per second. 
-            // Wait, their formula: loc.getSpeed() * timeInHours * Math.PI / 5556.0
-            // Instead we can use KMapUtils.rhumbDestinationPoint
-            // We need distance in meters.
-            // loc.speed is m/s. timeInHours * 3600 = timeInSeconds.
-            // distance = loc.speed * timeInHours * 3600.
             val distanceInMeters = speed * timeInHours * 3600.0
             val dest = KMapUtils.rhumbDestinationPoint(loc.latitude, loc.longitude, distanceInMeters, bearing.toDouble())
             return AisLatLon(dest.latitude, dest.longitude)
         }
         return null
+    }
+
+    /**
+     * Calculates position after timeInHours considering constant Rate of Turn (ROT).
+     * ROT is in degrees per minute.
+     */
+    fun getCurvedPosition(loc: AisLocation, timeInHours: Double): AisLatLon? {
+        val rotDegMin = loc.rot ?: return getNewPosition(loc, timeInHours)
+        if (abs(rotDegMin) < 0.1) return getNewPosition(loc, timeInHours)
+
+        val speedMs = loc.speed.toDouble()
+        val bearingDeg = loc.bearing.toDouble()
+        
+        // Convert ROT to radians per hour
+        val rotRadHour = rotDegMin * 60.0 * kotlin.math.PI / 180.0
+        
+        // Radius of turn R = V / omega
+        val r = (speedMs * 3600.0) / rotRadHour
+        
+        val deltaTheta = rotRadHour * timeInHours
+        
+        val theta0 = (90.0 - bearingDeg) * kotlin.math.PI / 180.0
+        val dx = r * (cos(theta0) - cos(theta0 + deltaTheta))
+        val dy = r * (sin(theta0 + deltaTheta) - sin(theta0))
+        
+        val latOffset = dy / 111132.0
+        val lonOffset = dx / (111132.0 * cos(loc.latitude * kotlin.math.PI / 180.0))
+        
+        return AisLatLon(loc.latitude + latOffset, loc.longitude + lonOffset)
+    }
+
+    fun getCurvedPathPoints(loc: AisLocation, timeInHours: Double, segments: Int): List<AisLatLon> {
+        val points = mutableListOf<AisLatLon>()
+        for (i in 0..segments) {
+            val t = (timeInHours * i) / segments
+            getCurvedPosition(loc, t)?.let { points.add(it) }
+        }
+        return points
     }
 
     private fun getCrossingTimes(x: AisLocation, y: AisLocation): Pair<Double, Double>? {

@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="?attr/list_background_color"
@@ -27,6 +28,13 @@
             android:text="@string/nautical_advanced_lock" />
     </RelativeLayout>
 
+    <com.google.android.material.tabs.TabLayout
+        android:id="@+id/tab_layout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:tabMode="fixed"
+        app:tabGravity="fill" />
+
     <View
         android:layout_width="match_parent"
         android:layout_height="1dp"
@@ -44,21 +52,12 @@
             android:orientation="vertical"
             android:padding="16dp">
 
-            <!-- Vessel Dynamics -->
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="8dp"
-                android:text="@string/nautical_advanced_vessel_dynamics"
-                android:textAppearance="?attr/textAppearanceCaption"
-                android:textColor="?attr/colorAccent"
-                android:textStyle="bold" />
-
+            <!-- Tab 1: Tuning -->
             <LinearLayout
+                android:id="@+id/container_tuning"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:paddingBottom="16dp">
+                android:orientation="vertical">
                 <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/nautical_advanced_rudder_gain" />
                 <com.google.android.material.slider.Slider
                     android:id="@+id/slider_rudder_gain"
@@ -68,13 +67,7 @@
                     android:valueTo="5.0"
                     android:stepSize="0.1"
                     android:value="1.0" />
-            </LinearLayout>
 
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:paddingBottom="16dp">
                 <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/nautical_advanced_counter_rudder" />
                 <com.google.android.material.slider.Slider
                     android:id="@+id/slider_counter_rudder"
@@ -84,13 +77,7 @@
                     android:valueTo="10.0"
                     android:stepSize="0.5"
                     android:value="2.0" />
-            </LinearLayout>
 
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:paddingBottom="16dp">
                 <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/nautical_advanced_auto_trim" />
                 <com.google.android.material.slider.Slider
                     android:id="@+id/slider_auto_trim"
@@ -100,19 +87,113 @@
                     android:valueTo="1.0"
                     android:stepSize="0.01"
                     android:value="0.1" />
+
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/nautical_advanced_filter_sensitivity" />
+                <com.google.android.material.slider.Slider
+                    android:id="@+id/slider_filter_sensitivity"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:valueFrom="0.0"
+                    android:valueTo="10.0"
+                    android:stepSize="1.0"
+                    android:value="3.0" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:text="@string/nautical_advanced_response_preview"
+                    android:textAppearance="?attr/textAppearanceCaption"
+                    android:textColor="?attr/colorAccent"
+                    android:textStyle="bold" />
+
+                <com.github.mikephil.charting.charts.LineChart
+                    android:id="@+id/pid_preview_chart"
+                    android:layout_width="match_parent"
+                    android:layout_height="120dp"
+                    android:layout_marginBottom="16dp"
+                    android:background="?attr/activity_background_color" />
             </LinearLayout>
 
+            <!-- Tab 2: Limits -->
             <LinearLayout
+                android:id="@+id/container_limits"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:paddingBottom="16dp">
+                android:visibility="gone">
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/nautical_advanced_rudder_limit" />
+                <com.google.android.material.slider.Slider
+                    android:id="@+id/slider_rudder_limit"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:valueFrom="10.0"
+                    android:valueTo="45.0"
+                    android:stepSize="1.0"
+                    android:value="30.0" />
+
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/nautical_advanced_off_course_threshold" />
+                <com.google.android.material.slider.Slider
+                    android:id="@+id/slider_off_course"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:valueFrom="5.0"
+                    android:valueTo="30.0"
+                    android:stepSize="1.0"
+                    android:value="15.0" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="@string/nautical_xte_threshold_desc" />
+                    <TextView
+                        android:id="@+id/txt_value_xte_threshold"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textAppearance="?attr/textAppearanceCaption"
+                        android:textColor="?attr/colorAccent"
+                        android:textStyle="bold"
+                        tools:text="0.1 NM" />
+                </LinearLayout>
+                <com.google.android.material.slider.Slider
+                    android:id="@+id/slider_xte_threshold"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:valueFrom="0.01"
+                    android:valueTo="1.0"
+                    android:stepSize="0.01"
+                    android:value="0.1" />
+
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/nautical_actuator_alarm_threshold" />
+                <com.google.android.material.slider.Slider
+                    android:id="@+id/slider_actuator_threshold"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:valueFrom="50.0"
+                    android:valueTo="95.0"
+                    android:stepSize="1.0"
+                    android:value="85.0" />
+            </LinearLayout>
+
+            <!-- Tab 3: Vessel -->
+            <LinearLayout
+                android:id="@+id/container_vessel"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone">
                 <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/nautical_vessel_type" />
                 <com.google.android.material.button.MaterialButtonToggleGroup
                     android:id="@+id/vessel_type_toggle"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
+                    android:layout_marginBottom="16dp"
                     app:singleSelection="true">
                     <Button
                         android:id="@+id/btn_vessel_conv"
@@ -127,126 +208,176 @@
                         android:layout_height="wrap_content"
                         android:text="@string/nautical_vessel_proa" />
                 </com.google.android.material.button.MaterialButtonToggleGroup>
-            </LinearLayout>
 
-            <View android:layout_width="match_parent" android:layout_height="1dp" android:background="?attr/divider_color_basic" android:layout_marginBottom="16dp" />
-
-            <!-- Sensor & Hardware -->
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="8dp"
-                android:text="@string/nautical_advanced_sensor_hardware"
-                android:textAppearance="?attr/textAppearanceCaption"
-                android:textColor="?attr/colorAccent"
-                android:textStyle="bold" />
-
-            <Button
-                android:id="@+id/btn_compass_calib"
-                style="@style/Widget.MaterialComponents.Button.TextButton"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:gravity="start|center_vertical"
-                android:text="@string/nautical_advanced_compass_wizard"
-                app:icon="@drawable/ic_action_direction_compass" />
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:paddingBottom="16dp">
-                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/nautical_advanced_filter_sensitivity" />
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="@string/nautical_keel_offset_title" />
+                    <TextView
+                        android:id="@+id/txt_value_keel_offset"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textAppearance="?attr/textAppearanceCaption"
+                        android:textColor="?attr/colorAccent"
+                        android:textStyle="bold"
+                        tools:text="0.0 m" />
+                </LinearLayout>
                 <com.google.android.material.slider.Slider
-                    android:id="@+id/slider_filter_sensitivity"
+                    android:id="@+id/slider_keel_offset"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:valueFrom="0.0"
                     android:valueTo="10.0"
+                    android:stepSize="0.1"
+                    android:value="0.0" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="@string/nautical_wind_alignment_title" />
+                    <TextView
+                        android:id="@+id/txt_value_wind_alignment"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textAppearance="?attr/textAppearanceCaption"
+                        android:textColor="?attr/colorAccent"
+                        android:textStyle="bold"
+                        tools:text="0°" />
+                </LinearLayout>
+                <com.google.android.material.slider.Slider
+                    android:id="@+id/slider_wind_alignment"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:valueFrom="-180.0"
+                    android:valueTo="180.0"
+                    android:stepSize="1.0"
+                    android:value="0.0" />
+            </LinearLayout>
+
+            <!-- Tab 4: Environment -->
+            <LinearLayout
+                android:id="@+id/container_env"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone">
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="@string/nautical_sea_state" />
+                    <TextView
+                        android:id="@+id/txt_value_sea_state"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="8dp"
+                        android:textAppearance="?attr/textAppearanceCaption"
+                        android:textColor="?attr/colorAccent"
+                        android:textStyle="bold"
+                        tools:text="3" />
+                    <com.google.android.material.switchmaterial.SwitchMaterial
+                        android:id="@+id/switch_auto_sea_state"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" />
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="4dp"
+                        android:text="@string/nautical_auto"
+                        android:textAppearance="?attr/textAppearanceCaption" />
+                </LinearLayout>
+                <com.google.android.material.slider.Slider
+                    android:id="@+id/slider_sea_state"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:valueFrom="1.0"
+                    android:valueTo="5.0"
                     android:stepSize="1.0"
                     android:value="3.0" />
+
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/nautical_wave_bias_sensitivity" />
+                <com.google.android.material.slider.Slider
+                    android:id="@+id/slider_wave_bias"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:valueFrom="0.0"
+                    android:valueTo="100.0"
+                    android:stepSize="10.0"
+                    android:value="50.0" />
             </LinearLayout>
 
+            <!-- Tab 5: Pypilot -->
             <LinearLayout
+                android:id="@+id/container_pypilot"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:paddingBottom="16dp">
-                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/nautical_advanced_rudder_limit" />
-                <com.google.android.material.slider.Slider
-                    android:id="@+id/slider_rudder_limit"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:valueFrom="10.0"
-                    android:valueTo="45.0"
-                    android:stepSize="1.0"
-                    android:value="30.0" />
+                android:visibility="gone">
+
+                <Button android:id="@+id/btn_select_pypilot_profile" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/nautical_pypilot_profile" />
+
+                <TextView style="@style/DashboardSubHeader" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/nautical_pypilot_pid" />
+
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/nautical_pypilot_p" />
+                <com.google.android.material.slider.Slider android:id="@+id/slider_p" android:layout_width="match_parent" android:layout_height="wrap_content" android:valueFrom="0.0" android:valueTo="1.0" />
+
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/nautical_pypilot_i" />
+                <com.google.android.material.slider.Slider android:id="@+id/slider_i" android:layout_width="match_parent" android:layout_height="wrap_content" android:valueFrom="0.0" android:valueTo="1.0" />
+
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/nautical_pypilot_d" />
+                <com.google.android.material.slider.Slider android:id="@+id/slider_d" android:layout_width="match_parent" android:layout_height="wrap_content" android:valueFrom="0.0" android:valueTo="1.0" />
+
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/nautical_pypilot_dd" />
+                <com.google.android.material.slider.Slider android:id="@+id/slider_dd" android:layout_width="match_parent" android:layout_height="wrap_content" android:valueFrom="0.0" android:valueTo="1.0" />
+
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/nautical_pypilot_pr" />
+                <com.google.android.material.slider.Slider android:id="@+id/slider_pr" android:layout_width="match_parent" android:layout_height="wrap_content" android:valueFrom="0.0" android:valueTo="1.0" />
+
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/nautical_pypilot_ff" />
+                <com.google.android.material.slider.Slider android:id="@+id/slider_ff" android:layout_width="match_parent" android:layout_height="wrap_content" android:valueFrom="0.0" android:valueTo="1.0" />
+
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/nautical_pypilot_wg" />
+                <com.google.android.material.slider.Slider android:id="@+id/slider_wg" android:layout_width="match_parent" android:layout_height="wrap_content" android:valueFrom="0.0" android:valueTo="1.0" />
+
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/nautical_pypilot_deadzone" />
+                <com.google.android.material.slider.Slider android:id="@+id/slider_deadzone" android:layout_width="match_parent" android:layout_height="wrap_content" android:valueFrom="0.0" android:valueTo="5.0" />
+
+                <TextView style="@style/DashboardSubHeader" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="16dp" android:text="@string/nautical_pypilot_calibration" />
+
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                    <Button android:id="@+id/btn_calibrate_compass" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="@string/nautical_pypilot_calibrate_compass" />
+                    <Button android:id="@+id/btn_stop_compass_calib" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/nautical_stop_calibration" />
+                </LinearLayout>
+                <ProgressBar android:id="@+id/progress_compass" style="?android:attr/progressBarStyleHorizontal" android:layout_width="match_parent" android:layout_height="wrap_content" android:max="100" />
+
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                    <Button android:id="@+id/btn_calibrate_rudder" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="@string/nautical_pypilot_calibrate_rudder" />
+                    <Button android:id="@+id/btn_stop_rudder_calib" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/nautical_stop_calibration" />
+                </LinearLayout>
+                <ProgressBar android:id="@+id/progress_rudder" style="?android:attr/progressBarStyleHorizontal" android:layout_width="match_parent" android:layout_height="wrap_content" android:max="100" />
             </LinearLayout>
-
-            <View android:layout_width="match_parent" android:layout_height="1dp" android:background="?attr/divider_color_basic" android:layout_marginBottom="16dp" />
-
-            <!-- Safety Thresholds -->
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="8dp"
-                android:text="@string/nautical_advanced_safety_thresholds"
-                android:textAppearance="?attr/textAppearanceCaption"
-                android:textColor="?attr/colorAccent"
-                android:textStyle="bold" />
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:paddingBottom="16dp">
-                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/nautical_advanced_off_course_threshold" />
-                <com.google.android.material.slider.Slider
-                    android:id="@+id/slider_off_course"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:valueFrom="5.0"
-                    android:valueTo="30.0"
-                    android:stepSize="1.0"
-                    android:value="15.0" />
-            </LinearLayout>
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:paddingBottom="16dp">
-                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/nautical_xte_threshold_desc" />
-                <com.google.android.material.slider.Slider
-                    android:id="@+id/slider_xte_threshold"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:valueFrom="0.01"
-                    android:valueTo="1.0"
-                    android:stepSize="0.01"
-                    android:value="0.1" />
-            </LinearLayout>
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="8dp"
-                android:text="@string/nautical_advanced_response_preview"
-                android:textAppearance="?attr/textAppearanceCaption"
-                android:textColor="?attr/colorAccent"
-                android:textStyle="bold" />
-
-            <com.github.mikephil.charting.charts.LineChart
-                android:id="@+id/pid_preview_chart"
-                android:layout_width="match_parent"
-                android:layout_height="120dp"
-                android:layout_marginBottom="16dp"
-                android:background="?attr/activity_background_color" />
 
             <Button
                 android:id="@+id/btn_reset_defaults"
                 style="@style/Widget.MaterialComponents.Button.TextButton"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
                 android:text="@string/nautical_advanced_reset_defaults"
                 android:textColor="@color/text_color_negative" />
 

@@ -4,6 +4,8 @@ apply from: rootProject.file("versions.gradle")
 
 apply plugin: 'kotlin-android'
 apply plugin: 'kotlin-parcelize'
+apply plugin: 'org.jetbrains.kotlin.plugin.serialization'
+apply plugin: 'kotlinx-serialization'
 
 // Global Parameters accepted
 // TARGET_APP_NAME    - app name
@@ -263,6 +265,7 @@ dependencies {
 	huaweiImplementation 'com.huawei.hms:iap:6.4.0.301'
 	huaweiImplementation 'com.huawei.hms:appservice:6.8.0.300'
 
+	implementation "androidx.security:security-crypto:1.1.0"
 	coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
 }
 

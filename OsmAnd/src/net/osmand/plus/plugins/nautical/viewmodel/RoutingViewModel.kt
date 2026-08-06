@@ -21,13 +21,33 @@ class RoutingViewModel : ViewModel() {
     private val _routingStatus = MutableStateFlow("Idle")
     val routingStatus: StateFlow<String> = _routingStatus.asStateFlow()
 
-    fun calculateWeatherRoute(request: RoutingRequest, gridData: GribGridData, s57Index: S57SpatialIndex) {
+    fun calculateWeatherRoute(
+        request: RoutingRequest,
+        gridData: GribGridData,
+        s57Index: S57SpatialIndex,
+        safetyManager: net.osmand.plus.plugins.nautical.engine.NauticalSafetyManager,
+    ) {
+        val draft = safetyManager.getVesselDraft()
         _routingStatus.value = "Calculating Weather Route..."
         viewModelScope.launch {
             try {
+                val safetyChecker = net.osmand.plus.plugins.nautical.hazard.engine.SafetyCorridorChecker(
+                    indexManager = s57Index,
+                    safetyManager = safetyManager
+                )
+
                 val gribEngine = GribInterpolationEngine(gridData)
-                val routingEngine = IsochroneRoutingEngine(gribEngine, s57Index)
-                val result = routingEngine.calculateRoute(request)
+                val routingEngine = IsochroneRoutingEngine(
+                    gribEngine,
+                    s57Index,
+                    safetyChecker,
+                    net.osmand.plus.plugins.nautical.NauticalPlugin.getInstance()?.capabilityManager,
+                    vesselDraft = draft
+                )
+                
+                val liveState = net.osmand.plus.plugins.nautical.NauticalPlugin.engine?.getCurrentState()
+                
+                val result = routingEngine.calculateRoute(request, liveState?.setTrue, liveState?.drift)
                 if (result != null) {
                     _optimalRoute.value = result
                     _routingStatus.value = "Optimal Route Calculated"

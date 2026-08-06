@@ -172,8 +172,9 @@ public class AppVersionUpgradeOnInit {
 	public static final int VERSION_5_3_04 = 5304;
 	public static final int VERSION_5_3_05 = 5305;
 	public static final int VERSION_5_3_06 = 5306;
+	public static final int VERSION_5_3_07 = 5307;
 
-	public static final int LAST_APP_VERSION = VERSION_5_3_06;
+	public static final int LAST_APP_VERSION = VERSION_5_3_07;
 
 	private static final String VERSION_INSTALLED = "VERSION_INSTALLED";
 
@@ -345,6 +346,9 @@ public class AppVersionUpgradeOnInit {
 				}
 				if (prevAppVersion < VERSION_5_3_06) {
 					migrateCoordinateFormatSettings(settings);
+				}
+				if (prevAppVersion < VERSION_5_3_07) {
+					migrateNauticalSettings(settings);
 				}
 				startPrefs.edit().putInt(VERSION_INSTALLED_NUMBER, lastVersion).commit();
 				startPrefs.edit().putString(VERSION_INSTALLED, Version.getFullVersion(app)).commit();
@@ -1183,6 +1187,29 @@ public class AppVersionUpgradeOnInit {
 			}
 			if (!settings.COORDINATE_GRID_FORMAT.isSetForMode(appMode)) {
 				settings.COORDINATE_GRID_FORMAT.setModeValue(appMode, getLegacyCoordinateGridFormat(legacyFormat));
+			}
+		}
+	}
+
+	private void migrateNauticalSettings(@NonNull OsmandSettings settings) {
+		SettingsAPI settingsAPI = settings.getSettingsAPI();
+		Object globalPreferences = settings.getGlobalPreferences();
+		SharedPreferences globalSharedPreferences = (SharedPreferences) globalPreferences;
+		Map<String, ?> allPrefs = globalSharedPreferences.getAll();
+
+		// Migrate legacy float coordinates to string-double format
+		String[] floatCoordKeys = {
+				"nautical_anchor_lat", "nautical_anchor_lon",
+				"nautical_mob_lat", "nautical_mob_lon"
+		};
+
+		for (String key : floatCoordKeys) {
+			if (allPrefs.containsKey(key)) {
+				Object val = allPrefs.get(key);
+				if (val instanceof Float) {
+					float fVal = (Float) val;
+					settingsAPI.edit(globalPreferences).putString(key, String.valueOf((double) fVal)).commit();
+				}
 			}
 		}
 	}

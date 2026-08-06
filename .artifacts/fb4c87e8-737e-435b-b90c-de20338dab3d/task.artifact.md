@@ -1,0 +1,8 @@
+- [x] Refactor `S57MapLayer.kt` for cluster collection
+- [x] Modify `NavtexMapLayer.kt` for menu arbitration (verified already handled)
+- [x] Implement `AisTargetBottomSheet.kt`
+- [x] Implement `NauticalTargetPicker.kt`
+- [x] Refactor `NauticalPlugin.kt` with multi-touch pass-through
+- [x] Implement `NauticalTouchArbitrator.kt`
+- [x] Refactor `NauticalMapLayer.kt` to use arbitration
+- [x] Manual verification and testing

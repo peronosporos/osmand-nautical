@@ -2,7 +2,6 @@ package net.osmand.plus.plugins.nautical.s57.ui
 
 import net.osmand.data.LatLon
 import net.osmand.data.PointDescription
-import net.osmand.plus.OsmandApplication
 import net.osmand.plus.R
 import net.osmand.plus.activities.MapActivity
 import net.osmand.plus.mapcontextmenu.MenuBuilder
@@ -17,14 +16,13 @@ class S57ObjectMenuController(
     private var s57Object: S57Object
 ) : MenuController(MenuBuilder(mapActivity), pointDescription, mapActivity) {
 
-    private val app: OsmandApplication = builder.application
-
     override fun getRightIconId(): Int = R.drawable.ic_plugin_nautical_map
 
     override fun isBigRightIcon(): Boolean = true
 
     override fun addPlainMenuItems(typeStr: String?, pointDescription: PointDescription?, latLon: LatLon?) {
-        addMenuItem("Acronym", s57Object.acronym)
+        val activity = mapActivity ?: return
+        addMenuItem(activity.getString(R.string.nautical_s57_acronym), s57Object.acronym)
         
         s57Object.attributes.forEach { (key, value) ->
             val label = getAttributeLabel(key)
@@ -34,7 +32,7 @@ class S57ObjectMenuController(
         // Add geometry info if relevant
         val geo = s57Object.geometries.firstOrNull()
         if (geo is S57Geometry.Point && geo.depth != null) {
-            addMenuItem("Depth", String.format(Locale.US, "%.1f m", geo.depth))
+            addMenuItem(activity.getString(R.string.nautical_s57_depth_label), String.format(Locale.US, "%.1f m", geo.depth))
         }
 
         super.addPlainMenuItems(typeStr, pointDescription, latLon)
@@ -47,27 +45,30 @@ class S57ObjectMenuController(
     }
 
     private fun getAttributeLabel(key: String): String {
+        val activity = mapActivity ?: return key
         return when (key) {
-            "OBJNAM", "116" -> "Name"
-            "NOBJNM", "111" -> "Name (Local)"
-            "INFORM", "102" -> "Information"
-            "NINFOM", "112" -> "Information (Local)"
-            "VALCO", "157" -> "Value of Contour"
-            "DRVAL1", "87" -> "Minimum Depth"
-            "DRVAL2", "88" -> "Maximum Depth"
-            "HEIGHT", "96" -> "Height"
-            "LITCHR", "107" -> "Light Characteristic"
-            "SIGPER", "143" -> "Signal Period"
-            "SIGGRP", "142" -> "Signal Group"
-            "COLOUR", "75" -> "Color"
-            "MARSYS", "109" -> "Marks System"
-            "CATSEA", "71" -> "Category of Sea Area"
-            "VALSOU", "159" -> "Sounding Value"
-            "BCNSPHP", "69" -> "Beacon Shape"
-            "BOYSHP", "70" -> "Buoy Shape"
+            "OBJNAM", "116" -> activity.getString(R.string.nautical_s57_name)
+            "NOBJNM", "111" -> activity.getString(R.string.nautical_s57_name_local)
+            "INFORM", "102" -> activity.getString(R.string.nautical_s57_information)
+            "NINFOM", "112" -> activity.getString(R.string.nautical_s57_information_local)
+            "VALCO", "157" -> activity.getString(R.string.nautical_s57_value_of_contour)
+            "DRVAL1", "87" -> activity.getString(R.string.nautical_s57_min_depth)
+            "DRVAL2", "88" -> activity.getString(R.string.nautical_s57_max_depth)
+            "HEIGHT", "96" -> activity.getString(R.string.nautical_s57_height)
+            "LITCHR", "107" -> activity.getString(R.string.nautical_s57_light_characteristic)
+            "SIGPER", "143" -> activity.getString(R.string.nautical_s57_signal_period)
+            "SIGGRP", "142" -> activity.getString(R.string.nautical_s57_signal_group)
+            "COLOUR", "75" -> activity.getString(R.string.nautical_s57_color)
+            "MARSYS", "109" -> activity.getString(R.string.nautical_s57_marks_system)
+            "CATSEA", "71" -> activity.getString(R.string.nautical_s57_category_of_sea_area)
+            "VALSOU", "159" -> activity.getString(R.string.nautical_s57_sounding_value)
+            "BCNSPHP", "69" -> activity.getString(R.string.nautical_s57_beacon_shape)
+            "BOYSHP", "70" -> activity.getString(R.string.nautical_s57_buoy_shape)
             else -> key
         }
     }
+
+
 
     override fun setObject(`object`: Any?) {
         if (`object` is S57Object) {

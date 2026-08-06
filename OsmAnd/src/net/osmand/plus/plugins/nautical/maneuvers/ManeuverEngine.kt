@@ -4,12 +4,21 @@ import net.osmand.plus.OsmandApplication
 import net.osmand.plus.plugins.nautical.NauticalPlugin
 import net.osmand.plus.plugins.nautical.engine.MarineState
 import net.osmand.plus.R
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import java.util.Timer
 import java.util.TimerTask
 
 abstract class ManeuverEngine(
     protected val app: OsmandApplication
 ) : ManeuverStateMachine {
+
+    private val _instructionFlow = MutableStateFlow<String?>(null)
+    val instructionFlow: StateFlow<String?> = _instructionFlow.asStateFlow()
+
+    private val _progressFlow = MutableStateFlow(0)
+    val progressFlow: StateFlow<Int> = _progressFlow.asStateFlow()
 
     override var currentState: ManeuverStateMachine.State = ManeuverStateMachine.State.ARMED
         protected set
@@ -18,6 +27,14 @@ abstract class ManeuverEngine(
 
     protected open val shouldCheckWindSafety: Boolean = false
     protected open val isTackingManeuver: Boolean = true
+
+    protected fun pushInstruction(text: String?) {
+        _instructionFlow.value = text
+    }
+
+    protected fun pushProgress(percent: Int) {
+        _progressFlow.value = percent.coerceIn(0, 100)
+    }
 
     override fun checkSafetyPreconditions(state: MarineState): Boolean {
         if (shouldCheckWindSafety) {

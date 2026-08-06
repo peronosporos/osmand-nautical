@@ -27,7 +27,7 @@ enum class S57PrimitiveType(val code: Int) {
 
     companion object {
         fun fromCode(code: Int): S57PrimitiveType {
-            return values().find { it.code == code } ?: UNKNOWN
+            return entries.find { it.code == code } ?: UNKNOWN
         }
     }
 }

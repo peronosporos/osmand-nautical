@@ -10,5 +10,7 @@ package net.osmand.plus.plugins.nautical.tide.model
 data class TidePrediction(
     val timestamp: Long,
     val heightMeters: Double,
-    val isHighTide: Boolean? = null
+    val isHighTide: Boolean? = null,
+    val velocity: Double? = null, // Current speed in m/s
+    val direction: Double? = null // Current direction in Radians
 )

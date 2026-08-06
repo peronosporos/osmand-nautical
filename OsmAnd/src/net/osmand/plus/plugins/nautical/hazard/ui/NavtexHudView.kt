@@ -1,77 +1,184 @@
 package net.osmand.plus.plugins.nautical.hazard.ui
 
 import android.content.Context
-import android.media.RingtoneManager
-import android.os.Build
-import android.os.VibrationEffect
-import android.os.Vibrator
 import android.util.AttributeSet
 import android.view.LayoutInflater
 import android.widget.FrameLayout
+import android.widget.TextView
 import androidx.core.view.isVisible
-import net.osmand.PlatformUtil
+import kotlinx.coroutines.*
 import net.osmand.plus.R
+import net.osmand.plus.activities.MapActivity
 import net.osmand.plus.plugins.nautical.hazard.engine.NavtexMessage
+import net.osmand.plus.plugins.nautical.hazard.engine.NavtexSubject
 import net.osmand.plus.plugins.nautical.hazard.viewmodel.NavtexUiState
+import net.osmand.plus.plugins.nautical.ui.INauticalHudHeader
+import net.osmand.plus.utils.AndroidUtils
+import kotlin.time.Duration.Companion.milliseconds
 
 class NavtexHudView @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
     defStyleAttr: Int = 0
-) : FrameLayout(context, attrs, defStyleAttr) {
+) : FrameLayout(context, attrs, defStyleAttr), INauticalHudHeader {
 
-    private var urgentMessage: NavtexMessage? = null
-    private var onMessageClick: ((NavtexMessage) -> Unit)? = null
-    private val log = PlatformUtil.getLog(NavtexHudView::class.java)
+    private var messages: List<NavtexMessage> = emptyList()
+    private var currentIndex = 0
+    private var cycleJob: Job? = null
+    private val viewScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
+
+    private val titleView: TextView
+    private val badgeView: TextView
+    private var isEmergencyState = false
+    private var isHighContrastMode = false
 
     init {
-        LayoutInflater.from(context).inflate(R.layout.navtex_urgent_hud, this, true)
-        setupListeners()
+        LayoutInflater.from(context).inflate(R.layout.navtex_hud_ticker, this, true)
+        titleView = findViewById(R.id.navtex_ticker_text)
+        badgeView = findViewById(R.id.navtex_ticker_badge)
         isVisible = false
-    }
+        
+        setOnClickListener {
+            val activity = context as? MapActivity
+            activity?.supportFragmentManager?.beginTransaction()
+                ?.add(android.R.id.content, NavtexListFragment(), NavtexListFragment.TAG)
+                ?.addToBackStack(NavtexListFragment.TAG)
+                ?.commit()
+        }
 
-    private fun setupListeners() {
-        findViewById<android.view.View>(R.id.navtex_hud_container).setOnClickListener {
-            urgentMessage?.let { onMessageClick?.invoke(it) }
+        viewScope.launch {
+            net.osmand.plus.plugins.nautical.NauticalEventBus.events.collect { event ->
+                when (event) {
+                    is net.osmand.plus.plugins.nautical.NauticalEvent.MobStateChanged -> {
+                        setHighContrastMode(event.active)
+                    }
+                    is net.osmand.plus.plugins.nautical.NauticalEvent.AlertContrastRequest -> {
+                        setHighContrastMode(event.highContrast)
+                    }
+                    else -> {}
+                }
+            }
         }
     }
 
-    fun setOnMessageClickListener(listener: (NavtexMessage) -> Unit) {
-        this.onMessageClick = listener
+    private fun setHighContrastMode(enabled: Boolean) {
+        if (isHighContrastMode == enabled) return
+        isHighContrastMode = enabled
+        updateDisplay()
+        if (enabled) {
+            startPulsing()
+        } else if (!isEmergencyState) {
+            stopPulsing()
+        }
     }
+
+    override fun onDetachedFromWindow() {
+        super.onDetachedFromWindow()
+        stopPulsing()
+        viewScope.cancel()
+    }
+
+    override fun setCompactMode(enabled: Boolean) {
+        val p = if (enabled) 6f else 10f
+        val px = AndroidUtils.dpToPx(context, p)
+        setPadding(px, px, px, px)
+        titleView.textSize = if (enabled) 12f else 14f
+    }
+
+    override fun isEmergency(): Boolean = isEmergencyState
 
     fun updateState(state: NavtexUiState) {
-        // Find the first urgent message to display in HUD
-        val urgent = state.messages.firstOrNull { it.isUrgent }
+        val urgent = state.messages.filter { it.isUrgent }.sortedBy { getPriority(it.subject) }
         
-        // Trigger alert only if it's a new urgent message
-        if (urgent != null && (urgentMessage == null || urgent.id != urgentMessage?.id)) {
-            triggerAlert()
+        val newEmergency = urgent.any { 
+            it.subject == NavtexSubject.SEARCH_AND_RESCUE || 
+            it.subject == NavtexSubject.NAVTEX_WARNING || 
+            it.subject == NavtexSubject.NAVIGATIONAL_WARNING_L 
         }
 
-        this.urgentMessage = urgent
-        isVisible = urgent != null
+        if (newEmergency != isEmergencyState) {
+            isEmergencyState = newEmergency
+            if (isEmergencyState) startPulsing() else stopPulsing()
+        }
+
+        if (urgent != messages) {
+            messages = urgent
+            currentIndex = 0
+            restartTicker()
+            updateDisplay()
+        }
+        isVisible = messages.isNotEmpty()
     }
 
-    private fun triggerAlert() {
-        try {
-            // Play notification sound
-            val notification = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
-            val r = RingtoneManager.getRingtone(context, notification)
-            r?.play()
-
-            // Vibrate for 500ms
-            val v = context.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                v?.vibrate(VibrationEffect.createOneShot(500, VibrationEffect.DEFAULT_AMPLITUDE))
-            } else {
-                @Suppress("DEPRECATION")
-                v?.vibrate(500)
-            }
-        } catch (e: Exception) {
-            log.error("NAVTEX HUD alert error: ${e.message}", e)
-            isVisible = false
-            urgentMessage = null
+    private fun startPulsing() {
+        val container = findViewById<android.view.View>(R.id.navtex_ticker_container) ?: return
+        container.clearAnimation()
+        val anim = android.view.animation.AlphaAnimation(1.0f, 0.4f).apply {
+            duration = 800
+            repeatMode = android.view.animation.Animation.REVERSE
+            repeatCount = android.view.animation.Animation.INFINITE
         }
+        container.startAnimation(anim)
+    }
+
+    private fun stopPulsing() {
+        val container = findViewById<android.view.View>(R.id.navtex_ticker_container) ?: return
+        container.clearAnimation()
+    }
+
+    private fun restartTicker() {
+        cycleJob?.cancel()
+        if (messages.size > 1) {
+            cycleJob = viewScope.launch {
+                while (isActive) {
+                    delay(5000.milliseconds)
+                    currentIndex = (currentIndex + 1) % messages.size
+                    updateDisplay()
+                }
+            }
+        }
+    }
+
+    private fun updateDisplay() {
+        if (messages.isEmpty()) {
+            if (isHighContrastMode) {
+                titleView.text = "MOB EMERGENCY ACTIVE"
+                titleView.setTextColor(0xFFFF0000.toInt())
+                findViewById<android.view.View>(R.id.navtex_ticker_container).setBackgroundColor(0xFF000000.toInt())
+                isVisible = true
+            } else {
+                isVisible = false
+            }
+            return
+        }
+        val msg = messages[currentIndex]
+        titleView.text = "${msg.subject.name.replace("_", " ")}: ${msg.id}"
+        badgeView.text = "[ ${currentIndex + 1} / ${messages.size} ]"
+        badgeView.isVisible = messages.size > 1
+        
+        val color = if (isHighContrastMode) {
+            0xFF000000.toInt()
+        } else {
+            when (msg.subject) {
+                NavtexSubject.SEARCH_AND_RESCUE -> 0xFFB71C1C.toInt()
+                else -> 0xFFE65100.toInt()
+            }
+        }
+        
+        if (isHighContrastMode) {
+            titleView.setTextColor(0xFFFF0000.toInt())
+        } else {
+            titleView.setTextColor(0xFFFFFFFF.toInt())
+        }
+        
+        findViewById<android.view.View>(R.id.navtex_ticker_container).setBackgroundColor(color)
+    }
+
+    private fun getPriority(subject: NavtexSubject): Int = when (subject) {
+        NavtexSubject.SEARCH_AND_RESCUE -> 0
+        NavtexSubject.NAVTEX_WARNING -> 1
+        NavtexSubject.NAVIGATIONAL_WARNING_L -> 1
+        NavtexSubject.METEOROLOGICAL_WARNING -> 2
+        else -> 3
     }
 }

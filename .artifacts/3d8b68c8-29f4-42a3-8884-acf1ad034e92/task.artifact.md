@@ -1,0 +1,11 @@
+- `[x]` Update `strings.xml` with new tide station title resource
+- `[x]` Fix warnings in `NmeaReplayViewModel.kt` (suppress unused)
+- `[x]` Fix warnings in `NmeaPlaybackEngine.kt` (use Duration)
+- `[x]` Fix warnings in `NauticalRouteSummaryFragment.kt` (use ListAdapter)
+- `[x]` Fix warnings in `S57MapLayer.kt` (rename constant)
+- `[x]` Fix warnings in `S52SymbolManager.kt` (remove unused parameters)
+- `[x]` Fix warnings in `S63CredentialStore.kt` (add security comment)
+- `[x]` Fix warnings in `S63PermitGenerator.kt` (suppress ECB warning)
+- `[x]` Fix warnings in `S63Decryptor.kt` (suppress ECB and keep function)
+- `[x]` Fix warnings in `TideViewModel.kt` (suppress unused)
+- `[x]` Fix warnings in `TideStationBottomSheet.kt` (fix string concatenation)

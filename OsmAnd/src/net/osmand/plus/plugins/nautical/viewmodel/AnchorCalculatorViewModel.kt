@@ -8,7 +8,7 @@ import net.osmand.plus.OsmandApplication
 import net.osmand.plus.plugins.nautical.AnchorCalculator
 import net.osmand.plus.plugins.nautical.NauticalPlugin
 
-class AnchorCalculatorViewModel(private val app: OsmandApplication) : ViewModel() {
+class AnchorCalculatorViewModel(app: OsmandApplication) : ViewModel() {
 
     private val settings = app.settings
 
@@ -20,6 +20,9 @@ class AnchorCalculatorViewModel(private val app: OsmandApplication) : ViewModel(
 
     private val _bowOffset = MutableStateFlow(settings.NAUTICAL_ANCHOR_BOW_OFFSET.get())
     val bowOffset: StateFlow<Float> = _bowOffset.asStateFlow()
+
+    private val _freeboard = MutableStateFlow(settings.NAUTICAL_ANCHOR_FREEBOARD.get())
+    val freeboard: StateFlow<Float> = _freeboard.asStateFlow()
 
     private val _safetyMargin = MutableStateFlow(settings.NAUTICAL_ANCHOR_SAFETY_MARGIN.get())
     val safetyMargin: StateFlow<Float> = _safetyMargin.asStateFlow()
@@ -55,6 +58,13 @@ class AnchorCalculatorViewModel(private val app: OsmandApplication) : ViewModel(
     fun setBowOffset(value: Float) {
         _bowOffset.value = value
         settings.NAUTICAL_ANCHOR_BOW_OFFSET.set(value)
+        updateCalculations()
+    }
+
+    fun setFreeboard(value: Float) {
+        _freeboard.value = value
+        settings.NAUTICAL_ANCHOR_FREEBOARD.set(value)
+        updateCalculations()
     }
 
     fun setSafetyMargin(value: Float) {
@@ -77,18 +87,17 @@ class AnchorCalculatorViewModel(private val app: OsmandApplication) : ViewModel(
     }
 
     private fun updateCalculations() {
-        // Default freeboard of 1.0m for calculation
-        val freeboard = 1.0 
         _recommendedRode.value = AnchorCalculator.calculateRodeLength(
             _depth.value.toDouble(),
             _tideRise.value.toDouble(),
-            freeboard,
-            _scopeRatio.value.toDouble()
+            _freeboard.value.toDouble(),
+            _scopeRatio.value.toDouble(),
         )
     }
 
     fun dropAnchor() {
-        val state = NauticalPlugin.engine?.getCurrentState()
+        val engine = NauticalPlugin.engine
+        val state = engine?.getCurrentState()
         
         // Use manual coordinates if provided, otherwise current GPS position
         val lat = if (_anchorLat.value != 0.0) _anchorLat.value else state?.latitude ?: return
@@ -101,11 +110,29 @@ class AnchorCalculatorViewModel(private val app: OsmandApplication) : ViewModel(
         val totalRadius = AnchorCalculator.calculateTotalRadius(
             _recommendedRode.value,
             _bowOffset.value.toDouble(),
-            _safetyMargin.value.toDouble()
+            _safetyMargin.value.toDouble(),
         )
 
+        // Sync with Server if connected
+        if (state?.connectionStatus == net.osmand.plus.plugins.nautical.engine.ConnectionStatus.CONNECTED) {
+            engine.setAnchor(anchorPos.latitude, anchorPos.longitude, totalRadius)
+        }
+
+        // Always update local settings for immediate map feedback and fallback
         settings.NAUTICAL_ANCHOR_LAT.set(anchorPos.latitude)
         settings.NAUTICAL_ANCHOR_LON.set(anchorPos.longitude)
         settings.NAUTICAL_ANCHOR_RADIUS.set(totalRadius.toFloat())
+    }
+
+    fun clearAnchor() {
+        val engine = NauticalPlugin.engine
+        if (engine?.getCurrentState()?.connectionStatus == net.osmand.plus.plugins.nautical.engine.ConnectionStatus.CONNECTED) {
+            engine.disarmAnchor()
+        }
+
+        settings?.NAUTICAL_ANCHOR_LAT?.set(0.0)
+        settings?.NAUTICAL_ANCHOR_LON?.set(0.0)
+        settings?.NAUTICAL_ANCHOR_RADIUS?.set(0f)
+        NauticalPlugin.getInstance()?.anchorWatchdog?.stop()
     }
 }

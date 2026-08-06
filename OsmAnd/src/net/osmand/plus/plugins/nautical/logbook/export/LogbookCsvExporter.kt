@@ -4,6 +4,10 @@ import net.osmand.PlatformUtil
 import net.osmand.plus.plugins.nautical.logbook.data.LogbookEntry
 import java.io.IOException
 import java.io.OutputStream
+import java.io.OutputStreamWriter
+import java.nio.charset.StandardCharsets
+import java.text.DecimalFormat
+import java.text.DecimalFormatSymbols
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -15,25 +19,50 @@ object LogbookCsvExporter {
         timeZone = TimeZone.getTimeZone("UTC")
     }
 
-    private const val HEADER = "Timestamp(UTC),Latitude,Longitude,SOG(knots),COG,TWS,TWA,TWD,Depth(m),WaterTemp(C),Voltage(V),EngineHours,Sail Plan,Notes\n"
+    private fun getHeader(delimiter: String) = "Timestamp(UTC)${delimiter}Latitude${delimiter}Longitude${delimiter}SOG(knots)${delimiter}COG${delimiter}TWS${delimiter}TWA${delimiter}TWD${delimiter}Depth(m)${delimiter}WaterTemp(C)${delimiter}Voltage(V)${delimiter}EngineHours${delimiter}Sail Plan${delimiter}Notes\n"
 
     fun export(entries: List<LogbookEntry>, outputStream: OutputStream): Boolean {
         return try {
-            outputStream.bufferedWriter().use { writer ->
-                writer.write(HEADER)
+            // Localization Check: Use semi-colon if comma is decimal separator (TASK-098)
+            val symbols = DecimalFormatSymbols.getInstance(Locale.getDefault())
+            val delimiter = if (symbols.decimalSeparator == ',') ";" else ","
+            
+            // Force UTF-8 Encoding with BOM (TASK-024/095)
+            OutputStreamWriter(outputStream, StandardCharsets.UTF_8).use { writer ->
+                writer.write("\uFEFF") // UTF-8 BOM for Excel compatibility
+                writer.write(getHeader(delimiter))
+                
+                val decimalFormat = DecimalFormat("0.0", symbols)
+                val highPrecisionFormat = DecimalFormat("0.00", symbols)
+
                 for (entry in entries) {
                     val timestamp = dateFormat.format(Date(entry.timestamp))
-                    val sogKnots = entry.sog?.let { String.format(Locale.US, "%.2f", it * 1.94384) } ?: ""
-                    val cogDegrees = entry.cog?.let { String.format(Locale.US, "%.1f", Math.toDegrees(it)) } ?: ""
-                    val twsKnots = entry.tws?.let { String.format(Locale.US, "%.1f", it * 1.94384) } ?: ""
-                    val twaDegrees = entry.twa?.let { String.format(Locale.US, "%.1f", Math.toDegrees(it)) } ?: ""
-                    val twdDegrees = entry.twd?.let { String.format(Locale.US, "%.1f", Math.toDegrees(it)) } ?: ""
-                    val depthMeters = entry.waterDepth?.let { String.format(Locale.US, "%.1f", it) } ?: ""
-                    val waterTempC = entry.waterTemp?.let { String.format(Locale.US, "%.1f", it - 273.15) } ?: ""
-                    val voltage = entry.batteryVoltage?.let { String.format(Locale.US, "%.2f", it) } ?: ""
-                    val engineHours = entry.engineHours?.let { String.format(Locale.US, "%.1f", it) } ?: ""
+                    val sogKnots = entry.sog?.let { highPrecisionFormat.format(it * 1.94384) } ?: ""
+                    val cogDegrees = entry.cog?.let { decimalFormat.format(Math.toDegrees(it)) } ?: ""
+                    val twsKnots = entry.tws?.let { decimalFormat.format(it * 1.94384) } ?: ""
+                    val twaDegrees = entry.twa?.let { decimalFormat.format(Math.toDegrees(it)) } ?: ""
+                    val twdDegrees = entry.twd?.let { decimalFormat.format(Math.toDegrees(it)) } ?: ""
+                    val depthMeters = entry.waterDepth?.let { decimalFormat.format(it) } ?: ""
+                    val waterTempC = entry.waterTemp?.let { decimalFormat.format(it - 273.15) } ?: ""
+                    val voltage = entry.batteryVoltage?.let { highPrecisionFormat.format(it) } ?: ""
+                    val engineHours = entry.engineHours?.let { decimalFormat.format(it) } ?: ""
                     
-                    val line = "$timestamp,${entry.latitude},${entry.longitude},$sogKnots,$cogDegrees,$twsKnots,$twaDegrees,$twdDegrees,$depthMeters,$waterTempC,$voltage,$engineHours,\"${entry.sailPlan}\",\"${entry.notes}\"\n"
+                    val line = StringBuilder().apply {
+                        append(timestamp).append(delimiter)
+                        append(entry.latitude).append(delimiter)
+                        append(entry.longitude).append(delimiter)
+                        append(sogKnots).append(delimiter)
+                        append(cogDegrees).append(delimiter)
+                        append(twsKnots).append(delimiter)
+                        append(twaDegrees).append(delimiter)
+                        append(twdDegrees).append(delimiter)
+                        append(depthMeters).append(delimiter)
+                        append(waterTempC).append(delimiter)
+                        append(voltage).append(delimiter)
+                        append(engineHours).append(delimiter)
+                        append("\"").append(entry.sailPlan.replace("\"", "'")).append("\"").append(delimiter)
+                        append("\"").append(entry.notes.replace("\"", "'")).append("\"\n")
+                    }.toString()
                     writer.write(line)
                 }
             }

@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="?attr/bg_color">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp"
+        android:background="?attr/bg_card">
+
+        <TextView
+            android:id="@+id/txt_coverage_stats"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Charts: 0 | Coverage: 0 NM"
+            android:textAppearance="?attr/textAppearanceCaption" />
+
+        <Button
+            android:id="@+id/btn_manage_permits"
+            style="@style/Widget.Material3.Button.TonalButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="Manage S-63 Permits"
+            app:icon="@drawable/ic_action_lock" />
+    </LinearLayout>
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/recycler_view"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+
+        <LinearLayout
+            android:id="@+id/empty_view"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:visibility="gone">
+            <ImageView
+                android:layout_width="64dp"
+                android:layout_height="64dp"
+                android:src="@drawable/ic_action_world_globe"
+                app:tint="?attr/icon_color_secondary" />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="No ENC charts found in nautical/enc/"
+                android:textAppearance="?attr/textAppearanceBodyMedium"
+                android:layout_marginTop="8dp" />
+        </LinearLayout>
+    </FrameLayout>
+</LinearLayout>

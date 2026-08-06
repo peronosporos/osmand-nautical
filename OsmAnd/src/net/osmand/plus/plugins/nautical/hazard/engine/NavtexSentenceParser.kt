@@ -175,7 +175,7 @@ object NavtexSentenceParser {
             }
             val provided = checksum.toInt(16)
             calculated == provided
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             false
         }
     }

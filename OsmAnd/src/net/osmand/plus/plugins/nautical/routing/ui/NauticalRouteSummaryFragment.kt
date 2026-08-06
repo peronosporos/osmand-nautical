@@ -9,7 +9,9 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.Lifecycle
+import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -29,7 +31,7 @@ class NauticalRouteSummaryFragment : BaseOsmAndFragment() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        viewModel = ViewModelProvider(requireActivity()).get(RoutingViewModel::class.java)
+        viewModel = ViewModelProvider(requireActivity())[RoutingViewModel::class.java]
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
@@ -58,13 +60,7 @@ class NauticalRouteSummaryFragment : BaseOsmAndFragment() {
         return view
     }
 
-    private class LegsAdapter : RecyclerView.Adapter<LegViewHolder>() {
-        private var items: List<PassagePlanLeg> = emptyList()
-
-        fun submitList(list: List<PassagePlanLeg>) {
-            items = list
-            notifyDataSetChanged()
-        }
+    private class LegsAdapter : ListAdapter<PassagePlanLeg, LegViewHolder>(DIFF_CALLBACK) {
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): LegViewHolder {
             val view = LayoutInflater.from(parent.context).inflate(R.layout.item_passage_plan_leg, parent, false)
@@ -72,10 +68,20 @@ class NauticalRouteSummaryFragment : BaseOsmAndFragment() {
         }
 
         override fun onBindViewHolder(holder: LegViewHolder, position: Int) {
-            holder.bind(items[position])
+            holder.bind(getItem(position))
         }
 
-        override fun getItemCount(): Int = items.size
+        companion object {
+            private val DIFF_CALLBACK = object : DiffUtil.ItemCallback<PassagePlanLeg>() {
+                override fun areItemsTheSame(oldItem: PassagePlanLeg, newItem: PassagePlanLeg): Boolean {
+                    return oldItem.legNumber == newItem.legNumber
+                }
+
+                override fun areContentsTheSame(oldItem: PassagePlanLeg, newItem: PassagePlanLeg): Boolean {
+                    return oldItem == newItem
+                }
+            }
+        }
     }
 
     private class LegViewHolder(view: View) : RecyclerView.ViewHolder(view) {

@@ -2,7 +2,6 @@ package net.osmand.plus.plugins.nautical.mob.ui
 
 import android.content.Context
 import android.graphics.*
-import net.osmand.data.LatLon
 import net.osmand.data.RotatedTileBox
 import net.osmand.plus.OsmandApplication
 import net.osmand.plus.plugins.nautical.mob.engine.MobState

@@ -65,7 +65,7 @@ class MBTilesHelper(private val app: OsmandApplication) {
             if (parts.size == 4) {
                 QuadRect(parts[0], parts[3], parts[2], parts[1])
             } else null
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             null
         }
     }

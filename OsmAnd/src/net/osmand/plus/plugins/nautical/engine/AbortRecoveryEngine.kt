@@ -3,6 +3,7 @@ package net.osmand.plus.plugins.nautical.engine
 import net.osmand.plus.R
 import net.osmand.PlatformUtil
 import net.osmand.plus.OsmandApplication
+import net.osmand.plus.plugins.nautical.NauticalPlugin
 
 /**
  * AbortRecoveryEngine handles graceful mid-maneuver aborts and failures,
@@ -11,7 +12,7 @@ import net.osmand.plus.OsmandApplication
  */
 class AbortRecoveryEngine(
     private val app: OsmandApplication,
-    private val autopilotController: AutopilotController
+    private val autopilotController: AutopilotController,
 ) {
     private val log = PlatformUtil.getLog(AbortRecoveryEngine::class.java)
 
@@ -34,6 +35,8 @@ class AbortRecoveryEngine(
             // Adjust heading / fall off by 10 degrees to regain speed
             autopilotController.adjustHeading(10.0)
             autopilotController.setAutopilotMode("wind")
+
+            showBanner(app.getString(R.string.nautical_recovery_mode_active))
         } else {
             val recoveryMessage = app.getString(R.string.nautical_recovery_maneuver_aborted)
             log.info(recoveryMessage)
@@ -42,7 +45,14 @@ class AbortRecoveryEngine(
         }
     }
 
+    private fun showBanner(text: String) {
+        app.runInUIThread {
+            NauticalPlugin.hudManager?.get()?.showBanner(text, 10000, isWarning = true)
+        }
+    }
+
     private fun speak(text: String) {
+
         app.runInUIThread {
             app.player?.let { player ->
                 player.playCommands(player.newCommandBuilder().attention(text))

@@ -1,28 +1,72 @@
 package net.osmand.plus.plugins.nautical.engine
 
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.content.Context
+import android.os.Build
+import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
+import kotlinx.serialization.json.Json
 import net.osmand.PlatformUtil
 import net.osmand.plus.OsmandApplication
 import net.osmand.plus.R
+import net.osmand.plus.plugins.nautical.NauticalPlugin
+import net.osmand.plus.plugins.nautical.audio.AlarmType
+import net.osmand.plus.plugins.nautical.audio.NauticalAudioArbiter
+import net.osmand.plus.plugins.nautical.logbook.data.MarineLogbookRepository
 import java.util.concurrent.ConcurrentHashMap
-import android.media.AudioAttributes
-import android.media.RingtoneManager
-import android.net.Uri
-import android.content.Context
-import android.media.AudioManager
 
-class NauticalNotificationManager(private val app: OsmandApplication) {
+class NauticalNotificationManager(
+    private val app: OsmandApplication,
+    private val repository: MarineLogbookRepository? = null
+) {
     private val log = PlatformUtil.getLog(NauticalNotificationManager::class.java)
-    private val processedNotifications = ConcurrentHashMap<String, NotificationState>()
+    private val arbiter = NauticalAudioArbiter.getInstance(app)
+    private val processedNotifications = ConcurrentHashMap<String, SignalKNotification>()
+    private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+
+    companion object {
+        const val CHANNEL_CRITICAL = "osmand_marine_critical"
+        const val ALERTS_STATE_KEY = "tactical.active_alerts"
+    }
+
+    init {
+        createNotificationChannels()
+        restorePersistedAlerts()
+    }
+
+    private fun createNotificationChannels() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val name = app.getString(R.string.nautical_critical_notifications)
+            val importance = NotificationManager.IMPORTANCE_HIGH
+            val channel = NotificationChannel(CHANNEL_CRITICAL, name, importance).apply {
+                description = app.getString(R.string.nautical_critical_notifications_descr)
+                enableLights(true)
+                lightColor = android.graphics.Color.RED
+                enableVibration(true)
+                setBypassDnd(true)
+                lockscreenVisibility = NotificationCompat.VISIBILITY_PUBLIC
+            }
+            val notificationManager = app.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            notificationManager.createNotificationChannel(channel)
+        }
+    }
 
     fun processNotifications(notifications: Map<String, SignalKNotification>) {
+        var changed = false
         notifications.forEach { (path, notification) ->
-            val lastState = processedNotifications[path]
-            if (lastState != notification.state) {
+            val last = processedNotifications[path]
+            if (last == null || last.state != notification.state) {
                 // State changed or new notification
                 if (notification.state == NotificationState.ALARM || notification.state == NotificationState.EMERGENCY) {
                     triggerAlert(path, notification)
                 }
-                processedNotifications[path] = notification.state
+                processedNotifications[path] = notification
+                changed = true
             }
         }
 
@@ -32,8 +76,14 @@ class NauticalNotificationManager(private val app: OsmandApplication) {
             val entry = iterator.next()
             if (!notifications.containsKey(entry.key)) {
                 log.info("Notification cleared: ${entry.key}")
+                NotificationManagerCompat.from(app).cancel(entry.key.hashCode())
                 iterator.remove()
+                changed = true
             }
+        }
+        
+        if (changed) {
+            persistAlerts()
         }
     }
 
@@ -43,48 +93,143 @@ class NauticalNotificationManager(private val app: OsmandApplication) {
         val isCritical = notification.state == NotificationState.ALARM || notification.state == NotificationState.EMERGENCY
 
         app.runInUIThread {
-            if (isCritical) {
-                playCriticalAlarm()
+            val priorityPrefix = when (notification.state) {
+                NotificationState.EMERGENCY -> app.getString(R.string.nautical_notification_state_emergency)
+                NotificationState.ALARM -> app.getString(R.string.nautical_notification_state_alarm)
+                else -> app.getString(R.string.nautical_notification_state_warning)
+            }
+            val message = "$priorityPrefix: ${notification.message}"
+            
+            val alarmType = when {
+                path.startsWith("notifications.communication.dsc") -> AlarmType.DSC_DISTRESS
+                path == "notifications.navigation.ais.sart" -> AlarmType.AIS_SART
+                else -> AlarmType.XTE_NAVIGATION
             }
 
-            // Audio alert via OsmAnd's player
-            app.player?.let { player ->
-                val priority = when (notification.state) {
-                    NotificationState.EMERGENCY -> app.getString(R.string.nautical_notification_state_emergency)
-                    NotificationState.ALARM -> app.getString(R.string.nautical_notification_state_alarm)
-                    else -> app.getString(R.string.nautical_notification_state_warning)
-                }
-                val message = "$priority ${notification.message}"
-                player.playCommands(player.newCommandBuilder().attention(message))
-            }
+            // Audio alerting
+            arbiter.dispatchAlarm(
+                type = alarmType,
+                voiceText = message,
+                loop = isCritical,
+                playTone = isCritical
+            )
             
+            // Post distinct Android Notification for critical safety events
+            if (isCritical) {
+                postCriticalNotification(path, priorityPrefix, notification.message)
+            }
+
             // Visual alert
-            app.showToastMessage("${notification.state}: ${notification.message}")
+            if (isCritical) {
+                val bannerLabel = if (alarmType == AlarmType.DSC_DISTRESS || alarmType == AlarmType.AIS_SART) {
+                    app.getString(R.string.nautical_locate_vessel)
+                } else {
+                    app.getString(R.string.nautical_silence_alarm)
+                }
+
+                NauticalPlugin.hudManager?.get()?.showBanner(
+                    message,
+                    durationMs = 30000,
+                    label = bannerLabel,
+                    isWarning = true,
+                    onConfirm = {
+                        if (alarmType == AlarmType.DSC_DISTRESS || alarmType == AlarmType.AIS_SART) {
+                            handleRescueLocate(notification.message)
+                        } else {
+                            NauticalPlugin.engine?.acknowledgeNotification(path)
+                        }
+                    }
+                )
+            } else {
+                app.showToastMessage(message)
+            }
         }
     }
 
-    private fun playCriticalAlarm() {
-        try {
-            val alarmUri: Uri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
-                ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE)
-            
-            val ringtone = RingtoneManager.getRingtone(app, alarmUri)
-            ringtone.audioAttributes = AudioAttributes.Builder()
-                .setUsage(AudioAttributes.USAGE_ALARM)
-                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                .build()
-            
-            // Ensure audible even if system volume is low (safety requirement)
-            val audioManager = app.getSystemService(Context.AUDIO_SERVICE) as AudioManager
-            val currentVolume = audioManager.getStreamVolume(AudioManager.STREAM_ALARM)
-            val maxVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_ALARM)
-            if (currentVolume < maxVolume / 2) {
-                audioManager.setStreamVolume(AudioManager.STREAM_ALARM, maxVolume / 2, 0)
+    private fun handleRescueLocate(message: String) {
+        // Extract MMSI from message if present "MMSI: 123456789"
+        val mmsiMatch = Regex("""MMSI:\s*(\d+)""").find(message)
+        if (mmsiMatch != null) {
+            val mmsi = mmsiMatch.groupValues[1].toIntOrNull()
+            if (mmsi != null) {
+                val aisObj = NauticalPlugin.getAisObject(mmsi)
+                if (aisObj != null && aisObj.position != null) {
+                    app.runInUIThread {
+                        app.osmandMap.mapView.setLatLon(aisObj.position!!.latitude, aisObj.position!!.longitude)
+                        app.osmandMap.mapView.setIntZoom(15)
+                    }
+                    return
+                }
             }
+        }
+        app.showToastMessage(R.string.nautical_vessel_not_found_on_ais)
+    }
 
-            ringtone.play()
-        } catch (e: Exception) {
-            log.error("Failed to play critical notification alarm", e)
+
+    fun postCriticalNotification(id: String, title: String, message: String) {
+        val builder = NotificationCompat.Builder(app, CHANNEL_CRITICAL)
+            .setSmallIcon(R.drawable.ic_action_sail_boat_dark)
+            .setContentTitle(title)
+            .setContentText(message)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setCategory(NotificationCompat.CATEGORY_ALARM)
+            .setAutoCancel(false)
+            .setOngoing(true)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            .setColor(android.graphics.Color.RED)
+
+        try {
+            NotificationManagerCompat.from(app).notify(id.hashCode(), builder.build())
+        } catch (e: SecurityException) {
+            log.error("Missing notification permission for critical alert", e)
+        }
+    }
+
+    private fun persistAlerts() {
+        val repo = repository ?: return
+        val activeAlerts = processedNotifications.filter { 
+            it.value.state == NotificationState.ALARM || it.value.state == NotificationState.EMERGENCY 
+        }
+        
+        scope.launch {
+            try {
+                if (activeAlerts.isEmpty()) {
+                    repo.deleteTacticalState(ALERTS_STATE_KEY)
+                } else {
+                    val json = Json.encodeToString(activeAlerts)
+                    repo.upsertTacticalState(ALERTS_STATE_KEY, json)
+                }
+            } catch (e: Exception) {
+                log.error("Failed to persist alerts", e)
+            }
+        }
+    }
+
+    private fun restorePersistedAlerts() {
+        val repo = repository ?: return
+        scope.launch {
+            try {
+                val json = repo.getTacticalState(ALERTS_STATE_KEY)
+                if (!json.isNullOrEmpty()) {
+                    val alerts = Json.decodeFromString<Map<String, SignalKNotification>>(json)
+                    alerts.forEach { (path, notification) ->
+                        processedNotifications[path] = notification
+                        // Hydrate silently: Post Android notification if critical, but skip audio/TTS
+                        if (notification.state == NotificationState.ALARM || notification.state == NotificationState.EMERGENCY) {
+                            app.runInUIThread {
+                                val priorityPrefix = when (notification.state) {
+                                    NotificationState.EMERGENCY -> app.getString(R.string.nautical_notification_state_emergency)
+                                    NotificationState.ALARM -> app.getString(R.string.nautical_notification_state_alarm)
+                                    else -> app.getString(R.string.nautical_notification_state_warning)
+                                }
+                                postCriticalNotification(path, priorityPrefix, notification.message)
+                            }
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                log.error("Failed to restore alerts", e)
+            }
         }
     }
 }

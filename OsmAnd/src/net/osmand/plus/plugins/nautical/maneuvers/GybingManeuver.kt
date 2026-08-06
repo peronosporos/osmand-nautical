@@ -2,7 +2,7 @@ package net.osmand.plus.plugins.nautical.maneuvers
 
 import net.osmand.plus.OsmandApplication
 import net.osmand.plus.plugins.nautical.NauticalPlugin
-import net.osmand.plus.R
+import net.osmand.plus.plugins.nautical.audio.AlarmType
 import java.util.Timer
 import java.util.TimerTask
 
@@ -16,10 +16,11 @@ class GybingManeuver(app: OsmandApplication) : ManeuverEngine(app) {
         super.transitionToExecuting()
         val state = NauticalPlugin.engine?.getCurrentState()
         
-        // Boom Secure Countdown
-        app.player?.let { player ->
-            player.playCommands(player.newCommandBuilder().attention("Prepare to gybe. Secure boom in 3, 2, 1."))
-        }
+        // Asynchronous TTS Dispatch with high-priority preemption (Phase 8.0R)
+        NauticalPlugin.getInstance()?.speechHelper?.speakAsync(
+            "Prepare to gybe. Secure boom in 3, 2, 1.", 
+            AlarmType.TACTICAL_GYBE
+        )
         
         countdownTimer?.cancel()
         val timer = Timer()
@@ -52,9 +53,10 @@ class GybingManeuver(app: OsmandApplication) : ManeuverEngine(app) {
             apm?.disengage()
         }
 
-        app.player?.let { player ->
-            player.playCommands(player.newCommandBuilder().attention("Gybe aborted. Autopilot disengaged."))
-        }
+        NauticalPlugin.getInstance()?.speechHelper?.speakAsync(
+            "Gybe aborted. Autopilot disengaged.", 
+            AlarmType.TACTICAL_GYBE
+        )
         super.transitionToAborted(reason)
     }
 }

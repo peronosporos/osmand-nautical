@@ -18,7 +18,7 @@ class AnchorTrackBuffer(private val maxCapacity: Int = 720) {
     private val lock = Any()
 
     companion object {
-        private const val MIN_TIME_DELTA_MS = 60_000L // 1 minute per point
+        private const val MIN_TIME_DELTA_MS = 30_000L // 30 seconds per point
         private const val MIN_DISTANCE_DELTA_M = 4.0  // 4 meters minimum movement to filter jitter
     }
 
@@ -33,11 +33,11 @@ class AnchorTrackBuffer(private val maxCapacity: Int = 720) {
                 val timeDelta = location.time - lastPoint.timestamp
                 val distanceDelta = KMapUtils.getDistance(
                     lastPoint.latLon.latitude, lastPoint.latLon.longitude,
-                    location.latitude, location.longitude
+                    location.latitude, location.longitude,
                 )
                 
                 // Filtering: avoid overlapping static points
-                if (timeDelta < MIN_TIME_DELTA_MS && distanceDelta < MIN_DISTANCE_DELTA_M) {
+                if (timeDelta < MIN_TIME_DELTA_MS && (distanceDelta < MIN_DISTANCE_DELTA_M)) {
                     return false
                 }
             }

@@ -1,16 +1,29 @@
 package net.osmand.plus.plugins.nautical.mob.engine
 
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.Json
+import net.osmand.PlatformUtil
 import net.osmand.data.LatLon
+import net.osmand.plus.plugins.nautical.logbook.data.MarineLogbookRepository
 import java.util.*
 
 /**
  * Thread-safe state machine for Man Overboard (MOB) emergency workflow.
  */
-class MobStateMachine {
+class MobStateMachine(
+    private val repository: MarineLogbookRepository? = null,
+    private val scope: CoroutineScope? = null
+) {
+
+    private val log = PlatformUtil.getLog(MobStateMachine::class.java)
 
     private val _mobStatus = MutableStateFlow(MobStatus(MobState.INACTIVE))
     
@@ -18,6 +31,10 @@ class MobStateMachine {
      * Current status of the MOB system.
      */
     val mobStatus: StateFlow<MobStatus> = _mobStatus.asStateFlow()
+
+    companion object {
+        const val MOB_STATE_KEY = "tactical.mob_status"
+    }
 
     /**
      * Triggers a new MOB emergency.
@@ -27,7 +44,7 @@ class MobStateMachine {
      * @param cog Current Course Over Ground (radians).
      */
     fun triggerMob(currentLocation: LatLon, sog: Double = 0.0, cog: Double = 0.0) {
-        val event = MobEvent(
+        val newEvent = MobEvent(
             id = UUID.randomUUID().toString(),
             dropLocation = currentLocation,
             dropTimestamp = System.currentTimeMillis(),
@@ -35,29 +52,50 @@ class MobStateMachine {
             initialCog = cog
         )
         
-        _mobStatus.update {
-            MobStatus(
+        _mobStatus.update { current ->
+            val nextEvents = current.activeEvents + newEvent
+            val nextVectors = current.returnVectors.toMutableMap()
+            nextVectors[newEvent.id] = MobVectorEngine.calculateReturnVector(currentLocation, newEvent, sog)
+            
+            val status = current.copy(
                 state = MobState.ACTIVE_EMERGENCY,
-                event = event,
-                returnVector = MobVectorEngine.calculateReturnVector(currentLocation, event, sog)
+                primaryEventId = newEvent.id,
+                activeEvents = nextEvents,
+                returnVectors = nextVectors,
+                muteUntil = 0L // Reset mute on new emergency
             )
+            persistState(status)
+            status
         }
     }
 
     /**
-     * Updates the boat's current location and recalculates the return vector.
+     * Updates the boat's current location and recalculates all return vectors.
      * 
      * @param newLocation Live GPS coordinates of the boat.
      * @param sog Current Speed Over Ground (m/s).
      */
     fun updateCurrentLocation(newLocation: LatLon, sog: Double) {
         _mobStatus.update { current ->
-            if (current.state == MobState.INACTIVE || current.event == null) {
+            if (current.state == MobState.INACTIVE || current.activeEvents.isEmpty()) {
                 current
             } else {
-                val newVector = MobVectorEngine.calculateReturnVector(newLocation, current.event, sog)
-                current.copy(returnVector = newVector)
+                val nextVectors = current.activeEvents.associate { event ->
+                    event.id to MobVectorEngine.calculateReturnVector(newLocation, event, sog)
+                }
+                current.copy(returnVectors = nextVectors)
             }
+        }
+    }
+
+    /**
+     * Mutes the MOB siren for a specified duration.
+     */
+    fun muteSiren(durationMs: Long = 5 * 60 * 1000L) {
+        _mobStatus.update { current ->
+            val status = current.copy(muteUntil = System.currentTimeMillis() + durationMs)
+            persistState(status)
+            status
         }
     }
 
@@ -68,10 +106,52 @@ class MobStateMachine {
      */
     fun cancelMob() {
         _mobStatus.update { current ->
-            when (current.state) {
+            val next = when (current.state) {
                 MobState.ACTIVE_EMERGENCY -> current.copy(state = MobState.RESOLVED)
                 MobState.RESOLVED -> MobStatus(MobState.INACTIVE)
                 MobState.INACTIVE -> current
+            }
+            persistState(next)
+            next
+        }
+    }
+
+    /**
+     * Restores state from persistent storage after process death.
+     */
+    fun restoreState(status: MobStatus) {
+        _mobStatus.value = status
+    }
+
+    /**
+     * Retrieves the stored status from the repository.
+     */
+    suspend fun getStoredStatus(): MobStatus? = withContext(Dispatchers.IO) {
+        try {
+            repository?.getTacticalState(MOB_STATE_KEY)?.let { json ->
+                Json.decodeFromString<MobStatus>(json)
+            }
+        } catch (e: Exception) {
+            log.error("Failed to retrieve stored MOB status: ${e.message}", e)
+            null
+        }
+    }
+
+    private fun persistState(status: MobStatus) {
+        val repo = repository ?: return
+        val effectiveScope = scope ?: return
+        effectiveScope.launch(Dispatchers.IO) {
+            withContext(NonCancellable) {
+                try {
+                    if (status.state == MobState.INACTIVE) {
+                        repo.deleteTacticalState(MOB_STATE_KEY)
+                    } else {
+                        val json = Json.encodeToString(status)
+                        repo.upsertTacticalState(MOB_STATE_KEY, json)
+                    }
+                } catch (e: Exception) {
+                    log.error("Failed to persist MOB state: ${e.message}", e)
+                }
             }
         }
     }

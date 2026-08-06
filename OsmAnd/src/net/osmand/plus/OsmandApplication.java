@@ -420,6 +420,9 @@ public class OsmandApplication extends MultiDexApplication {
 
 	public LocationServiceHelper createLocationServiceHelper() {
 		LocationSource source = settings.LOCATION_SOURCE.get();
+		if (source == LocationSource.EXTERNAL_SIGNALK) {
+			return new AndroidApiLocationServiceHelper(this); // Placeholder, but we'll guard in Provider
+		}
 		if (source == LocationSource.GOOGLE_PLAY_SERVICES) {
 			return new GmsLocationServiceHelper(this);
 		}
@@ -1121,12 +1124,16 @@ public class OsmandApplication extends MultiDexApplication {
 	}
 
 	public void startNavigationService(int usageIntent) {
-		startNavigationService(this, usageIntent);
+		startNavigationService(this, usageIntent, NavigationService.class);
 	}
 
 	public void startNavigationService(@NonNull Context context, int usageIntent) {
-		LOG.info(">>>> APP startNavigationService = " + usageIntent);
-		Intent intent = new Intent(context, NavigationService.class);
+		startNavigationService(context, usageIntent, NavigationService.class);
+	}
+
+	public void startNavigationService(@NonNull Context context, int usageIntent, Class<? extends NavigationService> serviceClass) {
+		LOG.info(">>>> APP startNavigationService = " + usageIntent + " service=" + serviceClass.getSimpleName());
+		Intent intent = new Intent(context, serviceClass);
 		intent.putExtra(NavigationService.USAGE_INTENT, usageIntent);
 		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
 			runInUIThread(() -> {

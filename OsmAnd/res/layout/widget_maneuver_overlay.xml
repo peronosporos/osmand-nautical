@@ -11,7 +11,7 @@
         android:id="@+id/status_text"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="ARMED"
+        android:text="@string/nautical_maneuver_state_armed"
         android:textColor="#FFFF00"
         android:textSize="28sp"
         android:textStyle="bold"
@@ -22,7 +22,7 @@
         android:id="@+id/collision_alert_text"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="COLLISION WARNING!"
+        android:text="@string/nautical_collision_warning"
         android:textColor="#FFFFFF"
         android:textSize="20sp"
         android:textStyle="bold"
@@ -36,13 +36,25 @@
         android:id="@+id/touch_lock_text"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="TOUCH LOCK ACTIVE: Use BLE Remote, Physical Buttons, or Voice."
+        android:text="@string/nautical_touch_lock_active_msg"
         android:textColor="#000000"
         android:textSize="14sp"
         android:textStyle="bold"
         android:gravity="center"
         android:background="#00FFFF"
         android:padding="6dp"
+        android:visibility="gone"
+        android:layout_marginBottom="8dp"/>
+
+    <TextView
+        android:id="@+id/sail_plan_text"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/nautical_sail_plan_no_data"
+        android:textColor="#FFFFFF"
+        android:textSize="14sp"
+        android:textStyle="bold"
+        android:gravity="center"
         android:visibility="gone"
         android:layout_marginBottom="8dp"/>
 
@@ -57,7 +69,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="HDG: --°"
+            android:text="@string/nautical_hdg_no_data"
             android:textColor="#00FF00"
             android:textSize="22sp"
             android:textStyle="bold"
@@ -68,12 +80,24 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="AWA: --°"
+            android:text="@string/nautical_awa_no_data"
             android:textColor="#00FF00"
             android:textSize="22sp"
             android:textStyle="bold"
             android:gravity="center"/>
     </LinearLayout>
+
+    <ProgressBar
+        android:id="@+id/maneuver_progress"
+        style="@android:style/Widget.ProgressBar.Horizontal"
+        android:layout_width="match_parent"
+        android:layout_height="8dp"
+        android:layout_marginBottom="16dp"
+        android:progressDrawable="@android:drawable/progress_horizontal"
+        android:progressTint="#00FF00"
+        android:max="100"
+        android:progress="0"
+        android:visibility="gone"/>
 
     <com.google.android.material.button.MaterialButton
         android:id="@+id/btn_execute"

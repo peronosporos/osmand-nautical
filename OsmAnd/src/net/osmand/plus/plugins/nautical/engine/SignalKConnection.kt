@@ -9,8 +9,10 @@ interface SignalKConnection {
         username: String? = null,
         password: String? = null,
         onFailure: (() -> Unit)? = null,
+        onAuthError: (() -> Unit)? = null,
         onMessageReceived: (String) -> Unit,
     )
     fun sendDelta(jsonPayload: String)
     fun disconnect()
+    fun getLatencyMs(): Long
 }

@@ -9,7 +9,6 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
 import net.osmand.plus.plugins.nautical.logbook.data.LogbookEntry
 import net.osmand.plus.plugins.nautical.logbook.data.MarineLogbookRepository
-import java.io.File
 
 class MarineLogbookViewModel(
     private val repository: MarineLogbookRepository
@@ -22,13 +21,31 @@ class MarineLogbookViewModel(
     private val _exportTrigger = MutableSharedFlow<ExportFormat>()
     val exportTrigger: SharedFlow<ExportFormat> = _exportTrigger.asSharedFlow()
 
+    private var currentOffset = 0
+    private val pageSize = 100
+    private var isLoading = false
+
     init {
         refresh()
     }
 
     fun refresh() {
+        if (isLoading) return
         viewModelScope.launch {
-            repository.refreshEntries()
+            isLoading = true
+            currentOffset = 0
+            repository.refreshEntries(limit = pageSize, offset = 0, append = false)
+            isLoading = false
+        }
+    }
+
+    fun loadNextPage() {
+        if (isLoading) return
+        viewModelScope.launch {
+            isLoading = true
+            currentOffset += pageSize
+            repository.refreshEntries(limit = pageSize, offset = currentOffset, append = true)
+            isLoading = false
         }
     }
 

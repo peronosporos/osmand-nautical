@@ -1,0 +1,250 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/telemetry_pane"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:paddingHorizontal="16dp">
+
+    <!-- Row 1 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:baselineAligned="false"
+        android:orientation="horizontal">
+
+        <!-- Row 1, Col 1 -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:orientation="vertical">
+            <ImageView
+                android:id="@+id/img_icon_1_1"
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:src="@drawable/ic_action_speed"
+                app:tint="?attr/icon_color_primary" />
+            <TextView
+                android:id="@+id/txt_label_1_1"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:fontFamily="sans-serif-condensed"
+                android:textAppearance="?attr/textAppearanceCaption"
+                android:textColor="?attr/text_color_secondary"
+                tools:text="SOG" />
+            <TextView
+                android:id="@+id/txt_value_1_1"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:fontFamily="sans-serif-condensed"
+                android:textColor="?attr/text_color_primary_v2"
+                android:textAppearance="?attr/textAppearanceBody1"
+                android:textStyle="bold"
+                android:lines="1"
+                android:maxLines="1"
+                android:gravity="center"
+                app:autoSizeTextType="uniform"
+                tools:text="6.4 kn" />
+
+        </LinearLayout>
+
+        <!-- Row 1, Col 2 -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:orientation="vertical">
+            <ImageView
+                android:id="@+id/img_icon_1_2"
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:src="@drawable/ic_action_direction_arrow"
+                app:tint="?attr/icon_color_primary" />
+            <TextView
+                android:id="@+id/txt_label_1_2"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:fontFamily="sans-serif-condensed"
+                android:textAppearance="?attr/textAppearanceCaption"
+                android:textColor="?attr/text_color_secondary"
+                tools:text="HDG ERR" />
+            <TextView
+                android:id="@+id/txt_value_1_2"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:fontFamily="sans-serif-condensed"
+                android:textColor="?attr/text_color_primary_v2"
+                android:textAppearance="?attr/textAppearanceBody1"
+                android:textStyle="bold"
+                android:lines="1"
+                android:maxLines="1"
+                android:gravity="center"
+                app:autoSizeTextType="uniform"
+                tools:text="2.1°" />
+        </LinearLayout>
+
+        <!-- Row 1, Col 3 -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:orientation="vertical">
+            <ImageView
+                android:id="@+id/img_icon_1_3"
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:src="@drawable/ic_action_direction_compass"
+                app:tint="?attr/icon_color_primary" />
+            <TextView
+                android:id="@+id/txt_label_1_3"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:fontFamily="sans-serif-condensed"
+                android:textAppearance="?attr/textAppearanceCaption"
+                android:textColor="?attr/text_color_secondary"
+                tools:text="TARGET" />
+            <TextView
+                android:id="@+id/txt_value_1_3"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:fontFamily="sans-serif-condensed"
+                android:textColor="?attr/text_color_primary_v2"
+                android:textAppearance="?attr/textAppearanceBody1"
+                android:textStyle="bold"
+                android:lines="1"
+                android:maxLines="1"
+                android:gravity="center"
+                app:autoSizeTextType="uniform"
+                tools:text="245°" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- Row 2 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="20dp"
+        android:baselineAligned="false"
+        android:orientation="horizontal">
+
+        <!-- Row 2, Col 1 -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:orientation="vertical">
+            <ImageView
+                android:id="@+id/img_icon_2_1"
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:src="@drawable/ic_action_speed"
+                app:tint="?attr/icon_color_primary" />
+            <TextView
+                android:id="@+id/txt_label_2_1"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:fontFamily="sans-serif-condensed"
+                android:textAppearance="?attr/textAppearanceCaption"
+                android:textColor="?attr/text_color_secondary"
+                tools:text="STW" />
+            <TextView
+                android:id="@+id/txt_value_2_1"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:fontFamily="sans-serif-condensed"
+                android:textColor="?attr/text_color_primary_v2"
+                android:textAppearance="?attr/textAppearanceBody1"
+                android:textStyle="bold"
+                android:lines="1"
+                android:maxLines="1"
+                android:gravity="center"
+                app:autoSizeTextType="uniform"
+                tools:text="6.2 kn" />
+        </LinearLayout>
+
+        <!-- Row 2, Col 2 -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:orientation="vertical">
+            <ImageView
+                android:id="@+id/img_icon_2_2"
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:src="@drawable/ic_action_direction_movement"
+                app:tint="?attr/icon_color_primary" />
+            <TextView
+                android:id="@+id/txt_label_2_2"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:fontFamily="sans-serif-condensed"
+                android:textAppearance="?attr/textAppearanceCaption"
+                android:textColor="?attr/text_color_secondary"
+                tools:text="SET/DRFT" />
+            <TextView
+                android:id="@+id/txt_value_2_2"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:fontFamily="sans-serif-condensed"
+                android:textColor="?attr/text_color_primary_v2"
+                android:textAppearance="?attr/textAppearanceBody1"
+                android:textStyle="bold"
+                android:lines="1"
+                android:maxLines="1"
+                android:gravity="center"
+                app:autoSizeTextType="uniform"
+                tools:text="240/0.2" />
+        </LinearLayout>
+
+        <!-- Row 2, Col 3 -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:orientation="vertical">
+            <ImageView
+                android:id="@+id/img_icon_2_3"
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:src="@drawable/ic_action_direction_arrow"
+                app:tint="?attr/icon_color_primary" />
+            <TextView
+                android:id="@+id/txt_label_2_3"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:fontFamily="sans-serif-condensed"
+                android:textAppearance="?attr/textAppearanceCaption"
+                android:textColor="?attr/text_color_secondary"
+                tools:text="ROT" />
+            <TextView
+                android:id="@+id/txt_value_2_3"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:fontFamily="sans-serif-condensed"
+                android:textColor="?attr/text_color_primary_v2"
+                android:textAppearance="?attr/textAppearanceBody1"
+                android:textStyle="bold"
+                android:lines="1"
+                android:maxLines="1"
+                android:gravity="center"
+                app:autoSizeTextType="uniform"
+                tools:text="0.5°/s" />
+        </LinearLayout>
+    </LinearLayout>
+</LinearLayout>

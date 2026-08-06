@@ -3,11 +3,18 @@ package net.osmand.plus.plugins.nautical.hazard.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.channels.awaitClose
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import net.osmand.Location
+import net.osmand.plus.OsmAndLocationProvider
 import net.osmand.plus.OsmandApplication
-import net.osmand.plus.OsmAndLocationProvider.OsmAndLocationListener
 import net.osmand.plus.plugins.nautical.hazard.data.NavtexRepository
 import net.osmand.plus.plugins.nautical.hazard.engine.NavtexMessage
 import net.osmand.plus.plugins.nautical.hazard.engine.NavtexSubject
@@ -16,7 +23,7 @@ import net.osmand.util.MapUtils
 data class NavtexFilters(
     val onlyUrgent: Boolean = false,
     val subject: NavtexSubject? = null,
-    val maxDistanceKm: Double? = null
+    val maxDistanceKm: Double? = null,
 )
 
 data class NavtexUiState(
@@ -41,11 +48,7 @@ class NavtexViewModel(
     )
     
     private val locationFlow: Flow<Location?> = callbackFlow {
-        val listener = object : OsmAndLocationListener {
-            override fun updateLocation(location: Location?) {
-                trySend(location)
-            }
-        }
+        val listener = OsmAndLocationProvider.OsmAndLocationListener { location -> trySend(location) }
         app.locationProvider.addLocationListener(listener)
         // Send initial location
         trySend(app.locationProvider.lastKnownLocation)
@@ -61,7 +64,7 @@ class NavtexViewModel(
     ) { messages, filters, location ->
         val filtered = messages.filter { msg ->
             // Subject 'A' (NAVTEX_WARNING) and 'D' (SEARCH_AND_RESCUE) always bypass filters per safety audit
-            if (msg.subject == NavtexSubject.NAVTEX_WARNING || msg.subject == NavtexSubject.SEARCH_AND_RESCUE) {
+            if ((msg.subject == NavtexSubject.NAVTEX_WARNING) || (msg.subject == NavtexSubject.SEARCH_AND_RESCUE)) {
                 return@filter true
             }
 
@@ -106,9 +109,17 @@ class NavtexViewModel(
         _filters.update { it.copy(maxDistanceKm = distanceKm) }
     }
     
+    fun clear() {
+        onCleared()
+    }
+
     fun refresh() {
         viewModelScope.launch {
             repository.refreshMessages()
         }
+    }
+
+    suspend fun upsertMessage(message: NavtexMessage) {
+        repository.upsertMessage(message)
     }
 }

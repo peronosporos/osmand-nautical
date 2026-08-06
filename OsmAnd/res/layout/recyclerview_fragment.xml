@@ -14,4 +14,13 @@
 		android:clipToPadding="false"
 		android:paddingBottom="@dimen/dialog_button_ex_height" />
 
+	<TextView
+		android:id="@+id/txt_empty_list"
+		android:layout_width="match_parent"
+		android:layout_height="match_parent"
+		android:gravity="center"
+		android:padding="32dp"
+		android:text="@string/shared_string_no_items"
+		android:visibility="gone" />
+
 </LinearLayout>

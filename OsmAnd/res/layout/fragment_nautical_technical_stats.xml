@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+    <LinearLayout
+        android:id="@+id/stats_container"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <TextView
+            android:id="@+id/txt_vessel_title"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/nautical_vessel_details"
+            android:textAppearance="?attr/textAppearanceHeadline5"
+            android:gravity="center"
+            android:layout_marginBottom="8dp" />
+
+
+        <TextView
+            android:id="@+id/txt_vessel_uuid"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/nautical_vessel_uuid_label"
+            android:textAppearance="?attr/textAppearanceCaption"
+            android:gravity="center"
+            android:layout_marginBottom="16dp"
+            android:alpha="0.6" />
+
+        <TextView
+            style="@style/DashboardSubHeader"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/nautical_vessel_identity" />
+        <include layout="@layout/nautical_pilot_telemetry_grid" android:id="@+id/grid_identity" />
+
+        <TextView
+            style="@style/DashboardSubHeader"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:text="@string/nautical_vessel_engine_tanks" />
+        <include layout="@layout/nautical_pilot_telemetry_grid" android:id="@+id/grid_systems" />
+
+        <TextView
+            style="@style/DashboardSubHeader"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:text="@string/nautical_vessel_ac_sails" />
+        <include layout="@layout/nautical_pilot_telemetry_grid" android:id="@+id/grid_power" />
+
+        <TextView
+            style="@style/DashboardSubHeader"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:text="@string/nautical_vessel_env_gnss" />
+        <include layout="@layout/nautical_pilot_telemetry_grid" android:id="@+id/grid_environment" />
+
+        <TextView
+            android:id="@+id/header_rigging"
+            style="@style/DashboardSubHeader"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:text="@string/nautical_rigging_loads"
+            android:visibility="gone" />
+        <include layout="@layout/nautical_pilot_telemetry_grid" android:id="@+id/grid_rigging" android:visibility="gone" />
+
+        <TextView
+            android:id="@+id/header_pypilot"
+            style="@style/DashboardSubHeader"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:text="@string/nautical_vessel_pypilot_health"
+            android:visibility="gone" />
+        <include layout="@layout/nautical_pilot_telemetry_grid" android:id="@+id/grid_pypilot" android:visibility="gone" />
+    </LinearLayout>
+</ScrollView>

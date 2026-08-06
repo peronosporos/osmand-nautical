@@ -7,7 +7,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import net.osmand.PlatformUtil
 import okio.BufferedSink
 import okio.FileSystem
-import okio.Path
 import okio.Path.Companion.toPath
 import okio.buffer
 import java.io.File
@@ -17,7 +16,7 @@ import java.io.File
  */
 class NmeaStreamRecorder(
     private val storageDir: File,
-    private val scope: CoroutineScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    private val scope: CoroutineScope
 ) : java.lang.AutoCloseable {
     private val log = PlatformUtil.getLog(NmeaStreamRecorder::class.java)
     private var sink: BufferedSink? = null

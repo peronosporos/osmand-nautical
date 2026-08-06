@@ -1,0 +1,9 @@
+- [x] Update `strings.xml` with new resource strings
+- [x] Fix warnings in `SignalKResourceManager.kt` (complete `syncChartLocker`, fix foldable if, asSequence)
+- [x] Use `SignalKPaths.PERF_RACING_TIMER` in `MarineTextWidget.kt`
+- [x] Fix warnings in `NauticalElectricalDashboardBottomSheet.kt` (ListAdapter migration)
+- [x] Fix warnings in `SailingChecklistFragment.kt` (ListAdapter + Sealed Class)
+- [x] Fix warnings in `SailInventoryFragment.kt` (ListAdapter migration)
+- [x] Fix warnings in `NauticalTelltaleWidget.kt` (use colors, fix parentheses)
+- [x] Fix warnings in `WatchScheduleHudView.kt`
+- [x] Verify all files with `analyze_file`

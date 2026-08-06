@@ -13,6 +13,16 @@
         android:orientation="vertical"
         android:padding="8dp">
 
+        <ImageView
+            android:id="@+id/mob_icon"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginBottom="4dp"
+            android:src="@drawable/ic_action_alert"
+            android:contentDescription="@string/nautical_mob_label"
+            app:tint="#FFFFFF" />
+
         <TextView
             android:id="@+id/mob_title"
             android:layout_width="match_parent"
@@ -101,6 +111,72 @@
                     android:textColor="#FFCDD2"
                     android:textSize="10sp" />
             </LinearLayout>
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/mob_sar_buttons"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/btn_mob_sar_patterns"
+                style="@style/Widget.AppCompat.Button.Colored"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:backgroundTint="#009688"
+                android:text="@string/nautical_sar_patterns"
+                android:textColor="#FFFFFF" />
+
+            <Button
+                android:id="@+id/btn_mob_maneuvers"
+                style="@style/Widget.AppCompat.Button.Colored"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:backgroundTint="#3F51B5"
+                android:text="@string/nautical_sar_maneuvers"
+                android:textColor="#FFFFFF" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/mob_tactical_buttons"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/btn_heave_to"
+                style="@style/Widget.AppCompat.Button.Colored"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:backgroundTint="#FF9800"
+                android:text="@string/nautical_mob_btn_heave_to"
+                android:textColor="#FFFFFF" />
+
+            <Button
+                android:id="@+id/btn_motor_return"
+                style="@style/Widget.AppCompat.Button.Colored"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:backgroundTint="#4CAF50"
+                android:text="@string/nautical_mob_btn_motor_return"
+                android:textColor="#FFFFFF" />
+
+            <Button
+                android:id="@+id/btn_hold_heading"
+                style="@style/Widget.AppCompat.Button.Colored"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:backgroundTint="#607D8B"
+                android:text="@string/nautical_mob_btn_hold_heading"
+                android:textColor="#FFFFFF" />
         </LinearLayout>
 
         <LinearLayout

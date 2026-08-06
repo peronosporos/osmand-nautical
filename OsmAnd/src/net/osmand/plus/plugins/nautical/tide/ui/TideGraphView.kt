@@ -4,8 +4,10 @@ import android.content.Context
 import android.graphics.*
 import android.util.AttributeSet
 import android.view.View
-import net.osmand.plus.R
-import net.osmand.plus.plugins.nautical.NauticalPlugin
+import net.osmand.plus.OsmandApplication
+import net.osmand.StateChangedListener
+import net.osmand.plus.plugins.nautical.ui.NauticalColorResolver
+import net.osmand.plus.plugins.nautical.ui.NauticalSemanticColor
 import net.osmand.plus.plugins.nautical.tide.model.TidePrediction
 import java.text.SimpleDateFormat
 import java.util.*
@@ -17,6 +19,13 @@ class TideGraphView @JvmOverloads constructor(
 ) : View(context, attrs, defStyleAttr) {
 
     private var predictions: List<TidePrediction> = emptyList()
+    private var vesselTide: net.osmand.plus.plugins.nautical.engine.TideState? = null
+
+    fun setVesselTide(state: net.osmand.plus.plugins.nautical.engine.TideState?) {
+        this.vesselTide = state
+        invalidate()
+    }
+
     private val linePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.CYAN
         style = Paint.Style.STROKE
@@ -24,40 +33,69 @@ class TideGraphView @JvmOverloads constructor(
     }
     private val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.WHITE
-        textSize = 30f
+        textSize = android.util.TypedValue.applyDimension(
+            android.util.TypedValue.COMPLEX_UNIT_SP,
+            12f,
+            context.resources.displayMetrics,
+        )
     }
     private val markerPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.YELLOW
         style = Paint.Style.FILL
     }
     
+    private val tidePath = Path()
     private val timeFormat = SimpleDateFormat("HH:mm", Locale.US)
+
+    // Pre-allocated cache for rendering
+    private class PredictionDrawData(
+        val x: Float,
+        val y: Float,
+        val heightLabel: String?,
+        val timeLabel: String?,
+    )
+    private var drawData: List<PredictionDrawData> = emptyList()
+    private var yAxisMaxLabel: String = ""
+    private var yAxisMinLabel: String = ""
+
+    private var viewWidth = 0f
+    private var viewHeight = 0f
 
     fun setPredictions(newPredictions: List<TidePrediction>) {
         this.predictions = newPredictions
+        updateDrawData()
         invalidate()
     }
 
-    override fun onDraw(canvas: Canvas) {
-        super.onDraw(canvas)
-        if (predictions.isEmpty()) return
+    private val nightVisionListener = StateChangedListener<Boolean> {
+        postInvalidate()
+    }
 
-        val app = context.applicationContext as? net.osmand.plus.OsmandApplication
-        if (NauticalPlugin.isNightVision(app)) {
-            linePaint.color = Color.RED
-            textPaint.color = Color.RED
-            markerPaint.color = Color.RED
-        } else {
-            linePaint.color = Color.CYAN
-            textPaint.color = Color.BLACK
-            markerPaint.color = Color.rgb(255, 165, 0) // Orange
-        }
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
+        (context.applicationContext as? OsmandApplication)?.settings?.NAUTICAL_NIGHT_VISION_ENABLED?.addListener(nightVisionListener)
+    }
 
-        val w = width.toFloat()
-        val h = height.toFloat()
+    override fun onDetachedFromWindow() {
+        super.onDetachedFromWindow()
+        (context.applicationContext as? OsmandApplication)?.settings?.NAUTICAL_NIGHT_VISION_ENABLED?.removeListener(nightVisionListener)
+    }
+
+    override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
+        super.onSizeChanged(w, h, oldw, oldh)
+        viewWidth = w.toFloat()
+        viewHeight = h.toFloat()
+        updateDrawData()
+    }
+
+    private fun updateDrawData() {
+        if (predictions.isEmpty() || (viewWidth <= 0)) return
+        
+        val w = viewWidth
+        val h = viewHeight
         val padding = 50f
-        val graphW = w - 2 * padding
-        val graphH = h - 2 * padding
+        val graphW = w - (2 * padding)
+        val graphH = h - (2 * padding)
 
         val minHeight = predictions.minOf { it.heightMeters }
         val maxHeight = predictions.maxOf { it.heightMeters }
@@ -65,28 +103,51 @@ class TideGraphView @JvmOverloads constructor(
         
         val startTime = predictions.first().timestamp
         val endTime = predictions.last().timestamp
-        val timeRange = (endTime - startTime).coerceAtLeast(1)
+        val timeRange = (endTime - startTime).coerceAtLeast(1).toFloat()
 
-        val path = Path()
-        predictions.forEachIndexed { i, p ->
-            val x = padding + ((p.timestamp - startTime).toFloat() / timeRange * graphW)
-            val y = h - padding - (((p.heightMeters - minHeight).toFloat() / range.toFloat()) * graphH)
+        yAxisMaxLabel = if (predictions.any { it.velocity != null }) String.format(Locale.US, "%.1fkn", maxHeight * 1.94384) else String.format(Locale.US, "%.1fm", maxHeight)
+        yAxisMinLabel = if (predictions.any { it.velocity != null }) String.format(Locale.US, "%.1fkn", minHeight * 1.94384) else String.format(Locale.US, "%.1fm", minHeight)
+
+        tidePath.rewind()
+        drawData = predictions.mapIndexed { i, p ->
+            val valToDraw = p.velocity ?: p.heightMeters
+            val x = padding + (((p.timestamp - startTime).toFloat() / timeRange) * graphW)
+            val y = h - padding - (((valToDraw - minHeight).toFloat() / range.toFloat()) * graphH)
             
-            if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
+            if (i == 0) tidePath.moveTo(x, y) else tidePath.lineTo(x, y)
             
+            val labelValue = if (p.velocity != null) p.velocity * 1.94384 else p.heightMeters
+            val unit = if (p.velocity != null) "kn" else "m"
+            
+            val hLabel = if ((p.isHighTide != null) || (p.velocity != null)) String.format(Locale.US, "%.1f%s", labelValue, unit) else null
+            val tLabel = if ((p.isHighTide != null) || (p.velocity != null)) timeFormat.format(Date(p.timestamp)) else null
+            
+            PredictionDrawData(x, y, hLabel, tLabel)
+        }
+    }
+
+    override fun onDraw(canvas: Canvas) {
+        super.onDraw(canvas)
+        if (drawData.isEmpty()) return
+
+        val textColor = NauticalColorResolver.getColor(context, NauticalSemanticColor.PRIMARY)
+        linePaint.color = textColor
+        textPaint.color = textColor
+        markerPaint.color = NauticalColorResolver.getColor(context, NauticalSemanticColor.MARKER)
+
+        drawData.forEachIndexed { i, data ->
             // Draw High/Low Markers
-            if (p.isHighTide != null) {
-                canvas.drawCircle(x, y, 10f, markerPaint)
-                val label = String.format(Locale.US, "%.1fm", p.heightMeters)
-                val timeLabel = timeFormat.format(Date(p.timestamp))
-                canvas.drawText(label, x - 20, if (p.isHighTide) y - 20 else y + 40, textPaint)
-                canvas.drawText(timeLabel, x - 20, if (p.isHighTide) y - 50 else y + 70, textPaint)
+            if ((data.heightLabel != null) && (data.timeLabel != null)) {
+                canvas.drawCircle(data.x, data.y, 10f, markerPaint)
+                val isHigh = predictions[i].isHighTide == true
+                canvas.drawText(data.heightLabel, data.x - 20, if (isHigh) data.y - 20 else data.y + 40, textPaint)
+                canvas.drawText(data.timeLabel, data.x - 20, if (isHigh) data.y - 50 else data.y + 70, textPaint)
             }
         }
-        canvas.drawPath(path, linePaint)
+        canvas.drawPath(tidePath, linePaint)
         
         // Draw Y-axis labels
-        canvas.drawText(String.format(Locale.US, "%.1fm", maxHeight), 5f, padding, textPaint)
-        canvas.drawText(String.format(Locale.US, "%.1fm", minHeight), 5f, h - padding, textPaint)
+        canvas.drawText(yAxisMaxLabel, 5f, 50f, textPaint)
+        canvas.drawText(yAxisMinLabel, 5f, viewHeight - 50f, textPaint)
     }
 }

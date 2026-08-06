@@ -182,7 +182,7 @@ public class OsmAndLocationProvider implements SensorEventListener {
 			}
 		}
 
-		if (isLocationPermissionAvailable(app)) {
+		if (isLocationPermissionAvailable(app) && app.getSettings().LOCATION_SOURCE.get() != LocationSource.EXTERNAL_SIGNALK) {
 			LocationManager locationService = (LocationManager) app.getSystemService(LOCATION_SERVICE);
 			registerGpsStatusListener(locationService);
 			try {

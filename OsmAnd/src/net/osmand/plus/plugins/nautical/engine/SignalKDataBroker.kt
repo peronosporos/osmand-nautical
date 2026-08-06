@@ -3,81 +3,350 @@ package net.osmand.plus.plugins.nautical.engine
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import kotlin.math.abs
+import net.osmand.plus.plugins.nautical.network.LivePerformanceData
+import net.osmand.plus.plugins.nautical.utils.TemporalUtils
+import net.osmand.plus.plugins.nautical.utils.AngleEMA
+import net.osmand.plus.plugins.nautical.utils.EMA
+import net.osmand.plus.settings.backend.OsmandSettings
 import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * Manages SignalK data streams with throttling and threshold-based filtering.
+ * Uses atomic StateFlow updates to ensure thread safety and prevent torn reads.
  */
-class SignalKDataBroker {
+class SignalKDataBroker(private val settings: OsmandSettings? = null) {
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
-    private val _headingTrue = MutableStateFlow<Double?>(null)
-    private val _windAngleApparent = MutableStateFlow<Double?>(null)
-    private val _autopilotState = MutableStateFlow<String>("standby")
-    private val _autopilotTargetHeadingMag = MutableStateFlow<Double?>(null)
-    private val _cpa = MutableStateFlow<Double?>(null) // Closest Point of Approach in nautical miles
-    private val _tcpa = MutableStateFlow<Double?>(null) // Time to Closest Point of Approach in seconds
-    private val _threatName = MutableStateFlow<String?>(null)
+    private val _marineState = MutableStateFlow(MarineState())
+    val marineState: StateFlow<MarineState> = _marineState.asStateFlow()
 
-    val headingTrue: StateFlow<Double?> = _headingTrue.asStateFlow()
-    val windAngleApparent: StateFlow<Double?> = _windAngleApparent.asStateFlow()
-    val autopilotState: StateFlow<String> = _autopilotState.asStateFlow()
-    val autopilotTargetHeadingMag: StateFlow<Double?> = _autopilotTargetHeadingMag.asStateFlow()
-    val cpa: StateFlow<Double?> = _cpa.asStateFlow()
-    val tcpa: StateFlow<Double?> = _tcpa.asStateFlow()
-    val threatName: StateFlow<String?> = _threatName.asStateFlow()
+    /**
+     * Visual State Flow: Emits only when critical visual fields change significantly.
+     * Thresholds: 10m for Position, 0.5 degrees for Heading/COG.
+     */
+    val visualState: Flow<MarineState> = marineState.distinctUntilChanged { old, new ->
+        val posChange = if ((old.latitude != null) && (old.longitude != null) && (new.latitude != null) && (new.longitude != null)) {
+            net.osmand.shared.util.KMapUtils.getDistance(old.latitude, old.longitude, new.latitude, new.longitude) > 10.0
+        } else {
+            (old.latitude != new.latitude) || (old.longitude != new.longitude)
+        }
+
+        val hdgChange = abs(Math.toDegrees((old.headingTrue ?: 0.0) - (new.headingTrue ?: 0.0))) > 0.5
+        val cogChange = abs(Math.toDegrees((old.courseOverGroundTrue ?: 0.0) - (new.courseOverGroundTrue ?: 0.0))) > 0.5
+        val envChange = (abs((old.depthBelowKeel ?: 0.0) - (new.depthBelowKeel ?: 0.0)) > 0.1) ||
+                        (abs((old.windSpeedApparent ?: 0.0) - (new.windSpeedApparent ?: 0.0)) > 0.5)
+        val statusChange = (old.connectionStatus != new.connectionStatus) || (old.isMobActive != new.isMobActive) || (old.autopilotState != new.autopilotState)
+        
+        // Return true to SKIP emission (if NO significant change)
+        !(posChange || hdgChange || cogChange || envChange || statusChange)
+    }
+
+    // Unified Smoothed Flows
+    val headingTrue = marineState.map { it.headingTrue }.distinctUntilChanged()
+    val windAngleApparent = marineState.map { it.windDirectionApparent }.distinctUntilChanged()
+    val windSpeedApparent = marineState.map { it.windSpeedApparent }.distinctUntilChanged()
+    val depthBelowKeel = marineState.map { it.depthBelowKeel }.distinctUntilChanged()
+    val rudderAngle = marineState.map { it.rudderAngle }.distinctUntilChanged()
+    val gnss = marineState.map { it.gnss }.distinctUntilChanged()
+    val batterySoc = marineState.map { it.batteries["0"]?.stateOfCharge }.distinctUntilChanged()
+    val tanks = marineState.map { it.tanks }.distinctUntilChanged()
+    val cpa = marineState.map { it.cpa }.distinctUntilChanged()
+    val tcpa = marineState.map { it.tcpa }.distinctUntilChanged()
+    val threatName = marineState.map { it.threatName }.distinctUntilChanged()
+
+    val magneticVariation = marineState.map { it.magneticVariation }.distinctUntilChanged()
+    val yaw = marineState.map { it.yaw }.distinctUntilChanged()
+    val riggingLoads = marineState.map { it.riggingLoads }.distinctUntilChanged()
+    val acSystems = marineState.map { it.inverters.values + it.chargers.values }.distinctUntilChanged()
+
+    val autopilotState: StateFlow<String> = marineState
+        .map { it.autopilotState }
+        .stateIn(scope, SharingStarted.Eagerly, "standby")
+
+    val autopilotTargetHeadingMag: StateFlow<Double?> = marineState
+        .map { it.autopilotHeadingSet }
+        .stateIn(scope, SharingStarted.Eagerly, null)
+
+    private val _manualOverrideTriggered = MutableSharedFlow<Unit>(replay = 0)
+    val manualOverrideTriggered: SharedFlow<Unit> = _manualOverrideTriggered.asSharedFlow()
 
     // Throttling and Threshold settings
-    private val throttleInterval = 500.milliseconds
-    private val angleThreshold = Math.toRadians(2.0)
+    private var throttleInterval = (settings?.NAUTICAL_TELEMETRY_REFRESH_BASE_MS?.get() ?: 100).milliseconds
+    private var angleThreshold = Math.toRadians((settings?.NAUTICAL_EMA_ANGLE_THRESHOLD_DEG?.get() ?: 0.5f).toDouble())
+    private var speedThreshold = (settings?.NAUTICAL_EMA_SPEED_THRESHOLD_MS?.get() ?: 0.05f).toDouble()
+
+    // EMA Smoothing filters
+    private val headingEma = AngleEMA(settings?.NAUTICAL_EMA_ALPHA_HEADING?.get()?.toDouble() ?: 0.2)
+    private val windAngleEma = AngleEMA(settings?.NAUTICAL_EMA_ALPHA_WIND_ANGLE?.get()?.toDouble() ?: 0.2)
+    private val windSpeedEma = EMA(settings?.NAUTICAL_EMA_ALPHA_WIND_SPEED?.get()?.toDouble() ?: 0.2)
+    private val depthEma = EMA(settings?.NAUTICAL_EMA_ALPHA_DEPTH?.get()?.toDouble() ?: 0.1)
+    private val rudderEma = AngleEMA(settings?.NAUTICAL_EMA_ALPHA_RUDDER?.get()?.toDouble() ?: 0.3)
+    private val simulatedRudderEma = AngleEMA(0.15) // Damping for virtual rudder
+    private val rollEma = AngleEMA(0.2)
+    private val pitchEma = AngleEMA(0.2)
 
     private var lastHeadingTime = 0L
-    private var lastHeadingValue: Double? = null
+    private var lastWindAngleTime = 0L
+    private var lastWindSpeedTime = 0L
+    private var lastRollTime = 0L
+    private var lastPitchTime = 0L
+    private var lastRudderTime = 0L
 
-    private var lastWindTime = 0L
-    private var lastWindValue: Double? = null
-
+    @Synchronized
     fun processHeadingUpdate(value: Double) {
-        val now = System.currentTimeMillis()
-        if (shouldUpdate(value, lastHeadingValue, now, lastHeadingTime)) {
-            _headingTrue.value = value
-            lastHeadingValue = value
+        val now = TemporalUtils.now()
+        val smoothed = headingEma.update(value)
+        if (shouldUpdate(smoothed, _marineState.value.headingTrue, now, lastHeadingTime, angleThreshold)) {
+            _marineState.update { it.copy(headingTrue = smoothed, timeOfHeadingFix = now) }
             lastHeadingTime = now
         }
     }
 
+    @Synchronized
     fun processWindAngleUpdate(value: Double) {
-        val now = System.currentTimeMillis()
-        if (shouldUpdate(value, lastWindValue, now, lastWindTime)) {
-            _windAngleApparent.value = value
-            lastWindValue = value
-            lastWindTime = now
+        val now = TemporalUtils.now()
+        val offsetDeg = settings?.NAUTICAL_WIND_ALIGNMENT?.get() ?: 0.0f
+        val offsetRad = Math.toRadians(offsetDeg.toDouble())
+        val correctedValue = (((value + offsetRad) % (2 * Math.PI)) + (2 * Math.PI)) % (2 * Math.PI)
+        val smoothed = windAngleEma.update(correctedValue)
+
+        if (shouldUpdate(smoothed, _marineState.value.windDirectionApparent, now, lastWindAngleTime, angleThreshold)) {
+            _marineState.update { it.copy(windDirectionApparent = smoothed, timeOfWindFix = now) }
+            lastWindAngleTime = now
         }
     }
 
+    @Synchronized
+    fun processWindSpeedUpdate(value: Double) {
+        val now = TemporalUtils.now()
+        val smoothed = windSpeedEma.update(value)
+        if (shouldUpdate(smoothed, _marineState.value.windSpeedApparent, now, lastWindSpeedTime, speedThreshold)) {
+            _marineState.update { it.copy(windSpeedApparent = smoothed, timeOfWindFix = now) }
+            lastWindSpeedTime = now
+        }
+    }
+
+    @Synchronized
+    fun processDepthUpdate(value: Double) {
+        val now = TemporalUtils.now()
+        val safetyManager = net.osmand.plus.plugins.nautical.NauticalPlugin.getInstance()?.safetyManager
+        val keelOffset = safetyManager?.getKeelOffset() ?: settings?.NAUTICAL_KEEL_OFFSET?.get()?.toDouble() ?: 0.0
+        val trueDepth = value + keelOffset
+        val smoothed = depthEma.update(trueDepth)
+        
+        _marineState.update { 
+            it.copy(
+                depthBelowTransducer = value,
+                depthBelowKeel = smoothed,
+                timeOfDepthFix = now,
+            ) 
+        }
+    }
+
+    private var lastStwValue: Double? = null
+    private var lastSogValue: Double? = null
+    private var stwUnreliableStartTime: Long = 0
+
+    @Synchronized
+    fun processStwUpdate(value: Double) {
+        val now = TemporalUtils.now()
+        lastStwValue = value
+        checkStwReliability(now)
+        _marineState.update { it.copy(speedThroughWater = value, timeOfSogFix = now) }
+    }
+
+    @Synchronized
+    fun processSogUpdate(value: Double) {
+        val now = TemporalUtils.now()
+        lastSogValue = value
+        checkStwReliability(now)
+        _marineState.update { it.copy(speedOverGround = value, timeOfSogFix = now) }
+    }
+
+    private fun checkStwReliability(now: Long) {
+        val stw = lastStwValue ?: return
+        val sog = lastSogValue ?: return
+        
+        val minStw = settings?.NAUTICAL_STW_REL_MIN_STW?.get()?.toDouble() ?: 0.1
+        val minSog = settings?.NAUTICAL_STW_REL_MIN_SOG?.get()?.toDouble() ?: 1.03
+        val delayMs = (settings?.NAUTICAL_STW_REL_DELAY_SEC?.get() ?: 10) * 1000L
+        
+        // Indicating a fouled paddlewheel: STW is 0 or very low while SOG is steady above threshold
+        val isPotentiallyUnreliable = (stw < minStw) && (sog > minSog) 
+        
+        if (isPotentiallyUnreliable) {
+            if (stwUnreliableStartTime == 0L) {
+                stwUnreliableStartTime = now
+            } else if ((now - stwUnreliableStartTime) > delayMs) { 
+                _marineState.update { it.copy(isStwUnreliable = true) }
+            }
+        } else {
+            stwUnreliableStartTime = 0
+            _marineState.update { it.copy(isStwUnreliable = false) }
+        }
+    }
+
+    @Synchronized
+    fun processRollUpdate(value: Double) {
+        val now = TemporalUtils.now()
+        val smoothed = rollEma.update(value)
+        if (shouldUpdate(smoothed, _marineState.value.roll, now, lastRollTime, angleThreshold)) {
+            _marineState.update { it.copy(roll = smoothed, timeOfAttitudeFix = now) }
+            lastRollTime = now
+        }
+    }
+
+    @Synchronized
+    fun processPitchUpdate(value: Double) {
+        val now = TemporalUtils.now()
+        val smoothed = pitchEma.update(value)
+        if (shouldUpdate(smoothed, _marineState.value.pitch, now, lastPitchTime, angleThreshold)) {
+            _marineState.update { it.copy(pitch = smoothed, timeOfAttitudeFix = now) }
+            lastPitchTime = now
+        }
+    }
+
+    @Synchronized
+    fun processRudderUpdate(value: Double) {
+        val now = TemporalUtils.now()
+        val smoothed = rudderEma.update(value)
+        
+        // Shadow Drive: Detect manual override if rudder moves significantly (>5 deg) 
+        // while AP is engaged and NOT in a transition/maneuver.
+        val state = _marineState.value
+        val shadowDriveEnabled = settings?.NAUTICAL_SHADOW_DRIVE?.get() ?: true
+        if (shadowDriveEnabled && (state.autopilotState != "standby") && (state.pendingCommandPath == null)) {
+            state.rudderAngle?.let { lastRudder ->
+                if (abs(smoothed - lastRudder) > Math.toRadians(5.0)) {
+                    scope.launch { _manualOverrideTriggered.emit(Unit) }
+                }
+            }
+        }
+
+        if (shouldUpdate(smoothed, _marineState.value.rudderAngle, now, lastRudderTime, angleThreshold)) {
+            _marineState.update { it.copy(rudderAngle = smoothed, timeOfRudderFix = now) }
+            lastRudderTime = now
+        }
+    }
+
+    fun updateSimulatedRudder(target: Double) {
+        val now = TemporalUtils.now()
+        val smoothed = simulatedRudderEma.update(target)
+        _marineState.update { it.copy(simulatedRudderAngle = smoothed, timeOfRudderFix = now) }
+    }
+
+    fun processVariationUpdate(value: Double) {
+        _marineState.update { it.copy(magneticVariation = value) }
+    }
+
     fun updateAutopilotState(state: String) {
-        _autopilotState.value = state
+        _marineState.update { it.copy(autopilotState = state) }
     }
 
     fun updateAutopilotTargetHeadingMag(value: Double) {
-        _autopilotTargetHeadingMag.value = value
+        _marineState.update { it.copy(autopilotHeadingSet = value) }
+    }
+
+    fun processTideUpdate(transform: (TideState?) -> TideState) {
+        _marineState.update { it.copy(tide = transform(it.tide)) }
     }
 
     fun updateClosestApproach(cpaVal: Double?, tcpaVal: Double?, name: String? = null) {
-        _cpa.value = cpaVal
-        _tcpa.value = tcpaVal
-        if (name != null) {
-            _threatName.value = name
+        _marineState.update { it.copy(cpa = cpaVal, tcpa = tcpaVal, threatName = name ?: it.threatName) }
+    }
+
+    fun updateState(transform: (MarineState) -> MarineState) {
+        _marineState.update(transform)
+    }
+
+    private val _livePerformanceData = MutableStateFlow(LivePerformanceData())
+    val livePerformanceData: StateFlow<LivePerformanceData> = _livePerformanceData.asStateFlow()
+
+    fun updatePerformanceData(data: LivePerformanceData) {
+        _livePerformanceData.value = data
+    }
+
+    fun updateTuning() {
+        if (settings == null) return
+        headingEma.alpha = settings.NAUTICAL_EMA_ALPHA_HEADING.get().toDouble()
+        windAngleEma.alpha = settings.NAUTICAL_EMA_ALPHA_WIND_ANGLE.get().toDouble()
+        windSpeedEma.alpha = settings.NAUTICAL_EMA_ALPHA_WIND_SPEED.get().toDouble()
+        depthEma.alpha = settings.NAUTICAL_EMA_ALPHA_DEPTH.get().toDouble()
+        rudderEma.alpha = settings.NAUTICAL_EMA_ALPHA_RUDDER.get().toDouble()
+        throttleInterval = settings.NAUTICAL_TELEMETRY_REFRESH_BASE_MS.get().milliseconds
+        angleThreshold = Math.toRadians(settings.NAUTICAL_EMA_ANGLE_THRESHOLD_DEG.get().toDouble())
+        speedThreshold = settings.NAUTICAL_EMA_SPEED_THRESHOLD_MS.get().toDouble()
+        
+        // Task: Reactive restart of staleness monitoring if watchdog timeout changed
+        startStalenessMonitoring()
+    }
+
+    private var deadReckoningJob: Job? = null
+    private var stalenessJob: Job? = null
+
+    init {
+        startDeadReckoning()
+        startStalenessMonitoring()
+    }
+
+    private fun startStalenessMonitoring() {
+        stalenessJob?.cancel()
+        stalenessJob = scope.launch {
+            while (isActive) {
+                delay(1000.milliseconds)
+                val now = TemporalUtils.now()
+                val timeoutMs = (settings?.NAUTICAL_WATCHDOG_TIMEOUT_SEC?.get() ?: 10) * 1000L
+                
+                _marineState.update { state ->
+                    val stale = state.timestamps.filter { (_, ts) ->
+                        (now - ts) > timeoutMs
+                    }.keys
+                    if (stale != state.stalePaths) {
+                        state.copy(stalePaths = stale)
+                    } else {
+                        state
+                    }
+                }
+            }
+        }
+    }
+
+    private fun startDeadReckoning() {
+        deadReckoningJob?.cancel()
+        deadReckoningJob = scope.launch {
+            while (isActive) {
+                delay(500.milliseconds)
+                val current = _marineState.value
+                if ((current.connectionStatus == ConnectionStatus.STALE) || (current.connectionStatus == ConnectionStatus.DISCONNECTED)) {
+                    val lat = current.latitude
+                    val lon = current.longitude
+                    val cog = current.courseOverGroundTrue
+                    val sog = current.speedOverGround
+                    
+                    if ((lat != null) && (lon != null) && (cog != null) && (sog != null) && (sog > 0.1)) {
+                        // Apply Dead Reckoning: move 0.5s worth of distance
+                        val distanceMeters = sog * 0.5
+                        val next = net.osmand.util.MapUtils.rhumbDestinationPoint(lat, lon, Math.toDegrees(cog), distanceMeters)
+                        
+                        _marineState.update { s ->
+                            s.copy(latitude = next.latitude, longitude = next.longitude)
+                        }
+                    }
+                }
+            }
         }
     }
 
     fun stop() {
+        deadReckoningJob?.cancel()
+        stwUnreliableStartTime = 0L
         scope.cancel()
     }
 
-    private fun shouldUpdate(newValue: Double, lastValue: Double?, now: Long, lastTime: Long): Boolean {
+    private fun shouldUpdate(newValue: Double, lastValue: Double?, now: Long, lastTime: Long, threshold: Double): Boolean {
         if (lastValue == null) return true
-        if (now - lastTime < throttleInterval.inWholeMilliseconds) return false
-        return abs(newValue - lastValue) > angleThreshold
+        if ((now - lastTime) < throttleInterval.inWholeMilliseconds) return false
+        return abs(newValue - lastValue) > threshold
     }
 }
+

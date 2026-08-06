@@ -1,12 +1,10 @@
 package net.osmand.plus.plugins.nautical.raster
 
-import android.content.Context
 import android.net.Uri
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import net.osmand.PlatformUtil
 import net.osmand.plus.OsmandApplication
-import net.osmand.plus.api.SQLiteAPI
 import java.io.File
 import java.io.FileOutputStream
 

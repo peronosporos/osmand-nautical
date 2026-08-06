@@ -194,8 +194,6 @@ public class GlobalSettingsFragment extends BaseSettingsFragment
 			}
 		} else if (prefId.equals(MAP_RENDERING_ENGINE_ID)) {
 			new MapRenderingEngineDialog(app, getActivity()).showDialog(this::setupMapRenderingEnginePref);
-		} else if (prefId.equals("nautical_compass_wizard")) {
-			NauticalCompassWizardDialog.show(this);
 		}
 
 		return super.onPreferenceClick(preference);

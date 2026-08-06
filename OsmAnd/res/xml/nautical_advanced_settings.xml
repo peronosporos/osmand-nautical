@@ -1,0 +1,165 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:title="Autopilot &amp; Signal Processing">
+
+    <PreferenceCategory
+        android:title="Autopilot PID Tuning"
+        android:layout="@layout/preference_category_with_descr">
+
+        <net.osmand.plus.settings.preferences.EditTextPreferenceEx
+            android:key="nautical_rudder_gain"
+            android:layout="@layout/preference_with_descr"
+            android:title="@string/nautical_advanced_rudder_gain"
+            android:summary="@string/nautical_help_rudder_gain"
+            android:inputType="numberDecimal" />
+
+        <net.osmand.plus.settings.preferences.EditTextPreferenceEx
+            android:key="nautical_counter_rudder"
+            android:layout="@layout/preference_with_descr"
+            android:title="@string/nautical_advanced_counter_rudder"
+            android:inputType="numberDecimal" />
+
+        <net.osmand.plus.settings.preferences.EditTextPreferenceEx
+            android:key="nautical_auto_trim"
+            android:layout="@layout/preference_with_descr"
+            android:title="@string/nautical_advanced_auto_trim"
+            android:inputType="numberDecimal" />
+
+        <net.osmand.plus.settings.preferences.EditTextPreferenceEx
+            android:key="nautical_rudder_limit"
+            android:layout="@layout/preference_with_descr"
+            android:title="@string/nautical_advanced_rudder_limit"
+            android:inputType="numberDecimal" />
+    </PreferenceCategory>
+
+    <PreferenceCategory
+        android:title="Pypilot Advanced PID"
+        android:layout="@layout/preference_category_with_descr">
+
+        <net.osmand.plus.settings.preferences.EditTextPreferenceEx
+            android:key="nautical_pypilot_p"
+            android:layout="@layout/preference_with_descr"
+            android:title="@string/nautical_pypilot_p"
+            android:inputType="numberDecimal" />
+
+        <net.osmand.plus.settings.preferences.EditTextPreferenceEx
+            android:key="nautical_pypilot_i"
+            android:layout="@layout/preference_with_descr"
+            android:title="@string/nautical_pypilot_i"
+            android:inputType="numberDecimal" />
+
+        <net.osmand.plus.settings.preferences.EditTextPreferenceEx
+            android:key="nautical_pypilot_d"
+            android:layout="@layout/preference_with_descr"
+            android:title="@string/nautical_pypilot_d"
+            android:inputType="numberDecimal" />
+
+        <net.osmand.plus.settings.preferences.EditTextPreferenceEx
+            android:key="nautical_pypilot_pr"
+            android:layout="@layout/preference_with_descr"
+            android:title="@string/nautical_pypilot_pr"
+            android:inputType="numberDecimal" />
+
+        <net.osmand.plus.settings.preferences.EditTextPreferenceEx
+            android:key="nautical_pypilot_ff"
+            android:layout="@layout/preference_with_descr"
+            android:title="@string/nautical_pypilot_ff"
+            android:inputType="numberDecimal" />
+    </PreferenceCategory>
+
+    <PreferenceCategory
+        android:title="@string/nautical_ema_smoothing"
+        android:layout="@layout/preference_category_with_descr">
+
+        <net.osmand.plus.settings.preferences.EditTextPreferenceEx
+            android:key="nautical_ema_alpha_heading"
+            android:layout="@layout/preference_with_descr"
+            android:title="@string/nautical_ema_alpha_heading"
+            android:summary="@string/nautical_help_ema_heading"
+            android:inputType="numberDecimal" />
+
+        <net.osmand.plus.settings.preferences.EditTextPreferenceEx
+            android:key="nautical_ema_alpha_wind_angle"
+            android:layout="@layout/preference_with_descr"
+            android:title="@string/nautical_ema_alpha_wind_angle"
+            android:inputType="numberDecimal" />
+
+        <net.osmand.plus.settings.preferences.EditTextPreferenceEx
+            android:key="nautical_ema_alpha_wind_speed"
+            android:layout="@layout/preference_with_descr"
+            android:title="@string/nautical_ema_alpha_wind_speed"
+            android:inputType="numberDecimal" />
+
+        <net.osmand.plus.settings.preferences.EditTextPreferenceEx
+            android:key="nautical_ema_alpha_depth"
+            android:layout="@layout/preference_with_descr"
+            android:title="@string/nautical_ema_alpha_depth"
+            android:inputType="numberDecimal" />
+
+        <net.osmand.plus.settings.preferences.EditTextPreferenceEx
+            android:key="nautical_ema_alpha_rudder"
+            android:layout="@layout/preference_with_descr"
+            android:title="@string/nautical_ema_alpha_rudder"
+            android:inputType="numberDecimal" />
+
+        <net.osmand.plus.settings.preferences.EditTextPreferenceEx
+            android:key="nautical_ema_angle_threshold_deg"
+            android:layout="@layout/preference_with_descr"
+            android:title="@string/nautical_ema_angle_threshold_deg"
+            android:inputType="numberDecimal" />
+
+        <net.osmand.plus.settings.preferences.EditTextPreferenceEx
+            android:key="nautical_ema_speed_threshold_ms"
+            android:layout="@layout/preference_with_descr"
+            android:title="@string/nautical_ema_speed_threshold_ms"
+            android:inputType="numberDecimal" />
+
+        <net.osmand.plus.settings.preferences.EditTextPreferenceEx
+            android:key="nautical_telemetry_refresh_base_ms"
+            android:layout="@layout/preference_with_descr"
+            android:title="@string/nautical_telemetry_refresh_base_ms"
+            android:inputType="number" />
+    </PreferenceCategory>
+
+    <PreferenceCategory
+        android:title="@string/nautical_reliability_thresholds"
+        android:layout="@layout/preference_category_with_descr">
+
+        <net.osmand.plus.settings.preferences.EditTextPreferenceEx
+            android:key="nautical_stw_rel_min_stw"
+            android:layout="@layout/preference_with_descr"
+            android:title="@string/nautical_stw_rel_min_stw"
+            android:inputType="numberDecimal" />
+
+        <net.osmand.plus.settings.preferences.EditTextPreferenceEx
+            android:key="nautical_stw_rel_min_sog"
+            android:layout="@layout/preference_with_descr"
+            android:title="@string/nautical_stw_rel_min_sog"
+            android:inputType="numberDecimal" />
+
+        <net.osmand.plus.settings.preferences.EditTextPreferenceEx
+            android:key="nautical_actuator_overload_window_sec"
+            android:layout="@layout/preference_with_descr"
+            android:title="@string/nautical_actuator_overload_window_sec"
+            android:inputType="number" />
+    </PreferenceCategory>
+
+    <PreferenceCategory
+        android:title="Signal Processing"
+        android:layout="@layout/preference_category_with_descr">
+
+        <net.osmand.plus.settings.preferences.EditTextPreferenceEx
+            android:key="nautical_filter_sensitivity"
+            android:layout="@layout/preference_with_descr"
+            android:title="@string/nautical_advanced_filter_sensitivity"
+            android:inputType="numberDecimal" />
+
+        <net.osmand.plus.settings.preferences.SwitchPreferenceEx
+            android:key="nautical_allow_unchecksummed_nmea"
+            android:layout="@layout/preference_with_descr"
+            android:title="@string/nautical_allow_unchecksummed_nmea"
+            android:summary="@string/nautical_allow_unchecksummed_nmea_desc" />
+    </PreferenceCategory>
+
+</PreferenceScreen>

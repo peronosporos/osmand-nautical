@@ -1,6 +1,7 @@
 package net.osmand.plus.plugins.nautical.hazard.ui
 
 import android.os.Bundle
+import android.view.KeyEvent
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -24,7 +25,22 @@ class NavtexDetailsBottomSheet : BottomSheetDialogFragment() {
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
-        return inflater.inflate(R.layout.bottom_sheet_navtex_details, container, false)
+        val view = inflater.inflate(R.layout.bottom_sheet_navtex_details, container, false)
+        
+        // Trap focus for D-pad
+        view.isFocusableInTouchMode = true
+        view.requestFocus()
+        view.setOnKeyListener { _, keyCode, event ->
+            if (keyCode == KeyEvent.KEYCODE_BACK && event.action == KeyEvent.ACTION_UP) {
+                dismiss()
+                true
+            } else {
+                // Consume keys to prevent map pan/zoom
+                true
+            }
+        }
+        
+        return view
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {

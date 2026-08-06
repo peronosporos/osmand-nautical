@@ -5,10 +5,250 @@
     android:title="@string/nautical_plugin_name"
     tools:context="net.osmand.plus.plugins.nautical.NauticalSettingsFragment">
 
+    <!-- Section 1: Display & Visibility -->
+    <PreferenceCategory
+        android:key="nautical_display_category"
+        android:layout="@layout/preference_category_with_descr"
+        android:title="@string/nautical_display_settings" />
+
+    <net.osmand.plus.settings.preferences.ListPreferenceEx
+        android:key="nautical_vessel_context"
+        android:layout="@layout/preference_with_descr"
+        android:title="@string/vessel_context_label"
+        android:summary="@string/vessel_context_desc" />
+
+    <net.osmand.plus.settings.preferences.ListPreferenceEx
+        android:key="nautical_display_mode"
+        android:layout="@layout/preference_with_descr"
+        android:title="@string/nautical_display_mode"
+        android:summary="@string/nautical_display_mode_desc" />
+
+    <net.osmand.plus.settings.preferences.SwitchPreferenceEx
+        android:key="nautical_heavy_weather_mode"
+        android:layout="@layout/preference_with_descr"
+        android:title="@string/nautical_heavy_weather_mode"
+        android:summary="@string/nautical_heavy_weather_mode_desc" />
+
+    <!-- Section 2: Enabled Modules (Gatekeeping) -->
+    <PreferenceCategory
+        android:key="nautical_modules_category"
+        android:layout="@layout/preference_category_with_descr"
+        android:title="@string/nautical_modules_title"
+        android:summary="@string/nautical_modules_desc" />
+
+    <net.osmand.plus.settings.preferences.SwitchPreferenceEx
+        android:key="nautical_module_ais"
+        android:layout="@layout/preference_with_descr"
+        android:title="AIS Tracking"
+        android:summary="Track nearby vessels via AIS" />
+
+    <net.osmand.plus.settings.preferences.SwitchPreferenceEx
+        android:key="nautical_module_tides"
+        android:layout="@layout/preference_with_descr"
+        android:title="Tide Predictions"
+        android:summary="Display tidal heights and currents on map" />
+
+    <net.osmand.plus.settings.preferences.SwitchPreferenceEx
+        android:key="nautical_module_grib"
+        android:layout="@layout/preference_with_descr"
+        android:title="Weather (GRIB)"
+        android:summary="Layer weather data from GRIB files or Signal K" />
+
+    <net.osmand.plus.settings.preferences.SwitchPreferenceEx
+        android:key="nautical_module_vhf"
+        android:layout="@layout/preference_with_descr"
+        android:title="VHF Integration"
+        android:summary="Connect to VHF radio backend for history and status" />
+
+    <net.osmand.plus.settings.preferences.SwitchPreferenceEx
+        android:key="nautical_module_logbook"
+        android:layout="@layout/preference_with_descr"
+        android:title="Marine Logbook"
+        android:summary="Automated logging of sailing trips" />
+
+    <net.osmand.plus.settings.preferences.SwitchPreferenceEx
+        android:key="nautical_module_enc"
+        android:layout="@layout/preference_with_descr"
+        android:title="ENC (S-57/S-63) Charts"
+        android:summary="Support for official electronic navigational charts" />
+
+    <net.osmand.plus.settings.preferences.SwitchPreferenceEx
+        android:key="nautical_module_raster"
+        android:layout="@layout/preference_with_descr"
+        android:title="Marine Raster Charts"
+        android:summary="Support for KAP/MBTiles raster charts" />
+
+    <net.osmand.plus.settings.preferences.SwitchPreferenceEx
+        android:key="nautical_navtex_enabled"
+        android:layout="@layout/preference_with_descr"
+        android:title="@string/nautical_navtex_enabled_title"
+        android:summary="Receive and decode NAVTEX safety messages" />
+
+    <!-- Detailed Module Configurations -->
+    <Preference
+        android:key="nautical_advanced_tuning"
+        android:layout="@layout/preference_with_descr"
+        android:title="Autopilot &amp; Signal Processing"
+        android:summary="Advanced PID tuning, filter sensitivity, and NMEA debug" />
+
+    <PreferenceCategory
+        android:key="ais_details_group"
+        android:layout="@layout/preference_category_with_descr"
+        android:title="@string/ais_details_group">
+
+        <net.osmand.plus.settings.preferences.EditTextPreferenceEx
+            android:key="nautical_ais_own_mmsi"
+            android:layout="@layout/preference_with_descr"
+            android:title="@string/nautical_ais_own_mmsi" />
+
+        <net.osmand.plus.settings.preferences.SwitchPreferenceEx
+            android:key="nautical_ais_display_own_position"
+            android:layout="@layout/preference_with_descr"
+            android:title="@string/nautical_ais_display_own_position" />
+
+        <net.osmand.plus.settings.preferences.ListPreferenceEx
+            android:key="nautical_ais_obj_lost_timeout"
+            android:layout="@layout/preference_with_descr"
+            android:title="@string/nautical_ais_obj_lost_timeout" />
+
+        <net.osmand.plus.settings.preferences.ListPreferenceEx
+            android:key="nautical_ais_ship_lost_timeout"
+            android:layout="@layout/preference_with_descr"
+            android:title="@string/nautical_ais_ship_lost_timeout" />
+
+        <net.osmand.plus.settings.preferences.ListPreferenceEx
+            android:key="nautical_ais_cpa_warning_time"
+            android:layout="@layout/preference_with_descr"
+            android:title="@string/nautical_ais_cpa_warning_time" />
+
+        <net.osmand.plus.settings.preferences.ListPreferenceEx
+            android:key="nautical_ais_cpa_warning_distance"
+            android:layout="@layout/preference_with_descr"
+            android:title="@string/nautical_ais_cpa_warning_distance" />
+    </PreferenceCategory>
+
+    <PreferenceCategory
+        android:key="vhf_details_group"
+        android:layout="@layout/preference_category_with_descr"
+        android:title="@string/vhf_details_group">
+
+        <net.osmand.plus.settings.preferences.EditTextPreferenceEx
+            android:key="nautical_vhf_backend_url"
+            android:layout="@layout/preference_with_descr"
+            android:title="@string/nautical_vhf_backend_url" />
+
+        <net.osmand.plus.settings.preferences.SwitchPreferenceEx
+            android:key="nautical_vhf_auto_replay"
+            android:layout="@layout/preference_with_descr"
+            android:title="@string/nautical_vhf_auto_replay" />
+    </PreferenceCategory>
+
+    <Preference
+        android:key="nautical_switch_panel"
+        android:layout="@layout/preference_with_descr"
+        android:title="Full Electrical Panel"
+        android:summary="Comprehensive electrical control and status" />
+
+    <PreferenceCategory
+        android:key="nautical_energy_category"
+        android:layout="@layout/preference_category_with_descr"
+        android:title="@string/nautical_energy_title"
+        android:summary="@string/nautical_energy_desc" />
+
+    <PreferenceCategory
+        android:key="nautical_smart_category"
+        android:layout="@layout/preference_category_with_descr"
+        android:title="@string/nautical_smart_title"
+        android:summary="@string/nautical_smart_desc_long" />
+
+    <Preference
+        android:key="nautical_boat_ai"
+        android:layout="@layout/preference_with_descr"
+        android:title="Boat AI Assistant"
+        android:summary="Chat with your vessel via Signal K AI Bridge" />
+
+    <Preference
+        android:key="nautical_notifications"
+        android:layout="@layout/preference_with_descr"
+        android:title="Active Notifications"
+        android:summary="View and acknowledge Signal K alarms" />
+
+    <Preference
+        android:key="nautical_safety_regions"
+        android:layout="@layout/preference_with_descr"
+        android:title="Safety Warnings &amp; Regions"
+        android:summary="Active waterway closures and restricted areas" />
+
+    <Preference
+        android:key="nautical_checklists"
+        android:layout="@layout/preference_with_descr"
+        android:title="Safety Checklists"
+        android:summary="Interactive procedure checklists synced with server" />
+
+    <PreferenceCategory
+        android:key="navtex_details_group"
+        android:layout="@layout/preference_category_with_descr"
+        android:title="@string/navtex_details_group">
+
+        <net.osmand.plus.settings.preferences.SwitchPreferenceEx
+            android:key="navtex_only_urgent"
+            android:layout="@layout/preference_with_descr"
+            android:title="@string/navtex_only_urgent" />
+
+        <net.osmand.plus.settings.preferences.EditTextPreferenceEx
+            android:key="navtex_subject_filter"
+            android:layout="@layout/preference_with_descr"
+            android:title="@string/navtex_subject_filter" />
+
+        <net.osmand.plus.settings.preferences.EditTextPreferenceEx
+            android:key="navtex_max_distance"
+            android:layout="@layout/preference_with_descr"
+            android:title="@string/navtex_max_distance" />
+
+        <net.osmand.plus.settings.preferences.EditTextPreferenceEx
+            android:key="nautical_navtex_expiry_hours"
+            android:layout="@layout/preference_with_descr"
+            android:title="@string/nautical_navtex_expiry_hours" />
+    </PreferenceCategory>
+
+    <PreferenceCategory
+        android:key="grib_details_group"
+        android:layout="@layout/preference_category_with_descr"
+        android:title="Weather Detail Settings">
+
+        <net.osmand.plus.settings.preferences.SwitchPreferenceEx
+            android:key="nautical_grib_source_signalk"
+            android:layout="@layout/preference_with_descr"
+            android:title="@string/nautical_grib_source_signalk" />
+    </PreferenceCategory>
+
+    <Preference
+        android:key="nautical_passage_plan"
+        android:layout="@layout/preference_with_descr"
+        android:title="Active Passage Plan"
+        android:summary="View leg-by-leg breakdown of calculated route" />
+
+    <PreferenceCategory
+        android:key="logbook_details_group"
+        android:layout="@layout/preference_category_with_descr"
+        android:title="@string/logbook_details_group">
+
+        <net.osmand.plus.settings.preferences.ListPreferenceEx
+            android:key="nautical_logbook_interval"
+            android:layout="@layout/preference_with_descr"
+            android:title="@string/nautical_logbook_interval" />
+    </PreferenceCategory>
+
+    <!-- Section 3: Connection & Hardware -->
     <PreferenceCategory
         android:key="nautical_connection_category"
         android:layout="@layout/preference_category_with_descr"
         android:title="@string/nautical_server_settings" />
+
+    <Preference
+        android:key="nautical_discovery_mdns"
+        android:layout="@layout/preference_with_descr"
+        android:title="@string/nautical_discovery_mdns" />
 
     <net.osmand.plus.settings.preferences.EditTextPreferenceEx
         android:key="nautical_server_ip"
@@ -39,11 +279,166 @@
         android:title="@string/nautical_server_password_desc"
         android:dependency="nautical_server_secure" />
 
+    <net.osmand.plus.settings.preferences.EditTextPreferenceEx
+        android:key="nautical_signal_k_auth_token"
+        android:layout="@layout/preference_with_descr"
+        android:title="@string/nautical_auth_token"
+        android:dependency="nautical_server_secure" />
+
     <net.osmand.plus.settings.preferences.SwitchPreferenceEx
         android:key="nautical_server_trust_all"
         android:layout="@layout/preference_with_descr"
         android:title="@string/nautical_server_trust_all"
         android:dependency="nautical_server_secure" />
+
+    <net.osmand.plus.settings.preferences.ListPreferenceEx
+        android:key="nautical_telemetry_refresh_rate"
+        android:layout="@layout/preference_with_descr"
+        android:title="@string/nautical_telemetry_refresh_rate" />
+
+    <net.osmand.plus.settings.preferences.ListPreferenceEx
+        android:key="nautical_nmea_source"
+        android:layout="@layout/preference_with_descr"
+        android:title="@string/nautical_nmea_source" />
+
+    <net.osmand.plus.settings.preferences.EditTextPreferenceEx
+        android:key="nautical_bt_device_address"
+        android:layout="@layout/preference_with_descr"
+        android:title="@string/nautical_bt_device_address" />
+
+    <net.osmand.plus.settings.preferences.EditTextPreferenceEx
+        android:key="nautical_usb_device_name"
+        android:layout="@layout/preference_with_descr"
+        android:title="@string/nautical_usb_device_name" />
+
+    <net.osmand.plus.settings.preferences.ListPreferenceEx
+        android:key="nautical_nmea_baud_rate"
+        android:layout="@layout/preference_with_descr"
+        android:title="@string/nautical_nmea_baud_rate" />
+
+    <net.osmand.plus.settings.preferences.SwitchPreferenceEx
+        android:key="nautical_shadow_drive"
+        android:layout="@layout/preference_with_descr"
+        android:title="@string/nautical_shadow_drive"
+        android:summary="@string/nautical_shadow_drive_desc" />
+
+    <net.osmand.plus.settings.preferences.ListPreferenceEx
+        android:key="nautical_receive_in_background"
+        android:layout="@layout/preference_with_descr"
+        android:title="@string/nautical_receive_in_background" />
+
+    <net.osmand.plus.settings.preferences.SwitchPreferenceEx
+        android:key="nautical_force_watch_layout"
+        android:layout="@layout/preference_with_descr"
+        android:title="@string/nautical_force_watch_layout" />
+
+    <Preference
+        android:key="nautical_hardware_health"
+        android:layout="@layout/preference_with_descr"
+        android:title="Vessel Technical Dashboard"
+        android:summary="Detailed vessel identity, dimensions, and system status" />
+
+    <!-- Section 4: Vessel Profile & Tuning -->
+    <PreferenceCategory
+        android:key="nautical_vessel_category"
+        android:layout="@layout/preference_category_with_descr"
+        android:title="Vessel Profile &amp; Tuning" />
+
+    <net.osmand.plus.settings.preferences.ListPreferenceEx
+        android:key="nautical_vessel_type"
+        android:layout="@layout/preference_with_descr"
+        android:title="@string/nautical_vessel_type" />
+
+    <net.osmand.plus.settings.preferences.SwitchPreferenceEx
+        android:key="nautical_multihull_shunting"
+        android:layout="@layout/preference_with_descr"
+        android:title="@string/nautical_multihull_shunting_title"
+        android:summary="@string/nautical_shunt_desc" />
+
+    <net.osmand.plus.settings.preferences.EditTextPreferenceEx
+        android:key="nautical_vessel_draft"
+        android:layout="@layout/preference_with_descr"
+        android:title="@string/nautical_vessel_draft"
+        android:inputType="numberDecimal" />
+
+    <net.osmand.plus.settings.preferences.EditTextPreferenceEx
+        android:key="nautical_keel_offset"
+        android:layout="@layout/preference_with_descr"
+        android:title="Keel Offset"
+        android:summary="Vertical distance between transducer and keel bottom"
+        android:inputType="numberDecimal" />
+
+    <net.osmand.plus.settings.preferences.EditTextPreferenceEx
+        android:key="nautical_wind_alignment"
+        android:layout="@layout/preference_with_descr"
+        android:title="Wind Transducer Alignment"
+        android:summary="Offset in degrees for wind transducer alignment"
+        android:inputType="numberSigned" />
+
+    <net.osmand.plus.settings.preferences.ListPreferenceEx
+        android:key="nautical_heading_reference"
+        android:layout="@layout/preference_with_descr"
+        android:title="@string/nautical_heading_reference" />
+
+    <net.osmand.plus.settings.preferences.ListPreferenceEx
+        android:key="nautical_ttw_mode"
+        android:layout="@layout/preference_with_descr"
+        android:title="@string/nautical_ttw_mode" />
+
+    <!-- Autopilot Tuning Sub-section - MOVED TO ADVANCED -->
+    <PreferenceCategory
+        android:key="nautical_autopilot_tuning_category"
+        android:title="Autopilot Overview"
+        android:layout="@layout/preference_category_with_descr">
+
+        <net.osmand.plus.settings.preferences.ListPreferenceEx
+            android:key="nautical_pilot_sea_state"
+            android:layout="@layout/preference_with_descr"
+            android:title="Pilot Sea State"
+            android:summary="Autopilot response dampening for wave conditions" />
+    </PreferenceCategory>
+
+    <PreferenceCategory
+        android:key="nautical_maneuver_category"
+        android:layout="@layout/preference_category_with_descr"
+        android:title="@string/nautical_maneuver_params"
+        android:summary="@string/nautical_maneuver_params_desc" />
+
+    <net.osmand.plus.settings.preferences.EditTextPreferenceEx
+        android:key="nautical_med_mooring_vessel_length"
+        android:layout="@layout/preference_with_descr"
+        android:title="@string/nautical_med_mooring_vessel_length"
+        android:inputType="numberDecimal" />
+
+    <net.osmand.plus.settings.preferences.EditTextPreferenceEx
+        android:key="nautical_med_mooring_scope"
+        android:layout="@layout/preference_with_descr"
+        android:title="@string/nautical_med_mooring_scope"
+        android:inputType="numberDecimal" />
+
+    <net.osmand.plus.settings.preferences.EditTextPreferenceEx
+        android:key="nautical_tacking_wind_limit"
+        android:layout="@layout/preference_with_descr"
+        android:title="@string/nautical_tacking_wind_limit"
+        android:inputType="numberDecimal" />
+
+    <net.osmand.plus.settings.preferences.EditTextPreferenceEx
+        android:key="nautical_mob_audio_interval"
+        android:layout="@layout/preference_with_descr"
+        android:title="@string/nautical_mob_audio_interval"
+        android:inputType="number" />
+
+    <net.osmand.plus.settings.preferences.EditTextPreferenceEx
+        android:key="nautical_arrival_radius"
+        android:layout="@layout/preference_with_descr"
+        android:title="@string/nautical_arrival_radius"
+        android:inputType="numberDecimal" />
+
+    <net.osmand.plus.settings.preferences.SwitchPreferenceEx
+        android:key="nautical_lock_touch_during_maneuvers"
+        android:layout="@layout/preference_with_descr"
+        android:title="@string/nautical_lock_touch_during_maneuvers"
+        android:summary="@string/nautical_lock_touch_during_maneuvers_description" />
 
     <PreferenceCategory
         android:key="nautical_safety_category"
@@ -51,64 +446,229 @@
         android:title="@string/nautical_safety_settings" />
 
     <net.osmand.plus.settings.preferences.EditTextPreferenceEx
-        android:key="nautical_vessel_draft"
-        android:layout="@layout/preference_with_descr"
-        android:title="@string/nautical_vessel_draft" />
-
-    <net.osmand.plus.settings.preferences.EditTextPreferenceEx
         android:key="nautical_safety_margin"
         android:layout="@layout/preference_with_descr"
-        android:title="@string/nautical_safety_margin" />
+        android:title="@string/nautical_safety_margin"
+        android:inputType="numberDecimal" />
 
     <net.osmand.plus.settings.preferences.EditTextPreferenceEx
         android:key="nautical_xte_threshold"
         android:layout="@layout/preference_with_descr"
-        android:title="@string/nautical_xte_threshold_desc" />
+        android:title="@string/nautical_xte_threshold_desc"
+        android:inputType="numberDecimal" />
+
+    <net.osmand.plus.settings.preferences.EditTextPreferenceEx
+        android:key="nautical_off_course_alarm"
+        android:layout="@layout/preference_with_descr"
+        android:title="Off Course Alarm Threshold"
+        android:inputType="numberDecimal" />
 
     <net.osmand.plus.settings.preferences.EditTextPreferenceEx
         android:key="nautical_corridor_width"
         android:layout="@layout/preference_with_descr"
-        android:title="@string/nautical_corridor_width" />
-
-    <PreferenceCategory
-        android:key="nautical_display_category"
-        android:layout="@layout/preference_category_with_descr"
-        android:title="@string/nautical_display_settings" />
-
-    <net.osmand.plus.settings.preferences.SwitchPreferenceEx
-        android:key="nautical_night_vision_enabled"
-        android:layout="@layout/preference_with_descr"
-        android:title="@string/nautical_night_vision" />
+        android:title="@string/nautical_corridor_width"
+        android:inputType="numberDecimal" />
 
     <net.osmand.plus.settings.preferences.EditTextPreferenceEx
+        android:key="nautical_safety_corridor_buffer"
+        android:layout="@layout/preference_with_descr"
+        android:title="@string/nautical_safety_corridor_buffer"
+        android:inputType="numberDecimal" />
+
+    <net.osmand.plus.settings.preferences.EditTextPreferenceEx
+        android:key="nautical_actuator_alarm_threshold"
+        android:layout="@layout/preference_with_descr"
+        android:title="@string/nautical_actuator_alarm_threshold" />
+
+    <net.osmand.plus.settings.preferences.SwitchPreferenceEx
+        android:key="nautical_mob_audio_guidance"
+        android:layout="@layout/preference_with_descr"
+        android:title="@string/nautical_mob_audio_guidance" />
+
+    <net.osmand.plus.settings.preferences.EditTextPreferenceEx
+        android:key="nautical_look_ahead_radius_nm"
+        android:layout="@layout/preference_with_descr"
+        android:title="@string/nautical_look_ahead_radius_nm"
+        android:dialogTitle="@string/nautical_look_ahead_radius_nm" />
+
+    <!-- Advanced Anchor Sub-section -->
+    <PreferenceCategory
+        android:key="nautical_anchor_advanced_category"
+        android:title="Advanced Anchor Configuration"
+        android:layout="@layout/preference_category_with_descr">
+
+        <net.osmand.plus.settings.preferences.EditTextPreferenceEx
+            android:key="nautical_anchor_depth"
+            android:layout="@layout/preference_with_descr"
+            android:title="@string/nautical_anchor_label_depth"
+            android:inputType="numberDecimal" />
+
+        <net.osmand.plus.settings.preferences.EditTextPreferenceEx
+            android:key="nautical_anchor_tide_rise"
+            android:layout="@layout/preference_with_descr"
+            android:title="@string/nautical_anchor_label_tide"
+            android:inputType="numberDecimal" />
+
+        <net.osmand.plus.settings.preferences.EditTextPreferenceEx
+            android:key="nautical_anchor_bow_offset"
+            android:layout="@layout/preference_with_descr"
+            android:title="@string/nautical_anchor_label_bow_offset"
+            android:inputType="numberDecimal" />
+
+        <net.osmand.plus.settings.preferences.EditTextPreferenceEx
+            android:key="nautical_anchor_safety_margin"
+            android:layout="@layout/preference_with_descr"
+            android:title="@string/nautical_anchor_label_safety_margin"
+            android:inputType="numberDecimal" />
+
+        <net.osmand.plus.settings.preferences.EditTextPreferenceEx
+            android:key="nautical_anchor_scope_ratio"
+            android:layout="@layout/preference_with_descr"
+            android:title="@string/nautical_anchor_label_ratio"
+            android:inputType="numberDecimal" />
+    </PreferenceCategory>
+
+    <Preference
+        android:key="nautical_compass_wizard"
+        android:layout="@layout/preference_with_descr"
+        android:title="@string/nautical_compass_wizard" />
+
+    <!-- Section 6: Map Overlays & Indicators -->
+    <PreferenceCategory
+        android:key="nautical_map_overlays_category"
+        android:layout="@layout/preference_category_with_descr"
+        android:title="Map Overlays &amp; Indicators" />
+
+    <net.osmand.plus.settings.preferences.SwitchPreferenceEx
+        android:key="nautical_show_laylines"
+        android:layout="@layout/preference_with_descr"
+        android:title="@string/nautical_show_laylines" />
+
+    <net.osmand.plus.settings.preferences.SwitchPreferenceEx
+        android:key="nautical_show_wind_shifts"
+        android:layout="@layout/preference_with_descr"
+        android:title="@string/nautical_show_wind_shifts" />
+
+    <net.osmand.plus.settings.preferences.SwitchPreferenceEx
+        android:key="nautical_show_trajectory"
+        android:layout="@layout/preference_with_descr"
+        android:title="@string/nautical_show_trajectory" />
+
+    <net.osmand.plus.settings.preferences.SwitchPreferenceEx
+        android:key="nautical_show_tides"
+        android:layout="@layout/preference_with_descr"
+        android:title="@string/layer_tides_title" />
+
+    <net.osmand.plus.settings.preferences.SwitchPreferenceEx
+        android:key="nautical_show_heading_line"
+        android:layout="@layout/preference_with_descr"
+        android:title="@string/nautical_show_heading_line" />
+
+    <net.osmand.plus.settings.preferences.SwitchPreferenceEx
+        android:key="nautical_show_cog_line"
+        android:layout="@layout/preference_with_descr"
+        android:title="@string/nautical_show_cog_line" />
+
+    <net.osmand.plus.settings.preferences.SwitchPreferenceEx
+        android:key="nautical_show_cmg_line"
+        android:layout="@layout/preference_with_descr"
+        android:title="Show CMG Line" />
+
+    <net.osmand.plus.settings.preferences.SwitchPreferenceEx
+        android:key="nautical_show_current_vector"
+        android:layout="@layout/preference_with_descr"
+        android:title="@string/nautical_show_current_vector" />
+
+    <net.osmand.plus.settings.preferences.SwitchPreferenceEx
+        android:key="nautical_restricted_areas_enabled"
+        android:layout="@layout/preference_with_descr"
+        android:title="@string/nautical_restricted_area" />
+
+    <net.osmand.plus.settings.preferences.SwitchPreferenceEx
+        android:key="nautical_show_rain_radar"
+        android:layout="@layout/preference_with_descr"
+        android:title="@string/nautical_rainviewer_radar"
+        android:summary="@string/nautical_rainviewer_radar_desc" />
+
+    <net.osmand.plus.settings.preferences.ListPreferenceEx
         android:key="nautical_look_ahead_time"
         android:layout="@layout/preference_with_descr"
         android:title="@string/nautical_look_ahead_time" />
 
-    <net.osmand.plus.settings.preferences.EditTextPreferenceEx
-        android:key="nautical_laylines_tack_angle"
-        android:layout="@layout/preference_with_descr"
-        android:title="@string/nautical_laylines_tack_angle" />
-
+    <!-- Section 7: Sailing Performance -->
     <PreferenceCategory
-        android:key="nautical_telemetry_category"
+        android:key="nautical_sailing_category"
         android:layout="@layout/preference_category_with_descr"
-        android:title="@string/nautical_telemetry_settings" />
-
-    <net.osmand.plus.settings.preferences.ListPreferenceEx
-        android:key="nautical_receive_in_background"
-        android:layout="@layout/preference_with_descr"
-        android:title="@string/nautical_receive_in_background" />
+        android:title="@string/pref_sailing_performance_title" />
 
     <Preference
         android:key="sailing_performance"
         android:layout="@layout/preference_with_descr"
-        android:title="@string/pref_sailing_performance_title" />
+        android:title="Polar File Manager"
+        android:summary="Manage polar curves and boat performance data" />
+
+    <net.osmand.plus.settings.preferences.EditTextPreferenceEx
+        android:key="nautical_laylines_tack_angle"
+        android:layout="@layout/preference_with_descr"
+        android:title="@string/nautical_laylines_tack_angle"
+        android:inputType="numberDecimal" />
+
+    <net.osmand.plus.settings.preferences.EditTextPreferenceEx
+        android:key="nautical_leeway_coefficient"
+        android:layout="@layout/preference_with_descr"
+        android:title="@string/nautical_leeway_coefficient"
+        android:inputType="numberDecimal" />
+
+    <net.osmand.plus.settings.preferences.SwitchPreferenceEx
+        android:key="nautical_predictive_steering"
+        android:layout="@layout/preference_with_descr"
+        android:title="@string/nautical_predictive_steering"
+        android:summary="@string/nautical_predictive_steering_desc" />
+
+    <net.osmand.plus.settings.preferences.ListPreferenceEx
+        android:key="nautical_wave_bias_sensitivity"
+        android:layout="@layout/preference_with_descr"
+        android:title="@string/nautical_wave_bias_sensitivity"
+        android:dependency="nautical_predictive_steering" />
+
+    <!-- Section 8: Maintenance & Tools -->
+    <Preference
+        android:key="nautical_master_telemetry_setup"
+        android:layout="@layout/preference_with_descr"
+        android:title="Master Telemetry Items"
+        android:summary="Choose which items appear in the master telemetry widget" />
 
     <PreferenceCategory
-        android:key="nautical_hardware_category"
+        android:key="nautical_maintenance_category"
         android:layout="@layout/preference_category_with_descr"
-        android:title="@string/nautical_hardware_settings" />
+        android:title="Maintenance &amp; Data Managers" />
+
+    <Preference
+        android:key="nautical_enc_manager"
+        android:layout="@layout/preference_with_descr"
+        android:title="@string/nautical_enc_manager" />
+
+    <Preference
+        android:key="nautical_tide_manager"
+        android:layout="@layout/preference_with_descr"
+        android:title="@string/nautical_tide_manager" />
+
+    <Preference
+        android:key="nautical_grib_manager"
+        android:layout="@layout/preference_with_descr"
+        android:title="@string/nautical_grib_manager" />
+
+    <Preference
+        android:key="nautical_server_routes"
+        android:layout="@layout/preference_with_descr"
+        android:title="@string/nautical_server_routes_title"
+        android:summary="Browse and navigate routes from Signal K server" />
+
+    <Preference
+        android:key="nautical_server_charts"
+        android:layout="@layout/preference_with_descr"
+        android:title="@string/nautical_server_charts_title"
+        android:summary="Browse and enable charts from Signal K server" />
 
     <Preference
         android:key="marine_raster_manager"
@@ -119,5 +679,10 @@
         android:key="s63_permit_manager"
         android:layout="@layout/preference_with_descr"
         android:title="@string/s63_manager_title" />
+
+    <Preference
+        android:key="nautical_clear_data"
+        android:layout="@layout/preference_with_descr"
+        android:title="@string/nautical_clear_marine_data" />
 
 </PreferenceScreen>

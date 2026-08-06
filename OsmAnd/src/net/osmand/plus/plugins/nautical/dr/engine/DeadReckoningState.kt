@@ -29,9 +29,13 @@ data class DrFix(
  * @param speedThroughWater Speed of the vessel through the water in meters per second.
  * @param headingDegrees Compass heading in degrees (0-360).
  * @param leewayDegrees Leeway angle in degrees (positive for leeway to starboard, negative to port).
+ * @param driftSpeedMps Speed of the current/drift in meters per second.
+ * @param driftSetDegrees Direction of the current/drift in degrees.
  */
 data class DrVector(
     val speedThroughWater: Double,
     val headingDegrees: Double,
-    val leewayDegrees: Double = 0.0
+    val leewayDegrees: Double = 0.0,
+    val driftSpeedMps: Double = 0.0,
+    val driftSetDegrees: Double = 0.0
 )

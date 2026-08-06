@@ -2,24 +2,22 @@ package net.osmand.plus.plugins.nautical.maneuvers
 
 import net.osmand.plus.OsmandApplication
 import net.osmand.plus.R
+import net.osmand.plus.plugins.nautical.audio.AlarmType
+import net.osmand.plus.plugins.nautical.audio.NauticalAudioArbiter
 
 class ManeuverTtsHelper(private val app: OsmandApplication) : ManeuverManager.ManeuverStateListener {
 
+    private val arbiter = NauticalAudioArbiter.getInstance(app)
+
     override fun onStateChanged(newState: ManeuverState) {
-        val player = app.player ?: return
         val textId = when (newState) {
             ManeuverState.ARMED -> R.string.maneuver_armed
             ManeuverState.EXECUTING -> R.string.maneuver_executing
-            ManeuverState.IDLE -> R.string.maneuver_aborted // Announce abort when returning to idle from non-idle
-            else -> return
+            ManeuverState.IDLE -> R.string.maneuver_aborted
         }
         
-        // Only announce IDLE if we were not already IDLE (though manager handles this)
-        if (newState == ManeuverState.IDLE) {
-            // We might want to be more specific if it was a success or abort
-            // but for foundation we just say aborted if cancelled.
-        }
-
-        player.playCommands(player.newCommandBuilder().attention(app.getString(textId)))
+        // Phase 8.0R: Dispatch tactical maneuver state changes with high priority
+        // to interrupt standard navigation prompts.
+        arbiter.dispatchTts(app.getString(textId), AlarmType.TACTICAL_TACK)
     }
 }

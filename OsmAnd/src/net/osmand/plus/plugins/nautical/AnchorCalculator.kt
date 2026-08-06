@@ -16,7 +16,7 @@ object AnchorCalculator {
         waterDepth: Double,
         tideRise: Double,
         freeboardHeight: Double,
-        scopeRatio: Double
+        scopeRatio: Double,
     ): Double {
         return (waterDepth + tideRise + freeboardHeight) * scopeRatio
     }

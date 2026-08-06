@@ -7,7 +7,6 @@ import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbManager
 import android.os.Build
 import net.osmand.PlatformUtil
-import net.osmand.plus.OsmandApplication
 import net.osmand.plus.plugins.nautical.NauticalPlugin
 import net.osmand.plus.plugins.nautical.di.SailingDependencyContainer
 
@@ -19,7 +18,6 @@ class UsbConnectionReceiver : BroadcastReceiver() {
     private val log = PlatformUtil.getLog(UsbConnectionReceiver::class.java)
 
     override fun onReceive(context: Context, intent: Intent) {
-        val app = context.applicationContext as? OsmandApplication ?: return
         val plugin = NauticalPlugin.getInstance() ?: return
         if (!plugin.isActive) return
 
@@ -34,9 +32,13 @@ class UsbConnectionReceiver : BroadcastReceiver() {
             UsbManager.ACTION_USB_DEVICE_ATTACHED -> {
                 log.info("USB device attached: ${device?.deviceName}")
                 device?.let { usbDevice ->
-                    val multiplexer = SailingDependencyContainer.getNmeaMultiplexer(app)
-                    val client = UsbNmeaClient(context, usbDevice)
-                    multiplexer.start(client)
+                    plugin.pluginScope?.let { scope ->
+                        val multiplexer = SailingDependencyContainer.getNmeaMultiplexer(scope)
+                        val osmandApp = context.applicationContext as net.osmand.plus.OsmandApplication
+                        val baud = osmandApp.settings.NAUTICAL_NMEA_BAUD_RATE.get()
+                        val client = UsbNmeaClient(context, usbDevice, baud, scope)
+                        multiplexer.start(client)
+                    }
                 }
             }
             UsbManager.ACTION_USB_DEVICE_DETACHED -> {

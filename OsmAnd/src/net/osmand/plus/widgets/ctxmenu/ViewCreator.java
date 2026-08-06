@@ -333,6 +333,16 @@ public class ViewCreator {
 			if (secondaryIconId == R.drawable.ic_action_additional_option) {
 				UiUtilities.rotateImageByLayoutDirection(secondaryIcon);
 			}
+			ItemClickListener secondaryListener = item.getSecondaryIconClickListener();
+			if (secondaryListener != null) {
+				secondaryIcon.setOnClickListener(v -> secondaryListener.onContextMenuClick(uiAdapter, (View) secondaryIcon.getParent(), item, false));
+				secondaryIcon.setFocusable(true);
+				secondaryIcon.setClickable(true);
+			} else {
+				secondaryIcon.setOnClickListener(null);
+				secondaryIcon.setFocusable(false);
+				secondaryIcon.setClickable(false);
+			}
 			AndroidUiHelper.updateVisibility(secondaryIcon, true);
 		} else {
 			AndroidUiHelper.updateVisibility(secondaryIcon, false);

@@ -1,0 +1,6 @@
+- `[x]` Fix warnings in `SignalKDataBroker.kt`
+    - `[x]` Update `batterySoc` to use `batteries` map
+    - `[x]` Add clarifying parentheses to `envChange`
+- `[x]` Fix warning in `SignalKWebSocketClient.kt`
+    - `[x]` Add logging for `deltaFlow` subscription count
+- `[x]` Verify changes with `analyze_file`

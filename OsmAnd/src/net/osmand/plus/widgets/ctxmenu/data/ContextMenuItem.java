@@ -62,6 +62,7 @@ public class ContextMenuItem {
 	private OnIntegerValueChangedListener integerListener;
 	private ProgressListener progressListener;
 	private OnItemDeleteAction itemDeleteAction;
+	private ItemClickListener secondaryIconClickListener;
 
 	public ContextMenuItem(@Nullable String id) {
 		this.id = id;
@@ -194,6 +195,11 @@ public class ContextMenuItem {
 	@Nullable
 	public OnItemDeleteAction getItemDeleteAction() {
 		return itemDeleteAction;
+	}
+
+	@Nullable
+	public ItemClickListener getSecondaryIconClickListener() {
+		return secondaryIconClickListener;
 	}
 
 	@NonNull
@@ -343,6 +349,12 @@ public class ContextMenuItem {
 	@NonNull
 	public ContextMenuItem setListener(@Nullable ItemClickListener itemClickListener) {
 		this.itemClickListener = itemClickListener;
+		return this;
+	}
+
+	@NonNull
+	public ContextMenuItem setSecondaryIconClickListener(@Nullable ItemClickListener secondaryIconClickListener) {
+		this.secondaryIconClickListener = secondaryIconClickListener;
 		return this;
 	}
 

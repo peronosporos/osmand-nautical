@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+	xmlns:app="http://schemas.android.com/apk/res-auto"
+	xmlns:tools="http://schemas.android.com/tools"
+	android:layout_width="match_parent"
+	android:layout_height="wrap_content"
+	android:orientation="horizontal"
+	android:minHeight="@dimen/map_widget_height">
+
+	<androidx.appcompat.widget.AppCompatImageView
+		android:id="@+id/compass_icon"
+		android:layout_width="@dimen/map_widget_icon"
+		android:layout_height="@dimen/map_widget_icon"
+		android:layout_gravity="center_vertical"
+		android:layout_marginStart="@dimen/map_widget_icon_margin"
+		android:layout_marginEnd="@dimen/map_widget_icon_margin"
+		app:srcCompat="@drawable/ic_action_compass_north" />
+
+	<LinearLayout
+		android:layout_width="0dp"
+		android:layout_height="wrap_content"
+		android:layout_weight="1"
+		android:layout_gravity="center_vertical"
+		android:orientation="vertical">
+
+		<net.osmand.plus.views.mapwidgets.OutlinedTextContainer
+			android:id="@+id/widget_text"
+			android:layout_width="wrap_content"
+			android:layout_height="wrap_content"
+			android:maxLines="1"
+			android:textSize="@dimen/map_widget_text_size"
+			tools:text="000°" />
+
+		<net.osmand.plus.views.mapwidgets.OutlinedTextContainer
+			android:id="@+id/widget_text_small"
+			android:layout_width="wrap_content"
+			android:layout_height="wrap_content"
+			android:maxLines="1"
+			android:textSize="@dimen/map_widget_text_size_small"
+			tools:text="HDG" />
+	</LinearLayout>
+
+</LinearLayout>

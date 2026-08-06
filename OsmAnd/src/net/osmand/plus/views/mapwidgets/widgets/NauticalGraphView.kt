@@ -7,7 +7,11 @@ import android.util.TypedValue
 import android.view.View
 import androidx.core.graphics.toColorInt
 import net.osmand.plus.R
-import net.osmand.plus.plugins.nautical.NauticalPlugin
+import net.osmand.plus.OsmandApplication
+import net.osmand.StateChangedListener
+import net.osmand.plus.settings.enums.NauticalDisplayMode
+import net.osmand.plus.plugins.nautical.ui.NauticalColorResolver
+import net.osmand.plus.plugins.nautical.ui.NauticalSemanticColor
 import java.util.*
 
 class NauticalGraphView @JvmOverloads constructor(
@@ -89,30 +93,70 @@ class NauticalGraphView @JvmOverloads constructor(
         postInvalidate()
     }
 
+    private val nightVisionListener = StateChangedListener<NauticalDisplayMode> {
+        postInvalidate()
+    }
+
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
+        val settings = (context.applicationContext as? OsmandApplication)?.settings
+        settings?.NAUTICAL_DISPLAY_MODE?.addListener(nightVisionListener)
+    }
+
+    override fun onDetachedFromWindow() {
+        super.onDetachedFromWindow()
+        val settings = (context.applicationContext as? OsmandApplication)?.settings
+        settings?.NAUTICAL_DISPLAY_MODE?.removeListener(nightVisionListener)
+    }
+
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
 
         synchronized(this) {
             if (data.isEmpty()) {
                 textPaint.textAlign = Paint.Align.CENTER
+                textPaint.color = NauticalColorResolver.getColor(context, NauticalSemanticColor.SECONDARY)
+                textPaint.alpha = 180
+                textPaint.textSize = 20f * resources.displayMetrics.density
                 canvas.drawText(context.getString(R.string.nautical_no_data), width / 2f, height / 2f, textPaint)
                 return
             }
 
-            val isNightVision = NauticalPlugin.isNightVision(context.applicationContext as? net.osmand.plus.OsmandApplication)
-            if (isNightVision) {
-                linePaint.color = Color.RED
-                textPaint.color = Color.RED
-                gridPaint.color = "#330000".toColorInt()
-            } else {
-                linePaint.color = defaultLineColor
-                textPaint.color = defaultTextColor
-                gridPaint.color = defaultGridColor
-            }
+            val app = context.applicationContext as? OsmandApplication
+            val mode = app?.settings?.NAUTICAL_DISPLAY_MODE?.get() ?: NauticalDisplayMode.NORMAL
+            val isSunlight = mode == NauticalDisplayMode.SUNLIGHT
+            val isNightVision = mode == NauticalDisplayMode.DARK
+
+            linePaint.color = NauticalColorResolver.getColor(context, NauticalSemanticColor.PRIMARY)
+            textPaint.color = NauticalColorResolver.getColor(context, NauticalSemanticColor.PRIMARY)
+            gridPaint.color = NauticalColorResolver.getColor(context, NauticalSemanticColor.GRID)
 
             val width = width.toFloat()
             val height = height.toFloat()
             val density = resources.displayMetrics.density
+
+            // Task 8.0: Extreme Display Adaptation
+            if (isSunlight) {
+                gridPaint.strokeWidth = density * 1.5f
+                gridPaint.alpha = 255 // 100% alpha
+                linePaint.strokeWidth = density * 4.0f
+                linePaint.alpha = 255
+            } else {
+                gridPaint.strokeWidth = density * 0.5f
+                gridPaint.alpha = 160
+                linePaint.strokeWidth = density * 2.5f
+            }
+
+            if (isNightVision) {
+                // Strict Scotopic Adaptation filter
+                linePaint.color = 0xFFFF0000.toInt() // Pure Red
+                textPaint.color = 0xFFFF0000.toInt()
+                gridPaint.color = 0xFF330000.toInt() // Dark Red
+                linePaint.alpha = 255
+                textPaint.alpha = 255
+                gridPaint.alpha = 255
+            }
+
             val paddingH = 36f * density
             val paddingV = 16f * density
             val paddingBottom = 24f * density
@@ -125,9 +169,12 @@ class NauticalGraphView @JvmOverloads constructor(
             
             for (p in data) {
                 val v = p.first * dataCoeff + dataOffset
+                if (v.isNaN() || v.isInfinite()) continue
                 if (v < min) min = v
                 if (v > max) max = v
             }
+
+            if (min == Double.MAX_VALUE || max == -Double.MAX_VALUE) return
 
             if (min == max) {
                 min -= 1.0
@@ -135,7 +182,9 @@ class NauticalGraphView @JvmOverloads constructor(
             }
 
             val range = max - min
+            if (range <= 0 || range.isNaN() || range.isInfinite()) return
             val stepX = if (data.size > 1) graphW / (data.size - 1) else 0f
+            if (stepX.isNaN() || stepX.isInfinite()) return
 
             // Draw Grid
             canvas.drawLine(paddingH, paddingV, width - paddingH, paddingV, gridPaint)

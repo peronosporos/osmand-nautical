@@ -14,7 +14,7 @@ import net.osmand.PlatformUtil
 class ScreenTouchLockManager {
     private val log = PlatformUtil.getLog(ScreenTouchLockManager::class.java)
 
-    private val _isTouchLockActive = MutableStateFlow(false)
+    private val _isTouchLockActive = MutableStateFlow(value = false)
     val isTouchLockActive: StateFlow<Boolean> = _isTouchLockActive.asStateFlow()
 
     private var downEventTime = 0L
@@ -43,13 +43,14 @@ class ScreenTouchLockManager {
             MotionEvent.ACTION_UP -> {
                 val duration = event.eventTime - downEventTime
                 if (duration >= longPressUnlockThreshold) {
-                    setTouchLockActive(false)
+                    setTouchLockActive(active = false)
                     log.info("Long-press unlock gesture detected. Touch lock disabled.")
                 }
                 return true // Consume touch
             }
             MotionEvent.ACTION_MOVE,
-            MotionEvent.ACTION_CANCEL -> {
+            MotionEvent.ACTION_CANCEL,
+            -> {
                 return true // Consume touch
             }
         }

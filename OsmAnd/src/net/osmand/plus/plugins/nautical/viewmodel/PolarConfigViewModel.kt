@@ -2,10 +2,13 @@ package net.osmand.plus.plugins.nautical.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import net.osmand.plus.plugins.nautical.network.PolarProfile
+import net.osmand.plus.plugins.nautical.network.SignalKRestService
 import kotlin.math.abs
 
 enum class WizardState {
@@ -20,15 +23,16 @@ data class PolarCell(
     val tws: Double,
     val twa: Double,
     var sampleCount: Int = 0,
-    var averageSpeed: Double = 0.0
+    var averageSpeed: Double = 0.0,
 )
 
+@Suppress("unused")
 class PolarConfigViewModel : ViewModel() {
 
     private val _wizardState = MutableStateFlow(WizardState.INITIAL_CHECK)
     val wizardState: StateFlow<WizardState> = _wizardState.asStateFlow()
 
-    private val _engineOff = MutableStateFlow(false)
+    private val _engineOff = MutableStateFlow(value = false)
     val engineOff: StateFlow<Boolean> = _engineOff.asStateFlow()
 
     private val _sensorsCalibrated = MutableStateFlow(false)
@@ -89,6 +93,50 @@ class PolarConfigViewModel : ViewModel() {
         _wizardState.value = newState
         if (newState == WizardState.ACTIVE_LOGGING) {
             updateRecommendation(10.0, 50.0)
+        } else if (newState == WizardState.SAVING) {
+            saveToServer()
+        }
+    }
+
+    private fun saveToServer() {
+        val plugin = net.osmand.plus.plugins.nautical.NauticalPlugin.getInstance() ?: return
+        val client = plugin.okHttpClient ?: return
+        
+        val ip = plugin.application.settings.NAUTICAL_SERVER_IP.get()
+        val port = plugin.application.settings.NAUTICAL_SERVER_PORT.get()
+        val protocol = if (plugin.application.settings.NAUTICAL_USE_SECURE_CONNECTION.get()) "https" else "http"
+        val service = SignalKRestService.create("$protocol://$ip:$port", client)
+
+        // Convert heatmap to PolarProfile matrix
+        val heatmap = _heatmapCells.value
+        val speeds = twsAxes.map { tws ->
+            twaAxes.map { twa ->
+                heatmap.find { it.tws == tws && it.twa == twa }?.averageSpeed ?: 0.0
+            }
+        }
+
+        val polarId = _profileName.value.lowercase().replace(" ", "-")
+        val profile = PolarProfile(
+            name = _profileName.value,
+            description = "Recorded in OsmAnd: ${_sailPlan.value}",
+            tws = twsAxes,
+            twa = twaAxes,
+            speeds = speeds
+        )
+
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val response = service.uploadPolar(polarId, profile)
+                if (response.isSuccessful) {
+                    plugin.application.runInUIThread {
+                        plugin.application.showToastMessage("Polar profile uploaded to Signal K")
+                    }
+                }
+            } catch (e: Exception) {
+                plugin.application.runInUIThread {
+                    plugin.application.showToastMessage("Failed to upload polar")
+                }
+            }
         }
     }
 
@@ -108,6 +156,7 @@ class PolarConfigViewModel : ViewModel() {
     private fun updateRecommendation(currentTws: Double, currentTwa: Double) {
         // Gamified recommendation: find empty or low sample cell closest to current conditions
         val emptyCell = _heatmapCells.value
+            .asSequence()
             .filter { it.sampleCount < 3 }
             .minByOrNull { abs(it.tws - currentTws) + abs(it.twa - currentTwa) }
 

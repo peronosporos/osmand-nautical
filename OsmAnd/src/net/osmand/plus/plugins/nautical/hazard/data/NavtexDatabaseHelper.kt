@@ -34,11 +34,11 @@ class NavtexDatabaseHelper(private val app: OsmandApplication) {
     }
 
     fun openConnection(readonly: Boolean): SQLiteConnection? {
-        val db = app.getSQLiteAPI().getOrCreateDatabase(DB_NAME, readonly) ?: return null
+        val db = app.sqLiteAPI.getOrCreateDatabase(DB_NAME, readonly) ?: return null
         if (db.version < DB_VERSION) {
             val finalDb = if (readonly) {
                 db.close()
-                app.getSQLiteAPI().getOrCreateDatabase(DB_NAME, false) ?: return null
+                app.sqLiteAPI.getOrCreateDatabase(DB_NAME, false) ?: return null
             } else {
                 db
             }

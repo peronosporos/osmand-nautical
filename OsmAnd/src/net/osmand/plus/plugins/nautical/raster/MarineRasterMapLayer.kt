@@ -2,25 +2,43 @@ package net.osmand.plus.plugins.nautical.raster
 
 import android.content.Context
 import android.graphics.*
-import net.osmand.PlatformUtil
+import kotlinx.coroutines.*
 import net.osmand.data.RotatedTileBox
+import net.osmand.map.ITileSource
 import net.osmand.plus.OsmandApplication
 import net.osmand.plus.plugins.nautical.NauticalPlugin
 import net.osmand.plus.views.layers.MapTileLayer
-import java.io.File
+import java.util.concurrent.atomic.AtomicReference
 
 class MarineRasterMapLayer(context: Context) : MapTileLayer(context, false) {
-    private val log = PlatformUtil.getLog(MarineRasterMapLayer::class.java)
     private val app = context.applicationContext as OsmandApplication
     private val manager = RasterChartManager(app)
     private var lastNightVision = false
+
+    private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    private var lastQueryJob: Job? = null
+    private val cachedSources = AtomicReference<List<ITileSource>>(emptyList())
+    private var lastQueryZoom = -1
+    private var lastQueryBounds: net.osmand.data.QuadRect? = null
 
     init {
         updateSources()
     }
 
     fun updateSources() {
-        manager.updateSources()
+        scope.launch {
+            withContext(Dispatchers.IO) {
+                manager.updateSources()
+            }
+            refreshSources(net.osmand.data.QuadRect(-180.0, 90.0, 180.0, -90.0), if (lastQueryZoom >= 0) lastQueryZoom else 0)
+        }
+    }
+
+    private fun refreshSources(bounds: net.osmand.data.QuadRect, zoom: Int) {
+        scope.launch {
+            val sources = manager.getSourcesForViewport(bounds, zoom)
+            cachedSources.set(sources)
+        }
     }
 
     override fun isVisible(): Boolean {
@@ -32,7 +50,7 @@ class MarineRasterMapLayer(context: Context) : MapTileLayer(context, false) {
     }
 
     override fun onDraw(canvas: Canvas, tileBox: RotatedTileBox, drawSettings: DrawSettings) {
-        if (!isVisible()) return
+        if (!isVisible) return
         
         val alpha = getAlpha()
         paintBitmap.alpha = alpha
@@ -47,16 +65,30 @@ class MarineRasterMapLayer(context: Context) : MapTileLayer(context, false) {
             lastNightVision = isNightVision
         }
 
-        // Viewport Culling: Only fetch sources that intersect current view
         val latLonBounds = tileBox.latLonBounds
-        val sources = manager.getSourcesForViewport(latLonBounds, tileBox.zoom)
-        if (sources.isEmpty()) return
+        val zoom = tileBox.zoom
+        
+        // Asynchronously request update if viewport changed significantly, but render from cache immediately
+        if ((lastQueryZoom != zoom) || (lastQueryBounds != latLonBounds)) {
+            lastQueryZoom = zoom
+            lastQueryBounds = latLonBounds
+            lastQueryJob?.cancel()
+            lastQueryJob = scope.launch {
+                val sources = manager.getSourcesForViewport(latLonBounds, zoom)
+                cachedSources.set(sources)
+            }
+        }
+
+        val sources = cachedSources.get()
+        
+        // Zero-Flicker Logic (TASK-006): If cache is empty but we have sources listed in manager,
+        // wait for the background update instead of clearing the screen.
+        if (sources.isEmpty() && manager.getAllSources().isNotEmpty()) return
 
         val originalMap = this.map
         try {
             for (source in sources) {
                 this.map = source
-                // drawTileMap iterates over tileBox bounds and draws relevant tiles
                 drawTileMap(canvas, tileBox, drawSettings)
             }
         } finally {
@@ -66,6 +98,7 @@ class MarineRasterMapLayer(context: Context) : MapTileLayer(context, false) {
 
     override fun destroyLayer() {
         super.destroyLayer()
+        scope.cancel()
         manager.destroy()
     }
 }

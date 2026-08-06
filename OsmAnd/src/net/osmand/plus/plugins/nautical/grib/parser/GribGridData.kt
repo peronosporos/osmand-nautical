@@ -31,8 +31,40 @@ data class TimeStepGrid(
     val vGrid: Array<DoubleArray>,
     val pressureGrid: Array<DoubleArray>? = null,    // Surface pressure (hPa)
     val waveHeightGrid: Array<DoubleArray>? = null,  // Significant wave height (m)
-    val waveDirectionGrid: Array<DoubleArray>? = null // Wave direction (degrees)
-)
+    val waveDirectionGrid: Array<DoubleArray>? = null, // Wave direction (degrees)
+    val currentUGrid: Array<DoubleArray>? = null,   // Eastward current (m/s)
+    val currentVGrid: Array<DoubleArray>? = null    // Northward current (m/s)
+) {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as TimeStepGrid
+
+        if (timestamp != other.timestamp) return false
+        if (!uGrid.contentDeepEquals(other.uGrid)) return false
+        if (!vGrid.contentDeepEquals(other.vGrid)) return false
+        if (!pressureGrid.contentDeepEquals(other.pressureGrid)) return false
+        if (!waveHeightGrid.contentDeepEquals(other.waveHeightGrid)) return false
+        if (!waveDirectionGrid.contentDeepEquals(other.waveDirectionGrid)) return false
+        if (!currentUGrid.contentDeepEquals(other.currentUGrid)) return false
+        if (!currentVGrid.contentDeepEquals(other.currentVGrid)) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = timestamp.hashCode()
+        result = 31 * result + uGrid.contentDeepHashCode()
+        result = 31 * result + vGrid.contentDeepHashCode()
+        result = 31 * result + (pressureGrid?.contentDeepHashCode() ?: 0)
+        result = 31 * result + (waveHeightGrid?.contentDeepHashCode() ?: 0)
+        result = 31 * result + (waveDirectionGrid?.contentDeepHashCode() ?: 0)
+        result = 31 * result + (currentUGrid?.contentDeepHashCode() ?: 0)
+        result = 31 * result + (currentVGrid?.contentDeepHashCode() ?: 0)
+        return result
+    }
+}
 
 data class GribGridData(
     val header: GribHeader,

@@ -1,12 +1,15 @@
 package net.osmand.plus.plugins.nautical.nmea.parser
 
+import io.mockk.mockk
+import net.osmand.plus.OsmandApplication
 import net.osmand.plus.plugins.nautical.network.LivePerformanceData
 import org.junit.Assert.*
 import org.junit.Test
 
 class NmeaSentenceParserTest {
 
-    private val parser = NmeaSentenceParser()
+    private val app = mockk<OsmandApplication>()
+    private val parser = NmeaSentenceParser(app)
 
     @Test
     fun testParseRMC() {

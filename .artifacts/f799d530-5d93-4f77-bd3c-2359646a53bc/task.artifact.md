@@ -1,0 +1,9 @@
+- [x] Implement `NauticalAisManager` in Kotlin
+- [x] Implement `NauticalAisAudioAlertManager` (Integrated into `NauticalAudioArbiter` as `COLLISION_DANGER`)
+- [x] Integrate AIS tracking into `SignalKEngine`
+- [x] Implement `NauticalAisObjectDrawable` in Kotlin
+- [x] Implement `NauticalAisLayer` in Kotlin
+- [x] Update `NauticalPlugin` with AIS support and preferences
+- [x] Update `AisTargetBottomSheet` to use new manager
+- [x] Cleanup redundant files (`AisCollisionBridge.kt`, `AisEncoder.kt`, `AisUdpEmitter.kt`)
+- [ ] Verify implementation

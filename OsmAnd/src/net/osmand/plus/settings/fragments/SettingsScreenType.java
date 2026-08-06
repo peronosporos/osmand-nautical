@@ -56,11 +56,27 @@ public enum SettingsScreenType {
 	AIS_SETTINGS(AisTrackerSettingsFragment.class.getName(), true, ApplyQueryType.SNACK_BAR, R.xml.ais_settings, R.layout.profile_preference_toolbar),
 	POSITION_ANIMATION(PositionAnimationFragment.class.getName(), true, ApplyQueryType.NONE, R.xml.position_animation_settings, R.layout.profile_preference_toolbar_with_switch),
 	NAUTICAL_SETTINGS("net.osmand.plus.plugins.nautical.NauticalSettingsFragment", false, ApplyQueryType.SNACK_BAR, R.xml.nautical_settings, R.layout.global_preference_toolbar),
-	SAILING_PERFORMANCE_SETTINGS("net.osmand.plus.plugins.nautical.ui.settings.SailingPerformanceSettingsFragment", true, ApplyQueryType.SNACK_BAR, -1, R.layout.profile_preference_toolbar),
+	SAILING_PERFORMANCE_SETTINGS("net.osmand.plus.plugins.nautical.ui.editor.PolarEditorFragment", false, null, -1, R.layout.global_preference_toolbar),
 	MARINE_LOGBOOK("net.osmand.plus.plugins.nautical.ui.logbook.MarineLogbookFragment", false, null, -1, R.layout.global_preference_toolbar),
 	TIDE_DATA_MANAGER("net.osmand.plus.plugins.nautical.tide.import.TideDataManagerFragment", false, null, -1, R.layout.global_preference_toolbar),
 	MARINE_RASTER_MANAGER("net.osmand.plus.plugins.nautical.raster.MarineRasterManagerFragment", false, null, -1, R.layout.global_preference_toolbar),
-	S63_PERMIT_MANAGER("net.osmand.plus.plugins.nautical.s63.ui.S63PermitManagerFragment", false, null, R.xml.s63_permit_manager_settings, R.layout.global_preference_toolbar);
+	S63_PERMIT_MANAGER("net.osmand.plus.plugins.nautical.s63.ui.S63PermitManagerFragment", false, null, R.xml.s63_permit_manager_settings, R.layout.global_preference_toolbar),
+	NAUTICAL_HARDWARE_STATS("net.osmand.plus.plugins.nautical.ui.NauticalTechnicalStatsFragment", false, null, -1, R.layout.global_preference_toolbar),
+	NAUTICAL_SWITCH_PANEL("net.osmand.plus.plugins.nautical.ui.NauticalSwitchPanelFragment", false, null, -1, R.layout.global_preference_toolbar),
+	NAUTICAL_PASSAGE_PLAN("net.osmand.plus.plugins.nautical.routing.ui.NauticalRouteSummaryFragment", false, null, -1, R.layout.global_preference_toolbar),
+	NAUTICAL_MASTER_TELEMETRY("net.osmand.plus.views.mapwidgets.configure.settings.NauticalMasterTelemetrySettingsFragment", false, null, -1, R.layout.global_preference_toolbar),
+	ENC_CHART_MANAGER("net.osmand.plus.plugins.nautical.s57.ui.S57ChartManagerFragment", false, null, -1, R.layout.global_preference_toolbar),
+	NAUTICAL_CHECKLISTS("net.osmand.plus.plugins.nautical.ui.checklist.SailingChecklistFragment", false, null, -1, R.layout.global_preference_toolbar),
+	SAIL_INVENTORY("net.osmand.plus.plugins.nautical.ui.sail.SailInventoryFragment", false, null, -1, R.layout.global_preference_toolbar),
+	BOAT_AI("net.osmand.plus.plugins.nautical.ui.ai.BoatAiFragment", false, null, -1, R.layout.global_preference_toolbar),
+	NAUTICAL_NOTIFICATIONS("net.osmand.plus.plugins.nautical.ui.NauticalNotificationsFragment", false, null, -1, R.layout.global_preference_toolbar),
+	NAUTICAL_SAFETY_REGIONS("net.osmand.plus.plugins.nautical.ui.NauticalSafetyRegionsFragment", false, null, -1, R.layout.global_preference_toolbar),
+	SIGNALK_SERVER_ROUTES("net.osmand.plus.plugins.nautical.ui.SignalKServerRoutesFragment", false, null, -1, R.layout.global_preference_toolbar),
+	SIGNALK_SERVER_CHARTS("net.osmand.plus.plugins.nautical.ui.SignalKServerChartsFragment", false, null, -1, R.layout.global_preference_toolbar),
+	NAUTICAL_GNSS_STATUS("net.osmand.plus.plugins.nautical.ui.NauticalGnssStatusFragment", false, null, -1, R.layout.global_preference_toolbar),
+	NAUTICAL_TIDE_TABLE("net.osmand.plus.plugins.nautical.ui.SignalKTideTableFragment", false, null, -1, R.layout.global_preference_toolbar),
+	NAUTICAL_AIS_BUDDIES("net.osmand.plus.plugins.nautical.ui.NauticalBuddyListFragment", false, null, -1, R.layout.global_preference_toolbar),
+	NAUTICAL_ADVANCED_SETTINGS("net.osmand.plus.plugins.nautical.ui.NauticalAdvancedSettingsFragment", false, null, R.xml.nautical_advanced_settings, R.layout.global_preference_toolbar);
 	public final String fragmentName;
 	public final boolean profileDependent;
 	public final ApplyQueryType applyQueryType;
