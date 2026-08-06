@@ -4,7 +4,7 @@ buildscript {
         google()
         mavenCentral()
         maven {
-            url 'https://developer.huawei.com/repo/'
+            url = 'https://developer.huawei.com/repo/'
         }
     }
     dependencies {
@@ -25,7 +25,7 @@ plugins {
 
 
 allprojects {
-    group "net.osmand"
+    group = "net.osmand"
 
 
     // Configure all test tasks
@@ -44,10 +44,10 @@ allprojects {
         google()
         mavenCentral()
         maven {
-            url "https://jitpack.io"
+            url = "https://jitpack.io"
         }
         maven {
-            url 'https://developer.huawei.com/repo/'
+            url = 'https://developer.huawei.com/repo/'
         }
     }
 }

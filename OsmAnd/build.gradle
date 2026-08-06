@@ -43,7 +43,7 @@ android {
 	compileOptions {
 		sourceCompatibility = JavaVersion.VERSION_17
 		targetCompatibility = JavaVersion.VERSION_17
-		coreLibraryDesugaringEnabled true
+		coreLibraryDesugaringEnabled = true
 	}
 
 	kotlinOptions {
@@ -52,11 +52,11 @@ android {
 
 	defaultConfig {
 		minSdkVersion osmand_minSdk
-		versionCode 5399
-		versionCode System.getenv("APK_NUMBER_VERSION") ? System.getenv("APK_NUMBER_VERSION").toInteger() : versionCode
-		versionName "5.4.0"
-		versionName System.getenv("APK_VERSION")? System.getenv("APK_VERSION").toString(): versionName
-		versionName System.getenv("APK_VERSION_SUFFIX")? versionName + System.getenv("APK_VERSION_SUFFIX").toString(): versionName
+		versionCode = 5399
+		versionCode = System.getenv("APK_NUMBER_VERSION") ? System.getenv("APK_NUMBER_VERSION").toInteger() : versionCode
+		versionName = "5.4.0"
+		versionName = System.getenv("APK_VERSION")? System.getenv("APK_VERSION").toString(): versionName
+		versionName = System.getenv("APK_VERSION_SUFFIX")? versionName + System.getenv("APK_VERSION_SUFFIX").toString(): versionName
 	}
 
 
@@ -109,8 +109,8 @@ android {
 	}
 
 	buildFeatures {
-		aidl true
-		buildConfig true
+		aidl = true
+		buildConfig = true
 	}
 
 	flavorDimensions "version", "coreversion", "abi"
@@ -118,57 +118,57 @@ android {
         noCompress 'qz'
     }
     lint {
-        abortOnError false
-        lintConfig file('lint.xml')
-        warningsAsErrors false
+        abortOnError = false
+        lintConfig = file('lint.xml')
+        warningsAsErrors = false
     }
     productFlavors {
 		// Version
 		nightlyFree {
-			dimension "version"
-			applicationId "net.osmand.dev"
+			dimension = "version"
+			applicationId = "net.osmand.dev"
 			resValue "string", "app_name", "OsmAnd Nightly"
-			resValue "string", "app_edition", System.getenv("APP_EDITION") ? System.getenv("APP_EDITION") : ""
+			resValue "string", "app_edition", (System.getenv("APP_EDITION") ?: "")
 		}
 		androidFull {
-			dimension "version"
-			applicationId "net.osmand.plus.nautical" // Change this line here
+			dimension = "version"
+			applicationId = "net.osmand.plus.nautical" // Change this line here
 			resValue "string", "app_name", "OsmAnd Nautical" // Change the label on your home screen
-			resValue "string", "app_edition", System.getenv("APP_EDITION") ? System.getenv("APP_EDITION") : ""
+			resValue "string", "app_edition", (System.getenv("APP_EDITION") ?: "")
 		}
 		gplayFree {
-			dimension "version"
-			applicationId "net.osmand"
+			dimension = "version"
+			applicationId = "net.osmand"
 			resValue "string", "app_name", "OsmAnd"
-			resValue "string", "app_edition", System.getenv("APP_EDITION") ? System.getenv("APP_EDITION") : ""
+			resValue "string", "app_edition", (System.getenv("APP_EDITION") ?: "")
 		}
 		gplayFull {
-			dimension "version"
-			applicationId "net.osmand.plus"
+			dimension = "version"
+			applicationId = "net.osmand.plus"
 			resValue "string", "app_name", "OsmAnd+"
-			resValue "string", "app_edition", System.getenv("APP_EDITION") ? System.getenv("APP_EDITION") : ""
+			resValue "string", "app_edition", (System.getenv("APP_EDITION") ?: "")
 		}
 		huawei {
-			dimension "version"
-			applicationId "net.osmand.huawei"
+			dimension = "version"
+			applicationId = "net.osmand.huawei"
 			resValue "string", "app_name", "OsmAnd"
 			resValue "string", "app_edition", ""
 		}
 
         // Build that includes 3D OpenGL release
 		opengl {
-			dimension "coreversion"
+			dimension = "coreversion"
 		}
         // Build that includes 3D OpenGL debug
 		opengldebug {
-			dimension "coreversion"
+			dimension = "coreversion"
 		}
 	}
 
 	buildTypes {
 		debug {
-			signingConfig signingConfigs.development
-			applicationIdSuffix ".nautical" // Forces the final package to be net.osmand.plus.nautical
+			signingConfig = signingConfigs.development
+			applicationIdSuffix = ".nautical" // Forces the final package to be net.osmand.plus.nautical
 		}
 		release {
 			signingConfig signingConfigs.publishing
@@ -177,61 +177,53 @@ android {
 		}
 	}
 
-	applicationVariants.configureEach {
-		def variant = it
-		def taskName = variant.name.capitalize()
-		def mergeAssetsTaskName = "merge${taskName}Assets"
-		tasks.named(mergeAssetsTaskName).configure { osmandTask ->
-			println(osmandTask.getName() + " merge assets")
-			osmandTask.dependsOn(collectExternalResources)
-		}
-		if (taskName.endsWith("Debug")) {
-			def mergeAndroidTestAssetsTaskName = "merge${taskName}AndroidTestAssets"
-			tasks.named(mergeAndroidTestAssetsTaskName).configure { osmandTask ->
-				println(osmandTask.getName() + " merge test assets")
-				osmandTask.dependsOn(collectExternalResources)
-			}
-		}
-		def mapSourceSetPathsName= "map${taskName}SourceSetPaths"
-		tasks.named(mapSourceSetPathsName).configure { osmandTask ->
-			println(osmandTask.getName())
-			osmandTask.dependsOn(copyIcons)
-		}
-		def mergeResources= "merge${taskName}Resources"
-		tasks.named(mergeResources).configure { osmandTask ->
-			println(osmandTask.getName() + " merge resources")
-			osmandTask.dependsOn(collectExternalResources)
-		}
-		def generateResources= "generate${taskName}Resources"
-		tasks.named(generateResources).configure { osmandTask ->
-			println(osmandTask.getName() + " generate resources")
-			osmandTask.dependsOn(collectExternalResources)
-		}
-		def processNavigationResources = "process${taskName}NavigationResources"
-		tasks.matching { it.name == processNavigationResources }.configureEach { osmandTask ->
-			println(osmandTask.getName() + " process navigation resources")
-			osmandTask.dependsOn(collectExternalResources)
-		}
-		def extractDeepLinks = "extractDeepLinks${taskName}"
-		tasks.matching { it.name == extractDeepLinks }.configureEach { osmandTask ->
-			println(osmandTask.getName() + " extract deep links")
-			osmandTask.dependsOn(collectExternalResources)
-		}
-	}
+}
+
+androidComponents {
+    onVariants(selector().all()) { variant ->
+        def taskName = variant.name.capitalize()
+        
+        tasks.matching { it.name == "merge${taskName}Assets" }.configureEach {
+            it.dependsOn(collectExternalResources)
+        }
+        
+        if (variant.name.endsWith("Debug")) {
+            tasks.matching { it.name == "merge${taskName}AndroidTestAssets" }.configureEach {
+                it.dependsOn(collectExternalResources)
+            }
+        }
+        
+        tasks.matching { it.name == "map${taskName}SourceSetPaths" }.configureEach {
+            it.dependsOn(copyIcons)
+        }
+        
+        tasks.matching { it.name == "merge${taskName}Resources" }.configureEach {
+            it.dependsOn(collectExternalResources)
+        }
+        
+        tasks.matching { it.name == "generate${taskName}Resources" }.configureEach {
+            it.dependsOn(collectExternalResources)
+        }
+        
+        tasks.matching { it.name == "process${taskName}NavigationResources" }.configureEach {
+            it.dependsOn(collectExternalResources)
+        }
+        
+        tasks.matching { it.name == "extractDeepLinks${taskName}" }.configureEach {
+            it.dependsOn(collectExternalResources)
+        }
+
+        tasks.matching { it.name == "compile${taskName}JavaWithJavac" }.configureEach {
+            if (variant.name.contains('Opengldebug')) {
+                it.dependsOn collectExternalResources, buildOsmAndCore, copyOsmAndCoreWithJNI, cleanupDuplicatesInCore
+            } else {
+                it.dependsOn collectExternalResources, buildOsmAndCore, cleanupDuplicatesInCore
+            }
+        }
+    }
 }
 
 afterEvaluate {
-	android.applicationVariants.configureEach { variant ->
-		if (variant.name.contains('Opengldebug')) {
-			variant.javaCompileProvider.configure {
-				dependsOn collectExternalResources, buildOsmAndCore, copyOsmAndCoreWithJNI, cleanupDuplicatesInCore
-			}
-		} else {
-			variant.javaCompileProvider.configure {
-				dependsOn collectExternalResources, buildOsmAndCore, cleanupDuplicatesInCore
-			}
-		}
-	}
 
 	Gradle gradle = getGradle()
 	String tskReqStr = gradle.getStartParameter().getTaskRequests().toString().toLowerCase()

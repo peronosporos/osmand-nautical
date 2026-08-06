@@ -106,20 +106,24 @@ android {
         disable 'InvalidPackage', 'MissingTranslation'
     }
 
-    applicationVariants.configureEach {
-		def variant = it
-		def taskName = variant.name.capitalize()
-		def mergeAssetsTaskName = "merge${taskName}Assets"
-		tasks.named(mergeAssetsTaskName).configure { osmandTask ->
-			println(osmandTask.getName())
-			osmandTask.dependsOn(collectFonts)
-		}
-		def mapSourceSetPathsName= "map${taskName}SourceSetPaths"
-		tasks.named(mapSourceSetPathsName).configure { osmandTask ->
-			println(osmandTask.getName())
-		}
-	}
+}
 
+androidComponents {
+    onVariants(selector().all()) { variant ->
+        def taskName = variant.name.capitalize()
+        
+        tasks.matching { it.name == "merge${taskName}Assets" }.configureEach {
+            it.dependsOn(collectFonts)
+        }
+        
+        tasks.matching { it.name == "compile${taskName}JavaWithJavac" }.configureEach {
+            it.dependsOn downloadPrebuiltTelegram, collectExternalResources
+        }
+        
+        tasks.matching { it.name == "pre${taskName}Build" }.configureEach {
+            it.dependsOn downloadPrebuiltTelegram
+        }
+    }
 }
 
 tasks.register('downloadTdLibzip') {
@@ -154,17 +158,6 @@ tasks.register('collectFonts', Copy) {
 
 tasks.register('collectExternalResources') {
 	dependsOn collectFonts
-}
-
-afterEvaluate {
-	android.applicationVariants.configureEach { variant ->
-		variant.javaCompileProvider.configure { compileTask ->
-			compileTask.dependsOn downloadPrebuiltTelegram, collectExternalResources
-		}
-		variant.preBuildProvider.configure { preBuildTask ->
-			preBuildTask.dependsOn downloadPrebuiltTelegram
-		}
-	}
 }
 
 dependencies {

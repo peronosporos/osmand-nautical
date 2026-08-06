@@ -41,52 +41,45 @@ android {
 		}
 	}
 
-	libraryVariants.configureEach {
-		def variant = it
-		def taskName = variant.name.capitalize()
-		def packageAssetsTaskName = "package${taskName}Assets"
-		tasks.named(packageAssetsTaskName).configure { osmandTask ->
-			println(osmandTask.getName())
-			osmandTask.dependsOn(copyProjDb)
-			osmandTask.dependsOn(collectFonts)
-			osmandTask.dependsOn(copyPoiCategories)
-			osmandTask.dependsOn(copyRouteActivities)
-			osmandTask.dependsOn(copyColorPalettes)
-			osmandTask.dependsOn(copyBundledAssets)
-			osmandTask.dependsOn(copy3DModels)
-			osmandTask.dependsOn(collectVoiceAssets)
-			osmandTask.dependsOn(downloadStarsDb)
-			osmandTask.dependsOn(downloadWorldMiniBasemap)
-		}
-		def mapSourceSetPathsName= "map${taskName}SourceSetPaths"
-		tasks.named(mapSourceSetPathsName).configure { osmandTask ->
-			println(osmandTask.getName())
-			osmandTask.dependsOn(copyIcons)
-		}
-		def packageResources= "package${taskName}Resources"
-		tasks.named(packageResources).configure { osmandTask ->
-			println(osmandTask.getName())
-			osmandTask.dependsOn(copyIcons)
-		}
-		def generateResources= "generate${taskName}Resources"
-		tasks.named(generateResources).configure { osmandTask ->
-			println(osmandTask.getName() + " generate resources")
-			osmandTask.dependsOn(copyIcons)
-		}
-		def processNavigationResources = "process${taskName}NavigationResources"
-		tasks.matching { it.name == processNavigationResources }.configureEach { osmandTask ->
-			println(osmandTask.getName() + " process navigation resources")
-			osmandTask.dependsOn(copyIcons)
-		}
-	}
 }
 
-afterEvaluate {
-	android.libraryVariants.configureEach { variant ->
-		variant.javaCompileProvider.configure {
-			dependsOn collectExternalResources, buildOsmAndCore, cleanupDuplicatesInCore
-		}
-	}
+androidComponents {
+    onVariants(selector().all()) { variant ->
+        def taskName = variant.name.capitalize()
+        
+        tasks.matching { it.name == "package${taskName}Assets" }.configureEach {
+            it.dependsOn(copyProjDb)
+            it.dependsOn(collectFonts)
+            it.dependsOn(copyPoiCategories)
+            it.dependsOn(copyRouteActivities)
+            it.dependsOn(copyColorPalettes)
+            it.dependsOn(copyBundledAssets)
+            it.dependsOn(copy3DModels)
+            it.dependsOn(collectVoiceAssets)
+            it.dependsOn(downloadStarsDb)
+            it.dependsOn(downloadWorldMiniBasemap)
+        }
+        
+        tasks.matching { it.name == "map${taskName}SourceSetPaths" }.configureEach {
+            it.dependsOn(copyIcons)
+        }
+        
+        tasks.matching { it.name == "package${taskName}Resources" }.configureEach {
+            it.dependsOn(copyIcons)
+        }
+        
+        tasks.matching { it.name == "generate${taskName}Resources" }.configureEach {
+            it.dependsOn(copyIcons)
+        }
+        
+        tasks.matching { it.name == "process${taskName}NavigationResources" }.configureEach {
+            it.dependsOn(copyIcons)
+        }
+
+        tasks.matching { it.name == "compile${taskName}JavaWithJavac" }.configureEach {
+            it.dependsOn collectExternalResources, buildOsmAndCore, cleanupDuplicatesInCore
+        }
+    }
 }
 
 version = System.getenv("OSMAND_BINARIES_IVY_REVISION") ?: "master-snapshot"
