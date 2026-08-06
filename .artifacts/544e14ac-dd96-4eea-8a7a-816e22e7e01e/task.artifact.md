@@ -1,0 +1,4 @@
+- [x] Add missing nautical strings to `strings.xml`
+- [x] Verify build (linking check passed)
+- [ ] Investigate "string too large" error (if needed)
+- [x] Create walkthrough

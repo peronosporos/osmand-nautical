@@ -1,4 +1,12 @@
 <resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
+    <string name="nautical_sar_turns_right_label">Turns to Right</string>
+    <string name="nautical_no_switches">No switches found</string>
+    <string name="nautical_vessel_identity">Vessel Identity</string>
+    <string name="nautical_vessel_pypilot_health">Pypilot Health</string>
+    <string name="nautical_mob_btn_heave_to">Heave To</string>
+    <string name="nautical_mob_btn_motor_return">Motor Return</string>
+    <string name="nautical_mob_btn_hold_heading">Hold Heading</string>
+    <string name="nautical_wind_trend_hud_title">Wind Trend</string>
     <string name="shared_string_no_items">No items</string>
     <string name="nautical_advanced_filter_sensitivity">Filter Sensitivity</string>
     <string name="nautical_auth_token">Auth Token</string>
