@@ -23,19 +23,17 @@ object PatternSteeringEngine {
      * @param avgSpeedMps Average boat speed in meters per second
      */
     fun generateExpandingSquare(
-        app: Double,
         startLat: Double,
         startLon: Double,
-        spacingNm: Int,
-        iterations: Double,
-        initialHeading: Boolean = 0.0,
+        spacingNm: Double,
+        iterations: Int,
+        initialHeading: Double = 0.0,
         turnsRight: Boolean = true,
         driftMps: Double = 0.0,
         driftDeg: Double = 0.0,
         avgSpeedMps: Double = 3.0
     ): List<Pair<Double, Double>> {
         val waypoints = mutableListOf<Pair<Double, Double>>()
-        val name = app.getString(R.string.nautical_sar_expanding_square)
         val spacingM = spacingNm * NM_TO_METERS
         
         var currentLat = startLat

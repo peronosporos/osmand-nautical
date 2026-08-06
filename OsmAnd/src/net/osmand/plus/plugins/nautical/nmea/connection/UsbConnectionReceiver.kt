@@ -33,8 +33,8 @@ class UsbConnectionReceiver : BroadcastReceiver() {
                 log.info("USB device attached: ${device?.deviceName}")
                 device?.let { usbDevice ->
                     plugin.pluginScope?.let { scope ->
-                        val multiplexer = SailingDependencyContainer.getNmeaMultiplexer(scope)
                         val osmandApp = context.applicationContext as net.osmand.plus.OsmandApplication
+                        val multiplexer = SailingDependencyContainer.getNmeaMultiplexer(osmandApp, scope)
                         val baud = osmandApp.settings.NAUTICAL_NMEA_BAUD_RATE.get()
                         val client = UsbNmeaClient(context, usbDevice, baud, scope)
                         multiplexer.start(client)

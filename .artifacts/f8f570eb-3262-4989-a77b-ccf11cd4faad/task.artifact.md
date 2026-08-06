@@ -1,0 +1,7 @@
+- [x] Fix `PatternSteeringEngine.kt` compilation errors
+    - [x] Correct `generateExpandingSquare` signature and logic
+    - [x] Remove invalid/unused `app` parameter and `name` variable
+- [x] Fix `UsbConnectionReceiver.kt` compilation errors
+    - [x] Provide `OsmandApplication` to `getNmeaMultiplexer` call
+- [x] Verify changes
+    - [x] Run `analyze_file` on modified files
