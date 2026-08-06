@@ -1,4 +1,8 @@
 <resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
+    <string name="shared_string_no_items">No items</string>
+    <string name="nautical_advanced_filter_sensitivity">Filter Sensitivity</string>
+    <string name="nautical_auth_token">Auth Token</string>
+    <string name="nautical_mob_audio_guidance">MOB Audio Guidance</string>
     <string name="nautical_not_available">N/A</string>
     <string name="nautical_anchor_dragging_alarm">Anchor Dragging Suspected! Distance %1$.1fm > Allowed %2$.1fm. Rode: %3$dm, Depth: %4$.1fm</string>
     <string name="nautical_vhf_copied_to_clipboard">Copied VHF Channel %1$s to clipboard</string>

@@ -12,7 +12,7 @@
         android:id="@+id/wind_trend_icon"
         android:layout_width="24dp"
         android:layout_height="24dp"
-        android:src="@drawable/ic_action_wind_direction"
+        android:src="@drawable/ic_action_wind"
         app:tint="#FFFF00"
         android:contentDescription="Wind Trend" />
 
