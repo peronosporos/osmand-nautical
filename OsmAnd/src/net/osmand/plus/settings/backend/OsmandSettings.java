@@ -3614,7 +3614,7 @@ public class OsmandSettings {
 	public final CommonPreference<Boolean> NAUTICAL_SHOW_COG_LINE = registerBooleanPreference("nautical_show_cog_line", true).makeProfile();
 	public final CommonPreference<Boolean> NAUTICAL_SHOW_CURRENT_VECTOR = registerBooleanPreference("nautical_show_current_vector", true).makeProfile();
 	public final CommonPreference<Integer> NAUTICAL_LOOK_AHEAD_TIME = registerIntPreference("nautical_look_ahead_time", 10).makeProfile();
-	public final CommonPreference<Boolean> NAUTICAL_RECEIVE_IN_BACKGROUND = registerBooleanPreference("nautical_receive_in_background", true);
+	public final CommonPreference<Boolean> NAUTICAL_RECEIVE_IN_BACKGROUND = registerBooleanPreference("nautical_receive_in_background", false);
 	public final CommonPreference<Boolean> NAUTICAL_NIGHT_VISION_ENABLED = registerBooleanPreference("nautical_night_vision_enabled", false).makeProfile();
 	public final CommonPreference<Boolean> NAUTICAL_SUNLIGHT_MODE = registerBooleanPreference("nautical_sunlight_mode", false).makeProfile();
 	public final CommonPreference<NauticalDisplayMode> NAUTICAL_DISPLAY_MODE = registerEnumStringPreference("nautical_display_mode", NauticalDisplayMode.NORMAL, NauticalDisplayMode.values(), NauticalDisplayMode.class).makeProfile();

@@ -130,6 +130,22 @@
                 android:gravity="center"
                 android:text="@string/nautical_wizard_ready_msg"
                 android:textAppearance="?attr/textAppearanceHeadline6" />
+
+            <Button
+                android:id="@+id/btn_optimize_battery"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="@string/nautical_receive_in_background" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:gravity="center"
+                android:text="@string/nautical_receive_in_background_description"
+                android:textAppearance="?attr/textAppearanceCaption" />
         </LinearLayout>
     </ViewFlipper>
 

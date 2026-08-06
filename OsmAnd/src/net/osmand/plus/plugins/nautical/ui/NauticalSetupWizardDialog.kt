@@ -45,6 +45,19 @@ class NauticalSetupWizardDialog : BaseMaterialBottomSheetDialogFragment() {
         vesselMmsiEdit.setText(osmandSettings.NAUTICAL_AIS_OWN_MMSI.get().toString())
         serverIpEdit.setText(osmandSettings.NAUTICAL_SERVER_IP.get())
 
+        view.findViewById<Button>(R.id.btn_optimize_battery).setOnClickListener {
+            net.osmand.plus.plugins.nautical.NauticalPlugin.getInstance()?.let { plugin ->
+                osmandSettings.NAUTICAL_RECEIVE_IN_BACKGROUND.set(true)
+                try {
+                    val method = plugin.javaClass.getDeclaredMethod("checkBatteryOptimization")
+                    method.isAccessible = true
+                    method.invoke(plugin)
+                } catch (e: Exception) {
+                    // Fallback if reflection fails
+                }
+            }
+        }
+
         btnNext.setOnClickListener {
             if (currentStep == 0) {
                 val draft = vesselDraftEdit.text.toString().toFloatOrNull() ?: 0f

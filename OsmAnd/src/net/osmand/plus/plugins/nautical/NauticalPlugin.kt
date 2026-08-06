@@ -1315,9 +1315,8 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
             AndroidUtils.requestNotificationPermissionIfNeeded(activity)
         }
         
-        if (!app.settings.NAUTICAL_SETUP_WIZARD_COMPLETED.get()) {
-            checkBatteryOptimization()
-        }
+        // Removed automatic battery optimization check to prevent settings loop on launch
+
 
         // TASK-047: Screen Touch Lock Integration
         val mapLayersView = activity.findViewById<View>(R.id.MapLayersView)
