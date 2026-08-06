@@ -1099,9 +1099,16 @@ class SignalKEngine(
 
         var aisTarget: AisObject? = null
         if (!isSelf) {
-            val rawId = context.substringAfterLast(":", "")
+            // Task: Robust Context Parsing (Industry Standard)
+            // Handle: vessels.urn:mrn:imo:mmsi:123456789, vessels.urn:mrn:signalk:uuid:..., etc.
+            val rawId = context.substringAfter("vessels.", "")
             if (rawId.isNotEmpty()) {
-                val numericMmsi = rawId.toIntOrNull() ?: (rawId.hashCode().absoluteValue % 1000000000)
+                val numericMmsi = if (rawId.contains("mmsi:")) {
+                    rawId.substringAfter("mmsi:").toIntOrNull()
+                } else {
+                    rawId.toIntOrNull()
+                } ?: (rawId.hashCode().absoluteValue % 1000000000)
+                
                 aisTarget = aisCache.getOrPut(numericMmsi) { AisObject(numericMmsi, 1, 0.0, 0.0) }
             }
         }

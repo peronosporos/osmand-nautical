@@ -119,6 +119,13 @@ class NauticalMapLayer(context: Context) : OsmandMapLayer(context), SharedPrefer
         alpha = 220
     }
 
+    private val drPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.rgb(255, 140, 0) // Dark Orange for DR
+        style = Paint.Style.STROKE
+        strokeWidth = 4f
+        pathEffect = DashPathEffect(floatArrayOf(15f, 10f), 0f)
+    }
+
     private val trajectoryPath = Path()
     private val trajectoryHistory = mutableListOf<Pair<Double, Double>>()
     private var lastTrajectoryPoint: Pair<Double, Double>? = null
@@ -413,7 +420,36 @@ class NauticalMapLayer(context: Context) : OsmandMapLayer(context), SharedPrefer
             drawConnectionWarning(canvas)
         }
 
+        val state = engine.getCurrentState()
+        if (state.isDeadReckoning && state.latitude != null && state.longitude != null) {
+            val drX = tileBox.getPixXFromLatLon(state.latitude, state.longitude)
+            val drY = tileBox.getPixYFromLatLon(state.latitude, state.longitude)
+            drawDrIndicator(canvas, drX, drY, isSunlight)
+        }
+
         drawVesselProjections(canvas, tileBox, engine, osmandSettings, isSunlight)
+    }
+
+    private fun drawDrIndicator(canvas: Canvas, x: Float, y: Float, isSunlight: Boolean) {
+        val density = context.resources.displayMetrics.density
+        drPaint.color = if (isSunlight) Color.BLACK else Color.rgb(255, 140, 0)
+        drPaint.strokeWidth = 3f * density
+        
+        // Industry Standard DR Symbol: Circle around position with cross
+        canvas.drawCircle(x, y, 40f * density, drPaint)
+        
+        val crossSize = 10f * density
+        canvas.drawLine(x - crossSize, y, x + crossSize, y, drPaint)
+        canvas.drawLine(x, y - crossSize, x, y + crossSize, drPaint)
+        
+        // Label
+        val oldColor = textPaint.color
+        val oldSize = textPaint.textSize
+        textPaint.color = drPaint.color
+        textPaint.textSize = 14f * density
+        canvas.drawText("(DR)", x, y + 60f * density, textPaint)
+        textPaint.color = oldColor
+        textPaint.textSize = oldSize
     }
 
     private fun drawConnectionWarning(canvas: Canvas) {

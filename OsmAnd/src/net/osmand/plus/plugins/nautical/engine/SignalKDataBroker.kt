@@ -317,7 +317,10 @@ class SignalKDataBroker(private val settings: OsmandSettings? = null) {
             while (isActive) {
                 delay(500.milliseconds)
                 val current = _marineState.value
-                if ((current.connectionStatus == ConnectionStatus.STALE) || (current.connectionStatus == ConnectionStatus.DISCONNECTED)) {
+                val isStale = (current.connectionStatus == ConnectionStatus.STALE) || (current.connectionStatus == ConnectionStatus.DISCONNECTED)
+                val drEnabled = settings?.NAUTICAL_ENABLE_AUTO_DR?.get() ?: false
+                
+                if (isStale && drEnabled) {
                     val lat = current.latitude
                     val lon = current.longitude
                     val cog = current.courseOverGroundTrue
@@ -329,9 +332,11 @@ class SignalKDataBroker(private val settings: OsmandSettings? = null) {
                         val next = net.osmand.util.MapUtils.rhumbDestinationPoint(lat, lon, Math.toDegrees(cog), distanceMeters)
                         
                         _marineState.update { s ->
-                            s.copy(latitude = next.latitude, longitude = next.longitude)
+                            s.copy(latitude = next.latitude, longitude = next.longitude, isDeadReckoning = true)
                         }
                     }
+                } else if (current.isDeadReckoning) {
+                    _marineState.update { it.copy(isDeadReckoning = false) }
                 }
             }
         }

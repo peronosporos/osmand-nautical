@@ -3645,6 +3645,7 @@ public class OsmandSettings {
 	public final CommonPreference<Boolean> NAUTICAL_SHOW_LOGBOOK_LAYER = registerBooleanPreference("nautical_show_logbook_layer", false).makeProfile();
 	public final CommonPreference<Boolean> NAUTICAL_SHOW_RASTER_CHARTS = registerBooleanPreference("nautical_show_raster_charts", true).makeProfile();
 	public final CommonPreference<Boolean> NAUTICAL_SHOW_RAIN_RADAR = registerBooleanPreference("nautical_show_rain_radar", false).makeProfile();
+	public final CommonPreference<Boolean> NAUTICAL_ENABLE_AUTO_DR = registerBooleanPreference("nautical_enable_auto_dr", false).makeProfile();
 	public final CommonPreference<Boolean> NAUTICAL_SHOW_WINDY_TILES = registerBooleanPreference("nautical_show_windy_tiles", false).makeProfile();
 	public final CommonPreference<Boolean> NAUTICAL_SHOW_OPENMETEO_TILES = registerBooleanPreference("nautical_show_openmeteo_tiles", false).makeProfile();
 	public final CommonPreference<Boolean> NAUTICAL_SHOW_SMHI_TILES = registerBooleanPreference("nautical_show_smhi_tiles", false).makeProfile();

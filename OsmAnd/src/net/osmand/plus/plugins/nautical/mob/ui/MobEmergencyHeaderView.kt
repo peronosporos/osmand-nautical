@@ -94,8 +94,18 @@ class MobEmergencyHeaderView @JvmOverloads constructor(
             showManeuversMenu()
         }
 
-        // Long-press logic for CANCEL MOB (2 seconds)
+        // Long-press logic for CANCEL MOB (2 seconds) for safety
+        // Single-tap allowed if already RESOLVED
         cancelMobButton.setOnTouchListener { v, event ->
+            val currentState = viewModel?.uiState?.value?.state
+            if (currentState == net.osmand.plus.plugins.nautical.mob.engine.MobState.RESOLVED) {
+                if (event.action == MotionEvent.ACTION_UP) {
+                    viewModel?.clearMob()
+                    v.performClick()
+                }
+                return@setOnTouchListener true
+            }
+
             when (event.action) {
                 MotionEvent.ACTION_DOWN -> {
                     cancelRunnable = Runnable {

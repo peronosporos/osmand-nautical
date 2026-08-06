@@ -5,6 +5,8 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.LightingColorFilter
 import android.graphics.Paint
+import android.graphics.PorterDuff
+import android.graphics.PorterDuffColorFilter
 import android.graphics.Typeface
 import androidx.core.graphics.withTranslation
 import net.osmand.core.jni.MapMarker
@@ -245,7 +247,7 @@ class NauticalAisObjectDrawable(private val plugin: NauticalPlugin, private val 
             }
         }
         if (bitmapColor != 0) {
-            paint.colorFilter = LightingColorFilter(bitmapColor, 0)
+            paint.colorFilter = PorterDuffColorFilter(bitmapColor, PorterDuff.Mode.SRC_IN)
         } else {
             paint.colorFilter = null
         }

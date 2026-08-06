@@ -417,6 +417,8 @@ data class MarineState(
     val mobLatitude: Double? = null,
     val mobLongitude: Double? = null,
 
+    val isDeadReckoning: Boolean = false,
+
     // Pypilot Specific
     val pypilotConfig: PypilotConfig? = null,
     val pypilotServo: PypilotServoState? = null,

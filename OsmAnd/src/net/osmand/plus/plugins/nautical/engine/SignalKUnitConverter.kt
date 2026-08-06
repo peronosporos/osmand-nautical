@@ -80,11 +80,11 @@ object SignalKUnitConverter {
             }
         }
 
-        // Extreme outlier prevention
+        // Extreme outlier prevention (Industry Standard Safety Bounds)
         val isOutlier = when {
             path.contains("speed", ignoreCase = true) -> (effectiveValue < -5.0) || (effectiveValue > 100.0)
             path.contains("depth", ignoreCase = true) -> (effectiveValue < -20.0) || (effectiveValue > 15000.0)
-            path.contains("temperature", ignoreCase = true) -> (effectiveValue < 100.0) || (effectiveValue > 500.0)
+            path.contains("temperature", ignoreCase = true) -> (effectiveValue < 200.0) || (effectiveValue > 1000.0)
             path.contains("voltage", ignoreCase = true) -> (effectiveValue < 0.0) || (effectiveValue > 600.0)
             else -> false
         }
@@ -111,7 +111,8 @@ object SignalKUnitConverter {
                 val fv = OsmAndFormatter.getFormattedAltitudeValue(effectiveValue, app, settings.ALTITUDE_METRIC.get())
                 fv.value to fv.unit
             }
-            path.contains("log", ignoreCase = true) || path.contains("distance", ignoreCase = true) || path.contains("cpa", ignoreCase = true) -> {
+            path.contains("log", ignoreCase = true) || path.contains("distance", ignoreCase = true) || 
+            path.contains("cpa", ignoreCase = true) || path.contains("Radius", ignoreCase = true) -> {
                 val fv = OsmAndFormatter.getFormattedDistanceValue(effectiveValue.toFloat(), app)
                 fv.value to fv.unit
             }

@@ -462,6 +462,10 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
     private fun setupSafetyCategory() {
         setupDepthPreference(settings.NAUTICAL_SAFETY_MARGIN.id, R.string.nautical_safety_margin_base, R.drawable.ic_action_additional_option)
 
+        findPreference<SwitchPreferenceEx>(settings.NAUTICAL_ENABLE_AUTO_DR.id)?.apply {
+            setIcon(R.drawable.ic_action_play_dark)
+        }
+
         setupDistancePreference(settings.NAUTICAL_XTE_THRESHOLD.id, R.string.nautical_xte_threshold_desc, R.drawable.ic_action_anchor)
         setupDistancePreference(settings.NAUTICAL_LOOK_AHEAD_RADIUS_NM.id, R.string.nautical_look_ahead_radius_nm, R.drawable.ic_action_anchor)
         setupDistancePreference(settings.NAUTICAL_CORRIDOR_WIDTH.id, R.string.nautical_corridor_width, R.drawable.ic_action_additional_option)
