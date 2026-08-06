@@ -106,24 +106,6 @@ public class MapWidgetsFactory {
 				return new GlideAverageWidget(mapActivity, customId, panel);
 			case ELEVATION_PROFILE:
 				return new ElevationProfileWidget(mapActivity, customId, panel);
-			case NAUTICAL_DEPTH:
-				return new MarineTextWidget(mapActivity, widgetType, customId, panel);
-			case NAUTICAL_WIND:
-				return new MarineTextWidget(mapActivity, widgetType, customId, panel);
-			case NAUTICAL_VMG:
-				return new MarineTextWidget(mapActivity, widgetType, customId, panel);
-			case NAUTICAL_COG:
-				return new MarineTextWidget(mapActivity, widgetType, customId, panel);
-			case NAUTICAL_NIGHT_VISION:
-				return new NauticalNightVisionWidget(mapActivity, widgetType, customId, panel);
-			case NAUTICAL_PILOT:
-				return new NauticalPilotWidget(mapActivity, widgetType, customId, panel);
-			case NAUTICAL_ACTUATOR:
-				return new ActuatorLoadWidget(mapActivity, widgetType, customId, panel);
-			case NAUTICAL_MASTER_TELEMETRY:
-				return new NauticalMasterTelemetryWidget(mapActivity, widgetType, customId, panel);
-			case NAUTICAL_CAMERA:
-				return new NauticalCameraWidget(mapActivity, widgetType, customId, panel);
 			case AIDL_WIDGET:
 				return app.getAidlApi().askCreateExternalWidget(mapActivity, customId, panel);
 			default:

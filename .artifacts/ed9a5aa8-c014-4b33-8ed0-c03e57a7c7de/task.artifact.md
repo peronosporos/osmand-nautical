@@ -1,0 +1,3 @@
+- [x] Remove redundant nautical widget cases from `MapWidgetsFactory.java`
+- [x] Verify compilation (via `analyze_file`)
+- [x] Create walkthrough
