@@ -358,8 +358,6 @@
     <string name="nautical_flags_desc">Reference guide for International Maritime Signal Flags</string>
     <string name="nautical_watch_schedule_title">Watch Schedule</string>
     <string name="nautical_windlass_title">Anchor Windlass</string>
-    <string name="nautical_windlass_up">Actuate UP</string>
-    <string name="nautical_windlass_down">Actuate DOWN</string>
     <string name="nautical_adjust_dimmer">Adjust Light Brightness</string>
     <string name="nautical_alarm_accidental_gybe">DANGER: Accidental Gybe Risk!</string>
     <string name="nautical_master_telemetry">Master Telemetry</string>
