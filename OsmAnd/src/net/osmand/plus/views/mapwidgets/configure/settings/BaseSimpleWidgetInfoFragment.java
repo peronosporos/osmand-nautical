@@ -25,7 +25,11 @@ public class BaseSimpleWidgetInfoFragment extends BaseResizableWidgetSettingFrag
 		super.initParams(bundle);
 		if (widgetInfo != null && widgetInfo.widget instanceof SimpleWidget simpleWidget) {
 			shouldShowIconPref = simpleWidget.shouldShowIconPref();
-			showIcon = bundle.containsKey(SHOW_ICON_KEY) ? bundle.getBoolean(SHOW_ICON_KEY) : shouldShowIconPref.get();
+			if (bundle.containsKey(SHOW_ICON_KEY)) {
+				showIcon = bundle.getBoolean(SHOW_ICON_KEY);
+			} else if (shouldShowIconPref != null) {
+				showIcon = shouldShowIconPref.get();
+			}
 		}
 	}
 

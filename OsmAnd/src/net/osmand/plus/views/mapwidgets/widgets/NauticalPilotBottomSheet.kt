@@ -45,7 +45,11 @@ class NauticalPilotBottomSheet : BaseMaterialBottomSheetDialogFragment() {
         updateTackButtons()
     }
     private var autoDismissHandler = Handler(Looper.getMainLooper())
-    private val autoDismissRunnable = Runnable { dismissAllowingStateLoss() }
+    private val autoDismissRunnable = Runnable {
+        if (isAdded) {
+            dismissAllowingStateLoss()
+        }
+    }
     private var lastSog: Double? = null
     private var lastStw: Double? = null
     private var lastVoiceHeading: Int? = null

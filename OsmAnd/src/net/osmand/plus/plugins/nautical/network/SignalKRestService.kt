@@ -125,7 +125,7 @@ interface SignalKRestService {
 
     companion object {
         fun create(baseUrl: String, okHttpClient: okhttp3.OkHttpClient): SignalKRestService? {
-            if (baseUrl.contains("://:")) {
+            if (baseUrl.isBlank() || baseUrl.contains("://:")) {
                 return null
             }
             val normalizedUrl = if (baseUrl.endsWith("/")) baseUrl else "$baseUrl/"

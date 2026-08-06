@@ -40,11 +40,12 @@ class NauticalElectricalWidget(
     }
 
     override fun updateSimpleWidgetInfo(drawSettings: OsmandMapLayer.DrawSettings?) {
-        val state = NauticalPlugin.engine?.getCurrentState()
-        if (state == null) {
-            setText("--", "")
+        val engine = NauticalPlugin.engine
+        if (engine == null) {
+            setText("--", "N/A")
             return
         }
+        val state = engine.getCurrentState()
 
         val battery = state.batteries.values.firstOrNull()
         if (battery?.voltage != null) {

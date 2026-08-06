@@ -442,7 +442,7 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
                     checkScreenAlwaysOn()
                     presentationManager?.updateState(state)
 
-                    if (app.settings.APPLICATION_MODE.get() == ApplicationMode.BOAT && state.headingTrue != null) {
+                    if (app.settings.APPLICATION_MODE.get().isDerivedRoutingFrom(ApplicationMode.BOAT) && state.headingTrue != null) {
                         val mapView = app.osmandMap?.mapView
                         if (mapView != null && app.settings.isCompassMode(net.osmand.plus.settings.enums.CompassMode.COMPASS_DIRECTION)) {
                             val hdgDeg = Math.toDegrees(state.headingTrue).toFloat()
@@ -1127,7 +1127,7 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
     }
 
     override fun addMyPlacesTab(myPlacesActivity: net.osmand.plus.myplaces.MyPlacesActivity, mTabs: MutableList<net.osmand.plus.activities.TabActivity.TabItem>, intent: Intent) {
-        if (app.settings.APPLICATION_MODE.get() == ApplicationMode.BOAT) {
+        if (app.settings.APPLICATION_MODE.get().isDerivedRoutingFrom(ApplicationMode.BOAT)) {
             mTabs.add(myPlacesActivity.getTabIndicator(R.string.logbook_title, net.osmand.plus.plugins.nautical.ui.logbook.MarineLogbookFragment::class.java))
         }
     }
@@ -1242,7 +1242,7 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
         appMode: ApplicationMode,
         layoutMode: ScreenLayoutMode?,
     ) {
-        if (appMode != ApplicationMode.BOAT) return
+        if (!appMode.isDerivedRoutingFrom(ApplicationMode.BOAT)) return
         
         createMapWidgetForParams(activity, WidgetType.MANEUVER_OVERLAY, null, WidgetsPanel.BOTTOM)?.let { widget ->
             widgetInfos.add(
@@ -1296,13 +1296,27 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
         isAppInBackground = false
         applyPowerThrottling()
         onAppForegrounded()
-        if (!::connection.isInitialized || !connection.isConnected()) {
+        
+        if (hudManager == null || hudManager?.get() == null) {
+            hudManager = WeakReference(NauticalHudManager(activity))
+        }
+        if (wearOsManager == null) {
+            wearOsManager = WearOsNauticalManager(activity)
+        }
+
+        if (!::connection.isInitialized) {
+            startEngine()
+        } else if (!connection.isConnected()) {
             startEngine()
         }
         updateNauticalBackgroundService()
         presentationManager?.onResume(activity)
         if (app.settings.NAUTICAL_RECEIVE_IN_BACKGROUND.get()) {
             AndroidUtils.requestNotificationPermissionIfNeeded(activity)
+        }
+        
+        if (!app.settings.NAUTICAL_SETUP_WIZARD_COMPLETED.get()) {
+            checkBatteryOptimization()
         }
 
         // TASK-047: Screen Touch Lock Integration
@@ -1325,7 +1339,7 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
             private var volUpPressTime = 0L
 
             override fun onKeyDown(keyCode: Int, event: android.view.KeyEvent): Boolean {
-                if (app.settings.APPLICATION_MODE.get() != ApplicationMode.BOAT) return false
+                if (!app.settings.APPLICATION_MODE.get().isDerivedRoutingFrom(ApplicationMode.BOAT)) return false
                 val manager = maneuverManager ?: return false
                 
                 when (keyCode) {
@@ -1392,7 +1406,7 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
 
             override fun onKeyLongPress(keyCode: Int, event: android.view.KeyEvent): Boolean = false
             override fun onKeyUp(keyCode: Int, event: android.view.KeyEvent): Boolean {
-                if (app.settings.APPLICATION_MODE.get() != ApplicationMode.BOAT) return false
+                if (!app.settings.APPLICATION_MODE.get().isDerivedRoutingFrom(ApplicationMode.BOAT)) return false
                 volUpPressTime = 0L
                 return keyCode == android.view.KeyEvent.KEYCODE_VOLUME_UP || keyCode == android.view.KeyEvent.KEYCODE_VOLUME_DOWN
             }
@@ -1442,7 +1456,7 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
 
     override fun updateLayers(context: Context, mapActivity: MapActivity?) {
         val activity = mapActivity ?: return
-        val isBoat = app.settings.APPLICATION_MODE.get() == ApplicationMode.BOAT
+        val isBoat = app.settings.APPLICATION_MODE.get().isDerivedRoutingFrom(ApplicationMode.BOAT)
         val mapView = activity.mapView
         if (isBoat && isActive) {
             if (layerController == null) {
@@ -1676,7 +1690,7 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
     }
 
     private fun updateHudVisibility() {
-        val isBoat = app.settings.APPLICATION_MODE.get() == ApplicationMode.BOAT
+        val isBoat = app.settings.APPLICATION_MODE.get().isDerivedRoutingFrom(ApplicationMode.BOAT)
         hudManager?.get()?.setVisible(isBoat)
     }
 
@@ -1885,7 +1899,7 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
     }
 
     fun updateFeatureLifecycle() {
-        val isBoat = app.settings.APPLICATION_MODE.get() == ApplicationMode.BOAT
+        val isBoat = app.settings.APPLICATION_MODE.get().isDerivedRoutingFrom(ApplicationMode.BOAT)
         val activity = app.osmandMap?.mapView?.mapActivity
 
         if (!isActive || !isBoat) {
@@ -2064,6 +2078,10 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
                                 }
                             }
                         }
+                        
+                        withContext(Dispatchers.Main) {
+                            requestRefresh()
+                        }
                     }
 
                     val currentEngine = engine
@@ -2234,8 +2252,6 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
             locationProvider?.start()
             updateNauticalBackgroundService()
             updateFeatureLifecycle()
-
-            checkBatteryOptimization()
 
                 val filter = IntentFilter().apply {
                 addAction(Intent.ACTION_SCREEN_OFF)
@@ -2557,7 +2573,7 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
         mapActivity: MapActivity,
         customRules: MutableList<RenderingRuleProperty>,
     ) {
-        if (isActive && app.settings.APPLICATION_MODE.get() == ApplicationMode.BOAT) {
+        if (isActive && app.settings.APPLICATION_MODE.get().isDerivedRoutingFrom(ApplicationMode.BOAT)) {
             adapter.addItem(
                 ContextMenuItem("nautical_category").apply {
                     isCategory = true
@@ -2758,7 +2774,7 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
     }
 
     override fun registerMapContextMenuActions(mapActivity: MapActivity, lat: Double, lon: Double, adapter: ContextMenuAdapter, obj: Any?, conf: Boolean) {
-        if (app.settings.APPLICATION_MODE.get() != ApplicationMode.BOAT) return
+        if (!app.settings.APPLICATION_MODE.get().isDerivedRoutingFrom(ApplicationMode.BOAT)) return
 
         adapter.addItem(
             ContextMenuItem("nautical_switches").apply {

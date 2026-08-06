@@ -48,7 +48,11 @@ class NauticalGraphWidget(
     }
 
     override fun updateInfo(view: View, drawSettings: OsmandMapLayer.DrawSettings?) {
-        val engine = NauticalPlugin.engine ?: return
+        val engine = NauticalPlugin.engine
+        if (engine == null) {
+            updateVisibility(true)
+            return
+        }
         val state = engine.getCurrentState()
         val g = graphView ?: return
         val badge = view.findViewById<View>(R.id.stale_badge)

@@ -612,7 +612,7 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
             val (v, u) = SignalKUnitConverter.formatValue(app, settings, nm * 1852.0, "distance")
             title = "${getString(titleId)} ($u)"
             summary = "$v $u"
-            text = v
+            text = nm.toString()
             setOnBindEditTextListener { it.inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL }
         }
     }
@@ -826,7 +826,7 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
         findPreference<Preference>("nautical_checklists")?.isVisible = caps?.hasNavtex == true // Heuristic
         
         // Maneuver section logic - hide if not in BOAT mode (safety)
-        val isBoat = app.settings.APPLICATION_MODE.get() == net.osmand.plus.settings.backend.ApplicationMode.BOAT
+        val isBoat = app.settings.APPLICATION_MODE.get().isDerivedRoutingFrom(net.osmand.plus.settings.backend.ApplicationMode.BOAT)
         findPreference<PreferenceCategory>("nautical_maneuver_category")?.isVisible = isBoat
     }
 

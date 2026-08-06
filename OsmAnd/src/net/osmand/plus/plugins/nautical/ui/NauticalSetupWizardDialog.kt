@@ -12,7 +12,7 @@ import net.osmand.plus.settings.enums.VesselType
 class NauticalSetupWizardDialog : BaseMaterialBottomSheetDialogFragment() {
 
     private var currentStep = 0
-    private lateinit var switcher: ViewSwitcher
+    private lateinit var switcher: ViewFlipper
     private lateinit var btnNext: Button
     private lateinit var btnBack: Button
 

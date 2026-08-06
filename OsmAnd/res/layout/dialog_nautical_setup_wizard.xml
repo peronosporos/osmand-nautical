@@ -14,7 +14,7 @@
         android:textAppearance="?attr/textAppearanceHeadline5"
         android:textStyle="bold" />
 
-    <ViewSwitcher
+    <ViewFlipper
         android:id="@+id/step_switcher"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -131,7 +131,7 @@
                 android:text="@string/nautical_wizard_ready_msg"
                 android:textAppearance="?attr/textAppearanceHeadline6" />
         </LinearLayout>
-    </ViewSwitcher>
+    </ViewFlipper>
 
     <LinearLayout
         android:layout_width="match_parent"

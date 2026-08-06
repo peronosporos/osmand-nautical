@@ -29,7 +29,11 @@ class TargetVmgWidget(
     }
 
     override fun updateSimpleWidgetInfo(drawSettings: OsmandMapLayer.DrawSettings?) {
-        val engine = NauticalPlugin.engine ?: return
+        val engine = NauticalPlugin.engine
+        if (engine == null) {
+            setText("--", "N/A")
+            return
+        }
         val state = engine.getCurrentState()
 
         if (state.velocityMadeGood == null) {
