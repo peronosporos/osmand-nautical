@@ -16,29 +16,32 @@ public class SecureStringPreference extends StringPreference {
 
     public SecureStringPreference(@NonNull OsmandSettings settings, @NonNull String id, String defaultValue) {
         super(settings, id, defaultValue);
-        initEncryptedPrefs();
     }
 
-    private void initEncryptedPrefs() {
-        try {
-            MasterKey masterKey = new MasterKey.Builder(getContext())
-                    .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-                    .build();
+    private SharedPreferences getEncryptedPrefs() {
+        if (encryptedPrefs == null && getContext() != null) {
+            try {
+                MasterKey masterKey = new MasterKey.Builder(getContext())
+                        .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+                        .build();
 
-            encryptedPrefs = EncryptedSharedPreferences.create(
-                    getContext(),
-                    "net.osmand.secure_settings",
-                    masterKey,
-                    EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-                    EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-            );
-        } catch (GeneralSecurityException | IOException e) {
-            e.printStackTrace();
+                encryptedPrefs = EncryptedSharedPreferences.create(
+                        getContext(),
+                        "net.osmand.secure_settings",
+                        masterKey,
+                        EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                        EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+                );
+            } catch (GeneralSecurityException | IOException e) {
+                e.printStackTrace();
+            }
         }
+        return encryptedPrefs;
     }
 
     @Override
     public String getValue(@NonNull Object prefs, String defaultValue) {
+        SharedPreferences encryptedPrefs = getEncryptedPrefs();
         if (encryptedPrefs != null && encryptedPrefs.contains(getId())) {
             return encryptedPrefs.getString(getId(), defaultValue);
         }
@@ -55,6 +58,7 @@ public class SecureStringPreference extends StringPreference {
 
     @Override
     protected boolean setValue(Object prefs, String val) {
+        SharedPreferences encryptedPrefs = getEncryptedPrefs();
         if (encryptedPrefs != null) {
             return encryptedPrefs.edit().putString(getId(), val).commit();
         }

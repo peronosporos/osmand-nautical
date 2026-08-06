@@ -1,3 +1,2 @@
-- [x] Remove redundant nautical widget cases from `MapWidgetsFactory.java`
-- [x] Verify compilation (via `analyze_file`)
-- [x] Create walkthrough
+- [x] Modify `SecureStringPreference.java` for lazy initialization of `encryptedPrefs`
+- [/] Verify fix by checking logcat for crashes on startup
