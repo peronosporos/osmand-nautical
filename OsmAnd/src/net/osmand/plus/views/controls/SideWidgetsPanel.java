@@ -254,9 +254,19 @@ public class SideWidgetsPanel extends FrameLayoutEx implements WidgetsContainer 
 			List<View> views = visiblePages.getWidgetsViews(viewPager.getCurrentItem());
 			if (!Algorithms.isEmpty(views)) {
 				for (View view : views) {
+					View container = view.findViewById(R.id.container);
 					View emptyBanner = view.findViewById(R.id.empty_banner);
-					if (view.findViewById(R.id.container).getVisibility() == VISIBLE
-							|| (emptyBanner != null && emptyBanner.getVisibility() == VISIBLE)) {
+					if (container != null) {
+						if (container.getVisibility() == VISIBLE) {
+							return true;
+						}
+					} else if (emptyBanner == null) {
+						// Custom widget without container/emptyBanner
+						if (view.getVisibility() == VISIBLE) {
+							return true;
+						}
+					}
+					if (emptyBanner != null && emptyBanner.getVisibility() == VISIBLE) {
 						return true;
 					}
 				}
