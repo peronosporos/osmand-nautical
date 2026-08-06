@@ -48,13 +48,7 @@ class NauticalSetupWizardDialog : BaseMaterialBottomSheetDialogFragment() {
         view.findViewById<Button>(R.id.btn_optimize_battery).setOnClickListener {
             net.osmand.plus.plugins.nautical.NauticalPlugin.getInstance()?.let { plugin ->
                 osmandSettings.NAUTICAL_RECEIVE_IN_BACKGROUND.set(true)
-                try {
-                    val method = plugin.javaClass.getDeclaredMethod("checkBatteryOptimization")
-                    method.isAccessible = true
-                    method.invoke(plugin)
-                } catch (e: Exception) {
-                    // Fallback if reflection fails
-                }
+                plugin.checkBatteryOptimization()
             }
         }
 

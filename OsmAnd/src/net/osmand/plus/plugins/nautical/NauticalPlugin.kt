@@ -585,6 +585,9 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
                 connection.disconnect()
             }
         }
+        if (state == true) {
+            checkBatteryOptimization()
+        }
     }
     private val enabledPluginsListener = StateChangedListener<String> {
         updateFeatureLifecycle()
@@ -3393,7 +3396,7 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
         }
     }
 
-    private fun checkBatteryOptimization() {
+    internal fun checkBatteryOptimization() {
         val pm = app.getSystemService(Context.POWER_SERVICE) as PowerManager
         if (!pm.isIgnoringBatteryOptimizations(app.packageName)) {
             try {
