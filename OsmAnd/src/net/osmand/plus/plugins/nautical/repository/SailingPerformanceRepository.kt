@@ -30,7 +30,7 @@ class SailingPerformanceRepository(
         okHttpClient
     }
 
-    private val restService: SignalKRestService = SignalKRestService.create(serverBaseUrl, authenticatedClient)
+    private val restService: SignalKRestService? = SignalKRestService.create(serverBaseUrl, authenticatedClient)
 
     private val _activePolarProfile = MutableStateFlow<PolarProfile?>(null)
     val activePolarProfile: StateFlow<PolarProfile?> = _activePolarProfile.asStateFlow()
@@ -58,8 +58,8 @@ class SailingPerformanceRepository(
     fun fetchPolars() {
         scope.launch {
             try {
-                val response = restService.getPolars()
-                if (response.isSuccessful && (response.body() != null)) {
+                val response = restService?.getPolars()
+                if (response != null && response.isSuccessful && (response.body() != null)) {
                     val polars = response.body()!!
                     _availablePolars.value = polars
                     if (_activePolarProfile.value == null && polars.isNotEmpty()) {
@@ -81,8 +81,8 @@ class SailingPerformanceRepository(
             }
 
             try {
-                val response = restService.getPolarById(polarId)
-                if (response.isSuccessful && (response.body() != null)) {
+                val response = restService?.getPolarById(polarId)
+                if (response != null && response.isSuccessful && (response.body() != null)) {
                     _activePolarProfile.value = response.body()
                 }
             } catch (e: Exception) {

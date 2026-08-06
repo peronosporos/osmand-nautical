@@ -60,8 +60,13 @@ object SailingDependencyContainer {
 
         _okHttpClient = client
 
-        val baseUrl = "http://${app.settings.NAUTICAL_SERVER_IP.get()}:${app.settings.NAUTICAL_SERVER_PORT.get()}"
-        performanceRepository = SailingPerformanceRepository(broker, okHttpClient, baseUrl)
+        val serverIp = app.settings.NAUTICAL_SERVER_IP.get()
+        if (serverIp.isNotEmpty()) {
+            val baseUrl = "http://$serverIp:${app.settings.NAUTICAL_SERVER_PORT.get()}"
+            performanceRepository = SailingPerformanceRepository(broker, okHttpClient, baseUrl)
+        } else {
+            log.warn("Nautical server IP is not configured, skipping SailingPerformanceRepository initialization")
+        }
         gribRepository = GribRepository()
         tideParser = HarmonicDataParser()
         tideEngine = TideCalculationEngine()

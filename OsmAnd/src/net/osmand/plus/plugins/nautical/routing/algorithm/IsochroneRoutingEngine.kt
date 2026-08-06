@@ -150,7 +150,7 @@ class IsochroneRoutingEngine(
         val ip = plugin.getSettings().NAUTICAL_SERVER_IP.get()
         val port = plugin.getSettings().NAUTICAL_SERVER_PORT.get()
         val protocol = if (plugin.getSettings().NAUTICAL_USE_SECURE_CONNECTION.get()) "https" else "http"
-        val rest = net.osmand.plus.plugins.nautical.network.SignalKRestService.create("$protocol://$ip:$port", client)
+        val rest = net.osmand.plus.plugins.nautical.network.SignalKRestService.create("$protocol://$ip:$port", client) ?: return null
 
         return try {
             val pluginId = if (caps.hasWingaRouting) "winga-weather-routing" else "signalk-routeiq"

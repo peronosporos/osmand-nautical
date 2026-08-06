@@ -124,14 +124,21 @@ interface SignalKRestService {
     suspend fun putGeneric(@Path("path", encoded = true) path: String, @Body body: SignalKPutBody): Response<SignalKActionResponse>
 
     companion object {
-        fun create(baseUrl: String, okHttpClient: okhttp3.OkHttpClient): SignalKRestService {
+        fun create(baseUrl: String, okHttpClient: okhttp3.OkHttpClient): SignalKRestService? {
+            if (baseUrl.contains("://:")) {
+                return null
+            }
             val normalizedUrl = if (baseUrl.endsWith("/")) baseUrl else "$baseUrl/"
-            return Retrofit.Builder()
-                .baseUrl(normalizedUrl)
-                .client(okHttpClient)
-                .addConverterFactory(GsonConverterFactory.create())
-                .build()
-                .create(SignalKRestService::class.java)
+            return try {
+                Retrofit.Builder()
+                    .baseUrl(normalizedUrl)
+                    .client(okHttpClient)
+                    .addConverterFactory(GsonConverterFactory.create())
+                    .build()
+                    .create(SignalKRestService::class.java)
+            } catch (_: Exception) {
+                null
+            }
         }
     }
 }

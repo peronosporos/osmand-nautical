@@ -63,7 +63,7 @@ class BoatAiFragment : BaseOsmAndFragment() {
             val ip = app.settings.NAUTICAL_SERVER_IP.get()
             val port = app.settings.NAUTICAL_SERVER_PORT.get()
             val protocol = if (app.settings.NAUTICAL_USE_SECURE_CONNECTION.get()) "https" else "http"
-            val service = net.osmand.plus.plugins.nautical.network.SignalKRestService.create("$protocol://$ip:$port", client)
+            val service = net.osmand.plus.plugins.nautical.network.SignalKRestService.create("$protocol://$ip:$port", client) ?: return@launch
             
             try {
                 val state = NauticalPlugin.engine?.getCurrentState()

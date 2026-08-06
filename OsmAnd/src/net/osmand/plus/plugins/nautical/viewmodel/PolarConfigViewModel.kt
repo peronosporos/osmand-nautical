@@ -105,7 +105,7 @@ class PolarConfigViewModel : ViewModel() {
         val ip = plugin.application.settings.NAUTICAL_SERVER_IP.get()
         val port = plugin.application.settings.NAUTICAL_SERVER_PORT.get()
         val protocol = if (plugin.application.settings.NAUTICAL_USE_SECURE_CONNECTION.get()) "https" else "http"
-        val service = SignalKRestService.create("$protocol://$ip:$port", client)
+        val service = SignalKRestService.create("$protocol://$ip:$port", client) ?: return
 
         // Convert heatmap to PolarProfile matrix
         val heatmap = _heatmapCells.value

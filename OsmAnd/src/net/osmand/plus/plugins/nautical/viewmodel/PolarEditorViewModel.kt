@@ -81,7 +81,7 @@ class PolarEditorViewModel : ViewModel() {
         viewModelScope.launch {
             try {
                 val client = NauticalPlugin.getInstance()?.okHttpClient ?: okhttp3.OkHttpClient()
-                val restService = SignalKRestService.create(serverBaseUrl, client)
+                val restService = SignalKRestService.create(serverBaseUrl, client) ?: run { onResult(false); return@launch }
                 val profile = PolarProfile(
                     name = "Edited Polar TWS ${_selectedTws.value}",
                     description = "Custom smoothed polar curve",

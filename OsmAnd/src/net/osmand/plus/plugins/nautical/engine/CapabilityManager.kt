@@ -67,7 +67,8 @@ class CapabilityManager(@Suppress("unused") private val app: OsmandApplication) 
         val hasMediaControl: Boolean = false,
     )
 
-    fun probe(restService: SignalKRestService) {
+    fun probe(restService: SignalKRestService?) {
+        if (restService == null) return
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 val pluginsResponse = restService.getPlugins()

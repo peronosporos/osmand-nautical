@@ -461,7 +461,7 @@ class SignalKEngine(
 
                 val protocol = if (app.settings.NAUTICAL_USE_SECURE_CONNECTION.get()) "https" else "http"
                 val baseUrl = "$protocol://$ip:$port"
-                val restService = net.osmand.plus.plugins.nautical.network.SignalKRestService.create(baseUrl, client)
+                val restService = net.osmand.plus.plugins.nautical.network.SignalKRestService.create(baseUrl, client) ?: return@launch
 
                 val response = restService.getVesselSelf()
                 if (response.isSuccessful) {
@@ -735,7 +735,7 @@ class SignalKEngine(
                     val ip = app.settings.NAUTICAL_SERVER_IP.get()
                     val port = app.settings.NAUTICAL_SERVER_PORT.get()
                     val protocol = if (app.settings.NAUTICAL_USE_SECURE_CONNECTION.get()) "https" else "http"
-                    val restService = net.osmand.plus.plugins.nautical.network.SignalKRestService.create("$protocol://$ip:$port", client)
+                    val restService = net.osmand.plus.plugins.nautical.network.SignalKRestService.create("$protocol://$ip:$port", client) ?: return@withTimeout
                     
                     val response = restService.getSelfIdentity()
                     if (response.isSuccessful) {
@@ -932,7 +932,7 @@ class SignalKEngine(
             val ip = app.settings.NAUTICAL_SERVER_IP.get()
             val port = app.settings.NAUTICAL_SERVER_PORT.get()
             val protocol = if (app.settings.NAUTICAL_USE_SECURE_CONNECTION.get()) "https" else "http"
-            val restService = net.osmand.plus.plugins.nautical.network.SignalKRestService.create("$protocol://$ip:$port", client)
+            val restService = net.osmand.plus.plugins.nautical.network.SignalKRestService.create("$protocol://$ip:$port", client) ?: return@withContext
 
             val coords = points.map { listOf(it.second, it.first) }
             val skRoute = net.osmand.plus.plugins.nautical.network.SignalKRoute(
@@ -966,7 +966,7 @@ class SignalKEngine(
             val ip = app.settings.NAUTICAL_SERVER_IP.get()
             val port = app.settings.NAUTICAL_SERVER_PORT.get()
             val protocol = if (app.settings.NAUTICAL_USE_SECURE_CONNECTION.get()) "https" else "http"
-            val restService = net.osmand.plus.plugins.nautical.network.SignalKRestService.create("$protocol://$ip:$port", client)
+            val restService = net.osmand.plus.plugins.nautical.network.SignalKRestService.create("$protocol://$ip:$port", client) ?: return@withContext
 
             val coords = points.map { listOf(it.second, it.first) }
             val skRoute = net.osmand.plus.plugins.nautical.network.SignalKRoute(
@@ -996,7 +996,7 @@ class SignalKEngine(
             val ip = app.settings.NAUTICAL_SERVER_IP.get()
             val port = app.settings.NAUTICAL_SERVER_PORT.get()
             val protocol = if (app.settings.NAUTICAL_USE_SECURE_CONNECTION.get()) "https" else "http"
-            val restService = net.osmand.plus.plugins.nautical.network.SignalKRestService.create("$protocol://$ip:$port", client)
+            val restService = net.osmand.plus.plugins.nautical.network.SignalKRestService.create("$protocol://$ip:$port", client) ?: return@withContext
 
             val response = restService.deleteRoute(routeId)
             if (response.isSuccessful) {
@@ -1016,7 +1016,7 @@ class SignalKEngine(
             val ip = app.settings.NAUTICAL_SERVER_IP.get()
             val port = app.settings.NAUTICAL_SERVER_PORT.get()
             val protocol = if (app.settings.NAUTICAL_USE_SECURE_CONNECTION.get()) "https" else "http"
-            val restService = net.osmand.plus.plugins.nautical.network.SignalKRestService.create("$protocol://$ip:$port", client)
+            val restService = net.osmand.plus.plugins.nautical.network.SignalKRestService.create("$protocol://$ip:$port", client) ?: return@withContext null
 
             val response = restService.getRoutes()
             if (response.isSuccessful) {
