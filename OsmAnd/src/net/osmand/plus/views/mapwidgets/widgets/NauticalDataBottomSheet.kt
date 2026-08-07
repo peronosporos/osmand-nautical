@@ -105,7 +105,7 @@ class NauticalDataBottomSheet : BottomSheetDialogFragment() {
             else -> context?.getString(R.string.nautical_data_telemetry)
         }
         if (name != null) {
-            titleView?.text = getString(R.string.nautical_history_title_pattern, name)
+            titleView?.text = context?.getString(R.string.nautical_history_title_pattern, name)
         }
     }
 

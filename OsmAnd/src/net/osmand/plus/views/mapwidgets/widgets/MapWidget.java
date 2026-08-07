@@ -159,7 +159,7 @@ public abstract class MapWidget {
 	}
 
 	public boolean isViewVisible() {
-		return getView().getVisibility() == View.VISIBLE;
+		return view != null && view.getVisibility() == View.VISIBLE;
 	}
 
 	public boolean isAttached() {

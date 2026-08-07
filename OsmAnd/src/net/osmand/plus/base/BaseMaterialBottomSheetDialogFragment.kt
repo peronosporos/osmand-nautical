@@ -19,10 +19,10 @@ import net.osmand.plus.utils.UiUtilities
 open class BaseMaterialBottomSheetDialogFragment :
     BottomSheetDialogFragment(), IOsmAndFragment, ISupportInsets {
 
-    protected lateinit var osmandApp: OsmandApplication
-    protected lateinit var osmandSettings: OsmandSettings
-    protected lateinit var currentAppMode: ApplicationMode
-    protected lateinit var uiUtilities: UiUtilities
+    protected lateinit var app: OsmandApplication
+    protected lateinit var settings: OsmandSettings
+    protected lateinit var appMode: ApplicationMode
+    protected lateinit var iconsCache: UiUtilities
     protected var nightMode: Boolean = false
 
     private var lastRootInsets: WindowInsetsCompat? = null
@@ -32,10 +32,10 @@ open class BaseMaterialBottomSheetDialogFragment :
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        osmandApp = requireActivity().application as OsmandApplication
-        osmandSettings = osmandApp.getSettings()
-        uiUtilities = osmandApp.uiUtilities
-        currentAppMode = restoreAppMode(osmandApp, null, savedInstanceState, arguments)
+        app = requireActivity().application as OsmandApplication
+        settings = app.getSettings()
+        iconsCache = app.uiUtilities
+        appMode = restoreAppMode(app, null, savedInstanceState, arguments)
         updateNightMode()
     }
 
@@ -71,7 +71,7 @@ open class BaseMaterialBottomSheetDialogFragment :
     }
 
     override fun getApp(): OsmandApplication {
-        return osmandApp
+        return app
     }
 
     override fun getThemedInflater(): LayoutInflater {
@@ -87,15 +87,15 @@ open class BaseMaterialBottomSheetDialogFragment :
     }
 
     override fun getIconsCache(): UiUtilities {
-        return uiUtilities
+        return iconsCache
     }
 
     override fun getAppMode(): ApplicationMode {
-        return currentAppMode
+        return appMode
     }
 
     override fun setAppMode(appMode: ApplicationMode) {
-        this.currentAppMode = appMode
+        this.appMode = appMode
     }
 
     override fun onApplyInsets(insets: WindowInsetsCompat) {

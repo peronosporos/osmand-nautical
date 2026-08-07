@@ -28,6 +28,7 @@ data class PolarCell(
 
 @Suppress("unused")
 class PolarConfigViewModel : ViewModel() {
+    private val log = net.osmand.PlatformUtil.getLog(PolarConfigViewModel::class.java)
 
     private val _wizardState = MutableStateFlow(WizardState.INITIAL_CHECK)
     val wizardState: StateFlow<WizardState> = _wizardState.asStateFlow()
@@ -35,7 +36,7 @@ class PolarConfigViewModel : ViewModel() {
     private val _engineOff = MutableStateFlow(value = false)
     val engineOff: StateFlow<Boolean> = _engineOff.asStateFlow()
 
-    private val _sensorsCalibrated = MutableStateFlow(false)
+    private val _sensorsCalibrated = MutableStateFlow(value = false)
     val sensorsCalibrated: StateFlow<Boolean> = _sensorsCalibrated.asStateFlow()
 
     private val _profileName = MutableStateFlow("My Custom Polar")
@@ -95,6 +96,29 @@ class PolarConfigViewModel : ViewModel() {
             updateRecommendation(10.0, 50.0)
         } else if (newState == WizardState.SAVING) {
             saveToServer()
+        }
+    }
+
+    fun downloadPolars() {
+        val plugin = net.osmand.plus.plugins.nautical.NauticalPlugin.getInstance() ?: return
+        val client = plugin.okHttpClient ?: return
+        
+        val ip = plugin.application.settings.NAUTICAL_SERVER_IP.get()
+        val port = plugin.application.settings.NAUTICAL_SERVER_PORT.get()
+        val protocol = if (plugin.application.settings.NAUTICAL_USE_SECURE_CONNECTION.get()) "https" else "http"
+        val service = SignalKRestService.create("$protocol://$ip:$port", client) ?: return
+
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val response = service.getPolars()
+                if (response.isSuccessful) {
+                    val polars = response.body() ?: emptyMap()
+                    // Logic to handle multiple polars could be added here
+                    log.info("Nautical: Downloaded ${polars.size} polars from server.")
+                }
+            } catch (e: Exception) {
+                log.error("Nautical: Failed to download polars: ${e.message}")
+            }
         }
     }
 

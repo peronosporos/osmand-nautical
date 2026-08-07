@@ -263,11 +263,13 @@ public class SideWidgetsPanel extends FrameLayoutEx implements WidgetsContainer 
 						if (container.getVisibility() == VISIBLE) {
 							return true;
 						}
-					} else if (emptyBanner != null) {
+					}
+					if (emptyBanner != null) {
 						if (emptyBanner.getVisibility() == VISIBLE) {
 							return true;
 						}
-					} else {
+					}
+					if (container == null && emptyBanner == null) {
 						// Custom widget without container/emptyBanner
 						if (view.getVisibility() == VISIBLE) {
 							return true;

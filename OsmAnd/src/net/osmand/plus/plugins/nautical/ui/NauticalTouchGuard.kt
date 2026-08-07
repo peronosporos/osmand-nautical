@@ -14,6 +14,7 @@ import kotlin.math.abs
 class NauticalTouchGuard(
     private val view: View,
     private val lockSwitch: View? = null,
+    private val isLockedCheck: (() -> Boolean)? = null,
     private val onUnlock: (() -> Unit)? = null
 ) {
     private var isUnlocked = false
@@ -45,6 +46,9 @@ class NauticalTouchGuard(
             if (lockSwitch?.isEnabled == true && (lockSwitch as? android.widget.CompoundButton)?.isChecked == true) {
                 return@setOnTouchListener true
             }
+            if (isLockedCheck?.invoke() == true) {
+                return@setOnTouchListener true
+            }
 
             lastX = event.x
             lastY = event.y
@@ -53,14 +57,14 @@ class NauticalTouchGuard(
                 MotionEvent.ACTION_DOWN -> {
                     if (isInteracting) return@setOnTouchListener false
                     isUnlocked = false
-                    handler.postDelayed(unlockRunnable, 500)
+                    handler.postDelayed(unlockRunnable, 1000) // INCREASED DELAY to 1s
                     true // Consume DOWN to prevent immediate interaction (e.g. Slider jump)
                 }
                 MotionEvent.ACTION_MOVE -> {
                     if (isInteracting) return@setOnTouchListener false
                     if (!isUnlocked) {
-                        // If user moves significantly before 500ms, cancel the unlock to avoid accidental drag
-                        if (abs(event.x - lastX) > 10 || abs(event.y - lastY) > 10) {
+                        // If user moves significantly before unlock, cancel the unlock to avoid accidental drag
+                        if (abs(event.x - lastX) > 20 || abs(event.y - lastY) > 20) {
                             handler.removeCallbacks(unlockRunnable)
                         }
                         true // Block the move
@@ -84,8 +88,8 @@ class NauticalTouchGuard(
 
     companion object {
         @JvmStatic
-        fun apply(view: View, lockSwitch: View? = null, onUnlock: (() -> Unit)? = null) {
-            NauticalTouchGuard(view, lockSwitch, onUnlock).apply()
+        fun apply(view: View, lockSwitch: View? = null, isLockedCheck: (() -> Boolean)? = null, onUnlock: (() -> Unit)? = null) {
+            NauticalTouchGuard(view, lockSwitch, isLockedCheck, onUnlock).apply()
         }
     }
 }

@@ -27,6 +27,9 @@ class ManeuverManager(private val app: OsmandApplication) {
 
     var state = ManeuverState.IDLE
         private set
+    
+    var lastAbortReason: String? = null
+        private set
 
     private val listeners = mutableListOf<ManeuverStateListener>()
 
@@ -91,7 +94,9 @@ class ManeuverManager(private val app: OsmandApplication) {
                         }
                     } else {
                         val failMsg = reason ?: app.getString(R.string.nautical_error_preflight_failed)
-                        abort(failMsg, isAlarm = true)
+                        // Task: Don't trigger emergency brightness for standard preflight failures unless it's MOB
+                        val isEmergency = maneuverId == "man_overboard"
+                        abort(failMsg, isAlarm = isEmergency)
                         app.runInUIThread {
                             app.showToastMessage(failMsg)
                         }
@@ -109,6 +114,7 @@ class ManeuverManager(private val app: OsmandApplication) {
             val maneuver = activeManeuver
             val maneuverId = maneuver?.let { getManeuverId(it) } ?: "unknown"
             
+            lastAbortReason = reason
             maneuver?.transitionToAborted(reason)
             updateState(ManeuverState.IDLE)
             activeManeuver = null

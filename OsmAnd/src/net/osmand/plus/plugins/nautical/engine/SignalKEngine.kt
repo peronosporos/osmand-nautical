@@ -1100,16 +1100,34 @@ class SignalKEngine(
         var aisTarget: AisObject? = null
         if (!isSelf) {
             // Task: Robust Context Parsing (Industry Standard)
-            // Handle: vessels.urn:mrn:imo:mmsi:123456789, vessels.urn:mrn:signalk:uuid:..., etc.
-            val rawId = context.substringAfter("vessels.", "")
-            if (rawId.isNotEmpty()) {
-                val numericMmsi = if (rawId.contains("mmsi:")) {
-                    rawId.substringAfter("mmsi:").toIntOrNull()
+            // Handle: vessels.*, aircraft.*, atons.*, sar.*
+            val type = context.substringBefore(".")
+            val rawId = context.substringAfter("$type.", "")
+            
+            if (rawId.isNotEmpty() && (type == "vessels" || type == "aircraft" || type == "atons" || type == "sar")) {
+                val numericMmsi: Int = if (rawId.contains("mmsi:")) {
+                    rawId.substringAfter("mmsi:").toIntOrNull() ?: (rawId.hashCode().absoluteValue % 1000000000)
+                } else if (rawId.contains("uuid:")) {
+                    rawId.substringAfter("uuid:").hashCode().absoluteValue % 1000000000
                 } else {
-                    rawId.toIntOrNull()
-                } ?: (rawId.hashCode().absoluteValue % 1000000000)
+                    rawId.toIntOrNull() ?: (rawId.hashCode().absoluteValue % 1000000000)
+                }
                 
-                aisTarget = aisCache.getOrPut(numericMmsi) { AisObject(numericMmsi, 1, 0.0, 0.0) }
+                aisTarget = aisCache.getOrPut(numericMmsi) { 
+                    log.info("Nautical: New AIS target discovered from context: $context (MMSI: $numericMmsi)")
+                    val msgType = when(type) {
+                        "aircraft" -> 9
+                        "atons" -> 21
+                        else -> 1 // Default vessel
+                    }
+                    val obj = AisObject(numericMmsi, msgType, 0.0, 0.0)
+                    if (type == "sar") {
+                        // Create a Class A vessel but we'll try to set SAR type if possible via updates
+                    }
+                    obj
+                }
+            } else if (context.isNotEmpty()) {
+                log.debug("Nautical: Ignoring Signal K update for unknown context: $context")
             }
         }
 
@@ -1163,6 +1181,9 @@ class SignalKEngine(
                                             }
                                         } else {
                                             value = readJsonValue(reader)
+                                            if (aisTarget != null && path != null) {
+                                                log.debug("Nautical: Received AIS update for ${aisTarget.mmsi} - Path: $path, Value: $value")
+                                            }
                                         }
                                     }
                                     else -> reader.skipValue()
@@ -1617,6 +1638,7 @@ class SignalKEngine(
             }
             "name", "vesselName" -> {
                 val shipName = valueObj?.toString()
+                log.info("Nautical: Identified AIS vessel ${target.mmsi} as '$shipName'")
                 val updated = AisObject(
                     target.mmsi, 1,
                     target.imo, target.callSign, shipName,
@@ -3206,5 +3228,3 @@ class SignalKEngine(
         }
     }
 }
-
-// dummy

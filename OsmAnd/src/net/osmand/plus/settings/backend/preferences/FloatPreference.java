@@ -24,7 +24,14 @@ public class FloatPreference extends CommonPreference<Float> {
 
 	@Override
 	public Float parseString(String s) {
-		return Float.parseFloat(s);
+		if (s == null) {
+			return getDefaultValue();
+		}
+		try {
+			return Float.parseFloat(s.replace(" ", "").replace("\u00A0", ""));
+		} catch (NumberFormatException e) {
+			return getDefaultValue();
+		}
 	}
 
 	@Override

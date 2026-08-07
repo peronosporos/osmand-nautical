@@ -13,6 +13,7 @@ import net.osmand.plus.plugins.nautical.NauticalPlugin
 import net.osmand.plus.views.mapwidgets.WidgetType
 import net.osmand.plus.views.mapwidgets.WidgetsPanel
 import net.osmand.plus.views.mapwidgets.widgets.MapWidget
+import kotlin.time.Duration.Companion.seconds
 
 class ManeuverOverlayWidget(
     mapActivity: MapActivity,
@@ -166,6 +167,20 @@ class ManeuverOverlayWidget(
             updateUI()
             if (newState == ManeuverState.EXECUTING) {
                 startObservingManeuverFeedback()
+            } else if (newState == ManeuverState.IDLE) {
+                val reason = manager.lastAbortReason
+                if (reason != null && reason != "User cancelled") {
+                    statusText?.text = mapActivity.getString(R.string.nautical_maneuver_aborted_format, reason)
+                    statusText?.setTextColor(0xFFFF0000.toInt()) // Red
+                    updateVisibility(true)
+                    // Auto-hide after 5 seconds
+                    mapActivity.lifecycleScope.launch {
+                        kotlinx.coroutines.delay(5.seconds)
+                        if (manager.state == ManeuverState.IDLE) {
+                            updateUI()
+                        }
+                    }
+                }
             }
         }
     }

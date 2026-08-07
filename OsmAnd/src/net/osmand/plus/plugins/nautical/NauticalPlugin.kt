@@ -460,7 +460,7 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
     }
 
     private fun evaluateVesselSafety(state: MarineState, notifications: MutableMap<String, SignalKNotification>) {
-        checkOffCourseAlert(state)
+        checkOffCourseAlert(state, notifications)
         checkDepthSafety(state, notifications)
         checkAccidentalGybeAlert(state, notifications)
     }
@@ -510,19 +510,36 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
         isBatteryAlertActive = lowBatteryDetected
     }
 
+    fun isVesselOnPassage(): Boolean {
+        val context = app.settings.NAUTICAL_VESSEL_CONTEXT.get()
+        if (context == VesselContext.SAILING || context == VesselContext.MOTORING || context == VesselContext.EMERGENCY_HEAVE_TO) {
+            return true
+        }
+        val state = engine?.getCurrentState()
+        val sog = state?.speedOverGround ?: 0.0
+        // More than 0.5 knots or following a route
+        return (sog > 0.25) || (engine?.isFollowingRoute == true)
+    }
+
     private var connectionLostAudioJob: Job? = null
     private fun startConnectionLostAudioLoop() {
         connectionLostAudioJob?.cancel()
         connectionLostAudioJob = pluginScope?.launch {
+            var firstRun = true
             while (isActive && isConnectionLostAlertActive) {
                 try {
-                    app.player?.let { player ->
-                        val text = app.getString(R.string.nautical_autopilot_data_lost)
-                        player.playCommands(player.newCommandBuilder().attention(text))
+                    // Task: Only loop if on passage. If at rest, play only once.
+                    if (firstRun || isVesselOnPassage()) {
+                        app.player?.let { player ->
+                            val text = app.getString(R.string.nautical_autopilot_data_lost)
+                            player.playCommands(player.newCommandBuilder().attention(text))
+                        }
                     }
+                    if (!isVesselOnPassage() && !firstRun) break // Silence loop if not on passage
                 } catch (e: Exception) {
                     log.error("Connection lost audio loop error: ${e.message}", e)
                 }
+                firstRun = false
                 delay(10.seconds)
             }
         }
@@ -559,7 +576,6 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
     private val retryHandler = Handler(Looper.getMainLooper())
     private var retryAttempt = 0
     private val retryRunnable = Runnable { startEngine() }
-    private var isAlertActive = false
     private var isBatteryAlertActive = false
     private var lastAutopilotState: String? = null
     private var lastConnectionStatus: ConnectionStatus? = null
@@ -1684,7 +1700,8 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
                 launch {
                     engine?.marineStateFlow?.collect { state ->
                         th.updateState(state)
-                        hh.updateState(state, connection.getLatencyMs())
+                        val latency = if (::connection.isInitialized) connection.getLatencyMs() else 0L
+                        hh.updateState(state, latency)
                     }
                 }
             }
@@ -2048,7 +2065,7 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
                     if (engine == null) {
                         val newEngine = SignalKEngine(app, scope, capabilityManager)
                         newEngine.addRouteStepListener(routeStepListener)
-                        newEngine.deltaSender = { delta -> connection.sendDelta(delta) }
+                        newEngine.deltaSender = { delta -> if (::connection.isInitialized) connection.sendDelta(delta) }
                         engine = newEngine
                         newEngine.loadBuffersFromDisk(app)
                         
@@ -2087,7 +2104,7 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
                     }
 
                     val currentEngine = engine
-                    if (autopilot == null && currentEngine != null) {
+                    if (autopilot == null && currentEngine != null && ::connection.isInitialized) {
                         okHttpClient?.let { client ->
                             val ap = AutopilotController(app, connection, client, currentEngine.dataBroker)
                             autopilot = ap
@@ -2368,21 +2385,10 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
         refreshHandler.removeCallbacks(refreshRunnable)
     }
 
-    private fun checkOffCourseAlert(state: MarineState) {
+    private fun checkOffCourseAlert(state: MarineState, notifications: MutableMap<String, SignalKNotification>) {
         if (state.isOffCourse) {
-            if (!isAlertActive) {
-                isAlertActive = true
-                log.warn("OFF COURSE ALERT!")
-                app.runInUIThread {
-                    app.showToastMessage(R.string.nautical_off_course_alert)
-                    app.player?.let { player ->
-                        val text = app.getString(R.string.nautical_off_course_alert)
-                        player.playCommands(player.newCommandBuilder().attention(text))
-                    }
-                }
-            }
-        } else {
-            isAlertActive = false
+            val msg = app.getString(R.string.nautical_off_course_alert)
+            notifications["navigation.offCourse"] = SignalKNotification(msg, NotificationState.ALARM)
         }
     }
 
@@ -2390,14 +2396,9 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
         val awa = state.windDirectionApparent ?: return
         val awaDeg = Math.toDegrees(awa)
         
-        if (abs(awaDeg) > 165.0) {
+        if (abs(awaDeg) > 172.0) { // Increased from 165 to 172 to reduce false positives
             val msg = app.getString(R.string.nautical_alarm_accidental_gybe)
             notifications["safety.alarm.gybe"] = SignalKNotification(msg, NotificationState.ALARM)
-
-            NauticalAudioArbiter.getInstance(app).dispatchAlarm(
-                net.osmand.plus.plugins.nautical.audio.AlarmType.TACTICAL_GYBE,
-                voiceText = msg
-            )
         }
     }
 
@@ -3262,7 +3263,7 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
         }
     }
 
-    fun isSignalKConnected(): Boolean = connection.isConnected()
+    fun isSignalKConnected(): Boolean = if (::connection.isInitialized) connection.isConnected() else false
 
     fun isAudioHardwareAvailable(): Boolean {
         val am = app.getSystemService(Context.AUDIO_SERVICE) as android.media.AudioManager

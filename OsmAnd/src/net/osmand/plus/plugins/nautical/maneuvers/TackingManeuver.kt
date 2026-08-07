@@ -123,10 +123,23 @@ class TackingManeuver(app: OsmandApplication) : ManeuverEngine(app) {
                 val state = NauticalPlugin.engine?.getCurrentState() ?: return
                 val awa = state.windDirectionApparent?.let { abs(Math.toDegrees(it)) } ?: 0.0
                 if (awa < 5.0) {
-                    transitionToAborted(app.getString(R.string.nautical_abort_stalled_in_irons))
+                    val msg = app.getString(R.string.nautical_warn_stalled_in_irons)
+                    NauticalPlugin.hudManager?.get()?.showBanner(
+                        msg,
+                        5000,
+                        "RESTART",
+                        true
+                    ) {
+                        transitionToExecuting() // Retry the maneuver
+                    }
+                    
+                    NauticalPlugin.getInstance()?.speechHelper?.speakAsync(
+                        "Warning: Stalled in irons. Check sheets and speed.",
+                        AlarmType.TACTICAL_TACK
+                    )
                 }
             }
-        }, 8000, 1000)
+        }, 8000, 5000) // Increased interval to 5s to be less intrusive
     }
 
     override fun transitionToCompleted() {

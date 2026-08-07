@@ -55,7 +55,7 @@
 
 
 
-    <style name="OsmandLightTheme.BottomSheet">
+    <style name="OsmandLightTheme.BottomSheet" parent="OsmandLightTheme">
         <item name="android:statusBarColor">@color/color_transparent</item>
         <item name="android:dialogTheme">@style/BottomSheet.Dialog</item>
         <item name="android:windowBackground">@color/color_transparent</item>

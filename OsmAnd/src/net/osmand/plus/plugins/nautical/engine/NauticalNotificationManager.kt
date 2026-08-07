@@ -27,11 +27,13 @@ class NauticalNotificationManager(
     private val log = PlatformUtil.getLog(NauticalNotificationManager::class.java)
     private val arbiter = NauticalAudioArbiter.getInstance(app)
     private val processedNotifications = ConcurrentHashMap<String, SignalKNotification>()
+    private val lastTriggerTimes = ConcurrentHashMap<String, Long>()
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
     companion object {
         const val CHANNEL_CRITICAL = "osmand_marine_critical"
         const val ALERTS_STATE_KEY = "tactical.active_alerts"
+        const val ALERT_COOLDOWN_MS = 60000L // 1 minute suppression for same path
     }
 
     init {
@@ -58,12 +60,18 @@ class NauticalNotificationManager(
 
     fun processNotifications(notifications: Map<String, SignalKNotification>) {
         var changed = false
+        val now = System.currentTimeMillis()
         notifications.forEach { (path, notification) ->
             val last = processedNotifications[path]
+            val lastTrigger = lastTriggerTimes[path] ?: 0L
+            
             if (last == null || last.state != notification.state) {
                 // State changed or new notification
                 if (notification.state == NotificationState.ALARM || notification.state == NotificationState.EMERGENCY) {
-                    triggerAlert(path, notification)
+                    if (now - lastTrigger > ALERT_COOLDOWN_MS) {
+                        triggerAlert(path, notification)
+                        lastTriggerTimes[path] = now
+                    }
                 }
                 processedNotifications[path] = notification
                 changed = true
@@ -77,6 +85,11 @@ class NauticalNotificationManager(
             if (!notifications.containsKey(entry.key)) {
                 log.info("Notification cleared: ${entry.key}")
                 NotificationManagerCompat.from(app).cancel(entry.key.hashCode())
+                
+                // Task: Stop the audio alarm if it was triggered by this path
+                val alarmType = getAlarmTypeForPath(entry.key)
+                arbiter.stopAlarm(alarmType)
+                
                 iterator.remove()
                 changed = true
             }
@@ -91,6 +104,8 @@ class NauticalNotificationManager(
         log.error("SIGNAL K ALERT: [$path] ${notification.message} (State: ${notification.state})")
         
         val isCritical = notification.state == NotificationState.ALARM || notification.state == NotificationState.EMERGENCY
+        val plugin = NauticalPlugin.getInstance()
+        val onPassage = plugin?.isVesselOnPassage() == true
 
         app.runInUIThread {
             val priorityPrefix = when (notification.state) {
@@ -100,19 +115,19 @@ class NauticalNotificationManager(
             }
             val message = "$priorityPrefix: ${notification.message}"
             
-            val alarmType = when {
-                path.startsWith("notifications.communication.dsc") -> AlarmType.DSC_DISTRESS
-                path == "notifications.navigation.ais.sart" -> AlarmType.AIS_SART
-                else -> AlarmType.XTE_NAVIGATION
-            }
+            val alarmType = getAlarmTypeForPath(path)
 
-            // Audio alerting
-            arbiter.dispatchAlarm(
-                type = alarmType,
-                voiceText = message,
-                loop = isCritical,
-                playTone = isCritical
-            )
+            // Audio alerting: Suppress if not on passage AND it's just a general navigation alert
+            val shouldSilence = !onPassage && (alarmType == AlarmType.XTE_NAVIGATION || path.contains("watchdog"))
+            
+            if (!shouldSilence) {
+                arbiter.dispatchAlarm(
+                    type = alarmType,
+                    voiceText = message,
+                    loop = isCritical,
+                    playTone = isCritical
+                )
+            }
             
             // Post distinct Android Notification for critical safety events
             if (isCritical) {
@@ -143,6 +158,17 @@ class NauticalNotificationManager(
             } else {
                 app.showToastMessage(message)
             }
+        }
+    }
+
+    private fun getAlarmTypeForPath(path: String): AlarmType {
+        return when {
+            path.startsWith("notifications.communication.dsc") -> AlarmType.DSC_DISTRESS
+            path == "notifications.navigation.ais.sart" -> AlarmType.AIS_SART
+            path == "notifications.navigation.mob" -> AlarmType.MOB
+            path == "notifications.safety.alarm.gybe" -> AlarmType.TACTICAL_GYBE
+            path == "notifications.navigation.offCourse" -> AlarmType.XTE_NAVIGATION
+            else -> AlarmType.XTE_NAVIGATION
         }
     }
 

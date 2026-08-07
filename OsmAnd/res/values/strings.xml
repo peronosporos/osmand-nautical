@@ -1,4 +1,11 @@
 <resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
+    <string name="nautical_maneuver_aborted_format">Maneuver Aborted: %1$s</string>
+    <string name="nautical_warn_stalled_in_irons">Stalled in irons. Restart tack?</string>
+    <string name="nautical_confirm_helm_into_wind">Point bow into wind automatically?</string>
+    <string name="nautical_telemetry_group">Nautical Telemetry</string>
+    <string name="nautical_telemetry_group_desc">Text-based marine data (SOG, COG, Depth, etc.)</string>
+    <string name="nautical_systems_group">Nautical Systems</string>
+    <string name="nautical_systems_group_desc">Vessel controls and complex system monitoring (Autopilot, Electrical, Engines)</string>
     <string name="nautical_sar_turns_right_label">Turns to Right</string>
     <string name="nautical_no_switches">No switches found</string>
     <string name="nautical_vessel_identity">Vessel Identity</string>

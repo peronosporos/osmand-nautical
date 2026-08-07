@@ -1,5 +1,6 @@
 package net.osmand.plus.plugins.nautical.network
 
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import retrofit2.Response
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
@@ -125,10 +126,13 @@ interface SignalKRestService {
 
     companion object {
         fun create(baseUrl: String, okHttpClient: okhttp3.OkHttpClient): SignalKRestService? {
-            if (baseUrl.isBlank() || baseUrl.contains("://:")) {
+            if (baseUrl.isBlank() || baseUrl.contains("://:") || !baseUrl.contains("://")) {
                 return null
             }
             val normalizedUrl = if (baseUrl.endsWith("/")) baseUrl else "$baseUrl/"
+            if (normalizedUrl.toHttpUrlOrNull() == null) {
+                return null
+            }
             return try {
                 Retrofit.Builder()
                     .baseUrl(normalizedUrl)

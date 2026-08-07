@@ -234,12 +234,6 @@ class MarineTextWidget(
             return
         }
 
-        // TASK-039: Source Indicator logic
-        val sourceLabel = when (state.connectionStatus) {
-            net.osmand.plus.plugins.nautical.engine.ConnectionStatus.CONNECTED -> " • SK"
-            else -> " • GPS"
-        }
-
         val (main, formattedSub) = when (widgetType) {
             WidgetType.NAUTICAL_DEPTH -> {
                 val depth = state.depthBelowTransducer
@@ -505,7 +499,7 @@ class MarineTextWidget(
             }
         }
         
-        val sub = formattedSub + sourceLabel
+        val sub = formattedSub
 
         if (integrity == lastIntegrity && main == lastFormattedMain && sub == lastFormattedSub && !isPulseActive) {
             return

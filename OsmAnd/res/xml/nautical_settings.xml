@@ -639,6 +639,11 @@
         android:summary="Choose which items appear in the master telemetry widget" />
 
     <PreferenceCategory
+        android:key="telemetry_widgets_group"
+        android:layout="@layout/preference_category_with_descr"
+        android:title="Telemetry (Text Widgets)" />
+
+    <PreferenceCategory
         android:key="nautical_maintenance_category"
         android:layout="@layout/preference_category_with_descr"
         android:title="Maintenance &amp; Data Managers" />

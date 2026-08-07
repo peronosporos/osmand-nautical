@@ -18,13 +18,13 @@ import kotlinx.coroutines.launch
 import androidx.lifecycle.lifecycleScope
 import android.widget.Button
 import android.widget.ProgressBar
-import net.osmand.plus.base.BottomSheetDialogFragment
+import net.osmand.plus.base.BaseMaterialBottomSheetDialogFragment
 import net.osmand.plus.R
 import net.osmand.plus.plugins.nautical.NauticalPlugin
 import net.osmand.plus.plugins.nautical.ui.NauticalTouchGuard
 import net.osmand.plus.settings.enums.VesselType
 
-class NauticalAdvancedSettingsBottomSheet : BottomSheetDialogFragment() {
+class NauticalAdvancedSettingsBottomSheet : BaseMaterialBottomSheetDialogFragment() {
 
     companion object {
         fun newInstance() = NauticalAdvancedSettingsBottomSheet()
@@ -43,6 +43,7 @@ class NauticalAdvancedSettingsBottomSheet : BottomSheetDialogFragment() {
         plugin.applyNightVisionFilter(view)
 
         val app = (activity?.application as? net.osmand.plus.OsmandApplication) ?: return
+        val settings = app.settings
         val arbitrator = net.osmand.plus.plugins.nautical.engine.NauticalHelmArbitrator.getInstance(app)
         val isLocked = arbitrator.isLockedByEmergency()
 
@@ -193,35 +194,35 @@ class NauticalAdvancedSettingsBottomSheet : BottomSheetDialogFragment() {
 
         val chart = view.findViewById<LineChart>(R.id.pid_preview_chart)
 
-        sliderRudderGain.value = settings.NAUTICAL_RUDDER_GAIN.get().coerceIn(sliderRudderGain.valueFrom, sliderRudderGain.valueTo)
-        sliderCounterRudder.value = settings.NAUTICAL_COUNTER_RUDDER.get().coerceIn(sliderCounterRudder.valueFrom, sliderCounterRudder.valueTo)
-        sliderAutoTrim.value = settings.NAUTICAL_AUTO_TRIM.get().coerceIn(sliderAutoTrim.valueFrom, sliderAutoTrim.valueTo)
+        sliderRudderGain.value = (settings.NAUTICAL_RUDDER_GAIN.get() as Float).coerceIn(sliderRudderGain.valueFrom, sliderRudderGain.valueTo)
+        sliderCounterRudder.value = (settings.NAUTICAL_COUNTER_RUDDER.get() as Float).coerceIn(sliderCounterRudder.valueFrom, sliderCounterRudder.valueTo)
+        sliderAutoTrim.value = (settings.NAUTICAL_AUTO_TRIM.get() as Float).coerceIn(sliderAutoTrim.valueFrom, sliderAutoTrim.valueTo)
         
         val currentSeaState = settings.NAUTICAL_PILOT_SEA_STATE.get() ?: 3
-        sliderSeaState.value = currentSeaState.toFloat().coerceIn(sliderSeaState.valueFrom, sliderSeaState.valueTo)
+        sliderSeaState.value = (currentSeaState as Number).toFloat().coerceIn(sliderSeaState.valueFrom, sliderSeaState.valueTo)
         txtSeaStateValue.text = currentSeaState.toString()
         switchAutoSeaState.isChecked = NauticalPlugin.engine?.getCurrentState()?.isAutoSeaStateEnabled ?: false
         sliderSeaState.isEnabled = !switchAutoSeaState.isChecked
         sliderSeaState.alpha = if (switchAutoSeaState.isChecked) 0.5f else 1.0f
 
-        sliderFilterSensitivity.value = settings.NAUTICAL_FILTER_SENSITIVITY.get().coerceIn(sliderFilterSensitivity.valueFrom, sliderFilterSensitivity.valueTo)
-        sliderRudderLimit.value = settings.NAUTICAL_RUDDER_LIMIT.get().coerceIn(sliderRudderLimit.valueFrom, sliderRudderLimit.valueTo)
-        sliderOffCourse.value = settings.NAUTICAL_OFF_COURSE_ALARM.get().coerceIn(sliderOffCourse.valueFrom, sliderOffCourse.valueTo)
+        sliderFilterSensitivity.value = (settings.NAUTICAL_FILTER_SENSITIVITY.get() as Float).coerceIn(sliderFilterSensitivity.valueFrom, sliderFilterSensitivity.valueTo)
+        sliderRudderLimit.value = (settings.NAUTICAL_RUDDER_LIMIT.get() as Float).coerceIn(sliderRudderLimit.valueFrom, sliderRudderLimit.valueTo)
+        sliderOffCourse.value = (settings.NAUTICAL_OFF_COURSE_ALARM.get() as Float).coerceIn(sliderOffCourse.valueFrom, sliderOffCourse.valueTo)
         
-        sliderKeelOffset.value = settings.NAUTICAL_KEEL_OFFSET.get().coerceIn(sliderKeelOffset.valueFrom, sliderKeelOffset.valueTo)
+        sliderKeelOffset.value = (settings.NAUTICAL_KEEL_OFFSET.get() as Float).coerceIn(sliderKeelOffset.valueFrom, sliderKeelOffset.valueTo)
         txtKeelOffsetValue.text = getString(R.string.nautical_format_meters, String.format(java.util.Locale.US, "%.1f", sliderKeelOffset.value))
-        sliderWindAlignment.value = settings.NAUTICAL_WIND_ALIGNMENT.get().coerceIn(sliderWindAlignment.valueFrom, sliderWindAlignment.valueTo)
+        sliderWindAlignment.value = (settings.NAUTICAL_WIND_ALIGNMENT.get() as Float).coerceIn(sliderWindAlignment.valueFrom, sliderWindAlignment.valueTo)
         txtWindAlignmentValue.text = getString(R.string.nautical_format_deg, sliderWindAlignment.value.toInt().toString())
 
-        sliderWaveBias.value = settings.NAUTICAL_WAVE_BIAS_SENSITIVITY.get().toFloat().coerceIn(sliderWaveBias.valueFrom, sliderWaveBias.valueTo)
-        sliderActuatorThreshold.value = settings.NAUTICAL_ACTUATOR_ALARM_THRESHOLD.get().coerceIn(sliderActuatorThreshold.valueFrom, sliderActuatorThreshold.valueTo)
+        sliderWaveBias.value = (settings.NAUTICAL_WAVE_BIAS_SENSITIVITY.get() as Number).toFloat().coerceIn(sliderWaveBias.valueFrom, sliderWaveBias.valueTo)
+        sliderActuatorThreshold.value = (settings.NAUTICAL_ACTUATOR_ALARM_THRESHOLD.get() as Float).coerceIn(sliderActuatorThreshold.valueFrom, sliderActuatorThreshold.valueTo)
 
-        val nm = settings.NAUTICAL_XTE_THRESHOLD.get().toDouble()
+        val nm = (settings.NAUTICAL_XTE_THRESHOLD.get() as Float).toDouble()
         sliderXteThreshold.value = nm.toFloat().coerceIn(0.01f, 1.0f)
         val res = net.osmand.plus.plugins.nautical.engine.SignalKUnitConverter.formatValue(app, settings, nm * 1852.0, "distance")
         view.findViewById<android.widget.TextView>(R.id.txt_value_xte_threshold)?.text = getString(R.string.nautical_format_nm, res.first)
         
-        vesselTypeToggle.check(if (settings.NAUTICAL_VESSEL_TYPE.get() == VesselType.PROA) R.id.btn_vessel_proa else R.id.btn_vessel_conv)
+        vesselTypeToggle.check(if (settings.NAUTICAL_VESSEL_TYPE.get() as VesselType == VesselType.PROA) R.id.btn_vessel_proa else R.id.btn_vessel_conv)
 
         // Apply Touch Guards to all sliders
         val sliders = listOf(
@@ -291,26 +292,26 @@ class NauticalAdvancedSettingsBottomSheet : BottomSheetDialogFragment() {
         updateChart()
 
         btnReset.setOnClickListener {
-            sliderRudderGain.value = settings.NAUTICAL_RUDDER_GAIN.defaultValue
-            sliderCounterRudder.value = settings.NAUTICAL_COUNTER_RUDDER.defaultValue
-            sliderAutoTrim.value = settings.NAUTICAL_AUTO_TRIM.defaultValue
-            sliderFilterSensitivity.value = settings.NAUTICAL_FILTER_SENSITIVITY.defaultValue
-            sliderRudderLimit.value = settings.NAUTICAL_RUDDER_LIMIT.defaultValue
-            sliderOffCourse.value = settings.NAUTICAL_OFF_COURSE_ALARM.defaultValue
-            sliderXteThreshold.value = settings.NAUTICAL_XTE_THRESHOLD.defaultValue
+            sliderRudderGain.value = (settings.NAUTICAL_RUDDER_GAIN.defaultValue as Float)
+            sliderCounterRudder.value = (settings.NAUTICAL_COUNTER_RUDDER.defaultValue as Float)
+            sliderAutoTrim.value = (settings.NAUTICAL_AUTO_TRIM.defaultValue as Float)
+            sliderFilterSensitivity.value = (settings.NAUTICAL_FILTER_SENSITIVITY.defaultValue as Float)
+            sliderRudderLimit.value = (settings.NAUTICAL_RUDDER_LIMIT.defaultValue as Float)
+            sliderOffCourse.value = (settings.NAUTICAL_OFF_COURSE_ALARM.defaultValue as Float)
+            sliderXteThreshold.value = (settings.NAUTICAL_XTE_THRESHOLD.defaultValue as Float)
             
-            sliderKeelOffset.value = settings.NAUTICAL_KEEL_OFFSET.defaultValue
+            sliderKeelOffset.value = (settings.NAUTICAL_KEEL_OFFSET.defaultValue as Float)
             txtKeelOffsetValue.text = getString(R.string.nautical_format_meters, String.format(java.util.Locale.US, "%.1f", sliderKeelOffset.value))
-            sliderWindAlignment.value = settings.NAUTICAL_WIND_ALIGNMENT.defaultValue
+            sliderWindAlignment.value = (settings.NAUTICAL_WIND_ALIGNMENT.defaultValue as Float)
             txtWindAlignmentValue.text = getString(R.string.nautical_format_deg, sliderWindAlignment.value.toInt().toString())
 
-            sliderSeaState.value = settings.NAUTICAL_PILOT_SEA_STATE.defaultValue.toFloat()
+            sliderSeaState.value = (settings.NAUTICAL_PILOT_SEA_STATE.defaultValue as Number).toFloat()
             txtSeaStateValue.text = settings.NAUTICAL_PILOT_SEA_STATE.defaultValue.toString()
             switchAutoSeaState.isChecked = false
             NauticalPlugin.engine?.setAutoSeaStateEnabled(false)
 
-            sliderWaveBias.value = settings.NAUTICAL_WAVE_BIAS_SENSITIVITY.defaultValue.toFloat()
-            sliderActuatorThreshold.value = settings.NAUTICAL_ACTUATOR_ALARM_THRESHOLD.defaultValue
+            sliderWaveBias.value = (settings.NAUTICAL_WAVE_BIAS_SENSITIVITY.defaultValue as Number).toFloat()
+            sliderActuatorThreshold.value = (settings.NAUTICAL_ACTUATOR_ALARM_THRESHOLD.defaultValue as Float)
 
             vesselTypeToggle.check(R.id.btn_vessel_conv)
             updateChart()

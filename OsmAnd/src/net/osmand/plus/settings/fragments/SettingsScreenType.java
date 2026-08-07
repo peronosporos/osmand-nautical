@@ -56,6 +56,7 @@ public enum SettingsScreenType {
 	AIS_SETTINGS(AisTrackerSettingsFragment.class.getName(), true, ApplyQueryType.SNACK_BAR, R.xml.ais_settings, R.layout.profile_preference_toolbar),
 	POSITION_ANIMATION(PositionAnimationFragment.class.getName(), true, ApplyQueryType.NONE, R.xml.position_animation_settings, R.layout.profile_preference_toolbar_with_switch),
 	NAUTICAL_SETTINGS("net.osmand.plus.plugins.nautical.NauticalSettingsFragment", false, ApplyQueryType.SNACK_BAR, R.xml.nautical_settings, R.layout.global_preference_toolbar),
+	NAUTICAL_POLAR_WIZARD("net.osmand.plus.plugins.nautical.ui.wizard.PolarWizardFragment", false, null, -1, R.layout.global_preference_toolbar),
 	SAILING_PERFORMANCE_SETTINGS("net.osmand.plus.plugins.nautical.ui.editor.PolarEditorFragment", false, null, -1, R.layout.global_preference_toolbar),
 	MARINE_LOGBOOK("net.osmand.plus.plugins.nautical.ui.logbook.MarineLogbookFragment", false, null, -1, R.layout.global_preference_toolbar),
 	TIDE_DATA_MANAGER("net.osmand.plus.plugins.nautical.tide.import.TideDataManagerFragment", false, null, -1, R.layout.global_preference_toolbar),

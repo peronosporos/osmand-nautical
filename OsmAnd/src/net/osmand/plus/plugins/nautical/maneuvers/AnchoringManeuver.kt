@@ -58,17 +58,31 @@ class AnchoringManeuver(app: OsmandApplication) : ManeuverEngine(app) {
         pushInstruction("Dropping Anchor")
         pushProgress(20)
 
-        // Active Helm Assistance: Point bow into wind
+        // Active Helm Assistance: Make optional via banner
         val twd = state.windDirectionTrue
         if (twd != null) {
-            NauticalPlugin.autopilot?.setTargetHeading(Math.toDegrees(twd))
-            NauticalPlugin.autopilot?.setAutopilotMode("auto")
+            NauticalPlugin.hudManager?.get()?.showBanner(
+                app.getString(R.string.nautical_confirm_helm_into_wind),
+                10000,
+                "AUTO-HELM",
+                false
+            ) {
+                NauticalPlugin.autopilot?.setTargetHeading(Math.toDegrees(twd))
+                NauticalPlugin.autopilot?.setAutopilotMode("auto")
+            }
         }
 
-        // Task 11: Auto-trigger Windlass
+        // Task 11: Prompt for Windlass instead of auto-trigger
         val caps = NauticalPlugin.getInstance()?.capabilityManager?.capabilities?.value
         if (caps?.hasWindlassControl == true && state.isEngineRunning) {
-            NauticalPlugin.engine?.setSwitch("electrical.switches.windlass.down", true)
+            NauticalPlugin.hudManager?.get()?.showBanner(
+                "Windlass Control Available. Lower anchor now?",
+                15000,
+                "LOWER",
+                false
+            ) {
+                NauticalPlugin.engine?.setSwitch("electrical.switches.windlass.down", true)
+            }
         }
 
         super.transitionToExecuting()

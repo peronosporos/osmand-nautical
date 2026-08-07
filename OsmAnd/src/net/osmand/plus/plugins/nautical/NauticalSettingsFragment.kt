@@ -10,7 +10,6 @@ import androidx.preference.PreferenceCategory
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import net.osmand.plus.R
-import net.osmand.plus.plugins.nautical.ui.wizard.ConfigurePolarsDialogFragment
 import net.osmand.plus.plugins.nautical.viewmodel.SailingPerformanceSettingsViewModel
 import net.osmand.plus.plugins.nautical.di.SailingDependencyContainer
 import net.osmand.plus.plugins.nautical.discovery.SignalKDiscoveryManager
@@ -51,6 +50,40 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
         updateSecureSettingsVisibility(settings.NAUTICAL_USE_SECURE_CONNECTION.get())
         updateHardwareVisibility(settings.NAUTICAL_NMEA_SOURCE.get())
         updateModuleDetailsVisibility()
+        updateConnectionStatusSummaries()
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            NauticalPlugin.engine?.marineStateFlow?.collectLatest { 
+                updateConnectionStatusSummaries()
+            }
+        }
+    }
+
+    private fun updateConnectionStatusSummaries() {
+        val connected = NauticalPlugin.getInstance()?.isSignalKConnected() == true
+        val status = if (connected) "" else " (Offline - Server not connected)"
+        
+        val needsConnection = listOf(
+            "nautical_switch_panel",
+            "nautical_boat_ai",
+            "nautical_notifications",
+            "nautical_server_routes",
+            "nautical_server_charts"
+        )
+        
+        needsConnection.forEach { key ->
+            findPreference<Preference>(key)?.let { pref ->
+                val baseSummary = when(key) {
+                    "nautical_switch_panel" -> "Comprehensive electrical control and status"
+                    "nautical_boat_ai" -> "Chat with your vessel via Signal K AI Bridge"
+                    "nautical_notifications" -> "View and acknowledge Signal K alarms"
+                    "nautical_server_routes" -> "Browse and navigate routes from Signal K server"
+                    "nautical_server_charts" -> "Browse and enable charts from Signal K server"
+                    else -> ""
+                }
+                pref.summary = baseSummary + status
+            }
+        }
     }
 
     private fun setupDisplayCategory() {
@@ -542,6 +575,11 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
     }
 
     private fun setupMapOverlaysCategory() {
+        // Group Telemetry Widgets
+        findPreference<PreferenceCategory>("telemetry_widgets_group")?.apply {
+            title = "Telemetry (Text Widgets)"
+        }
+        
         val overlays = listOf(
             settings.NAUTICAL_SHOW_LAYLINES,
             settings.NAUTICAL_SHOW_WIND_SHIFTS,
@@ -617,6 +655,15 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
             title = "${getString(titleId)} ($u)"
             summary = "$v $u"
             text = nm.toString()
+            setOnPreferenceChangeListener { _, newValue ->
+                val str = newValue?.toString()?.replace(" ", "")?.replace("\u00A0", "") ?: ""
+                try {
+                    str.toDouble()
+                    true
+                } catch (_: NumberFormatException) {
+                    false
+                }
+            }
             setOnBindEditTextListener { it.inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL }
         }
     }
@@ -643,7 +690,7 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
         findPreference<Preference>("nautical_polar_wizard")?.apply {
             setIcon(R.drawable.ic_action_settings)
             setOnPreferenceClickListener {
-                ConfigurePolarsDialogFragment.newInstance().show(parentFragmentManager, ConfigurePolarsDialogFragment.TAG)
+                showInstance(requireActivity(), SettingsScreenType.NAUTICAL_POLAR_WIZARD)
                 true
             }
         }

@@ -101,6 +101,8 @@ class NauticalPilotBottomSheet : BaseMaterialBottomSheetDialogFragment() {
     private lateinit var steeringCard: View
     private lateinit var authWarning: TextView
     private lateinit var modeToggleGroup: MaterialButtonToggleGroup
+    private lateinit var lockBtn: MaterialButton
+    private var isCourseLocked = false
 
     // Telemetry View Cache (Nullable until inflated)
     private var telemetryPane: View? = null
@@ -168,6 +170,11 @@ class NauticalPilotBottomSheet : BaseMaterialBottomSheetDialogFragment() {
         }
     }
 
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        isCancelable = true
+    }
+
     override fun onStart() {
         super.onStart()
         dialog?.window?.let { window ->
@@ -205,7 +212,7 @@ class NauticalPilotBottomSheet : BaseMaterialBottomSheetDialogFragment() {
         val minus1Btn = view.findViewById<MaterialButton>(R.id.btn_minus_1)
         val plus1Btn = view.findViewById<MaterialButton>(R.id.btn_plus_1)
         val state = NauticalPlugin.engine?.getCurrentState()
-        val isProa = (osmandSettings.NAUTICAL_VESSEL_TYPE.get() == VesselType.PROA)
+        val isProa = (settings.NAUTICAL_VESSEL_TYPE.get() == VesselType.PROA)
         val upwind = state?.windDirectionApparent?.let { kotlin.math.abs(Math.toDegrees(it)) < 90.0 } ?: true
 
         val defaultColor = ContextCompat.getColor(requireContext(), if (nightMode) R.color.text_color_primary_dark_v2 else R.color.text_color_primary_light_v2)
@@ -240,7 +247,7 @@ class NauticalPilotBottomSheet : BaseMaterialBottomSheetDialogFragment() {
         val plugin = NauticalPlugin.getInstance()
 
         if ((engine == null) || (autopilot == null)) {
-            dismiss()
+            dismissAllowingStateLoss()
             return
         }
 
@@ -251,11 +258,21 @@ class NauticalPilotBottomSheet : BaseMaterialBottomSheetDialogFragment() {
         steeringCard = view.findViewById(R.id.steering_card)
         authWarning = view.findViewById(R.id.auth_warning)
         modeToggleGroup = view.findViewById(R.id.mode_toggle_group)
+        lockBtn = view.findViewById(R.id.btn_lock_unlock)
 
         val advancedBtn = view.findViewById<View>(R.id.btn_advanced)
         val maneuversBtn = view.findViewById<View>(R.id.btn_maneuvers)
         val switchesBtn = view.findViewById<View>(R.id.btn_switches)
         val systemsBtn = view.findViewById<View>(R.id.btn_systems)
+
+        isCourseLocked = app.settings.NAUTICAL_LOCK_TOUCH_DURING_MANEUVERS.get()
+        updateLockButton()
+
+        lockBtn.setOnClickListener {
+            isCourseLocked = !isCourseLocked
+            updateLockButton()
+            view.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
+        }
 
         val minus1Btn = view.findViewById<MaterialButton>(R.id.btn_minus_1)
         val plus1Btn = view.findViewById<MaterialButton>(R.id.btn_plus_1)
@@ -471,8 +488,19 @@ class NauticalPilotBottomSheet : BaseMaterialBottomSheetDialogFragment() {
             NauticalAdvancedSettingsBottomSheet.newInstance().show(parentFragmentManager, "advanced_settings")
         }
 
-        // Apply Touch Guard to HeadingArcView
-        NauticalTouchGuard.apply(arcView)
+        // Apply Touch Guard to HeadingArcView with explicit lock check
+        NauticalTouchGuard.apply(arcView, isLockedCheck = { isCourseLocked })
+    }
+
+    private fun updateLockButton() {
+        if (isCourseLocked) {
+            lockBtn.setIconResource(R.drawable.ic_action_lock)
+            lockBtn.alpha = 1.0f
+        } else {
+            lockBtn.setIconResource(R.drawable.ic_action_lock_open)
+            lockBtn.alpha = 0.5f
+        }
+        arcView.alpha = if (isCourseLocked) 0.5f else 1.0f
     }
 
     private fun handleNudge(delta: Double, view: View) {
@@ -483,7 +511,7 @@ class NauticalPilotBottomSheet : BaseMaterialBottomSheetDialogFragment() {
                 val btn = view as? MaterialButton
                 val isPort = btn?.id == R.id.btn_minus_1
                 if (isArmedPort && isPort) {
-                    val isProa = osmandSettings.NAUTICAL_VESSEL_TYPE.get() == VesselType.PROA
+                    val isProa = settings.NAUTICAL_VESSEL_TYPE.get() == VesselType.PROA
                     if (isProa) {
                         showConfirmManeuver(tacking = true, isShunt = true) { NauticalPlugin.autopilot?.shunt() }
                     } else {
@@ -496,7 +524,7 @@ class NauticalPilotBottomSheet : BaseMaterialBottomSheetDialogFragment() {
                     isArmedPort = false
                     armHandler.removeCallbacks(resetArmRunnable)
                 } else if (isArmedStbd && !isPort) {
-                    val isProa = osmandSettings.NAUTICAL_VESSEL_TYPE.get() == VesselType.PROA
+                    val isProa = settings.NAUTICAL_VESSEL_TYPE.get() == VesselType.PROA
                     if (isProa) {
                         showConfirmManeuver(tacking = true, isShunt = true) { NauticalPlugin.autopilot?.shunt() }
                     } else {
@@ -689,7 +717,7 @@ class NauticalPilotBottomSheet : BaseMaterialBottomSheetDialogFragment() {
 
                 if (waypoints.isNotEmpty()) {
                     NauticalPlugin.autopilot?.executePattern(waypoints)
-                    dismiss()
+                    dismissAllowingStateLoss()
                 }
             }
             .show()
@@ -698,7 +726,7 @@ class NauticalPilotBottomSheet : BaseMaterialBottomSheetDialogFragment() {
     private fun showManeuversMenu() {
         val state = NauticalPlugin.engine?.getCurrentState()
         val upwind = state?.windDirectionApparent?.let { kotlin.math.abs(Math.toDegrees(it)) < 90.0 } ?: true
-        val isProa = (osmandSettings.NAUTICAL_VESSEL_TYPE.get() == VesselType.PROA)
+        val isProa = (settings.NAUTICAL_VESSEL_TYPE.get() == VesselType.PROA)
 
         val options = mutableListOf<Pair<String, String>>()
         if (isProa) {
@@ -727,7 +755,7 @@ class NauticalPilotBottomSheet : BaseMaterialBottomSheetDialogFragment() {
             .setItems(names) { _, which ->
                 val id = options[which].first
                 NauticalPlugin.getInstance()?.maneuverManager?.setActiveManeuver(id)
-                dismiss()
+                dismissAllowingStateLoss()
             }
             .show()
     }

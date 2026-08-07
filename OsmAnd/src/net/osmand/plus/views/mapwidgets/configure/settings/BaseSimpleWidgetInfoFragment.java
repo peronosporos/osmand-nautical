@@ -72,10 +72,8 @@ public class BaseSimpleWidgetInfoFragment extends BaseResizableWidgetSettingFrag
 		if (shouldShowIconPref != null) {
 			shouldShowIconPref.set(showIcon);
 		}
-		if (widgetInfo != null) {
-			if (widgetInfo.widget instanceof SimpleWidget simpleWidget) {
-				simpleWidget.updateWidgetView();
-			}
+		if (widgetInfo != null && widgetInfo.widget instanceof SimpleWidget simpleWidget) {
+			simpleWidget.updateWidgetView();
 		}
 		super.applySettings();
 	}
