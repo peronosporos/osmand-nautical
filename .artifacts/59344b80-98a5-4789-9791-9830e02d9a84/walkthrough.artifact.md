@@ -1,25 +1,40 @@
-# Walkthrough - Fixing Kotlin Build Errors in BottomSheet Fragments
+# Walkthrough - Resolved Inherited Platform Declarations Clash
 
-I have fixed the build errors where several Kotlin subclasses of `BaseMaterialBottomSheetDialogFragment` were reported as not implementing abstract members from `IOsmAndFragment` and `AppModeDependentComponent`.
+I have resolved the "Inherited platform declarations clash" that was causing build failures in several Nautical BottomSheet classes.
 
 ## Changes
 
-### [OsmAnd Component](file:///home/administrator/AndroidStudioProjects/osmand-nautical/OsmAnd)
+### OsmAnd Base Components
 
 #### [BaseMaterialBottomSheetDialogFragment.kt](file:///home/administrator/AndroidStudioProjects/osmand-nautical/OsmAnd/src/net/osmand/plus/base/BaseMaterialBottomSheetDialogFragment.kt)
 
-Modified the base class to use explicit method overrides for the interface methods instead of property overrides. This resolves an ambiguity in the Kotlin compiler when inheriting from Java interfaces through Kotlin base classes.
+The issue was caused by Kotlin properties (`app`, `appMode`, `iconsCache`) generating JVM getters and setters that clashed with explicit `override` methods intended to satisfy Java interfaces (`IOsmAndFragment` and `AppModeDependentComponent`).
 
-- Replaced `override lateinit var app` with `override fun getApp()` and a private backing field.
-- Replaced `override lateinit var appMode` with `override fun getAppMode()`, `override fun setAppMode()`, and a private backing field.
-- Replaced `override lateinit var iconsCache` with `override fun getIconsCache()` and a private backing field.
-- Added protected properties `app`, `appMode`, and `iconsCache` with custom getters/setters to maintain compatibility with all existing subclasses.
+I applied the `@JvmName` annotation to the property accessors to rename their synthetic JVM methods, effectively separating them from the interface-satisfying overrides.
+
+```kotlin
+    private lateinit var _app: OsmandApplication
+    @get:JvmName("getOsmandApp")
+    protected var app: OsmandApplication
+        get() = _app
+        set(value) { _app = value }
+
+    // ... similar for appMode and iconsCache ...
+
+    override fun getApp(): OsmandApplication = _app
+```
 
 ## Verification Results
 
 ### Automated Tests
-- The changes were applied successfully, and the IDE confirmed that 4 errors were resolved in the modified file.
-- Based on the nature of the error (compiler inability to resolve interface implementations), resolving them in the base class naturally fixes all reported subclasses (`CoordinateFormatSelectorBottomSheet`, `NauticalManeuversBottomSheet`, etc.).
+- I used `analyze_file` on the following files, which previously reported clashes:
+    - [NauticalPilotBottomSheet.kt](file:///home/administrator/AndroidStudioProjects/osmand-nautical/OsmAnd/src/net/osmand/plus/views/mapwidgets/widgets/NauticalPilotBottomSheet.kt)
+    - [NauticalSwitchesBottomSheet.kt](file:///home/administrator/AndroidStudioProjects/osmand-nautical/OsmAnd/src/net/osmand/plus/views/mapwidgets/widgets/NauticalSwitchesBottomSheet.kt)
+    - [NauticalSystemsBottomSheet.kt](file:///home/administrator/AndroidStudioProjects/osmand-nautical/OsmAnd/src/net/osmand/plus/views/mapwidgets/widgets/NauticalSystemsBottomSheet.kt)
+- No compilation errors or clashes were found after the fix.
 
-> [!NOTE]
-> The build was not executed per user request. However, the structural changes follow the pattern already successfully used in `BaseMaterialFragment.kt`, which is a known stable implementation for similar Kotlin fragments in this project.
+### Manual Verification
+- **User Action Recommended**: Run the build command to confirm the project compiles fully:
+  ```bash
+  ./gradlew clean :OsmAnd:assembleAndroidFullLegacyArm64Debug -x test --no-daemon
+  ```

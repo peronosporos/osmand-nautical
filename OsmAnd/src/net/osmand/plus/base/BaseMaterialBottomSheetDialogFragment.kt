@@ -20,7 +20,7 @@ open class BaseMaterialBottomSheetDialogFragment :
     BottomSheetDialogFragment(), IOsmAndFragment, ISupportInsets {
 
     private lateinit var _app: OsmandApplication
-    override fun getApp(): OsmandApplication = _app
+    @get:JvmName("getOsmandApp")
     protected var app: OsmandApplication
         get() = _app
         set(value) { _app = value }
@@ -28,14 +28,14 @@ open class BaseMaterialBottomSheetDialogFragment :
     protected lateinit var settings: OsmandSettings
 
     private lateinit var _appMode: ApplicationMode
-    override fun getAppMode(): ApplicationMode = _appMode
-    override fun setAppMode(appMode: ApplicationMode) { _appMode = appMode }
+    @get:JvmName("getOsmandAppMode")
+    @set:JvmName("setOsmandAppMode")
     protected var appMode: ApplicationMode
         get() = _appMode
         set(value) { _appMode = value }
 
     private lateinit var _iconsCache: UiUtilities
-    override fun getIconsCache(): UiUtilities = _iconsCache
+    @get:JvmName("getOsmandIconsCache")
     protected var iconsCache: UiUtilities
         get() = _iconsCache
         set(value) { _iconsCache = value }
@@ -55,6 +55,11 @@ open class BaseMaterialBottomSheetDialogFragment :
         _appMode = restoreAppMode(_app, null, savedInstanceState, arguments)
         updateNightMode()
     }
+
+    override fun getApp(): OsmandApplication = _app
+    override fun getAppMode(): ApplicationMode = _appMode
+    override fun setAppMode(appMode: ApplicationMode) { _appMode = appMode }
+    override fun getIconsCache(): UiUtilities = _iconsCache
 
     protected fun updateNightMode() {
         nightMode = resolveNightMode()
