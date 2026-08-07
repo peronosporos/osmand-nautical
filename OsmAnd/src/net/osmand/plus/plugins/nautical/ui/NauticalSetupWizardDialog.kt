@@ -38,16 +38,16 @@ class NauticalSetupWizardDialog : BaseMaterialBottomSheetDialogFragment() {
         val types = VesselType.entries.map { it.name }
         val adapter = ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, types)
         vesselTypeSpinner.setAdapter(adapter)
-        vesselTypeSpinner.setText(osmandSettings.NAUTICAL_VESSEL_TYPE.get().name, false)
+        vesselTypeSpinner.setText(settings.NAUTICAL_VESSEL_TYPE.get().name, false)
 
-        vesselDraftEdit.setText(osmandSettings.NAUTICAL_VESSEL_DRAFT.get().toString())
-        vesselAirDraftEdit.setText(osmandSettings.NAUTICAL_AIR_DRAFT.get().toString())
-        vesselMmsiEdit.setText(osmandSettings.NAUTICAL_AIS_OWN_MMSI.get().toString())
-        serverIpEdit.setText(osmandSettings.NAUTICAL_SERVER_IP.get())
+        vesselDraftEdit.setText(settings.NAUTICAL_VESSEL_DRAFT.get().toString())
+        vesselAirDraftEdit.setText(settings.NAUTICAL_AIR_DRAFT.get().toString())
+        vesselMmsiEdit.setText(settings.NAUTICAL_AIS_OWN_MMSI.get().toString())
+        serverIpEdit.setText(settings.NAUTICAL_SERVER_IP.get())
 
         view.findViewById<Button>(R.id.btn_optimize_battery).setOnClickListener {
             net.osmand.plus.plugins.nautical.NauticalPlugin.getInstance()?.let { plugin ->
-                osmandSettings.NAUTICAL_RECEIVE_IN_BACKGROUND.set(true)
+                settings.NAUTICAL_RECEIVE_IN_BACKGROUND.set(true)
                 plugin.checkBatteryOptimization()
             }
         }
@@ -78,12 +78,12 @@ class NauticalSetupWizardDialog : BaseMaterialBottomSheetDialogFragment() {
                 val mmsi = vesselMmsiEdit.text.toString().toIntOrNull() ?: 0
                 val ip = serverIpEdit.text.toString()
 
-                osmandSettings.NAUTICAL_VESSEL_TYPE.set(selectedType)
-                osmandSettings.NAUTICAL_VESSEL_DRAFT.set(draft)
-                osmandSettings.NAUTICAL_AIR_DRAFT.set(airDraft)
-                osmandSettings.NAUTICAL_AIS_OWN_MMSI.set(mmsi)
-                osmandSettings.NAUTICAL_SERVER_IP.set(ip)
-                osmandSettings.NAUTICAL_SETUP_WIZARD_COMPLETED.set(true)
+                settings.NAUTICAL_VESSEL_TYPE.set(selectedType)
+                settings.NAUTICAL_VESSEL_DRAFT.set(draft)
+                settings.NAUTICAL_AIR_DRAFT.set(airDraft)
+                settings.NAUTICAL_AIS_OWN_MMSI.set(mmsi)
+                settings.NAUTICAL_SERVER_IP.set(ip)
+                settings.NAUTICAL_SETUP_WIZARD_COMPLETED.set(true)
 
                 net.osmand.plus.plugins.nautical.NauticalPlugin.getInstance()?.reconnect()
                 dismiss()

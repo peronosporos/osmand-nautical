@@ -55,8 +55,8 @@ class NauticalManeuversBottomSheet : BaseMaterialBottomSheetDialogFragment() {
                 holder.itemView.setOnClickListener {
                     val instance = NauticalPlugin.getInstance()
                     if (item.first == "weighing_anchor") {
-                        val lat = osmandSettings.NAUTICAL_ANCHOR_LAT.get()
-                        val lon = osmandSettings.NAUTICAL_ANCHOR_LON.get()
+                        val lat = settings.NAUTICAL_ANCHOR_LAT.get()
+                        val lon = settings.NAUTICAL_ANCHOR_LON.get()
                         (instance?.maneuverManager?.getManeuverById("weighing_anchor") as? net.osmand.plus.plugins.nautical.maneuvers.WeighingAnchorManeuver)?.setDropPoint(lat, lon)
                     }
                     instance?.maneuverManager?.setActiveManeuver(item.first)

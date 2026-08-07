@@ -121,8 +121,8 @@ class AstroConfigureViewBottomSheet :
 			isChecked = { !requireStarMap().starView.is2DMode },
 			titleResEnabled = R.string.map_3d,
 			titleResDisabled = R.string.map_2d,
-			drawableEnabled = uiUtilities.getIcon(R.drawable.ic_action_globe_view, activeColor),
-			drawableDisabled = uiUtilities.getIcon(
+			drawableEnabled = iconsCache.getIcon(R.drawable.ic_action_globe_view, activeColor),
+			drawableDisabled = iconsCache.getIcon(
 				R.drawable.ic_action_celestial_path,
 				activeColor
 			),
@@ -135,16 +135,16 @@ class AstroConfigureViewBottomSheet :
 			card = root.findViewById(R.id.button_map),
 			isChecked = { requireStarMap().regularMapVisible },
 			titleResEnabled = R.string.shared_string_map,
-			drawableEnabled = uiUtilities.getIcon(R.drawable.ic_map, activeColor),
-			drawableDisabled = uiUtilities.getIcon(R.drawable.ic_action_map_outlined, activeColor),
+			drawableEnabled = iconsCache.getIcon(R.drawable.ic_map, activeColor),
+			drawableDisabled = iconsCache.getIcon(R.drawable.ic_action_map_outlined, activeColor),
 			toggle = { regularMap ->
 				requireStarMap().setRegularMapVisibility(regularMap)
 			}
 		)
 
 		val redFilterEnableDrawable = UiUtilities.getLayeredIcon(
-			uiUtilities.getIcon(R.drawable.ic_action_red_filter_base_on, activeColor),
-			uiUtilities.getIcon(
+			iconsCache.getIcon(R.drawable.ic_action_red_filter_base_on, activeColor),
+			iconsCache.getIcon(
 				R.drawable.ic_action_red_filter_overlay_on,
 				ColorUtilities.getWarningColorId(nightMode)
 			)
@@ -154,7 +154,7 @@ class AstroConfigureViewBottomSheet :
 			isChecked = { requireStarMap().starView.showRedFilter },
 			titleResEnabled = R.string.red_filter,
 			drawableEnabled = redFilterEnableDrawable,
-			drawableDisabled = uiUtilities.getIcon(
+			drawableDisabled = iconsCache.getIcon(
 				R.drawable.ic_action_red_filter_off,
 				activeColor
 			),
@@ -287,7 +287,7 @@ class AstroConfigureViewBottomSheet :
 		toggle: (AstronomyPluginSettings.StarMapConfig) -> AstronomyPluginSettings.StarMapConfig
 	) {
 		fun render(c: AstronomyPluginSettings.StarMapConfig) {
-			val drawable = uiUtilities.getIcon(
+			val drawable = iconsCache.getIcon(
 				iconRes,
 				ColorUtilities.getActiveIconColorId(nightMode)
 			)
@@ -448,7 +448,7 @@ class AstroConfigureViewBottomSheet :
 		isChecked: Boolean
 	) {
 		val imageDrawable =
-			uiUtilities.getPaintedIcon(
+			iconsCache.getPaintedIcon(
 				iconRes,
 				if (isChecked) ColorUtilities.getActiveIconColor(app, nightMode)
 				else ColorUtilities.getDefaultIconColor(app, nightMode)

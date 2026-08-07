@@ -38,8 +38,8 @@ class CoordinateFormatSelectorBottomSheet : BaseMaterialModalBottomSheetDialogFr
 	override fun onCreate(savedInstanceState: Bundle?) {
 		super.onCreate(savedInstanceState)
 		requestKey = arguments?.getString(ARG_REQUEST_KEY) ?: DEFAULT_REQUEST_KEY
-		targetAppMode = ApplicationMode.valueOfStringKey(arguments?.getString(ARG_APP_MODE_KEY), currentAppMode)
-			?: currentAppMode
+		targetAppMode = ApplicationMode.valueOfStringKey(arguments?.getString(ARG_APP_MODE_KEY), appMode)
+			?: appMode
 		selectedFormatId = CoordinateFormatIds.normalize(arguments?.getString(ARG_SELECTED_FORMAT_ID))
 		showSelectOtherFormat = arguments?.getBoolean(ARG_SHOW_SELECT_OTHER_FORMAT, true) ?: true
 	}
@@ -106,7 +106,7 @@ class CoordinateFormatSelectorBottomSheet : BaseMaterialModalBottomSheetDialogFr
 	}
 
 	private fun bindFormats() {
-		val preferences = osmandSettings.coordinateFormatSettingsStorage
+		val preferences = settings.coordinateFormatSettingsStorage
 		val preferredIds = preferences.getPreferredIds(targetAppMode)
 		val selectedId = selectedFormatId ?: preferences.getPrimaryId(targetAppMode)
 		val preferredFormats = resolveFormats(preferredIds)
@@ -129,9 +129,9 @@ class CoordinateFormatSelectorBottomSheet : BaseMaterialModalBottomSheetDialogFr
 		recentContainer.removeAllViews()
 		AndroidUiHelper.updateVisibility(recentContainer, recentFormats.isNotEmpty())
 		if (recentFormats.isNotEmpty()) {
-			recentContainer.addView(createHeader(recentContainer, R.string.coordinate_format_recent))
+			recentContainer.addView(createRecentHeader(recentContainer))
 		}
-		recentFormats.forEachIndexed { index, format ->
+		recentFormats.forEach { format ->
 			recentContainer.addView(
 				createFormatRow(
 					parent = recentContainer,
@@ -162,14 +162,14 @@ class CoordinateFormatSelectorBottomSheet : BaseMaterialModalBottomSheetDialogFr
 		}
 	}
 
-	private fun createHeader(parent: ViewGroup, titleRes: Int): View {
+	private fun createRecentHeader(parent: ViewGroup): View {
 		return LinearLayout(parent.context).apply {
 			orientation = LinearLayout.VERTICAL
 			addView(View(context).apply {
 				setBackgroundColor(AndroidUtils.getColorFromAttr(context, R.attr.divider_color))
 			}, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 1))
 			addView(TextView(context).apply {
-				setText(titleRes)
+				setText(R.string.coordinate_format_recent)
 				gravity = Gravity.CENTER_VERTICAL
 				setTextColor(AndroidUtils.getColorFromAttr(context, android.R.attr.textColorSecondary))
 				textSize = 14f
@@ -217,7 +217,7 @@ class CoordinateFormatSelectorBottomSheet : BaseMaterialModalBottomSheetDialogFr
 		CompoundButtonCompat.setButtonTintList(
 			radioButton,
 			AndroidUtils.createCheckedColorStateList(
-				osmandApp,
+				app,
 				ColorUtilities.getSecondaryIconColorId(nightMode),
 				ColorUtilities.getActiveIconColorId(nightMode)
 			)
@@ -238,10 +238,10 @@ class CoordinateFormatSelectorBottomSheet : BaseMaterialModalBottomSheetDialogFr
 		return format.epsgCode?.let { "EPSG:$it" }.orEmpty()
 	}
 
-	private fun dp(value: Int): Int = AndroidUtils.dpToPx(osmandApp, value.toFloat())
+	private fun dp(value: Int): Int = AndroidUtils.dpToPx(app, value.toFloat())
 
 	private fun resolveFormats(ids: List<String>): List<CoordinateFormat> {
-		return osmandApp.coordinateFormatHelper.resolveFormats(ids)
+		return app.coordinateFormatHelper.resolveFormats(ids)
 	}
 
 	interface FormatSelectionListener {
