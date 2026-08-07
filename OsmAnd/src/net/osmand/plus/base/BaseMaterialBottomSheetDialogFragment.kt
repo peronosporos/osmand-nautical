@@ -19,10 +19,10 @@ import net.osmand.plus.utils.UiUtilities
 open class BaseMaterialBottomSheetDialogFragment :
     BottomSheetDialogFragment(), IOsmAndFragment, ISupportInsets {
 
-    protected lateinit var app: OsmandApplication
+    override lateinit var app: OsmandApplication
     protected lateinit var settings: OsmandSettings
-    protected lateinit var appMode: ApplicationMode
-    protected lateinit var iconsCache: UiUtilities
+    override lateinit var appMode: ApplicationMode
+    override lateinit var iconsCache: UiUtilities
     protected var nightMode: Boolean = false
 
     private var lastRootInsets: WindowInsetsCompat? = null
@@ -70,10 +70,6 @@ open class BaseMaterialBottomSheetDialogFragment :
         }
     }
 
-    override fun getApp(): OsmandApplication {
-        return app
-    }
-
     override fun getThemedInflater(): LayoutInflater {
         return layoutInflater
     }
@@ -84,18 +80,6 @@ open class BaseMaterialBottomSheetDialogFragment :
 
     protected open fun isUsedOnMap(): Boolean {
         return false
-    }
-
-    override fun getIconsCache(): UiUtilities {
-        return iconsCache
-    }
-
-    override fun getAppMode(): ApplicationMode {
-        return appMode
-    }
-
-    override fun setAppMode(appMode: ApplicationMode) {
-        this.appMode = appMode
     }
 
     override fun onApplyInsets(insets: WindowInsetsCompat) {
