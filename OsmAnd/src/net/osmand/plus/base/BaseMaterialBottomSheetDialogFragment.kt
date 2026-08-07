@@ -19,10 +19,27 @@ import net.osmand.plus.utils.UiUtilities
 open class BaseMaterialBottomSheetDialogFragment :
     BottomSheetDialogFragment(), IOsmAndFragment, ISupportInsets {
 
-    override lateinit var app: OsmandApplication
+    private lateinit var _app: OsmandApplication
+    override fun getApp(): OsmandApplication = _app
+    protected var app: OsmandApplication
+        get() = _app
+        set(value) { _app = value }
+
     protected lateinit var settings: OsmandSettings
-    override lateinit var appMode: ApplicationMode
-    override lateinit var iconsCache: UiUtilities
+
+    private lateinit var _appMode: ApplicationMode
+    override fun getAppMode(): ApplicationMode = _appMode
+    override fun setAppMode(appMode: ApplicationMode) { _appMode = appMode }
+    protected var appMode: ApplicationMode
+        get() = _appMode
+        set(value) { _appMode = value }
+
+    private lateinit var _iconsCache: UiUtilities
+    override fun getIconsCache(): UiUtilities = _iconsCache
+    protected var iconsCache: UiUtilities
+        get() = _iconsCache
+        set(value) { _iconsCache = value }
+
     protected var nightMode: Boolean = false
 
     private var lastRootInsets: WindowInsetsCompat? = null
@@ -32,10 +49,10 @@ open class BaseMaterialBottomSheetDialogFragment :
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        app = requireActivity().application as OsmandApplication
-        settings = app.getSettings()
-        iconsCache = app.uiUtilities
-        appMode = restoreAppMode(app, null, savedInstanceState, arguments)
+        _app = requireActivity().application as OsmandApplication
+        settings = _app.getSettings()
+        _iconsCache = _app.uiUtilities
+        _appMode = restoreAppMode(_app, null, savedInstanceState, arguments)
         updateNightMode()
     }
 
