@@ -18,6 +18,7 @@ import android.os.PowerManager
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.provider.Settings
+import android.view.MotionEvent
 import android.view.View
 import androidx.appcompat.app.AlertDialog
 import androidx.core.content.ContextCompat
@@ -1347,12 +1348,13 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
         val mapLayersView = activity.findViewById<View>(R.id.MapLayersView)
         val legacyMapView = activity.findViewById<View>(R.id.MapView)
         val touchListener = View.OnTouchListener { v, event ->
+            if (event == null) return@OnTouchListener false
             if (workflowManager?.getScreenTouchLockManager()?.interceptTouchEvent(event) == true) {
                 true
             } else if (event.pointerCount > 1) {
                 false // PASS THROUGH for multi-touch (pinch/zoom)
             } else {
-                v.performClick()
+                v?.performClick()
                 false // PASS THROUGH for native map gestures
             }
         }
@@ -2935,8 +2937,9 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
                     icon = if (recording) R.drawable.ic_action_stop else R.drawable.ic_action_track_recordable
                     setListener { _, _, _, _ ->
                         if (recording) {
+                            val lastFile = recorder.currentFile.value
                             recorder.stopRecording()
-                            app.showToastMessage(R.string.nautical_replay_recording_stopped, recorder.currentFile.value ?: "")
+                            app.showToastMessage(R.string.nautical_replay_recording_stopped, lastFile ?: "")
                         } else {
                             // Standardized ISO-8601 Filenames (TASK-100)
                             val sdf = java.text.SimpleDateFormat("yyyyMMdd_HHmm", Locale.US)
