@@ -100,7 +100,7 @@ class SignalKEngine(
     private val _trajectoryEventFlow = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     val trajectoryEventFlow = _trajectoryEventFlow.asSharedFlow()
 
-    private val aisCache = ConcurrentHashMap<Int, AisObject>()
+    internal val aisCache = ConcurrentHashMap<Int, AisObject>()
 
     var onConnectionLost: (() -> Unit)? = null
     var onConnectionError: (() -> Unit)? = null

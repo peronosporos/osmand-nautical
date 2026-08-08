@@ -1,0 +1,3 @@
+- [x] Change `aisCache` visibility in `SignalKEngine.kt`
+- [x] Verify fix in `NauticalAisLayer.kt`
+- [x] Final verification with a build check if possible
