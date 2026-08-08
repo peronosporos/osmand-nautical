@@ -1,0 +1,2 @@
+- [x] Make `controlManager` and `resourceManager` public in `SignalKEngine.kt`
+- [x] Verify build (analyzed files to confirm visibility errors are gone)

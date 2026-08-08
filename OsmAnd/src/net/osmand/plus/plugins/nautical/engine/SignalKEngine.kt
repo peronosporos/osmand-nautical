@@ -78,8 +78,8 @@ class SignalKEngine(
 ) {
     private val log = PlatformUtil.getLog(SignalKEngine::class.java)
     val dataBroker = SignalKDataBroker(app.settings)
-    private val controlManager = SignalKControlManager(app, dataBroker, engineScope)
-    private val resourceManager = SignalKResourceManager(app, engineScope)
+    val controlManager = SignalKControlManager(app, dataBroker, engineScope)
+    val resourceManager = SignalKResourceManager(app, engineScope)
     var environmentalFilterService: EnvironmentalFilterService? = null
 
     private val engineExceptionHandler = CoroutineExceptionHandler { _, throwable ->
