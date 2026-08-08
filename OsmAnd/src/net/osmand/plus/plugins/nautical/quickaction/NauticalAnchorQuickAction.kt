@@ -23,6 +23,8 @@ class NauticalAnchorQuickAction : QuickAction {
 
     constructor() : super(TYPE)
 
+    constructor(action: QuickAction) : super(action)
+
     override fun execute(mapActivity: MapActivity, params: Bundle?) {
         val app = mapActivity.app
         val lat = app.settings.NAUTICAL_ANCHOR_LAT.get()
@@ -66,10 +68,9 @@ class NauticalAnchorQuickAction : QuickAction {
                 AnchorWatchDialogFragment.show(mapActivity.supportFragmentManager)
             }
         } else {
-            app.settings.NAUTICAL_ANCHOR_LAT.set(0.0)
-            app.settings.NAUTICAL_ANCHOR_LON.set(0.0)
+            val plugin = PluginsHelper.getPlugin(NauticalPlugin::class.java)
+            plugin?.anchorWatchdog?.stop()
             app.showToastMessage(R.string.nautical_anchor_cleared)
-            PluginsHelper.getPlugin(NauticalPlugin::class.java)?.anchorWatchdog?.stopAlarm()
         }
         app.osmandMap?.refreshMap()
         PluginsHelper.getPlugin(NauticalPlugin::class.java)?.updateNauticalBackgroundService()

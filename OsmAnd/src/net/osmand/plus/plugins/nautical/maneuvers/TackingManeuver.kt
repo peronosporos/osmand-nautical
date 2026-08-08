@@ -41,7 +41,7 @@ class TackingManeuver(app: OsmandApplication) : ManeuverEngine(app) {
         sheetReleaseTriggered = false
         sheetPullTriggered = false
         
-        pushInstruction("Tacking: Approaching Wind")
+        pushInstruction(app.getString(R.string.nautical_tacking_approaching_wind))
         pushProgress(10)
         
         val state = NauticalPlugin.engine?.getCurrentState()
@@ -51,7 +51,7 @@ class TackingManeuver(app: OsmandApplication) : ManeuverEngine(app) {
         
         // Asynchronous TTS Dispatch (Phase 8.0R)
         NauticalPlugin.getInstance()?.speechHelper?.speakAsync(
-            "Tacking. Prepare to tack.", 
+            app.getString(R.string.nautical_tacking_prepare), 
             AlarmType.TACTICAL_TACK
         )
 
@@ -76,9 +76,9 @@ class TackingManeuver(app: OsmandApplication) : ManeuverEngine(app) {
         // Sheet Release: Bow approaching wind (AWA < 10)
         if (!sheetReleaseTriggered && absAwa < 10.0) {
             sheetReleaseTriggered = true
-            pushInstruction("Sheet Release!")
+            pushInstruction(app.getString(R.string.nautical_sheet_release))
             pushProgress(40)
-            NauticalPlugin.getInstance()?.speechHelper?.speakAsync("Sheet Release", AlarmType.TACTICAL_TACK)
+            NauticalPlugin.getInstance()?.speechHelper?.speakAsync(app.getString(R.string.nautical_sheet_release), AlarmType.TACTICAL_TACK)
         }
 
         // Sheet Pull: Bow crossed wind and on new tack (AWA > 15 on opposite side)
@@ -87,12 +87,12 @@ class TackingManeuver(app: OsmandApplication) : ManeuverEngine(app) {
 
         if (sheetReleaseTriggered && !sheetPullTriggered && crossed) {
             sheetPullTriggered = true
-            pushInstruction("Sheet Pull!")
+            pushInstruction(app.getString(R.string.nautical_sheet_pull))
             pushProgress(70)
-            NauticalPlugin.getInstance()?.speechHelper?.speakAsync("Sheet Pull", AlarmType.TACTICAL_TACK)
+            NauticalPlugin.getInstance()?.speechHelper?.speakAsync(app.getString(R.string.nautical_sheet_pull), AlarmType.TACTICAL_TACK)
             
             if (absAwa > 30.0) {
-                pushInstruction("Tack Completed")
+                pushInstruction(app.getString(R.string.nautical_tack_completed))
                 pushProgress(100)
                 reportPerformance()
                 transitionToCompleted()
@@ -134,7 +134,7 @@ class TackingManeuver(app: OsmandApplication) : ManeuverEngine(app) {
                     }
                     
                     NauticalPlugin.getInstance()?.speechHelper?.speakAsync(
-                        "Warning: Stalled in irons. Check sheets and speed.",
+                        app.getString(R.string.nautical_warn_stalled_in_irons_tts),
                         AlarmType.TACTICAL_TACK
                     )
                 }
@@ -162,7 +162,7 @@ class TackingManeuver(app: OsmandApplication) : ManeuverEngine(app) {
         }
 
         NauticalPlugin.getInstance()?.speechHelper?.speakAsync(
-            "Maneuver aborted: $reason. Autopilot disengaged.", 
+            app.getString(R.string.nautical_maneuver_aborted_tts, reason ?: ""), 
             AlarmType.TACTICAL_TACK
         )
         super.transitionToAborted(reason)

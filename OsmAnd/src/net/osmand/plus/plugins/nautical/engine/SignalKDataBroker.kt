@@ -1,13 +1,33 @@
 package net.osmand.plus.plugins.nautical.engine
 
-import kotlinx.coroutines.*
-import kotlinx.coroutines.flow.*
-import kotlin.math.abs
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
+import net.osmand.plus.plugins.nautical.NauticalPlugin
 import net.osmand.plus.plugins.nautical.network.LivePerformanceData
-import net.osmand.plus.plugins.nautical.utils.TemporalUtils
 import net.osmand.plus.plugins.nautical.utils.AngleEMA
 import net.osmand.plus.plugins.nautical.utils.EMA
+import net.osmand.plus.plugins.nautical.utils.TemporalUtils
 import net.osmand.plus.settings.backend.OsmandSettings
+import net.osmand.shared.util.KMapUtils
+import kotlin.math.abs
 import kotlin.time.Duration.Companion.milliseconds
 
 /**
@@ -26,7 +46,7 @@ class SignalKDataBroker(private val settings: OsmandSettings? = null) {
      */
     val visualState: Flow<MarineState> = marineState.distinctUntilChanged { old, new ->
         val posChange = if ((old.latitude != null) && (old.longitude != null) && (new.latitude != null) && (new.longitude != null)) {
-            net.osmand.shared.util.KMapUtils.getDistance(old.latitude, old.longitude, new.latitude, new.longitude) > 10.0
+            KMapUtils.getDistance(old.latitude, old.longitude, new.latitude, new.longitude) > 10.0
         } else {
             (old.latitude != new.latitude) || (old.longitude != new.longitude)
         }
@@ -129,7 +149,7 @@ class SignalKDataBroker(private val settings: OsmandSettings? = null) {
     @Synchronized
     fun processDepthUpdate(value: Double) {
         val now = TemporalUtils.now()
-        val safetyManager = net.osmand.plus.plugins.nautical.NauticalPlugin.getInstance()?.safetyManager
+        val safetyManager = NauticalPlugin.getInstance()?.safetyManager
         val keelOffset = safetyManager?.getKeelOffset() ?: settings?.NAUTICAL_KEEL_OFFSET?.get()?.toDouble() ?: 0.0
         val trueDepth = value + keelOffset
         val smoothed = depthEma.update(trueDepth)
@@ -167,11 +187,12 @@ class SignalKDataBroker(private val settings: OsmandSettings? = null) {
         val stw = lastStwValue ?: return
         val sog = lastSogValue ?: return
         
+        // Link to profile-specific settings (TASK-LOGIC-001)
         val minStw = settings?.NAUTICAL_STW_REL_MIN_STW?.get()?.toDouble() ?: 0.1
-        val minSog = settings?.NAUTICAL_STW_REL_MIN_SOG?.get()?.toDouble() ?: 1.03
+        val minSog = settings?.NAUTICAL_STW_REL_MIN_SOG?.get()?.toDouble() ?: 1.03 // ~2 knots
         val delayMs = (settings?.NAUTICAL_STW_REL_DELAY_SEC?.get() ?: 10) * 1000L
         
-        // Indicating a fouled paddlewheel: STW is 0 or very low while SOG is steady above threshold
+        // Indicating a fouled paddlewheel: STW is near zero while SOG is steady above stall threshold
         val isPotentiallyUnreliable = (stw < minStw) && (sog > minSog) 
         
         if (isPotentiallyUnreliable) {

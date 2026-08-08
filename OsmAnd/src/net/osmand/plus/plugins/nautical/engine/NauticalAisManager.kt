@@ -1,8 +1,8 @@
 package net.osmand.plus.plugins.nautical.engine
 
+import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
-import kotlinx.coroutines.launch
 import net.osmand.Location
 import net.osmand.PlatformUtil
 import net.osmand.plus.OsmandApplication
@@ -15,12 +15,12 @@ import net.osmand.shared.aistracker.AisObject
 import net.osmand.shared.aistracker.AisObjectConstants
 import net.osmand.shared.aistracker.AisTrackerMath
 import java.util.Collections
-import java.util.Timer
-import java.util.TimerTask
+import kotlin.time.Duration.Companion.seconds
 
 class NauticalAisManager(private val app: OsmandApplication) {
 
     private val log = PlatformUtil.getLog(NauticalAisManager::class.java)
+    private val managerScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
 
     data class AisExtras(
         val threatLevel: Int = 0,
@@ -44,8 +44,8 @@ class NauticalAisManager(private val app: OsmandApplication) {
             }
         },
     )
-    private var cleanupTimer: Timer? = null
-    private var cpaTimer: Timer? = null
+    private var cleanupJob: Job? = null
+    private var cpaJob: Job? = null
 
     private var lastCpaExecutionTime: Long = 0
     private var isCpaOffloaded = false
@@ -69,7 +69,7 @@ class NauticalAisManager(private val app: OsmandApplication) {
     fun removeListener(listener: AisObjectListener) = listeners.remove(listener)
 
     fun startUpdates() {
-        reinitTimer()
+        startLoops()
         observeCapabilities()
     }
 
@@ -77,19 +77,18 @@ class NauticalAisManager(private val app: OsmandApplication) {
         val plugin = NauticalPlugin.getInstance()
         val capsFlow = plugin?.capabilityManager?.capabilities
         if (capsFlow != null) {
-            val scope = plugin.pluginScope
-            scope?.launch {
+            managerScope.launch {
                 capsFlow.collect { caps ->
                     val offload = caps.hasAisPrioritizer || caps.hasAdvancedSafety
                     if (offload != isCpaOffloaded) {
                         isCpaOffloaded = offload
                         if (isCpaOffloaded) {
-                            log.info("Nautical: AIS CPA calculation offloaded to server. Stopping local timer.")
-                            cpaTimer?.cancel()
-                            cpaTimer = null
-                        } else if (cleanupTimer != null) { // Only restart if updates are active
+                            log.info("Nautical: AIS CPA calculation offloaded to server. Stopping local loop.")
+                            cpaJob?.cancel()
+                            cpaJob = null
+                        } else {
                             log.info("Nautical: Resuming local AIS CPA calculation.")
-                            startCpaTimer()
+                            startCpaLoop()
                         }
                     }
                 }
@@ -97,57 +96,42 @@ class NauticalAisManager(private val app: OsmandApplication) {
         }
     }
 
-    private fun startCpaTimer() {
-        cpaTimer?.cancel()
-        cpaTimer = Timer("AisCpaTimer").apply {
-            schedule(
-                object : TimerTask() {
-                    override fun run() {
-                        updateAllCpa()
-                    }
-                },
-                5000,
-                10000,
-            )
+    private fun startCpaLoop() {
+        cpaJob?.cancel()
+        cpaJob = managerScope.launch {
+            delay(5.seconds)
+            while (isActive) {
+                updateAllCpa()
+                delay(10.seconds)
+            }
         }
     }
 
     fun stopUpdates() {
-        deinitTimer()
+        cleanupJob?.cancel()
+        cleanupJob = null
+        cpaJob?.cancel()
+        cpaJob = null
     }
 
-    private fun initTimer() {
-        cleanupTimer = Timer("AisCleanupTimer").apply {
-            schedule(
-                object : TimerTask() {
-                    override fun run() {
-                        removeLostObjects()
-                    }
-                },
-                20000,
-                30000,
-            )
+    private fun startLoops() {
+        cleanupJob?.cancel()
+        cleanupJob = managerScope.launch {
+            delay(20.seconds)
+            while (isActive) {
+                removeLostObjects()
+                delay(30.seconds)
+            }
         }
 
         if (!isCpaOffloaded) {
-            startCpaTimer()
+            startCpaLoop()
         }
     }
 
-    private fun deinitTimer() {
-        cleanupTimer?.cancel()
-        cleanupTimer = null
-        cpaTimer?.cancel()
-        cpaTimer = null
-    }
-
-    private fun reinitTimer() {
-        deinitTimer()
-        initTimer()
-    }
-
     fun cleanupResources() {
-        deinitTimer()
+        stopUpdates()
+        managerScope.cancel()
         objects.clear()
     }
 

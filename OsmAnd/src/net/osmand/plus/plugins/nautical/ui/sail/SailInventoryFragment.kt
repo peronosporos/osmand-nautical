@@ -38,6 +38,11 @@ class SailInventoryFragment : BaseOsmAndFragment() {
                 items.add(ReefData(state.reefs ?: 0))
                 items.addAll(state.sailInventory)
                 adapter.submitList(items)
+                
+                val emptyView = view.findViewById<TextView>(R.id.txt_empty_list)
+                val connected = NauticalPlugin.getInstance()?.isSignalKConnected() == true
+                emptyView?.text = if (connected) getString(R.string.shared_string_no_items) else "Server Disconnected"
+                emptyView?.visibility = if (items.isEmpty()) View.VISIBLE else View.GONE
             }
         }
 

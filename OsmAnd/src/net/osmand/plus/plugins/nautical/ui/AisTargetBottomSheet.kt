@@ -90,6 +90,32 @@ class AisTargetBottomSheet : BottomSheetDialogFragment() {
             root.addView(createAttributeRow(label, value))
         }
 
+        // Action Buttons
+        root.addView(LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            setPadding(0, dpToPx(context, 16f), 0, dpToPx(context, 16f))
+            
+            addView(com.google.android.material.button.MaterialButton(context, null, com.google.android.material.R.attr.materialButtonStyle).apply {
+                text = getString(R.string.shared_string_show_on_map)
+                layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply {
+                    marginEnd = dpToPx(context, 8f)
+                }
+                setOnClickListener {
+                    showOnMap(ais)
+                    dismiss()
+                }
+            })
+            
+            addView(com.google.android.material.button.MaterialButton(context, null, com.google.android.material.R.attr.materialButtonStyle).apply {
+                text = getString(R.string.nautical_follow_target)
+                layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+                setOnClickListener {
+                    followTarget(ais)
+                    dismiss()
+                }
+            })
+        })
+
         val caps = NauticalPlugin.getInstance()?.capabilityManager?.capabilities?.value
         val manager = NauticalPlugin.getInstance()?.aisManager
         val extras = manager?.getAisExtras(ais.mmsi)
@@ -183,6 +209,34 @@ class AisTargetBottomSheet : BottomSheetDialogFragment() {
                 }
             }
         }
+    }
+
+    private fun showOnMap(ais: AisObject) {
+        val pos = ais.position ?: return
+        val activity = activity as? net.osmand.plus.activities.MapActivity ?: return
+        activity.mapView.setLatLon(pos.latitude, pos.longitude)
+        if (activity.mapView.zoom < 14) {
+            activity.mapView.setIntZoom(15)
+        }
+    }
+
+    private fun followTarget(ais: AisObject) {
+        val plugin = NauticalPlugin.getInstance() ?: return
+        plugin.pluginScope?.launch {
+            val engine = NauticalPlugin.engine
+            val rest = engine?.getRestService()
+            if (rest != null) {
+                try {
+                    // Task: Set Signal K server-side tracking if supported
+                    val body = net.osmand.plus.plugins.nautical.network.SignalKPutBody(value = "vessels.${ais.mmsi}")
+                    rest.putGeneric("navigation/following", body)
+                } catch (_: Exception) {
+                    // Ignore, local follow is enough
+                }
+            }
+        }
+        showOnMap(ais)
+        // Set local map following mode if possible - for now we just jump to it
     }
 
     private fun createAttributeRow(label: String, value: String): View {

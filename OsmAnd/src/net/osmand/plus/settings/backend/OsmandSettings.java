@@ -98,6 +98,7 @@ import net.osmand.plus.settings.backend.storages.ImpassableRoadsStorage;
 import net.osmand.plus.settings.backend.storages.IntermediatePointsStorage;
 import net.osmand.plus.settings.coordinates.CoordinateFormatSettingsStorage;
 import net.osmand.plus.settings.enums.*;
+import net.osmand.plus.settings.enums.BatterySystemVoltage;
 import net.osmand.plus.settings.enums.VesselContext;
 import net.osmand.plus.utils.AndroidUtils;
 import net.osmand.plus.utils.FileUtils;
@@ -3635,6 +3636,7 @@ public class OsmandSettings {
 	public final CommonPreference<Float> NAUTICAL_ANCHOR_FREEBOARD = registerFloatPreference("nautical_anchor_freeboard", 1.0f).makeProfile();
 	public final CommonPreference<Float> NAUTICAL_ANCHOR_SAFETY_MARGIN = registerFloatPreference("nautical_anchor_safety_margin", 5f).makeProfile();
 	public final CommonPreference<Float> NAUTICAL_ANCHOR_SCOPE_RATIO = registerFloatPreference("nautical_anchor_scope_ratio", 5f).makeProfile();
+	public final CommonPreference<Float> NAUTICAL_ANCHOR_ACCURACY_THRESHOLD = registerFloatPreference("nautical_anchor_accuracy_threshold", 15.0f).makeProfile();
 	public final CommonPreference<Boolean> NAUTICAL_ANCHOR_LOCKED_LOCALLY = registerBooleanPreference("nautical_anchor_locked_locally", false);
 	public final CommonPreference<Boolean> NAUTICAL_SETUP_WIZARD_COMPLETED = registerBooleanPreference("nautical_setup_wizard_completed", false);
 	public final CommonPreference<Boolean> NAUTICAL_SHOW_CMG_LINE = registerBooleanPreference("nautical_show_cmg_line", true).makeProfile();
@@ -3738,6 +3740,7 @@ public class OsmandSettings {
 
 	// Quick Vessel Context
 	public final CommonPreference<VesselContext> NAUTICAL_VESSEL_CONTEXT = registerEnumStringPreference("nautical_vessel_context", VesselContext.SAILING, VesselContext.values(), VesselContext.class).makeProfile();
+	public final CommonPreference<BatterySystemVoltage> NAUTICAL_BATTERY_SYSTEM_VOLTAGE = registerEnumStringPreference("nautical_battery_system_voltage", BatterySystemVoltage.VOLTS_12, BatterySystemVoltage.values(), BatterySystemVoltage.class).makeProfile();
 
 
 	@NonNull

@@ -205,7 +205,7 @@ class VhfPoiSearchLayer(private val mapActivity: MapActivity) : OsmandMapLayer(m
                 PointDescription(PointDescription.POINT_TYPE_POI, "$name (VHF Ch $channel)")
             }
             is net.osmand.plus.plugins.nautical.network.SignalKWaypoint -> {
-                PointDescription(PointDescription.POINT_TYPE_POI, o.name ?: "Signal K Waypoint")
+                PointDescription(PointDescription.POINT_TYPE_POI, o.name ?: mapActivity.getString(R.string.nautical_signal_k_waypoint))
             }
             else -> null
         }
@@ -215,8 +215,8 @@ class VhfPoiSearchLayer(private val mapActivity: MapActivity) : OsmandMapLayer(m
         if (obj is net.osmand.plus.plugins.nautical.network.SignalKWaypoint) {
             adapter.addItem(
                 ContextMenuItem("sk_wp_info").apply {
-                    title = "Signal K Waypoint"
-                    description = obj.description ?: "No description"
+                    title = mapActivity.getString(R.string.nautical_signal_k_waypoint)
+                    description = obj.description ?: mapActivity.getString(R.string.shared_string_none)
                     icon = R.drawable.ic_action_info_dark
                 },
             )
@@ -228,7 +228,7 @@ class VhfPoiSearchLayer(private val mapActivity: MapActivity) : OsmandMapLayer(m
         adapter.addItem(
             ContextMenuItem("vhf_info").apply {
                 title = mapActivity.getString(R.string.nautical_vhf_channel)
-                description = "Channel: $channel"
+                description = mapActivity.getString(R.string.nautical_vhf_channel_fmt, channel)
                 icon = R.drawable.ic_action_message
                 setListener { _, _, _, _ ->
                     val clipboard = mapActivity.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager

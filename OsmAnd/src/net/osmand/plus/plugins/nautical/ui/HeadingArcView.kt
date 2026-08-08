@@ -112,6 +112,9 @@ class HeadingArcView @JvmOverloads constructor(
     private val mediumTypeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
 
     private var isDragging = false
+    private var dragStartedX = 0f
+    private var dragStartedY = 0f
+    private val dragSlop = 20f // pixels
 
     private val cardinalLabels = Array(8) { "" }
     private val cardinalIndices = intArrayOf(0, 45, 90, 135, 180, 225, 270, 315)
@@ -135,6 +138,7 @@ class HeadingArcView @JvmOverloads constructor(
     private var dp1 = 0f
     private var dp2 = 0f
     private var dp3 = 0f
+    private var dp5 = 0f
     private var dp6 = 0f
     private var dp8 = 0f
     private var dp10 = 0f
@@ -164,6 +168,7 @@ class HeadingArcView @JvmOverloads constructor(
         dp1 = 1f * density
         dp2 = 2f * density
         dp3 = 3f * density
+        dp5 = 5f * density
         dp6 = 6f * density
         dp8 = 8f * density
         dp10 = 10f * density
@@ -373,7 +378,7 @@ class HeadingArcView @JvmOverloads constructor(
             textPaint.color = textColorPrimary
             textPaint.textSize = dp64
             val centralValue = if (currentMode == "WIND") targetWindAngleApparent ?: 0 else targetHeading
-            NauticalFormatter.drawDeg(canvas, centralValue.toFloat(), centerX, centerY + dp10, textPaint, degreeBuffer)
+            NauticalFormatter.drawDeg(canvas, centralValue.toFloat(), centerX, centerY + dp5, textPaint, degreeBuffer)
         }
         
         paint.textSize = dp14
@@ -381,7 +386,7 @@ class HeadingArcView @JvmOverloads constructor(
         paint.alpha = 150
         paint.typeface = mediumTypeface
         val label = if (currentMode == "WIND") awaLabel else setHeadingLabel
-        canvas.drawText(label, centerX, centerY + dp45 * 0.8f, paint)
+        canvas.drawText(label, centerX, centerY + dp64, paint)
     }
 
     override fun onInitializeAccessibilityNodeInfo(info: AccessibilityNodeInfo) {
@@ -399,12 +404,20 @@ class HeadingArcView @JvmOverloads constructor(
         when (event.action) {
             MotionEvent.ACTION_DOWN -> {
                 if (dist > radius * 0.5f && dist < radius * 1.2f) {
-                    isDragging = true
+                    dragStartedX = event.x
+                    dragStartedY = event.y
                     parent.requestDisallowInterceptTouchEvent(true)
                     return true
                 }
             }
             MotionEvent.ACTION_MOVE -> {
+                if (!isDragging && (dragStartedX != 0f)) {
+                    val moveDist = sqrt((event.x - dragStartedX).pow(2) + (event.y - dragStartedY).pow(2))
+                    if (moveDist > dragSlop) {
+                        isDragging = true
+                    }
+                }
+                
                 if (isDragging) {
                     val angleRad = atan2(y.toDouble(), x.toDouble())
                     var angleDeg = Math.toDegrees(angleRad).toInt() + 90
@@ -419,6 +432,8 @@ class HeadingArcView @JvmOverloads constructor(
                 }
             }
             MotionEvent.ACTION_UP -> {
+                dragStartedX = 0f
+                dragStartedY = 0f
                 if (isDragging) {
                     isDragging = false
                     if (currentMode == "WIND") {
@@ -438,6 +453,8 @@ class HeadingArcView @JvmOverloads constructor(
             }
             MotionEvent.ACTION_CANCEL -> {
                 isDragging = false
+                dragStartedX = 0f
+                dragStartedY = 0f
             }
         }
         return super.onTouchEvent(event)

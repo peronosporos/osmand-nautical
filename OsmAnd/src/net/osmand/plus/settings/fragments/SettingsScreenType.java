@@ -77,7 +77,8 @@ public enum SettingsScreenType {
 	NAUTICAL_GNSS_STATUS("net.osmand.plus.plugins.nautical.ui.NauticalGnssStatusFragment", false, null, -1, R.layout.global_preference_toolbar),
 	NAUTICAL_TIDE_TABLE("net.osmand.plus.plugins.nautical.ui.SignalKTideTableFragment", false, null, -1, R.layout.global_preference_toolbar),
 	NAUTICAL_AIS_BUDDIES("net.osmand.plus.plugins.nautical.ui.NauticalBuddyListFragment", false, null, -1, R.layout.global_preference_toolbar),
-	NAUTICAL_ADVANCED_SETTINGS("net.osmand.plus.plugins.nautical.ui.NauticalAdvancedSettingsFragment", false, null, R.xml.nautical_advanced_settings, R.layout.global_preference_toolbar);
+	NAUTICAL_ADVANCED_SETTINGS("net.osmand.plus.plugins.nautical.ui.NauticalAdvancedSettingsFragment", false, null, R.xml.nautical_advanced_settings, R.layout.global_preference_toolbar),
+	SIGNALK_DIAGNOSTICS("net.osmand.plus.plugins.nautical.ui.SignalKDiagnosticsFragment", false, null, -1, R.layout.global_preference_toolbar);
 	public final String fragmentName;
 	public final boolean profileDependent;
 	public final ApplyQueryType applyQueryType;

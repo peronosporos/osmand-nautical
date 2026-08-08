@@ -32,6 +32,11 @@ class MarineTextWidget(
         setIcons(widgetType)
     }
 
+    override fun updateWidgetView() {
+        super.updateWidgetView()
+        widgetName?.visibility = View.GONE
+    }
+
     override fun updateIcon() {
         val iconId = iconId
         if (iconId != 0) {
@@ -487,7 +492,7 @@ class MarineTextWidget(
                 val count = state.notifications.size
                 if (count > 0) {
                     count.toString() to mapActivity.getString(R.string.nautical_notifications)
-                } else "0" to ""
+                } else "OK" to ""
             }
             else -> {
                 val customVal = state.customValues[customId]
@@ -509,7 +514,11 @@ class MarineTextWidget(
         lastFormattedSub = sub
 
         if (integrity == IntegrityState.ALARM) {
-            setText("X", "")
+            val safetyCritical = (widgetType == WidgetType.NAUTICAL_DEPTH) || 
+                                (widgetType == WidgetType.NAUTICAL_DEPTH_KEEL) || 
+                                (widgetType == WidgetType.NAUTICAL_XTE)
+            val msg = if (safetyCritical) mapActivity.getString(R.string.nautical_timeout) else "X"
+            setText(msg, "")
         } else {
             setText(main, sub)
         }

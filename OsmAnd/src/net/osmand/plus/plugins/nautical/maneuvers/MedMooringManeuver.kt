@@ -16,8 +16,16 @@ class MedMooringManeuver(app: OsmandApplication) : ManeuverEngine(app) {
     private var currentPhase = MedMooringPhase.APPROACH_DROP_ZONE
     private var anchorDropLat: Double? = null
     private var anchorDropLon: Double? = null
+    private var targetLat: Double = 0.0
+    private var targetLon: Double = 0.0
+    
     private val vesselLengthMeters: Double get() = app.settings.NAUTICAL_MED_MOORING_VESSEL_LENGTH.get().toDouble()
     private val desiredScope: Double get() = app.settings.NAUTICAL_MED_MOORING_SCOPE.get().toDouble()
+
+    fun setTarget(lat: Double, lon: Double) {
+        targetLat = lat
+        targetLon = lon
+    }
 
     override fun checkSafetyPreconditions(state: MarineState): Boolean {
         if (!super.checkSafetyPreconditions(state)) return false
@@ -46,20 +54,21 @@ class MedMooringManeuver(app: OsmandApplication) : ManeuverEngine(app) {
         super.transitionToExecuting()
     }
 
-    fun updateTelemetry(state: MarineState, distanceToQuayMeters: Double) {
+    override fun onStateUpdate(state: MarineState) {
         if (currentState != ManeuverStateMachine.State.EXECUTING) return
 
+        val distanceToQuayMeters = calculateDistanceToTarget(state) ?: 1000.0
         val sog = state.speedOverGround ?: 0.0
         val heading = state.headingTrue ?: 0.0
         val cog = state.courseOverGroundTrue ?: 0.0
-        val leewayAngle = abs(heading - cog)
+        val leewayAngle = abs(Math.toDegrees(heading - cog))
 
         when (currentPhase) {
             MedMooringPhase.APPROACH_DROP_ZONE -> {
                 val depth = (state.depthBelowTransducer ?: 5.0) + (state.depthSurfaceToTransducer ?: 1.0)
                 val targetDropDistance = depth * desiredScope + vesselLengthMeters
                 
-                pushProgress((1.0 - (distanceToQuayMeters / (targetDropDistance * 2)).coerceIn(0.0, 0.5)).toInt() * 100)
+                pushProgress(((1.0 - (distanceToQuayMeters / (targetDropDistance * 2)).coerceIn(0.0, 0.5)) * 100).toInt())
 
                 if (distanceToQuayMeters <= targetDropDistance && sog < 1.0) {
                     anchorDropLat = state.latitude
@@ -81,7 +90,7 @@ class MedMooringManeuver(app: OsmandApplication) : ManeuverEngine(app) {
                 NauticalPlugin.autopilot?.setAutopilotMode("auto")
             }
             MedMooringPhase.STERN_APPROACH -> {
-                pushProgress((1.0 - (distanceToQuayMeters / 50.0).coerceIn(0.0, 1.0)).toInt() * 100)
+                pushProgress(((1.0 - (distanceToQuayMeters / 50.0).coerceIn(0.0, 1.0)) * 100).toInt())
                 pushInstruction("Dist to Quay: ${distanceToQuayMeters.toInt()}m")
                 // Safety Checks during Stern Approach
                 if (leewayAngle > 15.0) {
@@ -93,8 +102,22 @@ class MedMooringManeuver(app: OsmandApplication) : ManeuverEngine(app) {
                     speak(warning)
                     transitionToAborted(warning)
                 }
+
+                // Auto completion
+                if (distanceToQuayMeters < 2.0 && sog < 0.1) {
+                    speak("Med-mooring completed. Secure lines.")
+                    pushInstruction("Maneuver Completed")
+                    pushProgress(100)
+                    transitionToCompleted()
+                }
             }
         }
+    }
+
+    private fun calculateDistanceToTarget(state: MarineState): Double? {
+        val lat = state.latitude ?: return null
+        val lon = state.longitude ?: return null
+        return net.osmand.shared.util.KMapUtils.getDistance(lat, lon, targetLat, targetLon)
     }
 
     private fun speak(text: String) {

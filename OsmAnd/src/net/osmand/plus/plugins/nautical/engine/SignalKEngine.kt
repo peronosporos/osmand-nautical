@@ -3,6 +3,8 @@ package net.osmand.plus.plugins.nautical.engine
 import android.content.Context
 import android.util.JsonReader
 import android.util.JsonToken
+import com.auth0.jwt.JWT
+import com.auth0.jwt.exceptions.JWTDecodeException
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
@@ -11,9 +13,12 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -24,25 +29,42 @@ import net.osmand.PlatformUtil
 import net.osmand.plus.OsmandApplication
 import net.osmand.plus.R
 import net.osmand.plus.plugins.nautical.NauticalPlugin
+import net.osmand.plus.plugins.nautical.laylines.engine.LatLon
+import net.osmand.plus.plugins.nautical.laylines.engine.LaylineData
+import net.osmand.plus.plugins.nautical.network.LivePerformanceData
+import net.osmand.plus.plugins.nautical.network.SignalKCourse
+import net.osmand.plus.plugins.nautical.network.SignalKRestService
+import net.osmand.plus.plugins.nautical.network.SignalKRoute
+import net.osmand.plus.plugins.nautical.network.SignalKRouteFeature
+import net.osmand.plus.plugins.nautical.network.SignalKLineString
+import net.osmand.plus.plugins.nautical.audio.AlarmType
+import net.osmand.plus.plugins.nautical.audio.NauticalAudioArbiter
+import net.osmand.plus.plugins.nautical.di.SailingDependencyContainer
+import net.osmand.plus.plugins.nautical.utils.EMA
+import net.osmand.plus.plugins.nautical.utils.AngleEMA
+import net.osmand.plus.plugins.nautical.utils.LeewayCalculator
+import net.osmand.plus.plugins.nautical.utils.NauticalLog
 import net.osmand.plus.plugins.nautical.utils.TemporalUtils
 import net.osmand.plus.settings.enums.TtwMode
 import net.osmand.plus.settings.enums.XteDirection
 import net.osmand.shared.aistracker.AisObject
 import net.osmand.shared.extensions.toRadians
 import net.osmand.shared.util.KMapUtils
-import com.auth0.jwt.JWT
-import com.auth0.jwt.exceptions.JWTDecodeException
 import org.json.JSONArray
 import org.json.JSONObject
+import java.io.DataInputStream
+import java.io.DataOutputStream
 import java.io.File
 import java.io.ObjectInputStream
 import java.io.StringReader
+import java.util.Date
 import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.CopyOnWriteArraySet
+import java.util.concurrent.atomic.AtomicLong
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.absoluteValue
-import kotlin.math.asin
 import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.sin
@@ -56,8 +78,8 @@ class SignalKEngine(
 ) {
     private val log = PlatformUtil.getLog(SignalKEngine::class.java)
     val dataBroker = SignalKDataBroker(app.settings)
-    val controlManager = SignalKControlManager(app, dataBroker, engineScope)
-    val resourceManager = SignalKResourceManager(app, engineScope)
+    private val controlManager = SignalKControlManager(app, dataBroker, engineScope)
+    private val resourceManager = SignalKResourceManager(app, engineScope)
     var environmentalFilterService: EnvironmentalFilterService? = null
 
     private val engineExceptionHandler = CoroutineExceptionHandler { _, throwable ->
@@ -67,7 +89,7 @@ class SignalKEngine(
     // Isolated scope for background parsing tasks to prevent ripple failures
     private val parsingScope = CoroutineScope(Dispatchers.Default + SupervisorJob() + engineExceptionHandler)
 
-    private val messageChannel = kotlinx.coroutines.channels.Channel<String>(capacity = 128)
+    private val messageChannel = Channel<String>(capacity = 128)
     private var messageProcessingJob: Job? = null
 
     val marineStateFlow: StateFlow<MarineState> = dataBroker.marineState
@@ -75,16 +97,19 @@ class SignalKEngine(
     private val _pulseFlow = MutableStateFlow(false)
     val pulseFlow: StateFlow<Boolean> = _pulseFlow.asStateFlow()
 
-    val aisCache = ConcurrentHashMap<Int, AisObject>()
+    private val _trajectoryEventFlow = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    val trajectoryEventFlow = _trajectoryEventFlow.asSharedFlow()
+
+    private val aisCache = ConcurrentHashMap<Int, AisObject>()
 
     var onConnectionLost: (() -> Unit)? = null
     var onConnectionError: (() -> Unit)? = null
     var onAuthError: (() -> Unit)? = null
     var onConnectionRestored: (() -> Unit)? = null
-    private val routeStepListeners = java.util.concurrent.CopyOnWriteArraySet<() -> Unit>()
+    private val routeStepListeners = CopyOnWriteArraySet<() -> Unit>()
     var deltaSender: ((String) -> Unit)? = null
 
-    private val stateListeners = java.util.concurrent.CopyOnWriteArraySet<(MarineState) -> Unit>()
+    private val stateListeners = CopyOnWriteArraySet<(MarineState) -> Unit>()
     private var aisListener: ((AisObject) -> Unit)? = null
     private val deltaQueue = mutableMapOf<String, Any>()
     private var deltaFlushJob: Job? = null
@@ -179,9 +204,13 @@ class SignalKEngine(
         }
     }
 
+    private var lastRestUrl: String? = null
+    private var cachedRestService: SignalKRestService? = null
+
     fun getCurrentState(): MarineState = dataBroker.marineState.value
 
-    fun getRestService(): net.osmand.plus.plugins.nautical.network.SignalKRestService? {
+    @Synchronized
+    fun getRestService(): SignalKRestService? {
         val plugin = NauticalPlugin.getInstance() ?: return null
         val client = plugin.okHttpClient ?: return null
         val ip = app.settings.NAUTICAL_SERVER_IP.get()
@@ -189,7 +218,15 @@ class SignalKEngine(
         if (ip.isEmpty()) return null
 
         val protocol = if (app.settings.NAUTICAL_USE_SECURE_CONNECTION.get()) "https" else "http"
-        return net.osmand.plus.plugins.nautical.network.SignalKRestService.create("$protocol://$ip:$port", client)
+        val url = "$protocol://$ip:$port"
+        
+        if (url == lastRestUrl && cachedRestService != null) {
+            return cachedRestService
+        }
+        
+        lastRestUrl = url
+        cachedRestService = SignalKRestService.create(url, client)
+        return cachedRestService
     }
 
     fun setSwitch(path: String, state: Boolean) = controlManager.setSwitchState(path, state)
@@ -241,7 +278,7 @@ class SignalKEngine(
     suspend fun saveBuffersToDisk(context: Context) = withContext(Dispatchers.IO + NonCancellable) {
         val file = File(context.filesDir, "nautical_history.bin")
         try {
-            java.io.DataOutputStream(file.outputStream().buffered()).use { dos ->
+            DataOutputStream(file.outputStream().buffered()).use { dos ->
                 dos.writeInt(2) // Version
 
                 fun writeBuffer(path: String) {
@@ -277,7 +314,7 @@ class SignalKEngine(
         val binFile = File(context.filesDir, "nautical_history.bin")
         if (binFile.exists()) {
             try {
-                java.io.DataInputStream(binFile.inputStream().buffered()).use { dis ->
+                DataInputStream(binFile.inputStream().buffered()).use { dis ->
                     val version = dis.readInt()
                     if (version == 2) {
                         val bufferCount = dis.readInt()
@@ -376,6 +413,7 @@ class SignalKEngine(
             val file = File(context.filesDir, fileName)
             if (!file.exists()) return
             try {
+                var readSuccess = false
                 ObjectInputStream(file.inputStream()).use { ois ->
                     val data = ois.readObject()
                     if (data is Collection<*>) {
@@ -395,9 +433,13 @@ class SignalKEngine(
                                 }
                             }
                         }
+                        readSuccess = true
                     }
                 }
-                file.delete()
+                if (readSuccess) {
+                    file.delete()
+                    log.info("Nautical: Migrated legacy buffer $fileName and cleared source.")
+                }
             } catch (e: Exception) {
                 log.error("Failed to load $fileName: ${e.message}")
             }
@@ -461,7 +503,7 @@ class SignalKEngine(
 
                 val protocol = if (app.settings.NAUTICAL_USE_SECURE_CONNECTION.get()) "https" else "http"
                 val baseUrl = "$protocol://$ip:$port"
-                val restService = net.osmand.plus.plugins.nautical.network.SignalKRestService.create(baseUrl, client) ?: return@launch
+                val restService = SignalKRestService.create(baseUrl, client) ?: return@launch
 
                 val response = restService.getVesselSelf()
                 if (response.isSuccessful) {
@@ -488,7 +530,7 @@ class SignalKEngine(
         }
     }
 
-    private suspend fun fetchHistoryFromServer(restService: net.osmand.plus.plugins.nautical.network.SignalKRestService) {
+    private suspend fun fetchHistoryFromServer(restService: SignalKRestService) {
         try {
             val paths = listOf(
                 SignalKPaths.ENV_DEPTH_BELOW_KEEL,
@@ -611,7 +653,7 @@ class SignalKEngine(
         return try {
             val jwt = JWT.decode(token)
             val expiresAt = jwt.expiresAt
-            if (expiresAt != null && expiresAt.before(java.util.Date())) {
+            if (expiresAt != null && expiresAt.before(Date())) {
                 log.error("JWT token expired at $expiresAt")
                 false
             } else {
@@ -623,7 +665,7 @@ class SignalKEngine(
         }
     }
 
-    private val lastAuthErrorTime = java.util.concurrent.atomic.AtomicLong(0)
+    private val lastAuthErrorTime = AtomicLong(0)
     private fun triggerAuthError() {
         val now = System.currentTimeMillis()
         val last = lastAuthErrorTime.get()
@@ -655,35 +697,41 @@ class SignalKEngine(
             return
         }
 
-        net.osmand.plus.plugins.nautical.utils.NauticalLog.auditCommand(command)
+        NauticalLog.auditCommand(command)
         log.debug("Dispatching authenticated command: $command")
         val parts = command.split(":", limit = 2)
         if (parts.size < 2) return
         
-        val path = when (parts[0]) {
-            "CALIBRATE_COMPASS" -> "steering.autopilot.actions.calibrateCompass"
-            "TARGET_HEADING" -> "steering.autopilot.target.headingTrue"
-            "STATE" -> "steering.autopilot.state"
+        val cmd = parts[0]
+        val rawValue = parts[1]
+
+        val (path, value) = when (cmd) {
+            "CALIBRATE_COMPASS" -> "steering.autopilot.actions.calibrateCompass" to (rawValue == "START")
+            "TARGET_HEADING" -> "steering.autopilot.target.headingTrue" to (rawValue.toDoubleOrNull() ?: rawValue)
+            "STATE" -> "steering.autopilot.state" to rawValue
             "SWITCH" -> {
-                val subParts = parts[1].split(":", limit = 2)
+                val subParts = rawValue.split(":", limit = 2)
                 if (subParts.size < 2) return
                 val switchPath = subParts[0]
-                "electrical.switches.$switchPath.state"
+                val state = subParts[1].lowercase(Locale.US).let { it == "true" || it == "on" || it == "1" }
+                "electrical.switches.$switchPath.state" to state
             }
-            "ANCHOR_STATE" -> "steering.anchor.state"
-            "ANCHOR_POS" -> "steering.anchor.position"
-            "NOTIFICATION" -> parts[1].substringBefore(":")
-            "LOGBOOK_ENTRY" -> "notifications.logbook.entry"
-            "MEDIA" -> "entertainment.media.state"
+            "ANCHOR_STATE" -> "steering.anchor.state" to rawValue
+            "ANCHOR_POS" -> {
+                try {
+                    "steering.anchor.position" to JSONObject(rawValue)
+                } catch (_: Exception) {
+                    "steering.anchor.position" to rawValue
+                }
+            }
+            "NOTIFICATION" -> {
+                val nPath = rawValue.substringBefore(":")
+                val nValue = rawValue.substringAfter(":")
+                nPath to nValue
+            }
+            "LOGBOOK_ENTRY" -> "notifications.logbook.entry" to rawValue
+            "MEDIA" -> "entertainment.media.state" to rawValue
             else -> return
-        }
-        
-        val value = if (parts[0] == "SWITCH") {
-            parts[1].substringAfter(":")
-        } else if (parts[0] == "NOTIFICATION") {
-            parts[1].substringAfter(":")
-        } else {
-            parts[1]
         }
         
         synchronized(deltaQueue) {
@@ -705,25 +753,28 @@ class SignalKEngine(
             deltaQueue.clear()
         }
 
-        val valuesJson = toSend.entries.joinToString(",") { (path, value) ->
-            val v = value.toString()
-            val escapedValue = if (v.startsWith("{") || v.startsWith("[")) v else "\"$v\""
-            """{"path": "$path", "value": $escapedValue}"""
-        }
+        try {
+            val updatesArray = JSONArray()
+            val valuesArray = JSONArray()
 
-        val payload = """
-            {
-                "updates": [
-                    {
-                        "values": [
-                            $valuesJson
-                        ]
-                    }
-                ]
+            toSend.forEach { (path, value) ->
+                val entry = JSONObject()
+                entry.put("path", path)
+                entry.put("value", JSONObject.wrap(value))
+                valuesArray.put(entry)
             }
-        """.trimIndent()
-        
-        deltaSender?.invoke(payload)
+
+            val update = JSONObject()
+            update.put("values", valuesArray)
+            updatesArray.put(update)
+
+            val root = JSONObject()
+            root.put("updates", updatesArray)
+
+            deltaSender?.invoke(root.toString())
+        } catch (e: Exception) {
+            log.error("Failed to flush deltas: ${e.message}")
+        }
     }
 
     private fun resolveSelfIdentity() {
@@ -735,9 +786,14 @@ class SignalKEngine(
                     val ip = app.settings.NAUTICAL_SERVER_IP.get()
                     val port = app.settings.NAUTICAL_SERVER_PORT.get()
                     val protocol = if (app.settings.NAUTICAL_USE_SECURE_CONNECTION.get()) "https" else "http"
-                    val restService = net.osmand.plus.plugins.nautical.network.SignalKRestService.create("$protocol://$ip:$port", client) ?: return@withTimeout
+                    val restService = SignalKRestService.create("$protocol://$ip:$port", client) ?: return@withTimeout
                     
-                    val response = restService.getSelfIdentity()
+                    var response = restService.getSelfIdentity()
+                    if (!response.isSuccessful) {
+                        log.info("SignalK v2 self identity failed, trying v1 fallback...")
+                        response = restService.getV1SelfIdentity()
+                    }
+
                     if (response.isSuccessful) {
                         val body = response.body()
                         val mmsi = (body?.get("mmsi") as? String)?.toIntOrNull()
@@ -811,7 +867,7 @@ class SignalKEngine(
                         var modified = false
                         val current = dataBroker.marineState.value
                         val nextStalePaths = current.stalePaths.toMutableSet()
-                        val staleThreshold = 5000L
+                        val staleThreshold = 10000L
                         val timestamps = current.timestamps
 
                         fun checkStale(path: String): Boolean {
@@ -857,11 +913,11 @@ class SignalKEngine(
                 try {
                     delay(60000.milliseconds)
                     val now = TemporalUtils.now()
-                    val it = aisCache.entries.iterator()
-                    while (it.hasNext()) {
-                        val entry = it.next()
+                    val iterator = aisCache.entries.iterator()
+                    while (iterator.hasNext()) {
+                        val entry = iterator.next()
                         if (now - entry.value.lastUpdate > 1800000) {
-                            it.remove()
+                            iterator.remove()
                         }
                     }
                 } catch (e: Exception) {
@@ -932,15 +988,15 @@ class SignalKEngine(
             val ip = app.settings.NAUTICAL_SERVER_IP.get()
             val port = app.settings.NAUTICAL_SERVER_PORT.get()
             val protocol = if (app.settings.NAUTICAL_USE_SECURE_CONNECTION.get()) "https" else "http"
-            val restService = net.osmand.plus.plugins.nautical.network.SignalKRestService.create("$protocol://$ip:$port", client) ?: return@withContext
+            val restService = SignalKRestService.create("$protocol://$ip:$port", client) ?: return@withContext
 
             val coords = points.map { listOf(it.second, it.first) }
-            val skRoute = net.osmand.plus.plugins.nautical.network.SignalKRoute(
+            val skRoute = SignalKRoute(
                 name = name,
-                description = "Exported from OsmAnd Nautical",
+                description = app.getString(R.string.nautical_sk_exported_description),
                 distance = null,
-                feature = net.osmand.plus.plugins.nautical.network.SignalKRouteFeature(
-                    geometry = net.osmand.plus.plugins.nautical.network.SignalKLineString(coordinates = coords)
+                feature = SignalKRouteFeature(
+                    geometry = SignalKLineString(coordinates = coords)
                 )
             )
 
@@ -966,15 +1022,15 @@ class SignalKEngine(
             val ip = app.settings.NAUTICAL_SERVER_IP.get()
             val port = app.settings.NAUTICAL_SERVER_PORT.get()
             val protocol = if (app.settings.NAUTICAL_USE_SECURE_CONNECTION.get()) "https" else "http"
-            val restService = net.osmand.plus.plugins.nautical.network.SignalKRestService.create("$protocol://$ip:$port", client) ?: return@withContext
+            val restService = SignalKRestService.create("$protocol://$ip:$port", client) ?: return@withContext
 
             val coords = points.map { listOf(it.second, it.first) }
-            val skRoute = net.osmand.plus.plugins.nautical.network.SignalKRoute(
+            val skRoute = SignalKRoute(
                 name = name,
-                description = "Updated from OsmAnd Nautical",
+                description = app.getString(R.string.nautical_sk_updated_description),
                 distance = null,
-                feature = net.osmand.plus.plugins.nautical.network.SignalKRouteFeature(
-                    geometry = net.osmand.plus.plugins.nautical.network.SignalKLineString(coordinates = coords)
+                feature = SignalKRouteFeature(
+                    geometry = SignalKLineString(coordinates = coords)
                 )
             )
 
@@ -996,7 +1052,7 @@ class SignalKEngine(
             val ip = app.settings.NAUTICAL_SERVER_IP.get()
             val port = app.settings.NAUTICAL_SERVER_PORT.get()
             val protocol = if (app.settings.NAUTICAL_USE_SECURE_CONNECTION.get()) "https" else "http"
-            val restService = net.osmand.plus.plugins.nautical.network.SignalKRestService.create("$protocol://$ip:$port", client) ?: return@withContext
+            val restService = SignalKRestService.create("$protocol://$ip:$port", client) ?: return@withContext
 
             val response = restService.deleteRoute(routeId)
             if (response.isSuccessful) {
@@ -1009,14 +1065,14 @@ class SignalKEngine(
         }
     }
 
-    suspend fun fetchRoutesFromServer(): Map<String, net.osmand.plus.plugins.nautical.network.SignalKRoute>? = withContext(Dispatchers.IO) {
+    suspend fun fetchRoutesFromServer(): Map<String, SignalKRoute>? = withContext(Dispatchers.IO) {
         try {
             val plugin = NauticalPlugin.getInstance() ?: return@withContext null
             val client = plugin.okHttpClient ?: return@withContext null
             val ip = app.settings.NAUTICAL_SERVER_IP.get()
             val port = app.settings.NAUTICAL_SERVER_PORT.get()
             val protocol = if (app.settings.NAUTICAL_USE_SECURE_CONNECTION.get()) "https" else "http"
-            val restService = net.osmand.plus.plugins.nautical.network.SignalKRestService.create("$protocol://$ip:$port", client) ?: return@withContext null
+            val restService = SignalKRestService.create("$protocol://$ip:$port", client) ?: return@withContext null
 
             val response = restService.getRoutes()
             if (response.isSuccessful) {
@@ -1032,9 +1088,9 @@ class SignalKEngine(
     private var lastFollowingUpdateTimestamp: Long = 0
     private var lastSetDriftTimestamp: Long = 0
 
-    private val vmgEma = net.osmand.plus.plugins.nautical.utils.EMA(0.2) // standard alpha is usually (1-alpha) in manual math
-    private val driftEma = net.osmand.plus.plugins.nautical.utils.EMA(0.2)
-    private val setAngleEma = net.osmand.plus.plugins.nautical.utils.AngleEMA(0.2)
+    private val vmgEma = EMA(0.2) // standard alpha is usually (1-alpha) in manual math
+    private val driftEma = EMA(0.2)
+    private val setAngleEma = AngleEMA(0.2)
 
     @Volatile
     private var powerSaveMode: Boolean = false
@@ -1049,15 +1105,22 @@ class SignalKEngine(
         val last = history.lastOrNull()
         val now = TemporalUtils.now()
 
+        // Improved Resolution (TASK-UX-003): 5s or 50m displacement
         if (now - lastTrajectoryTimestamp < 5000) return
 
         if (last != null) {
             val dist = KMapUtils.getDistance(last.first, last.second, lat, lon)
             val timeGap = now - lastTrajectoryTimestamp
-            if (dist > 500.0 && timeGap < 30000) return
+            if (dist > 50.0 || timeGap > 60000) {
+                trajectoryBuffer.add(Pair(lat, lon))
+                lastTrajectoryTimestamp = now
+                _trajectoryEventFlow.tryEmit(Unit)
+            }
+        } else {
+            trajectoryBuffer.add(Pair(lat, lon))
+            lastTrajectoryTimestamp = now
+            _trajectoryEventFlow.tryEmit(Unit)
         }
-        trajectoryBuffer.add(Pair(lat, lon))
-        lastTrajectoryTimestamp = now
     }
 
     fun copyTrajectoryTo(target: MutableList<Pair<Double, Double>>) {
@@ -1081,6 +1144,12 @@ class SignalKEngine(
     }
 
     private fun handleSelfIdentity(self: String) {
+        // High-Priority resolution from Hello message (TASK-CONN-001)
+        if (self.isNotBlank()) {
+             trueSelfContext = self
+             log.info("Nautical: Identified own vessel context as '$self'")
+        }
+
         if (self.startsWith("vessels.urn:mrn:imo:mmsi:")) {
             val mmsiStr = self.substringAfterLast(":")
             val mmsi = mmsiStr.toIntOrNull()
@@ -1121,9 +1190,7 @@ class SignalKEngine(
                         else -> 1 // Default vessel
                     }
                     val obj = AisObject(numericMmsi, msgType, 0.0, 0.0)
-                    if (type == "sar") {
-                        // Create a Class A vessel but we'll try to set SAR type if possible via updates
-                    }
+                    // TODO: Handle SAR type if possible via updates
                     obj
                 }
             } else if (context.isNotEmpty()) {
@@ -1290,7 +1357,7 @@ class SignalKEngine(
                 if (reader.peek() == JsonToken.BEGIN_OBJECT) {
                     var cpa = Double.NaN
                     var tcpa = Double.NaN
-                    var name = "Unknown Vessel"
+                    var name = app.getString(R.string.nautical_unknown_vessel)
                     reader.beginObject()
                     while (reader.hasNext()) {
                         when (reader.nextName()) {
@@ -1302,8 +1369,9 @@ class SignalKEngine(
                     }
                     reader.endObject()
                     if (!cpa.isNaN() && !tcpa.isNaN()) {
-                        dataBroker.updateClosestApproach(cpa, tcpa, name)
-                        val state = s.copy(cpa = cpa, tcpa = tcpa, threatName = name, timestamps = newTimestamps)
+                        val cpaNm = SignalKUnitConverter.metersToNm(cpa)
+                        dataBroker.updateClosestApproach(cpaNm, tcpa, name)
+                        val state = s.copy(cpa = cpaNm, tcpa = tcpa, threatName = name, timestamps = newTimestamps)
                         Pair(state, true)
                     } else null
                 } else null
@@ -1331,7 +1399,7 @@ class SignalKEngine(
                     }
                     reader.endObject()
                     if (MarineStateConstants.isValidLat(lat) && MarineStateConstants.isValidLon(lon)) {
-                        val state = s.copy(serverNextPoint = net.osmand.plus.plugins.nautical.laylines.engine.LatLon(lat, lon), timestamps = newTimestamps)
+                        val state = s.copy(serverNextPoint = LatLon(lat, lon), timestamps = newTimestamps)
                         Pair(state, true)
                     } else null
                 } else null
@@ -1343,7 +1411,7 @@ class SignalKEngine(
                     while (reader.hasNext()) {
                         if (reader.peek() == JsonToken.BEGIN_OBJECT) {
                             var id = ""
-                            var name = "Obstacle"
+                            var name = app.getString(R.string.nautical_obstacle)
                             var dist = 0.0
                             var bear = 0.0
                             var severity = NotificationState.NORMAL
@@ -1432,7 +1500,7 @@ class SignalKEngine(
                     reader.endObject()
 
                     if (!nextLat.isNaN()) {
-                        dataBroker.updateState { it.copy(serverNextPoint = net.osmand.plus.plugins.nautical.laylines.engine.LatLon(nextLat, nextLon)) }
+                        dataBroker.updateState { it.copy(serverNextPoint = LatLon(nextLat, nextLon)) }
                     }
                     radius?.let { arrivalRadiusMeters = it }
                     if (activeRouteHref != null) isFollowingRoute = true
@@ -1551,7 +1619,7 @@ class SignalKEngine(
 
         val effectiveStw = if (finalState.isStwUnreliable) finalState.speedOverGround else finalState.speedThroughWater
 
-        val perfData = net.osmand.plus.plugins.nautical.network.LivePerformanceData(
+        val perfData = LivePerformanceData(
             speedThroughWater = effectiveStw,
             windSpeedTrue = finalState.windSpeedTrue,
             windAngleTrueWater = finalState.trueWindAngle,
@@ -1584,7 +1652,7 @@ class SignalKEngine(
         dataBroker.updatePerformanceData(perfData)
         
         // Task: Bridge to SailingDataAggregator for unification
-        net.osmand.plus.plugins.nautical.di.SailingDependencyContainer.nmeaMultiplexer?.aggregator?.handleLivePerformanceData(perfData)
+        SailingDependencyContainer.nmeaMultiplexer?.aggregator?.handleLivePerformanceData(perfData)
 
         dataBroker.updateState { finalState }
         
@@ -2011,11 +2079,11 @@ class SignalKEngine(
                     val stbd = valueObj.optJSONObject("starboardTackPoint")
                     val target = valueObj.optJSONObject("targetWaypoint")
                     if (target != null) {
-                        val laylineData = net.osmand.plus.plugins.nautical.laylines.engine.LaylineData(
-                            portTackPoint = port?.let { net.osmand.plus.plugins.nautical.laylines.engine.LatLon(it.optDouble("latitude"), it.optDouble("longitude")) },
-                            starboardTackPoint = stbd?.let { net.osmand.plus.plugins.nautical.laylines.engine.LatLon(it.optDouble("latitude"), it.optDouble("longitude")) },
+                        val laylineData = LaylineData(
+                            portTackPoint = port?.let { LatLon(it.optDouble("latitude"), it.optDouble("longitude")) },
+                            starboardTackPoint = stbd?.let { LatLon(it.optDouble("latitude"), it.optDouble("longitude")) },
                             isFetchable = valueObj.optBoolean("isFetchable", true),
-                            targetWaypoint = net.osmand.plus.plugins.nautical.laylines.engine.LatLon(target.optDouble("latitude"), target.optDouble("longitude"))
+                            targetWaypoint = LatLon(target.optDouble("latitude"), target.optDouble("longitude"))
                         )
                         state = state.copy(serverLaylines = laylineData)
                         updated = true
@@ -2869,21 +2937,16 @@ class SignalKEngine(
     }
 
     private fun calculateLocalXte(lat1: Double, lon1: Double, lat2: Double, lon2: Double, lat3: Double, lon3: Double): Double {
-        val radiusMeters = 6371000.0
-        val d13 = KMapUtils.getDistance(lat1, lon1, lat3, lon3) / radiusMeters
-        val theta13 = (KMapUtils.getBearing(lat1, lon1, lat3, lon3))
-        val theta12 = (KMapUtils.getBearing(lat1, lon1, lat2, lon2))
-        var deltaTheta = theta13 - theta12
-        while (deltaTheta > PI) deltaTheta -= 2 * PI
-        while (deltaTheta < -PI) deltaTheta += 2 * PI
-        return asin(sin(d13) * sin(deltaTheta)) * radiusMeters
+        val dist = KMapUtils.getOrthogonalDistance(lat3, lon3, lat1, lon1, lat2, lon2)
+        val isRight = KMapUtils.rightSide(lat3, lon3, lat1, lon1, lat2, lon2)
+        return if (isRight) dist else -dist
     }
 
     private fun calculateLeeway(state: MarineState): Double {
         val roll = state.roll ?: 0.0
         val stw = state.speedThroughWater ?: 0.0
         val k = app.settings.NAUTICAL_LEEWAY_COEFFICIENT.get()
-        return net.osmand.plus.plugins.nautical.utils.LeewayCalculator.calculateLeewayRadians(roll, stw, k)
+        return LeewayCalculator.calculateLeewayRadians(roll, stw, k)
     }
 
     private fun calculateSetAndDrift(state: MarineState, now: Long): MarineState {
@@ -3085,7 +3148,8 @@ class SignalKEngine(
         if (avgLoad > threshold) {
             if (!state.isActuatorOverloaded) {
                 dataBroker.updateState { it.copy(isActuatorOverloaded = true) }
-                net.osmand.plus.plugins.nautical.audio.NauticalAudioArbiter.getInstance(app).dispatchAlarm(net.osmand.plus.plugins.nautical.audio.AlarmType.ACTUATOR_OVERLOAD, voiceText = "Autopilot Actuator Overload!")
+                val msg = app.getString(R.string.nautical_actuator_overload_alarm)
+                NauticalAudioArbiter.getInstance(app).dispatchAlarm(AlarmType.ACTUATOR_OVERLOAD, voiceText = msg)
 
                 NauticalPlugin.hudManager?.get()?.showBanner(
                     app.getString(R.string.nautical_actuator_maintenance_required),
@@ -3095,7 +3159,7 @@ class SignalKEngine(
             }
         } else if (state.isActuatorOverloaded && avgLoad < (threshold - 0.15)) {
             dataBroker.updateState { it.copy(isActuatorOverloaded = false) }
-            net.osmand.plus.plugins.nautical.audio.NauticalAudioArbiter.getInstance(app).stopAlarm(net.osmand.plus.plugins.nautical.audio.AlarmType.ACTUATOR_OVERLOAD)
+            NauticalAudioArbiter.getInstance(app).stopAlarm(AlarmType.ACTUATOR_OVERLOAD)
             NauticalPlugin.hudManager?.get()?.hideBanner()
         }
     }
@@ -3207,13 +3271,13 @@ class SignalKEngine(
         return state.copy(watermakers = watermakers)
     }
 
-    private fun processCourseObject(course: net.osmand.plus.plugins.nautical.network.SignalKCourse) {
+    private fun processCourseObject(course: SignalKCourse) {
         val nextPoint = course.nextPoint?.position
         if (nextPoint != null) {
             val lat = nextPoint.coordinates[1]
             val lon = nextPoint.coordinates[0]
             if (MarineStateConstants.isValidLat(lat) && MarineStateConstants.isValidLon(lon)) {
-                dataBroker.updateState { it.copy(serverNextPoint = net.osmand.plus.plugins.nautical.laylines.engine.LatLon(lat, lon)) }
+                dataBroker.updateState { it.copy(serverNextPoint = LatLon(lat, lon)) }
             }
         }
         

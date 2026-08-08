@@ -128,8 +128,9 @@ class NauticalMapLayer(context: Context) : OsmandMapLayer(context), SharedPrefer
 
     private val trajectoryPath = Path()
     private val trajectoryHistory = mutableListOf<Pair<Double, Double>>()
-    private var lastTrajectoryPoint: Pair<Double, Double>? = null
     private var lastDrawTileBox: RotatedTileBox? = null
+    
+    private var trajectoryUpdateJob: Job? = null
 
     private class GeodesicVectorCache {
         var lastHeading: Double? = null
@@ -236,6 +237,17 @@ class NauticalMapLayer(context: Context) : OsmandMapLayer(context), SharedPrefer
         val app = context.applicationContext as OsmandApplication
         app.getSharedPreferences(net.osmand.plus.settings.backend.OsmandSettings.SHARED_PREFERENCES_NAME, Context.MODE_PRIVATE)
             .registerOnSharedPreferenceChangeListener(prefChangeListener)
+
+        // Observe trajectory updates from engine for optimized rendering (TASK-PERF-001)
+        trajectoryUpdateJob = layerScope.launch {
+             NauticalPlugin.engine?.trajectoryEventFlow?.collect {
+                 invalidateTrajectory()
+             }
+        }
+    }
+
+    private fun invalidateTrajectory() {
+        lastDrawTileBox = null // Forces path rebuild on next draw
     }
 
     override fun destroyLayer() {
@@ -313,7 +325,7 @@ class NauticalMapLayer(context: Context) : OsmandMapLayer(context), SharedPrefer
         targetHeadingPaint.alpha = 255
         targetHeadingPaint.pathEffect = DashPathEffect(floatArrayOf(25f * density, 15f * density), 0f)
         
-        routePaint.color = if (isSunlight) Color.BLACK else Color.YELLOW
+        routePaint.color = if (isSunlight) Color.BLACK else ContextCompat.getColor(context, R.color.nautical_status_yellow)
         routePaint.strokeWidth = 6f * density * strokeScale
         routePaint.pathEffect = DashPathEffect(floatArrayOf(30f * density, 20f * density), 0f)
 
@@ -334,20 +346,9 @@ class NauticalMapLayer(context: Context) : OsmandMapLayer(context), SharedPrefer
                 (abs(lastTb.center31X - tileBox.center31X) > 1) ||
                 (abs(lastTb.center31Y - tileBox.center31Y) > 1)
             
-            // Optimization: only copy and rebuild if vessel moved significantly or tilebox changed
-            val currentState = engine.getCurrentState()
-            val vesselPos = if ((currentState.latitude != null) && (currentState.longitude != null)) {
-                Pair(currentState.latitude, currentState.longitude)
-            } else null
-            
-            val vesselMoved = (vesselPos != null) && (lastTrajectoryPoint != null) && 
-                (net.osmand.util.MapUtils.getDistance(vesselPos.first, vesselPos.second, lastTrajectoryPoint!!.first, lastTrajectoryPoint!!.second) > 10.0)
-
-            if (vesselMoved || tileBoxChanged || trajectoryHistory.isEmpty()) {
+            if (tileBoxChanged || trajectoryHistory.isEmpty()) {
                 engine.copyTrajectoryTo(trajectoryHistory)
                 if (trajectoryHistory.size >= 2) {
-                    val lastPoint = trajectoryHistory.last()
-                    
                     trajectoryPath.reset()
                     val bounds = tileBox.latLonBounds
                     val culledTop = bounds.top + bounds.height() * 0.1
@@ -375,7 +376,6 @@ class NauticalMapLayer(context: Context) : OsmandMapLayer(context), SharedPrefer
                         }
                         prevVisible = isVisible
                     }
-                    lastTrajectoryPoint = lastPoint
                     lastDrawTileBox = tileBox
                 }
             }
@@ -949,7 +949,11 @@ class NauticalMapLayer(context: Context) : OsmandMapLayer(context), SharedPrefer
             val x2 = tileBox.getPixXFromLatLon(p2.first, p2.second)
             val y2 = tileBox.getPixYFromLatLon(p2.first, p2.second)
 
-            routePaint.color = if (hazardousSegments.contains(i)) Color.RED else Color.YELLOW
+            routePaint.color = if (hazardousSegments.contains(i)) {
+                ContextCompat.getColor(app, R.color.nautical_status_red)
+            } else {
+                ContextCompat.getColor(app, R.color.nautical_status_yellow)
+            }
             if (isCloseQuarters && !hazardousSegments.contains(i)) {
                 routePaint.alpha = 80
             } else {

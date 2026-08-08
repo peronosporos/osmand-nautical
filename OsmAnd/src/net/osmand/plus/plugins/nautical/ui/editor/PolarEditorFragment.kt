@@ -85,7 +85,9 @@ class PolarEditorFragment : Fragment() {
             val protocol = if (secure) "https" else "http"
             val serverUrl = "$protocol://$ip:$port"
             
-            viewModel.savePolarsToServer(serverUrl, "default-polar") { success ->
+            val polarId = performanceViewModel.availablePolars.value.entries.find { it.value.name == performanceViewModel.activePolarName.value }?.key ?: "default"
+
+            viewModel.savePolarsToServer(serverUrl, polarId) { success ->
                 activity?.runOnUiThread {
                     val msg = if (success) {
                         getString(R.string.nautical_polar_save_success)
@@ -93,6 +95,9 @@ class PolarEditorFragment : Fragment() {
                         getString(R.string.nautical_polar_save_failed)
                     }
                     (activity?.application as? net.osmand.plus.OsmandApplication)?.showToastMessage(msg)
+                    if (success) {
+                         performanceViewModel.refreshPolars()
+                    }
                 }
             }
         }
@@ -171,8 +176,19 @@ class PolarEditorFragment : Fragment() {
     }
 
     private fun showTwsPicker() {
-        val twsOptions = arrayOf(6.0, 8.0, 10.0, 12.0, 14.0, 16.0, 20.0)
-        val names = twsOptions.map { "$it ${getString(R.string.nautical_unit_knots)}" }.toTypedArray()
+        val profile = net.osmand.plus.plugins.nautical.di.SailingDependencyContainer.performanceRepository?.activePolarProfile?.value
+        val availableTws = profile?.tws ?: emptyList()
+        
+        val twsOptions = mutableListOf(6.0, 8.0, 10.0, 12.0, 14.0, 16.0, 20.0)
+        // Add existing TWS from profile if not in default list
+        availableTws.forEach { if (!twsOptions.contains(it)) twsOptions.add(it) }
+        twsOptions.sort()
+
+        val names = twsOptions.map { tws ->
+            val hasData = availableTws.any { kotlin.math.abs(it - tws) < 0.1 }
+            val suffix = if (hasData) " (Active)" else " (New)"
+            "$tws ${getString(R.string.nautical_unit_knots)}$suffix"
+        }.toTypedArray()
         
         androidx.appcompat.app.AlertDialog.Builder(requireContext())
             .setTitle(R.string.nautical_tws)

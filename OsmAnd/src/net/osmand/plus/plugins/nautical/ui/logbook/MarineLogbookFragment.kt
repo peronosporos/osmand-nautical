@@ -129,14 +129,22 @@ class MarineLogbookFragment : BaseOsmAndFragment() {
         requireActivity().addMenuProvider(
             object : MenuProvider {
                 override fun onCreateMenu(menu: Menu, menuInflater: MenuInflater) {
-                    menu.add(0, EXPORT_CSV_ID, 0, getString(R.string.nautical_logbook_export_csv))
+                    val syncItem = menu.add(0, SYNC_SERVER_ID, 0, "Sync with Server")
+                    syncItem.setShowAsAction(MenuItem.SHOW_AS_ACTION_IF_ROOM)
+                    syncItem.setIcon(R.drawable.ic_action_import)
+                    
+                    menu.add(0, EXPORT_CSV_ID, 1, getString(R.string.nautical_logbook_export_csv))
                         .setShowAsAction(MenuItem.SHOW_AS_ACTION_NEVER)
-                    menu.add(0, EXPORT_GPX_ID, 1, getString(R.string.nautical_logbook_export_gpx))
+                    menu.add(0, EXPORT_GPX_ID, 2, getString(R.string.nautical_logbook_export_gpx))
                         .setShowAsAction(MenuItem.SHOW_AS_ACTION_NEVER)
                 }
 
                 override fun onMenuItemSelected(menuItem: MenuItem): Boolean {
                     return when (menuItem.itemId) {
+                        SYNC_SERVER_ID -> {
+                            viewModel.syncWithServer()
+                            true
+                        }
                         EXPORT_CSV_ID -> {
                             viewModel.requestExport(MarineLogbookViewModel.ExportFormat.CSV)
                             true
@@ -182,6 +190,7 @@ class MarineLogbookFragment : BaseOsmAndFragment() {
     override fun onOptionsItemSelected(item: MenuItem): Boolean = false
 
     companion object {
+        private const val SYNC_SERVER_ID = 0
         private const val EXPORT_CSV_ID = 1
         private const val EXPORT_GPX_ID = 2
     }

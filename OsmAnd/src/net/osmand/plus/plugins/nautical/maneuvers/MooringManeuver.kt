@@ -39,13 +39,25 @@ class MooringManeuver(app: OsmandApplication) : ManeuverEngine(app) {
         }
     }
 
-    fun updateState(state: MarineState) {
+    override fun onStateUpdate(state: MarineState) {
         if (currentState == ManeuverStateMachine.State.EXECUTING) {
             val dist = calculateDistanceToTarget(state) ?: 100.0
             val sog = state.speedOverGround ?: 0.0
             
             if (dist < 10.0 && sog > 2.5) {
                 transitionToAborted("Speed too high for mooring")
+                return
+            }
+
+            // Auto completion: within 3m and stopped
+            if (dist < 3.0 && sog < 0.1) {
+                pushInstruction("Mooring Completed")
+                pushProgress(100)
+                transitionToCompleted()
+            } else if (dist < 30.0) {
+                pushInstruction("Approach: ${dist.toInt()}m")
+                val progress = ((1.0 - (dist / 30.0).coerceIn(0.0, 1.0)) * 100).toInt()
+                pushProgress(progress)
             }
         }
     }

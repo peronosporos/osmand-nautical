@@ -63,6 +63,12 @@ object SignalKUnitConverter {
     ): Pair<String, String> {
         if ((value == null) || value.isNaN() || value.isInfinite()) return context.getString(R.string.n_a) to ""
 
+        val app = context.applicationContext as OsmandApplication
+
+        if (path.contains("timeToWaypoint", ignoreCase = true) || path.endsWith(".ttw")) {
+            return OsmAndFormatter.getFormattedDuration(value.toLong(), app) to ""
+        }
+
         val isAngle = path.contains("angle", ignoreCase = true) || path.contains("heading", ignoreCase = true) ||
                       path.contains("course", ignoreCase = true) || path.contains("direction", ignoreCase = true) ||
                       path.contains("roll") || path.contains("pitch") || path.contains("yaw")
@@ -89,8 +95,6 @@ object SignalKUnitConverter {
             else -> false
         }
         if (isOutlier) return "---" to ""
-
-        val app = context.applicationContext as OsmandApplication
 
         return when {
             path.contains("speed", ignoreCase = true) || path.endsWith("STW") || path.endsWith("SOG") -> {

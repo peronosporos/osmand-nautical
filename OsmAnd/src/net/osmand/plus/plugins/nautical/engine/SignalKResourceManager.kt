@@ -15,7 +15,17 @@ import net.osmand.plus.OsmandApplication
 import net.osmand.plus.plugins.nautical.NauticalPlugin
 import net.osmand.plus.plugins.nautical.logbook.data.LogbookEntry
 import net.osmand.plus.helpers.TargetPointsHelper
-import net.osmand.plus.plugins.nautical.network.*
+import net.osmand.plus.plugins.nautical.network.SignalKResourceResponse
+import net.osmand.plus.plugins.nautical.network.SignalKRoute
+import net.osmand.plus.plugins.nautical.network.SignalKRouteFeature
+import net.osmand.plus.plugins.nautical.network.SignalKLineString
+import net.osmand.plus.plugins.nautical.network.SignalKWaypoint
+import net.osmand.plus.plugins.nautical.network.SignalKPointFeature
+import net.osmand.plus.plugins.nautical.network.SignalKPoint
+import net.osmand.plus.plugins.nautical.network.SignalKNote
+import net.osmand.plus.plugins.nautical.network.SignalKChecklist
+import net.osmand.plus.plugins.nautical.network.SignalKRestService
+import net.osmand.plus.plugins.nautical.utils.TemporalUtils
 import java.io.File
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -327,7 +337,7 @@ class SignalKResourceManager(
             title = title,
             description = text,
             position = SignalKPoint(coordinates = listOf(lon, lat)),
-            timestamp = net.osmand.plus.plugins.nautical.utils.TemporalUtils.formatIso8601(System.currentTimeMillis())
+            timestamp = TemporalUtils.formatIso8601(System.currentTimeMillis())
         )
         val response = if (uuid != null) {
             service.updateNote(uuid, note)

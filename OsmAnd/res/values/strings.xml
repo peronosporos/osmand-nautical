@@ -1,4 +1,40 @@
 <resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
+    <string name="nautical_offline_status">Offline</string>
+    <string name="nautical_switch_panel_desc">Configure and control electrical switches via Signal K</string>
+    <string name="nautical_boat_ai_desc">Enable AI-assisted vessel optimization and insights</string>
+    <string name="nautical_notifications_desc">Manage Signal K alarms and notifications</string>
+    <string name="nautical_server_routes_desc">Manage routes stored on your Signal K server</string>
+    <string name="nautical_server_charts_desc">View charts served by your Signal K server</string>
+    <string name="nautical_disconnected_performance_msg">Performance data requires an active Signal K connection</string>
+    <string name="nautical_logbook_sync_msg">Logbook synchronization requires an active Signal K connection</string>
+    <string name="nautical_clear_data_confirm">Are you sure you want to clear all marine telemetry buffers and history? This cannot be undone.</string>
+    <string name="nautical_test_connection">Test Connection</string>
+    <string name="nautical_connection_test_success">Connection Successful!</string>
+    <string name="nautical_connection_test_failed">Connection Failed: %1$s</string>
+    <string name="nautical_anchoring_scope_msg">Scope set to %1$.1f. Paying out %2$s %3$s of rode.</string>
+    <string name="nautical_anchoring_dropping">Dropping Anchor</string>
+    <string name="nautical_anchoring_windlass_prompt">Windlass Control Available. Lower anchor now?</string>
+    <string name="nautical_anchoring_target_rode">Target Rode Reached</string>
+    <string name="nautical_anchoring_settling">Rode Out - Settling Vessel...</string>
+    <string name="nautical_anchoring_paying_out">Paying out: %1$.1f m / %2$.1f m</string>
+    <string name="nautical_anchoring_set">Vessel Settled - Anchor Set</string>
+    <string name="nautical_docking_ap_active">Autopilot active. Disengage before approach.</string>
+    <string name="nautical_docking_ap_disengaged">Autopilot disengaged for approach.</string>
+    <string name="nautical_docking_executing">Docking maneuver executing. Monitor distance and speed.</string>
+    <string name="nautical_docking_successful">Docking Successful</string>
+    <string name="nautical_docking_approaching">Approaching: %1$s @ %2$s kn</string>
+    <string name="nautical_layline_reached_gybe">Layline reached. Ready to gybe.</string>
+    <string name="nautical_layline_reached_tack">Layline reached. Ready to tack.</string>
+    <string name="nautical_tacking_approaching_wind">Tacking: Approaching Wind</string>
+    <string name="nautical_tacking_prepare">Tacking. Prepare to tack.</string>
+    <string name="nautical_sheet_release">Sheet Release!</string>
+    <string name="nautical_sheet_pull">Sheet Pull!</string>
+    <string name="nautical_tack_completed">Tack Completed</string>
+    <string name="nautical_warn_stalled_in_irons_tts">Warning: Stalled in irons. Check sheets and speed.</string>
+    <string name="nautical_maneuver_aborted_tts">Maneuver aborted: %1$s. Autopilot disengaged.</string>
+    <string name="nautical_signal_k_waypoint">Signal K Waypoint</string>
+    <string name="nautical_vhf_channel_fmt">Channel: %1$s</string>
+    <string name="nautical_timeout">TIMEOUT</string>
     <string name="nautical_maneuver_aborted_format">Maneuver Aborted: %1$s</string>
     <string name="nautical_warn_stalled_in_irons">Stalled in irons. Restart tack?</string>
     <string name="nautical_confirm_helm_into_wind">Point bow into wind automatically?</string>
@@ -713,6 +749,9 @@
 	<string name="nautical_anchor_label_tide">Max Expected Tide Rise (m)</string>
 	<string name="nautical_anchor_label_bow_offset">GPS Antenna Bow Offset (m)</string>
 	<string name="nautical_anchor_label_safety_margin">Safety Margin (m)</string>
+	<string name="nautical_anchor_accuracy_threshold">GPS Accuracy Threshold (m)</string>
+	<string name="nautical_anchor_clear_watch">Clear Anchor Watch</string>
+	<string name="nautical_follow_target">Follow Target</string>
 	<string name="nautical_anchor_label_lat">Latitude</string>
 	<string name="nautical_anchor_label_lon">Longitude</string>
 	<string name="nautical_compass_wizard">Compass Calibration Wizard</string>
@@ -952,7 +991,7 @@
 	<string name="nautical_connection_stale">STALE</string>
 	<string name="nautical_connection_disconnected">DISCONNECTED</string>
 	<string name="nautical_receive_in_background">Keep SignalK connection active</string>
-	<string name="nautical_receive_in_background_description">Keep SignalK connection alive when the screen is off or the app is in background.</string>
+	<string name="nautical_receive_in_background_description">Keep SignalK connection alive when the screen is off. CRITICAL for Anchor Watch and real-time hazard alerts.</string>
 
 	<string name="nautical_show_laylines">Show Laylines</string>
 	<string name="nautical_show_wind_shifts">Show Wind Shifts</string>
@@ -7723,4 +7762,13 @@ Download tile maps directly, or copy them as SQLite database files to OsmAnd\'s 
     <string name="routing_attr_freeride_policy_description">\'Freeride\' and \'Off-piste\' are unofficial routes and passages. Typically ungroomed, unmaintained and not checked in the evening. Enter at your own risk.</string>
     <string name="voice_prompts_timetable">Voice prompts times</string>
     <string name="nautical_gust_label">GUST</string>
+    <string name="nautical_battery_12v">12V System</string>
+    <string name="nautical_battery_24v">24V System</string>
+    <string name="nautical_battery_48v">48V System</string>
+    <string name="nautical_sk_unauthorized">Signal K Unauthorized</string>
+    <string name="nautical_unknown_vessel">Unknown Vessel</string>
+    <string name="nautical_obstacle">Obstacle</string>
+    <string name="nautical_sk_exported_description">Exported from OsmAnd Nautical</string>
+    <string name="nautical_sk_updated_description">Updated from OsmAnd Nautical</string>
+    <string name="nautical_crash_recovery_notes">CRASH RECOVERY: %1$s\n%2$s</string>
 </resources>

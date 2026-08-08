@@ -92,7 +92,7 @@ class TacticalProcessor(private val app: OsmandApplication) {
 
     private fun triggerLaylineReached(isDownwind: Boolean) {
         // Announce TTS prompt
-        val msg = if (isDownwind) "Layline reached. Ready to gybe." else "Layline reached. Ready to tack."
+        val msg = if (isDownwind) app.getString(net.osmand.plus.R.string.nautical_layline_reached_gybe) else app.getString(net.osmand.plus.R.string.nautical_layline_reached_tack)
         app.player?.let { player ->
             player.playCommands(player.newCommandBuilder().attention(msg))
         }

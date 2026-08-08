@@ -1,0 +1,22 @@
+- [x] Connection & Connectivity
+    - [x] Debounce connection status Toasts in `NauticalPlugin.kt`
+    - [x] Relax `NauticalTrustManager` SSL checks when `trustAll` is enabled
+    - [x] Implement mDNS Discovery implementation in `NauticalSetupWizardDialog.kt`
+    - [x] Add "Test Connection" functionality to Setup Wizard
+- [x] UI/UX Consistency & Layout
+    - [x] Refine `NauticalHudManager.kt` spatial arbitration (avoid standard widget overlap)
+    - [x] Implement HUD "Compact Mode" for multiple active headers
+    - [x] Refactor `NauticalTechnicalStatsFragment.kt` click listeners and XML styles
+    - [x] Add visual feedback for "Touch Guard" screen lock
+- [x] Functional & "Synergy" Gaps
+    - [x] Implement bi-directional anchor sync in `AnchorDriftWatchdog.kt`
+    - [x] Add Buddy Management toggle in `NauticalAisDetailsDialog.kt`
+    - [x] Implement logbook note push-back to Signal K server
+- [x] Safety & Stability
+    - [x] Fix data loss risk in `SignalKEngine.kt` legacy buffer loading
+    - [x] Add "Recovery" state indicators for automated maneuvers
+    - [x] Enforce strict audio alarm prioritization in `SafetyStateArbitrator.kt`
+    - [x] Add input debounce to `NauticalPilotWidget.kt`
+- [x] Localization & Technical Debt
+    - [x] Extract hardcoded strings to `strings.xml`
+    - [x] Consolidate duplicate settings between Plugin and Map Context Menu

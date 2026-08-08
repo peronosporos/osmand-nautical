@@ -28,6 +28,7 @@ class ManeuverOverlayWidget(
     private var windText: TextView? = null
     private var sailPlanText: TextView? = null
     private var executeBtn: Button? = null
+    private var doneBtn: Button? = null
     private var cancelBtn: Button? = null
     private var collisionAlertText: TextView? = null
     private var touchLockText: TextView? = null
@@ -48,6 +49,7 @@ class ManeuverOverlayWidget(
         windText = view.findViewById(R.id.wind_text)
         sailPlanText = view.findViewById(R.id.sail_plan_text)
         executeBtn = view.findViewById(R.id.btn_execute)
+        doneBtn = view.findViewById(R.id.btn_done)
         cancelBtn = view.findViewById(R.id.btn_cancel)
         collisionAlertText = view.findViewById(R.id.collision_alert_text)
         touchLockText = view.findViewById(R.id.touch_lock_text)
@@ -55,6 +57,9 @@ class ManeuverOverlayWidget(
 
         executeBtn?.setOnClickListener {
             manager.execute()
+        }
+        doneBtn?.setOnClickListener {
+            manager.completeActiveManeuver()
         }
         cancelBtn?.setOnClickListener {
             manager.abort()
@@ -153,6 +158,7 @@ class ManeuverOverlayWidget(
         windText?.setTextColor(accentColor)
         
         executeBtn?.visibility = if (manager.state == ManeuverState.ARMED) View.VISIBLE else View.GONE
+        doneBtn?.visibility = if (manager.state == ManeuverState.EXECUTING) View.VISIBLE else View.GONE
         progressBar?.visibility = if (manager.state == ManeuverState.EXECUTING) View.VISIBLE else View.GONE
         
         if (manager.state == ManeuverState.IDLE) {

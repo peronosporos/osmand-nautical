@@ -52,9 +52,9 @@ class NauticalCompassWizardDialog : BaseMaterialBottomSheetDialogFragment() {
                     viewLifecycleOwner.lifecycleScope.launch {
                         val startTime = System.currentTimeMillis()
                         var confirmed = false
-                        while ((System.currentTimeMillis() - startTime) < 3000L) {
+                        while ((System.currentTimeMillis() - startTime) < 5000L) {
                             val state = NauticalPlugin.engine?.getCurrentState()
-                            if (state != null) {
+                            if (state?.pypilotCalibration?.isCalibrating == true) {
                                 confirmed = true
                                 break
                             }

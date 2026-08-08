@@ -102,13 +102,23 @@
     <com.google.android.material.button.MaterialButton
         android:id="@+id/btn_execute"
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
+        android:layout_height="wrap_content"
         android:text="@string/maneuver_execute"
         android:textSize="32sp"
         android:textStyle="bold"
         android:backgroundTint="#00FF00"
         android:textColor="#000000" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btn_done"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/shared_string_done"
+        android:textSize="32sp"
+        android:textStyle="bold"
+        android:backgroundTint="#00FF00"
+        android:textColor="#000000"
+        android:visibility="gone" />
 
     <com.google.android.material.button.MaterialButton
         android:id="@+id/btn_cancel"

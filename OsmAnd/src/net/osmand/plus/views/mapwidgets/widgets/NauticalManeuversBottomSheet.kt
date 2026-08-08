@@ -54,10 +54,21 @@ class NauticalManeuversBottomSheet : BaseMaterialBottomSheetDialogFragment() {
                 (holder.itemView as TextView).text = item.second
                 holder.itemView.setOnClickListener {
                     val instance = NauticalPlugin.getInstance()
-                    if (item.first == "weighing_anchor") {
-                        val lat = settings.NAUTICAL_ANCHOR_LAT.get()
-                        val lon = settings.NAUTICAL_ANCHOR_LON.get()
-                        (instance?.maneuverManager?.getManeuverById("weighing_anchor") as? net.osmand.plus.plugins.nautical.maneuvers.WeighingAnchorManeuver)?.setDropPoint(lat, lon)
+                    val lat = arguments?.getDouble("lat") ?: 0.0
+                    val lon = arguments?.getDouble("lon") ?: 0.0
+
+                    when (item.first) {
+                        "weighing_anchor" -> {
+                            val aLat = settings.NAUTICAL_ANCHOR_LAT.get()
+                            val aLon = settings.NAUTICAL_ANCHOR_LON.get()
+                            (instance?.maneuverManager?.getManeuverById("weighing_anchor") as? net.osmand.plus.plugins.nautical.maneuvers.WeighingAnchorManeuver)?.setDropPoint(aLat, aLon)
+                        }
+                        "mooring" -> {
+                            (instance?.maneuverManager?.getManeuverById("mooring") as? net.osmand.plus.plugins.nautical.maneuvers.MooringManeuver)?.setTarget(lat, lon)
+                        }
+                        "med_mooring" -> {
+                            (instance?.maneuverManager?.getManeuverById("med_mooring") as? net.osmand.plus.plugins.nautical.maneuvers.MedMooringManeuver)?.setTarget(lat, lon)
+                        }
                     }
                     instance?.maneuverManager?.setActiveManeuver(item.first)
                     dismiss()
@@ -76,8 +87,13 @@ class NauticalManeuversBottomSheet : BaseMaterialBottomSheetDialogFragment() {
     private class ManeuverViewHolder(view: View) : RecyclerView.ViewHolder(view)
 
     companion object {
-        fun show(fm: androidx.fragment.app.FragmentManager) {
-            NauticalManeuversBottomSheet().show(fm, "maneuvers_sheet")
+        fun show(fm: androidx.fragment.app.FragmentManager, lat: Double = 0.0, lon: Double = 0.0) {
+            val fragment = NauticalManeuversBottomSheet()
+            val args = Bundle()
+            args.putDouble("lat", lat)
+            args.putDouble("lon", lon)
+            fragment.arguments = args
+            fragment.show(fm, "maneuvers_sheet")
         }
     }
 }

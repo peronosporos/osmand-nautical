@@ -9,7 +9,6 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.view.ViewStub
-import android.view.WindowManager
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.core.content.ContextCompat
@@ -43,12 +42,6 @@ class NauticalPilotBottomSheet : BaseMaterialBottomSheetDialogFragment() {
         isArmedPort = false
         isArmedStbd = false
         updateTackButtons()
-    }
-    private var autoDismissHandler = Handler(Looper.getMainLooper())
-    private val autoDismissRunnable = Runnable {
-        if (isAdded) {
-            dismissAllowingStateLoss()
-        }
     }
     private var lastSog: Double? = null
     private var lastStw: Double? = null
@@ -177,10 +170,7 @@ class NauticalPilotBottomSheet : BaseMaterialBottomSheetDialogFragment() {
 
     override fun onStart() {
         super.onStart()
-        dialog?.window?.let { window ->
-            window.clearFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
-            window.setBackgroundDrawableResource(android.R.color.transparent)
-        }
+        dialog?.window?.setBackgroundDrawableResource(android.R.color.transparent)
         (dialog as? com.google.android.material.bottomsheet.BottomSheetDialog)?.let { sheetDialog ->
             sheetDialog.findViewById<View>(com.google.android.material.R.id.design_bottom_sheet)?.let { bottomSheet ->
                 val behavior = com.google.android.material.bottomsheet.BottomSheetBehavior.from(bottomSheet)
@@ -189,21 +179,18 @@ class NauticalPilotBottomSheet : BaseMaterialBottomSheetDialogFragment() {
                 val screenHeightDp = metrics.heightPixels / metrics.density
 
                 if (isLandscape || (screenHeightDp < 600)) {
-                    behavior.peekHeight = (metrics.heightPixels * 0.7).toInt()
+                    behavior.peekHeight = (metrics.heightPixels * 0.85).toInt()
                     behavior.maxHeight = metrics.heightPixels
                 } else {
-                    behavior.maxHeight = (metrics.heightPixels * 0.6).toInt()
-                    behavior.peekHeight = (metrics.heightPixels * 0.4).toInt()
+                    behavior.maxHeight = (metrics.heightPixels * 0.85).toInt()
+                    behavior.peekHeight = (metrics.heightPixels * 0.6).toInt()
                 }
                 behavior.state = com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_COLLAPSED
             }
         }
-        resetAutoDismissTimer()
     }
 
     private fun resetAutoDismissTimer() {
-        autoDismissHandler.removeCallbacks(autoDismissRunnable)
-        autoDismissHandler.postDelayed(autoDismissRunnable, 60000)
         updateTackButtons()
     }
 
@@ -922,7 +909,6 @@ class NauticalPilotBottomSheet : BaseMaterialBottomSheetDialogFragment() {
 
     override fun onDestroyView() {
         super.onDestroyView()
-        autoDismissHandler.removeCallbacks(autoDismissRunnable)
         armHandler.removeCallbacks(resetArmRunnable)
     }
 }

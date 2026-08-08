@@ -3,8 +3,8 @@ package net.osmand.plus.plugins.nautical.ui
 import android.content.Context
 import android.graphics.*
 import androidx.lifecycle.lifecycleScope
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.*
+import kotlin.time.Duration.Companion.milliseconds
 import net.osmand.core.jni.MapMarkersCollection
 import net.osmand.core.jni.SingleSkImage
 import net.osmand.core.jni.VectorLinesCollection
@@ -30,7 +30,7 @@ class NauticalAisLayer(context: Context) : OsmandMapLayer(context), ContextMenuL
         const val START_ZOOM = 6
         const val START_ZOOM_SHOW_SHAPE = 16
         const val START_ZOOM_SHOW_DIRECTION = 10
-        private const val AIS_RENDER_REFRESH_INTERVAL_MS = 1000L
+        private const val AIS_RENDER_REFRESH_INTERVAL_MS = 200L
     }
 
     private val plugin: NauticalPlugin? = NauticalPlugin.getInstance()
@@ -54,15 +54,24 @@ class NauticalAisLayer(context: Context) : OsmandMapLayer(context), ContextMenuL
     override fun initLayer(view: OsmandMapTileView) {
         super.initLayer(view)
         
-        val manager = plugin?.aisManager
         val activity = view.mapActivity
-        if ((manager != null) && (activity != null)) {
+        if (activity != null) {
             aisUpdateJob = activity.lifecycleScope.launch {
-                manager.aisEvents.collect { event ->
-                    when (event) {
-                        is NauticalAisManager.AisEvent.Updated -> onAisObjectReceived(event.obj)
-                        is NauticalAisManager.AisEvent.Removed -> onAisObjectRemoved(event.obj)
+                // Task: Robust AIS subscription loop to handle plugin re-enabling
+                while (isActive) {
+                    val manager = plugin?.aisManager
+                    if (manager != null) {
+                        // Load initial state
+                        manager.getAisObjects().forEach { onAisObjectReceived(it) }
+                        
+                        manager.aisEvents.collect { event ->
+                            when (event) {
+                                is NauticalAisManager.AisEvent.Updated -> onAisObjectReceived(event.obj)
+                                is NauticalAisManager.AisEvent.Removed -> onAisObjectRemoved(event.obj)
+                            }
+                        }
                     }
+                    delay(2000.milliseconds) // Retry subscription if manager is missing
                 }
             }
         }

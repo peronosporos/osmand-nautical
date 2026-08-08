@@ -40,4 +40,12 @@
 
     </GridLayout>
 
+    <Button
+        android:id="@+id/btn_toggle_buddy"
+        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:text="@string/nautical_add_to_buddies" />
+
 </LinearLayout>

@@ -61,7 +61,7 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
 
     private fun updateConnectionStatusSummaries() {
         val connected = NauticalPlugin.getInstance()?.isSignalKConnected() == true
-        val status = if (connected) "" else " (Offline - Server not connected)"
+        val status = if (connected) "" else " (${getString(R.string.nautical_offline_status)})"
         
         val needsConnection = listOf(
             "nautical_switch_panel",
@@ -74,14 +74,14 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
         needsConnection.forEach { key ->
             findPreference<Preference>(key)?.let { pref ->
                 val baseSummary = when(key) {
-                    "nautical_switch_panel" -> "Comprehensive electrical control and status"
-                    "nautical_boat_ai" -> "Chat with your vessel via Signal K AI Bridge"
-                    "nautical_notifications" -> "View and acknowledge Signal K alarms"
-                    "nautical_server_routes" -> "Browse and navigate routes from Signal K server"
-                    "nautical_server_charts" -> "Browse and enable charts from Signal K server"
+                    "nautical_switch_panel" -> getString(R.string.nautical_switch_panel_desc)
+                    "nautical_boat_ai" -> getString(R.string.nautical_boat_ai_desc)
+                    "nautical_notifications" -> getString(R.string.nautical_notifications_desc)
+                    "nautical_server_routes" -> getString(R.string.nautical_server_routes_desc)
+                    "nautical_server_charts" -> getString(R.string.nautical_server_charts_desc)
                     else -> ""
                 }
-                pref.summary = baseSummary + status
+                pref.summary = "$baseSummary$status"
             }
         }
     }
@@ -147,6 +147,14 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
     }
 
     private fun setupMaintenanceCategory() {
+        findPreference<Preference>("nautical_diagnostics")?.apply {
+            setIcon(R.drawable.ic_action_info)
+            setOnPreferenceClickListener {
+                showInstance(requireActivity(), SettingsScreenType.SIGNALK_DIAGNOSTICS)
+                true
+            }
+        }
+
         findPreference<Preference>("nautical_advanced_tuning")?.apply {
             setIcon(R.drawable.ic_action_settings)
             setOnPreferenceClickListener {
@@ -209,7 +217,7 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
                 // Task 60: Add confirmation dialog to prevent accidental data loss
                 AlertDialog.Builder(requireContext())
                     .setTitle(R.string.nautical_clear_marine_data)
-                    .setMessage("This will permanently delete all logbooks, trajectories, and historical telemetry. Proceed?")
+                    .setMessage(R.string.nautical_clear_data_confirm)
                     .setPositiveButton(R.string.shared_string_delete) { _, _ ->
                         NauticalPlugin.getInstance()?.clearMarineData()
                     }
@@ -436,6 +444,26 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
             summary = getString(source.titleId)
         }
 
+        findPreference<EditTextPreferenceEx>(settings.NAUTICAL_BT_DEVICE_ADDRESS.id)?.apply {
+            setIcon(R.drawable.ic_action_bluetooth)
+            summary = settings.NAUTICAL_BT_DEVICE_ADDRESS.get().ifEmpty { getString(R.string.shared_string_none) }
+        }
+
+        findPreference<EditTextPreferenceEx>(settings.NAUTICAL_USB_DEVICE_NAME.id)?.apply {
+            setIcon(R.drawable.ic_action_settings)
+            summary = settings.NAUTICAL_USB_DEVICE_NAME.get().ifEmpty { getString(R.string.shared_string_none) }
+        }
+
+        findPreference<ListPreferenceEx>(settings.NAUTICAL_NMEA_BAUD_RATE.id)?.apply {
+            setIcon(R.drawable.ic_action_settings)
+            val baudRates = arrayOf("4800", "9600", "19200", "38400", "57600", "115200")
+            entries = baudRates
+            entryValues = baudRates
+            val current = settings.NAUTICAL_NMEA_BAUD_RATE.get().toString()
+            value = current
+            summary = current
+        }
+
         findPreference<ListPreferenceEx>(settings.NAUTICAL_RECEIVE_IN_BACKGROUND.id)?.apply {
             setIcon(R.drawable.ic_action_play_dark)
             entries = arrayOf(getString(R.string.shared_string_yes), getString(R.string.shared_string_no))
@@ -564,6 +592,7 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
 
         setupDepthPreference(settings.NAUTICAL_ANCHOR_DEPTH.id, R.string.nautical_anchor_label_depth, R.drawable.ic_action_anchor)
         setupDepthPreference(settings.NAUTICAL_ANCHOR_TIDE_RISE.id, R.string.nautical_anchor_label_tide, R.drawable.ic_action_additional_option)
+        setupDepthPreference(settings.NAUTICAL_ANCHOR_FREEBOARD.id, R.string.nautical_anchor_label_freeboard, R.drawable.ic_action_altitude)
         setupDepthPreference(settings.NAUTICAL_ANCHOR_BOW_OFFSET.id, R.string.nautical_anchor_label_bow_offset, R.drawable.ic_action_additional_option)
         setupDepthPreference(settings.NAUTICAL_ANCHOR_SAFETY_MARGIN.id, R.string.nautical_anchor_label_safety_margin, R.drawable.ic_action_additional_option)
 
@@ -572,9 +601,26 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
             summary = "${settings.NAUTICAL_ANCHOR_SCOPE_RATIO.get()}:1"
             setOnBindEditTextListener { it.inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL }
         }
+
+        findPreference<EditTextPreferenceEx>(settings.NAUTICAL_ANCHOR_ACCURACY_THRESHOLD.id)?.apply {
+            setIcon(R.drawable.ic_action_additional_option)
+            summary = "${settings.NAUTICAL_ANCHOR_ACCURACY_THRESHOLD.get()} m"
+            setOnBindEditTextListener { it.inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL }
+        }
+
+        findPreference<Preference>("nautical_clear_anchor")?.apply {
+            setIcon(R.drawable.ic_action_delete_dark)
+            setOnPreferenceClickListener {
+                settings.NAUTICAL_ANCHOR_LAT.set(0.0)
+                settings.NAUTICAL_ANCHOR_LON.set(0.0)
+                app.showToastMessage(R.string.nautical_anchor_cleared)
+                true
+            }
+        }
     }
 
     private fun setupMapOverlaysCategory() {
+        val plugin = NauticalPlugin.getInstance()
         // Group Telemetry Widgets
         findPreference<PreferenceCategory>("telemetry_widgets_group")?.apply {
             title = "Telemetry (Text Widgets)"
@@ -591,11 +637,20 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
             settings.NAUTICAL_SHOW_CURRENT_VECTOR,
             settings.NAUTICAL_RESTRICTED_AREAS_ENABLED,
             settings.NAUTICAL_SHOW_WINDY_TILES,
-            settings.NAUTICAL_SHOW_RAIN_RADAR
+            settings.NAUTICAL_SHOW_RAIN_RADAR,
+            settings.NAUTICAL_SHOW_OPENMETEO_TILES,
+            settings.NAUTICAL_SHOW_NOAA_TILES,
+            settings.NAUTICAL_SHOW_LOGBOOK_LAYER,
+            settings.NAUTICAL_SHOW_PMTILES
         )
         overlays.forEach { pref ->
             findPreference<SwitchPreferenceEx>(pref.id)?.apply {
                 setIcon(R.drawable.ic_action_additional_option)
+                setOnPreferenceChangeListener { _, newValue ->
+                    pref.set(newValue as Boolean)
+                    plugin?.requestRefresh()
+                    true
+                }
             }
         }
 
@@ -612,24 +667,24 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
 
     private fun setupDepthPreference(id: String, titleId: Int, iconId: Int) {
         val safetyManager = NauticalPlugin.getInstance()?.safetyManager
-        val unitLabel = safetyManager?.getDepthUnitLabel() ?: getString(R.string.nautical_unit_meters)
-
         findPreference<EditTextPreferenceEx>(id)?.apply {
             setIcon(iconId)
-            title = "${getString(titleId)} ($unitLabel)"
-            dialogTitle = title
             
             val meters = when (id) {
                 settings.NAUTICAL_VESSEL_DRAFT.id -> settings.NAUTICAL_VESSEL_DRAFT.get().toDouble()
+                settings.NAUTICAL_AIR_DRAFT.id -> settings.NAUTICAL_AIR_DRAFT.get().toDouble()
                 settings.NAUTICAL_KEEL_OFFSET.id -> settings.NAUTICAL_KEEL_OFFSET.get().toDouble()
                 settings.NAUTICAL_SAFETY_MARGIN.id -> settings.NAUTICAL_SAFETY_MARGIN.get().toDouble()
                 settings.NAUTICAL_ANCHOR_DEPTH.id -> settings.NAUTICAL_ANCHOR_DEPTH.get().toDouble()
                 settings.NAUTICAL_ANCHOR_TIDE_RISE.id -> settings.NAUTICAL_ANCHOR_TIDE_RISE.get().toDouble()
                 settings.NAUTICAL_ANCHOR_BOW_OFFSET.id -> settings.NAUTICAL_ANCHOR_BOW_OFFSET.get().toDouble()
+                settings.NAUTICAL_ANCHOR_FREEBOARD.id -> settings.NAUTICAL_ANCHOR_FREEBOARD.get().toDouble()
                 settings.NAUTICAL_ANCHOR_SAFETY_MARGIN.id -> settings.NAUTICAL_ANCHOR_SAFETY_MARGIN.get().toDouble()
                 else -> 0.0
             }
             val (v, u) = SignalKUnitConverter.formatValue(app, settings, meters, "depth")
+            title = "${getString(titleId)} ($u)"
+            dialogTitle = title
             summary = "$v $u"
             
             val multiplier = safetyManager?.getDepthSItoUserMultiplier() ?: 1.0
@@ -677,11 +732,16 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
             }
             
             // Integrate SailingPerformanceSettingsViewModel to show active polar
-            SailingDependencyContainer.performanceRepository?.let { repo ->
-                val vm = SailingPerformanceSettingsViewModel(repo)
-                lifecycleScope.launch {
-                    vm.activePolarName.collectLatest { name ->
-                        summary = name
+            val connected = NauticalPlugin.getInstance()?.isSignalKConnected() == true
+            if (!connected) {
+                summary = getString(R.string.nautical_disconnected_performance_msg)
+            } else {
+                SailingDependencyContainer.performanceRepository?.let { repo ->
+                    val vm = SailingPerformanceSettingsViewModel(repo)
+                    lifecycleScope.launch {
+                        vm.activePolarName.collectLatest { name ->
+                            summary = name
+                        }
                     }
                 }
             }
@@ -792,6 +852,14 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
     }
 
     private fun setupVhfCategory() {
+        findPreference<Preference>("nautical_vhf_history_view")?.apply {
+            setIcon(R.drawable.ic_action_group_list)
+            setOnPreferenceClickListener {
+                net.osmand.plus.plugins.nautical.ui.VhfHistoryBottomSheet.show(parentFragmentManager)
+                true
+            }
+        }
+
         findPreference<Preference>("nautical_switch_panel")?.apply {
             setIcon(R.drawable.ic_action_settings)
             setOnPreferenceClickListener {
@@ -836,7 +904,7 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
 
     private fun setupLogbookCategory() {
         findPreference<Preference>("nautical_passage_plan")?.apply {
-            setIcon(R.drawable.ic_action_flag)
+            setIcon(R.drawable.ic_action_track_16)
             setOnPreferenceClickListener {
                 showInstance(requireActivity(), SettingsScreenType.NAUTICAL_PASSAGE_PLAN)
                 true
@@ -845,15 +913,19 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
 
         findPreference<ListPreferenceEx>(settings.NAUTICAL_LOGBOOK_INTERVAL.id)?.apply {
             setIcon(R.drawable.ic_action_time)
-            entries = arrayOf(getString(R.string.nautical_logbook_disabled), getString(R.string.nautical_logbook_1h), getString(R.string.nautical_logbook_4h))
-            entryValues = arrayOf("0", "1", "4")
-            val interval = settings.NAUTICAL_LOGBOOK_INTERVAL.get() ?: 0
-            value = interval.toString()
-            summary = when (interval) {
-                1 -> getString(R.string.nautical_logbook_1h)
-                4 -> getString(R.string.nautical_logbook_4h)
-                else -> getString(R.string.nautical_logbook_disabled)
-            }
+            val values = arrayOf(0, 15, 30, 60, 120, 240, 360, 1440)
+            entries = values.map { if (it == 0) "Immediate (Event-based)" else "$it min" }.toTypedArray()
+            entryValues = values.map { it.toString() }.toTypedArray()
+            val current = settings.NAUTICAL_LOGBOOK_INTERVAL.get()
+            value = current.toString()
+            summary = if (current == 0) "Immediate (Event-based)" else "$current min"
+        }
+        
+        findPreference<Preference>("nautical_module_logbook")?.apply {
+             val connected = NauticalPlugin.getInstance()?.isSignalKConnected() == true
+             if (!connected) {
+                 summary = getString(R.string.nautical_logbook_sync_msg)
+             }
         }
     }
 
@@ -874,7 +946,7 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
         findPreference<Preference>("nautical_boat_ai")?.isVisible = caps?.hasMediaControl == true
         findPreference<Preference>("nautical_notifications")?.isVisible = true
         findPreference<Preference>("nautical_safety_regions")?.isVisible = true
-        findPreference<Preference>("nautical_checklists")?.isVisible = caps?.hasNavtex == true // Heuristic
+        findPreference<Preference>("nautical_checklists")?.isVisible = caps?.hasChecklists == true
         
         // Maneuver section logic - hide if not in BOAT mode (safety)
         val isBoat = app.settings.APPLICATION_MODE.get().isDerivedRoutingFrom(net.osmand.plus.settings.backend.ApplicationMode.BOAT)
@@ -991,6 +1063,7 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
                 settings.NAUTICAL_ANCHOR_DEPTH.id,
                 settings.NAUTICAL_ANCHOR_TIDE_RISE.id,
                 settings.NAUTICAL_ANCHOR_BOW_OFFSET.id,
+                settings.NAUTICAL_ANCHOR_FREEBOARD.id,
                 settings.NAUTICAL_ANCHOR_SAFETY_MARGIN.id -> {
                     val floatValue = newString.toFloatOrNull()
                     if (floatValue == null || floatValue < 0) {
@@ -1008,6 +1081,7 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
                         settings.NAUTICAL_ANCHOR_DEPTH.id -> settings.NAUTICAL_ANCHOR_DEPTH.set(meters.toFloat())
                         settings.NAUTICAL_ANCHOR_TIDE_RISE.id -> settings.NAUTICAL_ANCHOR_TIDE_RISE.set(meters.toFloat())
                         settings.NAUTICAL_ANCHOR_BOW_OFFSET.id -> settings.NAUTICAL_ANCHOR_BOW_OFFSET.set(meters.toFloat())
+                        settings.NAUTICAL_ANCHOR_FREEBOARD.id -> settings.NAUTICAL_ANCHOR_FREEBOARD.set(meters.toFloat())
                         settings.NAUTICAL_ANCHOR_SAFETY_MARGIN.id -> settings.NAUTICAL_ANCHOR_SAFETY_MARGIN.set(meters.toFloat())
                     }
                     val (v, u) = SignalKUnitConverter.formatValue(app, settings, meters, "depth")
@@ -1108,6 +1182,7 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
                 settings.NAUTICAL_ARRIVAL_RADIUS.id -> {
                     val floatValue = newString.toFloatOrNull() ?: 35.0f
                     val meters = floatValue.toDouble()
+                    settings.NAUTICAL_ARRIVAL_RADIUS.set(meters.toFloat())
                     val (v, u) = SignalKUnitConverter.formatValue(app, settings, meters, "distance")
                     preference.summary = "$v $u"
                     (preference as? EditTextPreferenceEx)?.text = v

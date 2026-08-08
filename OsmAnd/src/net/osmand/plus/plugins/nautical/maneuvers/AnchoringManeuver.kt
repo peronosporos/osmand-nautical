@@ -50,12 +50,12 @@ class AnchoringManeuver(app: OsmandApplication) : ManeuverEngine(app) {
             val (depthVal, depthUnit) = net.osmand.plus.plugins.nautical.engine.SignalKUnitConverter.formatValue(app, app.settings, depthBelow, "depth")
             val (rodeVal, rodeUnit) = net.osmand.plus.plugins.nautical.engine.SignalKUnitConverter.formatValue(app, app.settings, rodeLength, "distance")
             
-            val msg = app.getString(R.string.nautical_anchoring_at_depth_localized, depthVal, depthUnit) +
-                    " Scope set to ${String.format(java.util.Locale.US, "%.1f", scopeRatio)}. Paying out $rodeVal $rodeUnit of rode."
+            val msg = app.getString(R.string.nautical_anchoring_at_depth_localized, depthVal, depthUnit) + " " +
+                    app.getString(R.string.nautical_anchoring_scope_msg, scopeRatio, rodeVal, rodeUnit)
             player.playCommands(player.newCommandBuilder().attention(msg))
         }
         
-        pushInstruction("Dropping Anchor")
+        pushInstruction(app.getString(R.string.nautical_anchoring_dropping))
         pushProgress(20)
 
         // Active Helm Assistance: Make optional via banner
@@ -76,7 +76,7 @@ class AnchoringManeuver(app: OsmandApplication) : ManeuverEngine(app) {
         val caps = NauticalPlugin.getInstance()?.capabilityManager?.capabilities?.value
         if (caps?.hasWindlassControl == true && state.isEngineRunning) {
             NauticalPlugin.hudManager?.get()?.showBanner(
-                "Windlass Control Available. Lower anchor now?",
+                app.getString(R.string.nautical_anchoring_windlass_prompt),
                 15000,
                 "LOWER",
                 false
@@ -90,18 +90,33 @@ class AnchoringManeuver(app: OsmandApplication) : ManeuverEngine(app) {
 
     override fun onStateUpdate(state: MarineState) {
         if (currentState == ManeuverStateMachine.State.EXECUTING) {
+            val sog = state.speedOverGround ?: 0.0
             val caps = NauticalPlugin.getInstance()?.capabilityManager?.capabilities?.value
+            
+            // Auto-completion based on chain counter
             if (caps?.hasChainCounter == true && state.rodeDeployed != null) {
                 if (state.rodeDeployed >= rodeLength) {
-                    pushInstruction("Target Rode Reached")
+                    pushInstruction(app.getString(R.string.nautical_anchoring_target_rode))
                     if (caps.hasWindlassControl) {
                         NauticalPlugin.engine?.setSwitch("electrical.switches.windlass.down", false)
                     }
-                    transitionToCompleted()
+                    
+                    // Once rode is out, wait for vessel to settle (SOG < 0.1 kn)
+                    if (sog < 0.05) {
+                        transitionToCompleted()
+                    } else {
+                        pushInstruction(app.getString(R.string.nautical_anchoring_settling))
+                    }
                 } else {
                     val progress = ((state.rodeDeployed / rodeLength) * 100).toInt()
                     pushProgress(progress)
-                    pushInstruction(String.format(java.util.Locale.US, "Paying out: %.1fm / %.1fm", state.rodeDeployed, rodeLength))
+                    pushInstruction(app.getString(R.string.nautical_anchoring_paying_out, state.rodeDeployed, rodeLength))
+                }
+            } else {
+                // Fallback: If no chain counter, wait for settling after manual payout or time
+                if (sog < 0.05) {
+                    pushInstruction(app.getString(R.string.nautical_anchoring_set))
+                    transitionToCompleted()
                 }
             }
         }

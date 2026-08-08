@@ -28,6 +28,9 @@ interface SignalKRestService {
     @GET("signalk/v2/api/self")
     suspend fun getSelfIdentity(): Response<Map<String, Any>>
 
+    @GET("signalk/v1/api/self")
+    suspend fun getV1SelfIdentity(): Response<Map<String, Any>>
+
     @GET("signalk/v2/api/vessels/self")
     suspend fun getVesselSelf(): Response<Map<String, Any>>
 

@@ -65,6 +65,7 @@ class CapabilityManager(@Suppress("unused") private val app: OsmandApplication) 
         val hasEnvironmentSensors: Boolean = false,
         val hasTankManagement: Boolean = false,
         val hasMediaControl: Boolean = false,
+        val hasChecklists: Boolean = false,
     )
 
     fun probe(restService: SignalKRestService?) {
@@ -118,6 +119,7 @@ class CapabilityManager(@Suppress("unused") private val app: OsmandApplication) 
                 val hasChainCounter = enabledPluginIds.contains("signalk-chain-plugin") || hasPath(vesselData, "navigation.anchor.rodeDeployed")
                 val hasFusionStereo = enabledPluginIds.contains("signalk-fusion-stereo") || hasPath(vesselData, "entertainment.device.fusion")
                 val hasRainViewer = enabledPluginIds.contains("signalk-rainviewer-charts")
+                val hasChecklists = enabledPluginIds.contains("signalk-checklists") || restService.getChecklists().isSuccessful
 
                 // Functional Group Detection
                 val apPlugins = setOf("signalk-autopilot", "pypilot", "signalk-autopilot-furuno", "signalk-autopilot-garmin", "signalk-ac42-autopilot", "signalk-autopilot_route")
@@ -176,7 +178,8 @@ class CapabilityManager(@Suppress("unused") private val app: OsmandApplication) 
                     hasTacticalRacing = enabledPluginIds.any { racingPlugins.contains(it) },
                     hasEnvironmentSensors = enabledPluginIds.any { sensorPlugins.contains(it) },
                     hasTankManagement = enabledPluginIds.any { tankPlugins.contains(it) } || hasPath(vesselData, "tanks"),
-                    hasMediaControl = enabledPluginIds.any { mediaPlugins.contains(it) }
+                    hasMediaControl = enabledPluginIds.any { mediaPlugins.contains(it) },
+                    hasChecklists = hasChecklists
                 )
 
 

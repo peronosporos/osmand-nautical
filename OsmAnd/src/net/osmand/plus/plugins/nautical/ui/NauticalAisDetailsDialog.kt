@@ -4,6 +4,7 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Button
 import android.widget.TextView
 import net.osmand.plus.R
 import net.osmand.plus.base.BaseBottomSheetDialogFragment
@@ -73,5 +74,16 @@ class NauticalAisDetailsDialog : BaseBottomSheetDialogFragment() {
         
         val sogCogStr = String.format(Locale.US, "%.1f kn / %.0f°", ais.sog, ais.cog)
         view.findViewById<TextView>(R.id.txt_sog_cog).text = ctx.getString(R.string.nautical_ais_details_sog_cog, sogCogStr)
+
+        val btnBuddy = view.findViewById<Button>(R.id.btn_toggle_buddy)
+        val isBuddy = NauticalPlugin.engine?.getCurrentState()?.aisBuddies?.contains(ais.mmsi) ?: false
+        btnBuddy.text = if (isBuddy) ctx.getString(R.string.nautical_remove_from_buddies) else ctx.getString(R.string.nautical_add_to_buddies)
+        btnBuddy.setOnClickListener {
+            val engine = NauticalPlugin.engine
+            val current = engine?.getCurrentState()?.aisBuddies?.toMutableSet() ?: mutableSetOf()
+            if (isBuddy) current.remove(ais.mmsi) else current.add(ais.mmsi)
+            engine?.sendDelta("navigation.aisBuddies", current.toList())
+            dismiss()
+        }
     }
 }

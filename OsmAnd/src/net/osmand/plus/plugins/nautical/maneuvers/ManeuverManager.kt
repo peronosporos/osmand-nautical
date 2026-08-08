@@ -128,6 +128,21 @@ class ManeuverManager(private val app: OsmandApplication) {
         }
     }
 
+    /**
+     * Forcefully completes the active maneuver, bypassing sensor-based automatic completion.
+     * Useful for manual anchoring or docking where hardware counters/sensors are absent.
+     */
+    fun completeActiveManeuver() {
+        if (state == ManeuverState.EXECUTING) {
+            activeManeuver?.transitionToCompleted()
+            updateState(ManeuverState.IDLE)
+            activeManeuver = null
+            
+            // Release helm lock immediately upon manual completion
+            NauticalPlugin.getInstance()?.workflowManager?.getScreenTouchLockManager()?.setTouchLockActive(active = false)
+        }
+    }
+
     fun updateState(state: net.osmand.plus.plugins.nautical.engine.MarineState) {
         activeManeuver?.onStateUpdate(state)
     }

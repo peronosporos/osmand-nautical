@@ -38,6 +38,8 @@ class NauticalPilotWidget(
     private var holdProgress = 0
     private var pendingAnimator: ValueAnimator? = null
     private var lastIsPending = false
+    private var lastCommandTime = 0L
+    private val COMMAND_DEBOUNCE_MS = 500L
 
     init {
         setIcons(widgetType)
@@ -164,6 +166,10 @@ class NauticalPilotWidget(
             mapActivity,
             object : GestureDetector.SimpleOnGestureListener() {
                 override fun onSingleTapConfirmed(e: MotionEvent): Boolean {
+                    val now = System.currentTimeMillis()
+                    if ((now - lastCommandTime) < COMMAND_DEBOUNCE_MS) return true
+                    lastCommandTime = now
+
                     if (NauticalHelmArbitrator.getInstance(app).isLockedByEmergency()) {
                         val maneuver = NauticalHelmArbitrator.getInstance(app).getActiveManeuver()
                         app.showToastMessage("Helm Locked by $maneuver")
@@ -176,6 +182,10 @@ class NauticalPilotWidget(
                 }
 
                 override fun onLongPress(e: MotionEvent) {
+                    val now = System.currentTimeMillis()
+                    if ((now - lastCommandTime) < COMMAND_DEBOUNCE_MS) return
+                    lastCommandTime = now
+
                     val engine = NauticalPlugin.engine
                     val mode = engine?.getCurrentState()?.autopilotState?.lowercase(Locale.US) ?: "standby"
                     if (mode == "standby") return // Only long press to drop to standby from engaged

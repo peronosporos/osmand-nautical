@@ -261,8 +261,13 @@ public class WidgetInfoBaseFragment extends BaseFullScreenFragment {
 		widgetId = bundle.getString(KEY_WIDGET_ID);
 		appMode = ApplicationMode.valueOfStringKey(bundle.getString(KEY_APP_MODE), settings.getApplicationMode());
 		addNewWidgetMode = bundle.getBoolean(KEY_ADD_MODE, false);
-		widgetPanel = WidgetsPanel.valueOf(bundle.getString(KEY_SELECTED_PANEL));
-		isVerticalPanel = widgetPanel.isPanelVertical();
+		String panelName = bundle.getString(KEY_SELECTED_PANEL);
+		if (panelName != null) {
+			widgetPanel = WidgetsPanel.valueOf(panelName);
+		}
+		if (widgetPanel != null) {
+			isVerticalPanel = widgetPanel.isPanelVertical();
+		}
 
 		layoutMode = AndroidUtils.getSerializable(bundle, SCREEN_LAYOUT_MODE, ScreenLayoutMode.class);
 

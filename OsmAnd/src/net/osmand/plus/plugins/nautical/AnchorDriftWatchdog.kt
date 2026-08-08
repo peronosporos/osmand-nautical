@@ -37,7 +37,6 @@ class AnchorDriftWatchdog(private val app: OsmandApplication) {
     private val trackBuffer = AnchorTrackBuffer()
 
     companion object {
-        private const val MAX_ACCURACY_METERS = 15.0
         private const val CONSECUTIVE_PINGS_THRESHOLD = 3
     }
 
@@ -106,10 +105,11 @@ class AnchorDriftWatchdog(private val app: OsmandApplication) {
         observationJob = null
         scope.coroutineContext.cancelChildren()
         reset()
-        // Cleanup legacy phantom preferences to prevent battery drain from background checks
-        app.settings.NAUTICAL_ANCHOR_LAT.set(0.0)
-        app.settings.NAUTICAL_ANCHOR_LON.set(0.0)
-        log.info("AnchorWatchdog: Stopped and coordinates wiped.")
+        
+        // Task: Remote Disarm
+        NauticalPlugin.engine?.disarmAnchor()
+
+        log.info("AnchorWatchdog: Stopped.")
     }
 
     fun onAppBackgrounded() {
@@ -145,22 +145,23 @@ class AnchorDriftWatchdog(private val app: OsmandApplication) {
             app.runInUIThread { app.osmandMap?.refreshMap() }
         }
 
+        // Concurrent Safety: We always run local calculation as a validator,
+        // even if Signal K is connected, to guard against server-side misconfiguration.
+        
+        // Smart Offloading (TASK-CPU-001): If Signal K server is actively monitoring,
+        // skip local math to save cycles.
         val engine = NauticalPlugin.engine
         val state = engine?.getCurrentState()
-        val connected = state?.connectionStatus == ConnectionStatus.CONNECTED
-
-        if (connected) {
-            // Task 11: Display deployed chain length if available
-            state.rodeDeployed?.let { rode ->
-                log.info("AnchorWatch: Deployed rode: $rode m")
-            }
-            // When connected, we rely EXCLUSIVELY on Signal K notifications for the alarm.
-            // Local calculation is skipped to maintain "Single Source of Truth".
+        val caps = engine?.capabilityManager?.capabilities?.value
+        
+        val canOffload = (state?.connectionStatus == ConnectionStatus.CONNECTED) && 
+                        (caps?.hasAnchorAlarm == true) && 
+                        (state.anchor?.state?.lowercase() in listOf("armed", "active"))
+        
+        if (canOffload) {
             return isAlarmActive
         }
-        
-        // --- FALLBACK MODE: Local Calculation ---
-        
+
         val anchorLat = app.settings.NAUTICAL_ANCHOR_LAT.get()
         val anchorLon = app.settings.NAUTICAL_ANCHOR_LON.get()
         val radius = app.settings.NAUTICAL_ANCHOR_RADIUS.get()
@@ -171,8 +172,9 @@ class AnchorDriftWatchdog(private val app: OsmandApplication) {
         }
 
         // 1. Signal Filtering: Reject low accuracy pings
-        if (location.hasAccuracy() && (location.accuracy > MAX_ACCURACY_METERS)) {
-            log.info("AnchorWatch: Ignoring low accuracy fix: ${location.accuracy}m")
+        val accuracyThreshold = app.settings.NAUTICAL_ANCHOR_ACCURACY_THRESHOLD.get().toDouble()
+        if (location.hasAccuracy() && (location.accuracy > accuracyThreshold)) {
+            log.info("AnchorWatch: Ignoring low accuracy fix: ${location.accuracy}m (Threshold: ${accuracyThreshold}m)")
             return isAlarmActive
         }
 
