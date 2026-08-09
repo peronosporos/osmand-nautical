@@ -12,6 +12,16 @@
         android:clipToPadding="false"
         android:paddingBottom="80dp" />
 
+    <TextView
+        android:id="@+id/txt_empty_list"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:layout_margin="32dp"
+        android:gravity="center"
+        android:text="No AIS buddies tracked. Add nearby vessels to your watch list, or install signalk-buddylist-plugin on your server."
+        android:visibility="gone" />
+
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/fab_add_buddy"
         android:layout_width="wrap_content"

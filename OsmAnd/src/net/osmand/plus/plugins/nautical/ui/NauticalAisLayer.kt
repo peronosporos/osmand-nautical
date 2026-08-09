@@ -59,19 +59,24 @@ class NauticalAisLayer(context: Context) : OsmandMapLayer(context), ContextMenuL
             aisUpdateJob = activity.lifecycleScope.launch {
                 // Task: Robust AIS subscription loop to handle plugin re-enabling
                 while (isActive) {
-                    val manager = plugin?.aisManager
+                    val currentPlugin = NauticalPlugin.getInstance()
+                    val manager = currentPlugin?.aisManager
                     if (manager != null) {
                         // Load initial state
                         manager.getAisObjects().forEach { onAisObjectReceived(it) }
                         
-                        manager.aisEvents.collect { event ->
-                            when (event) {
-                                is NauticalAisManager.AisEvent.Updated -> onAisObjectReceived(event.obj)
-                                is NauticalAisManager.AisEvent.Removed -> onAisObjectRemoved(event.obj)
+                        try {
+                            manager.aisEvents.collect { event ->
+                                when (event) {
+                                    is NauticalAisManager.AisEvent.Updated -> onAisObjectReceived(event.obj)
+                                    is NauticalAisManager.AisEvent.Removed -> onAisObjectRemoved(event.obj)
+                                }
                             }
+                        } catch (_: Exception) {
+                            // If collection fails (e.g. manager invalidated), loop will retry
                         }
                     }
-                    delay(2000.milliseconds) // Retry subscription if manager is missing
+                    delay(2000.milliseconds) 
                 }
             }
         }
@@ -162,7 +167,8 @@ class NauticalAisLayer(context: Context) : OsmandMapLayer(context), ContextMenuL
     }
 
     private fun isOwnObject(ais: AisObject): Boolean {
-        return ais.mmsi == plugin?.aisOwnMmsi?.get()
+        val ownMmsi = plugin?.aisOwnMmsi?.get() ?: 0
+        return (ownMmsi != 0) && (ais.mmsi == ownMmsi)
     }
 
     private fun isOwnObjectHidden(ais: AisObject): Boolean {

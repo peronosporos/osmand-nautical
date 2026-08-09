@@ -30,6 +30,7 @@ class MarineLogbookAdapter : ListAdapter<LogbookEntry, MarineLogbookAdapter.Logb
     }
 
     inner class LogbookViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+        private val syncStatus: View = itemView.findViewById(R.id.img_sync_status)
         private val timestamp: TextView = itemView.findViewById(R.id.timestamp)
         private val position: TextView = itemView.findViewById(R.id.position)
         private val navData: TextView = itemView.findViewById(R.id.navigation_data)
@@ -48,6 +49,7 @@ class MarineLogbookAdapter : ListAdapter<LogbookEntry, MarineLogbookAdapter.Logb
 
         fun bind(entry: LogbookEntry) {
             val context = itemView.context
+            syncStatus.visibility = if (entry.serverUuid != null) View.VISIBLE else View.GONE
             timestamp.text = dateFormat.format(Date(entry.timestamp))
             position.text = String.format(Locale.US, "%.4f, %.4f", entry.latitude, entry.longitude)
 

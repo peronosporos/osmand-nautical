@@ -48,6 +48,7 @@ import net.osmand.plus.plugins.nautical.utils.TemporalUtils
 import net.osmand.plus.settings.enums.TtwMode
 import net.osmand.plus.settings.enums.XteDirection
 import net.osmand.shared.aistracker.AisObject
+import net.osmand.shared.aistracker.AisObjectConstants
 import net.osmand.shared.extensions.toRadians
 import net.osmand.shared.util.KMapUtils
 import org.json.JSONArray
@@ -1189,9 +1190,10 @@ class SignalKEngine(
                         "atons" -> 21
                         else -> 1 // Default vessel
                     }
-                    val obj = AisObject(numericMmsi, msgType, 0.0, 0.0)
-                    // TODO: Handle SAR type if possible via updates
-                    obj
+                    // Initialize with INVALID coordinates to avoid showing at (0,0)
+                    AisObject(numericMmsi, msgType, 
+                        AisObjectConstants.INVALID_LAT, 
+                        AisObjectConstants.INVALID_LON)
                 }
             } else if (context.isNotEmpty()) {
                 log.debug("Nautical: Ignoring Signal K update for unknown context: $context")
@@ -1289,9 +1291,12 @@ class SignalKEngine(
 
         if (isSelf && stateUpdated && currentBatchState != null) {
             finalizeAndNotifyState(currentBatchState)
-        } else if (aisTarget != null && aisTarget.position != null) {
-            val copy = AisObject(aisTarget)
-            aisListener?.invoke(copy)
+        } else if (aisTarget != null) {
+            val pos = aisTarget.position
+            if (pos != null && pos.latitude != AisObjectConstants.INVALID_LAT && pos.longitude != AisObjectConstants.INVALID_LON) {
+                val copy = AisObject(aisTarget)
+                aisListener?.invoke(copy)
+            }
         }
     }
 
@@ -1738,8 +1743,7 @@ class SignalKEngine(
                     val lat = valueObj.optDouble("latitude", Double.NaN)
                     val lon = valueObj.optDouble("longitude", Double.NaN)
                     if (MarineStateConstants.isValidLat(lat) && MarineStateConstants.isValidLon(lon)) {
-                        // Use the constructor that sets lat/lon
-                        val updated = AisObject(target.mmsi, 1, lat, lon)
+                        val updated = AisObject(target.mmsi, target.msgType, lat, lon)
                         target.set(updated)
                     }
                 }

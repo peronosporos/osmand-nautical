@@ -20,6 +20,7 @@ import net.osmand.plus.plugins.nautical.engine.Sail
 class SailInventoryFragment : BaseOsmAndFragment() {
 
     private lateinit var adapter: SailAdapter
+    private val pendingToggles = mutableMapOf<String, Boolean>()
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         val view = themedInflater.inflate(R.layout.recyclerview_fragment, container, false)
@@ -27,7 +28,7 @@ class SailInventoryFragment : BaseOsmAndFragment() {
         
         adapter = SailAdapter(
             onSailToggle = { sail -> toggleSail(sail) },
-            onReefChange = { reefs -> updateReefs(reefs) }
+            onReefChange = { reefs -> updateReefs(reefs) },
         )
         recyclerView.layoutManager = LinearLayoutManager(requireContext())
         recyclerView.adapter = adapter
@@ -36,7 +37,20 @@ class SailInventoryFragment : BaseOsmAndFragment() {
             NauticalPlugin.engine?.marineStateFlow?.collectLatest { state ->
                 val items = mutableListOf<Any>()
                 items.add(ReefData(state.reefs ?: 0))
-                items.addAll(state.sailInventory)
+                
+                val sails = state.sailInventory.map { sail ->
+                    val pending = pendingToggles[sail.id]
+                    if (pending != null) {
+                        if (pending == sail.active) {
+                            pendingToggles.remove(sail.id)
+                            sail
+                        } else {
+                            sail.copy(active = pending)
+                        }
+                    } else sail
+                }
+                
+                items.addAll(sails)
                 adapter.submitList(items)
                 
                 val emptyView = view.findViewById<TextView>(R.id.txt_empty_list)
@@ -56,8 +70,19 @@ class SailInventoryFragment : BaseOsmAndFragment() {
     }
 
     private fun toggleSail(sail: Sail) {
+        val nextState = !sail.active
+        pendingToggles[sail.id] = nextState
+        // Re-submit current state with the pending toggle for immediate UI response
+        NauticalPlugin.engine?.getCurrentState()?.let { state ->
+            val items = mutableListOf<Any>()
+            items.add(ReefData(state.reefs ?: 0))
+            items.addAll(state.sailInventory.map { s ->
+                if (s.id == sail.id) s.copy(active = nextState) else s
+            })
+            adapter.submitList(items)
+        }
+        
         lifecycleScope.launch {
-            val nextState = !sail.active
             NauticalPlugin.engine?.sendDelta("sails.inventory.${sail.id}.active", nextState)
         }
     }
@@ -85,9 +110,9 @@ class SailInventoryFragment : BaseOsmAndFragment() {
 
         override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
             val item = getItem(position)
-            if (holder is ReefHeaderViewHolder && item is ReefData) {
+            if ((holder is ReefHeaderViewHolder) && (item is ReefData)) {
                 holder.bind(item)
-            } else if (holder is SailViewHolder && item is Sail) {
+            } else if ((holder is SailViewHolder) && (item is Sail)) {
                 holder.bind(item, onSailToggle)
             }
         }
@@ -96,15 +121,15 @@ class SailInventoryFragment : BaseOsmAndFragment() {
     private class SailDiffCallback : DiffUtil.ItemCallback<Any>() {
         override fun areItemsTheSame(oldItem: Any, newItem: Any): Boolean {
             return when (oldItem) {
-                is ReefData if newItem is ReefData -> true
-                is Sail if newItem is Sail -> oldItem.id == newItem.id
+                is ReefData -> newItem is ReefData
+                is Sail -> newItem is Sail && oldItem.id == newItem.id
                 else -> false
             }
         }
         override fun areContentsTheSame(oldItem: Any, newItem: Any): Boolean {
             return when (oldItem) {
-                is ReefData if newItem is ReefData -> oldItem.count == newItem.count
-                is Sail if newItem is Sail -> oldItem == newItem
+                is ReefData -> newItem is ReefData && oldItem.count == newItem.count
+                is Sail -> newItem is Sail && oldItem == newItem
                 else -> false
             }
         }

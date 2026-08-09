@@ -29,11 +29,13 @@ class NauticalNotificationManager(
     private val processedNotifications = ConcurrentHashMap<String, SignalKNotification>()
     private val lastTriggerTimes = ConcurrentHashMap<String, Long>()
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    private val initTime = System.currentTimeMillis()
 
     companion object {
         const val CHANNEL_CRITICAL = "osmand_marine_critical"
         const val ALERTS_STATE_KEY = "tactical.active_alerts"
         const val ALERT_COOLDOWN_MS = 60000L // 1 minute suppression for same path
+        const val STARTUP_SILENCE_MS = 5000L // 5 seconds silence on startup
     }
 
     init {
@@ -101,6 +103,11 @@ class NauticalNotificationManager(
     }
 
     private fun triggerAlert(path: String, notification: SignalKNotification) {
+        val now = System.currentTimeMillis()
+        if (now - initTime < STARTUP_SILENCE_MS) {
+            log.info("Suppressing alert during startup: $path")
+            return
+        }
         log.error("SIGNAL K ALERT: [$path] ${notification.message} (State: ${notification.state})")
         
         val isCritical = notification.state == NotificationState.ALARM || notification.state == NotificationState.EMERGENCY

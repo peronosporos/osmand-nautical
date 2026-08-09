@@ -60,28 +60,42 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
     }
 
     private fun updateConnectionStatusSummaries() {
-        val connected = NauticalPlugin.getInstance()?.isSignalKConnected() == true
-        val status = if (connected) "" else " (${getString(R.string.nautical_offline_status)})"
+        val plugin = NauticalPlugin.getInstance()
+        val connected = plugin?.isSignalKConnected() == true
+        val caps = NauticalPlugin.engine?.capabilityManager?.capabilities?.value
         
-        val needsConnection = listOf(
-            "nautical_switch_panel",
-            "nautical_boat_ai",
-            "nautical_notifications",
-            "nautical_server_routes",
-            "nautical_server_charts"
+        val needsConnection = mapOf(
+            "nautical_switch_panel" to Pair(caps?.hasDigitalSwitching ?: false, "Install signalk-digital-switching"),
+            "nautical_boat_ai" to Pair(caps?.hasMediaControl ?: false, "Install signalk-ai-bridge"),
+            "nautical_notifications" to Pair(true, ""),
+            "nautical_server_routes" to Pair(caps?.hasNavicoSync ?: true, "Check server resources"),
+            "nautical_server_charts" to Pair(caps?.hasCharts ?: true, "Install signalk-charts-plugin"),
+            "nautical_module_logbook" to Pair(caps?.hasLogging ?: false, "Install signalk-logbook"),
+            "nautical_module_vhf" to Pair(caps?.hasNavtex ?: true, "Check backend URL"),
+            "sailing_performance" to Pair(caps?.hasPolarPerformance ?: false, "Install signalk-polar-performance")
         )
         
-        needsConnection.forEach { key ->
+        needsConnection.forEach { (key, info) ->
             findPreference<Preference>(key)?.let { pref ->
+                val hasCap = info.first
+                val guidance = info.second
                 val baseSummary = when(key) {
                     "nautical_switch_panel" -> getString(R.string.nautical_switch_panel_desc)
                     "nautical_boat_ai" -> getString(R.string.nautical_boat_ai_desc)
                     "nautical_notifications" -> getString(R.string.nautical_notifications_desc)
                     "nautical_server_routes" -> getString(R.string.nautical_server_routes_desc)
                     "nautical_server_charts" -> getString(R.string.nautical_server_charts_desc)
+                    "nautical_module_logbook" -> getString(R.string.nautical_logbook_sync_msg)
+                    "nautical_module_vhf" -> "Connect to VHF radio backend"
+                    "sailing_performance" -> getString(R.string.wizard_polar_title)
                     else -> ""
                 }
-                pref.summary = "$baseSummary$status"
+                
+                pref.summary = when {
+                    !connected -> "$baseSummary (${getString(R.string.nautical_offline_status)})"
+                    !hasCap -> "$baseSummary (Plugin missing: $guidance)"
+                    else -> baseSummary
+                }
             }
         }
     }
@@ -855,7 +869,12 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
         findPreference<Preference>("nautical_vhf_history_view")?.apply {
             setIcon(R.drawable.ic_action_group_list)
             setOnPreferenceClickListener {
-                net.osmand.plus.plugins.nautical.ui.VhfHistoryBottomSheet.show(parentFragmentManager)
+                val url = settings.NAUTICAL_VHF_BACKEND_URL.get()
+                if (url.isEmpty()) {
+                    app.showToastMessage(R.string.nautical_vhf_url_missing)
+                } else {
+                    net.osmand.plus.plugins.nautical.ui.VhfHistoryBottomSheet.show(parentFragmentManager)
+                }
                 true
             }
         }

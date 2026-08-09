@@ -39,7 +39,11 @@ class NauticalNotificationsFragment : BaseOsmAndFragment() {
                 adapter.submitList(notifications)
                 val emptyView = view.findViewById<TextView>(R.id.txt_empty_list)
                 val connected = NauticalPlugin.getInstance()?.isSignalKConnected() == true
-                emptyView?.text = if (connected) getString(R.string.nautical_no_notifications) else "Server Disconnected"
+                if (!connected) {
+                    emptyView?.text = "Server Disconnected. Check your Signal K settings in the plugin configuration."
+                } else if (notifications.isEmpty()) {
+                    emptyView?.text = "No active alarms. Your vessel is operating within safe parameters."
+                }
                 emptyView?.visibility = if (notifications.isEmpty()) View.VISIBLE else View.GONE
             }
         }

@@ -172,6 +172,7 @@ class NauticalPilotBottomSheet : BaseMaterialBottomSheetDialogFragment() {
         super.onStart()
         dialog?.window?.setBackgroundDrawableResource(android.R.color.transparent)
         (dialog as? com.google.android.material.bottomsheet.BottomSheetDialog)?.let { sheetDialog ->
+            sheetDialog.setCanceledOnTouchOutside(true)
             sheetDialog.findViewById<View>(com.google.android.material.R.id.design_bottom_sheet)?.let { bottomSheet ->
                 val behavior = com.google.android.material.bottomsheet.BottomSheetBehavior.from(bottomSheet)
                 val metrics = resources.displayMetrics
@@ -179,13 +180,16 @@ class NauticalPilotBottomSheet : BaseMaterialBottomSheetDialogFragment() {
                 val screenHeightDp = metrics.heightPixels / metrics.density
 
                 if (isLandscape || (screenHeightDp < 600)) {
-                    behavior.peekHeight = (metrics.heightPixels * 0.85).toInt()
-                    behavior.maxHeight = metrics.heightPixels
-                } else {
+                    behavior.peekHeight = (metrics.heightPixels * 0.8).toInt()
                     behavior.maxHeight = (metrics.heightPixels * 0.85).toInt()
+                    behavior.state = com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_EXPANDED
+                } else {
+                    behavior.maxHeight = (metrics.heightPixels * 0.8).toInt()
                     behavior.peekHeight = (metrics.heightPixels * 0.6).toInt()
+                    behavior.state = com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_COLLAPSED
                 }
-                behavior.state = com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_COLLAPSED
+                behavior.isDraggable = true
+                behavior.isHideable = true
             }
         }
     }
@@ -249,8 +253,10 @@ class NauticalPilotBottomSheet : BaseMaterialBottomSheetDialogFragment() {
 
         val advancedBtn = view.findViewById<View>(R.id.btn_advanced)
         val maneuversBtn = view.findViewById<View>(R.id.btn_maneuvers)
+        val toolCenterBtn = view.findViewById<View>(R.id.btn_tool_center)
         val switchesBtn = view.findViewById<View>(R.id.btn_switches)
         val systemsBtn = view.findViewById<View>(R.id.btn_systems)
+        val toggleTelemetryBtn = view.findViewById<View>(R.id.btn_toggle_telemetry)
 
         isCourseLocked = app.settings.NAUTICAL_LOCK_TOUCH_DURING_MANEUVERS.get()
         updateLockButton()
@@ -259,6 +265,19 @@ class NauticalPilotBottomSheet : BaseMaterialBottomSheetDialogFragment() {
             isCourseLocked = !isCourseLocked
             updateLockButton()
             view.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
+        }
+
+        toggleTelemetryBtn?.setOnClickListener {
+            if (telemetryPane == null) {
+                 inflateTelemetry(view)
+            }
+            telemetryPane?.let {
+                it.visibility = if (it.visibility == View.VISIBLE) View.GONE else View.VISIBLE
+                val behavior = com.google.android.material.bottomsheet.BottomSheetBehavior.from(view.parent as View)
+                if (behavior.state == com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_COLLAPSED) {
+                    behavior.state = com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_EXPANDED
+                }
+            }
         }
 
         val minus1Btn = view.findViewById<MaterialButton>(R.id.btn_minus_1)
@@ -461,6 +480,10 @@ class NauticalPilotBottomSheet : BaseMaterialBottomSheetDialogFragment() {
 
         maneuversBtn.setOnClickListener {
             showManeuversMenu()
+        }
+
+        toolCenterBtn?.setOnClickListener {
+             net.osmand.plus.plugins.nautical.ui.NauticalToolCenterDialog.show(parentFragmentManager)
         }
 
         switchesBtn.setOnClickListener {

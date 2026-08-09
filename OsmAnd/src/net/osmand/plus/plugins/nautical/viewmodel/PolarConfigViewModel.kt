@@ -52,6 +52,9 @@ class PolarConfigViewModel : ViewModel() {
     private val _heatmapCells = MutableStateFlow<List<PolarCell>>(emptyList())
     val heatmapCells: StateFlow<List<PolarCell>> = _heatmapCells.asStateFlow()
 
+    private val _qualityScore = MutableStateFlow(0)
+    val qualityScore: StateFlow<Int> = _qualityScore.asStateFlow()
+
     private val _recommendation = MutableStateFlow("Ensure engine is off and instruments are calibrated.")
     val recommendation: StateFlow<String> = _recommendation.asStateFlow()
 
@@ -167,14 +170,24 @@ class PolarConfigViewModel : ViewModel() {
     fun recordDataPoint(currentTws: Double, currentTwa: Double, currentSpeed: Double) {
         val cells = _heatmapCells.value.toMutableList()
         // Find closest cell
-        val cell = cells.minByOrNull { abs(it.tws - currentTws) + abs(it.twa - currentTwa) }
-        if (cell != null) {
-            cell.sampleCount++
-            cell.averageSpeed = ((cell.averageSpeed * (cell.sampleCount - 1)) + currentSpeed) / cell.sampleCount
+        val cellIndex = cells.indexOfFirst { abs(it.tws - currentTws) < 1.0 && abs(it.twa - currentTwa) < 5.0 }
+        
+        if (cellIndex != -1) {
+            val cell = cells[cellIndex]
+            val newCount = cell.sampleCount + 1
+            val newAvg = ((cell.averageSpeed * cell.sampleCount) + currentSpeed) / newCount
+            cells[cellIndex] = cell.copy(sampleCount = newCount, averageSpeed = newAvg)
             _heatmapCells.value = cells.toList()
+            updateQualityScore(cells)
         }
 
         updateRecommendation(currentTws, currentTwa)
+    }
+
+    private fun updateQualityScore(cells: List<PolarCell>) {
+        val populated = cells.count { it.sampleCount > 0 }
+        val score = (populated.toFloat() / cells.size * 100).toInt()
+        _qualityScore.value = score
     }
 
     private fun updateRecommendation(currentTws: Double, currentTwa: Double) {

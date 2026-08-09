@@ -18,7 +18,6 @@ import net.osmand.plus.views.mapwidgets.WidgetType
 import net.osmand.plus.views.mapwidgets.WidgetsPanel
 import net.osmand.plus.plugins.nautical.engine.SignalKUnitConverter
 import net.osmand.plus.plugins.nautical.utils.TemporalUtils
-import net.osmand.plus.utils.ColorUtilities
 import java.util.*
 
 class MarineTextWidget(
@@ -243,8 +242,7 @@ class MarineTextWidget(
             WidgetType.NAUTICAL_DEPTH -> {
                 val depth = state.depthBelowTransducer
                 val (v, u) = SignalKUnitConverter.formatValue(mapActivity, settings, depth, "depth")
-                val trend = getTrend(depth, lastDepth).also { lastDepth = depth }
-                v + trend to u
+                v to u
             }
             WidgetType.NAUTICAL_WIND -> SignalKUnitConverter.formatValue(mapActivity, settings,
                 state.windSpeedTrue, "speed")
@@ -253,20 +251,13 @@ class MarineTextWidget(
             WidgetType.NAUTICAL_COG -> SignalKUnitConverter.formatValue(mapActivity, settings,
                 state.courseOverGroundTrue, "course")
             WidgetType.NAUTICAL_SOG -> {
-                val trend = getTrend(state.speedOverGround, lastSog).also { lastSog =
-                    state.speedOverGround
-                }
-                val (v, u) = SignalKUnitConverter.formatValue(mapActivity, settings,
+                SignalKUnitConverter.formatValue(mapActivity, settings,
                     state.speedOverGround, "speed")
-                if (v == mapActivity.getString(R.string.n_a)) v to u else "$v$trend" to u
             }
             WidgetType.NAUTICAL_STW -> {
                 val speed = if (state.isStwUnreliable) state.speedOverGround else state.speedThroughWater
-                val trend = getTrend(speed, lastStw).also { lastStw = speed }
-                val (v, u) = SignalKUnitConverter.formatValue(mapActivity, settings,
+                SignalKUnitConverter.formatValue(mapActivity, settings,
                     speed, "speed")
-                val fallbackSuffix = if (state.isStwUnreliable) " (COG)" else ""
-                if (v == mapActivity.getString(R.string.n_a)) v to u else "$v$trend$fallbackSuffix" to u
             }
             WidgetType.NAUTICAL_HEADING_MAGNETIC -> SignalKUnitConverter.formatValue(mapActivity, settings,
                 state.headingMagnetic, "heading")
@@ -565,19 +556,19 @@ class MarineTextWidget(
                 text.textColor = if (nightMode) ContextCompat.getColor(app, R.color.text_color_primary_dark) else ContextCompat.getColor(app, R.color.text_color_primary_light)
             }
             IntegrityState.STALE -> {
-                contentView?.alpha = 1.0f
+                contentView?.alpha = 0.8f
+                bgView.background = null
                 text.textColor = ContextCompat.getColor(app, R.color.nautical_status_yellow)
-                bgView.setBackgroundColor(ColorUtilities.getColorWithAlpha(ContextCompat.getColor(app, R.color.nautical_status_yellow), 0.1f))
             }
             IntegrityState.ALARM -> {
                 contentView?.alpha = 1.0f
-                // OpenBridge: High Contrast Emergency Red (Synchronized Flash)
+                // Keep minimal but clear alarm state
                 if (isPulseActive) {
                     text.textColor = Color.WHITE
                     bgView.setBackgroundColor(Color.RED)
                 } else {
                     text.textColor = Color.RED
-                    bgView.setBackgroundColor(Color.TRANSPARENT)
+                    bgView.background = null
                 }
                 text.paint.isStrikeThruText = true
                 text.typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
@@ -618,17 +609,5 @@ class MarineTextWidget(
             else -> emptyList()
         }
         return paths.any { state.stalePaths.contains(it) }
-    }
-
-    private var lastSog: Double? = null
-    private var lastStw: Double? = null
-    private var lastDepth: Double? = null
-
-    private fun getTrend(current: Double?, last: Double?): String {
-        return when {
-            (current == null) || (last == null) || (kotlin.math.abs(current - last) < 0.01) -> ""
-            current > last -> mapActivity.getString(R.string.nautical_trend_up)
-            else -> mapActivity.getString(R.string.nautical_trend_down)
-        }
     }
 }

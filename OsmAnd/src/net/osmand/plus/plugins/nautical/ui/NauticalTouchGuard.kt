@@ -57,7 +57,7 @@ class NauticalTouchGuard(
                 MotionEvent.ACTION_DOWN -> {
                     if (isInteracting) return@setOnTouchListener false
                     isUnlocked = false
-                    handler.postDelayed(unlockRunnable, 1000) // INCREASED DELAY to 1s
+                    handler.postDelayed(unlockRunnable, 600) // Reduced delay to 600ms
                     true // Consume DOWN to prevent immediate interaction (e.g. Slider jump)
                 }
                 MotionEvent.ACTION_MOVE -> {

@@ -23,6 +23,7 @@ class NauticalHudBannerView @JvmOverloads constructor(
     private val messageTextView: TextView
     private val contentLayout: LinearLayout
     private var slideToConfirmView: SlideToConfirmView? = null
+    private var secondarySlideToConfirmView: SlideToConfirmView? = null
     private val handler = Handler(Looper.getMainLooper())
     private var dismissRunnable: Runnable? = null
 
@@ -80,20 +81,36 @@ class NauticalHudBannerView @JvmOverloads constructor(
 
     fun setConfirmAction(label: String, onConfirm: () -> Unit) {
         if (slideToConfirmView == null) {
-            slideToConfirmView = SlideToConfirmView(context).apply {
-                layoutParams = LinearLayout.LayoutParams(
-                    LayoutParams.MATCH_PARENT,
-                    AndroidUtils.dpToPx(context, 48f)
-                ).apply {
-                    topMargin = AndroidUtils.dpToPx(context, 8f)
-                }
-            }
+            slideToConfirmView = createSlideToConfirm()
             contentLayout.addView(slideToConfirmView)
         }
         slideToConfirmView?.label = label
         slideToConfirmView?.onConfirm = {
             onConfirm()
             dismiss()
+        }
+    }
+
+    fun setSecondaryConfirmAction(label: String, onConfirm: () -> Unit) {
+        if (secondarySlideToConfirmView == null) {
+            secondarySlideToConfirmView = createSlideToConfirm()
+            contentLayout.addView(secondarySlideToConfirmView)
+        }
+        secondarySlideToConfirmView?.label = label
+        secondarySlideToConfirmView?.onConfirm = {
+            onConfirm()
+            dismiss()
+        }
+    }
+
+    private fun createSlideToConfirm(): SlideToConfirmView {
+        return SlideToConfirmView(context).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                LayoutParams.MATCH_PARENT,
+                AndroidUtils.dpToPx(context, 48f)
+            ).apply {
+                topMargin = AndroidUtils.dpToPx(context, 8f)
+            }
         }
     }
 

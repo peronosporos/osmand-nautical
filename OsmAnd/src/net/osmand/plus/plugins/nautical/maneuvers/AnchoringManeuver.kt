@@ -4,6 +4,7 @@ import net.osmand.plus.OsmandApplication
 import net.osmand.plus.plugins.nautical.NauticalPlugin
 import net.osmand.plus.plugins.nautical.engine.MarineState
 import net.osmand.plus.R
+import java.util.Locale
 
 class AnchoringManeuver(app: OsmandApplication) : ManeuverEngine(app) {
 
@@ -96,19 +97,25 @@ class AnchoringManeuver(app: OsmandApplication) : ManeuverEngine(app) {
             // Auto-completion based on chain counter
             if (caps?.hasChainCounter == true && state.rodeDeployed != null) {
                 if (state.rodeDeployed >= rodeLength) {
-                    pushInstruction(app.getString(R.string.nautical_anchoring_target_rode))
                     if (caps.hasWindlassControl) {
                         NauticalPlugin.engine?.setSwitch("electrical.switches.windlass.down", false)
                     }
                     
                     // Once rode is out, wait for vessel to settle (SOG < 0.1 kn)
                     if (sog < 0.05) {
+                        pushInstruction(app.getString(R.string.nautical_anchoring_set))
+                        pushProgress(100)
                         transitionToCompleted()
                     } else {
-                        pushInstruction(app.getString(R.string.nautical_anchoring_settling))
+                        // Task 11: Descriptive settling state
+                        val speedKnots = sog * net.osmand.shared.units.SpeedConstants.KNOTS
+                        pushInstruction(app.getString(R.string.nautical_anchoring_settling_desc, String.format(Locale.US, "%.1f", speedKnots)))
+                        // Progress for settling (mapping 0.5 kn to 0.05 kn as 70-100%)
+                        val settleProgress = 70 + ((1.0 - (sog.coerceIn(0.05, 0.25) / 0.25)) * 30).toInt()
+                        pushProgress(settleProgress)
                     }
                 } else {
-                    val progress = ((state.rodeDeployed / rodeLength) * 100).toInt()
+                    val progress = ((state.rodeDeployed / rodeLength) * 70).toInt()
                     pushProgress(progress)
                     pushInstruction(app.getString(R.string.nautical_anchoring_paying_out, state.rodeDeployed, rodeLength))
                 }
@@ -116,7 +123,11 @@ class AnchoringManeuver(app: OsmandApplication) : ManeuverEngine(app) {
                 // Fallback: If no chain counter, wait for settling after manual payout or time
                 if (sog < 0.05) {
                     pushInstruction(app.getString(R.string.nautical_anchoring_set))
+                    pushProgress(100)
                     transitionToCompleted()
+                } else {
+                    val speedKnots = sog * net.osmand.shared.units.SpeedConstants.KNOTS
+                    pushInstruction(app.getString(R.string.nautical_anchoring_settling_manual, String.format(Locale.US, "%.1f", speedKnots)))
                 }
             }
         }

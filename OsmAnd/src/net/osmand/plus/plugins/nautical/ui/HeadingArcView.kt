@@ -114,7 +114,9 @@ class HeadingArcView @JvmOverloads constructor(
     private var isDragging = false
     private var dragStartedX = 0f
     private var dragStartedY = 0f
-    private val dragSlop = 20f // pixels
+    private var dragStartTime = 0L
+    private val dragSlop = 60f // pixels (Increased from 30f)
+    private val activationDelay = 800L // ms (Increased from 400ms)
 
     private val cardinalLabels = Array(8) { "" }
     private val cardinalIndices = intArrayOf(0, 45, 90, 135, 180, 225, 270, 315)
@@ -148,6 +150,7 @@ class HeadingArcView @JvmOverloads constructor(
     private var dp18 = 0f
     private var dp24 = 0f
     private var dp28 = 0f
+    private var dp32 = 0f
     private var dp45 = 0f
     private var dp64 = 0f
 
@@ -178,6 +181,7 @@ class HeadingArcView @JvmOverloads constructor(
         dp18 = 18f * density
         dp24 = 24f * density
         dp28 = 28f * density
+        dp32 = 32f * density
         dp45 = 45f * density
         dp64 = 64f * density
         
@@ -234,9 +238,16 @@ class HeadingArcView @JvmOverloads constructor(
 
         val centerX = w / 2f
         val centerY = h / 2f
-        val radius = min(w, h) / 2f * 0.85f
+        val baseRadius = min(w, h) / 2f
+        val radius = baseRadius * 0.85f
         if (radius <= 0 || radius.isNaN()) return
         
+        // Dynamic Font Scaling (Phase 1)
+        val cardinalSize = (radius / 3.5f).coerceIn(dp14, dp28)
+        val majorSize = (radius / 5.5f).coerceIn(dp10, dp18)
+        val centerValueSize = (radius / 1.5f).coerceIn(dp32, dp64)
+        val labelSize = (radius / 7f).coerceIn(dp10, dp14)
+
         val textColorPrimary = NauticalColorResolver.getColor(context, NauticalSemanticColor.PRIMARY)
         val textColorSecondary = NauticalColorResolver.getColor(context, NauticalSemanticColor.SECONDARY)
         val accentColor = NauticalColorResolver.getColor(context, NauticalSemanticColor.ACCENT)
@@ -271,7 +282,7 @@ class HeadingArcView @JvmOverloads constructor(
                     tickPaint.color = textColorPrimary
                     tickPaint.alpha = if (isCardinal || isMajor) 200 else 80
                     tickPaint.strokeWidth = if (isCardinal || isMajor) dp3 else dp1 * 1.5f
-                    val tickLen = if (isCardinal || isMajor) dp24 else dp12
+                    val tickLen = if (isCardinal || isMajor) radius * 0.15f else radius * 0.08f
 
                     val x1 = centerX + radius * cosRad
                     val y1 = centerY + radius * sinRad
@@ -281,21 +292,22 @@ class HeadingArcView @JvmOverloads constructor(
 
                     if (isCardinal || isMajor) {
                         paint.style = Paint.Style.FILL
-                        paint.textSize = if (isCardinal) dp28 else dp18
+                        paint.textSize = if (isCardinal) cardinalSize else majorSize
                         paint.textAlign = Paint.Align.CENTER
                         paint.color = if (isCardinal) accentColor else textColorSecondary
                         paint.alpha = 255
                         paint.typeface = if (isCardinal) cardinalTypeface else normalTypeface
 
-                        val tx = centerX + (radius - dp45) * cosRad
-                        val ty = centerY + (radius - dp45) * sinRad
+                        val textOffset = radius * 0.28f
+                        val tx = centerX + (radius - textOffset) * cosRad
+                        val ty = centerY + (radius - textOffset) * sinRad
                         
                         withRotation(animatedTargetHeading - hDeg + 90f, tx, ty) {
                             if (isCardinal) {
-                                drawText(cardinalLabels[cardinalIdx], tx, ty + dp8, paint)
+                                drawText(cardinalLabels[cardinalIdx], tx, ty + (paint.textSize / 3f), paint)
                             } else {
                                 val count = NauticalFormatter.formatInt(normH, degreeBuffer)
-                                drawText(degreeBuffer, 0, count, tx, ty + dp8, paint)
+                                drawText(degreeBuffer, 0, count, tx, ty + (paint.textSize / 3f), paint)
                             }
                         }
                     }
@@ -372,21 +384,21 @@ class HeadingArcView @JvmOverloads constructor(
         val isOffline = actualHeading == null
         if (isOffline) {
             textPaint.color = NauticalColorResolver.getColor(context, NauticalSemanticColor.STATUS_ERROR)
-            textPaint.textSize = dp28
+            textPaint.textSize = cardinalSize
             canvas.drawText(offlineLabel, centerX, centerY + dp10, textPaint)
         } else {
             textPaint.color = textColorPrimary
-            textPaint.textSize = dp64
+            textPaint.textSize = centerValueSize
             val centralValue = if (currentMode == "WIND") targetWindAngleApparent ?: 0 else targetHeading
-            NauticalFormatter.drawDeg(canvas, centralValue.toFloat(), centerX, centerY + dp5, textPaint, degreeBuffer)
+            NauticalFormatter.drawDeg(canvas, centralValue.toFloat(), centerX, centerY + (centerValueSize / 4f), textPaint, degreeBuffer)
         }
         
-        paint.textSize = dp14
+        paint.textSize = labelSize
         paint.color = textColorSecondary
         paint.alpha = 150
         paint.typeface = mediumTypeface
         val label = if (currentMode == "WIND") awaLabel else setHeadingLabel
-        canvas.drawText(label, centerX, centerY + dp64, paint)
+        canvas.drawText(label, centerX, centerY + (centerValueSize * 0.9f), paint)
     }
 
     override fun onInitializeAccessibilityNodeInfo(info: AccessibilityNodeInfo) {
@@ -403,9 +415,11 @@ class HeadingArcView @JvmOverloads constructor(
 
         when (event.action) {
             MotionEvent.ACTION_DOWN -> {
-                if (dist > radius * 0.5f && dist < radius * 1.2f) {
+                // Task: Narrower touch ring (75% to 110% of radius)
+                if (dist > radius * 0.75f && dist < radius * 1.1f) {
                     dragStartedX = event.x
                     dragStartedY = event.y
+                    dragStartTime = System.currentTimeMillis()
                     parent.requestDisallowInterceptTouchEvent(true)
                     return true
                 }
@@ -413,8 +427,12 @@ class HeadingArcView @JvmOverloads constructor(
             MotionEvent.ACTION_MOVE -> {
                 if (!isDragging && (dragStartedX != 0f)) {
                     val moveDist = sqrt((event.x - dragStartedX).pow(2) + (event.y - dragStartedY).pow(2))
-                    if (moveDist > dragSlop) {
+                    val timeElapsed = System.currentTimeMillis() - dragStartTime
+                    
+                    // Task: Delay activation to prevent accidental slides
+                    if (moveDist > dragSlop && timeElapsed > activationDelay) {
                         isDragging = true
+                        performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
                     }
                 }
                 
@@ -432,8 +450,10 @@ class HeadingArcView @JvmOverloads constructor(
                 }
             }
             MotionEvent.ACTION_UP -> {
+                val wasDragging = isDragging
                 dragStartedX = 0f
                 dragStartedY = 0f
+                dragStartTime = 0L
                 if (isDragging) {
                     isDragging = false
                     if (currentMode == "WIND") {
@@ -441,10 +461,9 @@ class HeadingArcView @JvmOverloads constructor(
                     } else {
                         onHeadingChanged?.invoke(targetHeading)
                     }
-                    performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
                     return true
                 }
-                if (dist < (min(width, height) / 4f)) {
+                if (!wasDragging && dist < (min(width, height) / 4f)) {
                     onCenterClicked?.invoke()
                     performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
                     performClick()
@@ -455,6 +474,7 @@ class HeadingArcView @JvmOverloads constructor(
                 isDragging = false
                 dragStartedX = 0f
                 dragStartedY = 0f
+                dragStartTime = 0L
             }
         }
         return super.onTouchEvent(event)

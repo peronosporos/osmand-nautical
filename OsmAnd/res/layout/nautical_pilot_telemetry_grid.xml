@@ -28,15 +28,15 @@
             android:background="?attr/selectableItemBackground">
             <ImageView
                 android:id="@+id/img_icon_1_1"
-                android:layout_width="24dp"
-                android:layout_height="24dp"
+                android:layout_width="20dp"
+                android:layout_height="20dp"
                 android:src="@drawable/ic_action_speed"
                 app:tint="?attr/icon_color_primary" />
             <TextView
                 android:id="@+id/txt_label_1_1"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
+                android:layout_marginTop="2dp"
                 android:fontFamily="sans-serif-condensed"
                 android:textAppearance="?attr/textAppearanceSubtitle2"
                 android:textColor="?attr/text_color_secondary"
@@ -70,15 +70,15 @@
             android:background="?attr/selectableItemBackground">
             <ImageView
                 android:id="@+id/img_icon_1_2"
-                android:layout_width="24dp"
-                android:layout_height="24dp"
+                android:layout_width="20dp"
+                android:layout_height="20dp"
                 android:src="@drawable/ic_action_direction_arrow"
                 app:tint="?attr/icon_color_primary" />
             <TextView
                 android:id="@+id/txt_label_1_2"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
+                android:layout_marginTop="2dp"
                 android:fontFamily="sans-serif-condensed"
                 android:textAppearance="?attr/textAppearanceSubtitle2"
                 android:textColor="?attr/text_color_secondary"
@@ -111,15 +111,15 @@
             android:background="?attr/selectableItemBackground">
             <ImageView
                 android:id="@+id/img_icon_1_3"
-                android:layout_width="24dp"
-                android:layout_height="24dp"
+                android:layout_width="20dp"
+                android:layout_height="20dp"
                 android:src="@drawable/ic_action_direction_compass"
                 app:tint="?attr/icon_color_primary" />
             <TextView
                 android:id="@+id/txt_label_1_3"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
+                android:layout_marginTop="2dp"
                 android:fontFamily="sans-serif-condensed"
                 android:textAppearance="?attr/textAppearanceSubtitle2"
                 android:textColor="?attr/text_color_secondary"
@@ -144,7 +144,7 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="20dp"
+        android:layout_marginTop="8dp"
         android:baselineAligned="false"
         android:orientation="horizontal">
 
@@ -161,15 +161,15 @@
             android:background="?attr/selectableItemBackground">
             <ImageView
                 android:id="@+id/img_icon_2_1"
-                android:layout_width="24dp"
-                android:layout_height="24dp"
+                android:layout_width="20dp"
+                android:layout_height="20dp"
                 android:src="@drawable/ic_action_speed"
                 app:tint="?attr/icon_color_primary" />
             <TextView
                 android:id="@+id/txt_label_2_1"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
+                android:layout_marginTop="2dp"
                 android:fontFamily="sans-serif-condensed"
                 android:textAppearance="?attr/textAppearanceSubtitle2"
                 android:textColor="?attr/text_color_secondary"
@@ -202,15 +202,15 @@
             android:background="?attr/selectableItemBackground">
             <ImageView
                 android:id="@+id/img_icon_2_2"
-                android:layout_width="24dp"
-                android:layout_height="24dp"
+                android:layout_width="20dp"
+                android:layout_height="20dp"
                 android:src="@drawable/ic_action_direction_movement"
                 app:tint="?attr/icon_color_primary" />
             <TextView
                 android:id="@+id/txt_label_2_2"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
+                android:layout_marginTop="2dp"
                 android:fontFamily="sans-serif-condensed"
                 android:textAppearance="?attr/textAppearanceSubtitle2"
                 android:textColor="?attr/text_color_secondary"
@@ -243,15 +243,15 @@
             android:background="?attr/selectableItemBackground">
             <ImageView
                 android:id="@+id/img_icon_2_3"
-                android:layout_width="24dp"
-                android:layout_height="24dp"
+                android:layout_width="20dp"
+                android:layout_height="20dp"
                 android:src="@drawable/ic_action_direction_arrow"
                 app:tint="?attr/icon_color_primary" />
             <TextView
                 android:id="@+id/txt_label_2_3"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
+                android:layout_marginTop="2dp"
                 android:fontFamily="sans-serif-condensed"
                 android:textAppearance="?attr/textAppearanceSubtitle2"
                 android:textColor="?attr/text_color_secondary"

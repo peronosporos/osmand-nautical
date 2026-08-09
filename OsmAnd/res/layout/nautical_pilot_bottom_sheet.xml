@@ -188,6 +188,30 @@
                 app:icon="@drawable/ic_action_lock"
                 app:iconTint="?attr/icon_color_primary"
                 android:contentDescription="Lock Course Control" />
+
+            <View android:layout_width="1dp" android:layout_height="24dp" android:background="#33FFFFFF" />
+
+            <ImageButton
+                android:id="@+id/btn_tool_center"
+                android:layout_width="0dp"
+                android:layout_height="48dp"
+                android:layout_weight="1"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Nautical Tools"
+                app:srcCompat="@drawable/ic_action_additional_option"
+                app:tint="?attr/icon_color_primary" />
+
+            <View android:layout_width="1dp" android:layout_height="24dp" android:background="#33FFFFFF" />
+
+            <ImageButton
+                android:id="@+id/btn_toggle_telemetry"
+                android:layout_width="0dp"
+                android:layout_height="48dp"
+                android:layout_weight="1"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/nautical_toggle_telemetry"
+                app:srcCompat="@drawable/ic_action_additional_option"
+                app:tint="?attr/icon_color_primary" />
         </LinearLayout>
 
         <!-- 2. Autopilot Head Card (Steering + Control Cluster) -->

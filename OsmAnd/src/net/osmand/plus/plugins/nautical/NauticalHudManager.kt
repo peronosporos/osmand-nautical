@@ -71,11 +71,22 @@ class NauticalHudManager(private val activity: MapActivity) {
         updateLayout()
     }
 
-    fun showBanner(text: String, durationMs: Long, label: String? = null, isWarning: Boolean = false, onConfirm: (() -> Unit)? = null) {
+    fun showBanner(
+        text: String,
+        durationMs: Long,
+        label: String? = null,
+        isWarning: Boolean = false,
+        onConfirm: (() -> Unit)? = null,
+        secondaryLabel: String? = null,
+        onSecondaryConfirm: (() -> Unit)? = null
+    ) {
         val banner = net.osmand.plus.plugins.nautical.ui.NauticalHudBannerView(activity).apply {
             setMessage(text, isWarning)
             if (onConfirm != null) {
                 setConfirmAction(label ?: activity.getString(R.string.shared_string_ok), onConfirm)
+            }
+            if (onSecondaryConfirm != null) {
+                setSecondaryConfirmAction(secondaryLabel ?: activity.getString(R.string.shared_string_cancel), onSecondaryConfirm)
             }
             onDismiss = {
                 removeHeader(this)

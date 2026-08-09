@@ -16,6 +16,7 @@ import net.osmand.plus.plugins.nautical.engine.ConnectionStatus
 import net.osmand.plus.plugins.nautical.engine.NotificationState
 import net.osmand.shared.util.KMapUtils
 import kotlin.math.abs
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * Background watchdog for anchor drift detection.
@@ -247,9 +248,14 @@ class AnchorDriftWatchdog(private val app: OsmandApplication) {
                     durationMs = 60000,
                     label = app.getString(R.string.nautical_silence_alarm),
                     isWarning = true,
-                ) {
-                    stopAlarm()
-                }
+                    onConfirm = {
+                        stopAlarm()
+                    },
+                    secondaryLabel = app.getString(R.string.nautical_disarm_anchor),
+                    onSecondaryConfirm = {
+                        disarm()
+                    }
+                )
             }
         }
     }
@@ -261,7 +267,26 @@ class AnchorDriftWatchdog(private val app: OsmandApplication) {
             isAlarmActive = false
             isGpsLostAlarmActive = false
             outOfBoundsCount = 0
+            // Task: Temporary suppression to prevent immediate re-trigger
+            observationJob?.cancel()
+            observationJob = null
+            scope.launch {
+                delay(30000.milliseconds) // 30s silence window
+                if (observationJob == null) {
+                    start()
+                }
+            }
         }
+    }
+
+    fun disarm() {
+        log.info("AnchorWatch: DISARMING definitively.")
+        stopAlarm()
+        app.settings.NAUTICAL_ANCHOR_LAT.set(0.0)
+        app.settings.NAUTICAL_ANCHOR_LON.set(0.0)
+        app.settings.NAUTICAL_ANCHOR_RADIUS.set(0f)
+        stop()
+        app.runInUIThread { app.osmandMap?.refreshMap() }
     }
 
     fun setAnchor(latitude: Double, longitude: Double, radius: Float) {

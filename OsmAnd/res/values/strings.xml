@@ -1,4 +1,10 @@
 <resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
+    <string name="nautical_disarm_anchor">DISARM ANCHOR WATCH</string>
+    <string name="nautical_toggle_telemetry">Toggle Telemetry Grid</string>
+    <string name="nautical_tool_center">Nautical Tool Center</string>
+    <string name="nautical_anchoring_settling_desc">Rode Out - Settling Vessel (Speed: %1$s kn)</string>
+    <string name="nautical_anchoring_settling_manual">Settling Vessel (Speed: %1$s kn). Wait for &lt; 0.1 kn.</string>
+    <string name="nautical_vhf_url_missing">VHF backend URL is not configured.</string>
     <string name="nautical_offline_status">Offline</string>
     <string name="nautical_switch_panel_desc">Configure and control electrical switches via Signal K</string>
     <string name="nautical_boat_ai_desc">Enable AI-assisted vessel optimization and insights</string>

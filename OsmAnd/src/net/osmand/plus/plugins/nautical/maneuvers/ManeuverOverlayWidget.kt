@@ -1,5 +1,6 @@
 package net.osmand.plus.plugins.nautical.maneuvers
 
+import android.graphics.Color
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
@@ -158,6 +159,14 @@ class ManeuverOverlayWidget(
         windText?.setTextColor(accentColor)
         
         executeBtn?.visibility = if (manager.state == ManeuverState.ARMED) View.VISIBLE else View.GONE
+        if (manager.state == ManeuverState.ARMED) {
+            val maneuverId = manager.activeManeuver?.let { manager.getManeuverId(it) } ?: "maneuver"
+            val maneuverName = maneuverId.replace("_", " ").uppercase()
+            val executeLabel = mapActivity.getString(R.string.maneuver_execute).uppercase()
+            executeBtn?.text = "$executeLabel $maneuverName"
+            executeBtn?.setBackgroundColor(0xFF00C853.toInt()) // High-Contrast Green
+            executeBtn?.setTextColor(Color.WHITE)
+        }
         doneBtn?.visibility = if (manager.state == ManeuverState.EXECUTING) View.VISIBLE else View.GONE
         progressBar?.visibility = if (manager.state == ManeuverState.EXECUTING) View.VISIBLE else View.GONE
         

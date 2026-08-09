@@ -29,6 +29,7 @@ class MarineLogbookFragment : BaseOsmAndFragment() {
     private lateinit var viewModel: MarineLogbookViewModel
     private lateinit var adapter: MarineLogbookAdapter
     private lateinit var emptyView: View
+    private lateinit var swipeRefresh: androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 
     private val createCsvLauncher = registerForActivityResult(ActivityResultContracts.CreateDocument("text/csv")) { uri ->
         handleExportResult(uri, MarineLogbookViewModel.ExportFormat.CSV)
@@ -95,6 +96,11 @@ class MarineLogbookFragment : BaseOsmAndFragment() {
         
         val recyclerView: RecyclerView = view.findViewById(R.id.recycler_view)
         emptyView = view.findViewById(R.id.empty_view)
+        swipeRefresh = view.findViewById(R.id.swipe_refresh)
+        
+        swipeRefresh.setOnRefreshListener {
+            viewModel.syncWithServer()
+        }
         
         // Update empty state text
         emptyView.findViewById<TextView>(R.id.empty_state_text)?.setText(R.string.logbook_empty_state)
@@ -167,6 +173,7 @@ class MarineLogbookFragment : BaseOsmAndFragment() {
             viewModel.logEntries.collectLatest { entries ->
                 adapter.submitList(entries)
                 emptyView.visibility = if (entries.isEmpty()) View.VISIBLE else View.GONE
+                swipeRefresh.isRefreshing = false
             }
         }
 

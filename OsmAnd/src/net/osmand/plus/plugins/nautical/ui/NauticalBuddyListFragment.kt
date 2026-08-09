@@ -40,6 +40,7 @@ class NauticalBuddyListFragment : BaseOsmAndFragment() {
             NauticalPlugin.engine?.marineStateFlow?.collectLatest { state ->
                 val buddies = state.aisBuddies.toList()
                 adapter.submitList(buddies)
+                view.findViewById<View>(R.id.txt_empty_list)?.visibility = if (buddies.isEmpty()) View.VISIBLE else View.GONE
             }
         }
 

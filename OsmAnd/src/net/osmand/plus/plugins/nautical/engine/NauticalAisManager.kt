@@ -31,7 +31,7 @@ class NauticalAisManager(private val app: OsmandApplication) {
 
     private val aisExtras = Collections.synchronizedMap(mutableMapOf<Int, AisExtras>())
 
-    private val aisObjectListCounterMax = 200
+    private val aisObjectListCounterMax = 500
     private val objects = Collections.synchronizedMap(
         object : LinkedHashMap<Int, AisObject>(aisObjectListCounterMax, 0.75f, true) {
             override fun removeEldestEntry(eldest: Map.Entry<Int, AisObject>?): Boolean {
