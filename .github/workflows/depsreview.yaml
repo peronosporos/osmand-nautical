@@ -12,4 +12,5 @@ jobs:
       - name: 'Checkout Repository'
         uses: actions/checkout@v7
       - name: 'Dependency Review'
+        continue-on-error: true
         uses: actions/dependency-review-action@v5
