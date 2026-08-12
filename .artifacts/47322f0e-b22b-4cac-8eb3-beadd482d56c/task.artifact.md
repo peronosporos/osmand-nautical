@@ -1,0 +1,2 @@
+- [x] Fix `runInUIThread` in `NauticalAisLayer.kt`
+- [x] Add import for `NauticalElectricalDashboardBottomSheet` in `NauticalElectricalWidget.kt`

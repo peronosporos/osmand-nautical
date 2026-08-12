@@ -4,6 +4,7 @@ import android.view.View
 import net.osmand.plus.activities.MapActivity
 import net.osmand.plus.plugins.nautical.NauticalPlugin
 import net.osmand.plus.plugins.nautical.engine.MarineState
+import net.osmand.plus.plugins.nautical.ui.widgets.NauticalElectricalDashboardBottomSheet
 import net.osmand.plus.views.layers.base.OsmandMapLayer
 import net.osmand.plus.views.mapwidgets.WidgetType
 import net.osmand.plus.views.mapwidgets.WidgetsPanel

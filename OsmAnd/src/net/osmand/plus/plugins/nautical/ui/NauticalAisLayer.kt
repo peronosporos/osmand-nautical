@@ -120,7 +120,7 @@ class NauticalAisLayer(context: Context) : OsmandMapLayer(context), ContextMenuL
         
         // Task: Local Follow Mode handling
         if (mmsi == followedMmsi && ais.position != null) {
-            tileView?.mapActivity?.application?.runInUIThread {
+            getApplication().runInUIThread {
                 tileView?.setLatLon(ais.position!!.latitude, ais.position!!.longitude)
             }
         }
