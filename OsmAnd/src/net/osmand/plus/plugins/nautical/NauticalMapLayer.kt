@@ -959,7 +959,7 @@ class NauticalMapLayer(context: Context) : OsmandMapLayer(context), SharedPrefer
     }
 
     private fun drawIsochrones(canvas: Canvas, tileBox: RotatedTileBox, isochrones: List<net.osmand.plus.plugins.nautical.network.SignalKRegion>) {
-        val engine = net.osmand.plus.plugins.nautical.NauticalPlugin.engine ?: return
+        val engine = NauticalPlugin.engine ?: return
         val lastUpdate = engine.getCurrentState().lastIsochroneTime
         val ageMs = System.currentTimeMillis() - lastUpdate
         
@@ -1030,7 +1030,7 @@ class NauticalMapLayer(context: Context) : OsmandMapLayer(context), SharedPrefer
                 val interpolatedSpeed = s1 + (s2 - s1) * twsFactor
                 
                 // Draw relative to boat heading
-                val drawAngle = state.headingTrue ?: 0.0 + angleRad
+                val drawAngle = state.headingTrue ?: (0.0 + angleRad)
                 val px = centerX + (interpolatedSpeed * pixelsPerMs * sin(drawAngle)).toFloat()
                 val py = centerY - (interpolatedSpeed * pixelsPerMs * cos(drawAngle)).toFloat()
                 

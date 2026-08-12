@@ -418,7 +418,6 @@
     <string name="nautical_windlass_control">Anchor Windlass (Hold to Actuate)</string>
     <string name="nautical_windlass_up">UP (Retrieve)</string>
     <string name="nautical_windlass_down">DOWN (Drop)</string>
-    <string name="nautical_windlass_engine_guard">DANGER: Engine must be running to operate windlass</string>
     <string name="nautical_rigging_load_label">Rigging Load</string>
     <string name="nautical_rigging_load_desc">Real-time tension data for critical rigging components</string>
     <string name="nautical_rainviewer_radar">Live Precipitation Radar</string>
@@ -7920,7 +7919,6 @@ Download tile maps directly, or copy them as SQLite database files to OsmAnd\'s 
     <string name="nautical_unknown_vessel">Unknown Vessel</string>
     <string name="nautical_vhf_streaming_port">VHF Streaming Port</string>
     <string name="nautical_vhf_transmission_received">New VHF Transmission: %1$s</string>
-    <string name="nautical_vhf_history_meta_fmt">%1$s | CH %2$s</string>
     <string name="nautical_obstacle">Obstacle</string>
     <string name="nautical_sk_exported_description">Exported from OsmAnd Nautical</string>
     <string name="nautical_sk_updated_description">Updated from OsmAnd Nautical</string>
