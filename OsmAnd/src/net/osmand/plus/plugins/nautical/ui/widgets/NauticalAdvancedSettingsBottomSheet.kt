@@ -20,6 +20,7 @@ import android.widget.Button
 import android.widget.ProgressBar
 import net.osmand.plus.R
 import net.osmand.plus.plugins.nautical.NauticalPlugin
+import net.osmand.plus.plugins.nautical.engine.SignalKUnitConverter
 import net.osmand.plus.plugins.nautical.ui.NauticalTouchGuard
 import net.osmand.plus.settings.enums.VesselType
 
@@ -76,6 +77,7 @@ class NauticalAdvancedSettingsBottomSheet : BaseNauticalBottomSheet() {
         val txtKeelOffsetValue = view.findViewById<android.widget.TextView>(R.id.txt_value_keel_offset)
         val sliderWindAlignment = view.findViewById<Slider>(R.id.slider_wind_alignment)
         val txtWindAlignmentValue = view.findViewById<android.widget.TextView>(R.id.txt_value_wind_alignment)
+        val txtXteThresholdValue = view.findViewById<android.widget.TextView>(R.id.txt_value_xte_threshold)
         val vesselTypeToggle = view.findViewById<com.google.android.material.button.MaterialButtonToggleGroup>(R.id.vessel_type_toggle)
 
         val sliderSeaState = view.findViewById<Slider>(R.id.slider_sea_state)
@@ -174,8 +176,15 @@ class NauticalAdvancedSettingsBottomSheet : BaseNauticalBottomSheet() {
         sliderXteThreshold.value = (settings.NAUTICAL_XTE_THRESHOLD.get() as Float).coerceIn(sliderXteThreshold.valueFrom, sliderXteThreshold.valueTo)
 
         txtSeaStateValue.text = sliderSeaState.value.toInt().toString()
-        txtKeelOffsetValue.text = String.format(java.util.Locale.US, "%.1f m", sliderKeelOffset.value)
-        txtWindAlignmentValue.text = getString(R.string.nautical_format_deg, sliderWindAlignment.value.toInt().toString())
+        
+        val initialKeel = SignalKUnitConverter.formatValue(app, settings, sliderKeelOffset.value.toDouble(), "depth")
+        txtKeelOffsetValue.text = "${initialKeel.first} ${initialKeel.second}"
+        
+        val initialWind = SignalKUnitConverter.formatValue(app, settings, Math.toRadians(sliderWindAlignment.value.toDouble()), "angle")
+        txtWindAlignmentValue.text = "${initialWind.first}${initialWind.second}"
+
+        val initialXte = SignalKUnitConverter.formatValue(app, settings, SignalKUnitConverter.nmToMeters(sliderXteThreshold.value.toDouble()), "distance")
+        txtXteThresholdValue.text = "${initialXte.first} ${initialXte.second}"
         
         switchAutoSeaState.isChecked = settings.NAUTICAL_PILOT_AUTO_SEA_STATE.get()
         sliderSeaState.isEnabled = !switchAutoSeaState.isChecked
@@ -184,8 +193,19 @@ class NauticalAdvancedSettingsBottomSheet : BaseNauticalBottomSheet() {
         vesselTypeToggle.check(if (settings.NAUTICAL_VESSEL_TYPE.get() as VesselType == VesselType.PROA) R.id.btn_vessel_proa else R.id.btn_vessel_conv)
 
         sliderSeaState.addOnChangeListener { _, value, _ -> txtSeaStateValue.text = value.toInt().toString() }
-        sliderKeelOffset.addOnChangeListener { _, value, _ -> txtKeelOffsetValue.text = String.format(java.util.Locale.US, "%.1f m", value) }
-        sliderWindAlignment.addOnChangeListener { _, value, _ -> txtWindAlignmentValue.text = "${value.toInt()}°" }
+        sliderKeelOffset.addOnChangeListener { _, value, _ ->
+            val (v, u) = SignalKUnitConverter.formatValue(app, settings, value.toDouble(), "depth")
+            txtKeelOffsetValue.text = "$v $u"
+        }
+        sliderWindAlignment.addOnChangeListener { _, value, _ ->
+            val (v, u) = SignalKUnitConverter.formatValue(app, settings, Math.toRadians(value.toDouble()), "angle")
+            txtWindAlignmentValue.text = "$v$u"
+        }
+        sliderXteThreshold.addOnChangeListener { _, value, _ ->
+            val meters = SignalKUnitConverter.nmToMeters(value.toDouble())
+            val (v, u) = SignalKUnitConverter.formatValue(app, settings, meters, "distance")
+            txtXteThresholdValue.text = "$v $u"
+        }
         switchAutoSeaState.setOnCheckedChangeListener { _, isChecked ->
             sliderSeaState.isEnabled = !isChecked
             sliderSeaState.alpha = if (isChecked) 0.5f else 1.0f

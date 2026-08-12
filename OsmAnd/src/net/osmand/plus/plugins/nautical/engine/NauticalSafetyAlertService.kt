@@ -1,7 +1,7 @@
 package net.osmand.plus.plugins.nautical.engine
 
 import net.osmand.plus.OsmandApplication
-import net.osmand.plus.R
+import net.osmand.plus.R as OsmAndR
 import net.osmand.plus.plugins.nautical.NauticalPlugin
 import net.osmand.plus.plugins.nautical.audio.AlarmType
 import net.osmand.plus.plugins.nautical.audio.NauticalAudioArbiter
@@ -48,13 +48,13 @@ class NauticalSafetyAlertService(private val app: OsmandApplication) {
         
         val danger = issues.find { it.severity == Severity.DANGER }
         if (danger != null) {
-            val msg = app.getString(R.string.nautical_hazard_ahead) + ": " + danger.description
+            val msg = app.getString(OsmAndR.string.nautical_hazard_ahead) + ": " + danger.description
             notifications["safety.hazard.danger"] = SignalKNotification(msg, NotificationState.ALARM)
             NauticalAudioArbiter.getInstance(app).dispatchAlarm(AlarmType.MAP_HAZARD, voiceText = msg)
         } else {
             val warning = issues.find { it.severity == Severity.WARNING }
             if (warning != null) {
-                val msg = app.getString(R.string.nautical_hazard_ahead) + ": " + warning.description
+                val msg = app.getString(OsmAndR.string.nautical_hazard_ahead) + ": " + warning.description
                 notifications["safety.hazard.warning"] = SignalKNotification(msg, NotificationState.WARN)
             }
         }
