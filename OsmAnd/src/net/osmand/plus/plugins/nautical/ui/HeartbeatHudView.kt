@@ -13,6 +13,7 @@ import net.osmand.data.LatLon
 import net.osmand.plus.R
 import net.osmand.plus.plugins.nautical.NauticalPlugin
 import net.osmand.plus.plugins.nautical.engine.MarineState
+import net.osmand.plus.plugins.nautical.engine.SignalKNotification
 import net.osmand.plus.plugins.nautical.engine.SignalKUnitConverter
 import net.osmand.plus.plugins.nautical.mob.viewmodel.MobTriggerSource
 import java.util.*
