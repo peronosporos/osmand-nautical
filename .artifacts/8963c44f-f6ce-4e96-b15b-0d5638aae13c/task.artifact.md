@@ -1,0 +1,5 @@
+- `[x]` Fix compilation errors in `NauticalPlugin.kt`
+    - `[x]` Add missing imports
+    - `[x]` Clean up FQN property declarations and inline usages
+- `[x]` Verify changes with `analyze_file`
+- `[x]` Create walkthrough

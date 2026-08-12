@@ -108,6 +108,7 @@ import net.osmand.plus.plugins.nautical.mob.viewmodel.MobViewModel
 import net.osmand.plus.plugins.nautical.network.NauticalVhfManager
 import net.osmand.plus.plugins.nautical.network.SignalKDiscovery
 import net.osmand.plus.plugins.nautical.network.SignalKRestService
+import net.osmand.plus.plugins.nautical.network.SignalKRoute
 import net.osmand.plus.plugins.nautical.poi.ui.VhfPoiSearchLayer
 import net.osmand.plus.plugins.nautical.quickaction.NauticalAnchorQuickAction
 import net.osmand.plus.plugins.nautical.quickaction.NauticalMobQuickAction
@@ -123,6 +124,8 @@ import net.osmand.plus.plugins.nautical.ui.NauticalAisDetailsDialog
 import net.osmand.plus.plugins.nautical.ui.NauticalAisLayer
 import net.osmand.plus.plugins.nautical.ui.NauticalEnvironmentWidgetView
 import net.osmand.plus.plugins.nautical.ui.NauticalSetupWizardDialog
+import net.osmand.plus.plugins.nautical.ui.PredictiveSteeringHudView
+import net.osmand.plus.plugins.nautical.ui.ScreenTouchLockHudView
 import net.osmand.plus.plugins.nautical.ui.SignalKLogbookLayer
 import net.osmand.plus.plugins.nautical.ui.StartLineHudHeader
 import net.osmand.plus.plugins.nautical.ui.TacticalHudView
@@ -138,6 +141,7 @@ import net.osmand.plus.plugins.nautical.utils.NauticalLog
 import net.osmand.plus.plugins.nautical.utils.TemporalUtils
 import net.osmand.plus.plugins.nautical.viewmodel.PolarConfigViewModel
 import net.osmand.plus.plugins.nautical.viewmodel.RoutingViewModel
+import net.osmand.plus.plugins.nautical.viewmodel.WizardState
 import net.osmand.plus.quickaction.QuickActionType
 import net.osmand.plus.settings.backend.ApplicationMode
 import net.osmand.plus.settings.backend.OsmandSettings.SHARED_PREFERENCES_NAME
@@ -414,7 +418,7 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
                 autopilot?.applyWaveBias(state)
                 
                 // Live recording for Polar Configuration Wizard
-                if (polarConfigViewModel?.wizardState?.value == net.osmand.plus.plugins.nautical.viewmodel.WizardState.ACTIVE_LOGGING) {
+                if (polarConfigViewModel?.wizardState?.value == WizardState.ACTIVE_LOGGING) {
                     val tws = state.windSpeedTrue ?: 0.0
                     val twa = state.trueWindAngle ?: 0.0
                     val speed = state.speedOverGround ?: 0.0
@@ -782,9 +786,9 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
     private var tacticsHudHeader: TacticsHudHeader? = null
     private var windTrendHudHeader: WindTrendHudHeader? = null
     private var anchorWatchHudView: AnchorWatchHudView? = null
-    private var predictiveSteeringHudView: net.osmand.plus.plugins.nautical.ui.PredictiveSteeringHudView? = null
+    private var predictiveSteeringHudView: PredictiveSteeringHudView? = null
     private var forwardWatchHudView: ForwardWatchHudView? = null
-    private var screenTouchLockHudView: net.osmand.plus.plugins.nautical.ui.ScreenTouchLockHudView? = null
+    private var screenTouchLockHudView: ScreenTouchLockHudView? = null
 
     private val prefChangeListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
         val watchedKeys = setOf(
@@ -1744,7 +1748,7 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
         this.healthHudView = hh
         hudManager?.get()?.addHeader(hh, priority = 400) // Lower priority (bottom of stack)
 
-        val lh = net.osmand.plus.plugins.nautical.ui.ScreenTouchLockHudView(activity)
+        val lh = ScreenTouchLockHudView(activity)
         this.screenTouchLockHudView = lh
         hudManager?.get()?.addHeader(lh, priority = 5) // Very high priority
 
@@ -1880,7 +1884,7 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
         this.anchorWatchHudView = aw
         hudManager?.get()?.addHeader(aw, priority = 260)
 
-        val ps = net.osmand.plus.plugins.nautical.ui.PredictiveSteeringHudView(activity)
+        val ps = PredictiveSteeringHudView(activity)
         this.predictiveSteeringHudView = ps
         hudManager?.get()?.addHeader(ps, priority = 270)
     }
