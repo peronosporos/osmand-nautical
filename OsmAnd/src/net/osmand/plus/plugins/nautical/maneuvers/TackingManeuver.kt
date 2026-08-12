@@ -155,7 +155,7 @@ class TackingManeuver(app: OsmandApplication) : ManeuverEngine(app) {
                     val msg = app.getString(R.string.nautical_warn_stalled_in_irons)
                     NauticalPlugin.hudManager?.get()?.showBanner(
                         msg,
-                        5000,
+                        5000L,
                         "RESTART",
                         true
                     ) {

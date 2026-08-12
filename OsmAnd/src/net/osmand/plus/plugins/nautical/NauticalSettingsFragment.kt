@@ -430,6 +430,10 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
 
         findPreference<SwitchPreferenceEx>(settings.NAUTICAL_FORCE_WATCH_LAYOUT.id)?.apply {
             setIcon(R.drawable.ic_action_additional_option)
+            isEnabled = !WearOsNauticalManager(requireContext()).isWatchMode() || settings.NAUTICAL_FORCE_WATCH_LAYOUT.get()
+            if (!isEnabled) {
+                summary = getString(R.string.nautical_force_watch_layout_desc) + " (Watch Mode Active)"
+            }
         }
 
         findPreference<ListPreferenceEx>(settings.NAUTICAL_TELEMETRY_REFRESH_RATE.id)?.apply {
@@ -1268,9 +1272,8 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
                 settings.NAUTICAL_LOGBOOK_INTERVAL.id -> {
                     val interval = newString.toIntOrNull() ?: 0
                     preference.summary = when (interval) {
-                        1 -> getString(R.string.nautical_logbook_1h)
-                        4 -> getString(R.string.nautical_logbook_4h)
-                        else -> getString(R.string.nautical_logbook_disabled)
+                        0 -> "Immediate (Event-based)"
+                        else -> "$newString min"
                     }
                 }
                 settings.NAUTICAL_HEADING_REFERENCE.id -> preference.summary = if (newString == "TRUE") getString(R.string.nautical_heading_reference_true) else getString(R.string.nautical_heading_reference_mag)

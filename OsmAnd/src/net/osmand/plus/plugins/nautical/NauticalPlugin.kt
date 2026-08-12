@@ -434,30 +434,30 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
                             ConnectionStatus.CONNECTED -> {
                                 if (shouldToast) {
                                     if (lastConnectionStatus == ConnectionStatus.DISCONNECTED || lastConnectionStatus == ConnectionStatus.CONNECTING) {
-                                        hudManager?.get()?.showBanner(app.getString(R.string.nautical_sk_connected), 3000)
+                                        hudManager?.get()?.showBanner(app.getString(R.string.nautical_sk_connected), 3000L)
                                         NauticalAudioArbiter.getInstance(app).dispatchTts(app.getString(R.string.nautical_sk_connected), AlarmType.TTS_INSTRUCTION)
                                         lastStatusToastTime = now
                                     } else if (lastConnectionStatus == ConnectionStatus.STALE) {
-                                        hudManager?.get()?.showBanner(app.getString(R.string.nautical_connection_restored), 3000)
+                                        hudManager?.get()?.showBanner(app.getString(R.string.nautical_connection_restored), 3000L)
                                         lastStatusToastTime = now
                                     }
                                 }
                             }
                             ConnectionStatus.STALE -> {
                                 if (shouldToast && lastConnectionStatus == ConnectionStatus.CONNECTED) {
-                                    hudManager?.get()?.showBanner(app.getString(R.string.nautical_sk_connection_stale), 5000, isWarning = true)
+                                    hudManager?.get()?.showBanner(app.getString(R.string.nautical_sk_connection_stale), 5000L, isWarning = true)
                                     lastStatusToastTime = now
                                 }
                             }
                             ConnectionStatus.DISCONNECTED -> {
                                 if (shouldToast && lastConnectionStatus != null && lastConnectionStatus != ConnectionStatus.DISCONNECTED) {
-                                    hudManager?.get()?.showBanner(app.getString(R.string.nautical_sk_connection_lost), 0, isWarning = true)
+                                    hudManager?.get()?.showBanner(app.getString(R.string.nautical_sk_connection_lost), 0L, isWarning = true)
                                     lastStatusToastTime = now
                                 }
                             }
                             ConnectionStatus.CONNECTING -> {
                                 if (shouldToast) {
-                                    hudManager?.get()?.showBanner(app.getString(R.string.nautical_sk_connecting), 0)
+                                    hudManager?.get()?.showBanner(app.getString(R.string.nautical_sk_connecting), 0L)
                                     lastStatusToastTime = now
                                 }
                             }
@@ -572,7 +572,7 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
             if (v in 0.1..threshold) {
                 lowBatteryDetected = true
                 if (!isBatteryAlertActive) {
-                    hudManager?.get()?.showBanner(app.getString(R.string.nautical_emergency_power_low), 30000, isWarning = true)
+                    hudManager?.get()?.showBanner(app.getString(R.string.nautical_emergency_power_low), 30000L, isWarning = true)
                     NauticalAudioArbiter.getInstance(app).dispatchTts(app.getString(R.string.nautical_critical_low_battery), AlarmType.TTS_INSTRUCTION)
                 }
             }
@@ -1430,7 +1430,7 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
                             val loc = app.locationProvider.lastKnownLocation
                             if (loc != null) {
                                 mobViewModel?.triggerMob(LatLon(loc.latitude, loc.longitude), MobTriggerSource.BUTTON)
-                                hudManager?.get()?.showBanner(app.getString(R.string.nautical_mob_label), 10000, isWarning = true)
+                                hudManager?.get()?.showBanner(app.getString(R.string.nautical_mob_label), 10000L, isWarning = true)
                                 
                                 // TASK-301: Proper non-deprecated vibration handling
                                 val vibrator = app.getSystemService(Vibrator::class.java)
@@ -2196,7 +2196,7 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
                                         val details = alarmManager.threatDetails.value
                                         hudManager?.get()?.showBanner(
                                             app.getString(R.string.nautical_collision_alert) + ": " + (details?.vesselName ?: ""),
-                                            0, // Persistent
+                                            0L, // Persistent
                                             isWarning = true
                                         )
                                     } else {
@@ -2208,7 +2208,7 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
                                 alarmManager.activeCriticalNotifications.collect { notifications ->
                                     if (notifications.isNotEmpty() && !alarmManager.isCollisionAlarmActive.value) {
                                         val first = notifications.values.first()
-                                        hudManager?.get()?.showBanner(first.message, 5000, isWarning = true)
+                                        hudManager?.get()?.showBanner(first.message, 5000L, isWarning = true)
                                     }
                                 }
                             }
@@ -2675,7 +2675,7 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
             app.runInUIThread {
                 hudManager?.get()?.showBanner(
                     app.getString(R.string.nautical_auth_token_required),
-                    15000,
+                    15000L,
                     label = app.getString(R.string.shared_string_settings),
                     isWarning = true,
                     onConfirm = {

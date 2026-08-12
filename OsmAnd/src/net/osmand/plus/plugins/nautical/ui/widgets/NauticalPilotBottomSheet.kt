@@ -242,7 +242,7 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
 
                 NauticalPlugin.hudManager?.get()?.showBanner(
                     msg,
-                    3000,
+                    3000L,
                     label = label,
                     isWarning = true,
                     onConfirm = {
@@ -499,12 +499,12 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
         val msgResId = if (isShunt) R.string.nautical_confirm_shunt else if (isSafe) R.string.nautical_confirm_maneuver else R.string.nautical_warn_unsafe_maneuver
         val msg = getString(msgResId)
 
-        NauticalPlugin.hudManager?.get()?.showBanner(msg, 10000, label, !isSafe, onConfirm)
+        NauticalPlugin.hudManager?.get()?.showBanner(msg, 10000L, label, !isSafe, onConfirm)
     }
 
     private fun showConfirmModeChange(mode: String, onConfirm: () -> Unit) {
         val msg = getString(R.string.nautical_confirm_mode_change, mode)
-        NauticalPlugin.hudManager?.get()?.showBanner(msg, 10000, onConfirm = onConfirm)
+        NauticalPlugin.hudManager?.get()?.showBanner(msg, 10000L, onConfirm = onConfirm)
     }
 
     private fun showPatternsDialog() {

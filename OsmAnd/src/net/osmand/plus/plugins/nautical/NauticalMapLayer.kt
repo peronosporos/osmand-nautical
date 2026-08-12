@@ -15,6 +15,7 @@ import kotlin.time.Duration.Companion.seconds
 import net.osmand.data.RotatedTileBox
 import net.osmand.plus.OsmandApplication
 import net.osmand.plus.R
+import net.osmand.plus.plugins.nautical.engine.NauticalSafetyManager
 import net.osmand.plus.plugins.nautical.engine.SailingWorkflowState
 import net.osmand.plus.plugins.nautical.engine.TrajectoryPoint
 import net.osmand.plus.plugins.nautical.hazard.engine.SafetyCorridorChecker
@@ -29,6 +30,8 @@ import kotlin.math.*
 
 class NauticalMapLayer(context: Context) : OsmandMapLayer(context), SharedPreferences.OnSharedPreferenceChangeListener {
 
+    private val app = context.applicationContext as OsmandApplication
+    private val safetyManager = NauticalSafetyManager.getInstance(app)
     private val wearOsManager = WearOsNauticalManager(context)
     private var lastKnownTileBox: RotatedTileBox? = null
     private val trailPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -1120,8 +1123,7 @@ class NauticalMapLayer(context: Context) : OsmandMapLayer(context), SharedPrefer
             val baseWidth = if (hazardousSegments.contains(i)) 12f else 6f
             routePaint.strokeWidth = baseWidth * (if (isSunlight) 2.5f else 1.0f)
             canvas.drawLine(x1, y1, x2, y2, routePaint)
-            val safetyManager = NauticalPlugin.getInstance()?.safetyManager
-            if (safetyManager != null) {
+            if (true) {
                 val totalWidthMeters = safetyManager.getTotalCorridorWidthMeters()
                 val halfWidthMeters = totalWidthMeters / 2.0
                 val pixelsPerMeter = getPixelsPerMeter(tileBox, p1.first, p1.second)

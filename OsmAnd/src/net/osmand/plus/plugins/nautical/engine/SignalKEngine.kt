@@ -3385,7 +3385,7 @@ else if (context.isNotEmpty()) {
 
                 NauticalPlugin.hudManager?.get()?.showBanner(
                     app.getString(R.string.nautical_actuator_maintenance_required),
-                    0, // Persistent
+                    0L, // Persistent
                     isWarning = true,
                     onConfirm = { acknowledgeActuatorAlarm() }
                 )

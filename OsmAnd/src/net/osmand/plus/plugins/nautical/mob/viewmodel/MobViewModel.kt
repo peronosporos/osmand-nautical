@@ -192,7 +192,7 @@ class MobViewModel(
             // Offer Heave-To stabilization as primary safety action
             NauticalPlugin.hudManager?.get()?.showBanner(
                 app.getString(R.string.nautical_mob_prepare_turn),
-                15000,
+                15000L,
                 "HEAVE-TO",
                 isWarning = true,
                 onConfirm = {

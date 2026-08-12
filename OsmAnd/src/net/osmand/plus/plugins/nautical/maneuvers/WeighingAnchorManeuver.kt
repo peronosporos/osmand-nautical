@@ -74,7 +74,7 @@ class WeighingAnchorManeuver(app: OsmandApplication) : ManeuverEngine(app) {
         // Banner prompt for Helm Assistance
         NauticalPlugin.hudManager?.get()?.showBanner(
             app.getString(R.string.nautical_confirm_helm_to_anchor),
-            10000,
+            10000L,
             "AUTO-HELM",
             false
         ) {
@@ -87,7 +87,7 @@ class WeighingAnchorManeuver(app: OsmandApplication) : ManeuverEngine(app) {
         if (caps?.hasWindlassControl == true && state.isEngineRunning) {
             NauticalPlugin.hudManager?.get()?.showBanner(
                 app.getString(R.string.nautical_weighing_anchor_windlass_up_prompt),
-                0, // Persistent
+                0L, // Persistent
                 "RAISE",
                 false
             ) {

@@ -47,7 +47,7 @@ class AbortRecoveryEngine(
 
     private fun showBanner(text: String) {
         app.runInUIThread {
-            NauticalPlugin.hudManager?.get()?.showBanner(text, 10000, isWarning = true)
+            NauticalPlugin.hudManager?.get()?.showBanner(text, 10000L, isWarning = true)
         }
     }
 

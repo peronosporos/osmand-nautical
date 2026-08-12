@@ -160,7 +160,7 @@ class NauticalNotificationManager(
 
                 NauticalPlugin.hudManager?.get()?.showBanner(
                     message,
-                    durationMs = if (isHydration) 10000 else 30000,
+                    durationMs = if (isHydration) 10000L else 30000L,
                     label = bannerLabel,
                     isWarning = true,
                     onConfirm = {

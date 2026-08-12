@@ -64,7 +64,7 @@ class AutopilotController(
                     setAutopilotMode("standby")
                     NauticalPlugin.hudManager?.get()?.showBanner(
                         app.getString(R.string.nautical_manual_override_detected),
-                        5000,
+                        5000L,
                         isWarning = true,
                     )
                     vibrateShort()
@@ -134,7 +134,7 @@ class AutopilotController(
     private fun showPersistentError(messageRes: Int, code: Int? = null) {
         val msg = if (code != null) app.getString(messageRes) + " (Error $code)" else app.getString(messageRes)
         app.runInUIThread {
-            NauticalPlugin.hudManager?.get()?.showBanner(msg, 0, isWarning = true)
+            NauticalPlugin.hudManager?.get()?.showBanner(msg, 0L, isWarning = true)
         }
     }
 
@@ -275,7 +275,7 @@ class AutopilotController(
         val displayReason = maneuver ?: e?.let { "Priority ${it.activePriority}" } ?: app.getString(R.string.nautical_target_vessel)
         NauticalPlugin.hudManager?.get()?.showBanner(
             app.getString(R.string.nautical_autopilot_rejected_maneuver, app.getString(R.string.nautical_autopilot_rejected), displayReason),
-            5000,
+            5000L,
             isWarning = true,
         )
     }
@@ -470,7 +470,7 @@ class AutopilotController(
         log.info("Engaging Point Lock (Virtual Anchor) at $lat, $lon")
         engine.loadRoute(listOf(lat to lon))
         setAutopilotMode("track")
-        NauticalPlugin.hudManager?.get()?.showBanner(app.getString(R.string.nautical_point_lock_active), 3000)
+        NauticalPlugin.hudManager?.get()?.showBanner(app.getString(R.string.nautical_point_lock_active), 3000L)
         vibrateShort()
     }
 

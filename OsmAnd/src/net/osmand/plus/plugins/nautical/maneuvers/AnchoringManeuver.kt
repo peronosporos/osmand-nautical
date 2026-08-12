@@ -96,7 +96,7 @@ class AnchoringManeuver(app: OsmandApplication) : ManeuverEngine(app) {
         if (twd != null) {
             NauticalPlugin.hudManager?.get()?.showBanner(
                 app.getString(R.string.nautical_confirm_helm_into_wind),
-                10000,
+                10000L,
                 "AUTO-HELM",
                 false
             ) {
@@ -110,7 +110,7 @@ class AnchoringManeuver(app: OsmandApplication) : ManeuverEngine(app) {
         if (caps?.hasWindlassControl == true && state.isEngineRunning) {
             NauticalPlugin.hudManager?.get()?.showBanner(
                 app.getString(R.string.nautical_anchoring_windlass_prompt),
-                0, // Persistent until used or dismissed
+                0L, // Persistent until used or dismissed
                 "LOWER",
                 false
             ) {

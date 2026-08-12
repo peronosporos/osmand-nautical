@@ -86,7 +86,7 @@ class AnchorDriftWatchdog(private val app: OsmandApplication) {
                                 app.runInUIThread {
                                     NauticalPlugin.hudManager?.get()?.showBanner(
                                         app.getString(R.string.nautical_anchor_desync_warning),
-                                        15000,
+                                        15000L,
                                         label = app.getString(R.string.nautical_sync_now),
                                         isWarning = true,
                                         onConfirm = {
@@ -267,7 +267,7 @@ class AnchorDriftWatchdog(private val app: OsmandApplication) {
             app.runInUIThread {
                 NauticalPlugin.hudManager?.get()?.showBanner(
                     text,
-                    durationMs = 60000,
+                    durationMs = 60000L,
                     label = app.getString(R.string.nautical_silence_alarm),
                     isWarning = true,
                     onConfirm = {
