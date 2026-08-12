@@ -1,0 +1,21 @@
+# Tasks - Nautical Plugin Optimization
+
+- `[x]` Backend Engine & Infrastructure
+    - `[x]` `SignalKEngine.kt`: Dynamic calculation throttling (10Hz vs 2Hz)
+    - `[x]` `SignalKEngine.kt`: Optimize path-based JSON dispatching
+    - `[x]` `SignalKEngine.kt`: Reduce telemetry buffer overhead and improve IO safety
+    - `[x]` `SignalKEngine.kt`: Debounce REST refreshes on foregrounding
+    - `[x]` `NauticalAisManager.kt`: Implement AIS notification batching/throttling
+    - `[x]` `NauticalAisManager.kt`: Offload CPA math to Default dispatcher and increase interval
+    - `[x]` `NauticalBackgroundService.kt`: Smarter lock management for battery saving
+- `[x]` Frontend & UI Layer
+    - `[x]` `NauticalMapLayer.kt`: Cache geodesic vector results
+    - `[x]` `NauticalMapLayer.kt`: Optimize trajectory drawing (persistent Path)
+    - `[x]` `NauticalMapLayer.kt`: Optimize steering worm calculations
+    - `[x]` `NauticalHudManager.kt`: Implement view caching and update throttling
+    - `[x]` `LaylineViewModel.kt`: Offload math to background thread and reduce frequency
+    - `[x]` `NauticalPlugin.kt`: Consolidate WearOsNauticalManager to a singleton
+- `[ ]` Verification
+    - `[ ]` CPU profiling comparison
+    - `[ ]` Verification of map drawing fluidity
+    - `[ ]` Battery impact monitoring

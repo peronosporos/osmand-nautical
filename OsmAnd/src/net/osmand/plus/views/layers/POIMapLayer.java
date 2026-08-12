@@ -50,7 +50,7 @@ import net.osmand.plus.mapcontextmenu.MapContextMenu;
 import net.osmand.plus.plugins.PluginsHelper;
 import net.osmand.plus.poi.PoiFilterUtils;
 import net.osmand.plus.poi.PoiUIFilter;
-import net.osmand.plus.plugins.nautical.NauticalPlugin;
+
 import net.osmand.plus.render.RenderingIcons;
 import net.osmand.plus.render.TravelRendererHelper;
 import net.osmand.plus.render.TravelRendererHelper.OnFileVisibilityChangeListener;
@@ -802,12 +802,9 @@ public class POIMapLayer extends OsmandMapLayer implements IContextMenuProvider,
 		List<Amenity> fullObjects = new ArrayList<>();
 		List<LatLon> fullObjectsLatLon = new ArrayList<>();
 		List<LatLon> smallObjectsLatLon = new ArrayList<>();
-		boolean isNightVision = NauticalPlugin.isNightVision(app);
-		if (isNightVision) {
-			Paint dimPaint = new Paint();
-			dimPaint.setColorFilter(NauticalPlugin.DIM_FILTER);
-			canvas.saveLayer(null, dimPaint);
-		}
+		// ITEM 10: Avoid Double Filtering (Bug #10)
+		// Activity decorView is already filtered by NauticalPlugin. Dimming is redundant.
+		boolean isNightVision = false;
 
 		if (shouldDraw(zoom)) {
 			data.queryNewData(tileBox);
@@ -861,7 +858,7 @@ public class POIMapLayer extends OsmandMapLayer implements IContextMenuProvider,
 			}
 		}
 		if (isNightVision) {
-			canvas.restore();
+			// No longer using saveLayer for dimming
 		}
 		mapTextLayer.putData(this, fullObjects);
 		mapActivityInvalidated = false;

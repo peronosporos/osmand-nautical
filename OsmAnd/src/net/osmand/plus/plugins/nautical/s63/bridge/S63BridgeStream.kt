@@ -56,7 +56,8 @@ object S63BridgeStream {
 
     private fun createDecryptedStream(file: File, cellKey: String): InputStream {
         val pipedOut = PipedOutputStream()
-        val pipedIn = PipedInputStream(pipedOut)
+        // Increase pipe buffer size to 64KB to reduce context switching during decryption
+        val pipedIn = PipedInputStream(pipedOut, 65536)
 
         decryptionScope.launch {
             try {

@@ -7,7 +7,7 @@ class LogbookDbHelper(private val context: OsmandApplication) {
 
     companion object {
         const val DB_NAME = "marine_logbook_db"
-        const val DB_VERSION = 4
+        const val DB_VERSION = 5
         
         const val TABLE_LOGBOOK = "logbook_entries"
         const val TABLE_TACTICAL_STATE = "tactical_state"
@@ -34,8 +34,7 @@ class LogbookDbHelper(private val context: OsmandApplication) {
         const val COL_STATE_KEY = "state_key"
         const val COL_STATE_VALUE = "state_value"
 
-        private const val TABLE_LOGBOOK_CREATE = """
-            CREATE TABLE IF NOT EXISTS $TABLE_LOGBOOK (
+        private const val TABLE_LOGBOOK_SCHEMA = """
                 $COL_ID INTEGER PRIMARY KEY AUTOINCREMENT,
                 $COL_TIMESTAMP LONG NOT NULL,
                 $COL_LAT DOUBLE NOT NULL,
@@ -54,8 +53,9 @@ class LogbookDbHelper(private val context: OsmandApplication) {
                 $COL_SAIL_PLAN TEXT,
                 $COL_NOTES TEXT,
                 $COL_SERVER_UUID TEXT
-            );
         """
+
+        private const val TABLE_LOGBOOK_CREATE = "CREATE TABLE IF NOT EXISTS $TABLE_LOGBOOK ($TABLE_LOGBOOK_SCHEMA);"
 
         private const val TABLE_TACTICAL_CREATE = """
             CREATE TABLE IF NOT EXISTS $TABLE_TACTICAL_STATE (
@@ -65,6 +65,7 @@ class LogbookDbHelper(private val context: OsmandApplication) {
         """
         
         private const val INDEX_CREATE = "CREATE INDEX IF NOT EXISTS logbook_ts_idx ON $TABLE_LOGBOOK ($COL_TIMESTAMP);"
+        private const val UUID_INDEX_CREATE = "CREATE UNIQUE INDEX IF NOT EXISTS logbook_uuid_idx ON $TABLE_LOGBOOK ($COL_SERVER_UUID) WHERE $COL_SERVER_UUID IS NOT NULL;"
     }
 
     fun openConnection(readonly: Boolean): SQLiteConnection? {
@@ -99,6 +100,7 @@ class LogbookDbHelper(private val context: OsmandApplication) {
         db.execSQL(TABLE_LOGBOOK_CREATE)
         db.execSQL(TABLE_TACTICAL_CREATE)
         db.execSQL(INDEX_CREATE)
+        db.execSQL(UUID_INDEX_CREATE)
     }
 
     private fun onUpgrade(db: SQLiteConnection, oldVersion: Int) {
@@ -114,6 +116,9 @@ class LogbookDbHelper(private val context: OsmandApplication) {
         }
         if (oldVersion < 4) {
             db.execSQL("ALTER TABLE $TABLE_LOGBOOK ADD COLUMN $COL_SERVER_UUID TEXT")
+        }
+        if (oldVersion < 5) {
+            db.execSQL(UUID_INDEX_CREATE)
         }
     }
 }

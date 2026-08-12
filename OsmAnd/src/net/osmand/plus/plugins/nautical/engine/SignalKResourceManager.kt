@@ -142,18 +142,37 @@ class SignalKResourceManager(
             routes.forEach { (id, skRoute) ->
                 val fileName = "sk_${id.replace(":", "_")}.gpx"
                 val file = File(gpxDir, fileName)
-                if (!file.exists()) {
-                    val gpx = net.osmand.shared.gpx.GpxFile("SignalK: ${skRoute.name}")
-                    val rte = net.osmand.shared.gpx.primitives.Route()
-                    skRoute.feature.geometry.coordinates.forEach { coord ->
-                        val pt = net.osmand.shared.gpx.primitives.WptPt()
-                        pt.lon = coord[0]
-                        pt.lat = coord[1]
-                        rte.points.add(pt)
+                
+                // TASK-03.4 FIX: Refresh local GPX only if changed
+                val newGpx = net.osmand.shared.gpx.GpxFile("SignalK: ${skRoute.name}")
+                val rte = net.osmand.shared.gpx.primitives.Route()
+                skRoute.feature.geometry.coordinates.forEach { coord ->
+                    val pt = net.osmand.shared.gpx.primitives.WptPt()
+                    pt.lon = coord[0]
+                    pt.lat = coord[1]
+                    rte.points.add(pt)
+                }
+                newGpx.routes.add(rte)
+                
+                var shouldUpdate = true
+                if (file.exists()) {
+                    try {
+                        val existing = net.osmand.plus.shared.SharedUtil.loadGpxFile(file.inputStream())
+                        if (existing.routes.size == 1 && existing.routes[0].points.size == rte.points.size) {
+                             val mismatch = existing.routes[0].points.zip(rte.points).any { (p1, p2) ->
+                                 p1.lat != p2.lat || p1.lon != p2.lon
+                             }
+                             if (!mismatch) shouldUpdate = false
+                        }
+                    } catch (_: Exception) {}
+                }
+
+                if (shouldUpdate) {
+                    val kFile = net.osmand.plus.shared.SharedUtil.kFile(file)
+                    val error = net.osmand.shared.gpx.GpxUtilities.writeGpxFile(kFile, newGpx)
+                    if (error == null) {
+                        log.debug("Updated local GPX for SignalK route: ${skRoute.name}")
                     }
-                    gpx.routes.add(rte)
-                    net.osmand.shared.gpx.GpxUtilities.writeGpxFile(net.osmand.plus.shared.SharedUtil.kFile(file), gpx)
-                    log.debug("Created local GPX for SignalK route: ${skRoute.name}")
                 }
             }
         }
@@ -360,6 +379,36 @@ class SignalKResourceManager(
         val response = service.updateChecklist(id, checklist)
         if (response.isSuccessful) {
             log.info("Successfully pushed checklist $id to Signal K")
+            syncChecklists() // Snappy UI update
+        }
+    }
+
+    suspend fun createChecklist(checklist: SignalKChecklist): String? = withContext(Dispatchers.IO) {
+        val service = getRestService() ?: return@withContext null
+        try {
+            val response = service.createChecklist(checklist)
+            if (response.isSuccessful) {
+                val id = response.body()?.id
+                log.info("Successfully created checklist on Signal K: $id")
+                syncChecklists()
+                id
+            } else null
+        } catch (e: Exception) {
+            log.error("Error creating checklist: ${e.message}")
+            null
+        }
+    }
+
+    suspend fun deleteChecklistFromServer(id: String) = withContext(Dispatchers.IO) {
+        val service = getRestService() ?: return@withContext
+        try {
+            val response = service.deleteChecklist(id)
+            if (response.isSuccessful) {
+                log.info("Successfully deleted checklist $id from Signal K")
+                syncChecklists()
+            }
+        } catch (e: Exception) {
+            log.error("Error deleting checklist $id: ${e.message}")
         }
     }
 

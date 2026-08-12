@@ -71,10 +71,18 @@ class NavtexViewModel(
             if (filters.onlyUrgent && !msg.isUrgent) return@filter false
             if (filters.subject != null && msg.subject != filters.subject) return@filter false
             if (filters.maxDistanceKm != null && location != null && msg.points.isNotEmpty()) {
-                val coords = msg.points[0]
-                val distance = MapUtils.getDistance(location.latitude, location.longitude, 
-                    coords.latitude, coords.longitude)
-                if (distance > filters.maxDistanceKm * 1000) return@filter false
+                val distLimit = filters.maxDistanceKm * 1000
+                val minDistance = msg.points.minOf { p ->
+                    MapUtils.getDistance(location.latitude, location.longitude, p.latitude, p.longitude)
+                }
+                
+                if (minDistance > distLimit) {
+                    // Also check if location is inside polygon if it is one
+                    if (msg.isPolygon && isPointInPolygon(location.latitude, location.longitude, msg.points)) {
+                        return@filter true
+                    }
+                    return@filter false
+                }
             }
             true
         }
@@ -85,6 +93,38 @@ class NavtexViewModel(
         viewModelScope.launch {
             repository.refreshMessages()
         }
+    }
+
+    private fun isPointInPolygon(lat: Double, lon: Double, polygon: List<net.osmand.data.LatLon>): Boolean {
+        var intersectCount = 0
+        val x = lon
+        val y = lat
+        
+        for (j in polygon.indices) {
+            val i = if (j > 0) j - 1 else polygon.size - 1
+            var viLon = polygon[i].longitude
+            var vjLon = polygon[j].longitude
+            val viLat = polygon[i].latitude
+            val vjLat = polygon[j].latitude
+
+            // Normalize for anti-meridian
+            if (Math.abs(viLon - vjLon) > 180) {
+                if (viLon < 0) viLon += 360
+                if (vjLon < 0) vjLon += 360
+            }
+            
+            var testX = x
+            if (Math.abs(x - viLon) > 180 && Math.abs(x - vjLon) > 180) {
+                if (x < 0) testX += 360
+            }
+
+            if (((viLat > y) != (vjLat > y)) &&
+                (testX < (vjLon - viLon) * (y - viLat) / (vjLat - viLat) + viLon)
+            ) {
+                intersectCount++
+            }
+        }
+        return intersectCount % 2 != 0
     }
 
     fun updateFilters(filters: NavtexFilters) {

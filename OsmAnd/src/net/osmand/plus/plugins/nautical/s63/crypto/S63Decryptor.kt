@@ -57,8 +57,11 @@ object S63Decryptor {
         ZipInputStream(cis).use { zis ->
             var entry = zis.nextEntry
             while (entry != null) {
-                // S-63 cells are ZIP archives containing the S-57 file (usually .000)
-                if (entry.name.endsWith(".000", ignoreCase = true)) {
+                // S-63 cells are ZIP archives containing the S-57 file (.000 for base, .001+ for updates)
+                val ext = entry.name.substringAfterLast('.', "")
+                val isS57 = ext.length == 3 && ext.all { it.isDigit() }
+                
+                if (isS57 || ext.equals("enc", ignoreCase = true)) {
                     val buffer = ByteArray(8192)
                     var len: Int
                     while (zis.read(buffer).also { len = it } > 0) {

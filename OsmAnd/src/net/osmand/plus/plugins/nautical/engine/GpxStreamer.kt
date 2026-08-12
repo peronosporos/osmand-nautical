@@ -6,7 +6,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import net.osmand.plus.R
 import net.osmand.plus.OsmandApplication
-import net.osmand.plus.plugins.nautical.NauticalPlugin
 import net.osmand.plus.shared.SharedUtil
 import net.osmand.plus.plugins.nautical.logbook.data.LogbookEntry
 import net.osmand.shared.gpx.GpxFile
@@ -24,7 +23,16 @@ class GpxStreamer(private val app: OsmandApplication) {
     private val log = PlatformUtil.getLog(GpxStreamer::class.java)
 
     suspend fun exportRouteGpx(result: OptimalRouteResult): File? = withContext(Dispatchers.IO) {
-        val gpx = GpxFile(app.getString(R.string.nautical_gpx_route_name))
+        val gpx = GpxFile("OsmAnd Nautical")
+        gpx.metadata.name = app.getString(R.string.nautical_gpx_route_name)
+        
+        // TASK-052: Add maritime context metadata
+        val metaEx = gpx.metadata.getExtensionsToWrite()
+        metaEx["vessel_draft"] = String.format(Locale.US, "%.2f", app.settings.NAUTICAL_VESSEL_DRAFT.get())
+        metaEx["safety_margin"] = String.format(Locale.US, "%.2f", app.settings.NAUTICAL_SAFETY_MARGIN.get())
+        metaEx["total_distance_nm"] = String.format(Locale.US, "%.2f", result.totalDistanceNm)
+        metaEx["total_time_hours"] = String.format(Locale.US, "%.2f", result.totalTimeHours)
+
         val route = Route()
         
         result.legs.forEachIndexed { index, leg ->
@@ -44,6 +52,8 @@ class GpxStreamer(private val app: OsmandApplication) {
             ex["cts"] = String.format(Locale.US, "%.1f", leg.courseToSteerDeg)
             ex["expected_sog"] = String.format(Locale.US, "%.1f", leg.speedOverGroundKn)
             
+            leg.expectedSetDeg?.let { ex["expected_set"] = String.format(Locale.US, "%.1f", it) }
+            leg.expectedDriftKn?.let { ex["expected_drift"] = String.format(Locale.US, "%.1f", it) }
             
             route.points.add(pt)
         }
@@ -72,10 +82,13 @@ class GpxStreamer(private val app: OsmandApplication) {
     suspend fun exportLogbookGpx(entries: List<LogbookEntry>): File? = withContext(Dispatchers.IO) {
         if (entries.isEmpty()) return@withContext null
 
-        val gpx = GpxFile(app.getString(R.string.nautical_gpx_logbook_name))
+        val gpx = GpxFile("OsmAnd Nautical")
+        gpx.metadata.name = app.getString(R.string.nautical_gpx_logbook_name)
+        gpx.metadata.time = System.currentTimeMillis()
+
         val track = Track()
         val segment = TrkSegment()
-
+        
         entries.forEach { entry ->
             val pt = WptPt()
             pt.lat = entry.latitude
@@ -83,10 +96,10 @@ class GpxStreamer(private val app: OsmandApplication) {
             pt.time = entry.timestamp
             
             entry.sog?.let { pt.speed = it.toFloat() }
-            entry.cog?.let { pt.bearing = Math.toDegrees(it).toFloat() }
-            entry.heading?.let { pt.heading = Math.toDegrees(it).toFloat() }
+            entry.cog?.let { pt.getExtensionsToWrite()["course"] = String.format(Locale.US, "%.1f", Math.toDegrees(it)) }
             
             val ex = pt.getExtensionsToWrite()
+            entry.heading?.let { ex["heading"] = String.format(Locale.US, "%.1f", Math.toDegrees(it)) }
             entry.tws?.let { ex["vessel_wind_speed"] = String.format(Locale.US, "%.2f", it) }
             entry.twa?.let { ex["vessel_wind_angle"] = String.format(Locale.US, "%.1f", Math.toDegrees(it)) }
             entry.twd?.let { ex["vessel_wind_dir"] = String.format(Locale.US, "%.1f", Math.toDegrees(it)) }
@@ -94,10 +107,10 @@ class GpxStreamer(private val app: OsmandApplication) {
             entry.waterTemp?.let { ex["vessel_water_temp"] = String.format(Locale.US, "%.1f", it - 273.15) }
             entry.batteryVoltage?.let { ex["vessel_voltage"] = String.format(Locale.US, "%.2f", it) }
             entry.engineHours?.let { ex["vessel_engine_hours"] = String.format(Locale.US, "%.1f", it) }
+            
             if (entry.sailPlan.isNotEmpty()) ex["vessel_sail_plan"] = entry.sailPlan
             if (entry.notes.isNotEmpty()) pt.desc = entry.notes
-
-
+            
             segment.points.add(pt)
         }
         track.segments.add(segment)
@@ -108,11 +121,10 @@ class GpxStreamer(private val app: OsmandApplication) {
         val fileName = "marine_logbook_$timestampStr.gpx"
         val gpxDir = app.getAppPath("tracks/")
         if (!gpxDir.exists()) gpxDir.mkdirs()
-
         val file = File(gpxDir, fileName)
         val kFile = SharedUtil.kFile(file)
+
         val error = GpxUtilities.writeGpxFile(kFile, gpx)
-        
         if (error == null) {
             log.info("Logbook GPX exported to ${file.absolutePath}")
             return@withContext file
@@ -122,102 +134,111 @@ class GpxStreamer(private val app: OsmandApplication) {
         }
     }
 
-    suspend fun parseGpx(uri: Uri): List<Pair<Double, Double>> = withContext(Dispatchers.IO) {
-        val route = mutableListOf<Pair<Double, Double>>()
+    suspend fun parseGpxRich(uri: Uri): GpxFile? = withContext(Dispatchers.IO) {
         val inputStream: InputStream? = app.contentResolver.openInputStream(uri)
-
         if (inputStream != null) {
             try {
-                // Use SharedUtil to load the GPX file as net.osmand.shared.gpx.GpxFile
                 val gpx = SharedUtil.loadGpxFile(inputStream)
-
-                fun processPoint(wpt: WptPt) {
-                    route.add(Pair(wpt.lat, wpt.lon))
-                    
-                    // TASK-052: Preserving marine-specific tags
-                    val extensions = wpt.getExtensionsToRead()
-                    if (extensions.isNotEmpty()) {
-                        // Extract planned speed / target speed
-                        val plannedSpeed = extensions["planned_speed"]?.toDoubleOrNull() 
-                            ?: extensions["expected_sog"]?.toDoubleOrNull()
-                            ?: extensions["target_speed"]?.toDoubleOrNull()
-                            
-                        // Extract arrival radius
-                        val radius = extensions["arrival_radius"]?.toDoubleOrNull()
-                        radius?.let { NauticalPlugin.engine?.arrivalRadiusMeters = it }
-                        
-                        // Extract GUID and Names
-                        extensions["guid"]?.let { log.debug("Preserving GUID for point: $it") }
-
-                        // Extract ETA if available
-                        val eta = extensions["eta"]
-                        if (eta != null) {
-                            log.debug("Found ETA in GPX: $eta")
+                
+                // Map symbols and extract marine metadata
+                fun processPoints(points: List<WptPt>) {
+                    points.forEach { wpt ->
+                        val sym = wpt.getIconName()
+                        if (sym != null) {
+                            val mappedIcon = when (sym.lowercase(Locale.US)) {
+                                "buoy", "beacon", "light" -> "seamark"
+                                "anchor", "mooring" -> "nautical_mooring"
+                                else -> null
+                            }
+                            if (mappedIcon != null) {
+                                wpt.setIconName(mappedIcon)
+                            }
                         }
                         
-                        // Log planned speed if found (to avoid unused warning and for traceability)
-                        if (plannedSpeed != null) {
-                            log.debug("Found planned speed in GPX: $plannedSpeed")
-                        }
-                    }
-
-                    // Map symbols to OsmAnd icons if present
-                    val sym = wpt.getIconName()
-                    if (sym != null) {
-                        val mappedIcon = when (sym.lowercase(Locale.US)) {
-                            "buoy", "beacon", "light" -> "seamark"
-                            "anchor", "mooring" -> "nautical_mooring"
-                            else -> null
-                        }
-                        if (mappedIcon != null) {
-                            wpt.setIconName(mappedIcon)
-                        }
+                        // Restore TASK-052: Preserve marine-specific tags in WptPt extensions
+                        val exRead = wpt.getExtensionsToRead()
+                        val exWrite = wpt.getExtensionsToWrite()
+                        
+                        val planned = exRead["planned_speed"] ?: exRead["expected_sog"] ?: exRead["target_speed"]
+                        if (planned != null) exWrite["planned_speed"] = planned
+                        
+                        exRead["guid"]?.let { exWrite["guid"] = it }
+                        exRead["eta"]?.let { exWrite["eta"] = it }
+                        exRead["arrival_radius"]?.let { exWrite["arrival_radius"] = it }
                     }
                 }
 
-                for (wpt in gpx.getPointsList()) {
-                    processPoint(wpt)
-                }
-                for (rte in gpx.routes) {
-                    for (point in rte.points) {
-                        processPoint(point)
-                    }
-                }
-                for (track in gpx.tracks) {
-                    for (segment in track.segments) {
-                        for (point in segment.points) {
-                            processPoint(point)
-                        }
-                    }
-                }
+                processPoints(gpx.getPointsList())
+                gpx.routes.forEach { processPoints(it.points) }
+                gpx.tracks.forEach { it.segments.forEach { seg -> processPoints(seg.points) } }
+
+                return@withContext gpx
             } catch (e: Exception) {
                 log.error("Error parsing GPX", e)
             } finally {
                 inputStream.close()
             }
         }
+        return@withContext null
+    }
+
+    suspend fun parseGpx(uri: Uri): List<Pair<Double, Double>> = withContext(Dispatchers.IO) {
+        val route = mutableListOf<Pair<Double, Double>>()
+        val gpx = parseGpxRich(uri) ?: return@withContext emptyList()
+
+        fun processPoint(wpt: WptPt) {
+            route.add(Pair(wpt.lat, wpt.lon))
+        }
+
+        for (wpt in gpx.getPointsList()) processPoint(wpt)
+        for (rte in gpx.routes) for (point in rte.points) processPoint(point)
+        for (track in gpx.tracks) for (segment in track.segments) for (point in segment.points) processPoint(point)
+        
         return@withContext route
     }
 
-    suspend fun exportTrajectory(points: List<Pair<Double, Double>>): File? = withContext(Dispatchers.IO) {
+    suspend fun exportTrajectory(points: List<TrajectoryPoint>): File? = withContext(Dispatchers.IO) {
         if (points.isEmpty()) return@withContext null
 
-        val gpx = GpxFile(app.getString(R.string.nautical_gpx_trajectory_name))
+        val gpx = GpxFile("OsmAnd Nautical")
         val track = Track()
         val segment = TrkSegment()
 
-        points.forEach { (lat, lon) ->
-            val pt = WptPt()
-            pt.lat = lat
-            pt.lon = lon
-            segment.points.add(pt)
+        points.forEach { pt ->
+            val wpt = WptPt()
+            wpt.lat = pt.lat
+            wpt.lon = pt.lon
+            wpt.time = pt.time
+            segment.points.add(wpt)
         }
         track.segments.add(segment)
         gpx.tracks.add(track)
 
+        return@withContext saveGpx(gpx, "nautical_trajectory")
+    }
+
+    suspend fun exportRoute(points: List<Pair<Double, Double>>): File? = withContext(Dispatchers.IO) {
+        if (points.isEmpty()) return@withContext null
+
+        val gpx = GpxFile("OsmAnd Nautical")
+        val route = Route()
+
+        points.forEachIndexed { index, (lat, lon) ->
+            val pt = WptPt()
+            pt.lat = lat
+            pt.lon = lon
+            pt.name = if (index == 0) app.getString(R.string.nautical_gpx_start) else "WPT $index"
+            route.points.add(pt)
+        }
+        gpx.routes.add(route)
+
+        return@withContext saveGpx(gpx, "nautical_route")
+    }
+
+    private fun saveGpx(gpx: GpxFile, prefix: String): File? {
         val timestampStr = net.osmand.plus.plugins.nautical.utils.TemporalUtils.formatIso8601(System.currentTimeMillis())
             .replace(":", "-").replace(".", "_")
-        val fileName = "nautical_trajectory_$timestampStr.gpx"
+        val fileName = "${prefix}_$timestampStr.gpx"
         val gpxDir = app.getAppPath("tracks/")
         if (!gpxDir.exists()) gpxDir.mkdirs()
 
@@ -225,12 +246,12 @@ class GpxStreamer(private val app: OsmandApplication) {
         val kFile = SharedUtil.kFile(file)
 
         val error = GpxUtilities.writeGpxFile(kFile, gpx)
-        if (error == null) {
+        return if (error == null) {
             log.info("GPX exported to ${file.absolutePath}")
-            return@withContext file
+            file
         } else {
             log.error("Failed to export GPX: ${error.message}")
-            return@withContext null
+            null
         }
     }
 }

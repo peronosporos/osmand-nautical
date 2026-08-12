@@ -79,6 +79,7 @@ class MBTilesTileSource(
 
     private var db: SQLiteAPI.SQLiteConnection? = null
 
+    @Synchronized
     private fun getDb(): SQLiteAPI.SQLiteConnection? {
         if (db == null || db!!.isClosed) {
             db = app.sqLiteAPI.openByAbsolutePath(file.absolutePath, true)
@@ -123,6 +124,8 @@ class MBTilesTileSource(
         val db = getDb() ?: return null
         // MBTiles uses TMS y numbering: tile_row = (2^zoom - 1) - y
         val row = (1 shl zoom) - 1 - y
+        
+        // Use rawQuery as SQLiteStatement in current API lacks blob result support
         val cursor = db.rawQuery(
             "SELECT tile_data FROM tiles WHERE zoom_level = ? AND tile_column = ? AND tile_row = ?",
             arrayOf(zoom.toString(), x.toString(), row.toString())

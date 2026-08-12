@@ -15,10 +15,13 @@ class NauticalSwitchesAdapter(
 ) : RecyclerView.Adapter<NauticalSwitchesAdapter.SwitchViewHolder>() {
 
     private var switchList = switches.asSequence().sortedBy { it.key }.toList()
+    private var dimmers: Map<String, Double> = emptyMap()
+    private var meta: Map<String, Map<String, Any>> = emptyMap()
 
     class SwitchViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         val name: TextView = view.findViewById(R.id.txt_switch_name)
         val toggle: SwitchCompat = view.findViewById(R.id.switch_toggle)
+        val slider: com.google.android.material.slider.Slider = view.findViewById(R.id.slider_dimmer)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): SwitchViewHolder {
@@ -30,7 +33,8 @@ class NauticalSwitchesAdapter(
         val entry = switchList[position]
         val path = entry.key
         val state = entry.value
-        holder.name.text = path.substringAfterLast(".").replaceFirstChar { it.uppercase() }
+        val displayName = meta[path]?.get("displayName") as? String
+        holder.name.text = displayName ?: path.substringAfterLast(".").replaceFirstChar { it.uppercase() }
 
         holder.toggle.setOnCheckedChangeListener(null)
         holder.toggle.isChecked = state
@@ -40,12 +44,28 @@ class NauticalSwitchesAdapter(
             }
         }
 
+        val dimLevel = dimmers[path]
+        if (dimLevel != null) {
+            holder.slider.visibility = View.VISIBLE
+            holder.slider.value = dimLevel.toFloat().coerceIn(0f, 1f)
+            holder.slider.clearOnChangeListeners()
+            holder.slider.addOnChangeListener { _, value, fromUser ->
+                if (fromUser) {
+                    net.osmand.plus.plugins.nautical.NauticalPlugin.engine?.controlManager?.setDimmerValue(path, value.toDouble())
+                }
+            }
+        } else {
+            holder.slider.visibility = View.GONE
+        }
+
         holder.itemView.setOnClickListener { holder.toggle.toggle() }
     }
 
     override fun getItemCount(): Int = switchList.size
 
-    fun updateSwitches(newSwitches: Map<String, Boolean>) {
+    fun updateData(newSwitches: Map<String, Boolean>, newDimmers: Map<String, Double>, newMeta: Map<String, Map<String, Any>>) {
+        dimmers = newDimmers
+        meta = newMeta
         if (newSwitches != switches) {
             val oldList = switchList
             switches = newSwitches
@@ -64,6 +84,8 @@ class NauticalSwitchesAdapter(
                 },
             )
             diffResult.dispatchUpdatesTo(this)
+        } else {
+            notifyDataSetChanged()
         }
     }
 }

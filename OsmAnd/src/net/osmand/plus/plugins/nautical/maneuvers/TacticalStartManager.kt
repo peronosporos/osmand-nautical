@@ -32,12 +32,30 @@ class TacticalStartManager(private val app: OsmandApplication) {
 
     /**
      * Calculates perpendicular distance from boat to the start line segment in meters.
+     * Item 3: Uses spherical geometry projection.
      */
     fun getDistanceToLine(lat: Double, lon: Double): Double? {
         val p1 = portPin ?: return null
         val p2 = starboardPin ?: return null
         
-        return distancePointToSegment(lat, lon, p1.first, p1.second, p2.first, p2.second)
+        // 1. Get distance and bearing of the line
+        val d12 = KMapUtils.getDistance(p1.first, p1.second, p2.first, p2.second)
+        if (d12 < 1.0) return KMapUtils.getDistance(lat, lon, p1.first, p1.second)
+        
+        val b12 = KMapUtils.getBearing(p1.first, p1.second, p2.first, p2.second)
+        val b1p = KMapUtils.getBearing(p1.first, p1.second, lat, lon)
+        val d1p = KMapUtils.getDistance(p1.first, p1.second, lat, lon)
+        
+        // 2. Spherical projection using cross-track distance formula
+        val angle = Math.toRadians(b1p - b12)
+        val xtd = d1p * Math.sin(angle)
+        val atd = d1p * Math.cos(angle)
+        
+        return when {
+            atd < 0 -> KMapUtils.getDistance(lat, lon, p1.first, p1.second)
+            atd > d12 -> KMapUtils.getDistance(lat, lon, p2.first, p2.second)
+            else -> Math.abs(xtd)
+        }
     }
 
     /**
@@ -50,7 +68,7 @@ class TacticalStartManager(private val app: OsmandApplication) {
         val state = NauticalPlugin.engine?.getCurrentState() ?: return null
         val twd = state.windDirectionTrue?.let { Math.toDegrees(it) } ?: return null
         
-        val lineBearing = Math.toDegrees(KMapUtils.getBearing(p1.first, p1.second, p2.first, p2.second))
+        val lineBearing = KMapUtils.getBearing(p1.first, p1.second, p2.first, p2.second)
         val perpendicular = (lineBearing + 90 + 360) % 360
         
         var bias = perpendicular - twd
@@ -62,32 +80,26 @@ class TacticalStartManager(private val app: OsmandApplication) {
 
     /**
      * Calculates Time to Burn in seconds.
-     * Distance to Line / Speed Over Ground.
+     * Item 4 & 5: (Race Countdown) - (Distance to Line / Component of Velocity Perpendicular to Line).
      */
     fun getTimeToBurn(lat: Double, lon: Double): Double? {
         val dist = getDistanceToLine(lat, lon) ?: return null
         val state = NauticalPlugin.engine?.getCurrentState() ?: return null
         val sog = state.speedOverGround ?: return null
+        val cog = state.courseOverGroundTrue?.let { Math.toDegrees(it) } ?: return null
+        val timer = state.racingTimer ?: 0.0
         
-        if (sog < 0.2) return Double.MAX_VALUE // Effectively stationary
+        val p1 = portPin ?: return null
+        val p2 = starboardPin ?: return null
+        val lineBearing = KMapUtils.getBearing(p1.first, p1.second, p2.first, p2.second)
+        val linePerp = (lineBearing + 90 + 360) % 360
         
-        return dist / sog
-    }
-
-    private fun distancePointToSegment(px: Double, py: Double, x1: Double, y1: Double, x2: Double, y2: Double): Double {
-        val dx = x2 - x1
-        val dy = y2 - y1
-        if (dx == 0.0 && dy == 0.0) return calculateDistance(px, py, x1, y1)
-
-        val t = ((px - x1) * dx + (py - y1) * dy) / (dx * dx + dy * dy)
-        return when {
-            t < 0 -> calculateDistance(px, py, x1, y1)
-            t > 1 -> calculateDistance(px, py, x2, y2)
-            else -> calculateDistance(px, py, x1 + t * dx, y1 + t * dy)
-        }
-    }
-
-    private fun calculateDistance(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
-        return KMapUtils.getDistance(lat1, lon1, lat2, lon2)
+        // Calculate velocity component towards the line
+        val vPerp = sog * Math.cos(Math.toRadians(cog - linePerp))
+        
+        if (vPerp < 0.1) return Double.MAX_VALUE 
+        
+        val ttl = dist / vPerp
+        return timer - ttl
     }
 }

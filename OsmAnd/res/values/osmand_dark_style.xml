@@ -285,5 +285,9 @@
         <item name="map_button_icon_color">@color/map_button_icon_color_dark</item>
         <item name="nautical_alert_bg">@color/marker_red</item>
         <item name="nautical_alert_text">#FFFFFF</item>
+        <item name="nautical_status_green">@color/nautical_status_green</item>
+        <item name="nautical_status_yellow">@color/nautical_status_yellow</item>
+        <item name="nautical_status_red">@color/nautical_status_red</item>
+        <item name="nautical_widget_background">@color/nautical_widget_background</item>
     </style>
 </resources>

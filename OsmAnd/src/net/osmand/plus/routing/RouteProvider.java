@@ -158,6 +158,8 @@ public class RouteProvider {
 				} else if (params.mode.getRouteService() == RouteService.STRAIGHT ||
 						params.mode.getRouteService() == RouteService.DIRECT_TO) {
 					res = findStraightRoute(params);
+				} else if (params.mode.getRouteService() == RouteService.SIGNALK) {
+					res = findSignalKRoute(params);
 				} else {
 					res = new RouteCalculationResult("Selected route service is not available");
 				}
@@ -782,6 +784,18 @@ public class RouteProvider {
 		RouteExporter exporter = new RouteExporter(name, originalRoute, locations, null, points);
 
 		return exporter.exportRoute();
+	}
+
+	private RouteCalculationResult findSignalKRoute(RouteCalculationParams params) {
+		try {
+			Class<?> providerClass = Class.forName("net.osmand.plus.plugins.nautical.routing.SignalKRouteProvider");
+			Object provider = providerClass.getDeclaredMethod("getInstance").invoke(null);
+			return (RouteCalculationResult) providerClass.getDeclaredMethod("calculateRoute", RouteCalculationParams.class)
+					.invoke(provider, params);
+		} catch (Exception e) {
+			log.error("SignalK routing failed, falling back to straight line", e);
+			return findStraightRoute(params);
+		}
 	}
 
 	private RouteCalculationResult findOnlineRoute(RouteCalculationParams params) throws IOException, JSONException {

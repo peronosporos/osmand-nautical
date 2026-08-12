@@ -40,7 +40,7 @@ class AutomatedLogbookEngine(
 
     private val routeStepListener: () -> Unit = {
         scope.launch {
-            triggerLog("Waypoint Reached")
+            triggerLog(app.getString(net.osmand.plus.R.string.nautical_log_waypoint_reached))
         }
     }
 
@@ -48,13 +48,21 @@ class AutomatedLogbookEngine(
         signalKEngine.registerListener(marineStateListener)
         signalKEngine.addRouteStepListener(routeStepListener)
         
+        restartLoggingJob()
+    }
+
+    private fun restartLoggingJob() {
         loggingJob?.cancel()
         loggingJob = scope.launch {
             while (isActive) {
-                val intervalHours: Int = app.settings.NAUTICAL_LOGBOOK_INTERVAL.get() ?: 0
+                val intervalHours = app.settings.NAUTICAL_LOGBOOK_INTERVAL.get() ?: 0
                 if (intervalHours > 0) {
-                    delay((intervalHours.toLong() * 3600 * 1000L).milliseconds)
-                    triggerLog("Periodic")
+                    // Check every minute if interval changed or it's time to log
+                    val now = TemporalUtils.now()
+                    if (now - lastLoggedTime >= intervalHours.toLong() * 3600 * 1000L) {
+                        triggerLog("Periodic")
+                    }
+                    delay(60000L.milliseconds) 
                 } else {
                     delay(60000L.milliseconds) // Check again in a minute if it was disabled
                 }
@@ -67,13 +75,15 @@ class AutomatedLogbookEngine(
         signalKEngine.removeRouteStepListener(routeStepListener)
         
         loggingJob?.cancel()
+        loggingJob = null
         scope.cancel()
     }
 
     fun onAppBackgrounded() {
-        val navigating = signalKEngine.isFollowingRoute
-        val anchorActive = app.settings.NAUTICAL_ANCHOR_LAT.get() != 0.0
-        if (!navigating && !anchorActive) {
+        // Item 16: Don't suspend if periodic logging is enabled. 
+        // Mariners want dock logging for remote monitoring.
+        val intervalHours = app.settings.NAUTICAL_LOGBOOK_INTERVAL.get() ?: 0
+        if (intervalHours == 0 && !signalKEngine.isFollowingRoute && app.settings.NAUTICAL_ANCHOR_LAT.get() == 0.0) {
             log.info("LogbookEngine: Suspending background logging.")
             loggingJob?.cancel()
             loggingJob = null
@@ -83,7 +93,7 @@ class AutomatedLogbookEngine(
     fun onAppForegrounded() {
         if (loggingJob == null) {
             log.info("LogbookEngine: Resuming background logging.")
-            start()
+            restartLoggingJob()
         }
     }
 
@@ -92,14 +102,14 @@ class AutomatedLogbookEngine(
         val rpm = state.engineRpm ?: 0.0
         val running = rpm > 50.0 // Threshold for running
         if (lastEngineRunning != null && lastEngineRunning != running) {
-            triggerLog(if (running) "Engine Started" else "Engine Stopped")
+            triggerLog(if (running) app.getString(net.osmand.plus.R.string.nautical_log_engine_started) else app.getString(net.osmand.plus.R.string.nautical_log_engine_stopped))
         }
         lastEngineRunning = running
 
         // 2. Sail Plan Change
         val sailPlan = app.settings.NAUTICAL_ACTIVE_SAIL_PLAN.get() ?: ""
         if (lastSailPlan != null && lastSailPlan != sailPlan) {
-            triggerLog("Sail Plan Changed: $sailPlan")
+            triggerLog(app.getString(net.osmand.plus.R.string.nautical_log_sail_plan_changed, sailPlan))
         }
         lastSailPlan = sailPlan
 
@@ -108,22 +118,24 @@ class AutomatedLogbookEngine(
         if (twa != null) {
             val twaSign = sign(twa)
             
-            if (lastTwaSign != null && lastTwaSign != twaSign && (state.speedOverGround ?: 0.0) > 1.0) {
+            // Item 4: Handle TWA == 0.0 (sign is 0) to avoid double logs at head-to-wind
+            if (lastTwaSign != null && lastTwaSign != 0.0 && twaSign != 0.0 && lastTwaSign != twaSign && (state.speedOverGround ?: 0.0) > 1.0) {
                 // Deadband: Require at least 15 degrees of total change or crossing a threshold 
                 // to avoid yaw-induced tack logs deep downwind.
                 val prevTwa = lastTwaValue ?: 0.0
                 if (abs(twa - prevTwa) > Math.toRadians(15.0)) {
-                    triggerLog(if (twaSign > 0) "Tacked to Starboard" else "Tacked to Port")
+                    triggerLog(if (twaSign > 0) app.getString(net.osmand.plus.R.string.nautical_log_tacked_starboard) else app.getString(net.osmand.plus.R.string.nautical_log_tacked_port))
                     lastTwaSign = twaSign
                 }
-            } else if (lastTwaSign == null) {
+            } else if (lastTwaSign == null || (lastTwaSign == 0.0 && twaSign != 0.0)) {
                 lastTwaSign = twaSign
             }
             lastTwaValue = twa
         }
     }
 
-    suspend fun triggerLog(reason: String = "Periodic") {
+    suspend fun triggerLog(reason: String? = null) {
+        val actualReason = reason ?: app.getString(net.osmand.plus.R.string.nautical_log_periodic)
         val state = signalKEngine.getCurrentState()
         val perf = performanceRepository.livePerformanceData.value
         
@@ -131,9 +143,9 @@ class AutomatedLogbookEngine(
         val lon = state.longitude ?: return
         val now = TemporalUtils.now()
         
-        // Jitter & Bloat Prevention: Add 5-minute debounce for event-based logs (TASK-021)
-        if (reason != "Periodic" && reason != "Manual") {
-            if (now - lastLoggedTime < 300000L) { // 5 minutes
+        // Jitter & Bloat Prevention: Add 1-minute debounce for event-based logs (TASK-021)
+        if (actualReason != app.getString(net.osmand.plus.R.string.nautical_log_periodic) && actualReason != app.getString(net.osmand.plus.R.string.nautical_log_manual)) {
+            if (now - lastLoggedTime < 60000L) { // 1 minute
                  // Still check distance if it's a movement log, but strictly
                  val lLat = lastLoggedLat
                  val lLon = lastLoggedLon
@@ -145,7 +157,7 @@ class AutomatedLogbookEngine(
         }
 
         val entry = LogbookEntry(
-            timestamp = TemporalUtils.now(),
+            timestamp = now,
             latitude = lat,
             longitude = lon,
             sog = state.speedOverGround,
@@ -160,13 +172,19 @@ class AutomatedLogbookEngine(
             batteryVoltage = state.batteryVoltage,
             engineHours = state.engineRunTime?.let { it / 3600.0 },
             sailPlan = app.settings.NAUTICAL_ACTIVE_SAIL_PLAN.get() ?: "",
-            notes = reason.takeIf { it != "Periodic" && it != "Manual" } ?: ""
+            notes = actualReason.takeIf { it != app.getString(net.osmand.plus.R.string.nautical_log_periodic) && it != app.getString(net.osmand.plus.R.string.nautical_log_manual) } ?: ""
         )
 
         repository.insertEntry(entry)
         
         // Sync to Signal K
-        signalKEngine.resourceManager.pushNoteToServer(lat, lon, "Log Entry", entry.notes)
+        val pushTitle = if (entry.sailPlan.isNotEmpty()) "Marine Log: ${entry.sailPlan}" else "Marine Log Entry"
+        try {
+            // Item 6: Better error logging for push failures
+            signalKEngine.resourceManager.pushNoteToServer(lat, lon, pushTitle, entry.notes)
+        } catch (e: Exception) {
+            log.error("Failed to push logbook entry to Signal K server", e)
+        }
 
         lastLoggedLat = lat
         lastLoggedLon = lon

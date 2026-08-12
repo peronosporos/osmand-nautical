@@ -49,6 +49,7 @@ class SignalKTideLayer(context: Context) : OsmandMapLayer(context) {
         val isNight = NauticalPlugin.isNightVision(app)
         textPaint.color = if (isNight) Color.RED else Color.WHITE
 
+        // Signal K Stations
         stations.values.forEach { station ->
             val lat = station.position.coordinates[1]
             val lon = station.position.coordinates[0]
@@ -75,12 +76,16 @@ class SignalKTideLayer(context: Context) : OsmandMapLayer(context) {
         // Draw outer ring
         canvas.drawCircle(x, y, 15f, paint)
 
-        // Draw height staff inside (simplified gauge)
+        // Draw height staff inside (Dynamic gauge)
         paint.style = Paint.Style.FILL
-        val heightRatio = 0.5f // Default if no real-time data
+        var heightRatio = 0.5f 
         
-        // If this is the current station for the vessel, we can show real-time height
-        if (station.name == vesselTide?.stationName) {
+        if (station.name == vesselTide?.stationName && vesselTide.heightNow != null) {
+            // Simplified range 0-5m for gauge if we don't have extremes yet
+            val minH = (vesselTide.nextExtremeHeight ?: 0.0) - 2.0
+            val maxH = (vesselTide.nextExtremeHeight ?: 2.0) + 2.0
+            heightRatio = ((vesselTide.heightNow - minH) / (maxH - minH)).toFloat().coerceIn(0.1f, 0.9f)
+            
             // Draw rising/falling arrow
             val trend = vesselTide.state
             if (trend == "rising") {

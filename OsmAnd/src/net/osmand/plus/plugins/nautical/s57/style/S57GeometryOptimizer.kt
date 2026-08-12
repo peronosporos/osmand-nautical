@@ -33,25 +33,40 @@ object S57GeometryOptimizer {
     private fun simplifyPoints(points: List<LatLon>, tolerance: Double): List<LatLon> {
         if (points.size <= 2) return points
 
-        var maxDistance = 0.0
-        var index = 0
-        val end = points.size - 1
+        val keep = BooleanArray(points.size)
+        keep[0] = true
+        keep[points.size - 1] = true
 
-        for (i in 1 until end) {
-            val d = perpendicularDistance(points[i], points[0], points[end])
-            if (d > maxDistance) {
-                index = i
-                maxDistance = d
+        val stack = java.util.Stack<Pair<Int, Int>>()
+        stack.push(0 to points.size - 1)
+
+        while (stack.isNotEmpty()) {
+            val (start, end) = stack.pop()
+            if (end - start <= 1) continue
+
+            var maxDistance = 0.0
+            var index = start
+
+            for (i in start + 1 until end) {
+                val d = perpendicularDistance(points[i], points[start], points[end])
+                if (d > maxDistance) {
+                    index = i
+                    maxDistance = d
+                }
+            }
+
+            if (maxDistance > tolerance) {
+                keep[index] = true
+                stack.push(start to index)
+                stack.push(index to end)
             }
         }
 
-        return if (maxDistance > tolerance) {
-            val res1 = simplifyPoints(points.subList(0, index + 1), tolerance)
-            val res2 = simplifyPoints(points.subList(index, points.size), tolerance)
-            res1.dropLast(1) + res2
-        } else {
-            listOf(points[0], points[end])
+        val result = mutableListOf<LatLon>()
+        for (i in points.indices) {
+            if (keep[i]) result.add(points[i])
         }
+        return result
     }
 
     private fun perpendicularDistance(p: LatLon, start: LatLon, end: LatLon): Double {

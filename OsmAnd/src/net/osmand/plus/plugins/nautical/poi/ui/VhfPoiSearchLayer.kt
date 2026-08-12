@@ -6,7 +6,6 @@ import android.content.Context
 import android.graphics.*
 import kotlinx.coroutines.*
 import net.osmand.plus.plugins.nautical.utils.NauticalLog
-import net.osmand.plus.plugins.nautical.NauticalPlugin
 import net.osmand.data.LatLon
 import net.osmand.data.PointDescription
 import net.osmand.data.RotatedTileBox
@@ -25,20 +24,11 @@ import net.osmand.util.MapUtils
 class VhfPoiSearchLayer(private val mapActivity: MapActivity) : OsmandMapLayer(mapActivity), IContextMenuProvider {
 
     private val poiPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = 0xFF01579B.toInt()
         style = Paint.Style.FILL
     }
-    
-    private val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.WHITE
-        textSize = 22f
-        textAlign = Paint.Align.CENTER
-        typeface = Typeface.DEFAULT_BOLD
-    }
 
-    private var vhfObjects = mutableListOf<BinaryMapDataObject>()
-    private var vhfObjectsCached = mutableListOf<BinaryMapDataObject>()
-    private var skWaypoints = mutableListOf<net.osmand.plus.plugins.nautical.network.SignalKWaypoint>()
+    private var vhfObjects = listOf<BinaryMapDataObject>()
+    private var vhfObjectsCached = listOf<BinaryMapDataObject>()
     private var lastSearchRect: Rect? = null
     private var searchJob: Job? = null
     private val layerScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
@@ -56,7 +46,7 @@ class VhfPoiSearchLayer(private val mapActivity: MapActivity) : OsmandMapLayer(m
             return
         }
         if (tileBox.zoom < 13) {
-            vhfObjectsCached.clear()
+            vhfObjectsCached = emptyList()
             return
         }
 
@@ -72,24 +62,15 @@ class VhfPoiSearchLayer(private val mapActivity: MapActivity) : OsmandMapLayer(m
             triggerSearch(tileBox)
         }
 
-        vhfObjectsCached.forEach { obj ->
-            val x = tileBox.getPixXFromLatLon(obj.labelLatLon.latitude, obj.labelLatLon.longitude)
-            val y = tileBox.getPixYFromLatLon(obj.labelLatLon.latitude, obj.labelLatLon.longitude)
+        poiPaint.color = getColor(R.color.nautical_status_blue)
+        val icon = getScaledBitmap(R.drawable.ic_action_message) ?: return
+        val snapshot = vhfObjectsCached // Local reference for thread safety
+        snapshot.forEach { obj ->
+            val x = tileBox.getPixXFromLatLon(obj.labelLatLon.latitude, obj.labelLatLon.longitude).toFloat()
+            val y = tileBox.getPixYFromLatLon(obj.labelLatLon.latitude, obj.labelLatLon.longitude).toFloat()
             
             if (((x >= 0) && (x <= canvas.width)) && ((y >= 0) && (y <= canvas.height))) {
-                canvas.drawCircle(x, y, 18f, poiPaint)
-                canvas.drawText("VHF", x, y + 8f, textPaint)
-            }
-        }
-
-        skWaypoints.forEach { wp ->
-            val coords = wp.feature.geometry.coordinates
-            val x = tileBox.getPixXFromLatLon(coords[1], coords[0])
-            val y = tileBox.getPixYFromLatLon(coords[1], coords[0])
-
-            if (((x >= 0) && (x <= canvas.width)) && ((y >= 0) && (y <= canvas.height))) {
-                canvas.drawCircle(x, y, 18f, poiPaint)
-                canvas.drawText("SK", x, y + 8f, textPaint)
+                canvas.drawBitmap(icon, x - icon.width / 2f, y - icon.height / 2f, null)
             }
         }
     }
@@ -101,7 +82,6 @@ class VhfPoiSearchLayer(private val mapActivity: MapActivity) : OsmandMapLayer(m
         if (searchJob?.isActive == true) return
 
         val bounds = tileBox.latLonBounds
-        // Expand search area by 50% to reduce re-searches during small pans
         val width = bounds.right - bounds.left
         val height = bounds.bottom - bounds.top
         val searchLeft = bounds.left - (width * 0.25)
@@ -140,23 +120,11 @@ class VhfPoiSearchLayer(private val mapActivity: MapActivity) : OsmandMapLayer(m
                         NauticalLog.e("Error searching VHF POIs in reader: ${reader.file?.name}", e)
                     }
                 }
-                results
+                results.toList()
             }
             
-            // Also fetch Signal K waypoints if capability exists
-            if (NauticalPlugin.getInstance()?.capabilityManager?.capabilities?.value?.hasCharts == true) {
-                try {
-                    val skResults = NauticalPlugin.engine?.getRestService()?.getWaypoints()
-                    if (skResults?.isSuccessful == true) {
-                        skWaypoints = skResults.body()?.values?.toMutableList() ?: mutableListOf()
-                    }
-                } catch (e: Exception) {
-                    NauticalLog.e("Error fetching Signal K waypoints", e)
-                }
-            }
-
             vhfObjectsCached = found
-            vhfObjects = found // Keep for hit testing
+            vhfObjects = found
             mapActivity.mapView.refreshMap()
         }
     }
@@ -180,48 +148,20 @@ class VhfPoiSearchLayer(private val mapActivity: MapActivity) : OsmandMapLayer(m
                 result.collect(obj, this)
             }
         }
-
-        skWaypoints.forEach { wp ->
-            val coords = wp.feature.geometry.coordinates
-            if (tileBox.isLatLonNearPixel(coords[1], coords[0], point.x, point.y, radius)) {
-                result.collect(wp, this)
-            }
-        }
     }
 
     override fun getObjectLocation(o: Any?): LatLon? {
-        return when (o) {
-            is BinaryMapDataObject -> o.labelLatLon
-            is net.osmand.plus.plugins.nautical.network.SignalKWaypoint -> LatLon(o.feature.geometry.coordinates[1], o.feature.geometry.coordinates[0])
-            else -> null
-        }
+        return (o as? BinaryMapDataObject)?.labelLatLon
     }
 
     override fun getObjectName(o: Any?): PointDescription? {
-        return when (o) {
-            is BinaryMapDataObject -> {
-                val channel = getVhfChannel(o) ?: return null
-                val name = o.name ?: mapActivity.getString(R.string.nautical_marine_station)
-                PointDescription(PointDescription.POINT_TYPE_POI, "$name (VHF Ch $channel)")
-            }
-            is net.osmand.plus.plugins.nautical.network.SignalKWaypoint -> {
-                PointDescription(PointDescription.POINT_TYPE_POI, o.name ?: mapActivity.getString(R.string.nautical_signal_k_waypoint))
-            }
-            else -> null
-        }
+        val bmo = (o as? BinaryMapDataObject) ?: return null
+        val channel = getVhfChannel(bmo) ?: return null
+        val name = bmo.name ?: mapActivity.getString(R.string.nautical_marine_station)
+        return PointDescription(PointDescription.POINT_TYPE_POI, "$name (VHF Ch $channel)")
     }
 
     fun registerContextMenuActions(adapter: ContextMenuAdapter, obj: Any?) {
-        if (obj is net.osmand.plus.plugins.nautical.network.SignalKWaypoint) {
-            adapter.addItem(
-                ContextMenuItem("sk_wp_info").apply {
-                    title = mapActivity.getString(R.string.nautical_signal_k_waypoint)
-                    description = obj.description ?: mapActivity.getString(R.string.shared_string_none)
-                    icon = R.drawable.ic_action_info_dark
-                },
-            )
-            return
-        }
         val bmo = (obj as? BinaryMapDataObject) ?: return
         val channel = getVhfChannel(bmo) ?: return
 

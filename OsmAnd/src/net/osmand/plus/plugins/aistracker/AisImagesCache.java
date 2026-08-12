@@ -23,7 +23,7 @@ public class AisImagesCache {
 	}
 
 	@Nullable
-	public Bitmap getBitmap(@DrawableRes int drawableId) {
+	public synchronized Bitmap getBitmap(@DrawableRes int drawableId) {
 		Bitmap bitmap = null;
 		if (drawableId != 0) {
 			float textScale = OsmandMapLayer.getTextScale(app);

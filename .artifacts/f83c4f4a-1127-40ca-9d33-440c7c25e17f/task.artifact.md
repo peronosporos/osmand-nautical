@@ -1,0 +1,27 @@
+# Task List - Nautical Plugin S-57/S-63 Fixes
+
+- `[x]` **Phase 1: Backend S-57 Core Improvements**
+    - `[x]` Fix S-57 Attribute Acronym mapping in `S57FileReader`
+    - `[x]` Update ISO 8211 directory parsing to respect leader-defined lengths
+    - `[x]` Implement DSSI-based character encoding detection
+    - `[x]` Implement S-57 update merging (.000 + .031/ENC updates)
+    - `[x]` Migrate `S57SqliteHelper` to R-Tree index
+    - `[x]` Refactor geometry storage to compact binary format (WKB-like)
+    - `[x]` Make `S57GeometryOptimizer` iterative to prevent stack overflows
+- `[x]` **Phase 2: S-63 Security & Cryptography**
+    - `[x]` Support multi-fragment S-63 decryption (.001, .002, etc.)
+    - `[x]` Implement User Permit and Cell Key checksum validation
+    - `[x]` Add permit expiry detection and warnings
+    - `[x]` Stabilize HWID generation logic
+    - `[x]` Optimize `S63BridgeStream` buffer for better throughput
+- `[x]` **Phase 3: Frontend & Rendering Fixes**
+    - `[x]` Move all SQLite queries to background threads in `S57MapLayer`
+    - `[x]` Implement relative coordinate path caching in `S57MapLayer`
+    - `[x]` Improve touch selection precision with geometric intersection
+    - `[x]` Expand `S52SymbolManager` with more sea marks
+    - `[x]` Fix Chart Manager coverage calculation and add reactive status updates
+    - `[x]` Clean up Basemap suppression side-effects in `NauticalPlugin`
+- `[x]` **Phase 4: Verification**
+    - `[x]` Run unit tests for parsing and crypto
+    - `[x]` Benchmark spatial query performance
+    - `[x]` Verify UI responsiveness and map rendering smoothness

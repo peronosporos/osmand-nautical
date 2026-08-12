@@ -14,16 +14,18 @@ import java.util.Locale
 object SignalKUnitConverter {
 
     const val KELVIN_ZERO_CELSIUS = 273.15
-    const val KELVIN_TO_CELSIUS = 1.0
+    const val KELVIN_OFFSET_CELSIUS = -273.15
     const val PASCAL_TO_HPA = 0.01
     const val PASCAL_TO_BAR = 1.0e-5
     const val METERS_TO_NM = 1.0 / 1852.0
     const val METERS_TO_FEET = 3.2808399
     const val METERS_TO_MILES = 1.0 / 1609.344
+    const val KNOTS_TO_MS = 0.514444
+    const val MS_TO_KNOTS = 1.94384449
 
-    fun kelvinToCelsius(k: Double): Double = (k - KELVIN_ZERO_CELSIUS) * KELVIN_TO_CELSIUS
+    fun kelvinToCelsius(k: Double): Double = k - KELVIN_ZERO_CELSIUS
     fun radToDeg(rad: Double): Double = Math.toDegrees(rad)
-    fun msToKnots(ms: Double): Double = ms * 1.94384449
+    fun msToKnots(ms: Double): Double = ms * MS_TO_KNOTS
     fun pascalToHpa(pa: Double): Double = pa * PASCAL_TO_HPA
     fun pascalToBar(pa: Double): Double = pa * PASCAL_TO_BAR
     fun metersToNm(m: Double): Double = m * METERS_TO_NM
@@ -65,7 +67,7 @@ object SignalKUnitConverter {
 
         val app = context.applicationContext as OsmandApplication
 
-        if (path.contains("timeToWaypoint", ignoreCase = true) || path.endsWith(".ttw")) {
+        if (path.contains("timeToWaypoint", ignoreCase = true) || path.endsWith(".ttw") || path.endsWith(".tcpa")) {
             return OsmAndFormatter.getFormattedDuration(value.toLong(), app) to ""
         }
 
@@ -130,6 +132,14 @@ object SignalKUnitConverter {
             }
             path.contains("voltage", ignoreCase = true) -> {
                 format(effectiveValue, context.getString(R.string.nautical_unit_volt), "%.2f")
+            }
+            path.contains("area", ignoreCase = true) -> {
+                val sys = settings.METRIC_SYSTEM.get()
+                if (sys.shouldUseFeet()) {
+                    format(effectiveValue * 10.76391, context.getString(R.string.nautical_unit_sqft), "%.1f")
+                } else {
+                    format(effectiveValue, context.getString(R.string.nautical_unit_m2), "%.1f")
+                }
             }
             path.contains("current", ignoreCase = true) -> {
                 format(effectiveValue, context.getString(R.string.nautical_unit_ampere), "%.1f")

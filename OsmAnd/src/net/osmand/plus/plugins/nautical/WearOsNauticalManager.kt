@@ -1,6 +1,7 @@
 package net.osmand.plus.plugins.nautical
 
 import android.content.Context
+import android.content.pm.PackageManager
 import android.content.res.Configuration
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -16,7 +17,7 @@ class WearOsNauticalManager(private val context: Context) {
 
     /**
      * Detects if the device is a WearOS / Watch hardware based on UI mode,
-     * smallest screen width (heuristic for full-Android watches), or manual override.
+     * hardware features, smallest screen width, or manual override.
      */
     fun isWatchMode(): Boolean {
         val app = context.applicationContext as net.osmand.plus.OsmandApplication
@@ -28,9 +29,22 @@ class WearOsNauticalManager(private val context: Context) {
         val uiMode = config.uiMode
         val isHardwareWatch = (uiMode and Configuration.UI_MODE_TYPE_MASK) == Configuration.UI_MODE_TYPE_WATCH
         
-        // Heuristic: Smallest screen width < 300dp often indicates a smartwatch form factor
-        val isExceptionallySmall = config.smallestScreenWidthDp in 1..299
+        val hasWatchFeature = context.packageManager.hasSystemFeature(PackageManager.FEATURE_WATCH)
         
-        return isHardwareWatch || isExceptionallySmall
+        // Heuristic: Smallest screen width < 380dp often indicates a smartwatch form factor in modern high-res devices
+        val isExceptionallySmall = config.smallestScreenWidthDp in 1..379
+        
+        return isHardwareWatch || hasWatchFeature || isExceptionallySmall
+    }
+
+    /**
+     * Returns true if the screen is round (Wear OS specific).
+     */
+    fun isScreenRound(): Boolean {
+        return context.resources.configuration.isScreenRound
+    }
+
+    fun setAmbientMode(enabled: Boolean) {
+        _isAmbientMode.value = enabled
     }
 }

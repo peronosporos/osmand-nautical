@@ -63,9 +63,19 @@ class NauticalHelmArbitrator private constructor(private val app: OsmandApplicat
         }
     }
 
+    /**
+     * Attempts to release the lock for a specific priority level.
+     * Tactical Maneuvers (PRIORITY_TACTICAL_MANEUVER) require a forced release if they were
+     * acquired by a managed maneuver engine to prevent auto-release during command reconciliation.
+     */
     @Synchronized
-    fun releaseLock(priority: Int) {
+    fun releaseLock(priority: Int, force: Boolean = false) {
         if (priority == currentPriority.get()) {
+            if (priority == PRIORITY_TACTICAL_MANEUVER && !force) {
+                // Tactical Maneuver locks are "sticky" and should only be released by the engine itself
+                // or via a higher-priority lock. Throttled/Reconciled commands should not release it.
+                return
+            }
             cancelTimeout()
             if (priorityStack.isNotEmpty()) {
                 val previous = priorityStack.pop()

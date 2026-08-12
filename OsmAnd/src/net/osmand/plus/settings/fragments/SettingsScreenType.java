@@ -67,7 +67,7 @@ public enum SettingsScreenType {
 	NAUTICAL_PASSAGE_PLAN("net.osmand.plus.plugins.nautical.routing.ui.NauticalRouteSummaryFragment", false, null, -1, R.layout.global_preference_toolbar),
 	NAUTICAL_MASTER_TELEMETRY("net.osmand.plus.views.mapwidgets.configure.settings.NauticalMasterTelemetrySettingsFragment", false, null, -1, R.layout.global_preference_toolbar),
 	ENC_CHART_MANAGER("net.osmand.plus.plugins.nautical.s57.ui.S57ChartManagerFragment", false, null, -1, R.layout.global_preference_toolbar),
-	NAUTICAL_CHECKLISTS("net.osmand.plus.plugins.nautical.ui.checklist.SailingChecklistFragment", false, null, -1, R.layout.global_preference_toolbar),
+	NAUTICAL_CHECKLISTS("net.osmand.plus.plugins.nautical.ui.checklist.NauticalChecklistFragment", false, null, -1, R.layout.global_preference_toolbar),
 	SAIL_INVENTORY("net.osmand.plus.plugins.nautical.ui.sail.SailInventoryFragment", false, null, -1, R.layout.global_preference_toolbar),
 	BOAT_AI("net.osmand.plus.plugins.nautical.ui.ai.BoatAiFragment", false, null, -1, R.layout.global_preference_toolbar),
 	NAUTICAL_NOTIFICATIONS("net.osmand.plus.plugins.nautical.ui.NauticalNotificationsFragment", false, null, -1, R.layout.global_preference_toolbar),
@@ -78,7 +78,7 @@ public enum SettingsScreenType {
 	NAUTICAL_TIDE_TABLE("net.osmand.plus.plugins.nautical.ui.SignalKTideTableFragment", false, null, -1, R.layout.global_preference_toolbar),
 	NAUTICAL_AIS_BUDDIES("net.osmand.plus.plugins.nautical.ui.NauticalBuddyListFragment", false, null, -1, R.layout.global_preference_toolbar),
 	NAUTICAL_ADVANCED_SETTINGS("net.osmand.plus.plugins.nautical.ui.NauticalAdvancedSettingsFragment", false, null, R.xml.nautical_advanced_settings, R.layout.global_preference_toolbar),
-	SIGNALK_DIAGNOSTICS("net.osmand.plus.plugins.nautical.ui.SignalKDiagnosticsFragment", false, null, -1, R.layout.global_preference_toolbar);
+	SIGNALK_DIAGNOSTICS("net.osmand.plus.plugins.nautical.ui.SignalKOrchestratorFragment", false, null, -1, R.layout.global_preference_toolbar);
 	public final String fragmentName;
 	public final boolean profileDependent;
 	public final ApplyQueryType applyQueryType;

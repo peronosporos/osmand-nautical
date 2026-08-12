@@ -21,10 +21,21 @@ class MarineLogbookRepository(context: OsmandApplication) {
     private val _logEntries = MutableStateFlow<List<LogbookEntry>>(emptyList())
     val logEntries: StateFlow<List<LogbookEntry>> = _logEntries.asStateFlow()
 
-    suspend fun insertEntry(entry: LogbookEntry) = withContext(Dispatchers.IO) {
+    suspend fun insertEntry(entry: LogbookEntry): Boolean = withContext(Dispatchers.IO) {
         NauticalIOQueue.writeMutex.withLock {
             insertEntrySync(entry)
         }
+        // Item 2: Don't hardcode refresh limit to 100, use existing list size to avoid jumping
+        val currentSize = _logEntries.value.size
+        refreshEntries(limit = if (currentSize > 0) currentSize + 1 else 100, offset = 0, append = false)
+    }
+
+    suspend fun insertEntries(entries: List<LogbookEntry>): Boolean = withContext(Dispatchers.IO) {
+        NauticalIOQueue.writeMutex.withLock {
+            insertEntriesSync(entries)
+        }
+        val currentSize = _logEntries.value.size
+        refreshEntries(limit = if (currentSize > 0) currentSize + entries.size else 100, offset = 0, append = false)
     }
 
     suspend fun upsertTacticalState(key: String, value: String) = withContext(Dispatchers.IO) {
@@ -82,37 +93,18 @@ class MarineLogbookRepository(context: OsmandApplication) {
     }
 
     /**
-     * Synchronous insert for emergency/crash logging where coroutines are not available.
+     * Synchronous insert for emergency/crash logging or batch sync.
      */
     fun insertEntrySync(entry: LogbookEntry) {
         val db = dbHelper.openConnection(readonly = false) ?: return
         try {
             db.beginTransaction()
-            val values = mutableMapOf<String, Any?>()
-            values[LogbookDbHelper.COL_TIMESTAMP] = TemporalUtils.validate(entry.timestamp)
-            values[LogbookDbHelper.COL_LAT] = entry.latitude
-            values[LogbookDbHelper.COL_LON] = entry.longitude
-            values[LogbookDbHelper.COL_SOG] = entry.sog
-            values[LogbookDbHelper.COL_COG] = entry.cog
-            values[LogbookDbHelper.COL_HEADING] = entry.heading
-            values[LogbookDbHelper.COL_TWS] = entry.tws
-            values[LogbookDbHelper.COL_TWA] = entry.twa
-            values[LogbookDbHelper.COL_TWD] = entry.twd
-            values[LogbookDbHelper.COL_PRESSURE] = entry.pressure
-            values[LogbookDbHelper.COL_WATER_DEPTH] = entry.waterDepth
-            values[LogbookDbHelper.COL_WATER_TEMP] = entry.waterTemp
-            values[LogbookDbHelper.COL_BATTERY_VOLTAGE] = entry.batteryVoltage
-            values[LogbookDbHelper.COL_ENGINE_HOURS] = entry.engineHours
-            values[LogbookDbHelper.COL_SAIL_PLAN] = entry.sailPlan
-            values[LogbookDbHelper.COL_NOTES] = entry.notes
-            values[LogbookDbHelper.COL_SERVER_UUID] = entry.serverUuid
-
+            val values = entryToMap(entry)
             db.execSQL(
                 AndroidDbUtils.createDbInsertQuery(LogbookDbHelper.TABLE_LOGBOOK, values.keys),
                 values.values.toTypedArray(),
             )
             db.setTransactionSuccessful()
-            // Can't refresh state-flow synchronously easily here without causing issues on Main thread
         } catch (e: Exception) {
             log.error("Sync insert failed", e)
         } finally {
@@ -121,7 +113,68 @@ class MarineLogbookRepository(context: OsmandApplication) {
         }
     }
 
-    suspend fun updateEntryDetails(id: Long, sailPlan: String, notes: String) = withContext(Dispatchers.IO) {
+    fun insertEntriesSync(entries: List<LogbookEntry>) {
+        val db = dbHelper.openConnection(readonly = false) ?: return
+        try {
+            db.beginTransaction()
+            for (entry in entries) {
+                val values = entryToMap(entry)
+                db.execSQL(
+                    AndroidDbUtils.createDbInsertQuery(LogbookDbHelper.TABLE_LOGBOOK, values.keys),
+                    values.values.toTypedArray(),
+                )
+            }
+            db.setTransactionSuccessful()
+        } catch (e: Exception) {
+            log.error("Batch sync insert failed", e)
+        } finally {
+            db.endTransaction()
+            db.close()
+        }
+    }
+
+    private fun entryToMap(entry: LogbookEntry): Map<String, Any?> {
+        val values = mutableMapOf<String, Any?>()
+        var ts = TemporalUtils.validate(entry.timestamp)
+        if (ts == 0L) ts = System.currentTimeMillis()
+        values[LogbookDbHelper.COL_TIMESTAMP] = ts
+        values[LogbookDbHelper.COL_LAT] = entry.latitude
+        values[LogbookDbHelper.COL_LON] = entry.longitude
+        values[LogbookDbHelper.COL_SOG] = entry.sog
+        values[LogbookDbHelper.COL_COG] = entry.cog
+        values[LogbookDbHelper.COL_HEADING] = entry.heading
+        values[LogbookDbHelper.COL_TWS] = entry.tws
+        values[LogbookDbHelper.COL_TWA] = entry.twa
+        values[LogbookDbHelper.COL_TWD] = entry.twd
+        values[LogbookDbHelper.COL_PRESSURE] = entry.pressure
+        values[LogbookDbHelper.COL_WATER_DEPTH] = entry.waterDepth
+        values[LogbookDbHelper.COL_WATER_TEMP] = entry.waterTemp
+        values[LogbookDbHelper.COL_BATTERY_VOLTAGE] = entry.batteryVoltage
+        values[LogbookDbHelper.COL_ENGINE_HOURS] = entry.engineHours
+        values[LogbookDbHelper.COL_SAIL_PLAN] = entry.sailPlan
+        values[LogbookDbHelper.COL_NOTES] = entry.notes
+        values[LogbookDbHelper.COL_SERVER_UUID] = entry.serverUuid
+        return values
+    }
+
+    suspend fun getEntryByUuid(uuid: String): LogbookEntry? = withContext(Dispatchers.IO) {
+        val db = dbHelper.openConnection(readonly = true) ?: return@withContext null
+        try {
+            val cursor = db.rawQuery("SELECT * FROM ${LogbookDbHelper.TABLE_LOGBOOK} WHERE ${LogbookDbHelper.COL_SERVER_UUID} = ?", arrayOf(uuid))
+            try {
+                if (cursor != null && cursor.moveToFirst()) {
+                    return@withContext readEntry(cursor)
+                }
+            } finally {
+                cursor?.close()
+            }
+            null
+        } finally {
+            db.close()
+        }
+    }
+
+    suspend fun updateEntryDetails(id: Long, sailPlan: String, notes: String, pushToServer: Boolean = true) = withContext(Dispatchers.IO) {
         NauticalIOQueue.writeMutex.withLock {
             val db = dbHelper.openConnection(readonly = false) ?: return@withLock
             try {
@@ -131,30 +184,34 @@ class MarineLogbookRepository(context: OsmandApplication) {
                 )
                 
                 // Task: Synergy Sync-Back
-                val cursor = db.rawQuery("SELECT * FROM ${LogbookDbHelper.TABLE_LOGBOOK} WHERE ${LogbookDbHelper.COL_ID} = ?", arrayOf(id.toString()))
-                try {
-                    if (((cursor != null) && cursor.moveToFirst())) {
-                        val entry = readEntry(cursor)
-                        NauticalPlugin.engine?.resourceManager?.pushNoteToServer(
-                            entry.latitude, entry.longitude, 
-                            "Log Edit: ${entry.sailPlan}", 
-                            entry.notes,
-                            entry.serverUuid,
-                        )
+                if (pushToServer) {
+                    val cursor = db.rawQuery("SELECT * FROM ${LogbookDbHelper.TABLE_LOGBOOK} WHERE ${LogbookDbHelper.COL_ID} = ?", arrayOf(id.toString()))
+                    try {
+                        if (((cursor != null) && cursor.moveToFirst())) {
+                            val entry = readEntry(cursor)
+                            val pushTitle = if (entry.sailPlan.isNotEmpty()) "Marine Log Update: ${entry.sailPlan}" else "Marine Log Update"
+                            NauticalPlugin.engine?.resourceManager?.pushNoteToServer(
+                                entry.latitude, entry.longitude, 
+                                pushTitle, 
+                                entry.notes,
+                                entry.serverUuid,
+                            )
+                        }
+                    } finally {
+                        cursor?.close()
                     }
-                } finally {
-                    cursor?.close()
                 }
 
-                refreshEntries()
+                val currentSize = _logEntries.value.size
+                refreshEntries(limit = if (currentSize > 0) currentSize else 100, offset = 0, append = false)
             } finally {
                 db.close()
             }
         }
     }
 
-    suspend fun refreshEntries(limit: Int = 100, offset: Int = 0, append: Boolean = false) = withContext(Dispatchers.IO) {
-        val db = dbHelper.openConnection(readonly = true) ?: return@withContext
+    suspend fun refreshEntries(limit: Int = 100, offset: Int = 0, append: Boolean = false): Boolean = withContext(Dispatchers.IO) {
+        val db = dbHelper.openConnection(readonly = true) ?: return@withContext false
         try {
             val entries = mutableListOf<LogbookEntry>()
             val cursor = db.rawQuery(
@@ -176,6 +233,36 @@ class MarineLogbookRepository(context: OsmandApplication) {
             } else {
                 _logEntries.value = entries
             }
+            true
+        } catch (e: Exception) {
+            log.error("Failed to refresh entries", e)
+            false
+        } finally {
+            db.close()
+        }
+    }
+
+    suspend fun getAllEntriesForExport(): List<LogbookEntry> = withContext(Dispatchers.IO) {
+        val db = dbHelper.openConnection(readonly = true) ?: return@withContext emptyList()
+        try {
+            val entries = mutableListOf<LogbookEntry>()
+            val cursor = db.rawQuery(
+                "SELECT * FROM ${LogbookDbHelper.TABLE_LOGBOOK} ORDER BY ${LogbookDbHelper.COL_TIMESTAMP} ASC",
+                null
+            )
+            try {
+                if (cursor != null && cursor.moveToFirst()) {
+                    do {
+                        entries.add(readEntry(cursor))
+                    } while (cursor.moveToNext())
+                }
+            } finally {
+                cursor?.close()
+            }
+            entries
+        } catch (e: Exception) {
+            log.error("Failed to fetch all entries for export", e)
+            emptyList()
         } finally {
             db.close()
         }

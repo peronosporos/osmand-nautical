@@ -38,6 +38,12 @@ class SignalKUnitConverterTest {
     }
 
     @Test
+    fun testRpmConversion() {
+        // 50 Hz = 3000 RPM
+        assertEquals(3000.0, SignalKUnitConverter.hertzToRpm(50.0), 0.001)
+    }
+
+    @Test
     fun testEdgeCases() {
         assertEquals(Double.NaN, SignalKUnitConverter.msToKnots(Double.NaN), 0.0)
     }

@@ -3,6 +3,7 @@ package net.osmand.shared.aistracker
 import net.osmand.shared.aistracker.AisObjectConstants.INVALID_CPA
 import net.osmand.shared.aistracker.AisObjectConstants.INVALID_TCPA
 import net.osmand.shared.util.KMapUtils
+import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.sin
@@ -23,8 +24,10 @@ object AisTrackerMath {
     }
 
     private fun getTcpa(ownLocation: AisLocation, otherLocation: AisLocation, lonCorrection: Double): Double {
-        val vX = locationToVector(ownLocation, lonCorrection)
-        val vY = locationToVector(otherLocation, lonCorrection)
+        val lonDiff = KMapUtils.degreesDiff(ownLocation.longitude, otherLocation.longitude)
+        val vX = Vector(lonDiff * 60.0 * lonCorrection, ownLocation.latitude * 60.0)
+        val vY = Vector(0.0, otherLocation.latitude * 60.0)
+        
         val vVX = courseToVector(ownLocation.bearing.toDouble(), getSpeedInKnots(ownLocation).toDouble())
         val vVY = courseToVector(otherLocation.bearing.toDouble(), getSpeedInKnots(otherLocation).toDouble())
         val vDXY = vX.sub(vY)
@@ -107,6 +110,7 @@ object AisTrackerMath {
     /**
      * Calculates position after timeInHours considering constant Rate of Turn (ROT).
      * ROT is in degrees per minute.
+     * Uses spherical trigonometry for improved accuracy.
      */
     fun getCurvedPosition(loc: AisLocation, timeInHours: Double): AisLatLon? {
         val rotDegMin = loc.rot ?: return getNewPosition(loc, timeInHours)
@@ -116,21 +120,15 @@ object AisTrackerMath {
         val bearingDeg = loc.bearing.toDouble()
         
         // Convert ROT to radians per hour
-        val rotRadHour = rotDegMin * 60.0 * kotlin.math.PI / 180.0
+        val rotRadHour = rotDegMin * 60.0 * PI / 180.0
         
-        // Radius of turn R = V / omega
-        val r = (speedMs * 3600.0) / rotRadHour
+        val deltaThetaRad = rotRadHour * timeInHours
+        val avgBearingDeg = (bearingDeg + (deltaThetaRad / 2.0) * 180.0 / PI)
+        val distanceMeters = speedMs * timeInHours * 3600.0
         
-        val deltaTheta = rotRadHour * timeInHours
+        val dest = KMapUtils.rhumbDestinationPoint(loc.latitude, loc.longitude, distanceMeters, avgBearingDeg)
         
-        val theta0 = (90.0 - bearingDeg) * kotlin.math.PI / 180.0
-        val dx = r * (cos(theta0) - cos(theta0 + deltaTheta))
-        val dy = r * (sin(theta0 + deltaTheta) - sin(theta0))
-        
-        val latOffset = dy / 111132.0
-        val lonOffset = dx / (111132.0 * cos(loc.latitude * kotlin.math.PI / 180.0))
-        
-        return AisLatLon(loc.latitude + latOffset, loc.longitude + lonOffset)
+        return AisLatLon(dest.latitude, dest.longitude)
     }
 
     fun getCurvedPathPoints(loc: AisLocation, timeInHours: Double, segments: Int): List<AisLatLon> {
@@ -161,7 +159,7 @@ object AisTrackerMath {
     }
 
     private fun calculateLonCorrection(latitude: Double): Double {
-        return cos(latitude * kotlin.math.PI / 180.0)
+        return cos(latitude * PI / 180.0)
     }
 
     fun knotsToMeterPerSecond(speed: Float): Float {

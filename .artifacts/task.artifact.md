@@ -1,13 +1,26 @@
-# Task Tracking: Resource Management & Adaptive UI/UX
+# Tasks - Nautical Pilot Overhaul
 
-- `[ ]` **Server Offloading (Resource Management)**
-    - `[ ]` Disable local AIS CPA timer when server offloading is available (`NauticalAisManager`)
-    - `[ ]` Finalize offloading for VMG, Leeway, and Set/Drift in `SignalKEngine`
-    - `[ ]` Lifecycle audit: Ensure strict job cancellation in `SignalKEngine.stop()`
-- `[ ]` **Adaptive UI/UX**
-    - `[ ]` Link `WidgetType.isAllowed()` to `CapabilityManager` flags
-    - `[ ]` Implement dynamic category visibility in `NauticalSettingsFragment`
-    - `[ ]` Clean up `MarineTextWidget` logic to use `dataBroker` states preferentially
-- `[ ]` **Code Cleanliness & De-duplication**
-    - `[ ]` Remove redundant path parsing and hardcoded strings
-    - `[ ]` Final verification using `analyze_file`
+- `[x]` Fix Backend Logic (`AutopilotController.kt` & `NauticalHelmArbitrator.kt`)
+    - `[x]` Item 1: Fix lock desync in `startReconciliation`
+    - `[x]` Item 2: Relax HTTP constraint for local IPs
+    - `[x]` Item 3: Add voice feedback to physical nudges
+    - `[x]` Item 4: Unify Auth Feedback (Centralize through `triggerAuthError`)
+    - `[x]` Item 5: Fix tactical lock recovery on timeout
+    - `[x]` Item 6: Refine GRIB wave direction logic
+    - `[x]` Item 7: Implement `stop()` and listener cleanup
+    - `[x]` Item 8: Add damping to virtual rudder
+- `[x]` Update `NauticalPlugin.kt`
+    - `[x]` Item 7: Call `autopilot?.stop()` in cleanup
+- `[x]` Fix Frontend UI (`NauticalPilotBottomSheet.kt` & Layout)
+    - `[x]` Item 10 & 19: Implement View Caching
+    - `[x]` Item 9: Improve Tack/Gybe label hysteresis
+    - `[x]` Item 11: Rename misleading functions
+    - `[x]` Item 12 & 18: Refactor `visualAlpha` and Lock UI
+    - `[x]` Item 13: Optimize Toggle Group updates
+    - `[x]` Item 14: Add Pattern Active indicator
+    - `[x]` Item 15: Unify Haptics
+    - `[x]` Item 16: Shorten voice debounce
+    - `[x]` Item 17: WIND mode Long Press for arming
+    - `[x]` Item 20: Fix RTL attributes in XML
+- `[x]` Verification
+    - `[x]` Manual verification of all 20 items

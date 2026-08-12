@@ -27,13 +27,13 @@ data class WaveVector(
 
 data class TimeStepGrid(
     val timestamp: Long,
-    val uGrid: Array<DoubleArray>,
-    val vGrid: Array<DoubleArray>,
-    val pressureGrid: Array<DoubleArray>? = null,    // Surface pressure (hPa)
-    val waveHeightGrid: Array<DoubleArray>? = null,  // Significant wave height (m)
-    val waveDirectionGrid: Array<DoubleArray>? = null, // Wave direction (degrees)
-    val currentUGrid: Array<DoubleArray>? = null,   // Eastward current (m/s)
-    val currentVGrid: Array<DoubleArray>? = null    // Northward current (m/s)
+    val uGrid: FloatArray,
+    val vGrid: FloatArray,
+    val pressureGrid: FloatArray? = null,    // Surface pressure (hPa)
+    val waveHeightGrid: FloatArray? = null,  // Significant wave height (m)
+    val waveDirectionGrid: FloatArray? = null, // Wave direction (degrees)
+    val currentUGrid: FloatArray? = null,   // Eastward current (m/s)
+    val currentVGrid: FloatArray? = null    // Northward current (m/s)
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -42,31 +42,51 @@ data class TimeStepGrid(
         other as TimeStepGrid
 
         if (timestamp != other.timestamp) return false
-        if (!uGrid.contentDeepEquals(other.uGrid)) return false
-        if (!vGrid.contentDeepEquals(other.vGrid)) return false
-        if (!pressureGrid.contentDeepEquals(other.pressureGrid)) return false
-        if (!waveHeightGrid.contentDeepEquals(other.waveHeightGrid)) return false
-        if (!waveDirectionGrid.contentDeepEquals(other.waveDirectionGrid)) return false
-        if (!currentUGrid.contentDeepEquals(other.currentUGrid)) return false
-        if (!currentVGrid.contentDeepEquals(other.currentVGrid)) return false
+        if (!uGrid.contentEquals(other.uGrid)) return false
+        if (!vGrid.contentEquals(other.vGrid)) return false
+        if (pressureGrid != null) {
+            if (other.pressureGrid == null) return false
+            if (!pressureGrid.contentEquals(other.pressureGrid)) return false
+        } else if (other.pressureGrid != null) return false
+        
+        if (waveHeightGrid != null) {
+            if (other.waveHeightGrid == null) return false
+            if (!waveHeightGrid.contentEquals(other.waveHeightGrid)) return false
+        } else if (other.waveHeightGrid != null) return false
+
+        if (waveDirectionGrid != null) {
+            if (other.waveDirectionGrid == null) return false
+            if (!waveDirectionGrid.contentEquals(other.waveDirectionGrid)) return false
+        } else if (other.waveDirectionGrid != null) return false
+
+        if (currentUGrid != null) {
+            if (other.currentUGrid == null) return false
+            if (!currentUGrid.contentEquals(other.currentUGrid)) return false
+        } else if (other.currentUGrid != null) return false
+
+        if (currentVGrid != null) {
+            if (other.currentVGrid == null) return false
+            if (!currentVGrid.contentEquals(other.currentVGrid)) return false
+        } else if (other.currentVGrid != null) return false
 
         return true
     }
 
     override fun hashCode(): Int {
         var result = timestamp.hashCode()
-        result = 31 * result + uGrid.contentDeepHashCode()
-        result = 31 * result + vGrid.contentDeepHashCode()
-        result = 31 * result + (pressureGrid?.contentDeepHashCode() ?: 0)
-        result = 31 * result + (waveHeightGrid?.contentDeepHashCode() ?: 0)
-        result = 31 * result + (waveDirectionGrid?.contentDeepHashCode() ?: 0)
-        result = 31 * result + (currentUGrid?.contentDeepHashCode() ?: 0)
-        result = 31 * result + (currentVGrid?.contentDeepHashCode() ?: 0)
+        result = 31 * result + uGrid.contentHashCode()
+        result = 31 * result + vGrid.contentHashCode()
+        result = 31 * result + (pressureGrid?.contentHashCode() ?: 0)
+        result = 31 * result + (waveHeightGrid?.contentHashCode() ?: 0)
+        result = 31 * result + (waveDirectionGrid?.contentHashCode() ?: 0)
+        result = 31 * result + (currentUGrid?.contentHashCode() ?: 0)
+        result = 31 * result + (currentVGrid?.contentHashCode() ?: 0)
         return result
     }
 }
 
 data class GribGridData(
     val header: GribHeader,
-    val timeSteps: List<TimeStepGrid>
+    val timeSteps: List<TimeStepGrid>,
+    var fileName: String? = null
 )

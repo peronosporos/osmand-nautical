@@ -4,7 +4,9 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ImageView
 import android.widget.TextView
+import androidx.appcompat.widget.SwitchCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -28,7 +30,7 @@ class SailInventoryFragment : BaseOsmAndFragment() {
         
         adapter = SailAdapter(
             onSailToggle = { sail -> toggleSail(sail) },
-            onReefChange = { reefs -> updateReefs(reefs) },
+            onReefChange = { reefs, sailId -> updateReefs(reefs, sailId) },
         )
         recyclerView.layoutManager = LinearLayoutManager(requireContext())
         recyclerView.adapter = adapter
@@ -36,7 +38,9 @@ class SailInventoryFragment : BaseOsmAndFragment() {
         viewLifecycleOwner.lifecycleScope.launch {
             NauticalPlugin.engine?.marineStateFlow?.collectLatest { state ->
                 val items = mutableListOf<Any>()
-                items.add(ReefData(state.reefs ?: 0))
+                
+                val globalMax = (state.pathMeta["sails.reefs"]?.get("max") as? Number)?.toInt() ?: 5
+                items.add(ReefData(count = state.reefs ?: 0, maxCount = globalMax))
                 
                 val sails = state.sailInventory.map { sail ->
                     val pending = pendingToggles[sail.id]
@@ -50,22 +54,35 @@ class SailInventoryFragment : BaseOsmAndFragment() {
                     } else sail
                 }
                 
-                items.addAll(sails)
+                sails.forEach { sail ->
+                    items.add(sail)
+                    sail.reefs?.let { reefs ->
+                        items.add(
+                            ReefData(
+                                count = reefs,
+                                maxCount = sail.maxReefs ?: 5,
+                                sailId = sail.id,
+                                sailName = sail.name
+                            )
+                        )
+                    }
+                }
                 adapter.submitList(items)
                 
                 val emptyView = view.findViewById<TextView>(R.id.txt_empty_list)
                 val connected = NauticalPlugin.getInstance()?.isSignalKConnected() == true
-                emptyView?.text = if (connected) getString(R.string.shared_string_no_items) else "Server Disconnected"
-                emptyView?.visibility = if (items.isEmpty()) View.VISIBLE else View.GONE
+                emptyView?.text = if (connected) getString(R.string.shared_string_no_items) else getString(R.string.nautical_server_disconnected)
+                emptyView?.visibility = if (state.sailInventory.isEmpty()) View.VISIBLE else View.GONE
             }
         }
 
         return view
     }
 
-    private fun updateReefs(reefs: Int) {
+    private fun updateReefs(reefs: Int, sailId: String?) {
         lifecycleScope.launch {
-            NauticalPlugin.engine?.sendDelta("sails.reefs", reefs)
+            val path = if (sailId != null) "sails.inventory.$sailId.reefs" else "sails.reefs"
+            NauticalPlugin.engine?.sendDelta(path, reefs)
         }
     }
 
@@ -87,11 +104,16 @@ class SailInventoryFragment : BaseOsmAndFragment() {
         }
     }
 
-    private data class ReefData(val count: Int)
+    private data class ReefData(
+        val count: Int,
+        val maxCount: Int = 5,
+        val sailId: String? = null,
+        val sailName: String? = null
+    )
 
     private class SailAdapter(
         private val onSailToggle: (Sail) -> Unit,
-        private val onReefChange: (Int) -> Unit
+        private val onReefChange: (Int, String?) -> Unit
     ) : ListAdapter<Any, RecyclerView.ViewHolder>(SailDiffCallback()) {
 
         override fun getItemViewType(position: Int): Int {
@@ -103,7 +125,7 @@ class SailInventoryFragment : BaseOsmAndFragment() {
                 val view = LayoutInflater.from(parent.context).inflate(R.layout.nautical_reefs_control_item, parent, false)
                 ReefHeaderViewHolder(view, onReefChange)
             } else {
-                val view = LayoutInflater.from(parent.context).inflate(R.layout.list_item_icon_and_switch, parent, false)
+                val view = LayoutInflater.from(parent.context).inflate(R.layout.item_title_with_description_icon_switch, parent, false)
                 SailViewHolder(view)
             }
         }
@@ -121,44 +143,70 @@ class SailInventoryFragment : BaseOsmAndFragment() {
     private class SailDiffCallback : DiffUtil.ItemCallback<Any>() {
         override fun areItemsTheSame(oldItem: Any, newItem: Any): Boolean {
             return when (oldItem) {
-                is ReefData -> newItem is ReefData
-                is Sail -> newItem is Sail && oldItem.id == newItem.id
+                is ReefData -> newItem is ReefData && (oldItem.sailId == newItem.sailId)
+                is Sail -> newItem is Sail && (oldItem.id == newItem.id)
                 else -> false
             }
         }
         override fun areContentsTheSame(oldItem: Any, newItem: Any): Boolean {
             return when (oldItem) {
-                is ReefData -> newItem is ReefData && oldItem.count == newItem.count
+                is ReefData -> newItem is ReefData && oldItem == newItem
                 is Sail -> newItem is Sail && oldItem == newItem
                 else -> false
             }
         }
     }
 
-    private class ReefHeaderViewHolder(view: View, private val onReefChange: (Int) -> Unit) : RecyclerView.ViewHolder(view) {
+    private class ReefHeaderViewHolder(view: View, private val onReefChange: (Int, String?) -> Unit) : RecyclerView.ViewHolder(view) {
+        private val txtTitle: TextView = view.findViewById(R.id.txt_reefs_title)
         private val txtReefs: TextView = view.findViewById(R.id.txt_reefs_count)
         private val btnMinus: View = view.findViewById(R.id.btn_minus)
         private val btnPlus: View = view.findViewById(R.id.btn_plus)
 
         fun bind(data: ReefData) {
+            txtTitle.text = if (data.sailName != null) {
+                "${data.sailName} ${itemView.context.getString(R.string.nautical_reefs)}"
+            } else {
+                itemView.context.getString(R.string.nautical_reefs)
+            }
             txtReefs.text = data.count.toString()
-            btnMinus.setOnClickListener { if (data.count > 0) onReefChange(data.count - 1) }
-            btnPlus.setOnClickListener { if (data.count < 5) onReefChange(data.count + 1) }
+            btnMinus.setOnClickListener { if (data.count > 0) onReefChange(data.count - 1, data.sailId) }
+            btnPlus.setOnClickListener { if (data.count < data.maxCount) onReefChange(data.count + 1, data.sailId) }
         }
     }
 
     private class SailViewHolder(view: View) : RecyclerView.ViewHolder(view) {
-        private val txtName: TextView = view.findViewById(R.id.title)
-        private val txtDesc: TextView = view.findViewById(R.id.description)
-        private val switchToggle: androidx.appcompat.widget.SwitchCompat = view.findViewById(R.id.switch_toggle)
+        private val icon: ImageView = view.findViewById(R.id.icon_iv)
+        private val txtName: TextView = view.findViewById(R.id.title_tv)
+        private val txtDesc: TextView = view.findViewById(R.id.state_tv)
+        private val switchToggle: SwitchCompat = view.findViewById(R.id.switch_compat)
 
         fun bind(sail: Sail, onToggle: (Sail) -> Unit) {
             txtName.text = sail.name
-            txtDesc.text = if (sail.area != null) {
-                itemView.context.getString(R.string.nautical_sail_desc_with_area, sail.type, sail.area.toString())
+            
+            val (areaVal, areaUnit) = if (sail.area != null) {
+                net.osmand.plus.plugins.nautical.engine.SignalKUnitConverter.formatValue(
+                    itemView.context, 
+                    NauticalPlugin.getInstance()!!.getSettings(),
+                    sail.area,
+                    "sails.inventory.area"
+                )
+            } else "" to ""
+            
+            txtDesc.text = if (areaVal.isNotEmpty()) {
+                "${sail.type} ($areaVal $areaUnit)"
             } else {
                 sail.type
             }
+
+            val iconRes = when (sail.type.lowercase()) {
+                "mainsail", "main" -> R.drawable.ic_action_sail_boat_dark
+                "genoa", "jib" -> R.drawable.ic_action_sail_boat_dark
+                "spinnaker", "gennaker", "code0" -> R.drawable.ic_action_sail_boat_dark
+                else -> R.drawable.ic_action_sail_boat_dark
+            }
+            icon.setImageResource(iconRes)
+
             switchToggle.setOnCheckedChangeListener(null)
             switchToggle.isChecked = sail.active
             switchToggle.setOnCheckedChangeListener { _, _ ->

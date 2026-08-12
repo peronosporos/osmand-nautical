@@ -1,0 +1,28 @@
+# Tasks - MOB Functionality Fixes
+
+- [x] **Backend & Logic Fixes**
+    - [x] Update `NauticalNotificationManager` path mapping
+    - [x] Implement drift-aware return vectors in `MobVectorEngine`
+    - [x] Fix IAMSAR Sector Search heading calculation in `PatternSteeringEngine`
+- [x] **Autopilot & Safety Fixes**
+    - [x] Implement helm lock release in `ManOverboardManeuver`
+    - [x] Standardize distance/bearing math in `ManOverboardManeuver`
+    - [x] Add downwind safety guard for Heave-To in `ManOverboardManeuver`
+    - [x] Fix incorrect toast message in `ManOverboardManeuver`
+    - [x] Refine autopilot disengage logic in `ManOverboardManeuver`
+- [x] **UI & UX Enhancements**
+    - [x] Add long-press progress feedback in `MobEmergencyHeaderView`
+    - [x] Implement global unit formatting in `MobEmergencyHeaderView`
+    - [x] Make map markers density-aware in `MobMapLayer`
+    - [x] Implement SAR pattern visualization in `MobMapLayer`
+    - [x] Improve window flag management in `NauticalPlugin`
+    - [x] Consolidate audio alert triggers in `MobViewModel`
+- [x] **Verification**
+    - [x] Verify logic changes via unit tests
+    - [x] Manual verification of UI and safety guards
+- [x] **Final Polishing**
+    - [x] Implement Banner Priority Queue in `NauticalHudManager`
+    - [x] Implement Dynamic Turn Thresholds in `MobViewModel`
+    - [x] Sync Remote MOB state in `MobViewModel`
+    - [x] Extract Position from MOB deltas in `SignalKEngine`
+    - [x] Refine Screen Timeout logic in `NauticalPlugin`

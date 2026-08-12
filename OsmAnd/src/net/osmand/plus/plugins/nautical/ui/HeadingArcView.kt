@@ -115,8 +115,8 @@ class HeadingArcView @JvmOverloads constructor(
     private var dragStartedX = 0f
     private var dragStartedY = 0f
     private var dragStartTime = 0L
-    private val dragSlop = 60f // pixels (Increased from 30f)
-    private val activationDelay = 800L // ms (Increased from 400ms)
+    private val dragSlop = 20f // pixels (Reduced from 60f)
+    private val activationDelay = 200L // ms (Reduced from 800ms)
 
     private val cardinalLabels = Array(8) { "" }
     private val cardinalIndices = intArrayOf(0, 45, 90, 135, 180, 225, 270, 315)
@@ -398,7 +398,7 @@ class HeadingArcView @JvmOverloads constructor(
         paint.alpha = 150
         paint.typeface = mediumTypeface
         val label = if (currentMode == "WIND") awaLabel else setHeadingLabel
-        canvas.drawText(label, centerX, centerY + (centerValueSize * 0.9f), paint)
+        canvas.drawText(label, centerX, centerY + (centerValueSize * 0.7f), paint) // Moved up from 0.9f to avoid overlap
     }
 
     override fun onInitializeAccessibilityNodeInfo(info: AccessibilityNodeInfo) {
@@ -415,8 +415,8 @@ class HeadingArcView @JvmOverloads constructor(
 
         when (event.action) {
             MotionEvent.ACTION_DOWN -> {
-                // Task: Narrower touch ring (75% to 110% of radius)
-                if (dist > radius * 0.75f && dist < radius * 1.1f) {
+                // Task: Better touch ring (60% to 115% of radius) for easier grabbing
+                if (dist > radius * 0.6f && dist < radius * 1.15f) {
                     dragStartedX = event.x
                     dragStartedY = event.y
                     dragStartTime = System.currentTimeMillis()

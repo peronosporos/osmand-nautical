@@ -1,0 +1,26 @@
+# Tasks - Nautical Pilot Overhaul
+
+- `[x]` **Backend Consolidation & Safety**
+    - `[x]` Merge `AutopilotManager` logic into `AutopilotController`
+    - `[x]` Enforce secure connections (HTTPS/Bearer) in `AutopilotController`
+    - `[x]` Implement command queue with retry logic in `AutopilotController`
+    - `[x]` Remove `AutopilotManager.kt`
+    - `[x]` Update `NauticalPlugin.kt` to remove `AutopilotManager` references
+- `[x]` **Logic & Synchronization Fixes**
+    - `[x]` Fix helm lock release race condition in `AutopilotController`
+    - `[x]` Implement optimistic UI updates with rollback in `AutopilotController`
+    - `[x]` Fix Route Step Listener for server-side waypoint arrival in `SignalKEngine.kt`
+    - `[x]` Consolidate Dead Reckoning logic to avoid GPS/DR conflicts
+    - `[x]` Add debounce to Shadow Drive detection in `SignalKDataBroker.kt`
+    - `[x]` Make STW reliability delay configurable
+- `[x]` **UI/UX Improvements**
+    - `[x]` Improve voice announcement debouncing in `NauticalPilotBottomSheet.kt`
+    - `[x]` Implement state machine for Tack/Gybe labels in `NauticalPilotBottomSheet.kt`
+    - `[x]` Synchronize Course Lock visual state in `NauticalPilotBottomSheet.kt`
+    - `[x]` Add Abort Pattern confirmation in `NauticalPilotBottomSheet.kt`
+    - `[x]` Implement banner queue in `NauticalHudManager.kt`
+    - `[x]` Improve stale visibility in `NauticalPilotWidget.kt`
+- `[x]` **Architectural & Structural Cleanup**
+    - `[x]` Add `NAUTICAL_RUDDER_LIMIT` setting to `OsmandSettings.java` (Verified and synchronized)
+    - `[x]` Move Pilot UI files to `net.osmand.plus.plugins.nautical.ui.widgets`
+    - `[x]` Standardize bottom sheet base classes for the plugin

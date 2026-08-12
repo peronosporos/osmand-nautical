@@ -1,5 +1,6 @@
 package net.osmand.plus.plugins.nautical.maneuvers
 
+import net.osmand.plus.plugins.nautical.network.PolarProfile
 import org.json.JSONObject
 import java.io.BufferedReader
 import java.io.InputStream
@@ -41,7 +42,7 @@ class PolarDiagram {
 
     /**
      * Parses standard CSV polar diagrams.
-     * Assumes speeds in Knots, converts to m/s internally.
+     * Assumes speeds in Knots, converts to m/s internally unless # Unit: ms is present.
      */
     fun loadFromCsv(inputStream: InputStream, polarId: String = "default"): Boolean {
         try {
@@ -53,16 +54,28 @@ class PolarDiagram {
             val parsedTwa = mutableListOf<Double>()
             val parsedRows = mutableListOf<DoubleArray>()
 
+            var speedMultiplier = KNOTS_TO_MS
             var headerParsed = false
             for (lineRaw in lines) {
                 val line = lineRaw.trim()
-                if (line.isEmpty() || line.startsWith("#")) continue
+                if (line.isEmpty()) continue
+                if (line.startsWith("#")) {
+                    val lower = line.lowercase(Locale.US)
+                    if (lower.contains("unit") || lower.contains("speed")) {
+                        if (lower.contains("ms") || lower.contains("m/s")) {
+                            speedMultiplier = 1.0
+                        } else if (lower.contains("kn") || lower.contains("kt")) {
+                            speedMultiplier = KNOTS_TO_MS
+                        }
+                    }
+                    continue
+                }
 
                 val tokens = line.split(",").map { it.trim() }
                 if (!headerParsed) {
                     if (tokens.size < 2) return false
                     for (i in 1 until tokens.size) {
-                        tokens[i].toDoubleOrNull()?.let { parsedTws.add(it * KNOTS_TO_MS) }
+                        tokens[i].toDoubleOrNull()?.let { parsedTws.add(it * speedMultiplier) }
                     }
                     if (parsedTws.isEmpty()) return false
                     headerParsed = true
@@ -73,7 +86,7 @@ class PolarDiagram {
 
                     val speeds = DoubleArray(parsedTws.size)
                     for (j in 0 until parsedTws.size) {
-                        speeds[j] = (tokens[j + 1].toDoubleOrNull() ?: 0.0) * KNOTS_TO_MS
+                        speeds[j] = (tokens[j + 1].toDoubleOrNull() ?: 0.0) * speedMultiplier
                     }
                     parsedRows.add(speeds)
                 }
@@ -83,11 +96,20 @@ class PolarDiagram {
                 return false
             }
 
+            // TASK-003: Standardize matrix storage to [TWS][TWA]
+            val nTws = parsedTws.size
+            val nTwa = parsedTwa.size
+            val transposedRows = Array(nTws) { j ->
+                DoubleArray(nTwa) { i ->
+                    parsedRows[i][j]
+                }
+            }
+
             lock.write {
                 polars[polarId] = PolarData(
                     parsedTws.toDoubleArray(),
                     parsedTwa.toDoubleArray(),
-                    parsedRows.toTypedArray()
+                    transposedRows
                 )
                 if (activePolarId == "default" || activePolarId == polarId) {
                     activePolarId = polarId
@@ -100,6 +122,35 @@ class PolarDiagram {
     }
 
     /**
+     * Directly loads a PolarProfile model.
+     */
+    fun loadFromProfile(profile: PolarProfile, polarId: String = "default"): Boolean {
+        val tws = profile.tws?.toDoubleArray() ?: return false
+        val twa = profile.twa?.toDoubleArray() ?: return false
+        val speeds = profile.speeds ?: return false
+
+        val nTws = tws.size
+        val nTwa = twa.size
+        if (nTws == 0 || nTwa == 0 || speeds.size < nTws) return false
+
+        val matrix = Array(nTws) { j ->
+            val row = speeds[j]
+            if (row.size < nTwa) return false // Item 9: Dimension validation
+            DoubleArray(nTwa) { i ->
+                row[i]
+            }
+        }
+
+        lock.write {
+            polars[polarId] = PolarData(tws, twa, matrix)
+            if (activePolarId == "default" || activePolarId == polarId) {
+                activePolarId = polarId
+            }
+        }
+        return true
+    }
+
+    /**
      * Parses Signal K Resources API JSON schema for polars.
      * Supports both SI units (m/s, Radians) and legacy/common metadata (Knots, Degrees).
      */
@@ -108,7 +159,6 @@ class PolarDiagram {
             val json = JSONObject(jsonString)
             val root = if (json.has("value")) json.getJSONObject("value") else json
             
-            // Metadata Unit Check (TASK-015)
             val meta = root.optJSONObject("meta")
             val angleUnit = meta?.optString("angleUnit", "rad") ?: "rad"
             val speedUnit = meta?.optString("speedUnit", "ms") ?: "ms"
@@ -123,9 +173,7 @@ class PolarDiagram {
 
             val nTws = twsArr.length()
             val nTwa = twaArr.length()
-            if (nTws == 0 || nTwa == 0 || speedsArr.length() != nTwa) {
-                return false
-            }
+            if (nTws == 0 || nTwa == 0) return false
 
             val twsMultiplier = if (speedUnit.lowercase(Locale.US) == "knots") KNOTS_TO_MS else 1.0
             val twaIsDeg = angleUnit.lowercase(Locale.US) == "deg"
@@ -136,17 +184,18 @@ class PolarDiagram {
                 if (twaIsDeg) raw else Math.toDegrees(raw)
             }
 
-            val parsedRows = Array(nTwa) { i ->
-                val rowJson = speedsArr.optJSONArray(i)
-                if (rowJson != null && rowJson.length() >= nTws) {
-                    DoubleArray(nTws) { j -> rowJson.optDouble(j, 0.0) * twsMultiplier }
-                } else {
-                    DoubleArray(nTws) { 0.0 }
-                }
-            }
+            // Item 7: Robust matrix order detection
+            val isTwsFirst = speedsArr.length() == nTws && (speedsArr.optJSONArray(0)?.length() ?: 0) == nTwa
+            val isTwaFirst = speedsArr.length() == nTwa && (speedsArr.optJSONArray(0)?.length() ?: 0) == nTws
 
-            if (parsedTws.isEmpty() || parsedTwa.isEmpty() || parsedRows.isEmpty()) {
-                return false
+            val parsedRows = Array(nTws) { j ->
+                DoubleArray(nTwa) { i ->
+                    when {
+                        isTwsFirst -> speedsArr.optJSONArray(j).optDouble(i, 0.0) * twsMultiplier
+                        isTwaFirst -> speedsArr.optJSONArray(i).optDouble(j, 0.0) * twsMultiplier
+                        else -> 0.0
+                    }
+                }
             }
 
             lock.write {
@@ -199,15 +248,14 @@ class PolarDiagram {
             val y1 = twaValues[twaIdx1]
             val y2 = twaValues[twaIdx2]
 
-            val q11 = speedTable[twaIdx1][twsIdx1]
-            val q21 = speedTable[twaIdx1][twsIdx2]
-            val q12 = speedTable[twaIdx2][twsIdx1]
-            val q22 = speedTable[twaIdx2][twsIdx2]
+            val q11 = speedTable[twsIdx1][twaIdx1]
+            val q21 = speedTable[twsIdx2][twaIdx1]
+            val q12 = speedTable[twsIdx1][twaIdx2]
+            val q22 = speedTable[twsIdx2][twaIdx2]
 
-            if (x1 == x2 && y1 == y2) return q11
-
-            val denomX = if (x2 == x1) 1.0 else (x2 - x1)
-            val denomY = if (y2 == y1) 1.0 else (y2 - y1)
+            // Item 2: Bilinear Interpolation divide-by-zero protection
+            val denomX = if (abs(x2 - x1) < 1e-9) 1.0 else (x2 - x1)
+            val denomY = if (abs(y2 - y1) < 1e-9) 1.0 else (y2 - y1)
 
             val r1 = ((x2 - clampedTws) / denomX) * q11 + ((clampedTws - x1) / denomX) * q21
             val r2 = ((x2 - clampedTws) / denomX) * q12 + ((clampedTws - x1) / denomX) * q22

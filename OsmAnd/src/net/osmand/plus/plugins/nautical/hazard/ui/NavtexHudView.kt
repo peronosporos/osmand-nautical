@@ -132,8 +132,10 @@ class NavtexHudView @JvmOverloads constructor(
             cycleJob = viewScope.launch {
                 while (isActive) {
                     delay(5000.milliseconds)
-                    currentIndex = (currentIndex + 1) % messages.size
-                    updateDisplay()
+                    if (messages.isNotEmpty()) {
+                        currentIndex = (currentIndex + 1) % messages.size
+                        updateDisplay()
+                    }
                 }
             }
         }
@@ -141,14 +143,7 @@ class NavtexHudView @JvmOverloads constructor(
 
     private fun updateDisplay() {
         if (messages.isEmpty()) {
-            if (isHighContrastMode) {
-                titleView.text = "MOB EMERGENCY ACTIVE"
-                titleView.setTextColor(0xFFFF0000.toInt())
-                findViewById<android.view.View>(R.id.navtex_ticker_container).setBackgroundColor(0xFF000000.toInt())
-                isVisible = true
-            } else {
-                isVisible = false
-            }
+            isVisible = false
             return
         }
         val msg = messages[currentIndex]

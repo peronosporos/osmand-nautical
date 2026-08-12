@@ -57,22 +57,42 @@ object S57FeatureStylizer {
 
     private fun styleBuoyLateral(feature: S57Object): S57StyleRule {
         val colour = feature.attributes["COLOUR"]?.split(",")?.firstOrNull()
-        val symbol = when (colour) {
-            "3" -> SymbolId.LATERAL_PORT // Red
-            "4" -> SymbolId.LATERAL_STARBOARD // Green
-            else -> SymbolId.SPECIAL_PURPOSE
+        val acronym = feature.acronym
+        val symbol = if (acronym == "BOYLAT") {
+            when (colour) {
+                "3" -> SymbolId.BUOY_PORT // Red
+                "4" -> SymbolId.BUOY_STARBOARD // Green
+                else -> SymbolId.SPECIAL_PURPOSE
+            }
+        } else {
+            when (colour) {
+                "3" -> SymbolId.BEACON_PORT
+                "4" -> SymbolId.BCN_STARBOARD
+                else -> SymbolId.SPECIAL_PURPOSE
+            }
         }
         return S57StyleRule(symbolId = symbol, priority = 80)
     }
 
     private fun styleBuoyCardinal(feature: S57Object): S57StyleRule {
         val category = feature.attributes["CATCAM"] // 1: North, 2: East, 3: South, 4: West
-        val symbol = when (category) {
-            "1" -> SymbolId.CARDINAL_NORTH
-            "2" -> SymbolId.CARDINAL_EAST
-            "3" -> SymbolId.CARDINAL_SOUTH
-            "4" -> SymbolId.CARDINAL_WEST
-            else -> SymbolId.SPECIAL_PURPOSE
+        val acronym = feature.acronym
+        val symbol = if (acronym == "BOYCAR") {
+            when (category) {
+                "1" -> SymbolId.BUOY_NORTH
+                "2" -> SymbolId.BUOY_EAST
+                "3" -> SymbolId.BUOY_SOUTH
+                "4" -> SymbolId.BUOY_WEST
+                else -> SymbolId.SPECIAL_PURPOSE
+            }
+        } else {
+            when (category) {
+                "1" -> SymbolId.CARDINAL_NORTH
+                "2" -> SymbolId.CARDINAL_EAST
+                "3" -> SymbolId.CARDINAL_SOUTH
+                "4" -> SymbolId.CARDINAL_WEST
+                else -> SymbolId.SPECIAL_PURPOSE
+            }
         }
         return S57StyleRule(symbolId = symbol, priority = 80)
     }

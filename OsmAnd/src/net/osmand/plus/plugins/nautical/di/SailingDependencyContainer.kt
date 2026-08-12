@@ -14,6 +14,7 @@ import net.osmand.plus.plugins.nautical.engine.EnvironmentalFilterService
 import net.osmand.plus.plugins.nautical.nmea.multiplexer.DirectNmeaMultiplexer
 import net.osmand.plus.plugins.nautical.service.SailingDataAggregator
 import net.osmand.plus.plugins.nautical.hazard.data.NavtexRepository
+import net.osmand.plus.plugins.nautical.replay.NmeaReplayManager
 
 /**
  * Dependency assembly module for sailing performance features.
@@ -50,6 +51,9 @@ object SailingDependencyContainer {
     val nmeaMultiplexer: DirectNmeaMultiplexer?
         get() = _nmeaMultiplexer
 
+    var replayManager: NmeaReplayManager? = null
+        private set
+
     fun initialize(app: OsmandApplication, broker: SignalKDataBroker, autopilot: AutopilotController, client: OkHttpClient) {
         log.info("Initializing SailingDependencyContainer")
 
@@ -73,19 +77,35 @@ object SailingDependencyContainer {
         environmentalFilterService = EnvironmentalFilterService(broker, autopilot)
         recoveryEngine = net.osmand.plus.plugins.nautical.engine.AbortRecoveryEngine(app, autopilot)
 
+        // Load offline tide harmonics in background
+        scope.launch(Dispatchers.IO) {
+            val file = java.io.File(app.filesDir, "tides/harmonics.txt")
+            if (file.exists()) {
+                try {
+                    file.inputStream().use { tideParser?.parse(it) }
+                    log.info("Nautical: Loaded ${tideParser?.getStations()?.size} offline tide stations")
+                } catch (e: Exception) {
+                    log.error("Nautical: Failed to load offline harmonics: ${e.message}")
+                }
+            }
+        }
+
         val navtexRepo = NavtexRepository(app)
         val aggregator = SailingDataAggregator()
-        _nmeaMultiplexer = DirectNmeaMultiplexer(app, aggregator, scope, navtexRepo = navtexRepo)
+        val multiplexer = DirectNmeaMultiplexer(app, aggregator, scope, navtexRepo = navtexRepo)
+        _nmeaMultiplexer = multiplexer
+        replayManager = NmeaReplayManager(app, scope, multiplexer)
     }
 
     fun setOkHttpClient(client: OkHttpClient) {
         _okHttpClient = client
-        // Repositories might need re-init if they hold client reference, 
-        // but typically they are re-initialized in NauticalPlugin.reconnect()
     }
 
     fun teardown() {
         log.info("Tearing down SailingDependencyContainer")
+        
+        replayManager?.close()
+        replayManager = null
         
         _nmeaMultiplexer?.stopAll()
         _nmeaMultiplexer = null

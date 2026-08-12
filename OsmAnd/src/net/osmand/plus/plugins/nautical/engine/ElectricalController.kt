@@ -3,15 +3,15 @@ package net.osmand.plus.plugins.nautical.engine
 import net.osmand.plus.OsmandApplication
 
 class ElectricalController(
-    private val app: OsmandApplication,
-    private val autopilot: AutopilotController,
+    @Suppress("unused") private val app: OsmandApplication,
+    @Suppress("unused") private val autopilot: AutopilotController,
 ) {
     fun setSwitchState(path: String, state: Boolean) {
-        if (!autopilot.isConnected()) {
-            app.showToastMessage(net.osmand.plus.R.string.nautical_autopilot_not_connected)
-            return
-        }
         net.osmand.plus.plugins.nautical.NauticalPlugin.engine?.setSwitch(path, state)
+    }
+
+    fun setDimmerValue(path: String, level: Double) {
+        net.osmand.plus.plugins.nautical.NauticalPlugin.engine?.controlManager?.setDimmerValue(path, level)
     }
 
     fun toggleSwitch(path: String) {

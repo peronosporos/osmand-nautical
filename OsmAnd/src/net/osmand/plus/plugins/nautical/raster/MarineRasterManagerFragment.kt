@@ -56,9 +56,14 @@ class MarineRasterManagerFragment : BaseOsmAndFragment() {
         listView.addFooterView(footerView)
 
         listView.setOnItemLongClickListener { _, _, position, _ ->
-            val file = adapter.getItem(position) as? File
-            file?.let { showDeleteDialog(it) }
-            true
+            // Fix for Item 15: Adjust position if footer is present
+            val adjPos = position - listView.headerViewsCount
+            if (adjPos >= 0 && adjPos < adapter.count) {
+                val file = adapter.getItem(adjPos) as? File
+                file?.let { showDeleteDialog(it) }
+                return@setOnItemLongClickListener true
+            }
+            false
         }
 
         refreshList()
@@ -106,8 +111,17 @@ class MarineRasterManagerFragment : BaseOsmAndFragment() {
             .setTitle(R.string.raster_manager_title)
             .setMessage(R.string.raster_delete_confirm)
             .setPositiveButton(R.string.shared_string_delete) { _, _ ->
-                if (importer.deleteChart(file)) {
-                    refreshList()
+                progressBar.isVisible = true
+                lifecycleScope.launch {
+                    val deleted = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                        importer.deleteChart(file)
+                    }
+                    progressBar.isVisible = false
+                    if (deleted) {
+                        refreshList()
+                        app.osmandMap.mapView.getLayerByClass(MarineRasterMapLayer::class.java)?.updateSources()
+                        app.osmandMap.refreshMap()
+                    }
                 }
             }
             .setNegativeButton(R.string.shared_string_cancel, null)
@@ -133,7 +147,11 @@ class MarineRasterManagerFragment : BaseOsmAndFragment() {
             val file = files[position]
             view.findViewById<TextView>(R.id.title).text = file.name
             val sizeMb = file.length() / 1024 / 1024
-            view.findViewById<TextView>(R.id.description).text = parent?.context?.getString(R.string.shared_string_memory_mb_desc, sizeMb.toString())
+            var desc = parent?.context?.getString(R.string.shared_string_memory_mb_desc, sizeMb.toString())
+            if (file.extension.equals("kap", ignoreCase = true)) {
+                desc += " | " + parent?.context?.getString(R.string.nautical_kap_metadata_only)
+            }
+            view.findViewById<TextView>(R.id.description).text = desc
             view.findViewById<ImageView>(R.id.icon).setImageResource(R.drawable.ic_action_world_globe)
             
             return view

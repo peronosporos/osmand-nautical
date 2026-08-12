@@ -5,11 +5,11 @@ import android.graphics.*
 import kotlinx.coroutines.*
 import net.osmand.data.RotatedTileBox
 import net.osmand.plus.OsmandApplication
-import net.osmand.plus.R
 import net.osmand.plus.plugins.nautical.NauticalPlugin
 import net.osmand.plus.plugins.nautical.di.SailingDependencyContainer
 import net.osmand.plus.plugins.nautical.grib.repository.GribRepository
 import net.osmand.plus.plugins.nautical.grib.repository.GribStatus
+import net.osmand.shared.settings.enums.MetricsConstants
 import net.osmand.plus.views.layers.base.OsmandMapLayer
 import java.util.*
 import kotlin.math.*
@@ -24,7 +24,7 @@ class OceanographicGribMapLayer(context: Context) : OsmandMapLayer(context) {
     private val isobarPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = 0xFF555555.toInt() // Dark gray for isobars
         style = Paint.Style.STROKE
-        strokeWidth = 2f
+        strokeWidth = 2.5f
     }
 
     private val wavePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -35,9 +35,10 @@ class OceanographicGribMapLayer(context: Context) : OsmandMapLayer(context) {
 
     private val labelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.DKGRAY
-        textSize = 22f
+        textSize = 24f
         textAlign = Paint.Align.CENTER
         typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+        style = Paint.Style.FILL
     }
 
     private val warningPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -54,8 +55,13 @@ class OceanographicGribMapLayer(context: Context) : OsmandMapLayer(context) {
         style = Paint.Style.FILL
     }
 
-    private val pressureUnit = context.getString(R.string.grib_unit_pressure)
-    private val waveUnit = context.getString(R.string.grib_unit_waves)
+    private val labelBgPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.WHITE
+        alpha = 180
+        style = Paint.Style.FILL
+    }
+
+    private val labelRect = RectF()
 
     private data class WaveVector(
         val lat: Double,
@@ -87,12 +93,10 @@ class OceanographicGribMapLayer(context: Context) : OsmandMapLayer(context) {
     private val layerScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     private var updateJob: Job? = null
 
-    private val isobarPath = Path()
-
     override fun drawInScreenPixels(): Boolean = true
 
     override fun onDraw(canvas: Canvas, tileBox: RotatedTileBox, settings: DrawSettings) {
-        if (tileBox.zoom < 5) return
+        if (tileBox.zoom < 3) return // Lowered zoom limit for overview
 
         val repository = SailingDependencyContainer.gribRepository
         if (repository?.status?.value != GribStatus.READY) return
@@ -100,15 +104,18 @@ class OceanographicGribMapLayer(context: Context) : OsmandMapLayer(context) {
         val timestamp = System.currentTimeMillis()
         val center = tileBox.centerLatLon
         
+        // Item 18: Improved pan-debounce for GRIB refresh
+        val moveThreshold = if (tileBox.zoom > 12) 0.002 else 0.01 // Finer threshold
         if (renderCache.zoom != tileBox.zoom || 
-            renderCache.centerLat != center.latitude || 
-            renderCache.centerLon != center.longitude ||
+            abs(renderCache.centerLat - center.latitude) > moveThreshold || 
+            abs(renderCache.centerLon - center.longitude) > moveThreshold ||
             abs(renderCache.timestamp - timestamp) > 300000) { // Refresh every 5 mins
             
             val app = context.applicationContext as OsmandApplication
             if (app.settings.NAUTICAL_GRIB_SOURCE_SIGNALK.get() && repository.status.value == GribStatus.IDLE) {
+                val pluginId = app.settings.NAUTICAL_GRIB_SIGNALK_PLUGIN_ID.get()
                 NauticalPlugin.engine?.getRestService()?.let { service ->
-                    repository.fetchFromSignalK(service)
+                    repository.fetchFromSignalK(service, pluginId)
                 }
             }
             triggerCacheUpdate(tileBox, repository, timestamp)
@@ -116,32 +123,34 @@ class OceanographicGribMapLayer(context: Context) : OsmandMapLayer(context) {
 
         val cache = renderCache
         
-        // 1. Render Pressure Isobars
-        isobarPath.rewind()
-        for (pair in cache.isobarLatLons) {
-            val x1 = tileBox.getPixXFromLatLon(pair.first.latitude, pair.first.longitude)
-            val y1 = tileBox.getPixYFromLatLon(pair.first.latitude, pair.first.longitude)
-            val x2 = tileBox.getPixXFromLatLon(pair.second.latitude, pair.second.longitude)
-            val y2 = tileBox.getPixYFromLatLon(pair.second.latitude, pair.second.longitude)
-            isobarPath.moveTo(x1, y1)
-            isobarPath.lineTo(x2, y2)
+        // 1. Optimized isobar rendering
+        if (cache.isobarLatLons.isNotEmpty()) {
+            val lines = FloatArray(cache.isobarLatLons.size * 4)
+            for (i in cache.isobarLatLons.indices) {
+                val pair = cache.isobarLatLons[i]
+                lines[i * 4] = tileBox.getPixXFromLatLon(pair.first.latitude, pair.first.longitude)
+                lines[i * 4 + 1] = tileBox.getPixYFromLatLon(pair.first.latitude, pair.first.longitude)
+                lines[i * 4 + 2] = tileBox.getPixXFromLatLon(pair.second.latitude, pair.second.longitude)
+                lines[i * 4 + 3] = tileBox.getPixYFromLatLon(pair.second.latitude, pair.second.longitude)
+            }
+            canvas.drawLines(lines, isobarPaint)
         }
-        canvas.drawPath(isobarPath, isobarPaint)
 
+        val textHeight = labelPaint.textSize
         for (label in cache.isobarLabels) {
             val px = tileBox.getPixXFromLatLon(label.lat, label.lon)
             val py = tileBox.getPixYFromLatLon(label.lat, label.lon)
-            canvas.drawText(label.text, px, py, labelPaint)
+            
+            val textWidth = labelPaint.measureText(label.text)
+            labelRect.set(px - textWidth / 2 - 4, py - textHeight / 2 - 4, px + textWidth / 2 + 4, py + textHeight / 2 + 4)
+            canvas.drawRect(labelRect, labelBgPaint)
+            canvas.drawText(label.text, px, py + textHeight / 3, labelPaint)
         }
 
-        // 2. Render Wave Vectors
-        for (wv in cache.waveVectors) {
-            val px = tileBox.getPixXFromLatLon(wv.lat, wv.lon)
-            val py = tileBox.getPixYFromLatLon(wv.lat, wv.lon)
-            drawWaveVector(canvas, px, py, wv, tileBox.rotate)
-        }
+        // 2. Render Wave Vectors (Batched)
+        drawWaveVectorsBatched(canvas, cache.waveVectors, tileBox)
 
-        // 3. Render "EXPIRED FORECAST" Banner if applicable
+        // 3. Render "EXPIRED FORECAST" Banner (Adjusted position)
         if (cache.isExpired) {
             drawExpiredBanner(canvas)
         }
@@ -150,9 +159,50 @@ class OceanographicGribMapLayer(context: Context) : OsmandMapLayer(context) {
     private fun drawExpiredBanner(canvas: Canvas) {
         val w = canvas.width.toFloat()
         val bannerHeight = 60f
-        val top = 100f
+        val top = 250f // Lowered to avoid top widgets
         canvas.drawRect(0f, top, w, top + bannerHeight, warningBgPaint)
         canvas.drawText("EXPIRED FORECAST", w / 2, top + bannerHeight * 0.75f, warningPaint)
+    }
+
+    private fun drawWaveVectorsBatched(canvas: Canvas, vectors: List<WaveVector>, tileBox: RotatedTileBox) {
+        if (vectors.isEmpty()) return
+        val directionTo = (context.applicationContext as OsmandApplication).settings.NAUTICAL_GRIB_WAVE_DIRECTION_TO.get()
+        val mapRotate = tileBox.rotate
+        
+        // We can't easily use drawLines for arrows with rotation per arrow unless we pre-calculate points
+        // But we can batch the main lines at least.
+        val mainLines = FloatArray(vectors.size * 4)
+        for (i in vectors.indices) {
+            val wv = vectors[i]
+            val px = tileBox.getPixXFromLatLon(wv.lat, wv.lon)
+            val py = tileBox.getPixYFromLatLon(wv.lat, wv.lon)
+            
+            val finalRotation = Math.toRadians(((if (directionTo) wv.rotation else (wv.rotation + 180f)) - mapRotate).toDouble())
+            val dx = (sin(finalRotation) * wv.length / 2).toFloat()
+            val dy = (-cos(finalRotation) * wv.length / 2).toFloat()
+            
+            mainLines[i * 4] = px - dx
+            mainLines[i * 4 + 1] = py - dy
+            mainLines[i * 4 + 2] = px + dx
+            mainLines[i * 4 + 3] = py + dy
+            
+            // Still need to draw arrow heads and labels. 
+            // For now, let's keep the rotation logic but avoid 'withTranslation' overhead where possible.
+            drawArrowHead(canvas, px + dx, py + dy, finalRotation.toFloat(), wv.length / 5)
+            
+            wv.label?.let {
+                canvas.drawText(it, px + dx * 1.5f, py + dy * 1.5f + 10f, labelPaint)
+            }
+        }
+        canvas.drawLines(mainLines, wavePaint)
+    }
+
+    private fun drawArrowHead(canvas: Canvas, tipX: Float, tipY: Float, angleRad: Float, size: Float) {
+        val angle1 = angleRad + Math.toRadians(150.0).toFloat()
+        val angle2 = angleRad - Math.toRadians(150.0).toFloat()
+        
+        canvas.drawLine(tipX, tipY, tipX + sin(angle1) * size, tipY - cos(angle1) * size, wavePaint)
+        canvas.drawLine(tipX, tipY, tipX + sin(angle2) * size, tipY - cos(angle2) * size, wavePaint)
     }
 
     private fun triggerCacheUpdate(tileBox: RotatedTileBox, repository: GribRepository, timestamp: Long) {
@@ -168,13 +218,12 @@ class OceanographicGribMapLayer(context: Context) : OsmandMapLayer(context) {
                 val waveVectors = mutableListOf<WaveVector>()
 
                 if (osmandSettings.NAUTICAL_SHOW_GRIB_PRESSURE.get()) {
-                    prepareIsobars(tileBox, repository, timestamp, isobarLatLons, isobarLabels)
+                    prepareIsobars(tileBox, repository, timestamp, isobarLatLons, isobarLabels, osmandSettings.NAUTICAL_GRIB_ISOBAR_STEP.get())
                 }
                 if (osmandSettings.NAUTICAL_SHOW_GRIB_WAVES.get()) {
                     prepareWaves(tileBox, repository, timestamp, waveVectors)
                 }
 
-                // Check for expiration (> 24h from latest available timestep)
                 val gridData = repository.gridData
                 val latestTime = gridData?.timeSteps?.maxByOrNull { it.timestamp }?.timestamp ?: 0L
                 val isExpired = latestTime > 0 && (timestamp - latestTime) > 86400000L
@@ -186,31 +235,118 @@ class OceanographicGribMapLayer(context: Context) : OsmandMapLayer(context) {
         }
     }
 
-    private fun prepareIsobars(tileBox: RotatedTileBox, repository: GribRepository, timestamp: Long, latLons: MutableList<Pair<net.osmand.data.LatLon, net.osmand.data.LatLon>>, labels: MutableList<IsobarLabel>) {
+    private fun prepareIsobars(tileBox: RotatedTileBox, repository: GribRepository, timestamp: Long, latLons: MutableList<Pair<net.osmand.data.LatLon, net.osmand.data.LatLon>>, labels: MutableList<IsobarLabel>, stepHpa: Int) {
         val bounds = tileBox.latLonBounds
-        val step = if (tileBox.zoom > 10) 0.5 else 1.0
+        val step = if (tileBox.zoom > 10) 0.25 else 0.5
         
-        val minLatBounds = min(bounds.top, bounds.bottom)
-        val maxLatBounds = max(bounds.top, bounds.bottom)
-        
-        val minLat = (floor(minLatBounds / step) * step).coerceIn(-85.0, 85.0)
-        val maxLat = (ceil(maxLatBounds / step) * step).coerceIn(-85.0, 85.0)
+        val minLat = (floor(min(bounds.top, bounds.bottom) / step) * step).coerceIn(-85.0, 85.0)
+        val maxLat = (ceil(max(bounds.top, bounds.bottom) / step) * step).coerceIn(-85.0, 85.0)
         val minLon = floor(bounds.left / step) * step
         val maxLon = ceil(bounds.right / step) * step
 
-        for (lat in generateSequence(minLat) { it + step }.takeWhile { it <= maxLat }) {
-            for (lon in generateSequence(minLon) { it + step }.takeWhile { it <= maxLon }) {
-                val pressure = repository.getPressure(lat, lon, timestamp) ?: continue
+        val gridLats = generateSequence(minLat) { it + step }.takeWhile { it <= maxLat }.toList()
+        val gridLons = generateSequence(minLon) { it + step }.takeWhile { it <= maxLon }.toList()
 
-                if (round(pressure) % 4 == 0.0) {
-                    labels.add(IsobarLabel(lat, lon, "${pressure.toInt()} $pressureUnit"))
-                }
-                
-                val pRight = repository.getPressure(lat, lon + step, timestamp)
-                if (pRight != null && abs(pRight - pressure) < 2.0) {
-                    latLons.add(Pair(net.osmand.data.LatLon(lat, lon), net.osmand.data.LatLon(lat, lon + step)))
+        val nLat = gridLats.size
+        val nLon = gridLons.size
+        if (nLat < 2 || nLon < 2) return
+
+        val pressureGrid = FloatArray(nLat * nLon)
+        for (j in 0 until nLat) {
+            for (i in 0 until nLon) {
+                pressureGrid[j * nLon + i] = (repository.getPressure(gridLats[j], gridLons[i], timestamp) ?: Double.NaN).toFloat()
+            }
+        }
+
+        val isobarLevels = (940..1060 step stepHpa).toList()
+        
+        for (level in isobarLevels) {
+            val threshold = level.toDouble()
+            var labelPlacedInView = false
+            
+            for (j in 0 until nLat - 1) {
+                for (i in 0 until nLon - 1) {
+                    val v00 = pressureGrid[j * nLon + i].toDouble()
+                    val v10 = pressureGrid[j * nLon + i + 1].toDouble()
+                    val v01 = pressureGrid[(j + 1) * nLon + i].toDouble()
+                    val v11 = pressureGrid[(j + 1) * nLon + i + 1].toDouble()
+                    
+                    if (v00.isNaN() || v10.isNaN() || v01.isNaN() || v11.isNaN()) continue
+                    
+                    var case = 0
+                    if (v00 >= threshold) case += 1
+                    if (v10 >= threshold) case += 2
+                    if (v11 >= threshold) case += 4
+                    if (v01 >= threshold) case += 8
+                    
+                    val p00 = net.osmand.data.LatLon(gridLats[j], gridLons[i])
+                    val p10 = net.osmand.data.LatLon(gridLats[j], gridLons[i+1])
+                    val p11 = net.osmand.data.LatLon(gridLats[j+1], gridLons[i+1])
+                    val p01 = net.osmand.data.LatLon(gridLats[j+1], gridLons[i])
+                    
+                    val segments = getSegmentsForCase(case, threshold, v00, v10, v11, v01, p00, p10, p11, p01)
+                    latLons.addAll(segments)
+                    
+                    if (!labelPlacedInView && segments.isNotEmpty() && (i % 8 == 0) && (j % 8 == 0)) {
+                        val mid = segments[0].first
+                        labels.add(IsobarLabel(mid.latitude, mid.longitude, getPressureLabel(threshold)))
+                        labelPlacedInView = true
+                    }
                 }
             }
+        }
+    }
+
+    private fun getSegmentsForCase(case: Int, t: Double, v00: Double, v10: Double, v11: Double, v01: Double, p00: net.osmand.data.LatLon, p10: net.osmand.data.LatLon, p11: net.osmand.data.LatLon, p01: net.osmand.data.LatLon): List<Pair<net.osmand.data.LatLon, net.osmand.data.LatLon>> {
+        val bottom = interpolate(p00, p10, v00, v10, t)
+        val right = interpolate(p10, p11, v10, v11, t)
+        val top = interpolate(p01, p11, v01, v11, t)
+        val left = interpolate(p00, p01, v00, v01, t)
+        
+        return when (case) {
+            1, 14 -> listOf(Pair(bottom, left))
+            2, 13 -> listOf(Pair(bottom, right))
+            3, 12 -> listOf(Pair(left, right))
+            4, 11 -> listOf(Pair(top, right))
+            5 -> {
+                val centerVal = (v00 + v10 + v11 + v01) / 4.0
+                if (centerVal < t) listOf(Pair(bottom, right), Pair(top, left))
+                else listOf(Pair(bottom, left), Pair(top, right))
+            }
+            6, 9 -> listOf(Pair(bottom, top))
+            7, 8 -> listOf(Pair(left, top))
+            10 -> {
+                val centerVal = (v00 + v10 + v11 + v01) / 4.0
+                if (centerVal < t) listOf(Pair(bottom, left), Pair(top, right))
+                else listOf(Pair(bottom, right), Pair(top, left))
+            }
+            else -> emptyList()
+        }
+    }
+
+    private fun interpolate(p1: net.osmand.data.LatLon, p2: net.osmand.data.LatLon, v1: Double, v2: Double, t: Double): net.osmand.data.LatLon {
+        val fraction = (t - v1) / (v2 - v1)
+        return net.osmand.data.LatLon(p1.latitude + fraction * (p2.latitude - p1.latitude), p1.longitude + fraction * (p2.longitude - p1.longitude))
+    }
+
+    private fun getPressureLabel(valHpa: Double): String {
+        val app = context.applicationContext as OsmandApplication
+        // Standard is hPa, but support inHg for US/UK
+        val metrics = app.settings.METRIC_SYSTEM.get()
+        return if (metrics == MetricsConstants.MILES_AND_FEET || metrics == MetricsConstants.MILES_AND_METERS || metrics == MetricsConstants.MILES_AND_YARDS) {
+            String.format(Locale.US, "%.2f", valHpa * 0.02953)
+        } else {
+            "${valHpa.toInt()}"
+        }
+    }
+
+    private fun getWaveLabel(valMeters: Double): String {
+        val app = context.applicationContext as OsmandApplication
+        val metrics = app.settings.METRIC_SYSTEM.get()
+        return if (metrics.shouldUseFeet()) {
+            String.format(Locale.US, "%.1f'", valMeters * 3.28084)
+        } else {
+            String.format(Locale.US, "%.1f m", valMeters)
         }
     }
 
@@ -233,26 +369,11 @@ class OceanographicGribMapLayer(context: Context) : OsmandMapLayer(context) {
                 val wave = repository.getWaveData(lat, lon, timestamp) ?: continue
                 if (wave.height < 0.1) continue
 
-                val length = (wave.height * 15.0).toFloat().coerceIn(10f, 60f)
-                val label = if (wave.height > 0.5) String.format(Locale.US, "%.1f %s", wave.height, waveUnit) else null
+                val length = (wave.height * 15.0).toFloat().coerceIn(15f, 80f)
+                val label = if (wave.height > 0.4) getWaveLabel(wave.height) else null
 
                 vectors.add(WaveVector(lat, lon, length, wave.direction.toFloat(), label))
             }
-        }
-    }
-
-    private fun drawWaveVector(canvas: Canvas, x: Float, y: Float, wv: WaveVector, mapRotate: Float) {
-        canvas.withTranslation(x, y) {
-            rotate(wv.rotation - mapRotate)
-
-            drawLine(0f, 0f, 0f, -wv.length, wavePaint)
-            drawLine(0f, -wv.length, -wv.length / 4, -wv.length * 0.75f, wavePaint)
-            drawLine(0f, -wv.length, wv.length / 4, -wv.length * 0.75f, wavePaint)
-
-            wv.label?.let {
-                drawText(it, 0f, 15f, labelPaint)
-            }
-
         }
     }
 

@@ -41,6 +41,14 @@ class HeadingErrorLinearView @JvmOverloads constructor(
     private val degreeBuffer = CharArray(16)
     private var defaultHdgErrLabel: String
 
+    private fun spToPx(sp: Float): Float {
+        return android.util.TypedValue.applyDimension(
+            android.util.TypedValue.COMPLEX_UNIT_SP,
+            sp,
+            context.resources.displayMetrics
+        )
+    }
+
     init {
         updateColors()
         paint.strokeCap = Paint.Cap.ROUND
@@ -97,12 +105,12 @@ class HeadingErrorLinearView @JvmOverloads constructor(
             canvas.drawLine(x, centerY - tickLen, x, centerY + tickLen, paint)
             
             if (isMajor) {
-                textPaint.textSize = 20f
+                textPaint.textSize = spToPx(14f) 
                 textPaint.color = colorSecondary
                 textPaint.alpha = 200
                 textPaint.typeface = Typeface.create("sans-serif-condensed", Typeface.NORMAL)
                 val count = NauticalFormatter.formatInt(abs(i), degreeBuffer)
-                canvas.drawText(degreeBuffer, 0, count, x, centerY + tickLen + 24f, textPaint)
+                canvas.drawText(degreeBuffer, 0, count, x, centerY - tickLen - 4f, textPaint) // Moved ABOVE the line
             }
         }
 
@@ -128,12 +136,12 @@ class HeadingErrorLinearView @JvmOverloads constructor(
         canvas.drawPath(indicatorPath, paint)
 
         // Digital Readout
-        textPaint.textSize = 32f
+        textPaint.textSize = spToPx(28f) 
         textPaint.color = colorPrimary
         textPaint.typeface = Typeface.create("sans-serif-condensed", Typeface.BOLD)
-        NauticalFormatter.drawDeg(canvas, headingError, centerX, h - 8f, textPaint, degreeBuffer)
+        NauticalFormatter.drawDeg(canvas, headingError, centerX, h - 4f, textPaint, degreeBuffer)
         
-        textPaint.textSize = 14f
+        textPaint.textSize = spToPx(12f) 
         textPaint.color = colorSecondary
         textPaint.alpha = 150
         textPaint.typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)

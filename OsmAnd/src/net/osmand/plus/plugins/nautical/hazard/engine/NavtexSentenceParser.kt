@@ -96,6 +96,7 @@ object NavtexSentenceParser {
 
     private fun isSubjectUrgent(subject: NavtexSubject): Boolean {
         return subject == NavtexSubject.NAVTEX_WARNING || 
+               subject == NavtexSubject.METEOROLOGICAL_WARNING ||
                subject == NavtexSubject.SEARCH_AND_RESCUE
     }
 
@@ -154,10 +155,17 @@ object NavtexSentenceParser {
         return try {
             val dotIndex = value.indexOf('.')
             val degreesLength = if (dotIndex != -1) dotIndex - 2 else value.length - 2
-            if (degreesLength <= 0) return null
             
-            val degrees = value.substring(0, degreesLength).toDouble()
-            val minutes = value.substring(degreesLength).toDouble()
+            val degrees: Double
+            val minutes: Double
+            
+            if (degreesLength > 0) {
+                degrees = value.substring(0, degreesLength).toDouble()
+                minutes = value.substring(degreesLength).toDouble()
+            } else {
+                degrees = 0.0
+                minutes = value.toDouble()
+            }
             
             val decimal = degrees + (minutes / 60.0)
             if (direction.uppercase() in listOf("S", "W")) -decimal else decimal
@@ -167,7 +175,7 @@ object NavtexSentenceParser {
     }
 
     private fun validateChecksum(content: String, checksum: String): Boolean {
-        if (checksum.isEmpty()) return true // Some sensors might not provide it
+        if (checksum.isEmpty()) return false // Mandatory for MSI safety
         return try {
             var calculated = 0
             for (char in content) {

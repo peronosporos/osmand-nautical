@@ -34,6 +34,7 @@ class NauticalAisLayer(context: Context) : OsmandMapLayer(context), ContextMenuL
     }
 
     private val plugin: NauticalPlugin? = NauticalPlugin.getInstance()
+    private val imagesCache by lazy { net.osmand.plus.plugins.aistracker.AisImagesCache(application) }
     private val bitmapPaint = Paint().apply {
         isAntiAlias = true
         isFilterBitmap = true
@@ -50,6 +51,7 @@ class NauticalAisLayer(context: Context) : OsmandMapLayer(context), ContextMenuL
     private var lastRenderZoom = -1
     private var lastRenderRefreshTimeMs: Long = 0
     private var aisUpdateJob: Job? = null
+    private var followedMmsi: Int? = null
 
     override fun initLayer(view: OsmandMapTileView) {
         super.initLayer(view)
@@ -57,12 +59,12 @@ class NauticalAisLayer(context: Context) : OsmandMapLayer(context), ContextMenuL
         val activity = view.mapActivity
         if (activity != null) {
             aisUpdateJob = activity.lifecycleScope.launch {
-                // Task: Robust AIS subscription loop to handle plugin re-enabling
+                // Reactive AIS subscription with immediate initial load
                 while (isActive) {
                     val currentPlugin = NauticalPlugin.getInstance()
                     val manager = currentPlugin?.aisManager
                     if (manager != null) {
-                        // Load initial state
+                        // Load initial state immediately
                         manager.getAisObjects().forEach { onAisObjectReceived(it) }
                         
                         try {
@@ -73,10 +75,10 @@ class NauticalAisLayer(context: Context) : OsmandMapLayer(context), ContextMenuL
                                 }
                             }
                         } catch (_: Exception) {
-                            // If collection fails (e.g. manager invalidated), loop will retry
+                            // If collection fails, loop will retry after a short delay
                         }
                     }
-                    delay(2000.milliseconds) 
+                    delay(500.milliseconds) // Reduced delay for faster re-subscription
                 }
             }
         }
@@ -116,10 +118,17 @@ class NauticalAisLayer(context: Context) : OsmandMapLayer(context), ContextMenuL
         val engine = NauticalPlugin.engine
         val virtual = (engine != null) && (engine.aisCache.containsKey(mmsi))
         
+        // Task: Local Follow Mode handling
+        if (mmsi == followedMmsi && ais.position != null) {
+            tileView?.mapActivity?.application?.runInUIThread {
+                tileView?.setLatLon(ais.position!!.latitude, ais.position!!.longitude)
+            }
+        }
+
         var drawable = objectDrawables[mmsi]
         if (drawable == null) {
             if (isOwnObjectHidden(ais)) return
-            drawable = NauticalAisObjectDrawable(plugin, ais)
+            drawable = NauticalAisObjectDrawable(plugin, ais, imagesCache)
             drawable.setOwnObject(own)
             drawable.setVirtual(virtual)
             extras?.let { 
@@ -220,7 +229,7 @@ class NauticalAisLayer(context: Context) : OsmandMapLayer(context), ContextMenuL
                 for (ais in aisObjects) {
                     if (isOwnObjectHidden(ais)) continue
                     
-                    val drawable = NauticalAisObjectDrawable(plugin!!, ais)
+                    val drawable = NauticalAisObjectDrawable(plugin!!, ais, imagesCache)
                     drawable.setOwnObject(isOwnObject(ais))
                     
                     val extras = plugin.aisManager?.getAisExtras(ais.mmsi)
@@ -329,8 +338,16 @@ class NauticalAisLayer(context: Context) : OsmandMapLayer(context), ContextMenuL
         }
     }
 
+    fun setFollowedTarget(mmsi: Int?) {
+        this.followedMmsi = mmsi
+        if (mmsi != null) {
+            plugin?.aisManager?.getAisObjects()?.find { it.mmsi == mmsi }?.let { onAisObjectReceived(it) }
+        }
+    }
+
     private fun isSignalLost(ais: AisObject): Boolean {
         val timeout = plugin?.aisShipLostTimeout?.get() ?: 4
-        return ais.isLost(timeout) && ais.isMovable() && !ais.isVesselAtRest()
+        // Signal is lost if timestamp is too old, regardless of movement status
+        return ais.isLost(timeout)
     }
 }

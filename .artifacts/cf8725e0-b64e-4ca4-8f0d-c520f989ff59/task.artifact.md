@@ -1,0 +1,7 @@
+- `[x]` Update `strings.xml` with grouped docking strings and new labels
+- `[x]` Update `widget_maneuver_overlay.xml` to include a slider for "Done"
+- `[x]` Refactor `SafetyPreflightController.kt` for faster engine checks
+- `[x]` Enhance `DockingManeuver.kt` logic (distance, progress, lock, TTS cooldown)
+- `[x]` Fix `NauticalManeuversBottomSheet.kt` (target init and vessel length sync)
+- `[x]` Enhance `ManeuverOverlayWidget.kt` (done slider, abort delay, touch recovery, collision alerts)
+- `[ ]` Verify changes with unit tests and manual checks

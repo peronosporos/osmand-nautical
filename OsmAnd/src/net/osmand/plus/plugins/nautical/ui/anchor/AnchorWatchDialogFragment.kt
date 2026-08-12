@@ -15,6 +15,7 @@ import com.google.android.material.button.MaterialButtonToggleGroup
 import com.google.android.material.textfield.TextInputEditText
 import androidx.lifecycle.repeatOnLifecycle
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import net.osmand.plus.OsmandApplication
 import net.osmand.plus.R
@@ -235,6 +236,13 @@ class AnchorWatchDialogFragment : BaseMaterialBottomSheetDialogFragment() {
                         btnWindlassUp?.isEnabled = engineOk
                         btnWindlassDown?.isEnabled = engineOk
 
+                        // Item 13 Fix: Reflect real-time switch state
+                        val upActive = state.switches["electrical.switches.windlass.up"] == true
+                        val downActive = state.switches["electrical.switches.windlass.down"] == true
+                        
+                        btnWindlassUp?.isPressed = upActive
+                        btnWindlassDown?.isPressed = downActive
+
                         setupWindlassButton(btnWindlassUp, "electrical.switches.windlass.up")
                         setupWindlassButton(btnWindlassDown, "electrical.switches.windlass.down")
 
@@ -280,6 +288,13 @@ class AnchorWatchDialogFragment : BaseMaterialBottomSheetDialogFragment() {
                 }
                 android.view.MotionEvent.ACTION_UP, android.view.MotionEvent.ACTION_CANCEL -> {
                     NauticalPlugin.engine?.setSwitch(path, false)
+                    // Item 12 Fix: Redundant fail-safe off commands
+                    viewLifecycleOwner.lifecycleScope.launch {
+                        delay(500)
+                        NauticalPlugin.engine?.setSwitch(path, false)
+                        delay(1000)
+                        NauticalPlugin.engine?.setSwitch(path, false)
+                    }
                     v.isPressed = false
                     v.performClick()
                     true

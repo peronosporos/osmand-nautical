@@ -42,7 +42,13 @@ class S57ChartManagerFragment : BaseOsmAndFragment() {
             net.osmand.plus.settings.fragments.BaseSettingsFragment.showInstance(requireActivity(), SettingsScreenType.S63_PERMIT_MANAGER)
         }
 
-        refreshCharts()
+        viewLifecycleOwner.lifecycleScope.launch {
+            val plugin = NauticalPlugin.getInstance()
+            plugin?.s57SpatialIndex?.indexingStatus?.collect { status ->
+                txtCoverageStats.text = "Status: $status"
+                refreshCharts()
+            }
+        }
         
         return root
     }
@@ -65,17 +71,35 @@ class S57ChartManagerFragment : BaseOsmAndFragment() {
             recyclerView.adapter = ChartAdapter(encFiles, boundsMap)
             emptyView.visibility = if (encFiles.isEmpty()) View.VISIBLE else View.GONE
             
-            txtCoverageStats.text = String.format(Locale.US, "Indexed Charts: %d | Coverage Area: %.1f sq NM", 
-                boundsMap.size, calculateTotalAreaNm(boundsMap.values))
+            val area = calculateTotalAreaNm(boundsMap.values)
+            val status = plugin?.s57SpatialIndex?.indexingStatus?.value ?: ""
+            txtCoverageStats.text = String.format(Locale.US, "Indexed: %d | Coverage: %.1f sq NM\n%s", 
+                boundsMap.size, area, status)
         }
     }
 
     private fun calculateTotalAreaNm(bounds: Collection<DoubleArray>): Double {
-        // Very rough approximation: 1 deg lat = 60 NM, 1 deg lon = 60 * cos(lat) NM
-        var totalArea = 0.0
+        // Use a grid-based approach to account for overlaps
+        val grid = mutableSetOf<Pair<Int, Int>>()
+        val step = 0.1 // 0.1 degree resolution
+        
         bounds.forEach { b ->
-            val dLat = (b[1] - b[0]) * 60.0
-            val dLon = (b[3] - b[2]) * 60.0 * cos(Math.toRadians((b[0] + b[1]) / 2.0))
+            var lat = b[0]
+            while (lat < b[1]) {
+                var lon = b[2]
+                while (lon < b[3]) {
+                    grid.add((lat / step).toInt() to (lon / step).toInt())
+                    lon += step
+                }
+                lat += step
+            }
+        }
+        
+        var totalArea = 0.0
+        grid.forEach { (gLat, _) ->
+            val lat = gLat * step
+            val dLat = step * 60.0 // NM
+            val dLon = step * 60.0 * cos(Math.toRadians(lat + step / 2.0))
             totalArea += abs(dLat * dLon)
         }
         return totalArea

@@ -53,7 +53,7 @@ class AlarmPriorityManager(
                         val watchdog = notifications[SignalKPaths.NOTIFICATIONS_WATCHDOG]
                         if (watchdog != null && (watchdog.state == NotificationState.ALARM || watchdog.state == NotificationState.EMERGENCY)) {
                             NauticalAudioArbiter.getInstance(app).dispatchAlarm(
-                                net.osmand.plus.plugins.nautical.audio.AlarmType.MOB, // Use high-priority Siren
+                                net.osmand.plus.plugins.nautical.audio.AlarmType.SOLO_WATCHDOG,
                                 voiceText = app.getString(R.string.nautical_solo_watchdog_timeout)
                             )
                         }
@@ -95,9 +95,10 @@ class AlarmPriorityManager(
     }
 
     private fun evaluateThreat(cpa: Double, tcpa: Double, vesselName: String) {
-        // TCPA threshold: 3 minutes = 180 seconds
-        // CPA threshold: 0.5 Nautical Miles
-        val isThreat = cpa < 0.5 && tcpa <= 180.0 && tcpa >= 0.0
+        val cpaThreshold = app.settings.NAUTICAL_AIS_CPA_WARNING_DISTANCE.get()
+        val tcpaThreshold = app.settings.NAUTICAL_AIS_CPA_WARNING_TIME.get().toDouble()
+        
+        val isThreat = cpa < cpaThreshold && tcpa <= tcpaThreshold && tcpa >= 0.0
 
         if (isThreat) {
             if (!_isCollisionAlarmActive.value) {
@@ -109,21 +110,23 @@ class AlarmPriorityManager(
                 _threatDetails.value = ThreatInfo(vesselName, cpa, tcpa)
             }
         } else {
-            if (_isCollisionAlarmActive.value && (cpa >= 0.6 || tcpa > 200.0)) {
+            // Hysteresis: clear only if significantly safe
+            if (_isCollisionAlarmActive.value && (cpa >= cpaThreshold * 1.2 || tcpa > tcpaThreshold * 1.1)) {
                 _isCollisionAlarmActive.value = false
                 _threatDetails.value = null
                 log.info("Collision threat cleared.")
+                NauticalAudioArbiter.getInstance(app).stopAlarm(net.osmand.plus.plugins.nautical.audio.AlarmType.COLLISION_DANGER)
             }
         }
     }
 
     private fun triggerCollisionAlarmAudio(vesselName: String, cpa: Double) {
-        app.runInUIThread {
-            app.player?.let { player ->
-                val message = app.getString(R.string.nautical_collision_audio_msg, vesselName, cpa)
-                player.playCommands(player.newCommandBuilder().attention(message))
-            }
-        }
+        val message = app.getString(R.string.nautical_collision_audio_msg, vesselName, cpa)
+        NauticalAudioArbiter.getInstance(app).dispatchAlarm(
+            net.osmand.plus.plugins.nautical.audio.AlarmType.COLLISION_DANGER,
+            voiceText = message,
+            loop = true
+        )
     }
 
     private fun extractVesselName(message: String): String {

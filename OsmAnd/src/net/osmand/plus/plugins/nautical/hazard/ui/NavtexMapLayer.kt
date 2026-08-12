@@ -16,6 +16,7 @@ import net.osmand.plus.views.layers.MapSelectionRules
 import net.osmand.plus.views.layers.ContextMenuLayer.IContextMenuProvider
 import net.osmand.plus.views.layers.base.OsmandMapLayer
 import androidx.core.graphics.withClip
+import net.osmand.util.MapUtils
 
 class NavtexMapLayer(private val activity: MapActivity) : OsmandMapLayer(activity), IContextMenuProvider {
 
@@ -95,11 +96,14 @@ class NavtexMapLayer(private val activity: MapActivity) : OsmandMapLayer(activit
     private fun isMessageVisible(msg: NavtexMessage, viewport: net.osmand.data.QuadRect): Boolean {
         if (msg.points.isEmpty()) return false
         
+        val latBuf = 0.01 // Small buffer for markers
+        val lonBuf = 0.01
+
         // Marker check
         if (!msg.isPolygon) {
             val p = msg.points[0]
-            return p.latitude <= viewport.top && p.latitude >= viewport.bottom &&
-                   p.longitude >= viewport.left && p.longitude <= viewport.right
+            return p.latitude <= viewport.top + latBuf && p.latitude >= viewport.bottom - latBuf &&
+                   p.longitude >= viewport.left - lonBuf && p.longitude <= viewport.right + lonBuf
         }
         
         // Polygon bbox check
@@ -113,6 +117,12 @@ class NavtexMapLayer(private val activity: MapActivity) : OsmandMapLayer(activit
             maxLat = max(maxLat, it.latitude)
             minLon = min(minLon, it.longitude)
             maxLon = max(maxLon, it.longitude)
+        }
+        
+        // Handle Anti-Meridian for bbox
+        if (maxLon - minLon > 180) {
+            // Polygon crosses the date line
+            return !(maxLat < viewport.bottom || minLat > viewport.top) // Vertical check only for cross-dateline
         }
         
         return !(maxLat < viewport.bottom || minLat > viewport.top ||
@@ -208,12 +218,16 @@ class NavtexMapLayer(private val activity: MapActivity) : OsmandMapLayer(activit
         val point = result.point
         val tileBox = result.tileBox
         val radius = getScaledTouchRadius(application, tileBox.defaultRadiusPoi) * TOUCH_RADIUS_MULTIPLIER
+        
+        val lat = tileBox.getLatFromPixel(point.x, point.y)
+        val lon = tileBox.getLonFromPixel(point.x, point.y)
+        val tapLoc = LatLon(lat, lon)
 
         uiState.messages.forEach { msg ->
             if (msg.points.isEmpty()) return@forEach
             
             if (msg.isPolygon) {
-                if (isPointInPolygon(LatLon(tileBox.getLatFromPixel(point.x, point.y), tileBox.getLonFromPixel(point.x, point.y)), msg.points)) {
+                if (isPointInPolygon(tapLoc, msg.points) || isNearPolygonEdge(tapLoc, msg.points, tileBox, radius)) {
                     result.collect(msg, this)
                 }
             } else {
@@ -225,14 +239,51 @@ class NavtexMapLayer(private val activity: MapActivity) : OsmandMapLayer(activit
         }
     }
 
-    private fun isPointInPolygon(point: LatLon, polygon: List<LatLon>): Boolean {
-        var intersectCount = 0
+    private fun isNearPolygonEdge(point: LatLon, polygon: List<LatLon>, tileBox: RotatedTileBox, radiusPx: Float): Boolean {
         for (j in polygon.indices) {
             val i = if (j > 0) j - 1 else polygon.size - 1
-            val vi = polygon[i]
-            val vj = polygon[j]
-            if (((vi.latitude > point.latitude) != (vj.latitude > point.latitude)) &&
-                (point.longitude < (vj.longitude - vi.longitude) * (point.latitude - vi.latitude) / (vj.latitude - vi.latitude) + vi.longitude)
+            val p1 = polygon[i]
+            val p2 = polygon[j]
+            
+            val x1 = tileBox.getPixXFromLatLon(p1.latitude, p1.longitude)
+            val y1 = tileBox.getPixYFromLatLon(p1.latitude, p1.longitude)
+            val x2 = tileBox.getPixXFromLatLon(p2.latitude, p2.longitude)
+            val y2 = tileBox.getPixYFromLatLon(p2.latitude, p2.longitude)
+            
+            val tapX = tileBox.getPixXFromLatLon(point.latitude, point.longitude)
+            val tapY = tileBox.getPixYFromLatLon(point.latitude, point.longitude)
+            
+            val dist = MapUtils.getOrthogonalDistance(tapX.toDouble(), tapY.toDouble(), x1.toDouble(), y1.toDouble(), x2.toDouble(), y2.toDouble())
+            if (dist < radiusPx) return true
+        }
+        return false
+    }
+
+    private fun isPointInPolygon(point: LatLon, polygon: List<LatLon>): Boolean {
+        var intersectCount = 0
+        val x = point.longitude
+        val y = point.latitude
+        
+        for (j in polygon.indices) {
+            val i = if (j > 0) j - 1 else polygon.size - 1
+            var viLon = polygon[i].longitude
+            var vjLon = polygon[j].longitude
+            val viLat = polygon[i].latitude
+            val vjLat = polygon[j].latitude
+
+            // Normalize for anti-meridian
+            if (Math.abs(viLon - vjLon) > 180) {
+                if (viLon < 0) viLon += 360
+                if (vjLon < 0) vjLon += 360
+            }
+            
+            var testX = x
+            if (Math.abs(x - viLon) > 180 && Math.abs(x - vjLon) > 180) {
+                if (x < 0) testX += 360
+            }
+
+            if (((viLat > y) != (vjLat > y)) &&
+                (testX < (vjLon - viLon) * (y - viLat) / (vjLat - viLat) + viLon)
             ) {
                 intersectCount++
             }
@@ -248,7 +299,8 @@ class NavtexMapLayer(private val activity: MapActivity) : OsmandMapLayer(activit
         val msg = o as? NavtexMessage ?: return null
         val typeStr = when(msg.subject) {
             NavtexSubject.NAVTEX_WARNING -> activity.getString(R.string.navtex_dialog_title)
-            NavtexSubject.METEOROLOGICAL_WARNING -> activity.getString(R.string.grib_layer_pressure)
+            NavtexSubject.METEOROLOGICAL_WARNING -> activity.getString(R.string.navtex_subject_filter)
+            NavtexSubject.SEARCH_AND_RESCUE -> activity.getString(R.string.navtex_hud_urgent_title)
             else -> activity.getString(R.string.navtex_dialog_title)
         }
         return PointDescription(PointDescription.POINT_TYPE_POI, "$typeStr: ${msg.id}")

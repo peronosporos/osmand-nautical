@@ -42,8 +42,10 @@ class MobStateMachine(
      * @param currentLocation The location where the MOB was triggered.
      * @param sog Current Speed Over Ground (m/s).
      * @param cog Current Course Over Ground (radians).
+     * @param driftMps Current drift speed (m/s).
+     * @param setTrueRad Current drift direction (radians).
      */
-    fun triggerMob(currentLocation: LatLon, sog: Double = 0.0, cog: Double = 0.0) {
+    fun triggerMob(currentLocation: LatLon, sog: Double = 0.0, cog: Double = 0.0, driftMps: Double = 0.0, setTrueRad: Double = 0.0) {
         val newEvent = MobEvent(
             id = UUID.randomUUID().toString(),
             dropLocation = currentLocation,
@@ -55,7 +57,9 @@ class MobStateMachine(
         _mobStatus.update { current ->
             val nextEvents = current.activeEvents + newEvent
             val nextVectors = current.returnVectors.toMutableMap()
-            nextVectors[newEvent.id] = MobVectorEngine.calculateReturnVector(currentLocation, newEvent, sog)
+            nextVectors[newEvent.id] = MobVectorEngine.calculateReturnVector(
+                currentLocation, newEvent, sog, driftMps, Math.toDegrees(setTrueRad)
+            )
             
             val status = current.copy(
                 state = MobState.ACTIVE_EMERGENCY,
@@ -74,14 +78,18 @@ class MobStateMachine(
      * 
      * @param newLocation Live GPS coordinates of the boat.
      * @param sog Current Speed Over Ground (m/s).
+     * @param driftMps Current drift speed (m/s).
+     * @param setTrueRad Current drift direction (radians).
      */
-    fun updateCurrentLocation(newLocation: LatLon, sog: Double) {
+    fun updateCurrentLocation(newLocation: LatLon, sog: Double, driftMps: Double = 0.0, setTrueRad: Double = 0.0) {
         _mobStatus.update { current ->
             if (current.state == MobState.INACTIVE || current.activeEvents.isEmpty()) {
                 current
             } else {
                 val nextVectors = current.activeEvents.associate { event ->
-                    event.id to MobVectorEngine.calculateReturnVector(newLocation, event, sog)
+                    event.id to MobVectorEngine.calculateReturnVector(
+                        newLocation, event, sog, driftMps, Math.toDegrees(setTrueRad)
+                    )
                 }
                 current.copy(returnVectors = nextVectors)
             }
@@ -94,6 +102,17 @@ class MobStateMachine(
     fun muteSiren(durationMs: Long = 5 * 60 * 1000L) {
         _mobStatus.update { current ->
             val status = current.copy(muteUntil = System.currentTimeMillis() + durationMs)
+            persistState(status)
+            status
+        }
+    }
+
+    /**
+     * Unmutes the MOB siren immediately.
+     */
+    fun unmuteSiren() {
+        _mobStatus.update { current ->
+            val status = current.copy(muteUntil = 0L)
             persistState(status)
             status
         }

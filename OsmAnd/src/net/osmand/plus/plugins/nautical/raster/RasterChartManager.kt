@@ -11,7 +11,8 @@ class RasterChartManager(private val app: OsmandApplication) {
     private val mbtilesHelper = MBTilesHelper(app)
     private val kapParser = KapChartParser()
     
-    private val indexedSources = mutableListOf<IndexedSource>()
+    @Volatile
+    private var indexedSources: List<IndexedSource> = emptyList()
 
     data class IndexedSource(
         val file: File,
@@ -22,12 +23,8 @@ class RasterChartManager(private val app: OsmandApplication) {
     )
 
     fun updateSources() {
-        indexedSources.forEach { 
-            if (it.tileSource is MBTilesTileSource) {
-                it.tileSource.close()
-            }
-        }
-        indexedSources.clear()
+        val oldSources = indexedSources
+        val newSources = mutableListOf<IndexedSource>()
 
         val dir = File(app.getAppPath(""), MarineRasterImporter.NAUTICAL_RASTER_DIR)
         val files = dir.listFiles { file -> 
@@ -41,7 +38,7 @@ class RasterChartManager(private val app: OsmandApplication) {
                     val metadata = mbtilesHelper.getMetadata(file)
                     if (metadata != null) {
                         val source = MBTilesTileSource(app, file, metadata)
-                        indexedSources.add(IndexedSource(file, metadata.bounds, metadata.minZoom, metadata.maxZoom, source))
+                        newSources.add(IndexedSource(file, metadata.bounds, metadata.minZoom, metadata.maxZoom, source))
                     }
                 } else if (file.extension.equals("kap", ignoreCase = true)) {
                     // KAP files are listed but currently only metadata is parsed.
@@ -56,6 +53,17 @@ class RasterChartManager(private val app: OsmandApplication) {
                 log.error("Failed to index chart ${file.name}: ${e.message}")
             }
         }
+
+        indexedSources = newSources
+        
+        // Close old sources that are no longer in use
+        oldSources.forEach { old ->
+            if (newSources.none { it.file == old.file }) {
+                if (old.tileSource is MBTilesTileSource) {
+                    old.tileSource.close()
+                }
+            }
+        }
     }
 
     fun getSourcesForViewport(bounds: QuadRect, zoom: Int): List<ITileSource> {
@@ -67,7 +75,17 @@ class RasterChartManager(private val app: OsmandApplication) {
     }
 
     private fun intersects(a: QuadRect, b: QuadRect): Boolean {
-        return a.left < b.right && a.right > b.left && a.top > b.bottom && a.bottom < b.top
+        val aLeft = Math.min(a.left, a.right)
+        val aRight = Math.max(a.left, a.right)
+        val aBottom = Math.min(a.top, a.bottom)
+        val aTop = Math.max(a.top, a.bottom)
+
+        val bLeft = Math.min(b.left, b.right)
+        val bRight = Math.max(b.left, b.right)
+        val bBottom = Math.min(b.top, b.bottom)
+        val bTop = Math.max(b.top, b.bottom)
+
+        return aLeft < bRight && aRight > bLeft && aTop > bBottom && aBottom < bTop
     }
 
     fun getAllSources(): List<ITileSource> = indexedSources.map { it.tileSource }
@@ -78,6 +96,6 @@ class RasterChartManager(private val app: OsmandApplication) {
                 it.tileSource.close()
             }
         }
-        indexedSources.clear()
+        indexedSources = emptyList()
     }
 }

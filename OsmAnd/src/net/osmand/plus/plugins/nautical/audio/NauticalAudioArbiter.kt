@@ -11,23 +11,28 @@ import android.net.Uri
 import android.os.Build
 import kotlinx.coroutines.*
 import java.util.PriorityQueue
+import java.util.concurrent.atomic.AtomicReference
 import net.osmand.PlatformUtil
 import net.osmand.plus.OsmandApplication
 import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
+import java.util.Calendar
 
-enum class AlarmType(val priority: Int) {
+enum class AlarmType(var priority: Int) {
     MOB(1),
     DSC_DISTRESS(2),
     AIS_SART(2),
-    ACTUATOR_OVERLOAD(3),
-    ANCHOR_DRIFT(4),
-    XTE_NAVIGATION(5),
-    COLLISION_DANGER(5),
-    TACTICAL_GYBE(6),
-    TACTICAL_TACK(6),
-    AUTOPILOT_COMMAND_REJECTED(7),
-    VHF_TRAFFIC(9),
-    TTS_INSTRUCTION(11)
+    SOLO_WATCHDOG(3),
+    ACTUATOR_OVERLOAD(4),
+    MAP_HAZARD(4),
+    ANCHOR_DRIFT(5),
+    XTE_NAVIGATION(6),
+    COLLISION_DANGER(6),
+    TACTICAL_GYBE(7),
+    TACTICAL_TACK(7),
+    AUTOPILOT_COMMAND_REJECTED(8),
+    VHF_TRAFFIC(10),
+    TTS_INSTRUCTION(12)
 }
 
 
@@ -40,14 +45,17 @@ class NauticalAudioArbiter private constructor(private val app: OsmandApplicatio
     private var mediaPlayer: MediaPlayer? = null
     
     private val audioManager = app.getSystemService(Context.AUDIO_SERVICE) as AudioManager
-    private var audioFocusRequest: AudioFocusRequest? = null
+    private val audioFocusRequest = AtomicReference<AudioFocusRequest?>()
     private var ttsQueue = mutableListOf<String>()
     private var previousAlarmVolume = -1
     private var originalSpeakerphoneState: Boolean? = null
     
     private val activeAlarmQueue = PriorityQueue<ActiveAlarm>()
+    private val muteWindows = mutableMapOf<AlarmType, Long>()
+    private val playerLock = Any()
     
     private val arbiterScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+    private var mobRepetitionJob: Job? = null
 
     init {
         startWatchBellMonitor()
@@ -57,12 +65,21 @@ class NauticalAudioArbiter private constructor(private val app: OsmandApplicatio
                     is net.osmand.plus.plugins.nautical.NauticalEvent.MobStateChanged -> {
                         if (event.active) {
                             dispatchAlarm(AlarmType.MOB, loop = true)
+                            startMobRepetition()
                         } else {
                             stopAlarm(AlarmType.MOB)
+                            stopMobRepetition()
                         }
                     }
                     is net.osmand.plus.plugins.nautical.NauticalEvent.AudioPriorityUpdate -> {
-                        // Logic for dynamic priority shifts could be added here
+                        synchronized(playerLock) {
+                            event.alarmType.priority = event.priority
+                            // Re-sort queue if needed by rebuilding it
+                            val alarms = activeAlarmQueue.toList()
+                            activeAlarmQueue.clear()
+                            activeAlarmQueue.addAll(alarms)
+                        }
+                        log.info("NauticalAudioArbiter: Updated priority for ${event.alarmType.name} to ${event.priority}")
                     }
                     else -> {}
                 }
@@ -80,21 +97,28 @@ class NauticalAudioArbiter private constructor(private val app: OsmandApplicatio
     }
 
     private val focusChangeListener = AudioManager.OnAudioFocusChangeListener { focusChange ->
-        when (focusChange) {
-            AudioManager.AUDIOFOCUS_LOSS_TRANSIENT -> {
-                val current = activeAlarmQueue.peek()?.type
-                if (current == AlarmType.MOB || current == AlarmType.ANCHOR_DRIFT) {
-                    mediaPlayer?.setVolume(0.5f, 0.5f)
-                } else {
-                    mediaPlayer?.pause()
+        synchronized(playerLock) {
+            when (focusChange) {
+                AudioManager.AUDIOFOCUS_LOSS_TRANSIENT -> {
+                    val current = activeAlarmQueue.peek()?.type
+                    if (current == AlarmType.MOB || current == AlarmType.ANCHOR_DRIFT) {
+                        try { mediaPlayer?.setVolume(0.5f, 0.5f) } catch (_: Exception) {}
+                    } else {
+                        try { mediaPlayer?.pause() } catch (_: Exception) {}
+                    }
                 }
-            }
-            AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK -> {
-                mediaPlayer?.setVolume(0.2f, 0.2f)
-            }
-            AudioManager.AUDIOFOCUS_GAIN -> {
-                mediaPlayer?.setVolume(1.0f, 1.0f)
-                if (mediaPlayer?.isPlaying == false) mediaPlayer?.start()
+                AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK -> {
+                    try { mediaPlayer?.setVolume(0.2f, 0.2f) } catch (_: Exception) {}
+                }
+                AudioManager.AUDIOFOCUS_GAIN -> {
+                    try {
+                        mediaPlayer?.setVolume(1.0f, 1.0f)
+                        if (mediaPlayer?.isPlaying == false) mediaPlayer?.start()
+                    } catch (_: Exception) {}
+                }
+                AudioManager.AUDIOFOCUS_LOSS -> {
+                    stopAlarmInternal(null)
+                }
             }
         }
     }
@@ -110,7 +134,6 @@ class NauticalAudioArbiter private constructor(private val app: OsmandApplicatio
         }
     }
 
-    @Synchronized
     fun dispatchAlarm(
         type: AlarmType,
         voiceText: String? = null,
@@ -118,78 +141,86 @@ class NauticalAudioArbiter private constructor(private val app: OsmandApplicatio
         loop: Boolean = true,
         playTone: Boolean = true
     ) {
-        if (isMuted(type)) {
-            log.info("NauticalAudioArbiter: Alarm ${type.name} is currently muted.")
-            return
-        }
-
-        val highestActive = activeAlarmQueue.peek()
-        val newAlarm = ActiveAlarm(type, voiceText, customUri, loop)
-
-        if (highestActive != null) {
-            if (type.priority > highestActive.type.priority) {
-                log.info("NauticalAudioArbiter: Alarm ${type.name} suppressed by higher priority ${highestActive.type.name}")
-                if (type == AlarmType.TTS_INSTRUCTION && voiceText != null) {
-                    ttsQueue.add(voiceText)
-                }
-                // Still add to queue if it's not a one-off TTS that we already queued
-                if (type != AlarmType.TTS_INSTRUCTION) {
-                    if (!activeAlarmQueue.any { it.type == type }) {
-                        activeAlarmQueue.add(newAlarm)
-                    }
-                }
+        synchronized(playerLock) {
+            if (isMuted(type)) {
+                log.info("NauticalAudioArbiter: Alarm ${type.name} is currently muted.")
                 return
-            } else if (type == highestActive.type) {
-                // Update existing alarm if needed, but don't re-trigger same priority
-                return
-            } else {
-                log.warn("NauticalAudioArbiter: Preempting active ${highestActive.type.name} with priority ${type.name}")
-                stopAlarmInternal(type)
             }
-        }
 
-        if (!activeAlarmQueue.any { it.type == type }) {
-            activeAlarmQueue.add(newAlarm)
-        }
+            val highestActive = activeAlarmQueue.peek()
+            val newAlarm = ActiveAlarm(type, voiceText, customUri, loop)
 
-        if (playTone) {
-            playAlarmTone(type, customUri, loop)
-        }
-        if (voiceText != null) {
-            playVoiceAlert(voiceText, type)
+            if (highestActive != null) {
+                if (type.priority > highestActive.type.priority) {
+                    log.info("NauticalAudioArbiter: Alarm ${type.name} suppressed by higher priority ${highestActive.type.name}")
+                    if (type == AlarmType.TTS_INSTRUCTION && voiceText != null) {
+                        ttsQueue.add(voiceText)
+                    }
+                    if (type != AlarmType.TTS_INSTRUCTION) {
+                        if (!activeAlarmQueue.any { it.type == type }) {
+                            activeAlarmQueue.add(newAlarm)
+                        }
+                    }
+                    return
+                } else if (type == highestActive.type) {
+                    return
+                } else {
+                    log.warn("NauticalAudioArbiter: Preempting active ${highestActive.type.name} with priority ${type.name}")
+                    stopAlarmInternal(type, abandonFocus = false)
+                }
+            }
+
+            if (!activeAlarmQueue.any { it.type == type }) {
+                activeAlarmQueue.add(newAlarm)
+            }
+
+            if (playTone) {
+                playAlarmTone(type, customUri, loop)
+            }
+            if (voiceText != null) {
+                playVoiceAlert(voiceText, type)
+            }
         }
     }
 
-    @Synchronized
     fun dispatchTts(text: String, type: AlarmType = AlarmType.TTS_INSTRUCTION) {
         dispatchAlarm(type, voiceText = text, playTone = false, loop = false)
     }
 
-    @Synchronized
     fun stopAlarm(type: AlarmType) {
-        val highestActive = activeAlarmQueue.peek()
-        if (highestActive?.type == type) {
-            log.info("NauticalAudioArbiter: Stopping active alarm ${type.name}")
-            activeAlarmQueue.poll()
-            
-            val nextAlarm = activeAlarmQueue.peek()
-            stopAlarmInternal(nextAlarm?.type)
-            
-            if (nextAlarm != null) {
-                log.info("NauticalAudioArbiter: Resuming next alarm ${nextAlarm.type.name}")
-                playAlarmTone(nextAlarm.type, nextAlarm.customUri, nextAlarm.loop)
-                if (nextAlarm.voiceText != null) {
-                    playVoiceAlert(nextAlarm.voiceText, nextAlarm.type)
+        synchronized(playerLock) {
+            val highestActive = activeAlarmQueue.peek()
+            if (highestActive?.type == type) {
+                log.info("NauticalAudioArbiter: Stopping active alarm ${type.name}")
+                activeAlarmQueue.poll()
+                
+                val nextAlarm = activeAlarmQueue.peek()
+                stopAlarmInternal(nextAlarm?.type, abandonFocus = nextAlarm == null)
+                
+                if (nextAlarm != null) {
+                    log.info("NauticalAudioArbiter: Resuming next alarm ${nextAlarm.type.name}")
+                    playAlarmTone(nextAlarm.type, nextAlarm.customUri, nextAlarm.loop)
+                    if (nextAlarm.voiceText != null) {
+                        playVoiceAlert(nextAlarm.voiceText, nextAlarm.type)
+                    }
+                } else {
+                    if (ttsQueue.isNotEmpty() && !isEmergencyActive()) {
+                        val nextTts = ttsQueue.removeAt(0)
+                        dispatchTts(nextTts)
+                    }
                 }
             } else {
-                if (ttsQueue.isNotEmpty() && !isEmergencyActive()) {
-                    val nextTts = ttsQueue.removeAt(0)
-                    dispatchTts(nextTts)
-                }
+                activeAlarmQueue.removeIf { it.type == type }
             }
-        } else {
-            // Remove from queue if it was pending
-            activeAlarmQueue.removeIf { it.type == type }
+        }
+    }
+
+    fun muteAlarm(type: AlarmType, durationMs: Long) {
+        synchronized(playerLock) {
+            muteWindows[type] = System.currentTimeMillis() + durationMs
+            if (activeAlarmQueue.peek()?.type == type) {
+                stopAlarm(type)
+            }
         }
     }
 
@@ -199,17 +230,21 @@ class NauticalAudioArbiter private constructor(private val app: OsmandApplicatio
                 val alarmUri = customUri ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
                     ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE)
 
+                val attributes = AudioAttributes.Builder()
+                    .setUsage(AudioAttributes.USAGE_ALARM)
+                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                    .build()
+
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    val request = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT)
-                        .setAudioAttributes(AudioAttributes.Builder()
-                            .setUsage(AudioAttributes.USAGE_ALARM)
-                            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                            .build())
-                        .setAcceptsDelayedFocusGain(true)
-                        .setOnAudioFocusChangeListener(focusChangeListener)
-                        .build()
-                    audioFocusRequest = request
-                    audioManager.requestAudioFocus(request)
+                    if (audioFocusRequest.get() == null) {
+                        val request = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT)
+                            .setAudioAttributes(attributes)
+                            .setAcceptsDelayedFocusGain(true)
+                            .setOnAudioFocusChangeListener(focusChangeListener)
+                            .build()
+                        audioFocusRequest.set(request)
+                        audioManager.requestAudioFocus(request)
+                    }
                 } else {
                     @Suppress("DEPRECATION")
                     audioManager.requestAudioFocus(focusChangeListener, AudioManager.STREAM_ALARM, AudioManager.AUDIOFOCUS_GAIN_TRANSIENT)
@@ -234,17 +269,33 @@ class NauticalAudioArbiter private constructor(private val app: OsmandApplicatio
                 }
 
                 withContext(Dispatchers.Main) {
-                    mediaPlayer = MediaPlayer().apply {
-                        setDataSource(app, alarmUri)
-                        setAudioAttributes(
-                            AudioAttributes.Builder()
-                                .setUsage(AudioAttributes.USAGE_ALARM)
-                                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                                .build()
-                        )
-                        isLooping = loop
-                        prepare()
-                        start()
+                    synchronized(playerLock) {
+                        mediaPlayer?.let {
+                            try { if (it.isPlaying) it.stop() } catch (_: Exception) {}
+                            it.release()
+                        }
+                        val mp = MediaPlayer().apply {
+                            setDataSource(app, alarmUri)
+                            setAudioAttributes(attributes)
+                            isLooping = loop
+                            setOnPreparedListener { it.start() }
+                            setOnErrorListener { _, what, extra ->
+                                log.error("NauticalAudioArbiter: MediaPlayer error $what, $extra")
+                                playFallbackTone(type)
+                                true
+                            }
+                            setOnCompletionListener { 
+                                if (!loop) {
+                                    synchronized(playerLock) {
+                                        if (activeAlarmQueue.peek()?.type == type) {
+                                            stopAlarm(type)
+                                        }
+                                    }
+                                }
+                            }
+                            prepareAsync()
+                        }
+                        mediaPlayer = mp
                     }
                 }
                 log.info("NauticalAudioArbiter: Started tone for ${type.name}")
@@ -256,14 +307,44 @@ class NauticalAudioArbiter private constructor(private val app: OsmandApplicatio
     }
 
     private fun isMuted(type: AlarmType): Boolean {
-        if (type == AlarmType.MOB) {
-            val plugin = net.osmand.plus.plugins.nautical.NauticalPlugin.getInstance()
-            val muteUntil = plugin?.mobViewModel?.uiState?.value?.muteUntil ?: 0L
+        synchronized(playerLock) {
+            val muteUntil = muteWindows[type] ?: 0L
             if (System.currentTimeMillis() < muteUntil) {
                 return true
             }
+            
+            if (type == AlarmType.MOB) {
+                val plugin = net.osmand.plus.plugins.nautical.NauticalPlugin.getInstance()
+                val mobMuteUntil = plugin?.mobViewModel?.uiState?.value?.muteUntil ?: 0L
+                if (System.currentTimeMillis() < mobMuteUntil) {
+                    return true
+                }
+            }
         }
         return false
+    }
+
+    private fun startMobRepetition() {
+        stopMobRepetition()
+        val interval = app.settings.NAUTICAL_MOB_AUDIO_INTERVAL.get()
+        if (interval > 0) {
+            mobRepetitionJob = arbiterScope.launch {
+                while (isActive) {
+                    delay(interval.seconds)
+                    val plugin = net.osmand.plus.plugins.nautical.NauticalPlugin.getInstance()
+                    val mobState = plugin?.mobViewModel?.uiState?.value
+                    if (mobState?.isMobActive == true && mobState.mobLocation != null) {
+                        val text = app.getString(net.osmand.plus.R.string.nautical_mob_label)
+                        playVoiceAlert(text, AlarmType.MOB)
+                    }
+                }
+            }
+        }
+    }
+
+    private fun stopMobRepetition() {
+        mobRepetitionJob?.cancel()
+        mobRepetitionJob = null
     }
 
     private fun playFallbackTone(type: AlarmType) {
@@ -294,6 +375,18 @@ class NauticalAudioArbiter private constructor(private val app: OsmandApplicatio
                             delay(300.milliseconds)
                             tg.startTone(ToneGenerator.TONE_DTMF_A, 250)
                             delay(300.milliseconds)
+                        }
+                    }
+                    AlarmType.SOLO_WATCHDOG -> {
+                        repeat(5) {
+                            tg.startTone(ToneGenerator.TONE_PROP_PROMPT, 500)
+                            delay(1000.milliseconds)
+                        }
+                    }
+                    AlarmType.MAP_HAZARD -> {
+                        repeat(4) {
+                            tg.startTone(ToneGenerator.TONE_CDMA_PIP, 200)
+                            delay(400.milliseconds)
                         }
                     }
                     else -> {
@@ -368,15 +461,20 @@ class NauticalAudioArbiter private constructor(private val app: OsmandApplicatio
     private fun startWatchBellMonitor() {
         arbiterScope.launch {
             while (isActive) {
-                val now = java.util.Calendar.getInstance()
-                val min = now.get(java.util.Calendar.MINUTE)
-                val sec = now.get(java.util.Calendar.SECOND)
+                val now = Calendar.getInstance()
+                val min = now.get(Calendar.MINUTE)
+                val sec = now.get(Calendar.SECOND)
+                val ms = now.get(Calendar.MILLISECOND)
                 
-                if ((min == 0 || min == 30) && sec == 0) {
-                    playWatchBells(now.get(java.util.Calendar.HOUR_OF_DAY), min)
-                    delay(2000.milliseconds) // Prevent double trigger
-                }
-                delay(1000.milliseconds)
+                // Target: next 0 or 30 minute mark
+                val targetMin = if (min < 30) 30 else 60
+                val delayMs = ((targetMin - min - 1) * 60 * 1000L) + ((60 - sec - 1) * 1000L) + (1000L - ms)
+                
+                delay(delayMs.coerceAtLeast(100L).milliseconds)
+                
+                val triggerTime = Calendar.getInstance()
+                playWatchBells(triggerTime.get(Calendar.HOUR_OF_DAY), triggerTime.get(Calendar.MINUTE))
+                delay(5.seconds) // Debounce
             }
         }
     }
@@ -407,13 +505,17 @@ class NauticalAudioArbiter private constructor(private val app: OsmandApplicatio
         return activeAlarmQueue.any { isEmergency(it.type) }
     }
 
-    private fun stopAlarmInternal(nextType: AlarmType?) {
+    private fun stopAlarmInternal(nextType: AlarmType?, abandonFocus: Boolean = true) {
         try {
-            mediaPlayer?.let {
-                if (it.isPlaying) it.stop()
-                it.release()
+            synchronized(playerLock) {
+                mediaPlayer?.let {
+                    try {
+                        if (it.isPlaying) it.stop()
+                    } catch (_: Exception) {}
+                    it.release()
+                }
+                mediaPlayer = null
             }
-            mediaPlayer = null
             
             try {
                 @Suppress("DEPRECATION")
@@ -433,12 +535,13 @@ class NauticalAudioArbiter private constructor(private val app: OsmandApplicatio
                 previousAlarmVolume = -1
             }
 
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                audioFocusRequest?.let { audioManager.abandonAudioFocusRequest(it) }
-                audioFocusRequest = null
-            } else {
-                @Suppress("DEPRECATION")
-                audioManager.abandonAudioFocus(focusChangeListener)
+            if (abandonFocus) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    audioFocusRequest.getAndSet(null)?.let { audioManager.abandonAudioFocusRequest(it) }
+                } else {
+                    @Suppress("DEPRECATION")
+                    audioManager.abandonAudioFocus(focusChangeListener)
+                }
             }
         } catch (e: Exception) {
             log.error("NauticalAudioArbiter: Error stopping alarm internal", e)
@@ -447,6 +550,9 @@ class NauticalAudioArbiter private constructor(private val app: OsmandApplicatio
 
     fun destroy() {
         arbiterScope.cancel()
+        synchronized(playerLock) {
+            stopAlarmInternal(null, abandonFocus = true)
+        }
         synchronized(NauticalAudioArbiter::class.java) {
             instance = null
         }

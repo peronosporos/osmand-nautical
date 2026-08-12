@@ -24,9 +24,57 @@ class IsochroneRoutingEngine(
 ) {
     private val geometryFactory = GeometryFactory()
     private val reusableCoordinate = Coordinate()
-    private val collisionCache = mutableMapOf<Pair<Int, Int>, Boolean>()
+    private val collisionCache = java.util.concurrent.ConcurrentHashMap<Pair<Int, Int>, Boolean>()
+    private var landMask: java.util.BitSet? = null
+    private var maskEnvelope: Envelope? = null
+    private val maskResolution = 1000.0 // 0.001 degree resolution
 
-    suspend fun calculateRoute(request: RoutingRequest, liveSet: Double? = null, liveDrift: Double? = null): OptimalRouteResult? = withContext(Dispatchers.Default) {
+    private fun precomputeLandMask(envelope: Envelope) {
+        val mask = java.util.BitSet()
+        val ni = ((envelope.width) * maskResolution).toInt() + 1
+        val nj = ((envelope.height) * maskResolution).toInt() + 1
+        
+        val queryGeo = geometryFactory.toGeometry(envelope)
+        val landFeatures = s57Index.queryByAcronym(queryGeo, setOf("LNDARE"))
+        val shallowFeatures = s57Index.queryByAcronym(queryGeo, setOf("DEPARE")).filter {
+            (it.attributes["DRVAL1"]?.toDoubleOrNull() ?: 0.0) < vesselDraft
+        }
+        
+        val allObstacles = landFeatures + shallowFeatures
+        for (feature in allObstacles) {
+            for (geo in feature.geometries) {
+                val jtsGeo = geo.toJtsGeometry(geometryFactory) ?: continue
+                val featEnv = jtsGeo.envelopeInternal
+                
+                val iMin = maxOf(0, ((featEnv.minX - envelope.minX) * maskResolution).toInt())
+                val iMax = minOf(ni - 1, ((featEnv.maxX - envelope.minX) * maskResolution).toInt())
+                val jMin = maxOf(0, ((featEnv.minY - envelope.minY) * maskResolution).toInt())
+                val jMax = minOf(nj - 1, ((featEnv.maxY - envelope.minY) * maskResolution).toInt())
+                
+                for (j in jMin..jMax) {
+                    for (i in iMin..iMax) {
+                        val testLon = envelope.minX + i / maskResolution
+                        val testLat = envelope.minY + j / maskResolution
+                        reusableCoordinate.x = testLon
+                        reusableCoordinate.y = testLat
+                        if (jtsGeo.intersects(geometryFactory.createPoint(reusableCoordinate))) {
+                            mask.set(j * ni + i)
+                        }
+                    }
+                }
+            }
+        }
+        this.landMask = mask
+        this.maskEnvelope = envelope
+    }
+
+    suspend fun calculateRoute(
+        request: RoutingRequest,
+        liveSet: Double? = null,
+        liveDrift: Double? = null,
+        onProgress: ((Int, Int) -> Unit)? = null
+    ): OptimalRouteResult? = withContext(Dispatchers.Default) {
+        collisionCache.clear() // Item 11: Clear cache on each run
         val caps = capabilityManager?.capabilities?.value ?: CapabilityManager.ServerCapabilityMap()
         if (caps.hasWingaRouting || caps.hasRouteIq) {
             val serverResult = tryCalculateOnServer(request, caps)
@@ -51,6 +99,9 @@ class IsochroneRoutingEngine(
         // 1. Spatial Bounding Box Pre-filter
         val workingEnvelope = Envelope(request.start.longitude, request.destination.longitude, request.start.latitude, request.destination.latitude)
         workingEnvelope.expandBy(0.5) // 0.5 degree buffer
+        
+        onProgress?.invoke(0, 1)
+        precomputeLandMask(workingEnvelope) // Item 13: Precompute mask
 
         val startNode = IsochroneNode(
             latitude = request.start.latitude,
@@ -63,11 +114,12 @@ class IsochroneRoutingEngine(
         )
 
         var currentFrontier = listOf(startNode)
-        val timeStepHours = 1.0
-        val maxSteps = 120
+        val timeStepHours = request.timeStepHours
+        val maxSteps = (240 / timeStepHours).toInt().coerceIn(24, 500)
         var step = 0
 
         while (step < maxSteps) {
+            onProgress?.invoke(step, maxSteps)
             val candidateNodes = mutableListOf<IsochroneNode>()
 
             for (node in currentFrontier) {
@@ -163,11 +215,34 @@ class IsochroneRoutingEngine(
 
             val response = rest.triggerPluginCalculation(pluginId, body)
             if (response.isSuccessful) {
-                // Parse server response to OptimalRouteResult
-                // This is a placeholder for actual parsing logic once specific plugin APIs are known.
-                // For now, we return null to fallback to local if parsing fails.
-                null
-            } else null
+                val json = response.body() ?: return null
+                // Item 9: Basic GeoJSON LineString parsing for server response
+                val feature = json["feature"] as? Map<*, *>
+                val geometry = feature?.get("geometry") as? Map<*, *>
+                val coordinates = geometry?.get("coordinates") as? List<*>
+                
+                if (coordinates != null && coordinates.isNotEmpty()) {
+                    val path = mutableListOf<Waypoint>()
+                    for (coord in coordinates) {
+                        val c = coord as? List<*> ?: continue
+                        if (c.size >= 2) {
+                            path.add(Waypoint(c[1] as Double, c[0] as Double))
+                        }
+                    }
+                    
+                    val properties = feature.get("properties") as? Map<*, *>
+                    val totalTime = (properties?.get("totalTime") as? Number)?.toDouble() ?: (path.size * request.timeStepHours)
+                    val totalDist = (properties?.get("totalDistance") as? Number)?.toDouble() ?: 0.0
+                    
+                    return OptimalRouteResult(
+                        path = path,
+                        totalTimeHours = totalTime,
+                        totalDistanceNm = totalDist,
+                        confidenceFactor = 1.0
+                    )
+                }
+            }
+            null
         } catch (_: Exception) {
             null
         }

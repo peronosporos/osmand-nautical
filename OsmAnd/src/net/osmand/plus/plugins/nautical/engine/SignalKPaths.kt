@@ -99,7 +99,7 @@ object SignalKPaths {
 
     // Notifications
     const val NOTIFICATIONS_PREFIX = "notifications."
-    const val NOTIFICATIONS_MOB = "notifications.mob"
+    const val NOTIFICATIONS_MOB = "notifications.security.mob"
     const val NOTIFICATIONS_WATCHDOG = "notifications.safety.watchdog"
     const val NOTIFICATIONS_COLLISION_RISK = "notifications.navigation.collisionRisk"
 
@@ -131,4 +131,5 @@ object SignalKPaths {
     // Sails
     const val SAILS_INVENTORY = "sails.inventory"
     const val SAILS_REEFS = "sails.reefs"
+    const val SAILS_ACTIVE_PLAN = "sails.activeSailPlan"
 }

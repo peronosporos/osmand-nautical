@@ -10,13 +10,13 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
-import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import net.osmand.plus.R
 import net.osmand.plus.plugins.nautical.NauticalPlugin
+import net.osmand.plus.plugins.nautical.ui.widgets.BaseNauticalBottomSheet
 
-class TideStationBottomSheet : BottomSheetDialogFragment() {
+class TideStationBottomSheet : BaseNauticalBottomSheet() {
 
     private lateinit var viewModel: TideViewModel
     private var graphView: TideGraphView? = null
@@ -68,8 +68,9 @@ class TideStationBottomSheet : BottomSheetDialogFragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         
+        // Red filter handled by BaseMaterialBottomSheetDialogFragment via BaseNauticalBottomSheet
         val plugin = NauticalPlugin.getInstance()
-        plugin?.applyNightVisionFilter(view)
+
 
         viewModel = ViewModelProvider(this)[TideViewModel::class.java]
         
@@ -80,10 +81,12 @@ class TideStationBottomSheet : BottomSheetDialogFragment() {
         val container = oldGraph?.parent as? ViewGroup
         
         graphView = TideGraphView(requireContext()).apply {
-            layoutParams = oldGraph?.layoutParams ?: ViewGroup.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, 
-                400,
-            )
+            val h = if (resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE) {
+                (resources.displayMetrics.heightPixels * 0.4).toInt()
+            } else {
+                (resources.displayMetrics.heightPixels * 0.3).toInt()
+            }
+            layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, h)
         }
         
         container?.let {

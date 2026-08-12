@@ -58,7 +58,7 @@ class SailingMapLayerController(private val mapActivity: MapActivity, s57Spatial
 
         // Laylines
         if (settings.NAUTICAL_SHOW_LAYLINES.get()) {
-            if (!mapView.layers.contains(laylinesLayer)) mapView.addLayer(laylinesLayer, 0f)
+            if (!mapView.layers.contains(laylinesLayer)) mapView.addLayer(laylinesLayer, 4.3f)
         } else {
             mapView.removeLayer(laylinesLayer)
         }

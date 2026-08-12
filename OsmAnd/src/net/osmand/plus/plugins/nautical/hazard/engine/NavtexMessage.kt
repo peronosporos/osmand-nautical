@@ -1,11 +1,12 @@
 package net.osmand.plus.plugins.nautical.hazard.engine
 
 import net.osmand.data.LatLon
+import java.io.Serializable
 
 /**
  * Subject indicators for NAVTEX messages as per IMO GMDSS standards.
  */
-enum class NavtexSubject(val code: Char) {
+enum class NavtexSubject(val code: Char) : Serializable {
     NAVTEX_WARNING('A'),
     METEOROLOGICAL_WARNING('B'),
     ICE_REPORT('C'),
@@ -43,6 +44,6 @@ data class NavtexMessage(
     val body: String,
     val points: List<LatLon> = emptyList(),
     val isUrgent: Boolean = false,
-) {
+) : Serializable {
     val isPolygon: Boolean get() = points.size > 2
 }

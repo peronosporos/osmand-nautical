@@ -5,7 +5,9 @@ import android.content.Context
 import android.hardware.display.DisplayManager
 import android.os.Bundle
 import android.view.Display
+import android.view.View
 import android.view.WindowManager
+import android.graphics.Paint
 import net.osmand.PlatformUtil
 import net.osmand.plus.OsmandApplication
 import net.osmand.plus.R
@@ -119,8 +121,19 @@ class NauticalPresentationManager(private val app: OsmandApplication) : DisplayM
 
         fun setNightMode(enabled: Boolean) {
             headingArc?.setNightMode(enabled)
-            // TacticalHudView can also handle night mode if it uses theme attributes correctly,
-            // but we can force it if needed.
+            
+            // ITEM 3: Apply Red Filter to external display Presentation window (Bug #3)
+            val decorView = window?.decorView
+            if (decorView != null) {
+                if (enabled) {
+                    val paint = Paint().apply {
+                        colorFilter = NauticalPlugin.NIGHT_VISION_FILTER
+                    }
+                    decorView.setLayerType(View.LAYER_TYPE_HARDWARE, paint)
+                } else {
+                    decorView.setLayerType(View.LAYER_TYPE_NONE, null)
+                }
+            }
         }
     }
 }

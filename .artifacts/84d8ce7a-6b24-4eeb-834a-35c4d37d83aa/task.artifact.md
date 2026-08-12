@@ -1,0 +1,23 @@
+# Task List - Mooring Maneuver Polishing
+
+- `[x]` **Backend Engine Refactoring (Initial)**
+    - `[x]` Update `ManeuverEngine.kt` with unified `speak()` and custom timeouts
+    - `[x]` Fix `MooringManeuver.kt`: distance calculation, NaN init, voice feedback
+    - `[x]` Fix `MedMooringManeuver.kt`: phase transitions, depth safety, AP state restoration, NaN init, longer timeout
+    - `[x]` Update `ManeuverManager.kt` for consistent lock release
+- `[x]` **Adaptive Thresholds**
+    - `[x]` Scale thresholds in `MooringManeuver.kt` using `vesselLengthMeters`
+    - `[x]` Scale thresholds in `MedMooringManeuver.kt` using `vesselLengthMeters`
+- `[x]` **Frontend UI Improvements**
+    - `[x]` Update `NauticalManeuversBottomSheet.kt` to include Med-Mooring
+    - `[x]` Add parameter adjustment UI to `nautical_maneuvers_bottom_sheet.xml`
+    - `[x]` Implement parameter handling in `NauticalManeuversBottomSheet.kt`
+    - `[x]` Refactor `ManeuverOverlayWidget.kt`:
+        - `[x]` Adjust collision alert visibility logic
+        - `[x]` Apply theme background attribute
+        - `[x]` Optimize coroutine threading
+        - `[x]` Unify instruction formatting and distinct iconography
+- `[x]` **Resource Updates**
+    - `[x]` Unify nautical maneuver strings in `strings.xml`
+- `[x]` **Verification**
+    - `[x]` Manual walkthrough of UI changes and threshold behavior

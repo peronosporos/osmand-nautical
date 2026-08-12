@@ -221,13 +221,14 @@ public abstract class TextInfoWidget extends MapWidget implements ISupportSidePa
 	@Override
 	public boolean isViewVisible() {
 		View contentView = getContentView();
-		return contentView != null ? contentView.getVisibility() == View.VISIBLE : super.isViewVisible();
+		return contentView != null && contentView.getVisibility() == View.VISIBLE;
 	}
 
 	public boolean updateVisibility(boolean visible) {
-		boolean updatedVisibility = AndroidUiHelper.updateVisibility(getContentView(), visible);
-		if (updatedVisibility && app.accessibilityEnabled()) {
-			getContentView().setFocusable(visible);
+		View contentView = getContentView();
+		boolean updatedVisibility = AndroidUiHelper.updateVisibility(contentView, visible);
+		if (updatedVisibility && app.accessibilityEnabled() && contentView != null) {
+			contentView.setFocusable(visible);
 		}
 		return updatedVisibility;
 	}

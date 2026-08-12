@@ -16,7 +16,7 @@ import net.osmand.data.QuadRect;
 import net.osmand.data.QuadTree;
 import net.osmand.data.RotatedTileBox;
 import net.osmand.plus.R;
-import net.osmand.plus.plugins.nautical.NauticalPlugin;
+
 import net.osmand.plus.utils.NativeUtilities;
 import net.osmand.plus.views.OsmandMapTileView;
 import net.osmand.plus.views.layers.base.OsmandMapLayer;
@@ -90,11 +90,9 @@ public class MapTextLayer extends OsmandMapLayer {
 		super.onPrepareBufferImage(canvas, tileBox, settings);
 		QuadTree<QuadRect> intersections = initBoundIntersections(tileBox);
 
-		if (NauticalPlugin.isNightVision(getApplication())) {
-			paintTextIcon.setColorFilter(NauticalPlugin.NIGHT_VISION_FILTER);
-		} else {
-			paintTextIcon.setColorFilter(null);
-		}
+		// ITEM 1: Avoid Double Filtering (Bug #1)
+		// Activity decorView is already filtered by NauticalPlugin
+		paintTextIcon.setColorFilter(null);
 
 		for (Map.Entry<OsmandMapLayer, Collection<?>> entry : textObjects.entrySet()) {
 			OsmandMapLayer l = entry.getKey();

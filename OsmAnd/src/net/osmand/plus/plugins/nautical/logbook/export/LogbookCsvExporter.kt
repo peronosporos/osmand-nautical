@@ -15,13 +15,13 @@ object LogbookCsvExporter {
 
     private val log = PlatformUtil.getLog(LogbookCsvExporter::class.java)
 
-    private val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).apply {
-        timeZone = TimeZone.getTimeZone("UTC")
-    }
-
     private fun getHeader(delimiter: String) = "Timestamp(UTC)${delimiter}Latitude${delimiter}Longitude${delimiter}SOG(knots)${delimiter}COG${delimiter}TWS${delimiter}TWA${delimiter}TWD${delimiter}Depth(m)${delimiter}WaterTemp(C)${delimiter}Voltage(V)${delimiter}EngineHours${delimiter}Sail Plan${delimiter}Notes\n"
 
-    fun export(entries: List<LogbookEntry>, outputStream: OutputStream): Boolean {
+    fun export(entries: List<LogbookEntry>, outputStream: OutputStream): Result<Unit> {
+        val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).apply {
+            timeZone = TimeZone.getTimeZone("UTC")
+        }
+        
         return try {
             // Localization Check: Use semi-colon if comma is decimal separator (TASK-098)
             val symbols = DecimalFormatSymbols.getInstance(Locale.getDefault())
@@ -32,8 +32,10 @@ object LogbookCsvExporter {
                 writer.write("\uFEFF") // UTF-8 BOM for Excel compatibility
                 writer.write(getHeader(delimiter))
                 
-                val decimalFormat = DecimalFormat("0.0", symbols)
-                val highPrecisionFormat = DecimalFormat("0.00", symbols)
+                // Use US symbols for numbers to ensure dot-decimal consistency in marine data (Industry Standard)
+                val usSymbols = DecimalFormatSymbols.getInstance(Locale.US)
+                val decimalFormat = DecimalFormat("0.0", usSymbols)
+                val highPrecisionFormat = DecimalFormat("0.00", usSymbols)
 
                 for (entry in entries) {
                     val timestamp = dateFormat.format(Date(entry.timestamp))
@@ -49,8 +51,8 @@ object LogbookCsvExporter {
                     
                     val line = StringBuilder().apply {
                         append(timestamp).append(delimiter)
-                        append(entry.latitude).append(delimiter)
-                        append(entry.longitude).append(delimiter)
+                        append(String.format(Locale.US, "%.6f", entry.latitude)).append(delimiter)
+                        append(String.format(Locale.US, "%.6f", entry.longitude)).append(delimiter)
                         append(sogKnots).append(delimiter)
                         append(cogDegrees).append(delimiter)
                         append(twsKnots).append(delimiter)
@@ -60,19 +62,19 @@ object LogbookCsvExporter {
                         append(waterTempC).append(delimiter)
                         append(voltage).append(delimiter)
                         append(engineHours).append(delimiter)
-                        append("\"").append(entry.sailPlan.replace("\"", "'")).append("\"").append(delimiter)
-                        append("\"").append(entry.notes.replace("\"", "'")).append("\"\n")
+                        append("\"").append(entry.sailPlan.replace("\"", "\"\"")).append("\"").append(delimiter)
+                        append("\"").append(entry.notes.replace("\"", "\"\"")).append("\"\n")
                     }.toString()
                     writer.write(line)
                 }
             }
-            true
+            Result.success(Unit)
         } catch (e: IOException) {
             log.error("Logbook CSV export IO error: ${e.message}", e)
-            false
+            Result.failure(e)
         } catch (e: Exception) {
             log.error("Logbook CSV export error: ${e.message}", e)
-            false
+            Result.failure(e)
         }
     }
 }

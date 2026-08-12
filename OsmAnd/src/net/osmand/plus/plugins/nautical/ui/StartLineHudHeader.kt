@@ -9,6 +9,8 @@ import android.widget.TextView
 import androidx.core.view.isVisible
 import net.osmand.plus.R
 import net.osmand.plus.plugins.nautical.NauticalPlugin
+import net.osmand.plus.plugins.nautical.ui.NauticalColorResolver
+import net.osmand.plus.plugins.nautical.ui.NauticalSemanticColor
 import net.osmand.plus.utils.AndroidUtils
 import java.util.Locale
 import kotlin.math.abs
@@ -63,15 +65,22 @@ class StartLineHudHeader @JvmOverloads constructor(
         
         distLabel.text = String.format(Locale.US, "Dist: %.0fm", dist)
         
-        if (time > 3600) {
-            timeLabel.text = "Time: --:--"
+        if (abs(time) > 3600) {
+            timeLabel.text = "Burn: --:--"
         } else {
-            val mins = (time / 60).toInt()
-            val secs = (time % 60).toInt()
-            timeLabel.text = String.format(Locale.US, "Burn: %02d:%02d", mins, secs)
+            val absTime = abs(time).toInt()
+            val mins = absTime / 60
+            val secs = absTime % 60
+            val sign = if (time < 0) "-" else ""
+            timeLabel.text = String.format(Locale.US, "Burn: %s%02d:%02d", sign, mins, secs)
         }
         
         biasLabel.text = String.format(Locale.US, "Bias: %.1f° %s", abs(bias), if (bias > 0) "S" else "P")
-        biasLabel.setTextColor(if (abs(bias) < 5) 0xFF00FF00.toInt() else 0xFF00FFFF.toInt())
+        val biasColor = if (abs(bias) < 5) {
+            NauticalColorResolver.getColor(context, NauticalSemanticColor.STATUS_OK)
+        } else {
+            NauticalColorResolver.getColor(context, NauticalSemanticColor.ACCENT)
+        }
+        biasLabel.setTextColor(biasColor)
     }
 }

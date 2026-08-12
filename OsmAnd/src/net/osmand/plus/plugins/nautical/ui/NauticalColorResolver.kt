@@ -26,23 +26,26 @@ object NauticalColorResolver {
         val displayMode = app?.settings?.NAUTICAL_DISPLAY_MODE?.get() ?: NauticalDisplayMode.NORMAL
         
         if (displayMode == NauticalDisplayMode.DARK) {
+            // ITEM 12: Compensate for activity-level Red Filter (Bug #12)
+            // Colors are mapped to Red channel via luminance: R' = 0.299R + 0.587G + 0.114B
+            // We use lighter grayscale colors to achieve target red intensity.
             return when (semanticColor) {
-                NauticalSemanticColor.PRIMARY -> 0xFFFF0000.toInt() // Pure Red
-                NauticalSemanticColor.SECONDARY -> 0xFF880000.toInt() // Dim Red
-                NauticalSemanticColor.ACCENT -> 0xFFFF0000.toInt()
-                NauticalSemanticColor.STATUS_OK -> 0xFFCC0000.toInt() // Strict Red for scotopic safety
-                NauticalSemanticColor.STATUS_WARNING -> 0xFFFF4400.toInt() // Orange-Red
-                NauticalSemanticColor.STATUS_ERROR -> 0xFFFF0000.toInt()
-                NauticalSemanticColor.GRID -> 0xFF330000.toInt() // Very Dark Red
-                NauticalSemanticColor.MARKER -> 0xFFFF0000.toInt()
+                NauticalSemanticColor.PRIMARY -> Color.WHITE // -> Pure Bright Red
+                NauticalSemanticColor.SECONDARY -> Color.GRAY // -> Dim Red
+                NauticalSemanticColor.ACCENT -> Color.WHITE
+                NauticalSemanticColor.STATUS_OK -> 0xFFAAAAAA.toInt() 
+                NauticalSemanticColor.STATUS_WARNING -> 0xFFDDDDDD.toInt()
+                NauticalSemanticColor.STATUS_ERROR -> Color.WHITE
+                NauticalSemanticColor.GRID -> 0xFF333333.toInt() // -> Very Dark Red
+                NauticalSemanticColor.MARKER -> Color.WHITE
             }
         }
 
         val isSunlight = displayMode == NauticalDisplayMode.SUNLIGHT
         val isNightMode = app?.daynightHelper?.isNightMode(app.settings.APPLICATION_MODE.get(), ThemeUsageContext.OVER_MAP) ?: false
 
-        if (isSunlight && !isNightMode) {
-            // Enforce absolute contrast in direct sunlight (Day mode only)
+        if (isSunlight) {
+            // Enforce absolute contrast in direct sunlight (Regardless of Night Mode status)
             return when (semanticColor) {
                 NauticalSemanticColor.PRIMARY -> Color.BLACK
                 NauticalSemanticColor.SECONDARY -> Color.DKGRAY

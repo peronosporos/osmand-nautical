@@ -21,8 +21,13 @@ class LogbookEntryEditorBottomSheet : BaseMaterialBottomSheetDialogFragment() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        @Suppress("DEPRECATION")
-        entry = arguments?.getSerializable(ENTRY_KEY) as? LogbookEntry
+        // Item 12: Update deprecated getSerializable
+        entry = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            arguments?.getSerializable(ENTRY_KEY, LogbookEntry::class.java)
+        } else {
+            @Suppress("DEPRECATION")
+            arguments?.getSerializable(ENTRY_KEY) as? LogbookEntry
+        }
         
         val repository = NauticalPlugin.getInstance()?.logbookRepository
             ?: throw IllegalStateException("Logbook repository not initialized")

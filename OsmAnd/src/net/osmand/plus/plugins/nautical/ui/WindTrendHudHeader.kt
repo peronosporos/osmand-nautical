@@ -8,6 +8,7 @@ import android.widget.ImageView
 import android.widget.TextView
 import net.osmand.plus.R
 import net.osmand.plus.plugins.nautical.NauticalPlugin
+import net.osmand.plus.plugins.nautical.engine.SignalKPaths
 import net.osmand.plus.utils.AndroidUtils
 import java.util.Locale
 import kotlin.math.abs
@@ -47,7 +48,7 @@ class WindTrendHudHeader @JvmOverloads constructor(
             return
         }
 
-        val history = engine.getWindDirectionHistory()
+        val history = engine.getHistory(SignalKPaths.ENV_WIND_DIRECTION_TRUE)
         if (history.size < 2) return
         
         val now = System.currentTimeMillis()

@@ -232,13 +232,13 @@ class SignalKDataBroker(private val settings: OsmandSettings? = null) {
         val now = TemporalUtils.now()
         val smoothed = rudderEma.update(value)
         
-        // Shadow Drive: Detect manual override if rudder moves significantly (>5 deg) 
-        // while AP is engaged and NOT in a transition/maneuver.
+        // ITEM 5 FIX: Debounce Shadow Drive to avoid false positives in heavy seas
+        // Require > 8.0 degrees of delta while engaged to trigger manual override
         val state = _marineState.value
         val shadowDriveEnabled = settings?.NAUTICAL_SHADOW_DRIVE?.get() ?: true
         if (shadowDriveEnabled && (state.autopilotState != "standby") && (state.pendingCommandPath == null)) {
             state.rudderAngle?.let { lastRudder ->
-                if (abs(smoothed - lastRudder) > Math.toRadians(5.0)) {
+                if (abs(smoothed - lastRudder) > Math.toRadians(8.0)) {
                     scope.launch { _manualOverrideTriggered.emit(Unit) }
                 }
             }
@@ -247,6 +247,13 @@ class SignalKDataBroker(private val settings: OsmandSettings? = null) {
         if (shouldUpdate(smoothed, _marineState.value.rudderAngle, now, lastRudderTime, angleThreshold)) {
             _marineState.update { it.copy(rudderAngle = smoothed, timeOfRudderFix = now) }
             lastRudderTime = now
+        }
+    }
+
+    // ITEM 6 FIX: External control for DR to avoid GPS conflicts
+    fun setDeadReckoningActive(active: Boolean) {
+        if (!active && _marineState.value.isDeadReckoning) {
+            _marineState.update { it.copy(isDeadReckoning = false) }
         }
     }
 

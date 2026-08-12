@@ -58,8 +58,14 @@ interface SignalKRestService {
     @GET("signalk/v2/api/resources/checklists")
     suspend fun getChecklists(): Response<Map<String, SignalKChecklist>>
 
+    @POST("signalk/v2/api/resources/checklists")
+    suspend fun createChecklist(@Body checklist: SignalKChecklist): Response<SignalKResourceResponse>
+
     @PUT("signalk/v2/api/resources/checklists/{id}")
     suspend fun updateChecklist(@Path("id") id: String, @Body checklist: SignalKChecklist): Response<Void>
+
+    @DELETE("signalk/v2/api/resources/checklists/{id}")
+    suspend fun deleteChecklist(@Path("id") id: String): Response<Void>
 
     @GET("signalk/v2/api/resources/logbook")
     suspend fun getLogbook(): Response<Map<String, SignalKLogbookEntry>>
@@ -114,11 +120,18 @@ interface SignalKRestService {
         @retrofit2.http.Query("resolution") resolution: Int? = null
     ): Response<Map<String, Any>>
 
-    @GET("signalk/v1/api/plugins/signalk-grib-weather-provider/grib")
-    suspend fun getGribData(): Response<okhttp3.ResponseBody>
+    @GET("signalk/v1/api/plugins/{pluginId}/grib")
+    suspend fun getGribData(@Path("pluginId") pluginId: String): Response<okhttp3.ResponseBody>
 
     @POST("signalk/v1/api/plugins/{pluginId}/calculate")
-    suspend fun triggerPluginCalculation(@Path("pluginId") pluginId: String, @Body body: Map<String, Any>): Response<Map<String, Any>>
+    suspend fun triggerPluginCalculation(@Path("pluginId") pluginId: String, @Body body: Map<String, @JvmSuppressWildcards Any>): Response<Map<String, Any>>
+
+    @POST("signalk/v1/api/plugins/{pluginId}/{action}")
+    suspend fun triggerPluginAction(
+        @Path("pluginId") pluginId: String,
+        @Path("action") action: String,
+        @Body body: Map<String, @JvmSuppressWildcards Any>
+    ): Response<SignalKActionResponse>
 
     // Control API (PUT / Action API)
     @PUT("signalk/v1/api/vessels/self/{path}")

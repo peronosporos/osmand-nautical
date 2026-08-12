@@ -26,4 +26,13 @@
         app:srcCompat="@drawable/ic_action_add"
         app:tint="?attr/colorAccent" />
 
+    <ImageView
+        android:id="@+id/btn_delete_checklist"
+        android:layout_width="32dp"
+        android:layout_height="32dp"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:padding="4dp"
+        app:srcCompat="@drawable/ic_action_delete_dark"
+        app:tint="?attr/colorAccent" />
+
 </LinearLayout>

@@ -26,17 +26,26 @@ object LaylineMathEngine {
         current: TidalCurrentVector,
         leewayRadians: Double,
         magneticVariation: Double = 0.0,
-        isMagneticInput: Boolean = false
+        isMagneticInput: Boolean = false,
+        isInfinite: Boolean = false
     ): LaylineData {
         // Transform to True frame if inputs are Magnetic (TASK-08D)
         val twdTrue = if (isMagneticInput) toTrue(trueWindDirection, magneticVariation) else trueWindDirection
         val currentDirTrue = if (isMagneticInput) toTrue(current.directionRadians, magneticVariation) else current.directionRadians
 
-        // 1. Calculate headings for Port and Starboard tacks (Upwind)
-        val stbdHeading = normalizeRadians(twdTrue - optimalTwa)
-        val portHeading = normalizeRadians(twdTrue + optimalTwa)
+        // 0. Determine if we are on a downwind leg (TASK-GYBE)
+        val bearingToTarget = calculateBearing(boatPosition, targetWaypoint)
+        val isDownwind = cos(bearingToTarget - twdTrue) < 0
+        
+        // For downwind, we use the gybe angle (180 - target_twa)
+        val targetTwa = if (isDownwind && optimalTwa < PI / 2) PI - optimalTwa else optimalTwa
+
+        // 1. Calculate headings for Port and Starboard tacks/gybes
+        val stbdHeading = normalizeRadians(twdTrue - targetTwa)
+        val portHeading = normalizeRadians(twdTrue + targetTwa)
 
         // 2. Apply leeway to STW headings to get "Course Through Water" (CTW)
+        // Leeway always pushes the boat leeward (away from the wind)
         val stbdCtw = normalizeRadians(stbdHeading - leewayRadians)
         val portCtw = normalizeRadians(portHeading + leewayRadians)
 
@@ -49,9 +58,24 @@ object LaylineMathEngine {
         val stbdCogVector = stbdStwVector + currentVector
         val portCogVector = portStwVector + currentVector
 
-        // 5. Derive COG headings and SOG (Speed Over Ground)
+        // 5. Derive COG headings
         val stbdCogHeading = vectorToHeading(stbdCogVector)
         val portCogHeading = vectorToHeading(portCogVector)
+
+        if (isInfinite) {
+             // Project laylines far out from boat position if infinite mode requested
+             // Using rhumb line destination for simplicity in UI projection
+             val distMeters = 1852.0 * 100.0 // 100 NM
+             val pStbd = projectPoint(boatPosition, stbdCogHeading, distMeters)
+             val pPort = projectPoint(boatPosition, portCogHeading, distMeters)
+             
+             return LaylineData(
+                 portTackPoint = pPort,
+                 starboardTackPoint = pStbd,
+                 isFetchable = true, // Infinite lines are always "active"
+                 targetWaypoint = targetWaypoint
+             )
+        }
 
         // 6. Find intersection points
         // Tacking FROM current Port tack TO Starboard tack to reach the mark.
@@ -67,7 +91,6 @@ object LaylineMathEngine {
         )
 
         // 7. Determine fetchability
-        val bearingToTarget = calculateBearing(boatPosition, targetWaypoint)
         val isFetchable = !isWithinArc(bearingToTarget, stbdCogHeading, portCogHeading)
 
         return LaylineData(
@@ -76,6 +99,19 @@ object LaylineMathEngine {
             isFetchable = isFetchable,
             targetWaypoint = targetWaypoint
         )
+    }
+
+    fun projectPoint(start: LatLon, bearingRad: Double, distanceMeters: Double): LatLon {
+        val R = 6371000.0 // Earth radius
+        val lat1 = Math.toRadians(start.latitude)
+        val lon1 = Math.toRadians(start.longitude)
+        
+        val lat2 = asin(sin(lat1) * cos(distanceMeters / R) + 
+                   cos(lat1) * sin(distanceMeters / R) * cos(bearingRad))
+        val lon2 = lon1 + atan2(sin(bearingRad) * sin(distanceMeters / R) * cos(lat1),
+                          cos(distanceMeters / R) - sin(lat1) * sin(lat2))
+                          
+        return LatLon(Math.toDegrees(lat2), normalizeLongitude(Math.toDegrees(lon2)))
     }
 
     private fun headingToVector(headingRad: Double, speed: Double): Vector2D {

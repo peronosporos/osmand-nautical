@@ -12,6 +12,7 @@ import android.widget.ImageView
 import android.widget.TextView
 import androidx.core.content.ContextCompat
 import net.osmand.plus.R
+import net.osmand.plus.plugins.nautical.WearOsNauticalManager
 import net.osmand.plus.utils.AndroidUtils
 
 class NauticalHudBannerView @JvmOverloads constructor(
@@ -20,6 +21,7 @@ class NauticalHudBannerView @JvmOverloads constructor(
     defStyleAttr: Int = 0,
 ) : FrameLayout(context, attrs, defStyleAttr), INauticalHudHeader {
 
+    private val wearOsManager = WearOsNauticalManager(context)
     private val messageTextView: TextView
     private val contentLayout: LinearLayout
     private var slideToConfirmView: SlideToConfirmView? = null
@@ -56,10 +58,18 @@ class NauticalHudBannerView @JvmOverloads constructor(
         val closeButton = ImageView(context).apply {
             setImageResource(R.drawable.ic_action_remove_dark)
             val size = AndroidUtils.dpToPx(context, 24f)
+            val isWatch = wearOsManager.isWatchMode()
+            
             layoutParams = LayoutParams(size, size).apply {
-                gravity = Gravity.TOP or Gravity.END
-                topMargin = AndroidUtils.dpToPx(context, 4f)
-                rightMargin = AndroidUtils.dpToPx(context, 4f)
+                if (isWatch) {
+                    // Center-bottom for watches to avoid bezel corners
+                    gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
+                    bottomMargin = AndroidUtils.dpToPx(context, 4f)
+                } else {
+                    gravity = Gravity.TOP or Gravity.END
+                    topMargin = AndroidUtils.dpToPx(context, 4f)
+                    rightMargin = AndroidUtils.dpToPx(context, 4f)
+                }
             }
             setColorFilter(Color.WHITE)
             setOnClickListener { dismiss() }

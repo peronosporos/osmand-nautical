@@ -35,7 +35,7 @@ class NauticalSwitchesBottomSheet : BaseMaterialBottomSheetDialogFragment() {
 
         viewLifecycleOwner.lifecycleScope.launch {
             NauticalPlugin.engine?.marineStateFlow?.collectLatest { state ->
-                adapter.updateSwitches(state.switches)
+                adapter.updateData(state.switches, state.dimmers, state.pathMeta)
             }
         }
 

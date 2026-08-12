@@ -22,7 +22,7 @@ enum class WizardState {
 data class PolarCell(
     val tws: Double,
     val twa: Double,
-    var sampleCount: Int = 0,
+    var sampleCount: Double = 0.0,
     var averageSpeed: Double = 0.0,
 )
 
@@ -66,7 +66,7 @@ class PolarConfigViewModel : ViewModel() {
         val cells = mutableListOf<PolarCell>()
         for (tws in twsAxes) {
             for (twa in twaAxes) {
-                cells.add(PolarCell(tws, twa, 0, 0.0))
+                cells.add(PolarCell(tws, twa, 0.0, 0.0))
             }
         }
         _heatmapCells.value = cells
@@ -168,24 +168,56 @@ class PolarConfigViewModel : ViewModel() {
     }
 
     fun recordDataPoint(currentTws: Double, currentTwa: Double, currentSpeed: Double) {
+        // Item 17: Skip recording if prerequisites not met
+        if (!_engineOff.value || !_sensorsCalibrated.value) return
+        if (currentSpeed < 0.2) return // Vessel stationary
+
         val cells = _heatmapCells.value.toMutableList()
-        // Find closest cell
-        val cellIndex = cells.indexOfFirst { abs(it.tws - currentTws) < 1.0 && abs(it.twa - currentTwa) < 5.0 }
         
-        if (cellIndex != -1) {
-            val cell = cells[cellIndex]
-            val newCount = cell.sampleCount + 1
-            val newAvg = ((cell.averageSpeed * cell.sampleCount) + currentSpeed) / newCount
-            cells[cellIndex] = cell.copy(sampleCount = newCount, averageSpeed = newAvg)
-            _heatmapCells.value = cells.toList()
-            updateQualityScore(cells)
+        // TASK-009: Bilinear Distribution for smoother polar recording
+        val tws1Idx = twsAxes.indexOfLast { it <= currentTws }.coerceIn(0, twsAxes.size - 2)
+        val tws2Idx = tws1Idx + 1
+        val twa1Idx = twaAxes.indexOfLast { it <= currentTwa }.coerceIn(0, twaAxes.size - 2)
+        val twa2Idx = twa1Idx + 1
+
+        val tws1 = twsAxes[tws1Idx]; val tws2 = twsAxes[tws2Idx]
+        val twa1 = twaAxes[twa1Idx]; val twa2 = twaAxes[twa2Idx]
+
+        val twsCoeff = ((currentTws - tws1) / (tws2 - tws1)).coerceIn(0.0, 1.0)
+        val twaCoeff = ((currentTwa - twa1) / (twa2 - twa1)).coerceIn(0.0, 1.0)
+
+        val weights = listOf(
+            (1.0 - twsCoeff) * (1.0 - twaCoeff), // (tws1, twa1)
+            twsCoeff * (1.0 - twaCoeff),         // (tws2, twa1)
+            (1.0 - twsCoeff) * twaCoeff,         // (tws1, twa2)
+            twsCoeff * twaCoeff                  // (tws2, twa2)
+        )
+
+        val targetPoints = listOf(
+            Pair(tws1, twa1), Pair(tws2, twa1), Pair(tws1, twa2), Pair(tws2, twa2)
+        )
+
+        for (i in weights.indices) {
+            val weight = weights[i]
+            if (weight < 0.01) continue
+
+            val target = targetPoints[i]
+            val cellIndex = cells.indexOfFirst { it.tws == target.first && it.twa == target.second }
+            if (cellIndex != -1) {
+                val cell = cells[cellIndex]
+                val newSampleCount = cell.sampleCount + weight // Item 8: Use Double for precision
+                val newAvg = ((cell.averageSpeed * cell.sampleCount) + (currentSpeed * weight)) / newSampleCount
+                cells[cellIndex] = cell.copy(sampleCount = newSampleCount, averageSpeed = newAvg)
+            }
         }
 
+        _heatmapCells.value = cells.toList()
+        updateQualityScore(cells)
         updateRecommendation(currentTws, currentTwa)
     }
 
     private fun updateQualityScore(cells: List<PolarCell>) {
-        val populated = cells.count { it.sampleCount > 0 }
+        val populated = cells.count { it.sampleCount >= 1.0 }
         val score = (populated.toFloat() / cells.size * 100).toInt()
         _qualityScore.value = score
     }

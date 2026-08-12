@@ -3,13 +3,18 @@ package net.osmand.plus.plugins.nautical.ui
 import android.content.Context
 import android.graphics.Color
 import android.util.AttributeSet
+import android.view.GestureDetector
 import android.view.LayoutInflater
+import android.view.MotionEvent
 import android.widget.FrameLayout
 import android.widget.TextView
 import androidx.core.content.ContextCompat
+import net.osmand.data.LatLon
 import net.osmand.plus.R
+import net.osmand.plus.plugins.nautical.NauticalPlugin
 import net.osmand.plus.plugins.nautical.engine.MarineState
 import net.osmand.plus.plugins.nautical.engine.SignalKUnitConverter
+import net.osmand.plus.plugins.nautical.mob.viewmodel.MobTriggerSource
 import java.util.*
 
 /**
@@ -27,6 +32,35 @@ class HeartbeatHudView @JvmOverloads constructor(
     private val xteText: TextView
     private var isAmbientMode = false
 
+    private val gestureDetector = GestureDetector(context, object : GestureDetector.SimpleOnGestureListener() {
+        override fun onDoubleTap(e: MotionEvent): Boolean {
+            // Acknowledge the most severe active alarm
+            val plugin = NauticalPlugin.getInstance()
+            val engine = NauticalPlugin.engine
+            val currentAlarms = engine?.getCurrentState()?.notifications ?: emptyMap()
+            if (currentAlarms.isNotEmpty()) {
+                val highestPath = currentAlarms.entries.maxByOrNull { it.value.state }?.key
+                highestPath?.let { path ->
+                    engine?.acknowledgeNotification(path)
+                    val app = context.applicationContext as net.osmand.plus.OsmandApplication
+                    app.showToastMessage(R.string.nautical_alarm_acknowledged)
+                    return true
+                }
+            }
+            return false
+        }
+
+        override fun onLongPress(e: MotionEvent) {
+            // Safety: Trigger MOB on long-press of the heartbeat HUD
+            val app = context.applicationContext as net.osmand.plus.OsmandApplication
+            val loc = app.locationProvider.lastKnownLocation
+            if (loc != null) {
+                NauticalPlugin.getInstance()?.mobViewModel?.triggerMob(LatLon(loc.latitude, loc.longitude), MobTriggerSource.MAP)
+                app.showToastMessage(R.string.nautical_mob_label)
+            }
+        }
+    })
+
     init {
         LayoutInflater.from(context).inflate(R.layout.nautical_heartbeat_hud, this, true)
         headingText = findViewById(R.id.heartbeat_heading)
@@ -35,6 +69,19 @@ class HeartbeatHudView @JvmOverloads constructor(
         
         setBackgroundResource(R.drawable.bg_nautical_hud_panel)
         applyWatchPadding()
+
+        isClickable = true
+        isFocusable = true
+        setOnTouchListener { v, event -> 
+            if (gestureDetector.onTouchEvent(event)) {
+                true
+            } else {
+                if (event.action == MotionEvent.ACTION_UP) {
+                    v.performClick()
+                }
+                false
+            }
+        }
     }
 
     fun setAmbientMode(enabled: Boolean) {

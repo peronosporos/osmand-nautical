@@ -1,46 +1,30 @@
-# Implementation Plan: Resource Management & Adaptive UI/UX
+# Implementation Plan - Unify Authentication Feedback (Item 4)
 
-This plan focuses on maximizing server offloading to save Android resources and ensuring the UI dynamically adapts to the Signal K server's capabilities.
+This plan addresses the redundancy and inconsistency in authentication feedback across the Nautical plugin. We will centralize auth error signaling through `SignalKEngine.triggerAuthError()` and ensure a consistent persistent UI banner is shown.
 
 ## User Review Required
 
 > [!IMPORTANT]
-> **CPA Offloading:** I will modify `NauticalAisManager` to disable its internal local CPA calculation timer if the Signal K server provides `navigation.closestApproach` (detected via `hasAisPrioritizer` or the path existing).
->
-> **Widget Filtering:** I will update the `isAllowed` logic for widgets to hide hardware-specific instruments (Media, Windlass, Watermaker) when the server doesn't report these capabilities.
+> We are moving away from transient Toast messages for authentication errors in the Pilot Bottom Sheet. Instead, users will see a persistent HUD Banner that allows them to jump directly to Nautical Settings to fix their credentials.
 
 ## Proposed Changes
 
-### [Nautical Engine]
-
-#### [MODIFY] [NauticalAisManager.kt](file:///home/administrator/AndroidStudioProjects/osmand-nautical/OsmAnd/src/net/osmand/plus/plugins/nautical/engine/NauticalAisManager.kt)
-- Add a listener to `CapabilityManager`.
-- If `hasAisPrioritizer` or `hasAdvancedSafety` is true, stop the local `cpaTimer` and rely on `MarineState.cpa` populated by the server.
+### [Nautical Plugin]
 
 #### [MODIFY] [SignalKEngine.kt](file:///home/administrator/AndroidStudioProjects/osmand-nautical/OsmAnd/src/net/osmand/plus/plugins/nautical/engine/SignalKEngine.kt)
-- Refine `finalizeAndNotifyState` to ensure *all* derived calculations (Set/Drift, Leeway, VMG) are skipped when server counterparts exist.
-- Ensure `parsingScope` and `deltaFlushJob` are handled with strict lifecycle management to prevent leaks.
+- No changes needed to the logic, but confirm `triggerAuthError()` is public and accessible.
 
-### [Nautical UI]
+#### [MODIFY] [AutopilotController.kt](file:///home/administrator/AndroidStudioProjects/osmand-nautical/OsmAnd/src/net/osmand/plus/plugins/nautical/engine/AutopilotController.kt)
+- In `executePut`, replace manual Banner creation for 401/403 errors with a call to `NauticalPlugin.engine?.triggerAuthError()`.
+- Also use `triggerAuthError()` when credentials (token or user/pass) are missing entirely.
 
-#### [MODIFY] [WidgetType.java](file:///home/administrator/AndroidStudioProjects/osmand-nautical/OsmAnd/src/net/osmand/plus/views/mapwidgets/WidgetType.java)
-- Link `isAllowed()` for `NAUTICAL_MEDIA`, `NAUTICAL_WATERMAKER`, `NAUTICAL_ACTUATOR` to the respective `CapabilityManager` flags.
-
-#### [MODIFY] [NauticalSettingsFragment.kt](file:///home/administrator/AndroidStudioProjects/osmand-nautical/OsmAnd/src/net/osmand/plus/plugins/nautical/NauticalSettingsFragment.kt)
-- Dynamically hide "Autopilot Tuning", "Vessel Details", and "Switch Panel" categories if the server doesn't support those functional groups.
-- Move "Boat AI" and "Checklists" into a dedicated "Smart Assistant" category that only appears when capabilities are present.
-
-### [Code Quality]
-
-#### [MODIFY] [MarineTextWidget.kt](file:///home/administrator/AndroidStudioProjects/osmand-nautical/OsmAnd/src/net/osmand/plus/views/mapwidgets/widgets/MarineTextWidget.kt)
-- Remove any hardcoded path logic that overlaps with standard `SignalKPaths`.
-- Ensure `IntegrityState` logic uses `stalePaths` effectively to dim widgets without redundant age calculations.
+#### [MODIFY] [NauticalPilotBottomSheet.kt](file:///home/administrator/AndroidStudioProjects/osmand-nautical/OsmAnd/src/net/osmand/plus/plugins/nautical/ui/widgets/NauticalPilotBottomSheet.kt)
+- Refactor `checkAuthToken()` to call `engine?.triggerAuthError()` if authentication fails, instead of showing a Toast.
+- Ensure the HUD banner's persistent nature is respected (avoiding multiple overlapping banners).
 
 ## Verification Plan
 
-### Performance Audit
-- Verify that the local `cpaTimer` is NOT running when connected to a server with `collision-detector`.
-- Check RAM usage with/without `hasHistory` capability active.
-
-### UI Audit
-- Verify that the "Configure Screen" list doesn't show "Fusion Media" if no media plugin is detected on the server.
+### Manual Verification
+1.  **Pilot Bottom Sheet**: Attempt to nudge or change mode without valid credentials. Verify a HUD Banner appears with a "Settings" button, and no Toast is shown.
+2.  **Autopilot Controller**: Trigger a 401 error from the server (e.g. by using an expired token). Verify the same HUD Banner appears.
+3.  **Settings Navigation**: Click the "Settings" button on the banner and verify it opens the Nautical Settings screen.

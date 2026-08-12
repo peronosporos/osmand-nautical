@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/maneuver_overlay_container"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
@@ -7,16 +8,33 @@
     android:padding="16dp"
     android:background="#000000">
 
-    <TextView
-        android:id="@+id/status_text"
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="@string/nautical_maneuver_state_armed"
-        android:textColor="#FFFF00"
-        android:textSize="28sp"
-        android:textStyle="bold"
-        android:gravity="center"
-        android:paddingBottom="8dp"/>
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingBottom="8dp">
+
+        <ImageView
+            android:id="@+id/maneuver_icon"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_marginEnd="12dp"
+            android:visibility="gone"
+            android:contentDescription="@null"
+            app:tint="?attr/nautical_status_yellow" />
+
+        <TextView
+            android:id="@+id/status_text"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/nautical_maneuver_state_armed"
+            android:textColor="?attr/nautical_status_yellow"
+            android:textSize="28sp"
+            android:textStyle="bold"
+            android:gravity="start|center_vertical"/>
+    </LinearLayout>
 
     <TextView
         android:id="@+id/collision_alert_text"
@@ -70,7 +88,7 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:text="@string/nautical_hdg_no_data"
-            android:textColor="#00FF00"
+            android:textColor="?attr/nautical_status_green"
             android:textSize="22sp"
             android:textStyle="bold"
             android:gravity="center"/>
@@ -81,7 +99,7 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:text="@string/nautical_awa_no_data"
-            android:textColor="#00FF00"
+            android:textColor="?attr/nautical_status_green"
             android:textSize="22sp"
             android:textStyle="bold"
             android:gravity="center"/>
@@ -94,10 +112,16 @@
         android:layout_height="8dp"
         android:layout_marginBottom="16dp"
         android:progressDrawable="@android:drawable/progress_horizontal"
-        android:progressTint="#00FF00"
+        android:progressTint="?attr/nautical_status_green"
         android:max="100"
         android:progress="0"
         android:visibility="gone"/>
+
+    <net.osmand.plus.plugins.nautical.ui.SlideToConfirmView
+        android:id="@+id/slide_execute"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:visibility="gone" />
 
     <com.google.android.material.button.MaterialButton
         android:id="@+id/btn_execute"
@@ -106,18 +130,13 @@
         android:text="@string/maneuver_execute"
         android:textSize="32sp"
         android:textStyle="bold"
-        android:backgroundTint="#00FF00"
+        android:backgroundTint="?attr/nautical_status_green"
         android:textColor="#000000" />
 
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/btn_done"
+    <net.osmand.plus.plugins.nautical.ui.SlideToConfirmView
+        android:id="@+id/slide_done"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="@string/shared_string_done"
-        android:textSize="32sp"
-        android:textStyle="bold"
-        android:backgroundTint="#00FF00"
-        android:textColor="#000000"
         android:visibility="gone" />
 
     <com.google.android.material.button.MaterialButton
@@ -128,7 +147,7 @@
         android:text="@string/shared_string_cancel"
         android:textSize="20sp"
         android:textStyle="bold"
-        android:backgroundTint="#FF0000"
+        android:backgroundTint="?attr/nautical_status_red"
         android:textColor="#000000" />
 
 </LinearLayout>

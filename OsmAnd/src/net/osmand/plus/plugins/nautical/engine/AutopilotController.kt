@@ -15,6 +15,8 @@ import java.io.IOException
 import java.util.Locale
 import kotlin.math.*
 import kotlinx.coroutines.*
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlin.time.Duration.Companion.milliseconds
 
 import android.content.Context
@@ -104,11 +106,18 @@ class AutopilotController(
 
     private companion object {
         val JSON = "application/json; charset=utf-8".toMediaType()
-        private const val HEADING_ADJUST_DEBOUNCE_MS = 300L
     }
 
-    private var pendingHeadingDelta = 0.0
-    private var headingAdjustJob: Job? = null
+    private var pendingManualDelta = 0.0
+    private var manualAdjustJob: Job? = null
+
+    private var pendingAutomatedDelta = 0.0
+    private var automatedAdjustJob: Job? = null
+    
+    private var lastAppliedWaveBias = 0.0
+    val activeWaveBias: Double get() = lastAppliedWaveBias
+    private var lastWaveBiasTime = 0L
+    private val biasMutex = Mutex()
 
     private fun vibrateShort() {
         val vibrator = app.getSystemService(Vibrator::class.java)
@@ -124,7 +133,9 @@ class AutopilotController(
 
     private fun showPersistentError(messageRes: Int, code: Int? = null) {
         val msg = if (code != null) app.getString(messageRes) + " (Error $code)" else app.getString(messageRes)
-        NauticalPlugin.hudManager?.get()?.showBanner(msg, 0, isWarning = true)
+        app.runInUIThread {
+            NauticalPlugin.hudManager?.get()?.showBanner(msg, 0, isWarning = true)
+        }
     }
 
     fun pushAllSettings() {
@@ -257,11 +268,13 @@ class AutopilotController(
         }
     }
 
-    private fun showArbitrationWarning(e: HelmLockedException? = null) {
+    private fun showArbitrationWarning(e: HelmLockedException? = null, suppressionReason: String? = null) {
+        if (suppressionReason == app.getString(R.string.nautical_predictive_steering)) return // Bug #8: Suppress automated warnings
+        
         val maneuver = NauticalHelmArbitrator.getInstance(app).getActiveManeuver()
-        val reason = maneuver ?: e?.let { "Priority ${it.activePriority}" } ?: app.getString(R.string.nautical_target_vessel)
+        val displayReason = maneuver ?: e?.let { "Priority ${it.activePriority}" } ?: app.getString(R.string.nautical_target_vessel)
         NauticalPlugin.hudManager?.get()?.showBanner(
-            app.getString(R.string.nautical_autopilot_rejected_maneuver, app.getString(R.string.nautical_autopilot_rejected), reason),
+            app.getString(R.string.nautical_autopilot_rejected_maneuver, app.getString(R.string.nautical_autopilot_rejected), displayReason),
             5000,
             isWarning = true,
         )
@@ -271,28 +284,39 @@ class AutopilotController(
         reconciliationJob?.cancel()
         val timeoutMs = app.settings.NAUTICAL_COMMAND_TIMEOUT_MS.get().toLong()
         reconciliationJob = controllerScope.launch {
-            delay(timeoutMs.milliseconds)
-            val engine = NauticalPlugin.engine
-            val currentState = engine?.getCurrentState()
-            
-            val isPending = when (path) {
-                "steering.autopilot.target.headingTrue" -> currentState?.pendingTargetHeading != null
-                "steering.autopilot.state" -> currentState?.pendingAutopilotState != null
-                else -> currentState?.pendingCommandPath != null
-            }
+            try {
+                delay(timeoutMs.milliseconds)
+                val engine = NauticalPlugin.engine
+                val currentState = engine?.getCurrentState()
+                
+                val isPending = when (path) {
+                    "steering.autopilot.target.headingTrue" -> currentState?.pendingTargetHeading != null
+                    "steering.autopilot.state" -> currentState?.pendingAutopilotState != null
+                    else -> currentState?.pendingCommandPath != null
+                }
 
-            if (isPending) {
-                log.warn("Autopilot command confirmation timeout (${timeoutMs}ms) for $path. Reverting pending state.")
-                engine?.updatePendingCommand(targetHeading = null, mode = null, path = null)
-                showPersistentError(R.string.nautical_toast_conn_failed)
-                NauticalAudioArbiter.getInstance(app).dispatchAlarm(
-                    AlarmType.AUTOPILOT_COMMAND_REJECTED,
-                    voiceText = app.getString(R.string.nautical_autopilot_rejected),
-                )
-                vibrateShort()
+                if (isPending) {
+                    log.warn("Autopilot command confirmation timeout (${timeoutMs}ms) for $path. Reverting pending state.")
+                    engine?.updatePendingCommand(targetHeading = null, mode = null, path = null)
+                    showPersistentError(R.string.nautical_toast_conn_failed)
+                    NauticalAudioArbiter.getInstance(app).dispatchAlarm(
+                        AlarmType.AUTOPILOT_COMMAND_REJECTED,
+                        voiceText = app.getString(R.string.nautical_autopilot_rejected),
+                    )
+                    vibrateShort()
+                }
+            } finally {
+                // ITEM 1 & 5 FIX: Avoid releasing lock if cancelled by a subsequent command.
+                // Force release tactical locks on actual timeout or completion to avoid "sticky" hangs.
+                if (isActive) { 
+                    withContext(NonCancellable) {
+                        priority?.let { 
+                            val force = (priority == NauticalHelmArbitrator.PRIORITY_TACTICAL_MANEUVER)
+                            NauticalHelmArbitrator.getInstance(app).releaseLock(it, force = force) 
+                        }
+                    }
+                }
             }
-            // Release helm lock after reconciliation completion or timeout
-            priority?.let { NauticalHelmArbitrator.getInstance(app).releaseLock(it) }
         }
     }
 
@@ -304,6 +328,16 @@ class AutopilotController(
             return
         }
         val payload = """{ "value": $rad }"""
+        executePut(url, payload, null, showToast = false)
+    }
+
+    fun setRudderAngle(radians: Double) {
+        val url = buildAutopilotUrl("target/rudderAngle")
+        if (url == null) {
+            showPersistentError(R.string.nautical_autopilot_not_connected)
+            return
+        }
+        val payload = """{ "value": $radians }"""
         executePut(url, payload, null, showToast = false)
     }
 
@@ -342,6 +376,18 @@ class AutopilotController(
             else -> buildVesselUrl("steering/autopilot/$path")
         }
     }
+
+    val state: kotlinx.coroutines.flow.StateFlow<String> = broker?.autopilotState ?: kotlinx.coroutines.flow.MutableStateFlow("standby")
+
+    fun isEngaged(): Boolean {
+        val currentMode = state.value.lowercase(Locale.US)
+        return currentMode != "standby" && currentMode != "off"
+    }
+
+    val targetHeadingMag: kotlinx.coroutines.flow.StateFlow<Double?> = broker?.autopilotTargetHeadingMag ?: kotlinx.coroutines.flow.MutableStateFlow(null)
+
+    fun engage() = setAutopilotMode("auto")
+    fun disengage() = setAutopilotMode("standby")
 
     fun setAutopilotMode(mode: String) {
         val modeLower = mode.lowercase(Locale.US)
@@ -443,28 +489,48 @@ class AutopilotController(
     }
 
     fun adjustHeading(deltaDegrees: Double) {
-        pendingHeadingDelta += deltaDegrees
-        headingAdjustJob?.cancel()
-        headingAdjustJob = controllerScope.launch {
-            delay(HEADING_ADJUST_DEBOUNCE_MS.milliseconds)
-            val totalDelta = pendingHeadingDelta
-            pendingHeadingDelta = 0.0
-            dispatchAdjustHeading(totalDelta)
+        pendingManualDelta += deltaDegrees
+        manualAdjustJob?.cancel()
+        manualAdjustJob = controllerScope.launch {
+            delay(300.milliseconds)
+            val totalDelta = pendingManualDelta
+            pendingManualDelta = 0.0
+            dispatchAdjustHeading(totalDelta, app.getString(R.string.nautical_ap_priority_manual))
         }
     }
 
-    private fun dispatchAdjustHeading(deltaDegrees: Double) {
+    private fun dispatchAutomatedNudge(deltaDegrees: Double) {
+        pendingAutomatedDelta += deltaDegrees
+        
+        automatedAdjustJob?.cancel()
+        automatedAdjustJob = controllerScope.launch {
+            // Bug #7: If manual job is active, wait and retry after a short delay
+            while (manualAdjustJob?.isActive == true) {
+                delay(200)
+            }
+            
+            val totalDelta = pendingAutomatedDelta
+            if (abs(totalDelta) > 0.1) {
+                pendingAutomatedDelta = 0.0
+                dispatchAdjustHeading(totalDelta, app.getString(R.string.nautical_predictive_steering))
+            }
+        }
+    }
+
+    private fun dispatchAdjustHeading(deltaDegrees: Double, reason: String) {
         val arbitrator = NauticalHelmArbitrator.getInstance(app)
         try {
-            arbitrator.acquireLock(NauticalHelmArbitrator.PRIORITY_STANDBY_MANUAL, "Heading Nudge")
+            arbitrator.acquireLock(NauticalHelmArbitrator.PRIORITY_STANDBY_MANUAL, reason)
             
             val currentState = NauticalPlugin.engine?.getCurrentState()
             val mode = currentState?.autopilotState?.uppercase(Locale.US) ?: "STANDBY"
 
-            // Virtual Rudder Fallback: Simulate rudder movement if physical sensor is missing
+            // ITEM 8 FIX: Damping for virtual rudder
             if (currentState?.rudderAngle == null) {
                 val currentSim = currentState?.simulatedRudderAngle ?: 0.0
-                val nextSim = (currentSim + Math.toRadians(deltaDegrees)).coerceIn(-Math.toRadians(35.0), Math.toRadians(35.0))
+                // Apply 30% damping to nudges for smoother virtual wheel movement
+                val smoothedDelta = Math.toRadians(deltaDegrees) * 0.7 
+                val nextSim = (currentSim + smoothedDelta).coerceIn(-Math.toRadians(35.0), Math.toRadians(35.0))
                 broker?.updateSimulatedRudder(nextSim)
             }
 
@@ -475,6 +541,11 @@ class AutopilotController(
                     if (newTargetRad > Math.PI) newTargetRad -= 2 * Math.PI
                     if (newTargetRad < -Math.PI) newTargetRad += 2 * Math.PI
                     setTargetWindAngle(Math.toDegrees(newTargetRad))
+                    
+                    // ITEM 3 FIX: Add voice feedback for physical nudge buttons
+                    if (reason == app.getString(R.string.nautical_ap_priority_manual)) {
+                        NauticalPlugin.getInstance()?.speakHeading(Math.toDegrees(newTargetRad).toInt())
+                    }
                 }
                 "TWA" -> {
                     val currentTarget = currentState?.trueWindAngle ?: 0.0
@@ -488,10 +559,15 @@ class AutopilotController(
                     val newTargetRad = (currentTarget + Math.toRadians(deltaDegrees)) % (2 * Math.PI)
                     val finalTarget = if (newTargetRad < 0) newTargetRad + (2 * Math.PI) else newTargetRad
                     setTargetHeading(Math.toDegrees(finalTarget))
+                    
+                    // ITEM 3 FIX: Add voice feedback for physical nudge buttons
+                    if (reason == app.getString(R.string.nautical_ap_priority_manual)) {
+                        NauticalPlugin.getInstance()?.speakHeading(Math.toDegrees(finalTarget).toInt())
+                    }
                 }
             }
         } catch (e: HelmLockedException) {
-            showArbitrationWarning(e)
+            showArbitrationWarning(e, reason)
         } finally {
             arbitrator.releaseLock(NauticalHelmArbitrator.PRIORITY_STANDBY_MANUAL)
         }
@@ -518,8 +594,8 @@ class AutopilotController(
         lastCalculationTime = now
 
         val engine = NauticalPlugin.engine ?: return
-        val rolls = engine.getRollHistory().asSequence().filter { (now - it.second) < 60000 }.map { it.first }.toList()
-        val pitches = engine.getPitchHistory().asSequence().filter { (now - it.second) < 60000 }.map { it.first }.toList()
+        val rolls = engine.getHistory("${SignalKPaths.NAV_ATTITUDE}.roll").asSequence().filter { (now - it.second) < 60000 }.map { it.first }.toList()
+        val pitches = engine.getHistory("${SignalKPaths.NAV_ATTITUDE}.pitch").asSequence().filter { (now - it.second) < 60000 }.map { it.first }.toList()
         
         if (rolls.isEmpty() && pitches.isEmpty()) return
         
@@ -597,17 +673,62 @@ class AutopilotController(
 
     fun stopPypilotCalibration(type: String) {
         val url = buildAutopilotUrl("calibration/$type/stop")
-        url?.let { executePut(it, """{ "value": true }""", R.string.nautical_command_sent, showToast = true) }
+        url?.let { executePut(it, """{ "value": false }""", R.string.nautical_command_sent, showToast = true) }
     }
 
-    fun tack(port: Boolean) {
+    /**
+     * Reconciles local UI state with the physical autopilot actuator.
+     * Prevents desynchronization after app restart or process death.
+     */
+    fun reconcileState() {
+        val url = buildAutopilotUrl("state") ?: return
+        controllerScope.launch(Dispatchers.IO) {
+            val requestBuilder = Request.Builder().url(url).get()
+            
+            val token = app.settings.NAUTICAL_SIGNAL_K_AUTH_TOKEN.get()
+            if (!token.isNullOrEmpty()) {
+                requestBuilder.addHeader("Authorization", "Bearer $token")
+            } else {
+                val username = app.settings.NAUTICAL_SERVER_USERNAME.get()
+                val password = app.settings.NAUTICAL_SERVER_PASSWORD.get()
+                if (!username.isNullOrEmpty() && !password.isNullOrEmpty()) {
+                    requestBuilder.addHeader("Authorization", Credentials.basic(username, password))
+                }
+            }
+
+            try {
+                val response = client.newCall(requestBuilder.build()).execute()
+                if (response.isSuccessful) {
+                    val body = response.body?.string()
+                    if (!body.isNullOrEmpty()) {
+                        val json = org.json.JSONObject(body)
+                        val hardwareMode = json.optString("value", "standby").lowercase(java.util.Locale.US)
+                        log.info("Nautical: Autopilot reconciliation: physical state is $hardwareMode")
+                        
+                        broker?.updateAutopilotState(hardwareMode)
+                    }
+                }
+                response.close()
+            } catch (e: Exception) {
+                log.error("Autopilot reconciliation failed: ${e.message}")
+            }
+        }
+    }
+
+    fun tack(direction: String, manageLock: Boolean = true) = tack(direction.lowercase(Locale.US) == "port", manageLock)
+    fun gybe(direction: String, manageLock: Boolean = true) = gybe(direction.lowercase(Locale.US) == "port", manageLock)
+
+    fun tack(port: Boolean, manageLock: Boolean = true) {
         val arbitrator = NauticalHelmArbitrator.getInstance(app)
         try {
-            arbitrator.acquireLock(NauticalHelmArbitrator.PRIORITY_TACTICAL_MANEUVER, app.getString(R.string.nautical_ap_priority_maneuver))
+            if (manageLock) {
+                arbitrator.acquireLock(NauticalHelmArbitrator.PRIORITY_TACTICAL_MANEUVER, app.getString(R.string.nautical_ap_priority_maneuver))
+            }
             
             val url = buildAutopilotUrl("actions/tack")
             if (url == null) {
                 showPersistentError(R.string.nautical_autopilot_not_connected)
+                if (manageLock) arbitrator.releaseLock(NauticalHelmArbitrator.PRIORITY_TACTICAL_MANEUVER)
                 return
             }
             val engine = NauticalPlugin.engine
@@ -617,22 +738,23 @@ class AutopilotController(
             val payload = """{ "value": "$value" }"""
             executePut(url, payload, R.string.nautical_command_sent, showToast = true)
             
-            startReconciliation("steering.autopilot.actions.tack", NauticalHelmArbitrator.PRIORITY_TACTICAL_MANEUVER)
+            startReconciliation("steering.autopilot.actions.tack", if (manageLock) NauticalHelmArbitrator.PRIORITY_TACTICAL_MANEUVER else null)
         } catch (e: HelmLockedException) {
             showArbitrationWarning(e)
         }
     }
 
-
-
-    fun gybe(port: Boolean) {
+    fun gybe(port: Boolean, manageLock: Boolean = true) {
         val arbitrator = NauticalHelmArbitrator.getInstance(app)
         try {
-            arbitrator.acquireLock(NauticalHelmArbitrator.PRIORITY_TACTICAL_MANEUVER, app.getString(R.string.nautical_ap_priority_maneuver))
+            if (manageLock) {
+                arbitrator.acquireLock(NauticalHelmArbitrator.PRIORITY_TACTICAL_MANEUVER, app.getString(R.string.nautical_ap_priority_maneuver))
+            }
             
             val url = buildAutopilotUrl("actions/gybe")
             if (url == null) {
                 showPersistentError(R.string.nautical_autopilot_not_connected)
+                if (manageLock) arbitrator.releaseLock(NauticalHelmArbitrator.PRIORITY_TACTICAL_MANEUVER)
                 return
             }
             val engine = NauticalPlugin.engine
@@ -642,7 +764,7 @@ class AutopilotController(
             val payload = """{ "value": "$value" }"""
             executePut(url, payload, R.string.nautical_command_sent, showToast = true)
 
-            startReconciliation("steering.autopilot.actions.gybe", NauticalHelmArbitrator.PRIORITY_TACTICAL_MANEUVER)
+            startReconciliation("steering.autopilot.actions.gybe", if (manageLock) NauticalHelmArbitrator.PRIORITY_TACTICAL_MANEUVER else null)
         } catch (e: HelmLockedException) {
             showArbitrationWarning(e)
         }
@@ -650,10 +772,17 @@ class AutopilotController(
 
 
 
-    fun shunt() {
+    fun shunt(manageWorkflow: Boolean = true) {
+        if (manageWorkflow) {
+            val mm = NauticalPlugin.getInstance()?.maneuverManager
+            mm?.setActiveManeuver("shunting")
+            mm?.execute()
+            return
+        }
+
         val arbitrator = NauticalHelmArbitrator.getInstance(app)
         try {
-            arbitrator.acquireLock(NauticalHelmArbitrator.PRIORITY_TACTICAL_MANEUVER, app.getString(R.string.nautical_ap_priority_maneuver))
+            arbitrator.acquireLock(NauticalHelmArbitrator.PRIORITY_TACTICAL_MANEUVER, app.getString(R.string.nautical_shunting))
             
             val engine = NauticalPlugin.engine ?: return
             val currentState = engine.getCurrentState()
@@ -731,36 +860,116 @@ class AutopilotController(
     fun applyWaveBias(state: MarineState) {
         if (!app.settings.NAUTICAL_PREDICTIVE_STEERING.get()) return
         
-        val grib = SailingDependencyContainer.gribRepository?.gridData ?: return
+        val mode = state.autopilotState.lowercase(Locale.US)
+        if (mode == "standby" || mode == "off") {
+            if (lastAppliedWaveBias != 0.0) {
+                updateWaveBias(0.0)
+            }
+            return
+        }
+        
+        val now = System.currentTimeMillis()
+        // Item 16: Throttle to 1Hz
+        if (now - lastWaveBiasTime < 1000) return
+        lastWaveBiasTime = now
+
+        val grib = SailingDependencyContainer.gribRepository?.gridData
+        if (grib == null) {
+            if (lastAppliedWaveBias != 0.0) updateWaveBias(0.0)
+            return
+        }
+        
         val lat = state.latitude ?: return
         val lon = state.longitude ?: return
-        val now = System.currentTimeMillis()
         
-        // TTL Check: Don't use wave data older than 3 hours to avoid dangerous steering on stale sea state
+        // Bug #3: GRIB TTL & Range Check
+        val firstStep = grib.timeSteps.minByOrNull { it.timestamp }
         val latestStep = grib.timeSteps.maxByOrNull { it.timestamp }
-        if ((latestStep != null) && ((now - latestStep.timestamp) > (3 * 3600 * 1000L))) {
+        
+        if (firstStep == null || latestStep == null || now < firstStep.timestamp || now > (latestStep.timestamp + 3600 * 1000L)) {
+            if (lastAppliedWaveBias != 0.0) updateWaveBias(0.0)
             return
         }
 
-        val wave = net.osmand.plus.plugins.nautical.grib.parser.GribInterpolationEngine(grib).getWaveData(lat, lon, now) ?: return
-        if (wave.height < 0.8) return // Only bias for significant waves
+        val wave = net.osmand.plus.plugins.nautical.grib.parser.GribInterpolationEngine(grib).getWaveData(lat, lon, now)
+        if (wave == null) {
+            if (lastAppliedWaveBias != 0.0) updateWaveBias(0.0)
+            return
+        }
+        
+        // Item 9: Adjustable Threshold
+        val threshold = app.settings.NAUTICAL_WAVE_NUDGE_THRESHOLD.get()
+        
+        // Bug #6: Motion Correlation (Roll Std Dev) - Default to FALSE if missing
+        val rollHistory = NauticalPlugin.engine?.getHistory("${SignalKPaths.NAV_ATTITUDE}.roll") ?: emptyList()
+        val recentRolls = rollHistory.filter { (now - it.second) < 30000 }.map { it.first }
+        
+        val significantMotion = if (recentRolls.size > 5) {
+            calculateStdDev(recentRolls) > Math.toRadians(1.0)
+        } else false 
+
+        if (wave.height < threshold || !significantMotion) {
+             updateWaveBias(0.0)
+             return
+        }
+
+        // Item 6: Refine wave direction logic & alignment check
+        var waveDirection = wave.direction
+        val liveWind = state.windDirectionTrue
+        if (liveWind != null) {
+            val gribWind = net.osmand.plus.plugins.nautical.grib.parser.GribInterpolationEngine(grib).getWindVector(lat, lon, now)
+            if (gribWind != null) {
+                 val diff = abs(net.osmand.util.MapUtils.degreesDiff(gribWind.direction, Math.toDegrees(liveWind)))
+                 if (diff > 120) { // Slightly tighter threshold for convention reversal
+                     waveDirection = (waveDirection + 180.0) % 360.0
+                     log.warn("Predictive Steering: GRIB convention mismatch detected. Reversing wave direction.")
+                 }
+                 
+                 // Bug #4: Relax misalignment threshold to 135°
+                 val finalDiff = abs(net.osmand.util.MapUtils.degreesDiff(waveDirection, Math.toDegrees(liveWind)))
+                 if (finalDiff > 135.0) {
+                     log.warn("Predictive Steering: Wave/Wind misalignment too high ($finalDiff°). Disabling nudge.")
+                     updateWaveBias(0.0)
+                     return
+                 }
+            }
+        }
 
         val hdg = state.headingTrue ?: return
-        val waveDirRad = Math.toRadians(wave.direction)
+        val waveDirRad = Math.toRadians(waveDirection)
         
         var relativeWave = waveDirRad - hdg
         while (relativeWave > PI) relativeWave -= 2 * PI
         while (relativeWave < -PI) relativeWave += 2 * PI
         
         val absRelWave = abs(relativeWave)
-        val minAngle = PI / 4.0
-        val maxAngle = 0.75 * PI
-        // Quartering or Beam seas: nudge slightly into the wave (windward/up-wave) to stabilize roll
-        if ((absRelWave >= minAngle) && (absRelWave <= maxAngle)) {
-            val sensitivity = app.settings.NAUTICAL_WAVE_BIAS_SENSITIVITY.get() / 100.0
-            val nudge = (if (relativeWave > 0) 5.0 else -5.0) * sensitivity * 2.0 // Scale for effect
-            log.info("Predictive Steering: Wave $nudge deg bias applied (Sens: $sensitivity).")
-            adjustHeading(nudge)
+        
+        // Item 7: Angle Weighting (Max bias at beam sea, 0 at head/following)
+        val weight = sin(absRelWave).coerceAtLeast(0.0)
+        
+        // Item 6: Subtle base nudge (2.0 instead of 5.0)
+        val sensitivity = app.settings.NAUTICAL_WAVE_BIAS_SENSITIVITY.get() / 100.0
+        val baseNudge = 2.0 * sensitivity
+        
+        // Item 10: Linearity (Scale by wave height relative to 2m)
+        val heightFactor = (wave.height / 2.0).coerceIn(0.5, 2.5)
+        
+        val desiredBias = (if (relativeWave > 0) 1.0 else -1.0) * baseNudge * weight * heightFactor
+        
+        updateWaveBias(desiredBias)
+    }
+
+    private fun updateWaveBias(targetBias: Double) {
+        controllerScope.launch {
+            biasMutex.withLock {
+                val delta = targetBias - lastAppliedWaveBias
+                // Item 2 fix: Only nudge the DIFF. If diff < 0.5 deg, ignore chatter.
+                if (abs(delta) >= 0.5) {
+                    lastAppliedWaveBias = targetBias
+                    log.info("Predictive Steering: Applying ${String.format(Locale.US, "%.1f", delta)}° delta for ${String.format(Locale.US, "%.1f", targetBias)}° total bias.")
+                    dispatchAutomatedNudge(delta)
+                }
+            }
         }
     }
 
@@ -851,9 +1060,29 @@ class AutopilotController(
         controllerScope.cancel()
         activeCalls.forEach { it.cancel() }
         activeCalls.clear()
+        
+        // ITEM 5 FIX: Release any lingering tactical locks on stop
+        NauticalHelmArbitrator.getInstance(app).releaseLock(NauticalHelmArbitrator.PRIORITY_TACTICAL_MANEUVER, force = true)
     }
 
-    fun executePut(url: String, payload: String, successToastRes: Int?, showToast: Boolean, priority: Boolean = false) {
+    fun executePut(url: String, payload: String, successToastRes: Int?, showToast: Boolean, priority: Boolean = false, retryCount: Int = 0) {
+        // ITEM 2: Relax security for local IP ranges (RFC 1918)
+        val isLocal = serverIp.startsWith("127.0.0.1") || 
+                     serverIp.startsWith("localhost") ||
+                     serverIp.startsWith("192.168.") ||
+                     serverIp.startsWith("10.") ||
+                     (serverIp.startsWith("172.") && serverIp.split(".")[1].toIntOrNull() in 16..31)
+
+        if (!url.startsWith("https") && !isLocal) {
+            log.warn("Nautical: Refusing to send command over insecure HTTP to public IP: $url")
+            if (showToast) {
+                app.runInUIThread {
+                    showPersistentError(R.string.nautical_error_insecure_connection)
+                }
+            }
+            return
+        }
+
         val requestBuilder = Request.Builder().url(url).put(payload.toRequestBody(JSON))
         
         if (priority) {
@@ -869,9 +1098,7 @@ class AutopilotController(
             if (!username.isNullOrEmpty() && !password.isNullOrEmpty()) {
                 requestBuilder.addHeader("Authorization", Credentials.basic(username, password))
             } else if (showToast) {
-                app.runInUIThread {
-                    showPersistentError(R.string.nautical_auth_token_required)
-                }
+                NauticalPlugin.engine?.triggerAuthError()
             }
         }
 
@@ -885,6 +1112,17 @@ class AutopilotController(
                     activeCalls.remove(call)
                     if (call.isCanceled()) return
                     log.error("Request failed: ${e.message}")
+
+                    // ITEM 20: Retry logic for priority commands
+                    if (priority && retryCount < 3) {
+                        log.info("Nautical: Retrying priority command ($retryCount)...")
+                        controllerScope.launch {
+                            delay(1000)
+                            executePut(url, payload, successToastRes, showToast, priority, retryCount + 1)
+                        }
+                        return
+                    }
+
                     if (showToast) {
                         app.runInUIThread {
                             showPersistentError(R.string.nautical_toast_conn_failed)
@@ -900,10 +1138,21 @@ class AutopilotController(
                     }
                     if (!response.isSuccessful) {
                         log.error("Server error: ${response.code}")
+                        
+                        // ITEM 20: Retry logic for priority commands on server errors too (5xx)
+                        if (priority && response.code >= 500 && retryCount < 3) {
+                             response.close()
+                             controllerScope.launch {
+                                 delay(1000)
+                                 executePut(url, payload, successToastRes, showToast, priority, retryCount + 1)
+                             }
+                             return
+                        }
+
                         if (showToast) {
                             app.runInUIThread {
                                 if ((response.code == 401) || (response.code == 403)) {
-                                    showPersistentError(R.string.nautical_auth_failed)
+                                    NauticalPlugin.engine?.triggerAuthError()
                                 } else {
                                     showPersistentError(R.string.nautical_toast_server_error, response.code)
                                 }

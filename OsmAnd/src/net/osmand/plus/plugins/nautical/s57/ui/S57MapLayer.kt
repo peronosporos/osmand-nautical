@@ -22,6 +22,7 @@ import net.osmand.plus.views.layers.MapSelectionResult
 import net.osmand.plus.views.layers.MapSelectionRules
 import net.osmand.plus.views.layers.base.OsmandMapLayer
 import kotlinx.coroutines.*
+import kotlin.math.pow
 
 class S57MapLayer(context: Context, private val indexManager: S57SpatialIndex) : OsmandMapLayer(context), IContextMenuProvider {
 
@@ -41,17 +42,8 @@ class S57MapLayer(context: Context, private val indexManager: S57SpatialIndex) :
 
     override fun initLayer(view: OsmandMapTileView) {
         super.initLayer(view)
-        suppressBasemap(true)
     }
 
-    private fun suppressBasemap(suppress: Boolean) {
-        val app = application
-        val value = if (suppress) "true" else "false"
-        app.settings.getCustomRenderProperty("hide_sea_marks", "false").set(value)
-        app.settings.getCustomRenderProperty("hide_coastline", "false").set(value)
-        app.settings.getCustomRenderProperty("no_osm_nautical", "false").set(value)
-    }
-    
     // Coroutine scope for background processing
     private val layerScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     
@@ -62,8 +54,13 @@ class S57MapLayer(context: Context, private val indexManager: S57SpatialIndex) :
     private var lastQueryKey: String? = null
     private var updateJob: Job? = null
 
+    // Cache for hazards to avoid UI thread DB queries
+    private var hazardFeatures: List<S57Object> = emptyList()
+    private var lastHazardQueryBounds: RectF? = null
+
     private data class PreparedGeometry(
         val geometry: S57Geometry,
+        val jtsGeometry: com.vividsolutions.jts.geom.Geometry? = null,
         val path: Path? = null,
         val soundingText: String? = null,
         val isSoundingDeep: Boolean = false
@@ -89,20 +86,28 @@ class S57MapLayer(context: Context, private val indexManager: S57SpatialIndex) :
         val point = result.point
         val tileBox = result.tileBox
         val radius = getScaledTouchRadius(application, tileBox.defaultRadiusPoi) * TOUCH_RADIUS_MULTIPLIER
+        
+        // Approximate degrees per pixel
+        val degPerPix = 360.0 / (256.0 * 2.0.pow(tileBox.zoom))
+        val radiusDeg = radius * degPerPix
 
         val queryKey = lastQueryKey ?: return
         val preparedFeatures = preparedFeaturesCache.get(queryKey) ?: return
-
+        
+        val factory = com.vividsolutions.jts.geom.GeometryFactory()
+        val lon = tileBox.getLonFromPixel(point.x, point.y)
+        val lat = tileBox.getLatFromPixel(point.x, point.y)
+        val touchPoint = factory.createPoint(com.vividsolutions.jts.geom.Coordinate(lon, lat))
+        
         for (pf in preparedFeatures) {
             for (pg in pf.preparedGeometries) {
-                val latLon = when (val geometry = pg.geometry) {
-                    is S57Geometry.Point -> geometry.position
-                    is S57Geometry.Line -> geometry.nodes.firstOrNull()
-                    is S57Geometry.Area -> geometry.boundaries.firstOrNull()?.firstOrNull()
-                    else -> null
-                }
-                if (latLon != null && tileBox.isLatLonNearPixel(latLon.latitude, latLon.longitude, point.x, point.y, radius)) {
-                    result.collect(pf.originalObject, this)
+                val jtsGeo = pg.jtsGeometry ?: pg.geometry.toJtsGeometry(factory)
+                if (jtsGeo != null) {
+                    val dist = jtsGeo.distance(touchPoint)
+                    if (dist < radiusDeg) {
+                        result.collect(pf.originalObject, this)
+                        break 
+                    }
                 }
             }
         }
@@ -146,8 +151,9 @@ class S57MapLayer(context: Context, private val indexManager: S57SpatialIndex) :
         val qLeft = (bounds.left * 100).toInt() / 100.0
         val qBottom = (bounds.bottom * 100).toInt() / 100.0
         val qRight = (bounds.right * 100).toInt() / 100.0
+        val qRotate = (tileBox.rotate / 5).toInt() * 5 // Quantize rotation to 5 degrees
         
-        val queryKey = "${tileBox.zoom}_${qTop}_${qLeft}_${qBottom}_${qRight}"
+        val queryKey = "${tileBox.zoom}_${qTop}_${qLeft}_${qBottom}_${qRight}_$qRotate"
         val preparedFeatures = preparedFeaturesCache.get(queryKey)
         
         if (preparedFeatures == null) {
@@ -155,9 +161,7 @@ class S57MapLayer(context: Context, private val indexManager: S57SpatialIndex) :
                 lastQueryKey = queryKey
                 triggerPrepareFeatures(queryKey, tileBox, safetyDepth, shallowDepth)
             }
-            // Asynchronous Cache Fallback: while vector chart cell details load,
-            // force immediate rendering of point-hazard markers from local spatial index.
-            drawCriticalHazardsImmediately(canvas, tileBox, isNight)
+            drawCriticalHazardsFromCache(canvas, tileBox, isNight)
             return
         }
 
@@ -168,7 +172,6 @@ class S57MapLayer(context: Context, private val indexManager: S57SpatialIndex) :
             val scale = (tileBox.density * (tileBox.zoom / 15f)).coerceAtLeast(1.0f)
             
             for (pg in pf.preparedGeometries) {
-                // Strict frustum culling: check if geometry is within current tileBox
                 if (!isGeometryInViewport(pg.geometry, tileBox)) continue
 
                 when (val geometry = pg.geometry) {
@@ -250,6 +253,7 @@ class S57MapLayer(context: Context, private val indexManager: S57SpatialIndex) :
         
         val features = indexManager.queryFeatures(latMin, latMax, lonMin, lonMax)
         val tolerance = 0.0001 / tileBox.zoom
+        val factory = com.vividsolutions.jts.geom.GeometryFactory()
 
         val prepared = features.map { feature ->
             val style = S57FeatureStylizer.getStyleForFeature(feature, safetyDepth, shallowDepth)
@@ -260,19 +264,78 @@ class S57MapLayer(context: Context, private val indexManager: S57SpatialIndex) :
                 var isSoundingDeep = false
                 
                 if (tileBox.zoom >= 12 && feature.acronym == "SOUNDG" && optimized is S57Geometry.Point) {
-                    val depth = optimized.depth ?: feature.attributes["159"]?.toDoubleOrNull() ?: 0.0
+                    val depth = optimized.depth ?: feature.attributes["VALCO"]?.toDoubleOrNull() ?: 0.0
                     soundingText = "%.1f".format(Locale.US, depth)
                     isSoundingDeep = depth > safetyDepth
                 } else if (optimized is S57Geometry.Line || optimized is S57Geometry.Area) {
                     path = getPathFromGeometry(optimized, tileBox)
                 }
                 
-                PreparedGeometry(optimized, path, soundingText, isSoundingDeep)
+                PreparedGeometry(optimized, optimized.toJtsGeometry(factory), path, soundingText, isSoundingDeep)
             }
             PreparedFeature(feature, feature.id, feature.acronym, style, preparedGeoms, feature.attributes)
         }.sortedBy { it.style.priority }
 
         preparedFeaturesCache.put(key, prepared)
+        updateHazardsCache(latMin, latMax, lonMin, lonMax)
+    }
+
+    private fun updateHazardsCache(latMin: Double, latMax: Double, lonMin: Double, lonMax: Double) {
+        val queryBounds = RectF(lonMin.toFloat(), latMin.toFloat(), lonMax.toFloat(), latMax.toFloat())
+        if (lastHazardQueryBounds?.contains(queryBounds) == true) return
+        
+        layerScope.launch(Dispatchers.IO) {
+            val hazards = indexManager.queryFeatures(latMin, latMax, lonMin, lonMax, criticalHazards)
+            withContext(Dispatchers.Main) {
+                hazardFeatures = hazards
+                lastHazardQueryBounds = queryBounds
+            }
+        }
+    }
+
+    private fun drawCriticalHazardsFromCache(canvas: Canvas, tileBox: RotatedTileBox, isNight: Boolean) {
+        val features = hazardFeatures
+        if (features.isEmpty()) return
+
+        val scale = (tileBox.density * (tileBox.zoom / 15f)).coerceAtLeast(1.0f)
+
+        if (tileBox.zoom < 10) {
+            val clusterGrid = mutableMapOf<Pair<Int, Int>, Boolean>()
+            val bucketSize = 16f * tileBox.density
+
+            for (feature in features) {
+                for (geo in feature.geometries) {
+                    if (geo is S57Geometry.Point) {
+                        if (tileBox.containsLatLon(geo.position.latitude, geo.position.longitude)) {
+                            val px = tileBox.getPixXFromLatLon(geo.position.latitude, geo.position.longitude)
+                            val py = tileBox.getPixYFromLatLon(geo.position.latitude, geo.position.longitude)
+                            val bucketX = (px / bucketSize).toInt()
+                            val bucketY = (py / bucketSize).toInt()
+                            clusterGrid[bucketX to bucketY] = true
+                        }
+                    }
+                }
+            }
+
+            for ((bucket, _) in clusterGrid) {
+                val cx = (bucket.first + 0.5f) * bucketSize
+                val cy = (bucket.second + 0.5f) * bucketSize
+                S52SymbolManager.drawSymbol(canvas, SymbolId.HAZARD_CLUSTER, cx, cy, isNight, scale)
+            }
+        } else {
+            for (feature in features) {
+                val style = S57FeatureStylizer.getStyleForFeature(feature, 5.0, 2.0)
+                for (geo in feature.geometries) {
+                    if (geo is S57Geometry.Point && tileBox.containsLatLon(geo.position.latitude, geo.position.longitude)) {
+                        val x = tileBox.getPixXFromLatLon(geo.position.latitude, geo.position.longitude)
+                        val y = tileBox.getPixYFromLatLon(geo.position.latitude, geo.position.longitude)
+                        if (style.symbolId != null) {
+                            S52SymbolManager.drawSymbol(canvas, style.symbolId, x, y, isNight, scale)
+                        }
+                    }
+                }
+            }
+        }
     }
 
     private fun getPathFromGeometry(geometry: S57Geometry, tileBox: RotatedTileBox): Path {
@@ -312,62 +375,8 @@ class S57MapLayer(context: Context, private val indexManager: S57SpatialIndex) :
         return path
     }
 
-    private fun drawCriticalHazardsImmediately(canvas: Canvas, tileBox: RotatedTileBox, isNight: Boolean) {
-        val bounds = tileBox.latLonBounds
-        val features = indexManager.queryFeatures(
-            bounds.top.coerceAtMost(bounds.bottom), bounds.top.coerceAtLeast(bounds.bottom),
-            bounds.left.coerceAtMost(bounds.right), bounds.left.coerceAtLeast(bounds.right),
-            criticalHazards
-        )
-        if (features.isEmpty()) return
-
-        val scale = (tileBox.density * (tileBox.zoom / 15f)).coerceAtLeast(1.0f)
-
-        if (tileBox.zoom < 10) {
-            // SPATIAL CLUSTER HAZARD RULE:
-            // Implement a lightweight 16px x 16px grid-based screen-space bucket cluster.
-            val clusterGrid = mutableMapOf<Pair<Int, Int>, Boolean>()
-            val bucketSize = 16f * tileBox.density
-
-            for (feature in features) {
-                for (geo in feature.geometries) {
-                    if (geo is S57Geometry.Point) {
-                        if (tileBox.containsLatLon(geo.position.latitude, geo.position.longitude)) {
-                            val px = tileBox.getPixXFromLatLon(geo.position.latitude, geo.position.longitude)
-                            val py = tileBox.getPixYFromLatLon(geo.position.latitude, geo.position.longitude)
-                            val bucketX = (px / bucketSize).toInt()
-                            val bucketY = (py / bucketSize).toInt()
-                            clusterGrid[bucketX to bucketY] = true
-                        }
-                    }
-                }
-            }
-
-            for ((bucket, _) in clusterGrid) {
-                val cx = (bucket.first + 0.5f) * bucketSize
-                val cy = (bucket.second + 0.5f) * bucketSize
-                S52SymbolManager.drawSymbol(canvas, SymbolId.HAZARD_CLUSTER, cx, cy, isNight, scale)
-            }
-        } else {
-            // High-density direct render
-            for (feature in features) {
-                val style = S57FeatureStylizer.getStyleForFeature(feature, 5.0, 2.0) // Defaults for fallback
-                for (geo in feature.geometries) {
-                    if (geo is S57Geometry.Point && tileBox.containsLatLon(geo.position.latitude, geo.position.longitude)) {
-                        val x = tileBox.getPixXFromLatLon(geo.position.latitude, geo.position.longitude)
-                        val y = tileBox.getPixYFromLatLon(geo.position.latitude, geo.position.longitude)
-                        if (style.symbolId != null) {
-                            S52SymbolManager.drawSymbol(canvas, style.symbolId, x, y, isNight, scale)
-                        }
-                    }
-                }
-            }
-        }
-    }
-
     override fun destroyLayer() {
         super.destroyLayer()
-        suppressBasemap(false)
         layerScope.cancel()
     }
 }

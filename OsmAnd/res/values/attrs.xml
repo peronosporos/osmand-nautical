@@ -204,6 +204,10 @@
 	    <attr name="map_button_icon_color" format="reference"/>
         <attr name="nautical_alert_bg" format="color|reference"/>
         <attr name="nautical_alert_text" format="color|reference"/>
+        <attr name="nautical_status_green" format="color|reference"/>
+        <attr name="nautical_status_yellow" format="color|reference"/>
+        <attr name="nautical_status_red" format="color|reference"/>
+        <attr name="nautical_widget_background" format="color|reference"/>
     </declare-styleable>
 
     <declare-styleable name="PagerSlidingTabStrip">

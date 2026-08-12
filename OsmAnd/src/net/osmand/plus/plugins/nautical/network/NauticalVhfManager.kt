@@ -7,6 +7,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import net.osmand.PlatformUtil
 import net.osmand.plus.OsmandApplication
+import net.osmand.plus.R
 import net.osmand.plus.plugins.nautical.NauticalPlugin
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -33,6 +34,9 @@ class NauticalVhfManager(private val app: OsmandApplication) {
     private val _status = MutableStateFlow(VhfStatus.IDLE)
     val status = _status.asStateFlow()
 
+    private val _errorFlow = MutableStateFlow<String?>(null)
+    val errorFlow = _errorFlow.asStateFlow()
+
     private val _lastTransmission = MutableStateFlow<VhfTransmission?>(null)
     val lastTransmission = _lastTransmission.asStateFlow()
 
@@ -57,10 +61,10 @@ class NauticalVhfManager(private val app: OsmandApplication) {
                 }
             }
             
-            // Fallback low-frequency poll (e.g. 5 mins) instead of 10s
+            // Fallback frequency (30s) for responsiveness when SK is not available
             while (isActive) {
-                delay(300.seconds) 
                 pollBackend()
+                delay(30.seconds) 
             }
         }
     }
@@ -75,9 +79,7 @@ class NauticalVhfManager(private val app: OsmandApplication) {
         if (url.isEmpty()) return@withContext
 
         try {
-            // Assuming /api/recordings exists based on typical patterns for such apps
-            // or we might need to parse the HTML list. For now, we assume a JSON endpoint.
-            val request = Request.Builder().url("$url/api/recordings").build()
+            val request = Request.Builder().url("${url.trimEnd('/')}/api/recordings").build()
             client.newCall(request).execute().use { response ->
                 if (response.isSuccessful) {
                     val body = response.body?.string() ?: return@use
@@ -90,23 +92,47 @@ class NauticalVhfManager(private val app: OsmandApplication) {
                             timestamp = obj.getLong("timestamp"),
                             vesselName = if (obj.isNull("vessel_name")) null else obj.getString("vessel_name"),
                             channel = if (obj.isNull("channel")) null else obj.getString("channel"),
-                            audioUrl = "$url/recordings/${obj.getString("filename")}"
+                            audioUrl = "${url.trimEnd('/')}/recordings/${obj.getString("filename")}"
                         ))
                     }
                     val sorted = newList.sortedByDescending { it.timestamp }
+                    val previousLatestId = _lastTransmission.value?.id
                     _history.value = sorted
+                    _errorFlow.value = null
                     
                     val latest = sorted.firstOrNull()
-                    if (latest != null && latest.id != _lastTransmission.value?.id) {
+                    if (latest != null && latest.id != previousLatestId) {
                         _lastTransmission.value = latest
+                        
                         if (app.settings.NAUTICAL_VHF_AUTO_REPLAY.get() && !isStreaming.get()) {
                             playReplay(latest)
                         }
+
+                        // Background Notifications for ALL new transmissions
+                        val plugin = NauticalPlugin.getInstance()
+                        if (plugin?.application?.osmandMap?.mapView?.mapActivity == null || !plugin.isActive) {
+                             val newTransmissions = if (previousLatestId == null) {
+                                 listOf(latest)
+                             } else {
+                                 sorted.takeWhile { it.id != previousLatestId }
+                             }
+                             
+                             newTransmissions.forEach { tx ->
+                                 plugin?.notificationManager?.postCriticalNotification(
+                                     "vhf_transmission_${tx.id}",
+                                     app.getString(R.string.nautical_vhf_transmission_received, tx.channel ?: "??"),
+                                     tx.vesselName ?: app.getString(R.string.nautical_unknown_vessel)
+                                 )
+                             }
+                        }
                     }
+                } else {
+                    _errorFlow.value = "Backend error: ${response.code}"
                 }
             }
         } catch (e: Exception) {
             log.error("VHF Backend Poll Failed: ${e.message}")
+            _errorFlow.value = e.message
         }
     }
 
@@ -115,8 +141,10 @@ class NauticalVhfManager(private val app: OsmandApplication) {
             stopAudio()
         } else {
             val url = app.settings.NAUTICAL_VHF_BACKEND_URL.get()
+            val port = app.settings.NAUTICAL_VHF_STREAMING_PORT.get()
             if (url.isNotEmpty()) {
-                playStream("$url:8091")
+                val base = url.substringBeforeLast(":").substringBeforeLast("/")
+                playStream("$base:$port")
             }
         }
     }

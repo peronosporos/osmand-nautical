@@ -5,27 +5,32 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
-import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import net.osmand.plus.R
+import net.osmand.plus.plugins.nautical.ui.widgets.BaseNauticalBottomSheet
 import net.osmand.plus.plugins.nautical.NauticalPlugin
 import net.osmand.plus.plugins.nautical.engine.MarineState
+import net.osmand.plus.plugins.nautical.engine.SignalKPaths
 import net.osmand.plus.plugins.nautical.engine.SignalKUnitConverter
 import net.osmand.plus.views.mapwidgets.WidgetType
 
-class NauticalDataBottomSheet : BottomSheetDialogFragment() {
+class NauticalDataBottomSheet : BaseNauticalBottomSheet() {
 
     private var type: WidgetType? = null
     private var graph: NauticalGraphView? = null
     private var myListener: ((MarineState) -> Unit)? = null
+    private var lastUpdateTime: Long = 0
+    private val throttleMs = 500L
 
     companion object {
         private const val WIDGET_TYPE = "widget_type"
+        private const val WIDGET_INSTANCE = "widget_instance"
 
         @JvmStatic
-        fun newInstance(type: WidgetType): NauticalDataBottomSheet {
+        fun newInstance(type: WidgetType, instance: String = "0"): NauticalDataBottomSheet {
             val fragment = NauticalDataBottomSheet()
             val args = Bundle()
             args.putSerializable(WIDGET_TYPE, type)
+            args.putString(WIDGET_INSTANCE, instance)
             fragment.arguments = args
             return fragment
         }
@@ -47,9 +52,7 @@ class NauticalDataBottomSheet : BottomSheetDialogFragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-
-        val plugin = NauticalPlugin.getInstance()
-        plugin?.applyNightVisionFilter(view)
+        // Red filter handled by BaseNauticalBottomSheet
 
         val titleView = view.findViewById<TextView>(R.id.graph_title)
         graph = view.findViewById(R.id.graph_view)
@@ -113,9 +116,13 @@ class NauticalDataBottomSheet : BottomSheetDialogFragment() {
         super.onStart()
 
         myListener = { _ ->
-            view?.post {
-                if (!isAdded) return@post
-                updateGraphData()
+            val now = System.currentTimeMillis()
+            if (now - lastUpdateTime > throttleMs) {
+                lastUpdateTime = now
+                view?.post {
+                    if (!isAdded) return@post
+                    updateGraphData()
+                }
             }
         }
 
@@ -133,46 +140,87 @@ class NauticalDataBottomSheet : BottomSheetDialogFragment() {
         val engine = NauticalPlugin.engine ?: return
         val g = graph ?: return
         val ctx = context ?: return
+        val instance = arguments?.getString(WIDGET_INSTANCE) ?: "0"
 
-        val knotsCoeff = net.osmand.shared.units.SpeedUnits.KNOTS.conversionCoefficient
+        val path = when (type) {
+            WidgetType.NAUTICAL_DEPTH -> SignalKPaths.ENV_DEPTH_BELOW_TRANSDUCER
+            WidgetType.NAUTICAL_WIND -> SignalKPaths.ENV_WIND_SPEED_TRUE
+            WidgetType.NAUTICAL_VMG -> SignalKPaths.PERF_VMG
+            WidgetType.NAUTICAL_COG -> SignalKPaths.NAV_COURSE_OVER_GROUND
+            WidgetType.NAUTICAL_SOG -> SignalKPaths.NAV_SPEED_OVER_GROUND
+            WidgetType.NAUTICAL_STW -> SignalKPaths.NAV_SPEED_THROUGH_WATER
+            WidgetType.NAUTICAL_ENGINE_RPM -> "${SignalKPaths.PROPULSION_PREFIX}$instance.revolutions"
+            WidgetType.NAUTICAL_BATTERY_VOLT -> "${SignalKPaths.BATTERIES_PREFIX}$instance.voltage"
+            WidgetType.NAUTICAL_BATTERY_SOC -> "${SignalKPaths.BATTERIES_PREFIX}$instance.capacity.stateOfCharge"
+            WidgetType.NAUTICAL_ENGINE_TEMP -> "${SignalKPaths.PROPULSION_PREFIX}$instance.temperature"
+            WidgetType.NAUTICAL_WATER_TEMP -> SignalKPaths.ENV_WATER_TEMP
+            WidgetType.NAUTICAL_OUTSIDE_TEMP -> SignalKPaths.ENV_OUTSIDE_TEMP
+            WidgetType.NAUTICAL_PRESSURE -> SignalKPaths.ENV_OUTSIDE_PRESSURE
+            WidgetType.NAUTICAL_ROLL -> "${SignalKPaths.NAV_ATTITUDE}.roll"
+            WidgetType.NAUTICAL_PITCH -> "${SignalKPaths.NAV_ATTITUDE}.pitch"
+            WidgetType.NAUTICAL_ROT -> SignalKPaths.NAV_RATE_OF_TURN
+            WidgetType.NAUTICAL_XTE -> SignalKPaths.NAV_XTE
+            WidgetType.NAUTICAL_DTW -> SignalKPaths.NAV_DTW
+            WidgetType.NAUTICAL_AWA -> SignalKPaths.ENV_WIND_ANGLE_APPARENT
+            WidgetType.NAUTICAL_AWS -> SignalKPaths.ENV_WIND_SPEED_APPARENT
+            WidgetType.NAUTICAL_TWA -> SignalKPaths.ENV_WIND_ANGLE_TRUE
+            WidgetType.NAUTICAL_POLAR_RATIO -> SignalKPaths.PERF_POLAR_RATIO
+            WidgetType.NAUTICAL_HEADING_MAGNETIC -> SignalKPaths.NAV_HEADING_MAG
+            WidgetType.NAUTICAL_LOG -> SignalKPaths.NAV_LOG
+            WidgetType.NAUTICAL_TRIP_LOG -> SignalKPaths.NAV_TRIP_LOG
+            WidgetType.NAUTICAL_DEPTH_KEEL -> SignalKPaths.ENV_DEPTH_BELOW_KEEL
+            WidgetType.NAUTICAL_FUEL_LEVEL -> "${SignalKPaths.TANKS_PREFIX}fuel.$instance.currentLevel"
+            WidgetType.NAUTICAL_FRESH_WATER_LEVEL -> "${SignalKPaths.TANKS_PREFIX}freshWater.$instance.currentLevel"
+            WidgetType.NAUTICAL_WASTE_WATER_LEVEL -> "${SignalKPaths.TANKS_PREFIX}wasteWater.$instance.currentLevel"
+            WidgetType.NAUTICAL_OIL_PRESSURE -> "${SignalKPaths.PROPULSION_PREFIX}$instance.oilPressure"
+            WidgetType.NAUTICAL_ENGINE_LOAD -> "${SignalKPaths.PROPULSION_PREFIX}$instance.engineLoad"
+            WidgetType.NAUTICAL_BATTERY_CURRENT -> "${SignalKPaths.BATTERIES_PREFIX}$instance.current"
+            WidgetType.NAUTICAL_ENGINE_COOLANT -> "${SignalKPaths.PROPULSION_PREFIX}$instance.coolantTemperature"
+            WidgetType.NAUTICAL_SOLAR_CURRENT -> "electrical.solar.$instance.current"
+            WidgetType.NAUTICAL_TWD -> SignalKPaths.NAV_TWD
+            WidgetType.NAUTICAL_HUMIDITY -> SignalKPaths.ENV_OUTSIDE_HUMIDITY
+            else -> null
+        } ?: return
+
+        val history = engine.getHistory(path)
 
         when (type) {
-            WidgetType.NAUTICAL_DEPTH -> g.setData(engine.getDepthHistory(), ctx.getString(R.string.nautical_unit_meters))
-            WidgetType.NAUTICAL_WIND -> g.setData(engine.getWindHistory(), ctx.getString(R.string.nautical_unit_knots), knotsCoeff)
-            WidgetType.NAUTICAL_VMG -> g.setData(engine.getVmgHistory(), ctx.getString(R.string.nautical_unit_knots), knotsCoeff)
-            WidgetType.NAUTICAL_COG -> g.setData(engine.getCogHistory(), "°", Math.toDegrees(1.0))
-            WidgetType.NAUTICAL_SOG -> g.setData(engine.getSogHistory(), ctx.getString(R.string.nautical_unit_knots), knotsCoeff)
-            WidgetType.NAUTICAL_STW -> g.setData(engine.getStwHistory(), ctx.getString(R.string.nautical_unit_knots), knotsCoeff)
-            WidgetType.NAUTICAL_ENGINE_RPM -> g.setData(engine.getRpmHistory(), "RPM")
-            WidgetType.NAUTICAL_BATTERY_VOLT -> g.setData(engine.getVoltHistory(), "V")
-            WidgetType.NAUTICAL_BATTERY_SOC -> g.setData(engine.getSocHistory(), "%", 100.0)
-            WidgetType.NAUTICAL_ENGINE_TEMP -> g.setData(engine.getTempEngineHistory(), ctx.getString(R.string.nautical_unit_celsius), 1.0, SignalKUnitConverter.KELVIN_TO_CELSIUS)
-            WidgetType.NAUTICAL_WATER_TEMP -> g.setData(engine.getWaterTempHistory(), ctx.getString(R.string.nautical_unit_celsius), 1.0, SignalKUnitConverter.KELVIN_TO_CELSIUS)
-            WidgetType.NAUTICAL_OUTSIDE_TEMP -> g.setData(engine.getOutsideTempHistory(), ctx.getString(R.string.nautical_unit_celsius), 1.0, SignalKUnitConverter.KELVIN_TO_CELSIUS)
-            WidgetType.NAUTICAL_PRESSURE -> g.setData(engine.getPressureHistory(), ctx.getString(R.string.nautical_unit_hpa), SignalKUnitConverter.PASCAL_TO_HPA)
-            WidgetType.NAUTICAL_ROLL -> g.setData(engine.getRollHistory(), "°", Math.toDegrees(1.0))
-            WidgetType.NAUTICAL_PITCH -> g.setData(engine.getPitchHistory(), "°", Math.toDegrees(1.0))
-            WidgetType.NAUTICAL_ROT -> g.setData(engine.getRotHistory(), ctx.getString(R.string.nautical_unit_rot_short), Math.toDegrees(1.0) * 60.0)
-            WidgetType.NAUTICAL_XTE -> g.setData(engine.getXteHistory(), ctx.getString(R.string.nautical_unit_nm), SignalKUnitConverter.METERS_TO_NM)
-            WidgetType.NAUTICAL_DTW -> g.setData(engine.getDtwHistory(), ctx.getString(R.string.nautical_unit_nm), SignalKUnitConverter.METERS_TO_NM)
-            WidgetType.NAUTICAL_AWA -> g.setData(engine.getAwaHistory(), "°", Math.toDegrees(1.0))
-            WidgetType.NAUTICAL_AWS -> g.setData(engine.getAwsHistory(), ctx.getString(R.string.nautical_unit_knots), knotsCoeff)
-            WidgetType.NAUTICAL_TWA -> g.setData(engine.getTwaHistory(), "°", Math.toDegrees(1.0))
-            WidgetType.NAUTICAL_POLAR_RATIO -> g.setData(engine.getPolarRatioHistory(), "%", 100.0)
-            WidgetType.NAUTICAL_HEADING_MAGNETIC -> g.setData(engine.getMagHdgHistory(), "°", Math.toDegrees(1.0))
-            WidgetType.NAUTICAL_LOG -> g.setData(engine.getLogHistory(), ctx.getString(R.string.nautical_unit_nm), SignalKUnitConverter.METERS_TO_NM)
-            WidgetType.NAUTICAL_TRIP_LOG -> g.setData(engine.getTripLogHistory(), ctx.getString(R.string.nautical_unit_nm), SignalKUnitConverter.METERS_TO_NM)
-            WidgetType.NAUTICAL_DEPTH_KEEL -> g.setData(engine.getDepthKeelHistory(), ctx.getString(R.string.nautical_unit_meters))
-            WidgetType.NAUTICAL_FUEL_LEVEL -> g.setData(engine.getFuelHistory(), "%", 100.0)
-            WidgetType.NAUTICAL_FRESH_WATER_LEVEL -> g.setData(engine.getFreshWaterHistory(), "%", 100.0)
-            WidgetType.NAUTICAL_WASTE_WATER_LEVEL -> g.setData(engine.getWasteHistory(), "%", 100.0)
-            WidgetType.NAUTICAL_OIL_PRESSURE -> g.setData(engine.getOilPressureHistory(), ctx.getString(R.string.nautical_unit_bar), SignalKUnitConverter.PASCAL_TO_BAR)
-            WidgetType.NAUTICAL_ENGINE_LOAD -> g.setData(engine.getEngineLoadHistory(), "%", 100.0)
-            WidgetType.NAUTICAL_BATTERY_CURRENT -> g.setData(engine.getBatteryCurrentHistory(), "A")
-            WidgetType.NAUTICAL_ENGINE_COOLANT -> g.setData(engine.getCoolantTempHistory(), ctx.getString(R.string.nautical_unit_celsius), 1.0, SignalKUnitConverter.KELVIN_TO_CELSIUS)
-            WidgetType.NAUTICAL_SOLAR_CURRENT -> g.setData(engine.getSolarCurrentHistory(), "A")
-            WidgetType.NAUTICAL_TWD -> g.setData(engine.getTwdHistory(), "°", Math.toDegrees(1.0))
-            WidgetType.NAUTICAL_HUMIDITY -> g.setData(engine.getHumidityHistory(), "%", 100.0)
+            WidgetType.NAUTICAL_DEPTH -> g.setData(history, ctx.getString(R.string.nautical_unit_meters))
+            WidgetType.NAUTICAL_WIND -> g.setData(history, ctx.getString(R.string.nautical_unit_knots), SignalKUnitConverter.MS_TO_KNOTS)
+            WidgetType.NAUTICAL_VMG -> g.setData(history, ctx.getString(R.string.nautical_unit_knots), SignalKUnitConverter.MS_TO_KNOTS)
+            WidgetType.NAUTICAL_COG -> g.setData(history, "°", Math.toDegrees(1.0))
+            WidgetType.NAUTICAL_SOG -> g.setData(history, ctx.getString(R.string.nautical_unit_knots), SignalKUnitConverter.MS_TO_KNOTS)
+            WidgetType.NAUTICAL_STW -> g.setData(history, ctx.getString(R.string.nautical_unit_knots), SignalKUnitConverter.MS_TO_KNOTS)
+            WidgetType.NAUTICAL_ENGINE_RPM -> g.setData(history, "RPM", 60.0)
+            WidgetType.NAUTICAL_BATTERY_VOLT -> g.setData(history, "V")
+            WidgetType.NAUTICAL_BATTERY_SOC -> g.setData(history, "%", 100.0)
+            WidgetType.NAUTICAL_ENGINE_TEMP -> g.setData(history, ctx.getString(R.string.nautical_unit_celsius), 1.0, SignalKUnitConverter.KELVIN_OFFSET_CELSIUS)
+            WidgetType.NAUTICAL_WATER_TEMP -> g.setData(history, ctx.getString(R.string.nautical_unit_celsius), 1.0, SignalKUnitConverter.KELVIN_OFFSET_CELSIUS)
+            WidgetType.NAUTICAL_OUTSIDE_TEMP -> g.setData(history, ctx.getString(R.string.nautical_unit_celsius), 1.0, SignalKUnitConverter.KELVIN_OFFSET_CELSIUS)
+            WidgetType.NAUTICAL_PRESSURE -> g.setData(history, ctx.getString(R.string.nautical_unit_hpa), SignalKUnitConverter.PASCAL_TO_HPA)
+            WidgetType.NAUTICAL_ROLL -> g.setData(history, "°", Math.toDegrees(1.0))
+            WidgetType.NAUTICAL_PITCH -> g.setData(history, "°", Math.toDegrees(1.0))
+            WidgetType.NAUTICAL_ROT -> g.setData(history, ctx.getString(R.string.nautical_unit_rot_short), Math.toDegrees(1.0) * 60.0)
+            WidgetType.NAUTICAL_XTE -> g.setData(history, ctx.getString(R.string.nautical_unit_nm), SignalKUnitConverter.METERS_TO_NM)
+            WidgetType.NAUTICAL_DTW -> g.setData(history, ctx.getString(R.string.nautical_unit_nm), SignalKUnitConverter.METERS_TO_NM)
+            WidgetType.NAUTICAL_AWA -> g.setData(history, "°", Math.toDegrees(1.0))
+            WidgetType.NAUTICAL_AWS -> g.setData(history, ctx.getString(R.string.nautical_unit_knots), SignalKUnitConverter.MS_TO_KNOTS)
+            WidgetType.NAUTICAL_TWA -> g.setData(history, "°", Math.toDegrees(1.0))
+            WidgetType.NAUTICAL_POLAR_RATIO -> g.setData(history, "%", 100.0)
+            WidgetType.NAUTICAL_HEADING_MAGNETIC -> g.setData(history, "°", Math.toDegrees(1.0))
+            WidgetType.NAUTICAL_LOG -> g.setData(history, ctx.getString(R.string.nautical_unit_nm), SignalKUnitConverter.METERS_TO_NM)
+            WidgetType.NAUTICAL_TRIP_LOG -> g.setData(history, ctx.getString(R.string.nautical_unit_nm), SignalKUnitConverter.METERS_TO_NM)
+            WidgetType.NAUTICAL_DEPTH_KEEL -> g.setData(history, ctx.getString(R.string.nautical_unit_meters))
+            WidgetType.NAUTICAL_FUEL_LEVEL -> g.setData(history, "%", 100.0)
+            WidgetType.NAUTICAL_FRESH_WATER_LEVEL -> g.setData(history, "%", 100.0)
+            WidgetType.NAUTICAL_WASTE_WATER_LEVEL -> g.setData(history, "%", 100.0)
+            WidgetType.NAUTICAL_OIL_PRESSURE -> g.setData(history, ctx.getString(R.string.nautical_unit_bar), SignalKUnitConverter.PASCAL_TO_BAR)
+            WidgetType.NAUTICAL_ENGINE_LOAD -> g.setData(history, "%", 100.0)
+            WidgetType.NAUTICAL_BATTERY_CURRENT -> g.setData(history, "A")
+            WidgetType.NAUTICAL_ENGINE_COOLANT -> g.setData(history, ctx.getString(R.string.nautical_unit_celsius), 1.0, SignalKUnitConverter.KELVIN_OFFSET_CELSIUS)
+            WidgetType.NAUTICAL_SOLAR_CURRENT -> g.setData(history, "A")
+            WidgetType.NAUTICAL_TWD -> g.setData(history, "°", Math.toDegrees(1.0))
+            WidgetType.NAUTICAL_HUMIDITY -> g.setData(history, "%", 100.0)
             else -> {}
         }
     }

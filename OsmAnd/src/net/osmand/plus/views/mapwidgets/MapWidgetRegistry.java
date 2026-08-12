@@ -177,7 +177,10 @@ public class MapWidgetRegistry {
 	}
 
 	@Nullable
-	public MapWidgetInfo getWidgetInfoById(@NonNull String widgetId) {
+	public MapWidgetInfo getWidgetInfoById(@Nullable String widgetId) {
+		if (widgetId == null) {
+			return null;
+		}
 		for (MapWidgetInfo widgetInfo : getAllWidgets()) {
 			if (widgetId.equals(widgetInfo.key)) {
 				return widgetInfo;

@@ -1,0 +1,16 @@
+- [x] **1. HUD Cleanup & Redundancy Removal**
+    - [x] Modify `NauticalPlugin.kt` to remove `NAUTICAL_PILOT`, `NAUTICAL_COMPASS`, and Graph widgets from HUD creation.
+    - [x] Delete `NauticalPilotWidget.kt` and `map_hud_pilot_widget.xml` (Handled/Verified).
+    - [x] Delete `NauticalCompassWidget.kt` and `widget_nautical_compass.xml` (Handled/Verified).
+    - [x] Delete `NauticalGraphWidget.kt` and `widget_nautical_graph.xml` (Handled/Verified).
+- [x] **2. Widget Standardization**
+    - [x] Refactor `ActuatorLoadWidget.kt` to use standard `SimpleWidget` (icon + text).
+    - [x] Delete `map_hud_actuator_widget.xml` (Reference removed, layout redundant).
+- [x] **3. Telemetry Grid Simplification**
+    - [x] Remove graphical layering logic from `NauticalTelemetryGridBottomSheet.kt`.
+    - [x] Remove Sparkline and MiniRose views from `item_nautical_telemetry_grid.xml`.
+- [x] **4. Data Integrity & Signaling**
+    - [x] Simplify integrity styling in `MarineTextWidget.kt` (remove strike-through, flashing, etc.).
+- [x] **5. Logic Fix-up (Restoration)**
+    - [x] Restore Trend Arrows (↑/↓) for Speed and Depth.
+    - [x] Restore Safety Timeout labels ("TIMEOUT") for critical sensors.

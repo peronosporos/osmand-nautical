@@ -11,10 +11,12 @@ import android.graphics.PointF
 import android.graphics.drawable.Drawable
 import androidx.core.content.ContextCompat
 import kotlinx.coroutines.*
+import kotlin.time.Duration.Companion.seconds
 import net.osmand.data.RotatedTileBox
 import net.osmand.plus.OsmandApplication
 import net.osmand.plus.R
 import net.osmand.plus.plugins.nautical.engine.SailingWorkflowState
+import net.osmand.plus.plugins.nautical.engine.TrajectoryPoint
 import net.osmand.plus.plugins.nautical.hazard.engine.SafetyCorridorChecker
 import net.osmand.plus.plugins.nautical.hazard.engine.SafetyIssue
 import net.osmand.plus.plugins.nautical.hazard.engine.Severity
@@ -27,6 +29,7 @@ import kotlin.math.*
 
 class NauticalMapLayer(context: Context) : OsmandMapLayer(context), SharedPreferences.OnSharedPreferenceChangeListener {
 
+    private val wearOsManager = WearOsNauticalManager(context)
     private var lastKnownTileBox: RotatedTileBox? = null
     private val trailPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.MAGENTA
@@ -35,6 +38,8 @@ class NauticalMapLayer(context: Context) : OsmandMapLayer(context), SharedPrefer
     }
     private val waypointIcon: Drawable? = ContextCompat.getDrawable(context, R.drawable.ic_action_waypoint)
     private val lockIcon: Drawable? = ContextCompat.getDrawable(context, R.drawable.ic_action_lock)
+    private val anchorIcon: Drawable? = ContextCompat.getDrawable(context, R.drawable.ic_action_anchor)
+    private val buildingIcon: Drawable? = ContextCompat.getDrawable(context, R.drawable.ic_action_building)
 
     private val projectionPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.WHITE
@@ -108,6 +113,19 @@ class NauticalMapLayer(context: Context) : OsmandMapLayer(context), SharedPrefer
         alpha = 180
     }
 
+    private val isochronePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.rgb(255, 140, 0) // Dark Orange
+        style = Paint.Style.STROKE
+        strokeWidth = 2f
+        alpha = 120
+    }
+
+    private val polarPerformancePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.YELLOW
+        style = Paint.Style.STROKE
+        strokeWidth = 3f
+    }
+
     private val warningPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.RED
         textAlign = Paint.Align.CENTER
@@ -126,8 +144,10 @@ class NauticalMapLayer(context: Context) : OsmandMapLayer(context), SharedPrefer
         pathEffect = DashPathEffect(floatArrayOf(15f, 10f), 0f)
     }
 
+    private val polygonPath = Path()
     private val trajectoryPath = Path()
-    private val trajectoryHistory = mutableListOf<Pair<Double, Double>>()
+    private val localTrajectoryHistory = mutableListOf<TrajectoryPoint>()
+    private var lastTrajectoryTime = 0L
     private var lastDrawTileBox: RotatedTileBox? = null
     
     private var trajectoryUpdateJob: Job? = null
@@ -238,16 +258,23 @@ class NauticalMapLayer(context: Context) : OsmandMapLayer(context), SharedPrefer
         app.getSharedPreferences(net.osmand.plus.settings.backend.OsmandSettings.SHARED_PREFERENCES_NAME, Context.MODE_PRIVATE)
             .registerOnSharedPreferenceChangeListener(prefChangeListener)
 
-        // Observe trajectory updates from engine for optimized rendering (TASK-PERF-001)
         trajectoryUpdateJob = layerScope.launch {
-             NauticalPlugin.engine?.trajectoryEventFlow?.collect {
-                 invalidateTrajectory()
-             }
+            while (isActive) {
+                val engine = NauticalPlugin.engine
+                if (engine != null) {
+                    engine.trajectoryEventFlow.collect {
+                        invalidateTrajectory()
+                    }
+                } else {
+                    delay(2.seconds)
+                }
+            }
         }
     }
 
     private fun invalidateTrajectory() {
-        lastDrawTileBox = null // Forces path rebuild on next draw
+        lastDrawTileBox = null
+        view.refreshMap()
     }
 
     override fun destroyLayer() {
@@ -263,6 +290,8 @@ class NauticalMapLayer(context: Context) : OsmandMapLayer(context), SharedPrefer
         val settings = app.settings
         val watchedKeys = setOf(
             settings.NAUTICAL_SHOW_TRAJECTORY.id,
+            settings.NAUTICAL_TRAJECTORY_COLOR.id,
+            settings.NAUTICAL_TRAJECTORY_THICKNESS.id,
             settings.NAUTICAL_SHOW_HEADING_LINE.id,
             settings.NAUTICAL_SHOW_COG_LINE.id,
             settings.NAUTICAL_SHOW_CMG_LINE.id,
@@ -293,39 +322,55 @@ class NauticalMapLayer(context: Context) : OsmandMapLayer(context), SharedPrefer
         val osmandSettings = app.settings
         val mode = osmandSettings.NAUTICAL_DISPLAY_MODE.get()
         val isSunlight = mode == net.osmand.plus.settings.enums.NauticalDisplayMode.SUNLIGHT
+        val isWatch = wearOsManager.isWatchMode()
+        val isAmbient = wearOsManager.isAmbientMode.value
 
-        // Task 8.0: Sunlight & Polarized Lens Adaptation
+        // Sunlight & Polarized Lens Adaptation
+        // When using polarized sunglasses, colors can shift or disappear.
+        // We use absolute contrast (Black/White) and thicker strokes to compensate.
         val density = context.resources.displayMetrics.density
-        val strokeScale = if (isSunlight) 2.5f else 1.0f
+        val watchScale = if (isWatch) 0.6f else 1.0f
+        val strokeScale = (if (isSunlight) 2.5f else 1.0f) * watchScale
+
+        if (isAmbient) {
+            drawAmbientMap(canvas, tileBox, engine, density)
+            return
+        }
 
         // Window-level ColorMatrixColorFilter handles scotopic rendering.
         // Maintain standard high-contrast colors for all states.
-        trailPaint.color = Color.MAGENTA
-        trailPaint.strokeWidth = 10f * density * strokeScale
+        trailPaint.color = if (isSunlight) Color.BLACK else osmandSettings.NAUTICAL_TRAJECTORY_COLOR.get()
+        trailPaint.strokeWidth = osmandSettings.NAUTICAL_TRAJECTORY_THICKNESS.get() * density * strokeScale
         
-        projectionPaint.color = if (isSunlight) Color.BLACK else Color.WHITE
+        val primaryColor = net.osmand.plus.plugins.nautical.ui.NauticalColorResolver.getColor(context, net.osmand.plus.plugins.nautical.ui.NauticalSemanticColor.PRIMARY)
+        val secondaryColor = net.osmand.plus.plugins.nautical.ui.NauticalColorResolver.getColor(context, net.osmand.plus.plugins.nautical.ui.NauticalSemanticColor.SECONDARY)
+        val accentColor = net.osmand.plus.plugins.nautical.ui.NauticalColorResolver.getColor(context, net.osmand.plus.plugins.nautical.ui.NauticalSemanticColor.ACCENT)
+        val okColor = net.osmand.plus.plugins.nautical.ui.NauticalColorResolver.getColor(context, net.osmand.plus.plugins.nautical.ui.NauticalSemanticColor.STATUS_OK)
+        val warningColor = net.osmand.plus.plugins.nautical.ui.NauticalColorResolver.getColor(context, net.osmand.plus.plugins.nautical.ui.NauticalSemanticColor.STATUS_WARNING)
+
+        projectionPaint.color = primaryColor
         projectionPaint.strokeWidth = 6f * density * strokeScale
         projectionPaint.alpha = if (isSunlight) 255 else 180
         projectionPaint.pathEffect = DashPathEffect(floatArrayOf(30f * density, 15f * density), 0f)
         
-        cogPaint.color = if (isSunlight) Color.rgb(0, 100, 0) else Color.GREEN // Dark Green for Sunlight
+        cogPaint.color = okColor
         cogPaint.strokeWidth = 5f * density * strokeScale
         cogPaint.pathEffect = DashPathEffect(floatArrayOf(20f * density, 10f * density), 0f)
 
-        cmgPaint.color = if (isSunlight) Color.rgb(0, 0, 128) else Color.rgb(0, 255, 255) // Dark Blue for Sunlight
+        cmgPaint.color = accentColor
         cmgPaint.strokeWidth = 6f * density * strokeScale
-        cmgPaint.pathEffect = null // Solid line for Resultant
+        cmgPaint.pathEffect = null
         
-        currentPaint.color = if (isSunlight) Color.BLACK else Color.BLUE
+        currentPaint.color = secondaryColor
         currentPaint.strokeWidth = 3f * density * strokeScale
         currentPaint.pathEffect = DashPathEffect(floatArrayOf(10f * density, 5f * density), 0f)
         
-        targetHeadingPaint.color = if (isSunlight) 0xFFCC6600.toInt() else Color.rgb(255, 165, 0)
+        targetHeadingPaint.color = warningColor
         targetHeadingPaint.strokeWidth = 5f * density * strokeScale
         targetHeadingPaint.alpha = 255
         targetHeadingPaint.pathEffect = DashPathEffect(floatArrayOf(25f * density, 15f * density), 0f)
         
-        routePaint.color = if (isSunlight) Color.BLACK else ContextCompat.getColor(context, R.color.nautical_status_yellow)
+        routePaint.color = if (isSunlight) Color.BLACK else warningColor
         routePaint.strokeWidth = 6f * density * strokeScale
         routePaint.pathEffect = DashPathEffect(floatArrayOf(30f * density, 20f * density), 0f)
 
@@ -346,39 +391,52 @@ class NauticalMapLayer(context: Context) : OsmandMapLayer(context), SharedPrefer
                 (abs(lastTb.center31X - tileBox.center31X) > 1) ||
                 (abs(lastTb.center31Y - tileBox.center31Y) > 1)
             
-            if (tileBoxChanged || trajectoryHistory.isEmpty()) {
-                engine.copyTrajectoryTo(trajectoryHistory)
-                if (trajectoryHistory.size >= 2) {
-                    trajectoryPath.reset()
-                    val bounds = tileBox.latLonBounds
-                    val culledTop = bounds.top + bounds.height() * 0.1
-                    val culledBottom = bounds.bottom - bounds.height() * 0.1
-                    val culledLeft = bounds.left - bounds.width() * 0.1
-                    val culledRight = bounds.right + bounds.width() * 0.1
+            val engine = NauticalPlugin.engine
+            if (engine != null) {
+                // Task: Efficiently sync trajectory from engine only when updated
+                val engineLatestTime = engine.getCurrentState().timestamps["navigation.position"] ?: 0L
+                if (engineLatestTime > lastTrajectoryTime) {
+                    engine.copyTrajectoryTo(localTrajectoryHistory)
+                    lastTrajectoryTime = engineLatestTime
+                    trajectoryPath.reset() // Force rebuild on next draw
+                }
+            }
 
-                    var firstVisible = true
-                    var prevVisible = false
-                    for (point in trajectoryHistory) {
-                        val isVisible = point.first in culledBottom..culledTop && 
-                                        point.second in culledLeft..culledRight
+            if (tileBoxChanged || trajectoryPath.isEmpty) {
+                trajectoryPath.reset()
+                if (localTrajectoryHistory.size >= 2) {
+                    val bounds = tileBox.latLonBounds
+                    val padding = 0.1
+                    val culledTop = bounds.top + bounds.height() * padding
+                    val culledBottom = bounds.bottom - bounds.height() * padding
+                    val left = bounds.left - bounds.width() * padding
+                    val right = bounds.right + bounds.width() * padding
+                    val isDatelineCrossed = left > right
+
+                    var first = true
+                    for (i in localTrajectoryHistory.indices) {
+                        val pt = localTrajectoryHistory[i]
+                        val lat = pt.lat
+                        val lon = pt.lon
                         
-                        if (isVisible || prevVisible) {
-                            val x = tileBox.getPixXFromLatLon(point.first, point.second)
-                            val y = tileBox.getPixYFromLatLon(point.first, point.second)
-                            if (firstVisible) {
+                        val isVisible = lat in culledBottom..culledTop && 
+                            if (isDatelineCrossed) (lon >= left || lon <= right) else (lon in left..right)
+
+                        if (isVisible || i == 0 || i == localTrajectoryHistory.size - 1) {
+                            val x = tileBox.getPixXFromLatLon(lat, lon)
+                            val y = tileBox.getPixYFromLatLon(lat, lon)
+                            if (first) {
                                 trajectoryPath.moveTo(x, y)
-                                firstVisible = false
+                                first = false
                             } else {
                                 trajectoryPath.lineTo(x, y)
                             }
-                        } else {
-                            firstVisible = true
                         }
-                        prevVisible = isVisible
                     }
-                    lastDrawTileBox = tileBox
                 }
+                lastDrawTileBox = tileBox
             }
+            
             if (!trajectoryPath.isEmpty) {
                 trailPaint.alpha = 200
                 canvas.drawPath(trajectoryPath, trailPaint)
@@ -396,14 +454,12 @@ class NauticalMapLayer(context: Context) : OsmandMapLayer(context), SharedPrefer
                 val y = tileBox.getPixYFromLatLon(nextPoint.first, nextPoint.second)
 
                 waypointIcon?.let {
-                    val density = context.resources.displayMetrics.density
                     val iconSize = (20 * density).toInt()
                     it.setBounds(x.toInt() - iconSize, y.toInt() - iconSize, x.toInt() + iconSize, y.toInt() + iconSize)
                     it.setTintList(null)
                     it.alpha = if (isCloseQuarters) 120 else 255
                     it.draw(canvas)
                 } ?: run {
-                    // Fallback to circle if icon is missing
                     trailPaint.color = Color.RED
                     trailPaint.style = Paint.Style.FILL
                     val oldAlpha = trailPaint.alpha
@@ -416,7 +472,7 @@ class NauticalMapLayer(context: Context) : OsmandMapLayer(context), SharedPrefer
             }
         }
 
-        if (NauticalPlugin.getInstance()?.isConnectionLostAlertActive == true) {
+        if (plugin?.isConnectionLostAlertActive == true) {
             drawConnectionWarning(canvas)
         }
 
@@ -427,7 +483,47 @@ class NauticalMapLayer(context: Context) : OsmandMapLayer(context), SharedPrefer
             drawDrIndicator(canvas, drX, drY, isSunlight)
         }
 
+        if (state.isochrones.isNotEmpty()) {
+            drawIsochrones(canvas, tileBox, state.isochrones)
+        }
+        if (state.polarTargetSpeed != null) {
+            drawPolarPerformance(canvas, tileBox, state, density)
+        }
+
         drawVesselProjections(canvas, tileBox, engine, osmandSettings, isSunlight)
+    }
+
+    private fun drawAmbientMap(canvas: Canvas, tileBox: RotatedTileBox, engine: net.osmand.plus.plugins.nautical.engine.SignalKEngine, density: Float) {
+        // High-contrast, low-bit drawing for Wear OS Ambient Mode
+        val state = engine.getCurrentState()
+        val lat = state.latitude ?: return
+        val lon = state.longitude ?: return
+        val startX = tileBox.getPixXFromLatLon(lat, lon)
+        val startY = tileBox.getPixYFromLatLon(lat, lon)
+
+        val ambientPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.WHITE
+            style = Paint.Style.STROKE
+            strokeWidth = 2f * density
+        }
+
+        // Draw boat as a simple triangle
+        val boatPath = Path()
+        val boatSize = 15f * density
+        val hdg = state.headingTrue ?: 0.0
+        boatPath.moveTo(startX + boatSize * sin(hdg).toFloat(), startY - boatSize * cos(hdg).toFloat())
+        boatPath.lineTo(startX + boatSize * sin(hdg + 2.3).toFloat(), startY - boatSize * cos(hdg + 2.3).toFloat())
+        boatPath.lineTo(startX + boatSize * sin(hdg - 2.3).toFloat(), startY - boatSize * cos(hdg - 2.3).toFloat())
+        boatPath.close()
+        canvas.drawPath(boatPath, ambientPaint)
+
+        // Only draw COG vector if sog > 0.5
+        if ((state.speedOverGround ?: 0.0) > 0.5) {
+            val cog = state.courseOverGroundTrue ?: 0.0
+            val endX = startX + 40f * density * sin(cog).toFloat()
+            val endY = startY - 40f * density * cos(cog).toFloat()
+            canvas.drawLine(startX, startY, endX, endY, ambientPaint)
+        }
     }
 
     private fun drawDrIndicator(canvas: Canvas, x: Float, y: Float, isSunlight: Boolean) {
@@ -442,7 +538,7 @@ class NauticalMapLayer(context: Context) : OsmandMapLayer(context), SharedPrefer
         canvas.drawLine(x - crossSize, y, x + crossSize, y, drPaint)
         canvas.drawLine(x, y - crossSize, x, y + crossSize, drPaint)
         
-        // Label
+        // Label with shadow for high contrast
         val oldColor = textPaint.color
         val oldSize = textPaint.textSize
         textPaint.color = drPaint.color
@@ -456,12 +552,14 @@ class NauticalMapLayer(context: Context) : OsmandMapLayer(context), SharedPrefer
         val now = System.currentTimeMillis()
         if (((now / 500) % 2) == 0L) return // Blink 1Hz
         
-        val text = context.getString(R.string.nautical_autopilot_data_lost)
+        val density = context.resources.displayMetrics.density
+        val text = context.getString(R.string.nautical_sk_connection_lost)
         val x = canvas.width / 2f
         val y = 200f // Top area
         
         val textWidth = warningPaint.measureText(text)
-        canvas.drawRect((x - (textWidth / 2)) - 40, y - 80, x + (textWidth / 2) + 40, y + 30, warningBgPaint)
+        val padding = 20f * density
+        canvas.drawRect((x - (textWidth / 2)) - padding, y - 80, x + (textWidth / 2) + padding, y + 30, warningBgPaint)
         
         val oldColor = warningPaint.color
         val oldSize = warningPaint.textSize
@@ -514,7 +612,6 @@ class NauticalMapLayer(context: Context) : OsmandMapLayer(context), SharedPrefer
         val startX = tileBox.getPixXFromLatLon(lat, lon)
         val startY = tileBox.getPixYFromLatLon(lat, lon)
         
-        // Strict culling for vessel projections
         if (startX < -1000 || startX > canvas.width + 1000 || startY < -1000 || startY > canvas.height + 1000) {
             return
         }
@@ -523,7 +620,6 @@ class NauticalMapLayer(context: Context) : OsmandMapLayer(context), SharedPrefer
         val mercatorScale = 1.0 / cos(Math.toRadians(lat)).coerceAtLeast(0.01)
         val arrowheadScale = (tileBox.density * mercatorScale).toFloat()
 
-        // 1. Heading Line
         val hdg = state.headingTrue
         if (hdg != null) {
             val speed = max(state.speedThroughWater ?: state.speedOverGround ?: 0.0, minSpeedForVector)
@@ -541,7 +637,6 @@ class NauticalMapLayer(context: Context) : OsmandMapLayer(context), SharedPrefer
             }
         }
 
-        // 2. COG Line
         val cog = state.courseOverGroundTrue
         if (cog != null) {
             val sog = state.speedOverGround ?: 0.0
@@ -561,7 +656,6 @@ class NauticalMapLayer(context: Context) : OsmandMapLayer(context), SharedPrefer
             }
         }
 
-        // 3. Resultant Vector (CMG - Predicted)
         if (settings.NAUTICAL_SHOW_CMG_LINE.get()) {
              val stw = state.speedThroughWater
              val hdgTrue = state.headingTrue
@@ -570,7 +664,6 @@ class NauticalMapLayer(context: Context) : OsmandMapLayer(context), SharedPrefer
              val set = state.setTrue
 
              if (stw != null && hdgTrue != null && drift != null && set != null) {
-                 // Vector Addition in Carthesian
                  val hdgL = hdgTrue + leeway
                  val v1x = stw * sin(hdgL)
                  val v1y = stw * cos(hdgL)
@@ -597,13 +690,12 @@ class NauticalMapLayer(context: Context) : OsmandMapLayer(context), SharedPrefer
              }
         }
 
-        // 4. Slip Angle (Crab Angle) Indicator
         if (hdg != null && cog != null && (state.speedOverGround ?: 0.0) > 0.5) {
             var diff = Math.toDegrees(cog - hdg)
             while (diff > 180) diff -= 360
             while (diff < -180) diff += 360
             
-            if (abs(diff) > 1.0) { // Only show if more than 1 degree slip
+            if (abs(diff) > 1.0) {
                 canvas.drawLine(headingCache.lastEndX, headingCache.lastEndY, cogCache.lastEndX, cogCache.lastEndY, slipAnglePaint)
                 val midX = (headingCache.lastEndX + cogCache.lastEndX) / 2
                 val midY = (headingCache.lastEndY + cogCache.lastEndY) / 2
@@ -611,7 +703,6 @@ class NauticalMapLayer(context: Context) : OsmandMapLayer(context), SharedPrefer
             }
         }
 
-        // 3. Current Vector
         if (settings.NAUTICAL_SHOW_CURRENT_VECTOR.get()) {
             val set = state.setTrue
             val drift = state.drift
@@ -630,7 +721,6 @@ class NauticalMapLayer(context: Context) : OsmandMapLayer(context), SharedPrefer
             }
         }
 
-        // 4. Target Heading (Autopilot)
         val targetHdg = state.targetHeading
         if (targetHdg != null && state.autopilotState.lowercase(Locale.US) != "standby") {
             val speed = max(state.speedThroughWater ?: state.speedOverGround ?: 5.0, minSpeedForVector)
@@ -647,7 +737,7 @@ class NauticalMapLayer(context: Context) : OsmandMapLayer(context), SharedPrefer
             drawArrowHead(canvas, startX, startY, targetHdgCache.lastEndX, targetHdgCache.lastEndY, targetHeadingPaint, arrowheadScale)
         }
 
-        // 5. Laylines
+        // 5. Laylines Fallback (Simple/Infinite)
         plugin?.tacticalProcessor?.let { tactical ->
             tactical.portLaylineEnd?.let { end ->
                 canvas.drawLine(startX, startY, tileBox.getPixXFromLatLon(end.first, end.second), tileBox.getPixYFromLatLon(end.first, end.second), laylinePaint)
@@ -657,7 +747,6 @@ class NauticalMapLayer(context: Context) : OsmandMapLayer(context), SharedPrefer
             }
         }
 
-        // 6. Steering Worm (Rate of Turn Prediction)
         val rot = state.rateOfTurn
         val sog = state.speedOverGround
         val heading = state.headingTrue
@@ -665,7 +754,6 @@ class NauticalMapLayer(context: Context) : OsmandMapLayer(context), SharedPrefer
             drawSteeringWorm(canvas, tileBox, lat, lon, heading, sog, rot, isSunlight)
         }
 
-        // 7. Tactical Pins (Start Line)
         plugin?.tacticalStartManager?.let { start ->
             start.portPin?.let { p ->
                 drawPin(canvas, tileBox, p.first, p.second, "P", Color.RED, isSunlight)
@@ -675,28 +763,31 @@ class NauticalMapLayer(context: Context) : OsmandMapLayer(context), SharedPrefer
             }
         }
 
-        // 8. Anchor Swing Radius
-        val osmandSettings = (context.applicationContext as OsmandApplication).settings
-        val anchorLat = osmandSettings.NAUTICAL_ANCHOR_LAT.get()
-        val anchorLon = osmandSettings.NAUTICAL_ANCHOR_LON.get()
-        val anchorRadius = osmandSettings.NAUTICAL_ANCHOR_RADIUS.get()
+        val anchorLat = settings.NAUTICAL_ANCHOR_LAT.get()
+        val anchorLon = settings.NAUTICAL_ANCHOR_LON.get()
+        val anchorRadius = settings.NAUTICAL_ANCHOR_RADIUS.get()
         if (anchorLat != 0.0 && anchorRadius > 0) {
             drawAnchorZone(canvas, tileBox, anchorLat, anchorLon, anchorRadius.toDouble(), isSunlight)
         }
 
-        val previewLat = osmandSettings.NAUTICAL_ANCHOR_PREVIEW_LAT.get()
-        val previewLon = osmandSettings.NAUTICAL_ANCHOR_PREVIEW_LON.get()
-        val previewRadius = osmandSettings.NAUTICAL_ANCHOR_PREVIEW_RADIUS.get()
+        val previewLat = settings.NAUTICAL_ANCHOR_PREVIEW_LAT.get()
+        val previewLon = settings.NAUTICAL_ANCHOR_PREVIEW_LON.get()
+        val previewRadius = settings.NAUTICAL_ANCHOR_PREVIEW_RADIUS.get()
         if (previewLat != 0.0 && previewRadius > 0) {
             drawAnchorPreviewZone(canvas, tileBox, previewLat, previewLon, previewRadius.toDouble(), isSunlight)
         }
 
-        // 9. Med-Mooring Backing Vector
         val activeManeuver = plugin?.maneuverManager?.activeManeuver
         if (activeManeuver is net.osmand.plus.plugins.nautical.maneuvers.MedMooringManeuver) {
-             val hdg = state.headingTrue ?: 0.0
-             val sternHdg = hdg + PI
-             val sternPath = generateGeodesicLatLons(lat, lon, 50.0, Math.toDegrees(sternHdg))
+             val hdgT = state.headingTrue ?: 0.0
+             val sternHdg = hdgT + PI
+             val dist = if (!activeManeuver.targetLat.isNaN()) {
+                 net.osmand.shared.util.KMapUtils.getDistance(lat, lon, activeManeuver.targetLat, activeManeuver.targetLon)
+             } else 50.0
+             
+             val backingDistance = (dist * 1.2).coerceIn(10.0, 100.0)
+             val sternPath = generateGeodesicLatLons(lat, lon, backingDistance, Math.toDegrees(sternHdg))
+             
              val path = Path()
              path.moveTo(startX, startY)
              for (p in sternPath) {
@@ -706,20 +797,49 @@ class NauticalMapLayer(context: Context) : OsmandMapLayer(context), SharedPrefer
                  )
              }
              canvas.drawPath(path, backingVectorPaint)
+             
+             val aLat = activeManeuver.anchorDropLat
+             val aLon = activeManeuver.anchorDropLon
+             if (!aLat.isNaN() && !aLon.isNaN()) {
+                 anchorIcon?.let { icon ->
+                     val iconDensity = context.resources.displayMetrics.density
+                     val size = (24 * iconDensity).toInt()
+                     val px = tileBox.getPixXFromLatLon(aLat, aLon)
+                     val py = tileBox.getPixYFromLatLon(aLat, aLon)
+                     icon.setBounds((px - size / 2).toInt(), (py - size / 2).toInt(), (px + size / 2).toInt(), (py + size / 2).toInt())
+                     icon.setTint(if (isSunlight) Color.BLACK else Color.RED)
+                     icon.draw(canvas)
+                 }
+             }
         }
 
-        // 10. Touch Lock Icon Overlay
-        val isLocked = plugin?.workflowManager?.getScreenTouchLockManager()?.isTouchLockActive?.value ?: false
-        if (isLocked) {
+        val isTouchLocked = plugin?.workflowManager?.getScreenTouchLockManager()?.isTouchLockActive?.value ?: false
+        if (isTouchLocked) {
             lockIcon?.let { icon ->
-                val density = context.resources.displayMetrics.density
-                val size = (48 * density).toInt()
-                val margin = (16 * density).toInt()
+                val iconDensity = context.resources.displayMetrics.density
+                val size = (48 * iconDensity).toInt()
+                val margin = (16 * iconDensity).toInt()
                 val left = tileBox.pixWidth - size - margin
                 val top = tileBox.pixHeight - size - margin
                 icon.setBounds(left, top, left + size, top + size)
                 icon.setTint(if (isSunlight) Color.BLACK else Color.RED)
                 icon.draw(canvas)
+            }
+        }
+
+        if (activeManeuver is net.osmand.plus.plugins.nautical.maneuvers.DockingManeuver) {
+            val dLat = activeManeuver.targetLat
+            val dLon = activeManeuver.targetLon
+            if (dLat != 0.0) {
+                buildingIcon?.let { icon ->
+                    val iconDensity = context.resources.displayMetrics.density
+                    val size = (32 * iconDensity).toInt()
+                    val px = tileBox.getPixXFromLatLon(dLat, dLon)
+                    val py = tileBox.getPixYFromLatLon(dLat, dLon)
+                    icon.setBounds((px - size / 2).toInt(), (py - size / 2).toInt(), (px + size / 2).toInt(), (py + size / 2).toInt())
+                    icon.setTint(if (isSunlight) Color.BLACK else Color.rgb(255, 215, 0))
+                    icon.draw(canvas)
+                }
             }
         }
     }
@@ -728,10 +848,8 @@ class NauticalMapLayer(context: Context) : OsmandMapLayer(context), SharedPrefer
     private fun drawPin(canvas: Canvas, tileBox: RotatedTileBox, lat: Double, lon: Double, label: String, color: Int, isSunlight: Boolean) {
         val px = tileBox.getPixXFromLatLon(lat, lon)
         val py = tileBox.getPixYFromLatLon(lat, lon)
-        
         pinPaint.color = if (isSunlight) Color.BLACK else color
         canvas.drawCircle(px, py, 15f, pinPaint)
-        
         pinPaint.color = if (isSunlight) Color.BLACK else Color.WHITE
         canvas.drawText(label, px, py - 25f, pinPaint)
     }
@@ -739,94 +857,63 @@ class NauticalMapLayer(context: Context) : OsmandMapLayer(context), SharedPrefer
     private fun getPixelsPerMeter(tileBox: RotatedTileBox, lat: Double, lon: Double): Float {
         val px = tileBox.getPixXFromLatLon(lat, lon)
         val py = tileBox.getPixYFromLatLon(lat, lon)
-        
-        // Use a small latitude increment to find vertical scale (pixels per degree of latitude)
-        // Mercator projection has local isotropy, so horizontal scale is the same.
         val latStep = 0.0001 
         val p2x = tileBox.getPixXFromLatLon(lat + latStep, lon)
         val p2y = tileBox.getPixYFromLatLon(lat + latStep, lon)
-        
         val pxDist = sqrt((p2x - px).toDouble().pow(2.0) + (p2y - py).toDouble().pow(2.0))
         val meterDist = net.osmand.util.MapUtils.getDistance(lat, lon, lat + latStep, lon)
-        
         return if (meterDist > 0) (pxDist / meterDist).toFloat() else 0f
     }
 
     private fun drawAnchorZone(canvas: Canvas, tileBox: RotatedTileBox, lat: Double, lon: Double, radiusMeters: Double, isSunlight: Boolean) {
         val px = tileBox.getPixXFromLatLon(lat, lon)
         val py = tileBox.getPixYFromLatLon(lat, lon)
-        
         val pixelsPerMeter = getPixelsPerMeter(tileBox, lat, lon)
         val radiusPx = (radiusMeters * pixelsPerMeter).toFloat()
-        
         anchorZonePaint.color = if (isSunlight) Color.BLACK else Color.RED
         canvas.drawCircle(px, py, radiusPx, anchorZonePaint)
-        canvas.drawCircle(px, py, 10f, anchorZonePaint) // Drop point
+        canvas.drawCircle(px, py, 10f, anchorZonePaint)
     }
 
     private fun drawAnchorPreviewZone(canvas: Canvas, tileBox: RotatedTileBox, lat: Double, lon: Double, radiusMeters: Double, isSunlight: Boolean) {
         val px = tileBox.getPixXFromLatLon(lat, lon)
         val py = tileBox.getPixYFromLatLon(lat, lon)
-        
         val pixelsPerMeter = getPixelsPerMeter(tileBox, lat, lon)
         val radiusPx = (radiusMeters * pixelsPerMeter).toFloat()
-        
         anchorZonePaint.color = if (isSunlight) Color.BLACK else Color.YELLOW
         anchorZonePaint.style = Paint.Style.STROKE
         anchorZonePaint.strokeWidth = 5f
         canvas.drawCircle(px, py, radiusPx, anchorZonePaint)
-        canvas.drawCircle(px, py, 15f, anchorZonePaint) // Drag target
+        canvas.drawCircle(px, py, 15f, anchorZonePaint)
         anchorZonePaint.style = Paint.Style.FILL_AND_STROKE
     }
 
-    private fun drawSteeringWorm(
-        canvas: Canvas,
-        tileBox: RotatedTileBox,
-        lat: Double,
-        lon: Double,
-        heading: Double,
-        sog: Double,
-        rot: Double,
-        isSunlight: Boolean
-    ) {
+    private fun drawSteeringWorm(canvas: Canvas, tileBox: RotatedTileBox, lat: Double, lon: Double, heading: Double, sog: Double, rot: Double, isSunlight: Boolean) {
         val wormPath = Path()
         wormPath.moveTo(tileBox.getPixXFromLatLon(lat, lon), tileBox.getPixYFromLatLon(lat, lon))
-        
-        // Predict next 30 seconds
-        val steps = 15
+        // Task: Reduced complexity for maneuvering prediction (15 -> 8 steps)
+        val steps = 8
         val duration = 30.0
         val dt = duration / steps
-        
         var curLat = lat
         var curLon = lon
         var curHdg = heading
-        
         repeat(steps) {
             val dist = sog * dt
             val endPoint = net.osmand.util.MapUtils.greatCircleDestinationPoint(curLat, curLon, dist, Math.toDegrees(curHdg + rot * dt / 2))
             curLat = endPoint.latitude
             curLon = endPoint.longitude
             curHdg += rot * dt
-            
             wormPath.lineTo(tileBox.getPixXFromLatLon(curLat, curLon), tileBox.getPixYFromLatLon(curLat, curLon))
         }
-        
         steeringWormPaint.color = if (isSunlight) Color.BLACK else Color.rgb(0, 255, 255)
         canvas.drawPath(wormPath, steeringWormPaint)
     }
 
-    private fun generateGeodesicLatLons(
-        startLat: Double,
-        startLon: Double,
-        dist: Double,
-        bearingDeg: Double,
-        segments: Int = 5
-    ): List<net.osmand.data.LatLon> {
+    private fun generateGeodesicLatLons(startLat: Double, startLon: Double, dist: Double, bearingDeg: Double, segments: Int = 5): List<net.osmand.data.LatLon> {
         val list = mutableListOf<net.osmand.data.LatLon>()
         list.add(net.osmand.data.LatLon(startLat, startLon))
-
         val endPoint = net.osmand.util.MapUtils.greatCircleDestinationPoint(startLat, startLon, dist, bearingDeg)
-        
         for (i in 1..segments) {
             val coeff = i.toDouble() / segments
             list.add(net.osmand.util.MapUtils.calculateIntermediatePoint(startLat, startLon, endPoint.latitude, endPoint.longitude, coeff))
@@ -838,12 +925,10 @@ class NauticalMapLayer(context: Context) : OsmandMapLayer(context), SharedPrefer
         val angle = atan2((y2 - y1).toDouble(), (x2 - x1).toDouble())
         val headLength = 30f * scale
         val headAngle = PI / 6
-
         val p1x = x2 - headLength * cos(angle - headAngle).toFloat()
         val p1y = y2 - headLength * sin(angle - headAngle).toFloat()
         val p2x = x2 - headLength * cos(angle + headAngle).toFloat()
         val p2y = y2 - headLength * sin(angle + headAngle).toFloat()
-
         canvas.drawLine(x2, y2, p1x, p1y, paint)
         canvas.drawLine(x2, y2, p2x, p2y, paint)
     }
@@ -873,17 +958,115 @@ class NauticalMapLayer(context: Context) : OsmandMapLayer(context), SharedPrefer
         lastDrawTileBox = null
     }
 
+    private fun drawIsochrones(canvas: Canvas, tileBox: RotatedTileBox, isochrones: List<net.osmand.plus.plugins.nautical.network.SignalKRegion>) {
+        val engine = net.osmand.plus.plugins.nautical.NauticalPlugin.engine ?: return
+        val lastUpdate = engine.getCurrentState().lastIsochroneTime
+        val ageMs = System.currentTimeMillis() - lastUpdate
+        
+        // Pulse/Fade effect: new isochrones are bright, then settle to 120 alpha
+        val alpha = if (ageMs < 3000) {
+            (120 + 135 * (1.0 - ageMs / 3000.0)).toInt()
+        } else 120
+
+        isochronePaint.alpha = alpha
+        isochrones.forEach { region ->
+            val geometry = region.feature.geometry
+            val coordinates = geometry["coordinates"] as? List<*> ?: return@forEach
+            val type = geometry["type"] as? String
+            
+            if (type == "Polygon") {
+                drawGeoJsonPolygon(canvas, tileBox, coordinates)
+            } else if (type == "MultiPolygon") {
+                coordinates.forEach { poly ->
+                    drawGeoJsonPolygon(canvas, tileBox, poly as? List<*> ?: return@forEach)
+                }
+            }
+        }
+    }
+
+    private fun drawGeoJsonPolygon(canvas: Canvas, tileBox: RotatedTileBox, rings: List<*>) {
+        rings.forEach { ring ->
+            val coords = ring as? List<*> ?: return@forEach
+            polygonPath.reset()
+            coords.forEachIndexed { index, coord ->
+                val lonLat = coord as? List<*> ?: return@forEachIndexed
+                val lon = (lonLat[0] as? Number)?.toDouble() ?: 0.0
+                val lat = (lonLat[1] as? Number)?.toDouble() ?: 0.0
+                val x = tileBox.getPixXFromLatLon(lat, lon)
+                val y = tileBox.getPixYFromLatLon(lat, lon)
+                if (index == 0) polygonPath.moveTo(x, y) else polygonPath.lineTo(x, y)
+            }
+            canvas.drawPath(polygonPath, isochronePaint)
+        }
+    }
+
+    private fun drawPolarPerformance(canvas: Canvas, tileBox: RotatedTileBox, state: net.osmand.plus.plugins.nautical.engine.MarineState, density: Float) {
+        val lat = state.latitude ?: return
+        val lon = state.longitude ?: return
+        val targetSpeed = state.polarTargetSpeed ?: return
+        val currentSpeed = state.speedThroughWater ?: state.speedOverGround ?: 0.0
+        val twa = state.trueWindAngle ?: 0.0 // Bow-relative radians
+
+        val centerX = tileBox.getPixXFromLatLon(lat, lon)
+        val centerY = tileBox.getPixYFromLatLon(lat, lon)
+        val pixelsPerMs = 15f * density 
+
+        // 1. Draw Polar Curve Background Segment (Arc showing performance for nearby TWAs)
+        state.polarProfile?.let { profile ->
+            val tws = state.windSpeedTrue ?: return@let
+            val twsList = profile.tws ?: return@let
+            val twaList = profile.twa ?: return@let
+            val speeds = profile.speeds ?: return@let
+
+            // Find TWS index for interpolation
+            val twsIdx = twsList.indexOfFirst { it > tws }.let { if (it == -1) twsList.size - 1 else it }.coerceAtLeast(1)
+            val twsFactor = (tws - twsList[twsIdx - 1]) / (twsList[twsIdx] - twsList[twsIdx - 1]).coerceAtLeast(0.1)
+
+            val polarPath = Path()
+            twaList.forEachIndexed { i, angleDeg ->
+                val angleRad = Math.toRadians(angleDeg)
+                val s1 = speeds[twsIdx - 1][i]
+                val s2 = speeds[twsIdx][i]
+                val interpolatedSpeed = s1 + (s2 - s1) * twsFactor
+                
+                // Draw relative to boat heading
+                val drawAngle = state.headingTrue ?: 0.0 + angleRad
+                val px = centerX + (interpolatedSpeed * pixelsPerMs * sin(drawAngle)).toFloat()
+                val py = centerY - (interpolatedSpeed * pixelsPerMs * cos(drawAngle)).toFloat()
+                
+                if (i == 0) polarPath.moveTo(px, py) else polarPath.lineTo(px, py)
+            }
+            
+            polarPerformancePaint.style = Paint.Style.STROKE
+            polarPerformancePaint.alpha = 60
+            polarPerformancePaint.color = Color.GRAY
+            canvas.drawPath(polarPath, polarPerformancePaint)
+        }
+
+        // 2. Efficiency Ring
+        val targetRadius = (targetSpeed * pixelsPerMs).toFloat()
+        val currentRadius = (currentSpeed * pixelsPerMs).toFloat()
+
+        polarPerformancePaint.style = Paint.Style.STROKE
+        polarPerformancePaint.alpha = 100
+        polarPerformancePaint.color = Color.WHITE
+        canvas.drawCircle(centerX, centerY, targetRadius, polarPerformancePaint)
+        
+        val ratio = if (targetSpeed > 0) currentSpeed / targetSpeed else 0.0
+        polarPerformancePaint.alpha = 255
+        polarPerformancePaint.color = if (ratio >= 0.98) Color.CYAN else if (ratio >= 0.90) Color.GREEN else if (ratio >= 0.8) Color.YELLOW else Color.RED
+        polarPerformancePaint.strokeWidth = 4f * density
+        canvas.drawCircle(centerX, centerY, currentRadius, polarPerformancePaint)
+    }
+
     private fun drawNavigationPath(canvas: Canvas, tileBox: RotatedTileBox, engine: net.osmand.plus.plugins.nautical.engine.SignalKEngine, isCloseQuarters: Boolean) {
         val route = engine.getRoutePoints()
         if (route.size < 2) return
-
         val app = context.applicationContext as OsmandApplication
         val currentState = engine.getCurrentState()
         val vesselPos = if ((currentState.latitude != null) && (currentState.longitude != null)) {
             Pair(currentState.latitude, currentState.longitude)
         } else null
-
-        // Caching logic for safety check
         val routeChanged = route != lastCheckedRoute
         val vesselMoved = vesselPos != null && lastCheckedVesselPos != null && 
             net.osmand.shared.util.KMapUtils.getDistance(vesselPos.first, vesselPos.second, lastCheckedVesselPos!!.first, lastCheckedVesselPos!!.second) > 50.0
@@ -893,54 +1076,34 @@ class NauticalMapLayer(context: Context) : OsmandMapLayer(context), SharedPrefer
             checkJob = layerScope.launch(Dispatchers.Main) {
                 val indexManager = NauticalPlugin.getInstance()?.s57SpatialIndex
                 val safetyManager = NauticalPlugin.getInstance()?.safetyManager
-                
                 var checker = safetyCorridorChecker
                 if (checker == null && indexManager != null && safetyManager != null) {
-                    checker = SafetyCorridorChecker(
-                        indexManager,
-                        safetyManager
-                    )
+                    checker = SafetyCorridorChecker(indexManager, safetyManager)
                     safetyCorridorChecker = checker
                 }
-                
                 val currentRoute = route.toList()
-
                 if (checker != null) {
                     val issues = withContext(Dispatchers.IO) {
                         val waypoints = currentRoute.map { Waypoint(it.first, it.second) }
                         val corridorIssues = checker.checkCorridor(waypoints).toMutableList()
-                        
                         vesselPos?.let { pos ->
                             if (!checker.isPointSafe(pos.first, pos.second)) {
-                                corridorIssues.add(
-                                    SafetyIssue(
-                                        -2,
-                                        app.getString(R.string.nautical_collision_danger),
-                                        S57Object(0L, "DANGER", S57PrimitiveType.POINT, emptyMap(), emptyList()),
-                                        Severity.DANGER,
-                                    )
-                                )
+                                corridorIssues.add(SafetyIssue(-2, app.getString(R.string.nautical_collision_danger), S57Object(0L, "DANGER", S57PrimitiveType.POINT, emptyMap(), emptyList()), Severity.DANGER))
                             }
                             corridorIssues.addAll(checker.checkLookAhead(pos.first, pos.second))
                         }
                         corridorIssues
                     }
-
                     cachedSafetyIssues = issues
-                    // hazardousSegmentsSet = issues.map { it.segmentIndex }.toSet()
-        // Sequence conversion for performance
-        hazardousSegmentsSet = issues.asSequence().map { it.segmentIndex }.toSet()
+                    hazardousSegmentsSet = issues.asSequence().map { it.segmentIndex }.toSet()
                     lastCheckedRoute = currentRoute
                     lastCheckedVesselPos = vesselPos
-                    
-                    // Refresh map to show new safety status
                     NauticalPlugin.getInstance()?.requestRefresh()
                 }
             }
         }
 
         val hazardousSegments = hazardousSegmentsSet
-
         for (i in 0 until route.size - 1) {
             val p1 = route[i]
             val p2 = route[i + 1]
@@ -948,38 +1111,25 @@ class NauticalMapLayer(context: Context) : OsmandMapLayer(context), SharedPrefer
             val y1 = tileBox.getPixYFromLatLon(p1.first, p1.second)
             val x2 = tileBox.getPixXFromLatLon(p2.first, p2.second)
             val y2 = tileBox.getPixYFromLatLon(p2.first, p2.second)
-
-            routePaint.color = if (hazardousSegments.contains(i)) {
-                ContextCompat.getColor(app, R.color.nautical_status_red)
-            } else {
-                ContextCompat.getColor(app, R.color.nautical_status_yellow)
-            }
-            if (isCloseQuarters && !hazardousSegments.contains(i)) {
-                routePaint.alpha = 80
-            } else {
-                routePaint.alpha = 140
-            }
-            
             val isSunlight = app.settings.NAUTICAL_DISPLAY_MODE.get() == net.osmand.plus.settings.enums.NauticalDisplayMode.SUNLIGHT
+            val errorColor = net.osmand.plus.plugins.nautical.ui.NauticalColorResolver.getColor(app, net.osmand.plus.plugins.nautical.ui.NauticalSemanticColor.STATUS_ERROR)
+            val warningColor = net.osmand.plus.plugins.nautical.ui.NauticalColorResolver.getColor(app, net.osmand.plus.plugins.nautical.ui.NauticalSemanticColor.STATUS_WARNING)
+
+            routePaint.color = if (isSunlight) Color.BLACK else (if (hazardousSegments.contains(i)) errorColor else warningColor)
+            routePaint.alpha = if (isCloseQuarters && !hazardousSegments.contains(i)) 80 else 140
             val baseWidth = if (hazardousSegments.contains(i)) 12f else 6f
             routePaint.strokeWidth = baseWidth * (if (isSunlight) 2.5f else 1.0f)
-            
             canvas.drawLine(x1, y1, x2, y2, routePaint)
-
-            // Draw Safety Corridor
             val safetyManager = NauticalPlugin.getInstance()?.safetyManager
             if (safetyManager != null) {
                 val totalWidthMeters = safetyManager.getTotalCorridorWidthMeters()
                 val halfWidthMeters = totalWidthMeters / 2.0
-                
                 val pixelsPerMeter = getPixelsPerMeter(tileBox, p1.first, p1.second)
                 val offsetPx = (halfWidthMeters * pixelsPerMeter).toFloat()
-                
                 if (offsetPx > 0) {
                     val angle = atan2((y2 - y1).toDouble(), (x2 - x1).toDouble())
                     val dx = (offsetPx * sin(angle)).toFloat()
                     val dy = (offsetPx * cos(angle)).toFloat()
-                    
                     canvas.drawLine(x1 + dx, y1 - dy, x2 + dx, y2 - dy, corridorPaint)
                     canvas.drawLine(x1 - dx, y1 + dy, x2 - dx, y2 + dy, corridorPaint)
                 }

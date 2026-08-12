@@ -10,9 +10,13 @@ import okio.FileSystem
 import okio.Path.Companion.toPath
 import okio.buffer
 import java.io.File
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 /**
  * Utility to record raw NMEA sentences to disk with UTC timestamps.
+ * Ensures all data is flushed before closing.
  */
 class NmeaStreamRecorder(
     private val storageDir: File,
@@ -21,7 +25,7 @@ class NmeaStreamRecorder(
     private val log = PlatformUtil.getLog(NmeaStreamRecorder::class.java)
     private var sink: BufferedSink? = null
     private var consumerJob: Job? = null
-    private val sentenceChannel = Channel<String>(capacity = 1024)
+    private val sentenceChannel = Channel<String>(capacity = 5000)
 
     private val _isRecording = MutableStateFlow(false)
     val isRecording = _isRecording.asStateFlow()
@@ -34,53 +38,69 @@ class NmeaStreamRecorder(
     }
 
     private fun startConsumer() {
-        consumerJob = scope.launch {
+        consumerJob = scope.launch(Dispatchers.IO) {
             var count = 0
             var lastFlush = System.currentTimeMillis()
-            for (sentence in sentenceChannel) {
-                if (_isRecording.value) {
-                    try {
-                        sink?.let { s ->
-                            val timestamp = System.currentTimeMillis()
-                            s.writeUtf8("[$timestamp] $sentence\n")
-                            count++
-                            
-                            val now = System.currentTimeMillis()
-                            if (count >= 20 || (now - lastFlush) > 5000) {
-                                s.flush()
-                                count = 0
-                                lastFlush = now
-                            }
+            try {
+                for (sentence in sentenceChannel) {
+                    sink?.let { s ->
+                        val timestamp = System.currentTimeMillis()
+                        s.writeUtf8("[$timestamp] $sentence\n")
+                        count++
+                        
+                        val now = System.currentTimeMillis()
+                        if (count >= 50 || (now - lastFlush) > 2000) {
+                            s.flush()
+                            count = 0
+                            lastFlush = now
                         }
-                    } catch (e: Exception) {
-                        log.error("Error writing NMEA sentence", e)
                     }
                 }
+            } catch (e: Exception) {
+                if (e !is CancellationException) {
+                    log.error("Error writing NMEA sentence", e)
+                }
+            } finally {
+                try {
+                    sink?.flush()
+                    sink?.close()
+                } catch (e: Exception) {
+                    log.error("Error closing NMEA sink", e)
+                }
+                sink = null
+                log.info("NMEA sink closed and flushed.")
             }
         }
     }
 
-    fun startRecording(filename: String) {
+    fun startRecording(name: String) {
         if (_isRecording.value) return
 
-        val file = File(storageDir, if (filename.endsWith(".nmea.log")) filename else "$filename.nmea.log")
         if (!storageDir.exists()) storageDir.mkdirs()
 
+        val sdf = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US)
+        val timestamp = sdf.format(Date())
+        val filename = "${name}_$timestamp.nmea.log"
+        val file = File(storageDir, filename)
+
         try {
-            val path = file.absolutePath.toPath()
-            sink = FileSystem.SYSTEM.sink(path).buffer()
+            sink = FileSystem.SYSTEM.sink(file.absolutePath.toPath()).buffer()
             _isRecording.value = true
             _currentFile.value = file.name
             log.info("Started recording NMEA to ${file.absolutePath}")
         } catch (e: Exception) {
             log.error("Failed to start NMEA recording", e)
-            stopRecording()
+            _isRecording.value = false
+            _currentFile.value = null
         }
     }
 
     fun recordSentence(sentence: String) {
         if (!_isRecording.value) return
-        sentenceChannel.trySend(sentence)
+        val sent = sentenceChannel.trySend(sentence)
+        if (sent.isFailure) {
+            log.warn("NMEA recording channel full. Dropping sentence.")
+        }
     }
 
     fun stopRecording() {
@@ -88,23 +108,13 @@ class NmeaStreamRecorder(
         
         _isRecording.value = false
         _currentFile.value = null
-        
-        scope.launch {
-            try {
-                sink?.close()
-            } catch (e: Exception) {
-                log.error("Error closing NMEA log sink", e)
-            } finally {
-                sink = null
-            }
-        }
+        // We don't close sink here, we let the consumer finish processing the channel
     }
 
     override fun close() {
         stopRecording()
         sentenceChannel.close()
-        consumerJob?.cancel()
-        // If we created our own scope, we should cancel it, but it's passed in the constructor.
-        // Usually, if it's passed in, we shouldn't cancel it unless we "own" it.
+        // We wait for consumer to finish in the job itself, but here we just cancel if needed
+        // but it's better to let it finish flushing if possible.
     }
 }

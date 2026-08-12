@@ -1,14 +1,36 @@
 package net.osmand.plus.plugins.nautical.maneuvers
 
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
 import net.osmand.plus.OsmandApplication
 import net.osmand.plus.plugins.nautical.NauticalPlugin
+import net.osmand.plus.plugins.nautical.di.SailingDependencyContainer
+import net.osmand.plus.plugins.nautical.laylines.engine.LatLon
+import net.osmand.plus.plugins.nautical.laylines.engine.LaylineMathEngine
+import net.osmand.plus.plugins.nautical.laylines.engine.TidalCurrentVector
 import net.osmand.plus.plugins.nautical.engine.MarineState
+import net.osmand.util.MapUtils
 import java.io.InputStream
 import kotlin.math.*
 
 class TacticalProcessor(private val app: OsmandApplication) {
 
     val polarDiagram = PolarDiagram()
+
+    init {
+        // TASK-002: Connect to PerformanceRepository to keep polar data in sync
+        SailingDependencyContainer.performanceRepository?.activePolarProfile?.let { profileFlow ->
+            app.runInUIThread {
+                NauticalPlugin.getInstance()?.pluginScope?.launch {
+                    profileFlow.collectLatest { profile ->
+                        profile?.let {
+                            polarDiagram.loadFromProfile(it)
+                        }
+                    }
+                }
+            }
+        }
+    }
 
     // Layline endpoints (lat, lon) for rendering and intersection checks
     var portLaylineEnd: Pair<Double, Double>? = null
@@ -17,7 +39,8 @@ class TacticalProcessor(private val app: OsmandApplication) {
         private set
 
     private var lastLaylineIntersectionState = false
-    private var targetWaypoint: Pair<Double, Double>? = null // (lat, lon)
+    var targetWaypoint: Pair<Double, Double>? = null
+        private set // (lat, lon)
 
     fun loadPolarFromStream(stream: InputStream): Boolean {
         return polarDiagram.loadFromCsv(stream)
@@ -36,58 +59,39 @@ class TacticalProcessor(private val app: OsmandApplication) {
     fun update(state: MarineState) {
         val lat = state.latitude ?: return
         val lon = state.longitude ?: return
-        val tws = state.windSpeedTrue ?: 5.14 // approx 10 knots default (m/s)
-        val twd = state.windDirectionTrue ?: 0.0 // radians true
+        val tws = state.windSpeedTrue ?: 5.14
+        val twd = state.windDirectionTrue ?: 0.0
         
-        val target = targetWaypoint
-        val isDownwind = if (target != null) {
-            val bearingToTarget = Math.toRadians(calculateBearing(lat, lon, target.first, target.second))
-            val relWind = (bearingToTarget - twd + 3 * PI) % (2 * PI) - PI
-            abs(relWind) > PI / 2
-        } else false
-
-        val optimalTwa = if (isDownwind) {
-            polarDiagram.getOptimalDownwindTwaRad(tws)
-        } else {
-            polarDiagram.getOptimalUpwindTwaRad(tws)
-        }
-
-        // Calculate Port and Starboard Laylines in Radians (Relative to Water)
-        var portHeading = (twd + optimalTwa + (2 * PI)) % (2 * PI)
-        var starboardHeading = (twd - optimalTwa + (2 * PI)) % (2 * PI)
+        val target = targetWaypoint ?: return
         
-        // Environmental Correction: Compensate for Current (Set/Drift)
-        val drift = state.drift
-        val set = state.setTrue
-        if (drift != null && set != null && drift > 0.05) {
-            val boatSpeed = polarDiagram.getTargetSpeedRad(tws, optimalTwa)
-            portHeading = compensateForCurrent(portHeading, boatSpeed, set, drift)
-            starboardHeading = compensateForCurrent(starboardHeading, boatSpeed, set, drift)
+        // TASK-001: Unified Layline Logic using LaylineMathEngine
+        val optimalTwa = polarDiagram.getOptimalUpwindTwaRad(tws)
+        val current = TidalCurrentVector(
+            (state.drift ?: 0.0) * sin(state.setTrue ?: 0.0),
+            (state.drift ?: 0.0) * cos(state.setTrue ?: 0.0)
+        )
+
+        val result = LaylineMathEngine.calculateApparentLaylines(
+            boatPosition = LatLon(lat, lon),
+            targetWaypoint = LatLon(target.first, target.second),
+            optimalTwa = optimalTwa,
+            trueWindDirection = twd,
+            boatSpeed = state.speedThroughWater ?: state.speedOverGround ?: 5.0,
+            current = current,
+            leewayRadians = state.leeway ?: 0.0
+        )
+
+        portLaylineEnd = result.portTackPoint?.let { it.latitude to it.longitude }
+        starboardLaylineEnd = result.starboardTackPoint?.let { it.latitude to it.longitude }
+
+        val isDownwind = abs((Math.toRadians(calculateBearing(lat, lon, target.first, target.second)) - twd + 3 * PI) % (2 * PI) - PI) > (PI / 2.0)
+
+        // Check intersection with target waypoint
+        val intersected = checkLaylineIntersection(lat, lon, target, portLaylineEnd, starboardLaylineEnd)
+        if (intersected && !lastLaylineIntersectionState) {
+            triggerLaylineReached(isDownwind)
         }
-
-        // Project laylines for e.g. 2 nautical miles (approx 3.7 km)
-        val distanceKm = 3.7
-        portLaylineEnd = calculateDestination(lat, lon, distanceKm, Math.toDegrees(portHeading))
-        starboardLaylineEnd = calculateDestination(lat, lon, distanceKm, Math.toDegrees(starboardHeading))
-
-        // Check intersection with target waypoint if set
-        target?.let { t ->
-            val intersected = checkLaylineIntersection(lat, lon, t, portLaylineEnd, starboardLaylineEnd)
-            if (intersected && !lastLaylineIntersectionState) {
-                triggerLaylineReached(isDownwind)
-            }
-            lastLaylineIntersectionState = intersected
-        }
-    }
-
-    private fun compensateForCurrent(heading: Double, boatSpeed: Double, set: Double, drift: Double): Double {
-        // Vector addition: Boat Velocity + Current Velocity = COG Vector
-        val boatX = boatSpeed * sin(heading)
-        val boatY = boatSpeed * cos(heading)
-        val currentX = drift * sin(set)
-        val currentY = drift * cos(set)
-        
-        return (atan2(boatX + currentX, boatY + currentY) + 2 * PI) % (2 * PI)
+        lastLaylineIntersectionState = intersected
     }
 
     private fun triggerLaylineReached(isDownwind: Boolean) {
@@ -113,20 +117,6 @@ class TacticalProcessor(private val app: OsmandApplication) {
         return (Math.toDegrees(atan2(y, x)) + 360) % 360
     }
 
-    private fun calculateDestination(latDeg: Double, lonDeg: Double, distanceKm: Double, bearingDeg: Double): Pair<Double, Double> {
-        val earthRadiusKm = 6371.0
-        val brngRad = Math.toRadians(bearingDeg)
-        val lat1Rad = Math.toRadians(latDeg)
-        val lon1Rad = Math.toRadians(lonDeg)
-
-        val angularDistance = distanceKm / earthRadiusKm
-
-        val lat2Rad = asin((sin(lat1Rad) * cos(angularDistance)) + (cos(lat1Rad) * sin(angularDistance) * cos(brngRad)))
-        val lon2Rad = lon1Rad + atan2(sin(brngRad) * sin(angularDistance) * cos(lat1Rad), cos(angularDistance) - sin(lat1Rad) * sin(lat2Rad))
-
-        return Pair(Math.toDegrees(lat2Rad), Math.toDegrees(lon2Rad))
-    }
-
     private fun checkLaylineIntersection(
         currLat: Double, currLon: Double,
         target: Pair<Double, Double>,
@@ -141,7 +131,7 @@ class TacticalProcessor(private val app: OsmandApplication) {
         return distToPort < 0.05 || distToStbd < 0.05
     }
 
-    private fun distanceToSegment(x: Double, y: Double, x1: Double, y1: Double, x2: Double, y2: Double): Double {
+    fun distanceToSegment(x: Double, y: Double, x1: Double, y1: Double, x2: Double, y2: Double): Double {
         val a = x - x1
         val b = y - y1
         val c = x2 - x1
@@ -168,8 +158,7 @@ class TacticalProcessor(private val app: OsmandApplication) {
             yy = y1 + (param * d)
         }
 
-        val dx = x - xx
-        val dy = y - yy
-        return sqrt(dx * dx + dy * dy) * 111.0
+        // TASK-004: Replace inaccurate 111.0 multiplier with proper Geodesic distance
+        return MapUtils.getDistance(x, y, xx, yy) / 1000.0 // Convert meters to km
     }
 }

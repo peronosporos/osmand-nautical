@@ -22,6 +22,22 @@ object AnchorCalculator {
     }
 
     /**
+     * Centralized scope recommendation based on wind and user settings.
+     */
+    fun calculateRecommendedScope(
+        windSpeedMs: Double,
+        userPreferredRatio: Float
+    ): Double {
+        val baseRatio = userPreferredRatio.toDouble().coerceAtLeast(3.0)
+        // Adjust for high wind (> 20 knots / 10 m/s)
+        return if (windSpeedMs > 10.0) {
+            (baseRatio + 2.0).coerceAtLeast(7.0)
+        } else {
+            baseRatio
+        }
+    }
+
+    /**
      * Calculates the total watch radius.
      * R_total = Rode_Length + Bow_Offset + Safety_Margin
      */

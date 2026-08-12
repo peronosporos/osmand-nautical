@@ -30,7 +30,8 @@
             android:id="@+id/mode_toggle_group"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginHorizontal="16dp"
+            android:layout_marginStart="16dp"
+            android:layout_marginEnd="16dp"
             android:layout_marginTop="20dp"
             app:layout_constraintEnd_toStartOf="@id/btn_mode_stop"
             app:layout_constraintStart_toStartOf="parent"
@@ -102,14 +103,16 @@
             android:id="@+id/auth_warning"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginHorizontal="16dp"
+            android:layout_marginStart="16dp"
+            android:layout_marginEnd="16dp"
             android:layout_marginTop="12dp"
             android:text="@string/nautical_auth_token_required"
             android:textColor="@color/nautical_status_text_emergency"
             android:textSize="12sp"
             android:textStyle="bold"
             android:background="@drawable/bg_nautical_status_emergency"
-            android:paddingHorizontal="12dp"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp"
             android:paddingVertical="4dp"
             android:gravity="center"
             android:visibility="gone"
@@ -118,12 +121,12 @@
             app:layout_constraintTop_toBottomOf="@id/mode_toggle_group"
             tools:visibility="visible" />
 
-        <!-- 1.5 Quick Actions Row -->
         <LinearLayout
             android:id="@+id/header_actions"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginHorizontal="16dp"
+            android:layout_marginStart="16dp"
+            android:layout_marginEnd="16dp"
             android:layout_marginTop="16dp"
             android:orientation="horizontal"
             android:gravity="center"
@@ -161,7 +164,7 @@
                 android:layout_height="48dp"
                 android:layout_weight="1"
                 android:background="?attr/selectableItemBackgroundBorderless"
-                android:contentDescription="Vessel Systems"
+                android:contentDescription="@string/nautical_systems_group"
                 app:srcCompat="@drawable/ic_action_layers"
                 app:tint="?attr/icon_color_primary" />
 
@@ -187,7 +190,7 @@
                 android:layout_weight="1"
                 app:icon="@drawable/ic_action_lock"
                 app:iconTint="?attr/icon_color_primary"
-                android:contentDescription="Lock Course Control" />
+                android:contentDescription="@string/nautical_lock_course" />
 
             <View android:layout_width="1dp" android:layout_height="24dp" android:background="#33FFFFFF" />
 
@@ -197,19 +200,7 @@
                 android:layout_height="48dp"
                 android:layout_weight="1"
                 android:background="?attr/selectableItemBackgroundBorderless"
-                android:contentDescription="Nautical Tools"
-                app:srcCompat="@drawable/ic_action_additional_option"
-                app:tint="?attr/icon_color_primary" />
-
-            <View android:layout_width="1dp" android:layout_height="24dp" android:background="#33FFFFFF" />
-
-            <ImageButton
-                android:id="@+id/btn_toggle_telemetry"
-                android:layout_width="0dp"
-                android:layout_height="48dp"
-                android:layout_weight="1"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:contentDescription="@string/nautical_toggle_telemetry"
+                android:contentDescription="@string/nautical_tool_center"
                 app:srcCompat="@drawable/ic_action_additional_option"
                 app:tint="?attr/icon_color_primary" />
         </LinearLayout>
@@ -220,12 +211,13 @@
             style="@style/Widget.App.Material.SectionCard"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginHorizontal="16dp"
+            android:layout_marginStart="16dp"
+            android:layout_marginEnd="16dp"
             android:layout_marginTop="24dp"
             app:cardBackgroundColor="#26FFFFFF"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/auth_warning">
+            app:layout_constraintTop_toBottomOf="@id/header_actions">
 
             <androidx.constraintlayout.widget.ConstraintLayout
                 android:layout_width="match_parent"
@@ -237,7 +229,8 @@
                     android:id="@+id/heading_error_linear"
                     android:layout_width="0dp"
                     android:layout_height="80dp"
-                    android:layout_marginHorizontal="16dp"
+                    android:layout_marginStart="16dp"
+                    android:layout_marginEnd="16dp"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toTopOf="parent" />
@@ -253,6 +246,20 @@
                     app:layout_constraintTop_toBottomOf="@id/heading_error_linear"
                     android:contentDescription="@string/nautical_pilot_title"
                     android:focusable="true" />
+
+                <!-- Predictive Steering Active Indicator -->
+                <ImageView
+                    android:id="@+id/img_predictive_active"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:layout_marginEnd="16dp"
+                    android:layout_marginTop="16dp"
+                    android:src="@drawable/ic_action_nautical_depth"
+                    app:tint="@color/nautical_status_green"
+                    android:visibility="gone"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintTop_toTopOf="parent"
+                    android:contentDescription="@string/nautical_predictive_steering_active" />
 
                 <!-- Left Controls (Vertical Column) -->
                 <LinearLayout
@@ -356,7 +363,8 @@
                     android:id="@+id/rudder_view"
                     android:layout_width="0dp"
                     android:layout_height="64dp"
-                    android:layout_marginHorizontal="32dp"
+                    android:layout_marginStart="32dp"
+                    android:layout_marginEnd="32dp"
                     android:layout_marginTop="16dp"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintStart_toStartOf="parent"
@@ -365,19 +373,6 @@
                     android:focusable="true" />
             </androidx.constraintlayout.widget.ConstraintLayout>
         </com.google.android.material.card.MaterialCardView>
-
-        <!-- 3. Telemetry Pane (Deferred via ViewStub) -->
-        <ViewStub
-            android:id="@+id/telemetry_stub"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="28dp"
-            android:layout="@layout/nautical_pilot_telemetry_grid"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/steering_card" />
-
-
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 </androidx.core.widget.NestedScrollView>

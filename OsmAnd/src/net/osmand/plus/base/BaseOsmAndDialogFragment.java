@@ -27,6 +27,8 @@ import net.osmand.plus.utils.InsetTarget.Type;
 import net.osmand.plus.utils.InsetTargetsCollection;
 import net.osmand.plus.utils.InsetsUtils;
 import net.osmand.plus.utils.UiUtilities;
+import net.osmand.plus.plugins.nautical.NauticalPlugin;
+import android.graphics.Paint;
 
 public class BaseOsmAndDialogFragment extends DialogFragment implements IOsmAndFragment, ISupportInsets {
 
@@ -71,6 +73,14 @@ public class BaseOsmAndDialogFragment extends DialogFragment implements IOsmAndF
 			} else {
 				WindowCompat.setDecorFitsSystemWindows(dialog.getWindow(), false);
 			}
+		}
+		
+		// ITEM 2: Extend night vision coverage to Dialogs (Bug #2)
+		if (dialog != null && dialog.getWindow() != null && NauticalPlugin.isNightVision(app)) {
+			View decorView = dialog.getWindow().getDecorView();
+			Paint paint = new Paint();
+			paint.setColorFilter(NauticalPlugin.NIGHT_VISION_FILTER);
+			decorView.setLayerType(View.LAYER_TYPE_HARDWARE, paint);
 		}
 	}
 

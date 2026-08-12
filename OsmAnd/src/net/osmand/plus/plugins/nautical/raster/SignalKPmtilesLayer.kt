@@ -16,14 +16,16 @@ class SignalKPmtilesLayer(private val mapActivity: MapActivity) : OsmandMapLayer
 
     private val app = mapActivity.app
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
-    private val tileCache = object : LruCache<String, Bitmap>(50) {
-        override fun entryRemoved(evicted: Boolean, key: String, oldValue: Bitmap, newValue: Bitmap?) {
-            if (evicted) oldValue.recycle()
-        }
-    }
+    private val tileCache = LruCache<String, Bitmap>(256)
+    
+    private val inFlightRequests = mutableSetOf<String>()
+    
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         alpha = 255
     }
+    
+    private val drawRect = RectF()
+    private var lastNightVision = false
 
     override fun destroyLayer() {
         scope.cancel()
@@ -42,6 +44,12 @@ class SignalKPmtilesLayer(private val mapActivity: MapActivity) : OsmandMapLayer
         
         val opacity = app.settings.NAUTICAL_RASTER_CHARTS_OPACITY.get()
         paint.alpha = opacity
+
+        val isNightVision = NauticalPlugin.isNightVision(app)
+        if (isNightVision != lastNightVision) {
+            paint.colorFilter = if (isNightVision) NauticalPlugin.NIGHT_VISION_FILTER else null
+            lastNightVision = isNightVision
+        }
 
         val zoom = tileBox.zoom
         val bounds = tileBox.tileBounds ?: return
@@ -62,14 +70,15 @@ class SignalKPmtilesLayer(private val mapActivity: MapActivity) : OsmandMapLayer
         val key = "pmtiles/$zoom/$x/$y"
         val bitmap = tileCache[key]
         
+        drawRect.set(
+            tileBox.getPixXFromTile(x.toDouble(), y.toDouble(), zoom.toFloat()),
+            tileBox.getPixYFromTile(x.toDouble(), y.toDouble(), zoom.toFloat()),
+            tileBox.getPixXFromTile((x + 1).toDouble(), (y + 1).toDouble(), zoom.toFloat()),
+            tileBox.getPixYFromTile((x + 1).toDouble(), (y + 1).toDouble(), zoom.toFloat())
+        )
+
         if (bitmap != null) {
-            val pxLeft = tileBox.getPixXFromTile(x.toDouble(), y.toDouble(), zoom.toFloat())
-            val pxTop = tileBox.getPixYFromTile(x.toDouble(), y.toDouble(), zoom.toFloat())
-            val pxRight = tileBox.getPixXFromTile((x + 1).toDouble(), (y + 1).toDouble(), zoom.toFloat())
-            val pxBottom = tileBox.getPixYFromTile((x + 1).toDouble(), (y + 1).toDouble(), zoom.toFloat())
-            
-            val rect = RectF(pxLeft, pxTop, pxRight, pxBottom)
-            canvas.drawBitmap(bitmap, null, rect, paint)
+            canvas.drawBitmap(bitmap, null, drawRect, paint)
         } else {
             fetchTile(zoom, x, y)
         }
@@ -77,7 +86,10 @@ class SignalKPmtilesLayer(private val mapActivity: MapActivity) : OsmandMapLayer
 
     private fun fetchTile(zoom: Int, x: Int, y: Int) {
         val key = "pmtiles/$zoom/$x/$y"
-        if (tileCache[key] != null) return
+        synchronized(inFlightRequests) {
+            if (tileCache[key] != null || inFlightRequests.contains(key)) return
+            inFlightRequests.add(key)
+        }
         
         scope.launch(Dispatchers.IO) {
             try {
@@ -99,11 +111,17 @@ class SignalKPmtilesLayer(private val mapActivity: MapActivity) : OsmandMapLayer
                         val bitmap = BitmapFactory.decodeStream(stream)
                         if (bitmap != null) {
                             tileCache.put(key, bitmap)
-                            mapActivity.mapView.refreshMap()
+                            withContext(Dispatchers.Main) {
+                                mapActivity.mapView.refreshMap()
+                            }
                         }
                     }
                 }
             } catch (_: Exception) {
+            } finally {
+                synchronized(inFlightRequests) {
+                    inFlightRequests.remove(key)
+                }
             }
         }
     }

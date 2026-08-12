@@ -3,6 +3,7 @@ package net.osmand.plus.plugins.nautical.engine
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.sample
 import net.osmand.Location
 import net.osmand.PlatformUtil
 import net.osmand.plus.OsmandApplication
@@ -15,6 +16,7 @@ import net.osmand.shared.aistracker.AisObject
 import net.osmand.shared.aistracker.AisObjectConstants
 import net.osmand.shared.aistracker.AisTrackerMath
 import java.util.Collections
+import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
 class NauticalAisManager(private val app: OsmandApplication) {
@@ -37,6 +39,8 @@ class NauticalAisManager(private val app: OsmandApplication) {
             override fun removeEldestEntry(eldest: Map.Entry<Int, AisObject>?): Boolean {
                 val shouldRemove = size > aisObjectListCounterMax
                 if (shouldRemove && (eldest != null)) {
+                    val mmsi = eldest.key
+                    aisExtras.remove(mmsi)
                     _aisEvents.tryEmit(AisEvent.Removed(eldest.value))
                     listeners.forEach { it.onAisObjectRemoved(eldest.value) }
                 }
@@ -55,8 +59,21 @@ class NauticalAisManager(private val app: OsmandApplication) {
         data class Removed(val obj: AisObject) : AisEvent()
     }
 
-    private val _aisEvents = MutableSharedFlow<AisEvent>(extraBufferCapacity = 64)
+    private val _aisEvents = MutableSharedFlow<AisEvent>(extraBufferCapacity = 256)
     val aisEvents = _aisEvents.asSharedFlow()
+
+    private val batchUpdateFlow = MutableSharedFlow<AisObject>(extraBufferCapacity = 128)
+
+    init {
+        managerScope.launch {
+            // Task: AIS Notification Throttling (Batching updates to 2Hz)
+            batchUpdateFlow
+                .sample(500.milliseconds)
+                .collect { obj ->
+                    listeners.forEach { it.onAisObjectReceived(obj) }
+                }
+        }
+    }
 
     interface AisObjectListener {
         fun onAisObjectReceived(ais: AisObject)
@@ -143,7 +160,7 @@ class NauticalAisManager(private val app: OsmandApplication) {
         }
 
         _aisEvents.tryEmit(AisEvent.Updated(obj))
-        listeners.forEach { it.onAisObjectReceived(obj) }
+        batchUpdateFlow.tryEmit(obj)
     }
 
     fun updateAisThreatLevel(mmsi: Int, level: Int) {
@@ -178,29 +195,34 @@ class NauticalAisManager(private val app: OsmandApplication) {
         val basePruneTimeout = plugin.aisObjLostTimeout.get()
         val classBPruneTimeout = 18
 
-        val iterator = objects.entries.iterator()
-        while (iterator.hasNext()) {
-            val obj = iterator.next().value
-            var pruneTimeout = basePruneTimeout
-            
-            val isClassB = obj.msgTypes.any { (it == 18) || (it == 19) || (it == 24) }
-            if (isClassB) {
-                pruneTimeout = kotlin.math.max(pruneTimeout, classBPruneTimeout)
-            }
+        synchronized(objects) {
+            val iterator = objects.entries.iterator()
+            while (iterator.hasNext()) {
+                val entry = iterator.next()
+                val obj = entry.value
+                var pruneTimeout = basePruneTimeout
 
-            if (obj.isLost(pruneTimeout)) {
-                log.debug("Remove AIS object with MMSI ${obj.mmsi}")
-                iterator.remove()
-                _aisEvents.tryEmit(AisEvent.Removed(obj))
-                listeners.forEach { it.onAisObjectRemoved(obj) }
+                val isClassB = obj.msgTypes.any { (it == 18) || (it == 19) || (it == 24) }
+                if (isClassB) {
+                    pruneTimeout = kotlin.math.max(pruneTimeout, classBPruneTimeout)
+                }
+
+                if (obj.isLost(pruneTimeout)) {
+                    log.debug("Remove AIS object with MMSI ${obj.mmsi}")
+                    val mmsi = entry.key
+                    aisExtras.remove(mmsi)
+                    iterator.remove()
+                    _aisEvents.tryEmit(AisEvent.Removed(obj))
+                    listeners.forEach { it.onAisObjectRemoved(obj) }
+                }
             }
         }
     }
 
 
 
-    private fun updateAllCpa() {
-        val ownPosition = app.locationProvider.lastKnownLocation ?: return
+    private fun updateAllCpa() = managerScope.launch(Dispatchers.Default) {
+        val ownPosition = app.locationProvider.lastKnownLocation ?: return@launch
         val now = System.currentTimeMillis()
         
         // Simulating the optimization from AisTrackerPlugin
@@ -209,17 +231,20 @@ class NauticalAisManager(private val app: OsmandApplication) {
 
         val interval = if (isBackground) 30000L else (if (isMoving) 5000L else 10000L)
         if ((now - lastCpaExecutionTime) < interval) {
-             return // Skip for battery optimization
+             return@launch // Skip for battery optimization
         }
         lastCpaExecutionTime = now
 
         val ownAisLocation = ownPosition.toAisLocation()
-        val plugin: NauticalPlugin = NauticalPlugin.getInstance() ?: return
+        val plugin: NauticalPlugin = NauticalPlugin.getInstance() ?: return@launch
         val cpaWarningTime = plugin.aisCpaWarningTime.get()
         val cpaWarningDistance = plugin.aisCpaWarningDistance.get()
         var anyDanger = false
 
-        for (obj in objects.values) {
+        val objectsToProcess = synchronized(objects) { objects.values.toList() }
+
+        for (obj in objectsToProcess) {
+            yield() // Yield to prevent long blocking of Default thread if list is huge
             if (!obj.isMovable() || (obj.objectClass == net.osmand.shared.aistracker.AisObjType.AIS_AIRPLANE)) {
                 obj.cpa.reset()
                 continue

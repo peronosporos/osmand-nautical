@@ -76,13 +76,45 @@ class TideViewModel : ViewModel() {
                 val isCurrent = (skStation.name.contains("Current", ignoreCase = true)) || 
                                 (skStation.properties?.get("type") == "current")
                 
-                _predictions.value = timeline.map { skp ->
+                val mappedPredictions = timeline.mapIndexed { i, skp ->
+                    val h = skp.height
+                    var isHigh: Boolean? = null
+                    
+                    if (!isCurrent && i > 0 && i < timeline.size - 1) {
+                        val prevH = timeline[i - 1].height
+                        val nextH = timeline[i + 1].height
+                        if (h > prevH && h > nextH) isHigh = true
+                        else if (h < prevH && h < nextH) isHigh = false
+                    }
+                    
                     TidePrediction(
                         timestamp = parseSkTime(skp.timestamp),
-                        heightMeters = if (isCurrent) 0.0 else skp.height,
-                        velocity = if (isCurrent) skp.height else null,
+                        heightMeters = if (isCurrent) 0.0 else h,
+                        velocity = if (isCurrent) h else null,
+                        isHighTide = isHigh
                     )
                 }
+
+                // Enrich with actual extremes if available
+                val finalPredictions = mappedPredictions.toMutableList()
+                extremes.forEach { ext ->
+                    val ts = parseSkTime(ext.timestamp)
+                    val isHigh = ext.type.lowercase(Locale.US).contains("high")
+                    // Check if we already have a prediction near this time
+                    val existingIdx = finalPredictions.indexOfFirst { Math.abs(it.timestamp - ts) < 600000 }
+                    if (existingIdx != -1) {
+                        finalPredictions[existingIdx] = finalPredictions[existingIdx].copy(isHighTide = isHigh)
+                    } else {
+                        finalPredictions.add(TidePrediction(
+                            timestamp = ts,
+                            heightMeters = if (isCurrent) 0.0 else ext.height,
+                            velocity = if (isCurrent) ext.height else null,
+                            isHighTide = isHigh
+                        ))
+                    }
+                }
+                
+                _predictions.value = finalPredictions.sortedBy { it.timestamp }
             } else {
                 // Fallback to local if server fails
                 val lat = skStation.position.coordinates[1]

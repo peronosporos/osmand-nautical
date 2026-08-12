@@ -28,15 +28,17 @@ class SafetyCorridorChecker(
 
         val corridorWidthNm = safetyManager.getSafetyCorridorWidthNm()
         val corridorBufferNm = safetyManager.getSafetyCorridorBufferNm()
-
-        // Half width for JTS buffer including the safety buffer
-        val halfWidthDegrees = (corridorWidthNm / 2.0 + corridorBufferNm) / 60.0
+        val totalHalfWidthNm = corridorWidthNm / 2.0 + corridorBufferNm
 
         for (i in 0 until waypoints.size - 1) {
             val p1 = waypoints[i]
             val p2 = waypoints[i + 1]
 
             if (p1.latitude.isNaN() || p1.longitude.isNaN() || p2.latitude.isNaN() || p2.longitude.isNaN()) continue
+
+            // Item 7 Fix: Account for longitude convergence
+            val midLat = (p1.latitude + p2.latitude) / 2.0
+            val halfWidthDegrees = totalHalfWidthNm / (60.0 * kotlin.math.cos(Math.toRadians(midLat)).coerceAtLeast(0.01))
 
             val line = geometryFactory.createLineString(arrayOf(
                 Coordinate(p1.longitude, p1.latitude),

@@ -37,6 +37,62 @@ object S52SymbolManager {
             SymbolId.CARDINAL_EAST -> drawCardinal(canvas, x, y, 2, finalScale)
             SymbolId.CARDINAL_SOUTH -> drawCardinal(canvas, x, y, 3, finalScale)
             SymbolId.CARDINAL_WEST -> drawCardinal(canvas, x, y, 4, finalScale)
+            SymbolId.BUOY_PORT -> drawBuoy(canvas, x, y, Color.RED, 1, finalScale)
+            SymbolId.BUOY_STARBOARD -> drawBuoy(canvas, x, y, Color.GREEN, 2, finalScale)
+            SymbolId.BUOY_NORTH -> drawBuoy(canvas, x, y, Color.BLACK, 3, finalScale)
+            SymbolId.BUOY_EAST -> drawBuoy(canvas, x, y, Color.BLACK, 4, finalScale)
+            SymbolId.BUOY_SOUTH -> drawBuoy(canvas, x, y, Color.BLACK, 5, finalScale)
+            SymbolId.BUOY_WEST -> drawBuoy(canvas, x, y, Color.BLACK, 6, finalScale)
+            SymbolId.BEACON_PORT -> drawBeacon(canvas, x, y, Color.RED, 1, finalScale)
+            SymbolId.BCN_STARBOARD -> drawBeacon(canvas, x, y, Color.GREEN, 2, finalScale)
+        }
+    }
+
+    private fun drawBuoy(canvas: Canvas, x: Float, y: Float, color: Int, type: Int, scale: Float) {
+        fillPaint.color = color
+        path.reset()
+        // Buoy base
+        path.moveTo(x - 4f * scale, y + 6f * scale)
+        path.lineTo(x + 4f * scale, y + 6f * scale)
+        path.lineTo(x + 3f * scale, y - 4f * scale)
+        path.lineTo(x - 3f * scale, y - 4f * scale)
+        path.close()
+        canvas.drawPath(path, fillPaint)
+        
+        // Top mark
+        when (type) {
+            1 -> { // Port: Square
+                canvas.drawRect(x - 2f * scale, y - 8f * scale, x + 2f * scale, y - 4f * scale, fillPaint)
+            }
+            2 -> { // Starboard: Triangle
+                path.reset()
+                path.moveTo(x, y - 9f * scale)
+                path.lineTo(x - 2f * scale, y - 4f * scale)
+                path.lineTo(x + 2f * scale, y - 4f * scale)
+                path.close()
+                canvas.drawPath(path, fillPaint)
+            }
+            3 -> { // North: Up Up
+                 drawTriangleAt(canvas, x, y - 8f * scale, 2f * scale, true)
+                 drawTriangleAt(canvas, x, y - 5f * scale, 2f * scale, true)
+            }
+            // ... add others if needed
+        }
+    }
+
+    private fun drawBeacon(canvas: Canvas, x: Float, y: Float, color: Int, type: Int, scale: Float) {
+        strokePaint.color = color
+        strokePaint.strokeWidth = 3f * scale
+        canvas.drawLine(x, y + 8f * scale, x, y - 4f * scale, strokePaint)
+        fillPaint.color = color
+        if (type == 1) canvas.drawRect(x - 3f * scale, y - 8f * scale, x + 3f * scale, y - 4f * scale, fillPaint)
+        else if (type == 2) {
+            path.reset()
+            path.moveTo(x, y - 9f * scale)
+            path.lineTo(x - 3f * scale, y - 4f * scale)
+            path.lineTo(x + 3f * scale, y - 4f * scale)
+            path.close()
+            canvas.drawPath(path, fillPaint)
         }
     }
 

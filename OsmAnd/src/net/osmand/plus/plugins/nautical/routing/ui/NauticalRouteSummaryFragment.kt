@@ -90,6 +90,7 @@ class NauticalRouteSummaryFragment : BaseOsmAndFragment() {
         private val cts = view.findViewById<TextView>(R.id.cts)
         private val sog = view.findViewById<TextView>(R.id.sog)
         private val ete = view.findViewById<TextView>(R.id.ete)
+        private val wind = view.findViewById<TextView>(R.id.wind)
 
         fun bind(leg: PassagePlanLeg) {
             number.text = leg.legNumber.toString()
@@ -97,6 +98,12 @@ class NauticalRouteSummaryFragment : BaseOsmAndFragment() {
             cts.text = String.format(Locale.US, "%03d°", leg.courseToSteerDeg.toInt())
             sog.text = String.format(Locale.US, "%.1f", leg.speedOverGroundKn)
             ete.text = String.format(Locale.US, "%.1f", leg.eteHours)
+            
+            leg.windSpeedMs?.let { ws ->
+                wind.text = String.format(Locale.US, "W:%.0f", ws * 1.94384) // To knots
+            } ?: run {
+                wind.text = ""
+            }
         }
     }
 }

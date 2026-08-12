@@ -24,7 +24,7 @@ import net.osmand.data.RotatedTileBox;
 import net.osmand.plus.render.MapRenderRepositories;
 import net.osmand.plus.resources.AsyncLoadingThread;
 import net.osmand.plus.resources.ResourceManager;
-import net.osmand.plus.plugins.nautical.NauticalPlugin;
+
 import net.osmand.plus.views.OsmandMapTileView;
 import net.osmand.plus.views.corenative.NativeCoreContext;
 import net.osmand.plus.views.layers.base.BaseMapLayer;
@@ -224,11 +224,9 @@ public class MapVectorLayer extends BaseMapLayer {
 //			final float y2 = calc.getPixYFromLatLon(rb.getLatitude(), rb.getLongitude());
 			destImage.set(x1, y1, x2, y2);
 			if (!bmp.isRecycled()) {
-				if (NauticalPlugin.isNightVision(getApplication())) {
-					paintImg.setColorFilter(NauticalPlugin.NIGHT_VISION_FILTER);
-				} else {
-					paintImg.setColorFilter(null);
-				}
+				// ITEM 1: Avoid Double Filtering (Bug #1)
+				// Activity decorView is already filtered by NauticalPlugin
+				paintImg.setColorFilter(null);
 				canvas.drawBitmap(bmp, null, destImage, paintImg);
 				shown = true;
 			}

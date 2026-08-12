@@ -11,7 +11,8 @@ data class RoutingRequest(
     val start: Waypoint,
     val destination: Waypoint,
     val departureTime: Long,
-    val polarProfile: PolarProfile
+    val polarProfile: PolarProfile,
+    val timeStepHours: Double = 1.0
 )
 
 data class IsochroneNode(
@@ -33,7 +34,10 @@ data class PassagePlanLeg(
     val expectedSetDeg: Double?,
     val expectedDriftKn: Double?,
     val speedOverGroundKn: Double,
-    val eteHours: Double
+    val eteHours: Double,
+    val windSpeedMs: Double? = null,
+    val windAngleRad: Double? = null,
+    val waveHeightM: Double? = null
 )
 
 data class OptimalRouteResult(

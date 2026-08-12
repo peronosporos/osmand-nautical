@@ -88,9 +88,17 @@ class NauticalNotificationManager(
                 log.info("Notification cleared: ${entry.key}")
                 NotificationManagerCompat.from(app).cancel(entry.key.hashCode())
                 
-                // Task: Stop the audio alarm if it was triggered by this path
+                // Item 9 Fix: Only stop audio if no other notification of this alarm type is active
                 val alarmType = getAlarmTypeForPath(entry.key)
-                arbiter.stopAlarm(alarmType)
+                val otherActiveOfSameType = notifications.any { (otherPath, otherNotif) ->
+                    otherPath != entry.key && 
+                    getAlarmTypeForPath(otherPath) == alarmType && 
+                    (otherNotif.state == NotificationState.ALARM || otherNotif.state == NotificationState.EMERGENCY)
+                }
+                
+                if (!otherActiveOfSameType) {
+                    arbiter.stopAlarm(alarmType)
+                }
                 
                 iterator.remove()
                 changed = true
@@ -104,11 +112,9 @@ class NauticalNotificationManager(
 
     private fun triggerAlert(path: String, notification: SignalKNotification) {
         val now = System.currentTimeMillis()
-        if (now - initTime < STARTUP_SILENCE_MS) {
-            log.info("Suppressing alert during startup: $path")
-            return
-        }
-        log.error("SIGNAL K ALERT: [$path] ${notification.message} (State: ${notification.state})")
+        val isHydration = (now - initTime < STARTUP_SILENCE_MS)
+        
+        log.error("SIGNAL K ALERT: [$path] ${notification.message} (State: ${notification.state}) ${if (isHydration) "[HYDRATION]" else ""}")
         
         val isCritical = notification.state == NotificationState.ALARM || notification.state == NotificationState.EMERGENCY
         val plugin = NauticalPlugin.getInstance()
@@ -124,10 +130,10 @@ class NauticalNotificationManager(
             
             val alarmType = getAlarmTypeForPath(path)
 
-            // Audio alerting: Suppress if not on passage AND it's just a general navigation alert
-            val shouldSilence = !onPassage && (alarmType == AlarmType.XTE_NAVIGATION || path.contains("watchdog"))
+            // Audio alerting: Suppress if in hydration mode OR not on passage AND it's just a general navigation alert
+            val shouldSilenceAudio = isHydration || (!onPassage && (alarmType == AlarmType.XTE_NAVIGATION || path.contains("watchdog")))
             
-            if (!shouldSilence) {
+            if (!shouldSilenceAudio) {
                 arbiter.dispatchAlarm(
                     type = alarmType,
                     voiceText = message,
@@ -141,28 +147,33 @@ class NauticalNotificationManager(
                 postCriticalNotification(path, priorityPrefix, notification.message)
             }
 
-            // Visual alert
+            // Visual alert: Always show banner for critical alarms even during hydration
             if (isCritical) {
-                val bannerLabel = if (alarmType == AlarmType.DSC_DISTRESS || alarmType == AlarmType.AIS_SART) {
-                    app.getString(R.string.nautical_locate_vessel)
-                } else {
-                    app.getString(R.string.nautical_silence_alarm)
+                val isMob = alarmType == AlarmType.MOB
+                val isMuted = isMob && (plugin?.mobViewModel?.uiState?.value?.muteUntil ?: 0L) > System.currentTimeMillis()
+
+                val bannerLabel = when {
+                    alarmType == AlarmType.DSC_DISTRESS || alarmType == AlarmType.AIS_SART -> app.getString(R.string.nautical_locate_vessel)
+                    isMuted -> app.getString(R.string.nautical_unmute_alarm)
+                    else -> app.getString(R.string.nautical_silence_alarm)
                 }
 
                 NauticalPlugin.hudManager?.get()?.showBanner(
                     message,
-                    durationMs = 30000,
+                    durationMs = if (isHydration) 10000 else 30000,
                     label = bannerLabel,
                     isWarning = true,
                     onConfirm = {
                         if (alarmType == AlarmType.DSC_DISTRESS || alarmType == AlarmType.AIS_SART) {
-                            handleRescueLocate(notification.message)
+                            handleRescueLocate(notification)
+                        } else if (isMuted) {
+                            plugin?.mobViewModel?.unmuteAlarm()
                         } else {
                             NauticalPlugin.engine?.acknowledgeNotification(path)
                         }
                     }
                 )
-            } else {
+            } else if (!isHydration) {
                 app.showToastMessage(message)
             }
         }
@@ -172,27 +183,43 @@ class NauticalNotificationManager(
         return when {
             path.startsWith("notifications.communication.dsc") -> AlarmType.DSC_DISTRESS
             path == "notifications.navigation.ais.sart" -> AlarmType.AIS_SART
-            path == "notifications.navigation.mob" -> AlarmType.MOB
+            path == SignalKPaths.NOTIFICATIONS_MOB -> AlarmType.MOB
             path == "notifications.safety.alarm.gybe" -> AlarmType.TACTICAL_GYBE
             path == "notifications.navigation.offCourse" -> AlarmType.XTE_NAVIGATION
             else -> AlarmType.XTE_NAVIGATION
         }
     }
 
-    private fun handleRescueLocate(message: String) {
-        // Extract MMSI from message if present "MMSI: 123456789"
-        val mmsiMatch = Regex("""MMSI:\s*(\d+)""").find(message)
-        if (mmsiMatch != null) {
-            val mmsi = mmsiMatch.groupValues[1].toIntOrNull()
-            if (mmsi != null) {
-                val aisObj = NauticalPlugin.getAisObject(mmsi)
-                if (aisObj != null && aisObj.position != null) {
-                    app.runInUIThread {
-                        app.osmandMap.mapView.setLatLon(aisObj.position!!.latitude, aisObj.position!!.longitude)
-                        app.osmandMap.mapView.setIntZoom(15)
-                    }
-                    return
+    private fun handleRescueLocate(notification: SignalKNotification) {
+        val message = notification.message
+        val source = notification.source
+        
+        // 1. Try to extract MMSI from structured source if available
+        var mmsi: Int? = null
+        if (source != null) {
+            if (source.startsWith("vessels.urn:mrn:imo:mmsi:")) {
+                mmsi = source.substringAfterLast(":").toIntOrNull()
+            } else if (source.all { it.isDigit() } && source.length == 9) {
+                mmsi = source.toIntOrNull()
+            }
+        }
+        
+        // 2. Fallback to regex on message
+        if (mmsi == null) {
+            val mmsiMatch = Regex("""MMSI:\s*(\d+)""").find(message)
+            if (mmsiMatch != null) {
+                mmsi = mmsiMatch.groupValues[1].toIntOrNull()
+            }
+        }
+
+        if (mmsi != null) {
+            val aisObj = NauticalPlugin.getAisObject(mmsi)
+            if (aisObj != null && aisObj.position != null) {
+                app.runInUIThread {
+                    app.osmandMap.mapView.setLatLon(aisObj.position!!.latitude, aisObj.position!!.longitude)
+                    app.osmandMap.mapView.setIntZoom(15)
                 }
+                return
             }
         }
         app.showToastMessage(R.string.nautical_vessel_not_found_on_ais)

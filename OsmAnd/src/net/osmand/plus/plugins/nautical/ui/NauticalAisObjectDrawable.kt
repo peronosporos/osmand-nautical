@@ -34,7 +34,11 @@ import net.osmand.util.MapUtils
 import kotlin.math.abs
 
 @Suppress("UsePropertyAccessSyntax")
-class NauticalAisObjectDrawable(private val plugin: NauticalPlugin, private val ais: AisObject) {
+class NauticalAisObjectDrawable(
+    private val plugin: NauticalPlugin,
+    private val ais: AisObject,
+    private val imagesCache: AisImagesCache
+) {
 
     private var bitmap: Bitmap? = null
     private var bitmapValid = false
@@ -51,12 +55,13 @@ class NauticalAisObjectDrawable(private val plugin: NauticalPlugin, private val 
     private var hasCpaWarning: Boolean = false
     private var threatLevel: Int = 0
     private var alpha: Int = 255
+    private var closeQuartersAlpha: Int? = null
 
-    private val imagesCache = AisImagesCache(plugin.application)
+    // Cache for badged bitmaps to avoid redundant copies
+    private val badgeCache = java.util.Collections.synchronizedMap(mutableMapOf<Int, Bitmap>())
     
     private val badgePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.MAGENTA
-        textSize = 14f
         typeface = Typeface.DEFAULT_BOLD
     }
 
@@ -189,12 +194,18 @@ class NauticalAisObjectDrawable(private val plugin: NauticalPlugin, private val 
             if (bitmapId >= 0) {
                 var baseBmp = imagesCache.getBitmap(bitmapId)
                 if (virtualTarget && (baseBmp != null)) {
-                    val mutableBmp = baseBmp.copy(Bitmap.Config.ARGB_8888, true)
-                    val canvas = Canvas(mutableBmp)
-                    canvas.drawText("V", 2f, mutableBmp.height.toFloat() - 2f, badgePaint)
-                    baseBmp = mutableBmp
+                    val cacheKey = bitmapId xor 0x56 // 'V'
+                    bitmap = badgeCache.getOrPut(cacheKey) {
+                        val mutableBmp = baseBmp!!.copy(Bitmap.Config.ARGB_8888, true)
+                        val canvas = Canvas(mutableBmp)
+                        val textScale = net.osmand.plus.views.layers.base.OsmandMapLayer.getTextScale(plugin.application)
+                        badgePaint.textSize = 14f * textScale
+                        canvas.drawText("V", 2f * textScale, mutableBmp.height.toFloat() - 2f * textScale, badgePaint)
+                        mutableBmp
+                    }
+                } else {
+                    bitmap = baseBmp
                 }
-                bitmap = baseBmp
                 bitmapValid = true
             }
         }
@@ -229,7 +240,7 @@ class NauticalAisObjectDrawable(private val plugin: NauticalPlugin, private val 
         alpha = if (caps?.hasAisPrioritizer == true && threatLevel == 0 && !ownObject && !hasCpaWarning) {
             100
         } else {
-            255
+            closeQuartersAlpha ?: 255
         }
     }
 
@@ -458,8 +469,8 @@ class NauticalAisObjectDrawable(private val plugin: NauticalPlugin, private val 
     }
 
     fun setAlpha(alpha: Int) {
-        if (this.alpha != alpha) {
-            this.alpha = alpha
+        if (this.closeQuartersAlpha != alpha) {
+            this.closeQuartersAlpha = alpha
             invalidateBitmap()
         }
     }

@@ -2,6 +2,7 @@ package net.osmand.plus.plugins.nautical.ui.logbook
 
 import android.os.Bundle
 import android.view.*
+import android.widget.FrameLayout
 import android.widget.TextView
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.view.MenuProvider
@@ -11,6 +12,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.floatingactionbutton.FloatingActionButton
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -19,6 +21,7 @@ import net.osmand.PlatformUtil
 import net.osmand.plus.R
 import net.osmand.plus.base.BaseOsmAndFragment
 import net.osmand.plus.plugins.nautical.NauticalPlugin
+import net.osmand.plus.plugins.nautical.WearOsNauticalManager
 import net.osmand.plus.plugins.nautical.engine.GpxStreamer
 import net.osmand.plus.plugins.nautical.logbook.export.LogbookCsvExporter
 import net.osmand.plus.plugins.nautical.viewmodel.MarineLogbookViewModel
@@ -30,6 +33,7 @@ class MarineLogbookFragment : BaseOsmAndFragment() {
     private lateinit var adapter: MarineLogbookAdapter
     private lateinit var emptyView: View
     private lateinit var swipeRefresh: androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+    private lateinit var wearOsManager: WearOsNauticalManager
 
     private val createCsvLauncher = registerForActivityResult(ActivityResultContracts.CreateDocument("text/csv")) { uri ->
         handleExportResult(uri, MarineLogbookViewModel.ExportFormat.CSV)
@@ -44,13 +48,21 @@ class MarineLogbookFragment : BaseOsmAndFragment() {
             lifecycleScope.launch {
                 val success = withContext(Dispatchers.IO) {
                     try {
+                        val allEntries = viewModel.getFullLogbookForExport()
                         requireContext().contentResolver.openOutputStream(it)?.use { stream ->
                             when (format) {
                                 MarineLogbookViewModel.ExportFormat.CSV -> {
-                                    LogbookCsvExporter.export(viewModel.logEntries.value, stream)
+                                    val result = LogbookCsvExporter.export(allEntries, stream)
+                                    if (result.isFailure) {
+                                        val errorMsg = result.exceptionOrNull()?.message ?: "Unknown error"
+                                        app.runInUIThread {
+                                            app.showToastMessage(app.getString(R.string.nautical_logbook_export_error) + ": " + errorMsg)
+                                        }
+                                        false
+                                    } else true
                                 }
                                 MarineLogbookViewModel.ExportFormat.GPX -> {
-                                    val gpxFile = GpxStreamer(app).exportLogbookGpx(viewModel.logEntries.value)
+                                    val gpxFile = GpxStreamer(app).exportLogbookGpx(allEntries)
                                     if (gpxFile != null) {
                                         FileInputStream(gpxFile).use { input ->
                                             input.copyTo(stream)
@@ -79,6 +91,7 @@ class MarineLogbookFragment : BaseOsmAndFragment() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        wearOsManager = WearOsNauticalManager(requireContext())
 
         val factory = object : ViewModelProvider.Factory {
             override fun <T : ViewModel> create(modelClass: Class<T>): T {
@@ -97,7 +110,41 @@ class MarineLogbookFragment : BaseOsmAndFragment() {
         val recyclerView: RecyclerView = view.findViewById(R.id.recycler_view)
         emptyView = view.findViewById(R.id.empty_view)
         swipeRefresh = view.findViewById(R.id.swipe_refresh)
+        val fab: FloatingActionButton = view.findViewById(R.id.add_entry_fab)
         
+        val isWatch = wearOsManager.isWatchMode()
+        if (isWatch) {
+             // Item 13: Use proper WindowInsets for round bezel padding
+             view.setOnApplyWindowInsetsListener { _, insets ->
+                 if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+                     val type = WindowInsets.Type.systemBars()
+                     val systemInsets = insets.getInsets(type)
+                     recyclerView.setPadding(
+                         systemInsets.left + net.osmand.plus.utils.AndroidUtils.dpToPx(requireContext(), 16f),
+                         systemInsets.top + net.osmand.plus.utils.AndroidUtils.dpToPx(requireContext(), 32f),
+                         systemInsets.right + net.osmand.plus.utils.AndroidUtils.dpToPx(requireContext(), 16f),
+                         systemInsets.bottom + net.osmand.plus.utils.AndroidUtils.dpToPx(requireContext(), 48f)
+                     )
+                 } else {
+                     @Suppress("DEPRECATION")
+                     recyclerView.setPadding(
+                         insets.systemWindowInsetLeft + net.osmand.plus.utils.AndroidUtils.dpToPx(requireContext(), 16f),
+                         insets.systemWindowInsetTop + net.osmand.plus.utils.AndroidUtils.dpToPx(requireContext(), 32f),
+                         insets.systemWindowInsetRight + net.osmand.plus.utils.AndroidUtils.dpToPx(requireContext(), 16f),
+                         insets.systemWindowInsetBottom + net.osmand.plus.utils.AndroidUtils.dpToPx(requireContext(), 48f)
+                     )
+                 }
+                 recyclerView.clipToPadding = false
+                 insets
+             }
+
+             // Move FAB to center for easier access on round screens
+             val params = fab.layoutParams as FrameLayout.LayoutParams
+             params.gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
+             params.bottomMargin = net.osmand.plus.utils.AndroidUtils.dpToPx(requireContext(), 8f)
+             fab.layoutParams = params
+        }
+
         swipeRefresh.setOnRefreshListener {
             viewModel.syncWithServer()
         }
@@ -112,6 +159,10 @@ class MarineLogbookFragment : BaseOsmAndFragment() {
         }
         recyclerView.layoutManager = LinearLayoutManager(requireContext())
         recyclerView.adapter = adapter
+
+        view.findViewById<FloatingActionButton>(R.id.add_entry_fab)?.setOnClickListener {
+            NauticalLogbookEntryDialog.show(parentFragmentManager)
+        }
         
         recyclerView.addOnScrollListener(
             object : RecyclerView.OnScrollListener() {
@@ -137,12 +188,14 @@ class MarineLogbookFragment : BaseOsmAndFragment() {
                 override fun onCreateMenu(menu: Menu, menuInflater: MenuInflater) {
                     val syncItem = menu.add(0, SYNC_SERVER_ID, 0, "Sync with Server")
                     syncItem.setShowAsAction(MenuItem.SHOW_AS_ACTION_IF_ROOM)
-                    syncItem.setIcon(R.drawable.ic_action_import)
+                    syncItem.setIcon(R.drawable.ic_action_refresh_dark)
                     
-                    menu.add(0, EXPORT_CSV_ID, 1, getString(R.string.nautical_logbook_export_csv))
-                        .setShowAsAction(MenuItem.SHOW_AS_ACTION_NEVER)
-                    menu.add(0, EXPORT_GPX_ID, 2, getString(R.string.nautical_logbook_export_gpx))
-                        .setShowAsAction(MenuItem.SHOW_AS_ACTION_NEVER)
+                    if (!wearOsManager.isWatchMode()) {
+                        menu.add(0, EXPORT_CSV_ID, 1, getString(R.string.nautical_logbook_export_csv))
+                            .setShowAsAction(MenuItem.SHOW_AS_ACTION_NEVER)
+                        menu.add(0, EXPORT_GPX_ID, 2, getString(R.string.nautical_logbook_export_gpx))
+                            .setShowAsAction(MenuItem.SHOW_AS_ACTION_NEVER)
+                    }
                 }
 
                 override fun onMenuItemSelected(menuItem: MenuItem): Boolean {
@@ -173,7 +226,24 @@ class MarineLogbookFragment : BaseOsmAndFragment() {
             viewModel.logEntries.collectLatest { entries ->
                 adapter.submitList(entries)
                 emptyView.visibility = if (entries.isEmpty()) View.VISIBLE else View.GONE
-                swipeRefresh.isRefreshing = false
+            }
+        }
+
+        lifecycleScope.launch {
+            viewModel.uiEvents.collect { event ->
+                when (event) {
+                    is MarineLogbookViewModel.UiEvent.ShowToast -> app.showToastMessage(event.text)
+                    is MarineLogbookViewModel.UiEvent.ShowToastRes -> {
+                        val text = if (event.formatArgs.isNotEmpty()) app.getString(event.resId, *event.formatArgs) else app.getString(event.resId)
+                        app.showToastMessage(text)
+                    }
+                }
+            }
+        }
+
+        lifecycleScope.launch {
+            viewModel.isSyncing.collectLatest { syncing ->
+                swipeRefresh.isRefreshing = syncing
             }
         }
 

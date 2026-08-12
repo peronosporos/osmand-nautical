@@ -9,7 +9,9 @@ data class Sail(
     val name: String,
     val type: String,
     val area: Double? = null,
-    val active: Boolean = false
+    val active: Boolean = false,
+    val reefs: Int? = null,
+    val maxReefs: Int? = null
 ) : Serializable
 
 @kotlinx.serialization.Serializable
@@ -105,6 +107,7 @@ data class SignalKNotification(
     val message: String,
     val state: NotificationState,
     val method: List<String> = emptyList(),
+    val source: String? = null
 ) : Serializable
 
 @kotlinx.serialization.Serializable
@@ -278,6 +281,7 @@ data class MarineState(
     val actuatorDutyCycle: Double? = null, // Ratio 0.0-1.0
     val actuatorCurrent: Double? = null, // Amperes (A)
     val isActuatorOverloaded: Boolean = false,
+    val actuatorAlarmAcknowledged: Boolean = false,
     val isShunted: Boolean = false,
     val isEngineRunning: Boolean = false,
     val watchdogStatus: SignalKNotification? = null,
@@ -299,6 +303,7 @@ data class MarineState(
     val batteries: Map<String, Battery> = emptyMap(),
     val tanks: Map<String, Tank> = emptyMap(),
     val switches: Map<String, Boolean> = emptyMap(),
+    val dimmers: Map<String, Double> = emptyMap(),
     val chargers: Map<String, Charger> = emptyMap(),
     val inverters: Map<String, Inverter> = emptyMap(),
     val riggingLoads: Map<String, Double> = emptyMap(),
@@ -426,7 +431,6 @@ data class MarineState(
 
     // Alarms and Notifications
     val notifications: Map<String, SignalKNotification> = emptyMap(),
-    @kotlinx.serialization.Transient
     val checklists: Map<String, net.osmand.plus.plugins.nautical.network.SignalKChecklist> = emptyMap(),
 
     // Tide Data
@@ -445,6 +449,15 @@ data class MarineState(
 
     val timestamps: Map<String, Long> = emptyMap(),
     val stalePaths: Set<String> = emptySet(),
+
+    // Orchestration
+    val isochrones: List<net.osmand.plus.plugins.nautical.network.SignalKRegion> = emptyList(),
+    val activePlugins: Set<String> = emptySet(),
+    val polarProfile: net.osmand.plus.plugins.nautical.network.PolarProfile? = null,
+    val lastIsochroneTime: Long = 0,
+    val recordingStability: Boolean = false,
+    val recordingPointCount: Int = 0,
+    val routeConditions: Map<Int, Double> = emptyMap(), // Waypoint index to wind speed example
 
     // Temporal Fix Metadata (Phase 8.0AC)
     val timeOfHeadingFix: Long = 0,

@@ -9,7 +9,7 @@ import net.osmand.plus.plugins.nautical.NauticalPlugin
 import net.osmand.plus.plugins.nautical.di.SailingDependencyContainer
 import net.osmand.plus.plugins.nautical.engine.SafetyPreflightController
 
-class ManeuverManager(private val app: OsmandApplication) {
+class ManeuverManager(private val app: OsmandApplication) : ManeuverEngine.ManeuverEngineListener {
 
     private val safetyPreflightController by lazy {
         val broker = NauticalPlugin.engine?.dataBroker
@@ -42,8 +42,10 @@ class ManeuverManager(private val app: OsmandApplication) {
     }
 
     fun setActiveManeuver(id: String) {
+        activeManeuver?.unregisterEngineListener(this)
         activeManeuver = maneuvers[id]
         if (activeManeuver != null) {
+            activeManeuver?.registerEngineListener(this)
             arm()
         } else {
             abort()
@@ -115,9 +117,13 @@ class ManeuverManager(private val app: OsmandApplication) {
             val maneuverId = maneuver?.let { getManeuverId(it) } ?: "unknown"
             
             lastAbortReason = reason
+            maneuver?.unregisterEngineListener(this)
             maneuver?.transitionToAborted(reason)
             updateState(ManeuverState.IDLE)
             activeManeuver = null
+
+            // Release helm lock and touch lock
+            releaseLocks()
 
             // Execute recovery logic if available
             SailingDependencyContainer.recoveryEngine?.executeRecovery(maneuverId, reason)
@@ -134,17 +140,53 @@ class ManeuverManager(private val app: OsmandApplication) {
      */
     fun completeActiveManeuver() {
         if (state == ManeuverState.EXECUTING) {
+            activeManeuver?.unregisterEngineListener(this)
             activeManeuver?.transitionToCompleted()
             updateState(ManeuverState.IDLE)
             activeManeuver = null
             
-            // Release helm lock immediately upon manual completion
-            NauticalPlugin.getInstance()?.workflowManager?.getScreenTouchLockManager()?.setTouchLockActive(active = false)
+            // Release helm lock and touch lock
+            releaseLocks()
         }
     }
 
+    override fun onManeuverCompleted(maneuver: ManeuverEngine) {
+        app.runInUIThread {
+            if (activeManeuver == maneuver) {
+                updateState(ManeuverState.IDLE)
+                activeManeuver = null
+                releaseLocks()
+            }
+        }
+    }
+
+    override fun onManeuverAborted(maneuver: ManeuverEngine, reason: String?) {
+        app.runInUIThread {
+            if (activeManeuver == maneuver) {
+                lastAbortReason = reason
+                updateState(ManeuverState.IDLE)
+                activeManeuver = null
+                releaseLocks()
+            }
+        }
+    }
+
+    private fun releaseLocks() {
+        NauticalPlugin.getInstance()?.workflowManager?.getScreenTouchLockManager()?.setTouchLockActive(active = false)
+        val arbitrator = net.osmand.plus.plugins.nautical.engine.NauticalHelmArbitrator.getInstance(app)
+        
+        // Refactored Release: Only release tactical maneuver lock unless it's explicitly an MOB maneuver (Item 9)
+        // Standard maneuvers use PRIORITY_TACTICAL_MANEUVER.
+        arbitrator.releaseLock(
+            net.osmand.plus.plugins.nautical.engine.NauticalHelmArbitrator.PRIORITY_TACTICAL_MANEUVER, 
+            force = true
+        )
+    }
+
     fun updateState(state: net.osmand.plus.plugins.nautical.engine.MarineState) {
-        activeManeuver?.onStateUpdate(state)
+        app.runInUIThread {
+            activeManeuver?.onStateUpdate(state)
+        }
     }
 
     private fun triggerAlarmPowerState() {

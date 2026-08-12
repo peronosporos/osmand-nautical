@@ -1,0 +1,14 @@
+- [x] Fix warnings in `NauticalPlugin.kt`
+    - [x] Remove `DIM_FILTER`
+    - [x] Remove unused `wearOsManager` local variable and property
+    - [x] Update `initWorkflowSystem` to use singleton `getWearOsManager`
+    - [x] Remove `applyNightVisionFilter`
+- [x] Fix warnings in `SignalKEngine.kt`
+    - [x] Remove `stateUpdateInterval`
+- [x] Fix memory leak in `NauticalPlugin.kt`
+    - [x] Remove `wearOsManagerRef` static field
+    - [x] Add `wearOsManager` property to `NauticalPlugin` class
+    - [x] Update `getWearOsManager` static method
+- [x] Verify changes
+    - [x] Run `analyze_file` on `NauticalPlugin.kt`
+    - [x] Check for new errors or warnings

@@ -27,16 +27,19 @@ class NauticalVhfWidget(
     override fun updateIcon() {
         val vhf = NauticalPlugin.getInstance()?.vhfManager
         val status = vhf?.status?.value ?: VhfStatus.IDLE
+        val error = vhf?.errorFlow?.value
         
-        val iconId = when (status) {
-            VhfStatus.LIVE -> R.drawable.ic_action_antenna
-            VhfStatus.REPLAYING -> R.drawable.ic_action_play_dark
+        val iconId = when {
+            error != null -> R.drawable.ic_action_alert
+            status == VhfStatus.LIVE -> R.drawable.ic_action_antenna
+            status == VhfStatus.REPLAYING -> R.drawable.ic_action_play_dark
             else -> R.drawable.ic_action_antenna
         }
 
-        val color = when (status) {
-            VhfStatus.LIVE -> if (isPulseActive) Color.RED else ContextCompat.getColor(app, R.color.map_widget_icon_color)
-            VhfStatus.REPLAYING -> ContextCompat.getColor(app, R.color.nautical_status_yellow)
+        val color = when {
+            error != null -> ContextCompat.getColor(app, R.color.nautical_status_red)
+            status == VhfStatus.LIVE -> if (isPulseActive) Color.RED else ContextCompat.getColor(app, R.color.map_widget_icon_color)
+            status == VhfStatus.REPLAYING -> ContextCompat.getColor(app, R.color.nautical_status_yellow)
             else -> ContextCompat.getColor(app, R.color.map_widget_icon_color)
         }
 
@@ -56,13 +59,17 @@ class NauticalVhfWidget(
                 override fun onViewAttachedToWindow(v: View) {
                     val plugin = NauticalPlugin.getInstance()
                     plugin?.vhfManager?.status?.onEach { 
-                        mapActivity.runOnUiThread { updateInfo(null) }
+                        updateInfo(null)
+                    }?.launchIn(mapActivity.lifecycleScope)
+
+                    plugin?.vhfManager?.errorFlow?.onEach {
+                        updateInfo(null)
                     }?.launchIn(mapActivity.lifecycleScope)
                     
                     NauticalPlugin.engine?.pulseFlow?.onEach { 
                         if (isPulseActive != it) {
                             isPulseActive = it
-                            mapActivity.runOnUiThread { updateIcon() }
+                            updateIcon()
                         }
                     }?.launchIn(mapActivity.lifecycleScope)
                 }
@@ -87,8 +94,14 @@ class NauticalVhfWidget(
         val vhf = NauticalPlugin.getInstance()?.vhfManager ?: return
         val status = vhf.status.value
         val last = vhf.lastTransmission.value
+        val error = vhf.errorFlow.value
 
         updateIcon()
+
+        if (error != null) {
+            setText("VHF", mapActivity.getString(R.string.shared_string_io_error))
+            return
+        }
 
         when (status) {
             VhfStatus.LIVE -> {

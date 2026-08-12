@@ -133,13 +133,13 @@ class PolarEditorFragment : Fragment() {
 
     private fun observeViewModel() {
         viewLifecycleOwner.lifecycleScope.launch {
-            viewModel.rawPoints.collectLatest { points ->
+            viewModel.uiRawPoints.collectLatest { points ->
                 canvasView.rawPoints = points
             }
         }
 
         viewLifecycleOwner.lifecycleScope.launch {
-            viewModel.smoothedPoints.collectLatest { points ->
+            viewModel.uiPoints.collectLatest { points ->
                 canvasView.smoothedPoints = points
             }
         }

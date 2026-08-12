@@ -15,30 +15,42 @@ class MarineRasterImporter(private val app: OsmandApplication) {
         const val NAUTICAL_RASTER_DIR = "nautical/charts"
     }
 
-    suspend fun importRaster(uri: Uri, fileName: String): Result<File> = withContext(Dispatchers.IO) {
+    suspend fun importRaster(uri: Uri, originalFileName: String): Result<File> = withContext(Dispatchers.IO) {
         try {
             val destinationDir = File(app.getAppPath(""), NAUTICAL_RASTER_DIR)
             if (!destinationDir.exists()) {
                 destinationDir.mkdirs()
             }
 
-            val destFile = File(destinationDir, fileName)
+            val fileName = originalFileName.replace("[^a-zA-Z0-9._-]".toRegex(), "_")
+            var destFile = File(destinationDir, fileName)
+            
+            // Duplicate Detection (Item 16)
+            if (destFile.exists()) {
+                val base = destFile.nameWithoutExtension
+                val ext = destFile.extension
+                var count = 1
+                while (destFile.exists()) {
+                    destFile = File(destinationDir, "${base}_$count.$ext")
+                    count++
+                }
+            }
+
             app.contentResolver.openInputStream(uri)?.use { input ->
                 FileOutputStream(destFile).use { output ->
                     input.copyTo(output)
                 }
             } ?: return@withContext Result.failure(Exception("Failed to open input stream"))
 
-            if (fileName.endsWith(".mbtiles", ignoreCase = true)) {
-                if (!validateMbTiles(destFile)) {
-                    destFile.delete()
-                    return@withContext Result.failure(Exception("Invalid MBTiles structure"))
-                }
-            } else if (fileName.endsWith(".kap", ignoreCase = true)) {
-                if (!validateKap(destFile)) {
-                    destFile.delete()
-                    return@withContext Result.failure(Exception("Invalid BSB/KAP structure"))
-                }
+            val success = if (destFile.name.endsWith(".mbtiles", ignoreCase = true)) {
+                validateMbTiles(destFile)
+            } else if (destFile.name.endsWith(".kap", ignoreCase = true)) {
+                validateKap(destFile)
+            } else true
+
+            if (!success) {
+                destFile.delete()
+                return@withContext Result.failure(Exception("Invalid chart structure"))
             }
 
             Result.success(destFile)
@@ -49,13 +61,24 @@ class MarineRasterImporter(private val app: OsmandApplication) {
     }
 
     private fun validateMbTiles(file: File): Boolean {
+        var connection: net.osmand.plus.api.SQLiteAPI.SQLiteConnection? = null
         return try {
-            val helper = MBTilesHelper(app)
-            val metadata = helper.getMetadata(file)
-            metadata != null
+            connection = app.sqLiteAPI.openByAbsolutePath(file.absolutePath, true)
+            // Deeper validation: Check if mandatory tables exist and have entries
+            val cursor = connection?.rawQuery("SELECT count(*) FROM tiles", null)
+            val hasTiles = if (cursor != null && cursor.moveToFirst()) {
+                val count = cursor.getInt(0)
+                cursor.close()
+                count > 0
+            } else false
+            
+            val metadata = MBTilesHelper(app).getMetadata(file)
+            hasTiles && metadata != null
         } catch (e: Exception) {
             log.error("Validation failed for ${file.name}: ${e.message}")
             false
+        } finally {
+            connection?.close()
         }
     }
 

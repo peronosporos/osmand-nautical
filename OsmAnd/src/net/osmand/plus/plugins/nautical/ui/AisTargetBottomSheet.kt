@@ -20,6 +20,8 @@ import java.util.Locale
 class AisTargetBottomSheet : BottomSheetDialogFragment() {
 
     private var aisObject: AisObject? = null
+    private var buddyJob: kotlinx.coroutines.Job? = null
+    private var muteJob: kotlinx.coroutines.Job? = null
 
     companion object {
         fun newInstance(aisObject: AisObject): AisTargetBottomSheet {
@@ -167,7 +169,8 @@ class AisTargetBottomSheet : BottomSheetDialogFragment() {
 
     private fun toggleBuddy(mmsi: Int, add: Boolean) {
         val plugin = NauticalPlugin.getInstance() ?: return
-        plugin.pluginScope?.launch {
+        buddyJob?.cancel()
+        buddyJob = plugin.pluginScope?.launch {
             val engine = NauticalPlugin.engine
             val rest = engine?.getRestService()
             if (rest != null) {
@@ -192,7 +195,8 @@ class AisTargetBottomSheet : BottomSheetDialogFragment() {
         val manager = plugin.aisManager ?: return
         manager.muteAisTarget(mmsi, mute)
         
-        plugin.pluginScope?.launch {
+        muteJob?.cancel()
+        muteJob = plugin.pluginScope?.launch {
             val engine = NauticalPlugin.engine
             val rest = engine?.getRestService()
             if (rest != null) {
@@ -218,10 +222,14 @@ class AisTargetBottomSheet : BottomSheetDialogFragment() {
         if (activity.mapView.zoom < 14) {
             activity.mapView.setIntZoom(15)
         }
+        // Stop following when manually panning to a target
+        NauticalPlugin.getInstance()?.aisAisLayer?.setFollowedTarget(null)
     }
 
     private fun followTarget(ais: AisObject) {
         val plugin = NauticalPlugin.getInstance() ?: return
+        plugin.aisAisLayer?.setFollowedTarget(ais.mmsi)
+        
         plugin.pluginScope?.launch {
             val engine = NauticalPlugin.engine
             val rest = engine?.getRestService()
@@ -236,7 +244,6 @@ class AisTargetBottomSheet : BottomSheetDialogFragment() {
             }
         }
         showOnMap(ais)
-        // Set local map following mode if possible - for now we just jump to it
     }
 
     private fun createAttributeRow(label: String, value: String): View {

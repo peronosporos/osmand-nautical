@@ -66,6 +66,9 @@
             android:textAppearance="@style/TextAppearance.AppCompat.Small"
             android:textColor="?android:attr/textColorSecondary"
             android:visibility="gone"
+            android:textSize="11sp"
+            android:maxLines="3"
+            android:ellipsize="end"
             android:text="Cells: 3.3V | 3.2V" />
 
     </LinearLayout>

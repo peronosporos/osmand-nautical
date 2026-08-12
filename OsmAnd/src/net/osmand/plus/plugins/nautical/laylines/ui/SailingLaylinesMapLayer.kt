@@ -6,6 +6,7 @@ import android.graphics.*
 import net.osmand.data.RotatedTileBox
 import net.osmand.plus.OsmandApplication
 import net.osmand.plus.plugins.nautical.NauticalPlugin
+import net.osmand.plus.plugins.nautical.engine.SignalKPaths
 import net.osmand.plus.plugins.nautical.laylines.viewmodel.LaylineUiState
 import net.osmand.plus.views.layers.base.OsmandMapLayer
 import kotlin.math.*
@@ -78,7 +79,7 @@ class SailingLaylinesMapLayer(context: Context) : OsmandMapLayer(context), Share
             val list = mutableListOf<net.osmand.data.LatLon>()
             list.add(net.osmand.data.LatLon(boatLat, boatLon))
             
-            val segments = 5
+            val segments = 50
             for (i in 1..segments) {
                 val coeff = i.toDouble() / segments
                 list.add(net.osmand.util.MapUtils.calculateIntermediatePoint(boatLat, boatLon, interLat, interLon, coeff))
@@ -154,7 +155,7 @@ class SailingLaylinesMapLayer(context: Context) : OsmandMapLayer(context), Share
 
     private fun updateWindShiftCache() {
         val engine = NauticalPlugin.engine ?: return
-        val history = engine.getWindDirectionHistory()
+        val history = engine.getHistory(SignalKPaths.ENV_WIND_DIRECTION_TRUE)
         if (history.size == lastWindHistorySize) return
         lastWindHistorySize = history.size
         if (history.isEmpty()) return
@@ -275,13 +276,17 @@ class SailingLaylinesMapLayer(context: Context) : OsmandMapLayer(context), Share
 
         val centerX = tileBox.getPixXFromLatLon(boatLat, boatLon)
         val centerY = tileBox.getPixYFromLatLon(boatLat, boatLon)
-        val radius = 300f // pixels
+        
+        // Scale radius by zoom and density (TASK-ZOOM)
+        val baseRadius = 250f * tileBox.density
+        val zoomFactor = (tileBox.zoom / 14f).coerceIn(0.5f, 2.0f)
+        val radius = baseRadius * zoomFactor
 
         windShiftRect.set(centerX - radius, centerY - radius, centerX + radius, centerY + radius)
         
         // Adjust for Android canvas startAngle (0 at East, clockwise) vs Nautical (0 at North, clockwise)
-        // Also subtract map rotation
-        val startAngle = cachedStartOfMaxGapPlusGap - 90.0 - tileBox.rotate
+        // Correct rotation sign (TASK-ROTATION)
+        val startAngle = cachedStartOfMaxGapPlusGap - 90.0 + tileBox.rotate
         
         canvas.drawArc(windShiftRect, startAngle.toFloat(), cachedSweepAngle, true, windShiftPaint)
     }

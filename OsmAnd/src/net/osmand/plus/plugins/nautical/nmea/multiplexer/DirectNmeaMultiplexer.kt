@@ -75,7 +75,10 @@ class DirectNmeaMultiplexer(
     }
 
     private suspend fun processSentence(transport: NmeaTransport?, sentence: String) {
-        recorder?.recordSentence(sentence)
+        // FEEDBACK LOOP PREVENTION: Do not record replayed sentences
+        if (transport !is NmeaPlaybackEngine) {
+            recorder?.recordSentence(sentence)
+        }
 
         // Pass to NAVTEX decoder if it looks like ASCII block
         if (transport != null) {
@@ -112,7 +115,8 @@ class DirectNmeaMultiplexer(
                 collectionJobs[client] = scope.launch {
                     var count = 0
                     var lastReset = System.currentTimeMillis()
-                    val maxSentencesPerSec = 500 // Increased from 100 for N2K gateways
+                    val isPlayback = client is NmeaPlaybackEngine
+                    val maxSentencesPerSec = if (isPlayback) 5000 else 500
                     
                     client.dataStream.collect { sentence ->
                         val now = System.currentTimeMillis()
@@ -126,8 +130,10 @@ class DirectNmeaMultiplexer(
                             sentenceChannel.send(client to sentence)
                             count++
                         } else if (count == maxSentencesPerSec) {
-                            PlatformUtil.getLog(DirectNmeaMultiplexer::class.java)
-                                .warn("Rate limit exceeded for client: ${client.javaClass.simpleName}. Dropping sentences until next second.")
+                            if (!isPlayback) {
+                                PlatformUtil.getLog(DirectNmeaMultiplexer::class.java)
+                                    .warn("Rate limit exceeded for client: ${client.javaClass.simpleName}. Dropping sentences until next second.")
+                            }
                             count++
                         }
                     }

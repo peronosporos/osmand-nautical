@@ -38,10 +38,23 @@ class MobEmergencyHeaderView @JvmOverloads constructor(
     private val sarPatternsButton: Button
     private val maneuversButton: Button
     private val mobIcon: android.widget.ImageView
+    private val cancelProgressBar: android.widget.ProgressBar
 
     private var viewModel: MobViewModel? = null
     private val handler = Handler(Looper.getMainLooper())
     private var cancelRunnable: Runnable? = null
+    private var progressStartTime: Long = 0
+    private val progressUpdateRunnable = object : Runnable {
+        override fun run() {
+            if (progressStartTime > 0) {
+                val elapsed = System.currentTimeMillis() - progressStartTime
+                cancelProgressBar.progress = elapsed.toInt()
+                if (elapsed < 2000) {
+                    handler.postDelayed(this, 50)
+                }
+            }
+        }
+    }
 
     init {
         LayoutInflater.from(context).inflate(R.layout.mob_emergency_hud, this, true)
@@ -57,6 +70,7 @@ class MobEmergencyHeaderView @JvmOverloads constructor(
         sarPatternsButton = findViewById(R.id.btn_mob_sar_patterns)
         maneuversButton = findViewById(R.id.btn_mob_maneuvers)
         mobIcon = findViewById(R.id.mob_icon)
+        cancelProgressBar = findViewById(R.id.cancel_progress)
 
         setupListeners()
         isVisible = false
@@ -108,8 +122,15 @@ class MobEmergencyHeaderView @JvmOverloads constructor(
 
             when (event.action) {
                 MotionEvent.ACTION_DOWN -> {
+                    progressStartTime = System.currentTimeMillis()
+                    cancelProgressBar.isVisible = true
+                    cancelProgressBar.progress = 0
+                    handler.post(progressUpdateRunnable)
+                    
                     cancelRunnable = Runnable {
                         viewModel?.clearMob()
+                        cancelProgressBar.isVisible = false
+                        progressStartTime = 0
                     }
                     handler.postDelayed(cancelRunnable!!, 2000)
                     v.isPressed = true
@@ -117,6 +138,9 @@ class MobEmergencyHeaderView @JvmOverloads constructor(
                 }
                 MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                     cancelRunnable?.let { handler.removeCallbacks(it) }
+                    handler.removeCallbacks(progressUpdateRunnable)
+                    cancelProgressBar.isVisible = false
+                    progressStartTime = 0
                     v.isPressed = false
                     true
                 }
@@ -149,12 +173,17 @@ class MobEmergencyHeaderView @JvmOverloads constructor(
         
         if (!isVisible) return
 
+        val app = context.applicationContext as net.osmand.plus.OsmandApplication
+        val settings = app.settings
+
         state.distanceMeters?.let {
-            distanceView.text = context.getString(R.string.mob_distance_label, it)
+            val (v, u) = net.osmand.plus.plugins.nautical.engine.SignalKUnitConverter.formatValue(context, settings, it, "distance")
+            distanceView.text = "$v $u"
         }
         
         state.bearingDegrees?.let {
-            bearingView.text = context.getString(R.string.mob_bearing_label, it)
+            val (v, u) = net.osmand.plus.plugins.nautical.engine.SignalKUnitConverter.formatValue(context, settings, it, "angle")
+            bearingView.text = "$v$u"
         }
         
         state.etaSeconds?.let {
@@ -180,7 +209,15 @@ class MobEmergencyHeaderView @JvmOverloads constructor(
             tacticalContainer.isVisible = true
             
             motorReturnButton.isEnabled = state.isMotoring
-            heaveToButton.isEnabled = !state.isMotoring && state.isUpwind
+            heaveToButton.isEnabled = !state.isMotoring
+            
+            // Visual hint for Heave-To optimization
+            if (!state.isMotoring && !state.isUpwind) {
+                heaveToButton.alpha = 0.7f
+                // We could add a warning icon here if desired
+            } else {
+                heaveToButton.alpha = 1.0f
+            }
         }
     }
 }

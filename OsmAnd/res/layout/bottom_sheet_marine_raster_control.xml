@@ -25,12 +25,27 @@
         android:paddingTop="8dp"
         android:paddingBottom="8dp" />
 
-    <TextView
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="@string/raster_opacity_title"
-        android:textAppearance="@style/TextAppearance.AppCompat.Medium"
-        android:paddingTop="16dp" />
+        android:orientation="horizontal"
+        android:paddingTop="16dp">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/raster_opacity_title"
+            android:textAppearance="@style/TextAppearance.AppCompat.Medium" />
+
+        <TextView
+            android:id="@+id/opacity_percent"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="100%"
+            android:textAppearance="@style/TextAppearance.AppCompat.Medium"
+            android:textColor="?android:attr/textColorSecondary" />
+    </LinearLayout>
 
     <SeekBar
         android:id="@+id/opacity_seekbar"

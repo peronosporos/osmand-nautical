@@ -33,7 +33,7 @@ object NavtexMessageDecoder {
 
         val stationLetter = idPart[0]
         val subjectChar = idPart[1]
-        val sequenceNumber = idPart.substring(2, 4).toIntOrNull() ?: 0
+        val sequenceNumber = idPart.substring(2).trim().toIntOrNull() ?: 0
         val subject = NavtexSubject.fromCode(subjectChar)
 
         // The rest is the body

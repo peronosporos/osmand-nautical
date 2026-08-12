@@ -265,16 +265,21 @@ class RudderView @JvmOverloads constructor(
         paint.color = colorStarboard
         canvas.drawLine(centerX + dp6, centerY, w - padding, centerY, paint)
 
+        val settings = (context.applicationContext as? OsmandApplication)?.settings
+        val limitDeg = settings?.NAUTICAL_RUDDER_LIMIT?.get() ?: 35f
+        val limitDegInt = limitDeg.toInt()
+
         paint.color = colorPrimary
         paint.strokeWidth = dp1
         paint.alpha = 120
-        for (i in (-30..30) step 15) {
-            val ratio = (i + 30) / 60f
-            val x = padding + (ratio * scaleWidth)
+        val step = if (limitDegInt > 45) 20 else 15
+        for (i in (-limitDegInt..limitDegInt) step step) {
+            val r = (i + limitDeg) / (limitDeg * 2f)
+            val x = padding + (r * scaleWidth)
             canvas.drawLine(x, centerY - dp6, x, centerY + dp6, paint)
         }
 
-        val maxVisualAngle = Math.toRadians(35.0)
+        val maxVisualAngle = Math.toRadians(limitDeg.toDouble())
         val isOffline = animatedAngle.isNaN()
         val ratio = if (isOffline) 0f else (animatedAngle.coerceIn(-maxVisualAngle, maxVisualAngle) / maxVisualAngle).toFloat()
         val pointerX = centerX + (ratio * (scaleWidth / 2f))

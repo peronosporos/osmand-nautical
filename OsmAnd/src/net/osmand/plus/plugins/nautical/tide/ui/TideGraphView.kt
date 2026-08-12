@@ -97,22 +97,23 @@ class TideGraphView @JvmOverloads constructor(
         val graphW = w - (2 * padding)
         val graphH = h - (2 * padding)
 
-        val minHeight = predictions.minOf { it.heightMeters }
-        val maxHeight = predictions.maxOf { it.heightMeters }
-        val range = (maxHeight - minHeight).coerceAtLeast(0.1)
+        val isCurrent = predictions.any { it.velocity != null }
+        val minVal = if (isCurrent) predictions.minOf { it.velocity ?: 0.0 } else predictions.minOf { it.heightMeters }
+        val maxVal = if (isCurrent) predictions.maxOf { it.velocity ?: 0.0 } else predictions.maxOf { it.heightMeters }
+        val range = (maxVal - minVal).coerceAtLeast(0.1)
         
         val startTime = predictions.first().timestamp
         val endTime = predictions.last().timestamp
         val timeRange = (endTime - startTime).coerceAtLeast(1).toFloat()
 
-        yAxisMaxLabel = if (predictions.any { it.velocity != null }) String.format(Locale.US, "%.1fkn", maxHeight * 1.94384) else String.format(Locale.US, "%.1fm", maxHeight)
-        yAxisMinLabel = if (predictions.any { it.velocity != null }) String.format(Locale.US, "%.1fkn", minHeight * 1.94384) else String.format(Locale.US, "%.1fm", minHeight)
+        yAxisMaxLabel = if (isCurrent) String.format(Locale.US, "%.1fkn", maxVal * 1.94384) else String.format(Locale.US, "%.1fm", maxVal)
+        yAxisMinLabel = if (isCurrent) String.format(Locale.US, "%.1fkn", minVal * 1.94384) else String.format(Locale.US, "%.1fm", minVal)
 
         tidePath.rewind()
         drawData = predictions.mapIndexed { i, p ->
             val valToDraw = p.velocity ?: p.heightMeters
             val x = padding + (((p.timestamp - startTime).toFloat() / timeRange) * graphW)
-            val y = h - padding - (((valToDraw - minHeight).toFloat() / range.toFloat()) * graphH)
+            val y = h - padding - (((valToDraw - minVal).toFloat() / range.toFloat()) * graphH)
             
             if (i == 0) tidePath.moveTo(x, y) else tidePath.lineTo(x, y)
             

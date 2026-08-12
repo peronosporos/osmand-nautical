@@ -10,7 +10,8 @@ public enum RouteService {
 	BROUTER("BRouter (offline)"),
 	STRAIGHT("Straight line"),
 	DIRECT_TO("Direct To"),
-	ONLINE("Online engine");
+	ONLINE("Online engine"),
+	SIGNALK("Signal K Server");
 
 	private final String name;
 
@@ -29,6 +30,14 @@ public enum RouteService {
 	boolean isAvailable(OsmandApplication ctx) {
 		if (this == BROUTER) {
 			return ctx.getBRouterService() != null;
+		}
+		if (this == SIGNALK) {
+			try {
+				Class<?> nauticalClass = Class.forName("net.osmand.plus.plugins.nautical.NauticalPlugin");
+				return net.osmand.plus.plugins.PluginsHelper.isEnabled((Class) nauticalClass);
+			} catch (ClassNotFoundException e) {
+				return false;
+			}
 		}
 		return true;
 	}

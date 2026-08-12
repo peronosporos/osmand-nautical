@@ -1,12 +1,10 @@
 package net.osmand.plus.plugins.nautical.ui
 
-import android.content.Context
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
-import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.DiffUtil
@@ -19,37 +17,17 @@ import net.osmand.plus.R
 import net.osmand.plus.base.BaseMaterialBottomSheetDialogFragment
 import net.osmand.plus.plugins.nautical.NauticalPlugin
 import net.osmand.plus.plugins.nautical.network.VhfTransmission
-import java.util.*
+import java.util.Date
 
 class VhfHistoryBottomSheet : BaseMaterialBottomSheetDialogFragment() {
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
-        val context = requireContext()
-        val root = LinearLayout(context).apply {
-            orientation = LinearLayout.VERTICAL
-            val pad = toPx(context, 16)
-            setPadding(pad, pad, pad, 0)
-        }
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
+        val root = inflater.inflate(R.layout.bottom_sheet_vhf_history, container, false)
         
-        val title = TextView(context).apply {
-            text = getString(R.string.nautical_vhf_history)
-            setTextAppearance(android.R.style.TextAppearance_Material_Headline)
-            setPadding(0, 0, 0, toPx(context, 16))
-        }
-        root.addView(title)
-        
-        val recycler = RecyclerView(context).apply {
-            id = View.generateViewId()
-            layoutManager = LinearLayoutManager(context)
-        }
-        root.addView(
-            recycler,
-            LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f,
-            ),
-        )
-        
+        val recycler = root.findViewById<RecyclerView>(R.id.recycler_view)
+        recycler.layoutManager = LinearLayoutManager(requireContext())
         setupRecycler(recycler)
+        
         return root
     }
 
@@ -67,66 +45,32 @@ class VhfHistoryBottomSheet : BaseMaterialBottomSheetDialogFragment() {
         }
     }
 
-    private fun toPx(context: Context, dp: Int): Int = (dp * context.resources.displayMetrics.density).toInt()
-
     inner class VhfAdapter(private val onClick: (VhfTransmission) -> Unit) : ListAdapter<VhfTransmission, VhfAdapter.ViewHolder>(VhfDiffCallback()) {
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
-            val context = parent.context
-            val view = LinearLayout(context).apply {
-                orientation = LinearLayout.HORIZONTAL
-                layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
-                setPadding(toPx(context, 8), toPx(context, 12), toPx(context, 8), toPx(context, 12))
-                isClickable = true
-                val out = android.util.TypedValue()
-                context.theme.resolveAttribute(android.R.attr.selectableItemBackground, out, true)
-                setBackgroundResource(out.resourceId)
-            }
-            
-            val infoLayout = LinearLayout(context).apply {
-                orientation = LinearLayout.VERTICAL
-            }
-            
-            val name = TextView(context).apply {
-                setTextAppearance(android.R.style.TextAppearance_Material_Body1)
-            }
-            infoLayout.addView(name)
-            
-            val meta = TextView(context).apply {
-                setTextAppearance(android.R.style.TextAppearance_Material_Caption)
-            }
-            infoLayout.addView(meta)
-            
-            view.addView(infoLayout, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-            
-            val play = ImageView(context).apply {
-                setImageResource(R.drawable.ic_action_play_dark)
-                setPadding(toPx(context, 8), toPx(context, 8), toPx(context, 8), toPx(context, 8))
-            }
-            view.addView(play)
-            
-            return ViewHolder(view, name, meta)
+            val view = LayoutInflater.from(parent.context).inflate(R.layout.item_vhf_transmission, parent, false)
+            return ViewHolder(view)
         }
 
         override fun onBindViewHolder(holder: ViewHolder, position: Int) {
             val item = getItem(position)
-            holder.name.text = item.vesselName ?: "Unknown Vessel"
-            val time = java.text.SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date(item.timestamp))
+            holder.name.text = item.vesselName ?: getString(R.string.nautical_unknown_vessel)
+            val time = java.text.DateFormat.getTimeInstance(java.text.DateFormat.SHORT).format(Date(item.timestamp))
             holder.meta.text = getString(R.string.nautical_vhf_history_meta_fmt, time, item.channel ?: "---")
             holder.itemView.setOnClickListener { onClick(item) }
+            holder.playIcon.setOnClickListener { onClick(item) }
         }
 
-        inner class ViewHolder(view: View, val name: TextView, val meta: TextView) : RecyclerView.ViewHolder(view)
+        inner class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
+            val name: TextView = view.findViewById(R.id.vessel_name)
+            val meta: TextView = view.findViewById(R.id.meta_info)
+            val playIcon: ImageView = view.findViewById(R.id.play_icon)
+        }
     }
 
     private class VhfDiffCallback : DiffUtil.ItemCallback<VhfTransmission>() {
-        override fun areItemsTheSame(oldItem: VhfTransmission, newItem: VhfTransmission): Boolean {
-            return (oldItem.timestamp == newItem.timestamp) && (oldItem.vesselName == newItem.vesselName)
-        }
-
-        override fun areContentsTheSame(oldItem: VhfTransmission, newItem: VhfTransmission): Boolean {
-            return oldItem == newItem
-        }
+        override fun areItemsTheSame(oldItem: VhfTransmission, newItem: VhfTransmission): Boolean = oldItem.id == newItem.id
+        override fun areContentsTheSame(oldItem: VhfTransmission, newItem: VhfTransmission): Boolean = oldItem == newItem
     }
 
     companion object {

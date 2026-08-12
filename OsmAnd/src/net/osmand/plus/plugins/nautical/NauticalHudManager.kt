@@ -3,9 +3,8 @@ package net.osmand.plus.plugins.nautical
 import android.view.View
 import android.view.ViewGroup
 import android.widget.LinearLayout
-import androidx.core.view.isVisible
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.*
+import java.util.concurrent.PriorityBlockingQueue
 import net.osmand.plus.R
 import net.osmand.plus.activities.MapActivity
 import net.osmand.plus.utils.AndroidUtils
@@ -15,7 +14,16 @@ class NauticalHudManager(private val activity: MapActivity) {
     private var nauticalHudContainer: LinearLayout? = null
     private var topBarListener: View.OnLayoutChangeListener? = null
     private var topWidgetsListener: View.OnLayoutChangeListener? = null
-    private val wearOsManager = WearOsNauticalManager(activity)
+    private val wearOsManager = NauticalPlugin.getWearOsManager(activity)
+    
+    // View Caching
+    private var cachedTopBar: View? = null
+    private var cachedTopWidgets: View? = null
+    private var cachedCompass: View? = null
+    private var cachedZoomIn: View? = null
+    private var cachedZoomOut: View? = null
+
+    private var lastLayoutUpdateTime = 0L
 
     fun getOrCreateContainer(): ViewGroup? {
         if (nauticalHudContainer == null || nauticalHudContainer?.context != activity) {
@@ -35,11 +43,12 @@ class NauticalHudManager(private val activity: MapActivity) {
                 val listener = View.OnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
                     updateLayout()
                 }
-                val topBar = activity.findViewById<View>(R.id.widget_top_bar)
-                val topWidgets = activity.findViewById<View>(R.id.top_widgets_panel)
                 
-                topBar?.addOnLayoutChangeListener(listener)
-                topWidgets?.addOnLayoutChangeListener(listener)
+                cachedTopBar = activity.findViewById(R.id.widget_top_bar)
+                cachedTopWidgets = activity.findViewById(R.id.top_widgets_panel)
+                
+                cachedTopBar?.addOnLayoutChangeListener(listener)
+                cachedTopWidgets?.addOnLayoutChangeListener(listener)
                 
                 topBarListener = listener
                 topWidgetsListener = listener
@@ -71,6 +80,30 @@ class NauticalHudManager(private val activity: MapActivity) {
         updateLayout()
     }
 
+    private val bannerQueue = PriorityBlockingQueue<BannerRequest>()
+    private var isDisplayingBanner = false
+    private var currentBannerText: String? = null
+
+    private data class BannerRequest(
+        val text: String,
+        val durationMs: Long,
+        val label: String?,
+        val isWarning: Boolean,
+        val onConfirm: (() -> Unit)?,
+        val secondaryLabel: String?,
+        val onSecondaryConfirm: (() -> Unit)?,
+        val timestamp: Long = System.currentTimeMillis()
+    ) : Comparable<BannerRequest> {
+        override fun compareTo(other: BannerRequest): Int {
+            // Priority 1: Warnings/Emergencies first
+            if (this.isWarning != other.isWarning) {
+                return if (this.isWarning) -1 else 1
+            }
+            // Priority 2: Older items first within same category
+            return this.timestamp.compareTo(other.timestamp)
+        }
+    }
+
     fun showBanner(
         text: String,
         durationMs: Long,
@@ -80,38 +113,89 @@ class NauticalHudManager(private val activity: MapActivity) {
         secondaryLabel: String? = null,
         onSecondaryConfirm: (() -> Unit)? = null
     ) {
+        // Priority check: if text is same as current or queued, ignore to avoid duplicates and clutter
+        if (currentBannerText == text || bannerQueue.any { it.text == text }) return
+
+        val request = BannerRequest(text, durationMs, label, isWarning, onConfirm, secondaryLabel, onSecondaryConfirm)
+        bannerQueue.add(request)
+        activity.runOnUiThread { processNextBanner() }
+    }
+
+    private fun processNextBanner() {
+        if (isDisplayingBanner || bannerQueue.isEmpty()) return
+        val next = bannerQueue.poll() ?: return
+        
+        getOrCreateContainer() ?: return
+        isDisplayingBanner = true
+        currentBannerText = next.text
+        
         val banner = net.osmand.plus.plugins.nautical.ui.NauticalHudBannerView(activity).apply {
-            setMessage(text, isWarning)
-            if (onConfirm != null) {
-                setConfirmAction(label ?: activity.getString(R.string.shared_string_ok), onConfirm)
+            setMessage(next.text, next.isWarning)
+            if (next.onConfirm != null) {
+                setConfirmAction(next.label ?: activity.getString(R.string.shared_string_ok), next.onConfirm)
             }
-            if (onSecondaryConfirm != null) {
-                setSecondaryConfirmAction(secondaryLabel ?: activity.getString(R.string.shared_string_cancel), onSecondaryConfirm)
+            if (next.onSecondaryConfirm != null) {
+                setSecondaryConfirmAction(next.secondaryLabel ?: activity.getString(R.string.shared_string_cancel), next.onSecondaryConfirm)
             }
             onDismiss = {
                 removeHeader(this)
+                isDisplayingBanner = false
+                currentBannerText = null
+                processNextBanner()
             }
         }
-        addHeader(banner, priority = 0) // Show at the top
-        banner.show(durationMs)
+        addHeader(banner, priority = 0)
+        banner.show(next.durationMs)
     }
 
     fun hideBanner() {
         val container = nauticalHudContainer ?: return
+        var removed = false
         for (i in container.childCount - 1 downTo 0) {
             val child = container.getChildAt(i)
             if (child is net.osmand.plus.plugins.nautical.ui.NauticalHudBannerView) {
                 removeHeader(child)
+                removed = true
             }
+        }
+        if (removed) {
+            isDisplayingBanner = false
+            currentBannerText = null
+            processNextBanner()
         }
     }
 
     fun updateLayout() {
         val container = nauticalHudContainer ?: return
+        
+        // Task: Throttling frequent HUD layout updates (max 2Hz)
+        val now = System.currentTimeMillis()
+        if (now - lastLayoutUpdateTime < 500) return
+        lastLayoutUpdateTime = now
+
         val mapHudLayout = container.parent as? ViewGroup ?: return
         
         val isWatch = wearOsManager.isWatchMode()
+        val isRound = wearOsManager.isScreenRound()
         
+        // Task: UI Collision Avoidance on Smartwatches
+        activity.runOnUiThread {
+            if (cachedCompass == null) cachedCompass = activity.findViewById(R.id.map_compass_button)
+            if (cachedZoomIn == null) cachedZoomIn = activity.findViewById(R.id.map_zoom_in_button)
+            if (cachedZoomOut == null) cachedZoomOut = activity.findViewById(R.id.map_zoom_out_button)
+            
+            if (isWatch && container.isNotEmpty() && container.getChildAt(0).isVisible) {
+                // Hide standard buttons to prevent overlap and touch confusion on tiny screens
+                cachedCompass?.visibility = View.GONE
+                cachedZoomIn?.visibility = View.GONE
+                cachedZoomOut?.visibility = View.GONE
+            } else if (isWatch) {
+                cachedCompass?.visibility = View.VISIBLE
+                cachedZoomIn?.visibility = View.VISIBLE
+                cachedZoomOut?.visibility = View.VISIBLE
+            }
+        }
+
         val loc = IntArray(2)
         mapHudLayout.getLocationOnScreen(loc)
         val parentTop = loc[1]
@@ -119,22 +203,22 @@ class NauticalHudManager(private val activity: MapActivity) {
         var topOffset = 0
         if (!isWatch) {
             // Robust Spatial Arbitration: Account for standard widgets using screen coordinates
-            val topBar = activity.findViewById<View>(R.id.widget_top_bar)
+            val topBar = cachedTopBar ?: activity.findViewById<View>(R.id.widget_top_bar).also { cachedTopBar = it }
             if (topBar?.isVisible == true) {
                 topBar.getLocationOnScreen(loc)
                 topOffset = maxOf(topOffset, loc[1] + topBar.height - parentTop)
             }
             
-            val topWidgets = activity.findViewById<View>(R.id.top_widgets_panel)
+            val topWidgets = cachedTopWidgets ?: activity.findViewById<View>(R.id.top_widgets_panel).also { cachedTopWidgets = it }
             if (topWidgets?.isVisible == true) {
                 topWidgets.getLocationOnScreen(loc)
                 topOffset = maxOf(topOffset, loc[1] + topWidgets.height - parentTop)
             }
             
             // Core controls to avoid obscuring
-            val compass = activity.findViewById<View>(R.id.map_compass_button)
-            val zoomIn = activity.findViewById<View>(R.id.map_zoom_in_button)
-            val zoomOut = activity.findViewById<View>(R.id.map_zoom_out_button)
+            val compass = cachedCompass ?: activity.findViewById<View>(R.id.map_compass_button).also { cachedCompass = it }
+            val zoomIn = cachedZoomIn ?: activity.findViewById<View>(R.id.map_zoom_in_button).also { cachedZoomIn = it }
+            val zoomOut = cachedZoomOut ?: activity.findViewById<View>(R.id.map_zoom_out_button).also { cachedZoomOut = it }
             
             val coreControls = listOfNotNull(compass, zoomIn, zoomOut)
             var maxCoreBottom = 0
@@ -178,7 +262,13 @@ class NauticalHudManager(private val activity: MapActivity) {
                 topOffset = maxOf(topOffset, systemBars.top - parentTop)
             }
         } else {
-            topOffset = AndroidUtils.dpToPx(activity, 16f)
+            // Center-weighted layout for round watches to avoid clipping
+            val screenHeight = activity.resources.displayMetrics.heightPixels
+            topOffset = if (isRound) {
+                (screenHeight * 0.2f).toInt() // Position at 20% down for round bands
+            } else {
+                AndroidUtils.dpToPx(activity, 16f)
+            }
         }
 
         val params = container.layoutParams as? android.widget.FrameLayout.LayoutParams

@@ -47,7 +47,14 @@ class RoutingViewModel : ViewModel() {
                 
                 val liveState = net.osmand.plus.plugins.nautical.NauticalPlugin.engine?.getCurrentState()
                 
-                val result = routingEngine.calculateRoute(request, liveState?.setTrue, liveState?.drift)
+                val result = routingEngine.calculateRoute(
+                    request, 
+                    liveState?.setTrue, 
+                    liveState?.drift,
+                    onProgress = { step, total ->
+                        _routingStatus.value = "Calculating: Step $step/$total"
+                    }
+                )
                 if (result != null) {
                     _optimalRoute.value = result
                     _routingStatus.value = "Optimal Route Calculated"

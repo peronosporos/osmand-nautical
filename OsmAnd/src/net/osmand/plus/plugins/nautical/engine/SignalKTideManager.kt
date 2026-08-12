@@ -4,6 +4,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import net.osmand.PlatformUtil
@@ -32,6 +33,9 @@ class SignalKTideManager(
 
     private val _vesselTide = MutableStateFlow<TideState?>(null)
     val vesselTide = _vesselTide.asStateFlow()
+
+    private var cachedRestService: SignalKRestService? = null
+    private var lastRestUrl: String? = null
 
     init {
         scope.launch {
@@ -63,21 +67,32 @@ class SignalKTideManager(
 
     fun start() {
         scope.launch {
-            fetchStations()
+            var attempt = 0
+            while (isActive && _stations.value.isEmpty()) {
+                val success = fetchStations()
+                if (success) break
+                
+                attempt++
+                val delayMs = Math.min(2000L * Math.pow(2.0, attempt.toDouble()).toLong(), 60000L)
+                log.info("Nautical: Tide station fetch failed, retrying in ${delayMs / 1000}s...")
+                kotlinx.coroutines.delay(delayMs)
+            }
         }
     }
 
-    suspend fun fetchStations() = withContext(Dispatchers.IO) {
-        val service = getRestService() ?: return@withContext
+    suspend fun fetchStations(): Boolean = withContext(Dispatchers.IO) {
+        val service = getRestService() ?: return@withContext false
         try {
             val response = service.getTideStations()
             if (response.isSuccessful) {
                 _stations.value = response.body() ?: emptyMap()
                 log.info("Nautical: Fetched ${_stations.value.size} tide stations from Signal K")
+                return@withContext true
             }
         } catch (e: Exception) {
             log.error("Nautical: Failed to fetch tide stations: ${e.message}")
         }
+        false
     }
 
     suspend fun getExtremes(stationId: String): List<SignalKTideExtreme> = withContext(Dispatchers.IO) {
@@ -110,8 +125,17 @@ class SignalKTideManager(
         val plugin = NauticalPlugin.getInstance() ?: return null
         val client = plugin.okHttpClient ?: return null
         val ip = app.settings.NAUTICAL_SERVER_IP.get()
+        if (ip.isEmpty()) return null
         val port = app.settings.NAUTICAL_SERVER_PORT.get()
         val protocol = if (app.settings.NAUTICAL_USE_SECURE_CONNECTION.get()) "https" else "http"
-        return SignalKRestService.create("$protocol://$ip:$port", client)
+        val url = "$protocol://$ip:$port"
+
+        if (url == lastRestUrl && cachedRestService != null) {
+            return cachedRestService
+        }
+
+        lastRestUrl = url
+        cachedRestService = SignalKRestService.create(url, client)
+        return cachedRestService
     }
 }

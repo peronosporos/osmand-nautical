@@ -17,9 +17,13 @@ class NavtexDetailsBottomSheet : BottomSheetDialogFragment() {
     private var message: NavtexMessage? = null
 
     companion object {
+        private const val KEY_MESSAGE = "key_message"
+
         fun newInstance(message: NavtexMessage): NavtexDetailsBottomSheet {
             val fragment = NavtexDetailsBottomSheet()
-            fragment.message = message
+            val args = Bundle()
+            args.putSerializable(KEY_MESSAGE, message)
+            fragment.arguments = args
             return fragment
         }
     }
@@ -27,16 +31,29 @@ class NavtexDetailsBottomSheet : BottomSheetDialogFragment() {
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         val view = inflater.inflate(R.layout.bottom_sheet_navtex_details, container, false)
         
-        // Trap focus for D-pad
+        message = if (android.os.Build.VERSION.SDK_INT >= 33) {
+            arguments?.getSerializable(KEY_MESSAGE, NavtexMessage::class.java)
+        } else {
+            @Suppress("DEPRECATION")
+            arguments?.getSerializable(KEY_MESSAGE) as? NavtexMessage
+        }
+
+        // Trap focus for D-pad navigation but allow system keys
         view.isFocusableInTouchMode = true
         view.requestFocus()
         view.setOnKeyListener { _, keyCode, event ->
-            if (keyCode == KeyEvent.KEYCODE_BACK && event.action == KeyEvent.ACTION_UP) {
-                dismiss()
-                true
-            } else {
-                // Consume keys to prevent map pan/zoom
-                true
+            when (keyCode) {
+                KeyEvent.KEYCODE_BACK -> {
+                    if (event.action == KeyEvent.ACTION_UP) dismiss()
+                    true
+                }
+                KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN,
+                KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT,
+                KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_DPAD_CENTER -> {
+                    // Consume navigation keys to prevent map movement
+                    true
+                }
+                else -> false
             }
         }
         
@@ -50,7 +67,9 @@ class NavtexDetailsBottomSheet : BottomSheetDialogFragment() {
         
         view.findViewById<TextView>(R.id.navtex_detail_id).text = getString(R.string.navtex_detail_id_label, msg.id)
         
-        val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
+        val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).apply {
+            timeZone = TimeZone.getTimeZone("UTC")
+        }
         view.findViewById<TextView>(R.id.navtex_detail_time).text = sdf.format(Date(msg.timestamp))
         
         view.findViewById<TextView>(R.id.navtex_detail_body).text = msg.body

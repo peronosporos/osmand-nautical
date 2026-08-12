@@ -16,17 +16,29 @@ class SignalKRasterLayer(private val mapActivity: MapActivity) : OsmandMapLayer(
 
     private val app = mapActivity.app
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
-    private val tileCache = object : LruCache<String, Bitmap>(50) {
-        override fun entryRemoved(evicted: Boolean, key: String, oldValue: Bitmap, newValue: Bitmap?) {
-            if (evicted) oldValue.recycle()
-        }
-    }
+    private val tileCache = LruCache<String, Bitmap>(256)
+    
+    private val inFlightRequests = mutableSetOf<String>()
+    
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         alpha = 255
     }
     
+    private val drawRect = RectF()
+    private val srcRect = Rect()
+    
     // TASK-006: Double-Buffering / Zoom interpolation to prevent white flashes
     private var lastZoom = -1
+
+
+    private val apiPaths = mapOf(
+        "rainviewer" to "plugins/signalk-rainviewer-charts/radar",
+        "windy" to "plugins/signalk-windy-apiv2/tiles",
+        "openmeteo" to "plugins/@signalk/open-meteo-provider/tiles",
+        "smhi" to "plugins/signalk-smhi-weather-provider/tiles",
+        "noaa" to "plugins/signalk-noaa-weather/tiles",
+        "radar" to "signalk/v1/api/resources/charts/radar"
+    )
 
     fun setOpacity(opacity: Float) {
         paint.alpha = (opacity * 255).toInt().coerceIn(0, 255)
@@ -50,6 +62,10 @@ class SignalKRasterLayer(private val mapActivity: MapActivity) : OsmandMapLayer(
         val opacity = app.settings.NAUTICAL_RASTER_CHARTS_OPACITY.get()
         paint.alpha = opacity
 
+        // ITEM 1: Avoid Double Filtering (Bug #1)
+        // Activity decorView is already filtered by NauticalPlugin
+        paint.colorFilter = null
+
         val zoom = tileBox.zoom
         val bounds = tileBox.tileBounds ?: return
         
@@ -60,19 +76,23 @@ class SignalKRasterLayer(private val mapActivity: MapActivity) : OsmandMapLayer(
 
         for (x in left..right) {
             for (y in top..bottom) {
-                val showRainRadar = caps.hasRainViewer && app.settings.NAUTICAL_SHOW_RAIN_RADAR.get()
-                val showWindy = caps.hasAdvancedWeather && app.settings.NAUTICAL_SHOW_WINDY_TILES.get()
-                val showOpenMeteo = caps.hasAdvancedWeather && app.settings.NAUTICAL_SHOW_OPENMETEO_TILES.get()
-                val showSmhi = caps.hasAdvancedWeather && app.settings.NAUTICAL_SHOW_SMHI_TILES.get()
-                val showNoaa = caps.hasAdvancedWeather && app.settings.NAUTICAL_SHOW_NOAA_TILES.get()
-                
-                when {
-                    showRainRadar -> drawTile(canvas, tileBox, x, y, zoom, "rainviewer")
-                    showWindy -> drawTile(canvas, tileBox, x, y, zoom, "windy")
-                    showOpenMeteo -> drawTile(canvas, tileBox, x, y, zoom, "openmeteo")
-                    showSmhi -> drawTile(canvas, tileBox, x, y, zoom, "smhi")
-                    showNoaa -> drawTile(canvas, tileBox, x, y, zoom, "noaa")
-                    else -> drawTile(canvas, tileBox, x, y, zoom, "radar")
+                // Support simultaneous display of multiple Signal K overlays (Item 8)
+                if (caps.hasRainViewer && app.settings.NAUTICAL_SHOW_RAIN_RADAR.get()) {
+                    drawTile(canvas, tileBox, x, y, zoom, "rainviewer")
+                }
+                if (caps.hasAdvancedWeather) {
+                    if (app.settings.NAUTICAL_SHOW_WINDY_TILES.get()) drawTile(canvas, tileBox, x, y, zoom, "windy")
+                    if (app.settings.NAUTICAL_SHOW_OPENMETEO_TILES.get()) drawTile(canvas, tileBox, x, y, zoom, "openmeteo")
+                    if (app.settings.NAUTICAL_SHOW_SMHI_TILES.get()) drawTile(canvas, tileBox, x, y, zoom, "smhi")
+                    if (app.settings.NAUTICAL_SHOW_NOAA_TILES.get()) drawTile(canvas, tileBox, x, y, zoom, "noaa")
+                }
+                if (caps.hasCharts && app.settings.NAUTICAL_SHOW_RASTER_CHARTS.get()) {
+                    val activeChart = app.settings.NAUTICAL_ACTIVE_SERVER_CHART.get()
+                    if (activeChart.isNotEmpty()) {
+                        drawTile(canvas, tileBox, x, y, zoom, activeChart)
+                    } else {
+                        drawTile(canvas, tileBox, x, y, zoom, "radar")
+                    }
                 }
             }
         }
@@ -82,18 +102,19 @@ class SignalKRasterLayer(private val mapActivity: MapActivity) : OsmandMapLayer(
         val key = "$type/$zoom/$x/$y"
         val bitmap = tileCache[key]
         
-        val pxLeft = tileBox.getPixXFromTile(x.toDouble(), y.toDouble(), zoom.toFloat())
-        val pxTop = tileBox.getPixYFromTile(x.toDouble(), y.toDouble(), zoom.toFloat())
-        val pxRight = tileBox.getPixXFromTile((x + 1).toDouble(), (y + 1).toDouble(), zoom.toFloat())
-        val pxBottom = tileBox.getPixYFromTile((x + 1).toDouble(), (y + 1).toDouble(), zoom.toFloat())
-        val rect = RectF(pxLeft, pxTop, pxRight, pxBottom)
+        drawRect.set(
+            tileBox.getPixXFromTile(x.toDouble(), y.toDouble(), zoom.toFloat()),
+            tileBox.getPixYFromTile(x.toDouble(), y.toDouble(), zoom.toFloat()),
+            tileBox.getPixXFromTile((x + 1).toDouble(), (y + 1).toDouble(), zoom.toFloat()),
+            tileBox.getPixYFromTile((x + 1).toDouble(), (y + 1).toDouble(), zoom.toFloat())
+        )
 
         if (bitmap != null) {
-            canvas.drawBitmap(bitmap, null, rect, paint)
+            canvas.drawBitmap(bitmap, null, drawRect, paint)
             lastZoom = zoom
         } else {
             // TASK-006: Fallback to parent tile (Zoom Interpolation)
-            drawParentTile(canvas, x, y, zoom, type, rect)
+            drawParentTile(canvas, x, y, zoom, type, drawRect)
             fetchTile(zoom, x, y, type)
         }
     }
@@ -110,7 +131,7 @@ class SignalKRasterLayer(private val mapActivity: MapActivity) : OsmandMapLayer(
                 // Calculate which quadrant of the parent tile we are in
                 val offsetX = x % 2
                 val offsetY = y % 2
-                val srcRect = Rect(
+                srcRect.set(
                     (offsetX * (parentBitmap.width / 2)),
                     (offsetY * (parentBitmap.height / 2)),
                     ((offsetX + 1) * (parentBitmap.width / 2)),
@@ -127,7 +148,10 @@ class SignalKRasterLayer(private val mapActivity: MapActivity) : OsmandMapLayer(
 
     private fun fetchTile(zoom: Int, x: Int, y: Int, type: String) {
         val key = "$type/$zoom/$x/$y"
-        if (tileCache[key] != null) return
+        synchronized(inFlightRequests) {
+            if (tileCache[key] != null || inFlightRequests.contains(key)) return
+            inFlightRequests.add(key)
+        }
         
         scope.launch(Dispatchers.IO) {
             try {
@@ -135,14 +159,7 @@ class SignalKRasterLayer(private val mapActivity: MapActivity) : OsmandMapLayer(
                 val port = app.settings.NAUTICAL_SERVER_PORT.get()
                 val protocol = if (app.settings.NAUTICAL_USE_SECURE_CONNECTION.get()) "https" else "http"
                 
-                val path = when (type) {
-                    "rainviewer" -> "plugins/signalk-rainviewer-charts/radar"
-                    "windy" -> "plugins/signalk-windy-apiv2/tiles"
-                    "openmeteo" -> "plugins/@signalk/open-meteo-provider/tiles"
-                    "smhi" -> "plugins/signalk-smhi-weather-provider/tiles"
-                    "noaa" -> "plugins/signalk-noaa-weather/tiles"
-                    else -> "signalk/v1/api/resources/charts/radar"
-                }
+                val path = apiPaths[type] ?: "signalk/v1/api/resources/charts/$type"
                 val url = "$protocol://$ip:$port/$path/$zoom/$x/$y"
                 
                 val plugin = NauticalPlugin.getInstance()
@@ -156,11 +173,17 @@ class SignalKRasterLayer(private val mapActivity: MapActivity) : OsmandMapLayer(
                         val bitmap = BitmapFactory.decodeStream(stream)
                         if (bitmap != null) {
                             tileCache.put(key, bitmap)
-                            mapActivity.mapView.refreshMap()
+                            withContext(Dispatchers.Main) {
+                                mapActivity.mapView.refreshMap()
+                            }
                         }
                     }
                 }
             } catch (_: Exception) {
+            } finally {
+                synchronized(inFlightRequests) {
+                    inFlightRequests.remove(key)
+                }
             }
         }
     }

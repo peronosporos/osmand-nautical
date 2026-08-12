@@ -15,20 +15,29 @@ object MultihullShuntManager {
         if (!state.isShunted) return state
 
         return state.copy(
-            // Flip Bow/Stern Vectors
+            // Flip Hull-Relative Heading Vectors
             headingTrue = state.headingTrue?.let { flipVector(it) },
             headingMagnetic = state.headingMagnetic?.let { flipVector(it) },
-            courseOverGroundTrue = state.courseOverGroundTrue?.let { flipVector(it) },
+
+            // Autopilot Targets must be flipped to match new hull orientation
+            targetHeading = state.targetHeading?.let { flipVector(it) },
+            pendingTargetHeading = state.pendingTargetHeading?.let { flipVector(it) },
+            autopilotHeadingSet = state.autopilotHeadingSet?.let { flipVector(it) },
             
             // Invert Relative Wind Angles (AWA/TWA)
             windDirectionApparent = state.windDirectionApparent?.let { flipRelativeAngle(it) },
             trueWindAngle = state.trueWindAngle?.let { flipRelativeAngle(it) },
+
+            // Wind Targets relative to bow must also be flipped
+            targetWindAngleApparent = state.targetWindAngleApparent?.let { flipRelativeAngle(it) },
+            autopilotWindAngleSet = state.autopilotWindAngleSet?.let { flipRelativeAngle(it) },
             
-            // Note: Depth and other scalar telemetry remain unchanged
-            // Rate of turn and drift vectors might need flipping if they are relative to ship axes
-            rateOfTurn = state.rateOfTurn?.let { -it }, // Turning 'starboard' becomes 'port' if bow/stern flip?
-            // Actually, in a proa, the ama stays on the same side, so rotation direction is consistent 
-            // with the boat's frame, but the definition of 'forward' flipped.
+            // Note: COG (Course Over Ground) and Set (Drift Direction) are absolute 
+            // relative to the earth and must NOT be flipped.
+            
+            // Transverse metrics relative to the vessel centerline
+            rateOfTurn = state.rateOfTurn?.let { -it }, 
+            leeway = state.leeway?.let { -it }
         )
     }
 

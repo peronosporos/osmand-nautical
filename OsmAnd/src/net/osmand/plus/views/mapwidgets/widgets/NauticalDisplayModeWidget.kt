@@ -37,6 +37,12 @@ class NauticalDisplayModeWidget(
         }
         
         setImageDrawable(iconsCache.getPaintedIcon(iconRes, iconColor))
+
+        if (mode == NauticalDisplayMode.SUNLIGHT) {
+            view.setBackgroundColor(0x44FFD700) // Semi-transparent Gold
+        } else {
+            view.background = null
+        }
         
         view.setOnClickListener {
             val nextMode = when (mode) {

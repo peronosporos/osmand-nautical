@@ -259,11 +259,16 @@ public class WidgetInfoBaseFragment extends BaseFullScreenFragment {
 
 	protected void initParams(@NonNull Bundle bundle) {
 		widgetId = bundle.getString(KEY_WIDGET_ID);
-		appMode = ApplicationMode.valueOfStringKey(bundle.getString(KEY_APP_MODE), settings.getApplicationMode());
+		String appModeKey = bundle.getString(KEY_APP_MODE);
+		appMode = ApplicationMode.valueOfStringKey(appModeKey, settings.getApplicationMode());
 		addNewWidgetMode = bundle.getBoolean(KEY_ADD_MODE, false);
 		String panelName = bundle.getString(KEY_SELECTED_PANEL);
 		if (panelName != null) {
-			widgetPanel = WidgetsPanel.valueOf(panelName);
+			try {
+				widgetPanel = WidgetsPanel.valueOf(panelName);
+			} catch (Exception e) {
+				// Ignore
+			}
 		}
 		if (widgetPanel != null) {
 			isVerticalPanel = widgetPanel.isPanelVertical();
@@ -277,7 +282,7 @@ public class WidgetInfoBaseFragment extends BaseFullScreenFragment {
 				widgetInfo = controllerAddedWidgetInfo;
 			}
 		}
-		if (widgetInfo == null) {
+		if (widgetInfo == null && widgetId != null) {
 			widgetInfo = widgetRegistry.getWidgetInfoById(widgetId);
 		}
 

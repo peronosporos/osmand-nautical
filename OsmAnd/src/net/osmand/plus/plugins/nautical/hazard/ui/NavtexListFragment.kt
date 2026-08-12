@@ -22,7 +22,9 @@ import java.util.*
 class NavtexListFragment : BaseOsmAndFragment() {
 
     private lateinit var recyclerView: RecyclerView
-    private val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
+    private val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).apply {
+        timeZone = TimeZone.getTimeZone("UTC")
+    }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         val view = inflater.inflate(R.layout.navtex_list_fragment, container, false)
@@ -73,25 +75,50 @@ class NavtexListFragment : BaseOsmAndFragment() {
         val viewModel = plugin?.navtexViewModel ?: return
         val current = viewModel.uiState.value.filters
         
-        val items = arrayOf<CharSequence>(
+        val items = arrayOf(
             getString(R.string.navtex_only_urgent),
-            getString(R.string.navtex_subject_filter),
+            getString(R.string.navtex_subject_filter) + ": " + (current.subject?.name ?: "All"),
             getString(R.string.navtex_max_distance)
         )
-        val checked = booleanArrayOf(current.onlyUrgent, false, false)
 
         androidx.appcompat.app.AlertDialog.Builder(requireContext())
             .setTitle(R.string.navtex_details_group)
-            .setMultiChoiceItems(items, checked) { _, which, isChecked ->
+            .setItems(items) { _, which ->
                 when (which) {
-                    0 -> viewModel.setUrgentOnly(isChecked)
-                    1 -> viewModel.setSubjectFilter(if (isChecked) NavtexSubject.NAVTEX_WARNING else null)
-                    2 -> viewModel.setMaxDistance(if (isChecked) 100.0 else null)
+                    0 -> viewModel.setUrgentOnly(!current.onlyUrgent)
+                    1 -> showSubjectSelectionDialog(viewModel)
+                    2 -> showDistanceSelectionDialog(viewModel)
                 }
             }
-            .setPositiveButton(android.R.string.ok, null)
             .setNeutralButton("Reset All") { _, _ ->
                 viewModel.updateFilters(NavtexFilters())
+            }
+            .show()
+    }
+
+    private fun showSubjectSelectionDialog(viewModel: net.osmand.plus.plugins.nautical.hazard.viewmodel.NavtexViewModel) {
+        val subjects = NavtexSubject.entries.toTypedArray()
+        val names = subjects.map { it.name.replace("_", " ") }.toTypedArray()
+        
+        androidx.appcompat.app.AlertDialog.Builder(requireContext())
+            .setTitle(R.string.navtex_subject_filter)
+            .setItems(names) { _, which ->
+                viewModel.setSubjectFilter(subjects[which])
+            }
+            .setNeutralButton("Clear Filter") { _, _ ->
+                viewModel.setSubjectFilter(null)
+            }
+            .show()
+    }
+
+    private fun showDistanceSelectionDialog(viewModel: net.osmand.plus.plugins.nautical.hazard.viewmodel.NavtexViewModel) {
+        val distances = arrayOf("10 km", "50 km", "100 km", "500 km", "Any")
+        val values = arrayOf(10.0, 50.0, 100.0, 500.0, null)
+        
+        androidx.appcompat.app.AlertDialog.Builder(requireContext())
+            .setTitle(R.string.navtex_max_distance)
+            .setItems(distances) { _, which ->
+                viewModel.setMaxDistance(values[which])
             }
             .show()
     }

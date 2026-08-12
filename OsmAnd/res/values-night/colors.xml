@@ -18,4 +18,5 @@
 	<color name="nautical_status_green">#1B5E20</color>
 	<color name="nautical_status_yellow">#F57F17</color>
 	<color name="nautical_status_red">#B71C1C</color>
+	<color name="nautical_widget_background">#E6000000</color>
 </resources>

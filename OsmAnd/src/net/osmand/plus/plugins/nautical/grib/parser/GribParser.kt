@@ -2,24 +2,26 @@ package net.osmand.plus.plugins.nautical.grib.parser
 
 import net.osmand.PlatformUtil
 import net.osmand.plus.plugins.nautical.utils.TemporalUtils
-import java.io.InputStream
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.time.LocalDateTime
 import java.time.ZoneOffset
+import java.util.Arrays
 import kotlin.math.pow
+
+class UnsupportedGribException(message: String) : Exception(message)
 
 class GribParser {
     private val log = PlatformUtil.getLog(GribParser::class.java)
 
-    fun parse(inputStream: InputStream): GribGridData? {
-        try {
-            val bytes = inputStream.readBytes()
-            if (bytes.size < 16) return null
-            val buffer = ByteBuffer.wrap(bytes).order(ByteOrder.BIG_ENDIAN)
+    @Throws(UnsupportedGribException::class)
+    fun parse(bytes: ByteArray): GribGridData? {
+        if (bytes.size < 16) return null
+        val buffer = ByteBuffer.wrap(bytes).order(ByteOrder.BIG_ENDIAN)
 
+        try {
             var offset = 0
-            var header: GribHeader? = null
+            var globalHeader: GribHeader? = null
             val timeSteps = mutableMapOf<Long, MutableTimeStep>()
 
             while (offset < (bytes.size - 4)) {
@@ -29,174 +31,312 @@ class GribParser {
                     offset++
                     continue
                 }
-                
+
+                val discipline = bytes[offset + 6].toInt() and 0xFF
                 val edition = bytes[offset + 7].toInt()
                 if (edition != 2) {
-                    log.error("Unsupported GRIB edition: $edition")
-                    return null
+                    throw UnsupportedGribException("GRIB Edition $edition is not supported. Please use Edition 2.")
                 }
 
                 val totalLength = buffer.getLong(offset + 8)
                 val msgEnd = offset + totalLength.toInt()
-                var secOffset = offset + 16
-
-                var currentRefTime = 0L
-                var currentNi = 0
-                var currentNj = 0
-                var currentHeader: GribHeader? = null
-
-                // Iterate through Sections 1-7 within the GRIB message
-                while (secOffset < (msgEnd - 4)) {
-                    val secLength = buffer.getInt(secOffset)
-
-                    when (bytes[secOffset + 4].toInt()) {
-                        1 -> { // Identification Section
-                            val year = buffer.getShort(secOffset + 12).toInt()
-                            val month = bytes[secOffset + 14].toInt()
-                            val day = bytes[secOffset + 15].toInt()
-                            val hour = bytes[secOffset + 16].toInt()
-                            // Strict UTC enforcement using java.time
-                            currentRefTime = LocalDateTime.of(year, month, day, hour, 0)
-                                .toInstant(ZoneOffset.UTC).toEpochMilli()
-                        }
-                        3 -> { // Grid Definition Section
-                            val template = buffer.getShort(secOffset + 12).toInt()
-                            if (template == 0) { // Equidistant Cylindrical
-                                currentNi = buffer.getInt(secOffset + 30)
-                                currentNj = buffer.getInt(secOffset + 34)
-                                val lat1 = buffer.getInt(secOffset + 46) / 1000000.0
-                                val lon1 = buffer.getInt(secOffset + 50) / 1000000.0
-                                val lat2 = buffer.getInt(secOffset + 55) / 1000000.0
-                                val lon2 = buffer.getInt(secOffset + 59) / 1000000.0
-                                
-                                currentHeader = GribHeader(
-                                    latMin = minOf(lat1, lat2),
-                                    latMax = maxOf(lat1, lat2),
-                                    lonMin = minOf(lon1, lon2),
-                                    lonMax = maxOf(lon1, lon2),
-                                    latSteps = currentNj,
-                                    lonSteps = currentNi,
-                                )
-                                header = currentHeader // Store for final object
-                            }
-                        }
-                        4 -> { // Product Definition Section
-                            // Extract Parameter Category and Number
-                            val cat = bytes[secOffset + 9].toInt()
-                            val num = bytes[secOffset + 10].toInt()
-                            val forecastTime = buffer.getInt(secOffset + 18) // Usually hours
-                            val timestamp = TemporalUtils.validate(currentRefTime + (forecastTime * 3600000L))
-                            
-                            // Look ahead for Sections 5 and 7 to extract data
-                            val data = extractData(buffer, secOffset + secLength, msgEnd, currentNi, currentNj)
-                            if (data != null && currentHeader != null) {
-                                val step = timeSteps.getOrPut(timestamp) { MutableTimeStep(timestamp, currentHeader) }
-                                mapParameter(cat, num, data, step)
-                            }
-                        }
-                    }
-                    secOffset += secLength
+                
+                // Pre-scan sections for this message
+                val sections = scanSections(bytes, offset + 16, msgEnd)
+                
+                // Section 1: Identification
+                val sec1 = sections[1]
+                var refTime = 0L
+                if (sec1 != null) {
+                    val year = buffer.getShort(sec1 + 12).toInt()
+                    val month = bytes[sec1 + 14].toInt() and 0xFF
+                    val day = bytes[sec1 + 15].toInt() and 0xFF
+                    val hour = bytes[sec1 + 16].toInt() and 0xFF
+                    val minute = bytes[sec1 + 17].toInt() and 0xFF
+                    val second = bytes[sec1 + 18].toInt() and 0xFF
+                    refTime = LocalDateTime.of(year, month, day, hour, minute, second)
+                        .toInstant(ZoneOffset.UTC).toEpochMilli()
                 }
+
+                // Section 3: Grid Definition
+                val sec3 = sections[3]
+                var ni = 0
+                var nj = 0
+                var scanMode = 0
+                var currentHeader: GribHeader? = null
+                if (sec3 != null) {
+                    val template = buffer.getShort(sec3 + 12).toInt()
+                    if (template == 0) { // Equidistant Cylindrical
+                        ni = buffer.getInt(sec3 + 30)
+                        nj = buffer.getInt(sec3 + 34)
+                        val lat1 = buffer.getInt(sec3 + 46) / 1000000.0
+                        val lon1 = buffer.getInt(sec3 + 50) / 1000000.0
+                        val lat2 = buffer.getInt(sec3 + 55) / 1000000.0
+                        val lon2 = buffer.getInt(sec3 + 59) / 1000000.0
+                        scanMode = bytes[sec3 + 71].toInt() and 0xFF
+                        
+                        currentHeader = GribHeader(
+                            latMin = minOf(lat1, lat2),
+                            latMax = maxOf(lat1, lat2),
+                            lonMin = minOf(lon1, lon2),
+                            lonMax = maxOf(lon1, lon2),
+                            latSteps = nj,
+                            lonSteps = ni,
+                        )
+                        globalHeader = currentHeader
+                    } else if (template == 10) { // Mercator
+                        ni = buffer.getInt(sec3 + 30)
+                        nj = buffer.getInt(sec3 + 34)
+                        val lat1 = buffer.getInt(sec3 + 38) / 1000000.0
+                        val lon1 = buffer.getInt(sec3 + 42) / 1000000.0
+                        val lat2 = buffer.getInt(sec3 + 51) / 1000000.0
+                        val lon2 = buffer.getInt(sec3 + 55) / 1000000.0
+                        scanMode = bytes[sec3 + 64].toInt() and 0xFF
+                        
+                        currentHeader = GribHeader(
+                            latMin = minOf(lat1, lat2),
+                            latMax = maxOf(lat1, lat2),
+                            lonMin = minOf(lon1, lon2),
+                            lonMax = maxOf(lon1, lon2),
+                            latSteps = nj,
+                            lonSteps = ni,
+                        )
+                        globalHeader = currentHeader
+                    } else {
+                        log.warn("Unsupported GRIB Grid Template: $template")
+                    }
+                }
+
+                // Section 4: Product Definition
+                val sec4 = sections[4]
+                if ((sec4 != null) && (currentHeader != null)) {
+                    val cat = bytes[sec4 + 9].toInt() and 0xFF
+                    val num = bytes[sec4 + 10].toInt() and 0xFF
+                    val timeUnit = bytes[sec4 + 17].toInt() and 0xFF
+                    val forecastTime = buffer.getInt(sec4 + 18)
+                    
+                    val timestamp = TemporalUtils.validate(refTime + convertToMillis(forecastTime, timeUnit))
+                    if (timestamp == 0L) {
+                        log.warn("GRIB: Skipping message with invalid timestamp")
+                        continue
+                    }
+                    
+                    // Section 5, 6, 7 required for data
+                    val sec5 = sections[5]
+                    val sec6 = sections[6]
+                    val sec7 = sections[7]
+                    
+                    if ((sec5 != null) && (sec7 != null)) {
+                        val data = extractData(buffer, sec5, sec6, sec7, ni, nj, scanMode)
+                        val step = timeSteps.getOrPut(timestamp) { MutableTimeStep(timestamp, currentHeader) }
+                        mapParameter(discipline, cat, num, data, step)
+                    }
+                }
+                
                 offset = msgEnd
             }
 
-            return header?.let { h ->
+            return globalHeader?.let { h ->
                 GribGridData(h, timeSteps.values.map { it.toTimeStepGrid() })
             }
 
         } catch (e: Exception) {
-            log.error("Error parsing GRIB stream: ${e.message}", e)
+            log.error("Error parsing GRIB bytes: ${e.message}", e)
             return null
         }
     }
 
-    private fun mapParameter(cat: Int, num: Int, data: Array<DoubleArray>, step: MutableTimeStep) {
-        // Discipline 0 (Meteorological)
-        if (cat == 2 && num == 2) step.uGrid = data // U-component of wind
-        if (cat == 2 && num == 3) step.vGrid = data // V-component of wind
-        if (cat == 3 && num == 0) step.pressureGrid = data // Pressure
-        
-        // Discipline 10 (Oceanographic)
-        if (cat == 1 && num == 2) step.currentUGrid = data // Current U (Eastward)
-        if (cat == 1 && num == 3) step.currentVGrid = data // Current V (Northward)
-        if (cat == 0 && num == 3) step.waveHeightGrid = data // Significant wave height
-        if (cat == 0 && num == 4) step.waveDirectionGrid = data // Mean wave direction
+    private fun scanSections(bytes: ByteArray, startOffset: Int, msgEnd: Int): Map<Int, Int> {
+        val sections = mutableMapOf<Int, Int>()
+        var offset = startOffset
+        val buffer = ByteBuffer.wrap(bytes)
+        while (offset < (msgEnd - 4)) {
+            val length = buffer.getInt(offset)
+            if (length <= 0) break
+            val num = bytes[offset + 4].toInt() and 0xFF
+            sections[num] = offset
+            offset += length
+        }
+        return sections
     }
 
-    private fun extractData(buffer: ByteBuffer, startOffset: Int, msgEnd: Int, ni: Int, nj: Int): Array<DoubleArray>? {
-        var offset = startOffset
-        var referenceValue = 0f
-        var binaryScale = 0
-        var decimalScale = 0
-        var bitsPerValue = 0
+    private fun convertToMillis(value: Int, unit: Int): Long {
+        return when (unit) {
+            0 -> value * 60000L // Minutes
+            1 -> value * 3600000L // Hours
+            2 -> value * 86400000L // Days
+            3 -> value * 86400000L * 30 // Months (approx)
+            4 -> value * 86400000L * 365 // Years (approx)
+            5 -> value * 86400000L * 365 * 10 // Decade
+            6 -> value * 86400000L * 365 * 30 // Normal
+            7 -> value * 86400000L * 365 * 100 // Century
+            10 -> value * 3600000L * 3 // 3 Hours
+            11 -> value * 3600000L * 6 // 6 Hours
+            12 -> value * 3600000L * 12 // 12 Hours
+            13 -> value * 1000L // Seconds
+            else -> value * 3600000L // Default to hours
+        }
+    }
 
-        // Find Section 5 (Representation)
-        while (offset < msgEnd - 5) {
-            val length = buffer.getInt(offset)
-            val num = buffer[offset + 4].toInt()
-            if (num == 5) {
-                referenceValue = buffer.getFloat(offset + 11)
-                binaryScale = buffer.getShort(offset + 15).toInt()
-                decimalScale = buffer.getShort(offset + 17).toInt()
-                bitsPerValue = buffer[offset + 19].toInt()
-                break
+    private fun mapParameter(discipline: Int, cat: Int, num: Int, data: FloatArray, step: MutableTimeStep) {
+        when (discipline) {
+            0 -> { // Meteorological
+                if (cat == 2 && num == 2) step.uGrid = data
+                if (cat == 2 && num == 3) step.vGrid = data
+                if (cat == 3 && num == 0) step.pressureGrid = data
             }
-            offset += length
+            10 -> { // Oceanographic
+                if (cat == 1 && num == 2) step.currentUGrid = data
+                if (cat == 1 && num == 3) step.currentVGrid = data
+                if (cat == 0 && num == 3) step.waveHeightGrid = data
+                if (cat == 0 && num == 4) step.waveDirectionGrid = data
+            }
+        }
+    }
+
+    private fun extractData(buffer: ByteBuffer, sec5: Int, sec6: Int?, sec7: Int, ni: Int, nj: Int, scanMode: Int): FloatArray {
+        // Section 5: Representation
+        val template = buffer.getShort(sec5 + 9).toInt()
+        val referenceValue = buffer.getFloat(sec5 + 11)
+        val binaryScale = buffer.getShort(sec5 + 15).toInt()
+        val decimalScale = buffer.getShort(sec5 + 17).toInt()
+        val bitsPerValue = buffer[sec5 + 19].toInt() and 0xFF
+        
+        if (bitsPerValue == 0) return FloatArray(ni * nj) { (referenceValue * 10.0.pow(-decimalScale.toDouble())).toFloat() }
+
+        // Section 6: Bit-map
+        var bitMap: BooleanArray? = null
+        if (sec6 != null) {
+            val bitMapIndicator = buffer[sec6 + 5].toInt() and 0xFF
+            if (bitMapIndicator == 0) {
+                bitMap = readBitMap(buffer, sec6 + 6, ni * nj)
+            }
         }
 
-        // Find Section 7 (Data)
-        offset = startOffset
-        while (offset < msgEnd - 5) {
-            val length = buffer.getInt(offset)
-            val num = buffer.get(offset + 4).toInt()
-            if (num == 7 && bitsPerValue > 0) {
-                val bitReader = BitReader(buffer, offset + 5)
-                val grid = Array(nj) { DoubleArray(ni) }
-                val bScale = 2.0.pow(binaryScale.toDouble())
-                val dScale = 10.0.pow(-decimalScale.toDouble())
+        // Section 7: Data
+        val bScale = 2.0.pow(binaryScale.toDouble())
+        val dScale = 10.0.pow(-decimalScale.toDouble())
 
-                for (j in 0 until nj) {
-                    for (i in 0 until ni) {
-                        val packed = bitReader.readBits(bitsPerValue)
-                        grid[j][i] = (referenceValue + packed * bScale) * dScale
-                    }
+        val rawData = FloatArray(ni * nj)
+        
+        if (template == 0) { // Simple packing
+            val bitReader = BitReader(buffer, sec7 + 5)
+            for (i in 0 until (ni * nj)) {
+                if (bitMap == null || bitMap[i]) {
+                    val packed = bitReader.readBits(bitsPerValue)
+                    rawData[i] = ((referenceValue + packed * bScale) * dScale).toFloat()
+                } else {
+                    rawData[i] = Float.NaN
                 }
-                return grid
             }
-            offset += length
+        } else {
+            val templateName = when(template) {
+                2 -> "Complex Packing"
+                3 -> "Complex Packing & Spatial Differencing"
+                40 -> "JPEG 2000 Packing"
+                41 -> "PNG Packing"
+                else -> "Template $template"
+            }
+            log.warn("GRIB: Packing $templateName is not supported. Please use Simple Packing.")
+            Arrays.fill(rawData, Float.NaN)
         }
-        return null
+
+        return normalizeGrid(rawData, ni, nj, scanMode)
+    }
+
+    private fun readBitMap(buffer: ByteBuffer, startOffset: Int, size: Int): BooleanArray {
+        val bitmap = BooleanArray(size)
+        var bitOffset = startOffset.toLong() * 8
+        for (i in 0 until size) {
+            val byteIdx = (bitOffset / 8).toInt()
+            val bitIdx = (7 - (bitOffset % 8)).toInt()
+            val bit = (buffer[byteIdx].toInt() and 0xFF shr bitIdx) and 1
+            bitmap[i] = bit == 1
+            bitOffset++
+        }
+        return bitmap
+    }
+
+    private fun normalizeGrid(rawData: FloatArray, ni: Int, nj: Int, scanMode: Int): FloatArray {
+        val grid = FloatArray(ni * nj)
+        
+        val iDir = (scanMode shr 7) and 1 // 0: +lon, 1: -lon
+        val jDir = (scanMode shr 6) and 1 // 0: -lat, 1: +lat
+        val consecutive = (scanMode shr 5) and 1 // 0: i consecutive, 1: j consecutive
+        val zigzag = (scanMode shr 4) and 1 // 0: same direction, 1: alternate rows scan in opposite direction
+        
+        // We want grid[latIdx * ni + lonIdx] where latIdx 0 is latMin (South) and lonIdx 0 is lonMin (West)
+        
+        for (idx in rawData.indices) {
+            var i: Int
+            var j: Int
+            
+            if (consecutive == 0) {
+                i = idx % ni
+                j = idx / ni
+            } else {
+                i = idx / nj
+                j = idx % nj
+            }
+            
+            // Handle zigzag (alternate rows reversed)
+            if (zigzag == 1 && j % 2 == 1) {
+                i = (ni - 1 - i)
+            }
+            
+            val targetI = if (iDir == 0) i else (ni - 1 - i)
+            val targetJ = if (jDir == 1) j else (nj - 1 - j)
+            
+            if (targetI in 0 until ni && targetJ in 0 until nj) {
+                grid[targetJ * ni + targetI] = rawData[idx]
+            }
+        }
+        return grid
     }
 
     private class BitReader(private val buffer: ByteBuffer, startOffset: Int) {
-        private var bitOffset = startOffset * 8
-        
+        private var bitOffset = startOffset.toLong() * 8
+        private val totalBits = buffer.capacity().toLong() * 8
+
         fun readBits(n: Int): Long {
+            if (n == 0) return 0
+            if (bitOffset + n > totalBits) return 0
+            
             var value = 0L
-            repeat(n) {
-                val byteIdx = bitOffset / 8
-                val bitIdx = 7 - (bitOffset % 8)
-                val bit = (buffer.get(byteIdx).toInt() shr bitIdx) and 1
-                value = (value shl 1) or bit.toLong()
-                bitOffset++
+            var bitsLeft = n
+            
+            while (bitsLeft > 0) {
+                val byteIdx = (bitOffset / 8).toInt()
+                val bitIdx = (bitOffset % 8).toInt()
+                val bitsInByte = 8 - bitIdx
+                val toRead = minOf(bitsLeft, bitsInByte)
+                
+                val mask = (0xFF shr bitIdx) and (0xFF shl (bitsInByte - toRead))
+                val shift = bitsInByte - toRead
+                val bits = (buffer[byteIdx].toInt() and mask) shr shift
+                
+                value = (value shl toRead) or (bits.toLong() and ((1L shl toRead) - 1))
+                
+                bitOffset += toRead
+                bitsLeft -= toRead
             }
             return value
         }
     }
 
     private class MutableTimeStep(val timestamp: Long, val header: GribHeader) {
-        var uGrid: Array<DoubleArray>? = null
-        var vGrid: Array<DoubleArray>? = null
-        var pressureGrid: Array<DoubleArray>? = null
-        var waveHeightGrid: Array<DoubleArray>? = null
-        var waveDirectionGrid: Array<DoubleArray>? = null
-        var currentUGrid: Array<DoubleArray>? = null
-        var currentVGrid: Array<DoubleArray>? = null
+        var uGrid: FloatArray? = null
+        var vGrid: FloatArray? = null
+        var pressureGrid: FloatArray? = null
+        var waveHeightGrid: FloatArray? = null
+        var waveDirectionGrid: FloatArray? = null
+        var currentUGrid: FloatArray? = null
+        var currentVGrid: FloatArray? = null
 
         fun toTimeStepGrid() = TimeStepGrid(
             timestamp,
-            uGrid ?: Array(header.latSteps) { DoubleArray(header.lonSteps) },
-            vGrid ?: Array(header.latSteps) { DoubleArray(header.lonSteps) },
+            uGrid ?: FloatArray(header.latSteps * header.lonSteps),
+            vGrid ?: FloatArray(header.latSteps * header.lonSteps),
             pressureGrid,
             waveHeightGrid,
             waveDirectionGrid,

@@ -1,15 +1,13 @@
 package net.osmand.plus.plugins.nautical.engine
 
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.*
 import net.osmand.PlatformUtil
 import net.osmand.plus.OsmandApplication
 import net.osmand.plus.plugins.nautical.NauticalPlugin
 import net.osmand.plus.plugins.nautical.network.SignalKPutBody
 import net.osmand.plus.plugins.nautical.network.SignalKRestService
 import java.util.concurrent.ConcurrentHashMap
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * Manages bi-directional control (PUT requests) to Signal K.
@@ -22,6 +20,8 @@ class SignalKControlManager(
 ) {
     private val log = PlatformUtil.getLog(SignalKControlManager::class.java)
     private val pendingCommands = ConcurrentHashMap<String, Job>()
+    private var cachedRestService: SignalKRestService? = null
+    private var lastUrl: String? = null
 
     private fun getRestService(): SignalKRestService? {
         val plugin = NauticalPlugin.getInstance() ?: return null
@@ -29,24 +29,45 @@ class SignalKControlManager(
         val ip = app.settings.NAUTICAL_SERVER_IP.get()
         val port = app.settings.NAUTICAL_SERVER_PORT.get()
         val protocol = if (app.settings.NAUTICAL_USE_SECURE_CONNECTION.get()) "https" else "http"
-        return SignalKRestService.create("$protocol://$ip:$port", client)
+        val url = "$protocol://$ip:$port"
+
+        if (url == lastUrl && cachedRestService != null) return cachedRestService
+
+        lastUrl = url
+        cachedRestService = SignalKRestService.create(url, client)
+        return cachedRestService
     }
 
     fun setSwitchState(path: String, state: Boolean) {
-        val fullPath = when {
-            path.startsWith("electrical.switches.") -> path
-            path.startsWith("shelly.") -> "electrical.switches.$path"
-            path.startsWith("empirbus.") -> "electrical.switches.$path"
-            else -> "electrical.switches.$path"
+        // Safety Guard for Windlass (Item 20 fix)
+        if (path.contains("windlass", ignoreCase = true) && state) {
+            val isEngineRunning = dataBroker.marineState.value.isEngineRunning
+            if (!isEngineRunning) {
+                app.runInUIThread {
+                    app.showToastMessage(net.osmand.plus.R.string.nautical_windlass_engine_guard)
+                }
+                return
+            }
         }
+        val fullPath = normalizePath(path)
         val putPath = "$fullPath.state"
         sendCommand(putPath, state)
     }
 
     fun setDimmerValue(path: String, value: Double) {
-        val fullPath = if (path.startsWith("electrical.switches.")) path else "electrical.switches.$path"
+        val fullPath = normalizePath(path)
         val putPath = "$fullPath.dimmingLevel"
         sendCommand(putPath, value)
+    }
+
+    private fun normalizePath(path: String): String {
+        return when {
+            path.startsWith("electrical.switches.") -> path
+            path.startsWith("shelly.") -> "electrical.switches.$path"
+            path.startsWith("empirbus.") -> "electrical.switches.$path"
+            path.contains(".") -> path
+            else -> "electrical.switches.$path"
+        }
     }
 
     fun setAutopilotMode(mode: String) {
@@ -105,6 +126,15 @@ class SignalKControlManager(
     }
 
     private fun sendCommand(path: String, value: Any) {
+        val useSecure = app.settings.NAUTICAL_USE_SECURE_CONNECTION.get()
+        val ip = app.settings.NAUTICAL_SERVER_IP.get()
+        if (!useSecure && (ip != "127.0.0.1" && ip != "localhost")) {
+            log.error("Rejected state mutation command '$path': Secure connection (HTTPS) is required.")
+            app.runInUIThread {
+                app.showToastMessage(net.osmand.plus.R.string.nautical_error_insecure_connection)
+            }
+            return
+        }
 
         pendingCommands[path]?.cancel()
         val job = scope.launch(Dispatchers.IO) {
@@ -118,6 +148,15 @@ class SignalKControlManager(
                     s.copy(timestamps = timestamps)
                 }
 
+                // Watchdog to clear pending if server never responds
+                val currentJob = coroutineContext[Job]
+                scope.launch {
+                    delay(5000L.milliseconds)
+                    if (pendingCommands[path] == currentJob) {
+                        clearPending(path)
+                    }
+                }
+
                 val response = service.putValue(path.replace(".", "/"), SignalKPutBody(value))
                 if (response.isSuccessful) {
                     val body = response.body()
@@ -129,6 +168,13 @@ class SignalKControlManager(
                     }
                 } else {
                     log.error("SignalK Command Failed: $path. Code: ${response.code()}")
+                    app.runInUIThread {
+                        if (response.code() == 401 || response.code() == 403) {
+                            app.showToastMessage(net.osmand.plus.R.string.nautical_auth_failed)
+                        } else {
+                            app.showToastMessage(net.osmand.plus.R.string.nautical_toast_server_error, response.code())
+                        }
+                    }
                     clearPending(path)
                 }
             } catch (e: Exception) {

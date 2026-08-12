@@ -6,6 +6,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
 import android.widget.SeekBar
+import android.widget.TextView
 import androidx.appcompat.widget.SwitchCompat
 import net.osmand.plus.OsmandApplication
 import net.osmand.plus.R
@@ -28,9 +29,15 @@ class MarineRasterSettingsControl : BaseMaterialBottomSheetDialogFragment() {
         }
 
         val seekBar = view.findViewById<SeekBar>(R.id.opacity_seekbar)
-        seekBar.progress = settings.NAUTICAL_RASTER_CHARTS_OPACITY.get()
+        val percentText = view.findViewById<TextView>(R.id.opacity_percent)
+        
+        val currentOpacity = settings.NAUTICAL_RASTER_CHARTS_OPACITY.get()
+        seekBar.progress = currentOpacity
+        percentText.text = "${(currentOpacity * 100 / 255)}%"
+
         seekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                percentText.text = "${(progress * 100 / 255)}%"
                 if (fromUser) {
                     settings.NAUTICAL_RASTER_CHARTS_OPACITY.set(progress)
                     app.osmandMap.refreshMap()

@@ -38,6 +38,9 @@ class NavtexRepository(private val app: OsmandApplication) {
         refreshMessages()
     }
 
+    private var lastCleanupTime = 0L
+    private val CLEANUP_INTERVAL = 60L * 60L * 1000L // 1 hour
+
     suspend fun upsertMessage(message: NavtexMessage) = withContext(Dispatchers.IO) {
         NauticalIOQueue.writeMutex.withLock {
             val db = dbHelper.openConnection(false) ?: return@withLock
@@ -62,7 +65,13 @@ class NavtexRepository(private val app: OsmandApplication) {
                     pointsToString(message.points),
                     if (message.isUrgent) 1 else 0
                 ))
-                cleanupExpiredInternal(db)
+                
+                val now = System.currentTimeMillis()
+                if (now - lastCleanupTime > CLEANUP_INTERVAL) {
+                    cleanupExpiredInternal(db)
+                    lastCleanupTime = now
+                }
+                
                 db.setTransactionSuccessful()
                 refreshTrigger.emit(Unit)
             } finally {
@@ -114,7 +123,7 @@ class NavtexRepository(private val app: OsmandApplication) {
 
     private fun cleanupExpiredInternal(db: net.osmand.plus.api.SQLiteAPI.SQLiteConnection) {
         val now = System.currentTimeMillis()
-        val expiryHours = app.settings.NAUTICAL_NAVTEX_EXPIRY_HOURS.get().toLong()
+        val expiryHours = maxOf(1L, app.settings.NAUTICAL_NAVTEX_EXPIRY_HOURS.get().toLong())
         val expiryMs = expiryHours * 60L * 60L * 1000L
 
         db.execSQL(
@@ -139,14 +148,14 @@ class NavtexRepository(private val app: OsmandApplication) {
 
     private fun readMessage(cursor: SQLiteCursor): NavtexMessage {
         return NavtexMessage(
-            id = cursor.getString(0),
-            stationLetter = cursor.getString(1).getOrNull(0) ?: ' ',
-            subject = NavtexSubject.fromCode(cursor.getString(2).getOrNull(0) ?: ' '),
-            sequenceNumber = cursor.getInt(3),
-            timestamp = cursor.getLong(4),
-            body = cursor.getString(5),
-            points = stringToPoints(cursor.getString(6)),
-            isUrgent = cursor.getInt(7) == 1
+            id = cursor.getString(cursor.getColumnIndex(NavtexDatabaseHelper.COL_ID)),
+            stationLetter = cursor.getString(cursor.getColumnIndex(NavtexDatabaseHelper.COL_STATION)).getOrNull(0) ?: ' ',
+            subject = NavtexSubject.fromCode(cursor.getString(cursor.getColumnIndex(NavtexDatabaseHelper.COL_SUBJECT)).getOrNull(0) ?: ' '),
+            sequenceNumber = cursor.getInt(cursor.getColumnIndex(NavtexDatabaseHelper.COL_SEQUENCE)),
+            timestamp = cursor.getLong(cursor.getColumnIndex(NavtexDatabaseHelper.COL_TIMESTAMP)),
+            body = cursor.getString(cursor.getColumnIndex(NavtexDatabaseHelper.COL_BODY)),
+            points = stringToPoints(cursor.getString(cursor.getColumnIndex(NavtexDatabaseHelper.COL_POINTS))),
+            isUrgent = cursor.getInt(cursor.getColumnIndex(NavtexDatabaseHelper.COL_URGENT)) == 1
         )
     }
 }

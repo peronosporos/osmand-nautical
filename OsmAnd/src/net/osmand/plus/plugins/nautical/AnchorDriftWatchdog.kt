@@ -16,7 +16,6 @@ import net.osmand.plus.plugins.nautical.engine.ConnectionStatus
 import net.osmand.plus.plugins.nautical.engine.NotificationState
 import net.osmand.shared.util.KMapUtils
 import kotlin.math.abs
-import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * Background watchdog for anchor drift detection.
@@ -65,19 +64,41 @@ class AnchorDriftWatchdog(private val app: OsmandApplication) {
                     
                     val isLocked = app.settings.NAUTICAL_ANCHOR_LOCKED_LOCALLY.get()
                     
-                    if ((!isLocked) && (sLat != null) && (sLon != null) && (sRadius != null)) {
-                        // Only update if they differ significantly to avoid triggering listeners unnecessarily
+                    if ((sLat != null) && (sLon != null) && (sRadius != null)) {
                         val currentLat = app.settings.NAUTICAL_ANCHOR_LAT.get()
                         val currentLon = app.settings.NAUTICAL_ANCHOR_LON.get()
                         val currentRadius = app.settings.NAUTICAL_ANCHOR_RADIUS.get()
+                        
+                        val dist = KMapUtils.getDistance(currentLat, currentLon, sLat, sLon)
+                        val radiusDiff = abs(currentRadius - sRadius)
 
-                        if ((KMapUtils.getDistance(currentLat, currentLon, sLat, sLon) > 1.0) || 
-                            (abs(currentRadius - sRadius) > 1.0)) {
-                            log.info("AnchorWatch: Syncing local anchor settings from server.")
-                            app.settings.NAUTICAL_ANCHOR_LAT.set(sLat)
-                            app.settings.NAUTICAL_ANCHOR_LON.set(sLon)
-                            app.settings.NAUTICAL_ANCHOR_RADIUS.set(sRadius.toFloat())
-                            app.runInUIThread { app.osmandMap?.refreshMap() }
+                        if (!isLocked) {
+                            if (dist > 1.0 || radiusDiff > 1.0) {
+                                log.info("AnchorWatch: Syncing local anchor settings from server.")
+                                app.settings.NAUTICAL_ANCHOR_LAT.set(sLat)
+                                app.settings.NAUTICAL_ANCHOR_LON.set(sLon)
+                                app.settings.NAUTICAL_ANCHOR_RADIUS.set(sRadius.toFloat())
+                                app.runInUIThread { app.osmandMap?.refreshMap() }
+                            }
+                        } else {
+                            // Item 13 Fix: Warn if locked but desynced significantly
+                            if (dist > 50.0) {
+                                app.runInUIThread {
+                                    NauticalPlugin.hudManager?.get()?.showBanner(
+                                        app.getString(R.string.nautical_anchor_desync_warning),
+                                        15000,
+                                        label = app.getString(R.string.nautical_sync_now),
+                                        isWarning = true,
+                                        onConfirm = {
+                                            app.settings.NAUTICAL_ANCHOR_LOCKED_LOCALLY.set(false)
+                                            app.settings.NAUTICAL_ANCHOR_LAT.set(sLat)
+                                            app.settings.NAUTICAL_ANCHOR_LON.set(sLon)
+                                            app.settings.NAUTICAL_ANCHOR_RADIUS.set(sRadius.toFloat())
+                                            app.osmandMap?.refreshMap()
+                                        }
+                                    )
+                                }
+                            }
                         }
                     }
                 }
@@ -228,6 +249,7 @@ class AnchorDriftWatchdog(private val app: OsmandApplication) {
         isAlarmActive = true
         
         val text = customText ?: app.getString(R.string.nautical_anchor_drift_alarm)
+        
         arbiter.dispatchAlarm(AlarmType.ANCHOR_DRIFT, voiceText = text)
         
         // Post critical Android notification
@@ -263,19 +285,10 @@ class AnchorDriftWatchdog(private val app: OsmandApplication) {
     fun stopAlarm() {
         if (isAlarmActive || isGpsLostAlarmActive) {
             log.info("Silencing anchor alarm")
-            arbiter.stopAlarm(AlarmType.ANCHOR_DRIFT)
+            arbiter.muteAlarm(AlarmType.ANCHOR_DRIFT, 60000L) // 1 minute silence
             isAlarmActive = false
             isGpsLostAlarmActive = false
             outOfBoundsCount = 0
-            // Task: Temporary suppression to prevent immediate re-trigger
-            observationJob?.cancel()
-            observationJob = null
-            scope.launch {
-                delay(30000.milliseconds) // 30s silence window
-                if (observationJob == null) {
-                    start()
-                }
-            }
         }
     }
 

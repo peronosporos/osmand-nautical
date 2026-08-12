@@ -1,0 +1,12 @@
+- `[ ]` uncompleted tasks
+- `[/]` in progress tasks
+- `[x]` completed tasks
+
+- `[x]` Define `TrajectoryPoint` and update `SignalKEngine` buffer and resolution logic
+- `[x]` Implement periodic auto-save in `SignalKEngine`
+- `[x]` Update `GpxStreamer` to include timestamps in trajectory export
+- `[x]` Update `NauticalPlugin` to use Share Sheet and add Clear Trajectory action
+- `[x]` Add Trajectory styling settings to `OsmandSettings`
+- `[x]` Fix redraw failure and dateline handling in `NauticalMapLayer`
+- `[x]` Optimize rendering performance in `NauticalMapLayer`
+- `[x]` Improve lifecycle synchronization in `NauticalMapLayer`

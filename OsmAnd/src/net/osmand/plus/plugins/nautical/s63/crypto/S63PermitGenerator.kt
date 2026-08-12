@@ -65,14 +65,34 @@ object S63PermitGenerator {
     }
 
     /**
+     * Validates a User Permit string.
+     */
+    fun isValidUserPermit(permit: String): Boolean {
+        if (permit.length != 28) return false
+        return try {
+            val encHwidHex = permit.substring(0, 16)
+            val checksumHex = permit.substring(16, 24)
+
+            val encHwidBytes = fromHexString(encHwidHex)
+            val crc = CRC32()
+            crc.update(encHwidBytes)
+            val expectedChecksum = String.format("%08X", crc.value.toInt())
+            
+            checksumHex.uppercase() == expectedChecksum.uppercase()
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    /**
      * Extracts and decrypts Cell Keys from a standard PERMIT.TXT content.
      *
      * @param permitTxt Content of PERMIT.TXT.
      * @param hwid The 5-byte HWID used to decrypt cell keys.
-     * @return Map of Cell Name to decrypted 16-character Cell Key.
+     * @return Map of Cell Name to PermitInfo (decrypted key + expiry).
      */
-    fun extractCellKeys(permitTxt: String, hwid: ByteArray): Map<String, String> {
-        val cellKeys = mutableMapOf<String, String>()
+    fun extractPermits(permitTxt: String, hwid: ByteArray): Map<String, PermitInfo> {
+        val permits = mutableMapOf<String, PermitInfo>()
         val paddedHwid = ByteArray(BLOWFISH_BLOCK_SIZE)
         System.arraycopy(hwid, 0, paddedHwid, 0, HWID_SIZE.coerceAtMost(BLOWFISH_BLOCK_SIZE))
         
@@ -85,16 +105,27 @@ object S63PermitGenerator {
             val parts = line.split(",")
             if ((parts.size >= 5) && (parts[0].trim().uppercase() == "PERMIT")) {
                 val cellName = parts[1].trim()
+                val expiryDate = parts[2].trim()
                 val encKey1 = parts[3].trim()
                 
                 if (encKey1.length == 16) {
-                    val encryptedBytes = fromHexString(encKey1)
-                    val decryptedBytes = cipher.doFinal(encryptedBytes)
-                    cellKeys[cellName] = toHexString(decryptedBytes).uppercase()
+                    try {
+                        val encryptedBytes = fromHexString(encKey1)
+                        val decryptedBytes = cipher.doFinal(encryptedBytes)
+                        val cellKey = toHexString(decryptedBytes).uppercase()
+                        permits[cellName] = PermitInfo(cellKey, expiryDate)
+                    } catch (_: Exception) {}
                 }
             }
         }
-        return cellKeys
+        return permits
+    }
+
+    data class PermitInfo(val cellKey: String, val expiryDate: String)
+
+    @Deprecated("Use extractPermits", ReplaceWith("extractPermits(permitTxt, hwid).mapValues { it.value.cellKey }"))
+    fun extractCellKeys(permitTxt: String, hwid: ByteArray): Map<String, String> {
+        return extractPermits(permitTxt, hwid).mapValues { it.value.cellKey }
     }
 
     private fun toHexString(bytes: ByteArray): String {

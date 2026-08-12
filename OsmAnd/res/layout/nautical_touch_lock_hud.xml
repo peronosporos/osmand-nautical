@@ -1,19 +1,37 @@
 <?xml version="1.0" encoding="utf-8"?>
-<merge xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto">
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content">
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:gravity="center"
         android:padding="8dp">
-        <ImageView
-            android:id="@+id/img_touch_lock"
-            android:layout_width="32dp"
-            android:layout_height="32dp"
-            android:src="@drawable/ic_action_lock"
-            app:tint="@color/nautical_status_yellow"
-            android:alpha="0.8" />
+        <FrameLayout
+            android:layout_width="48dp"
+            android:layout_height="48dp">
+            <com.google.android.material.progressindicator.CircularProgressIndicator
+                android:id="@+id/unlock_progress"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                app:indicatorSize="40dp"
+                app:trackThickness="4dp"
+                app:indicatorColor="@color/nautical_status_yellow"
+                android:progress="0"
+                android:max="100" />
+            <ImageView
+                android:id="@+id/img_touch_lock"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:layout_gravity="center"
+                android:src="@drawable/ic_action_lock"
+                app:tint="@color/nautical_status_yellow"
+                android:alpha="0.8" />
+        </FrameLayout>
         <TextView
+            android:id="@+id/txt_touch_lock"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="8dp"
@@ -22,4 +40,4 @@
             android:textColor="@color/nautical_status_yellow"
             android:textStyle="bold" />
     </LinearLayout>
-</merge>
+</FrameLayout>

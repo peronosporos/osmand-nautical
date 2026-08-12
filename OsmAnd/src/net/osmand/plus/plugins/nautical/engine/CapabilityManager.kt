@@ -7,6 +7,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import net.osmand.PlatformUtil
 import net.osmand.plus.OsmandApplication
+import net.osmand.plus.plugins.nautical.NauticalPlugin
 import net.osmand.plus.plugins.nautical.network.SignalKRestService
 
 /**
@@ -66,6 +67,7 @@ class CapabilityManager(@Suppress("unused") private val app: OsmandApplication) 
         val hasTankManagement: Boolean = false,
         val hasMediaControl: Boolean = false,
         val hasChecklists: Boolean = false,
+        val hasAiBridge: Boolean = false,
     )
 
     fun probe(restService: SignalKRestService?) {
@@ -120,6 +122,7 @@ class CapabilityManager(@Suppress("unused") private val app: OsmandApplication) 
                 val hasFusionStereo = enabledPluginIds.contains("signalk-fusion-stereo") || hasPath(vesselData, "entertainment.device.fusion")
                 val hasRainViewer = enabledPluginIds.contains("signalk-rainviewer-charts")
                 val hasChecklists = enabledPluginIds.contains("signalk-checklists") || restService.getChecklists().isSuccessful
+                val hasAiBridge = enabledPluginIds.contains("signalk-ai-bridge")
 
                 // Functional Group Detection
                 val apPlugins = setOf("signalk-autopilot", "pypilot", "signalk-autopilot-furuno", "signalk-autopilot-garmin", "signalk-ac42-autopilot", "signalk-autopilot_route")
@@ -179,12 +182,32 @@ class CapabilityManager(@Suppress("unused") private val app: OsmandApplication) 
                     hasEnvironmentSensors = enabledPluginIds.any { sensorPlugins.contains(it) },
                     hasTankManagement = enabledPluginIds.any { tankPlugins.contains(it) } || hasPath(vesselData, "tanks"),
                     hasMediaControl = enabledPluginIds.any { mediaPlugins.contains(it) },
-                    hasChecklists = hasChecklists
+                    hasChecklists = hasChecklists,
+                    hasAiBridge = hasAiBridge
                 )
 
 
                 _capabilities.value = newMap
                 log.info("Nautical: Server capabilities updated: $newMap")
+
+                // Task: Orchestrator - Sync active plugins and initial resources
+                NauticalPlugin.engine?.dataBroker?.updateState { it.copy(activePlugins = enabledPluginIds) }
+                if (hasWinga || hasRouteIq) {
+                    val regions = restService.getRegions()
+                    if (regions.isSuccessful) {
+                        val isochrones = regions.body()?.values?.filter { 
+                            it.feature.properties["type"] == "isochrone" || it.feature.properties["source"] == "winga"
+                        } ?: emptyList()
+                        NauticalPlugin.engine?.dataBroker?.updateState { it.copy(isochrones = isochrones, lastIsochroneTime = System.currentTimeMillis()) }
+                    }
+                }
+                if (hasPolarPerformance) {
+                    val polars = restService.getPolars()
+                    if (polars.isSuccessful) {
+                        val activePolar = polars.body()?.values?.firstOrNull() // For MVP: take first
+                        NauticalPlugin.engine?.dataBroker?.updateState { it.copy(polarProfile = activePolar) }
+                    }
+                }
             } catch (e: Exception) {
                 log.error("Nautical: Failed to probe server capabilities: ${e.message}")
             }

@@ -22,6 +22,13 @@ class MobMapLayer(context: Context) : OsmandMapLayer(context) {
         strokeWidth = 4f
     }
 
+    private val patternPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.YELLOW
+        style = Paint.Style.STROKE
+        strokeWidth = 3f
+        pathEffect = DashPathEffect(floatArrayOf(10f, 10f), 0f)
+    }
+
     private val linePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.RED
         style = Paint.Style.STROKE
@@ -46,23 +53,47 @@ class MobMapLayer(context: Context) : OsmandMapLayer(context) {
         if (state.state == MobState.INACTIVE) return
 
         val mobLocation = state.mobLocation ?: return
+        val density = context.resources.displayMetrics.density
         
         // Draw MOB target marker
         val mobX = tileBox.getPixXFromLatLon(mobLocation.latitude, mobLocation.longitude)
         val mobY = tileBox.getPixYFromLatLon(mobLocation.latitude, mobLocation.longitude)
 
-        canvas.drawCircle(mobX, mobY, 30f, fillPaint)
-        canvas.drawCircle(mobX, mobY, 30f, markerPaint)
+        val radius = 30f * density
+        val crosshairSize = 45f * density
+        
+        canvas.drawCircle(mobX, mobY, radius, fillPaint)
+        canvas.drawCircle(mobX, mobY, radius, markerPaint)
         
         // Crosshair
-        canvas.drawLine(mobX - 45f, mobY, mobX + 45f, mobY, markerPaint)
-        canvas.drawLine(mobX, mobY - 45f, mobX, mobY + 45f, markerPaint)
+        canvas.drawLine(mobX - crosshairSize, mobY, mobX + crosshairSize, mobY, markerPaint)
+        canvas.drawLine(mobX, mobY - crosshairSize, mobX, mobY + crosshairSize, markerPaint)
 
-        // Draw return vector line if boat location is available
         val app = context.applicationContext as? OsmandApplication
         val boatLocation = app?.locationProvider?.lastKnownLocation
         
-        if (boatLocation != null) {
+        // Draw active SAR pattern if available
+        val engine = net.osmand.plus.plugins.nautical.NauticalPlugin.engine
+        if (engine != null && engine.isFollowingRoute) {
+            val route = engine.getRoutePoints()
+            if (route.isNotEmpty() && boatLocation != null) {
+                val path = Path()
+                path.moveTo(
+                    tileBox.getPixXFromLatLon(boatLocation.latitude, boatLocation.longitude),
+                    tileBox.getPixYFromLatLon(boatLocation.latitude, boatLocation.longitude)
+                )
+                route.forEach { pt ->
+                    path.lineTo(
+                        tileBox.getPixXFromLatLon(pt.first, pt.second),
+                        tileBox.getPixYFromLatLon(pt.first, pt.second)
+                    )
+                }
+                canvas.drawPath(path, patternPaint)
+            }
+        }
+
+        // Draw return vector line if boat location is available and NOT following a pattern
+        if (boatLocation != null && (engine == null || !engine.isFollowingRoute)) {
             val boatX = tileBox.getPixXFromLatLon(boatLocation.latitude, boatLocation.longitude)
             val boatY = tileBox.getPixYFromLatLon(boatLocation.latitude, boatLocation.longitude)
             

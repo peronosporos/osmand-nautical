@@ -6,12 +6,13 @@ import com.google.gson.annotations.SerializedName
  * Signal K Resources API Polar Profile and WebSocket Delta Stream data classes.
  */
 
+@kotlinx.serialization.Serializable
 data class PolarProfile(
     @SerializedName("name") val name: String?,
     @SerializedName("description") val description: String?,
-    @SerializedName("tws") val tws: List<Double>?,
-    @SerializedName("twa") val twa: List<Double>?,
-    @SerializedName("speeds") val speeds: List<List<Double>>?,
+    val tws: List<Double>?,
+    val twa: List<Double>?,
+    val speeds: List<List<Double>>?,
 )
 
 /**
@@ -79,12 +80,14 @@ data class SignalKLogbookEntry(
 /**
  * Signal K Checklist Resource.
  */
+@kotlinx.serialization.Serializable
 data class SignalKChecklist(
     @SerializedName("name") val name: String,
     @SerializedName("description") val description: String?,
     @SerializedName("items") val items: List<SignalKChecklistItem>
 )
 
+@kotlinx.serialization.Serializable
 data class SignalKChecklistItem(
     @SerializedName("title") val title: String,
     @SerializedName("state") val state: String // "pending", "completed"
@@ -140,14 +143,18 @@ data class SignalKChart(
 /**
  * Signal K Region (Restricted Area) Resource.
  */
+@kotlinx.serialization.Serializable
 data class SignalKRegion(
     @SerializedName("feature") val feature: SignalKRegionFeature,
 )
 
+@kotlinx.serialization.Serializable
 data class SignalKRegionFeature(
     @SerializedName("type") val type: String = "Feature",
-    @SerializedName("geometry") val geometry: Map<String, Any>, // Polygons or MultiPolygons
-    @SerializedName("properties") val properties: Map<String, Any> = emptyMap()
+    @kotlinx.serialization.Contextual
+    @SerializedName("geometry") val geometry: Map<String, @kotlinx.serialization.Contextual Any>, // Polygons or MultiPolygons
+    @kotlinx.serialization.Contextual
+    @SerializedName("properties") val properties: Map<String, @kotlinx.serialization.Contextual Any> = emptyMap()
 )
 
 data class SignalKTideStation(

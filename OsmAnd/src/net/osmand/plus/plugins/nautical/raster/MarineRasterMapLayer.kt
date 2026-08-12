@@ -20,6 +20,9 @@ class MarineRasterMapLayer(context: Context) : MapTileLayer(context, false) {
     private val cachedSources = AtomicReference<List<ITileSource>>(emptyList())
     private var lastQueryZoom = -1
     private var lastQueryBounds: net.osmand.data.QuadRect? = null
+    
+    private val drawPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val drawRect = RectF()
 
     init {
         updateSources()
@@ -53,14 +56,14 @@ class MarineRasterMapLayer(context: Context) : MapTileLayer(context, false) {
         if (!isVisible) return
         
         val alpha = getAlpha()
-        paintBitmap.alpha = alpha
+        drawPaint.alpha = alpha
         
         val isNightVision = NauticalPlugin.isNightVision(app)
         if (isNightVision != lastNightVision) {
             if (isNightVision) {
-                paintBitmap.colorFilter = NauticalPlugin.NIGHT_VISION_FILTER
+                drawPaint.colorFilter = NauticalPlugin.NIGHT_VISION_FILTER
             } else {
-                paintBitmap.colorFilter = null
+                drawPaint.colorFilter = null
             }
             lastNightVision = isNightVision
         }
@@ -68,7 +71,7 @@ class MarineRasterMapLayer(context: Context) : MapTileLayer(context, false) {
         val latLonBounds = tileBox.latLonBounds
         val zoom = tileBox.zoom
         
-        // Asynchronously request update if viewport changed significantly, but render from cache immediately
+        // Asynchronously request update if viewport changed significantly
         if ((lastQueryZoom != zoom) || (lastQueryBounds != latLonBounds)) {
             lastQueryZoom = zoom
             lastQueryBounds = latLonBounds
@@ -76,19 +79,26 @@ class MarineRasterMapLayer(context: Context) : MapTileLayer(context, false) {
             lastQueryJob = scope.launch {
                 val sources = manager.getSourcesForViewport(latLonBounds, zoom)
                 cachedSources.set(sources)
+                withContext(Dispatchers.Main) {
+                    app.osmandMap.refreshMap()
+                }
             }
         }
 
         val sources = cachedSources.get()
         
-        // Zero-Flicker Logic (TASK-006): If cache is empty but we have sources listed in manager,
-        // wait for the background update instead of clearing the screen.
-        if (sources.isEmpty() && manager.getAllSources().isNotEmpty()) return
+        // Zero-Flicker Improvement (Item 20): 
+        // If sources are empty but we have indexed charts, don't just return.
+        // We might be waiting for the query to finish.
+        if (sources.isEmpty() && manager.getAllSources().isEmpty()) return
 
         val originalMap = this.map
         try {
             for (source in sources) {
                 this.map = source
+                // Ensure the paint settings are used by the base layer
+                this.paintBitmap.alpha = alpha
+                this.paintBitmap.colorFilter = drawPaint.colorFilter
                 drawTileMap(canvas, tileBox, drawSettings)
             }
         } finally {

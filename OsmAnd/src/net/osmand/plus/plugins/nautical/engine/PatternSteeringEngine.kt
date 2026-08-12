@@ -94,17 +94,19 @@ object PatternSteeringEngine {
         val waypoints = mutableListOf<Pair<Double, Double>>()
         val radiusM = radiusNm * NM_TO_METERS
         
-        var currentHeading = initialHeading
         val turnAngle = if (turnsRight) 120.0 else -120.0
+        val sectorOffset = if (turnsRight) 30.0 else -30.0
 
         // 3 sectors, each with 3 legs
-        repeat(3) {
+        for (i in 0 until 3) {
+            val sectorInitialHeading = (initialHeading + i * sectorOffset + 360) % 360
+            
             // Leg 1: Outward from center
-            val p1 = KMapUtils.rhumbDestinationPoint(centerLat, centerLon, radiusM, currentHeading)
+            val p1 = KMapUtils.rhumbDestinationPoint(centerLat, centerLon, radiusM, sectorInitialHeading)
             waypoints.add(p1.latitude to p1.longitude)
             
             // Turn 120 degrees
-            val heading2 = (currentHeading + turnAngle + 360) % 360
+            val heading2 = (sectorInitialHeading + turnAngle + 360) % 360
             
             // Leg 2: Cross leg
             val p2 = KMapUtils.rhumbDestinationPoint(p1.latitude, p1.longitude, radiusM, heading2)
@@ -112,9 +114,6 @@ object PatternSteeringEngine {
             
             // Leg 3: Return to center
             waypoints.add(centerLat to centerLon)
-            
-            // Next sector starts with a 30 degree offset from previous sector's entry leg
-            currentHeading = (currentHeading + turnAngle + 30.0 + 360) % 360
         }
         
         return waypoints

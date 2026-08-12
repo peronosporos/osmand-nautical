@@ -40,7 +40,7 @@ class NavtexSentenceParserTest {
 
     @Test
     fun testParseGPNVT() {
-        val sentence = "\$GPNVT,123456,5045.123,N,00112.456,W,OA01*"
+        val sentence = "\$GPNVT,123456,5045.123,N,00112.456,W,OA01*00" // Added dummy checksum for mandatory check
         val message = NavtexSentenceParser.parseNmeaSentence(sentence)
         
         assertNotNull("Message should not be null", message)
@@ -84,5 +84,30 @@ class NavtexSentenceParserTest {
         assertNull(NavtexSentenceParser.parseNmeaSentence("NOT A SENTENCE"))
         assertNull(NavtexSentenceParser.parseNmeaSentence("\$INVALID,1,2*FF"))
         assertNull(NavtexSentenceParser.parseNmeaSentence("\$CRRXO,518,INVALID,0,TEXT*00"))
+    }
+
+    @Test
+    fun testMandatoryChecksum() {
+        // No checksum should now return null
+        val sentence = "\$CRRXO,518,OA00,0,ZCZC 37-55N 023-40E NAVIGATIONAL WARNING NNNN"
+        assertNull("Message should be null when checksum is missing", NavtexSentenceParser.parseNmeaSentence(sentence))
+    }
+
+    @Test
+    fun testLowDegreeCoordinates() {
+        // Test single digit degree: 5-55N 001-40E
+        val points = NavtexSentenceParser.extractCoordinates("LOC: 5-55N 001-40E")
+        assertEquals(1, points.size)
+        assertEquals(5.9166, points[0].latitude, 0.001)
+        assertEquals(1.6666, points[0].longitude, 0.001)
+    }
+
+    @Test
+    fun testMeteorologicalUrgency() {
+        // Meteorological Warning ('B') should be urgent
+        val sentence = "\$CRRXO,518,OB01,0,ZCZC GALE WARNING NNNN*40" // Dummy checksum
+        val message = NavtexSentenceParser.parseNmeaSentence(sentence)
+        assertNotNull(message)
+        assertTrue("Meteorological warning should be urgent", message!!.isUrgent)
     }
 }

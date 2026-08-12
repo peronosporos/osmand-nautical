@@ -88,8 +88,8 @@
     <Preference
         android:key="nautical_diagnostics"
         android:layout="@layout/preference_with_descr"
-        android:title="Server Connectivity &amp; Plugins"
-        android:summary="Check health and available features on Signal K server" />
+        android:title="Signal K Orchestrator"
+        android:summary="Control and manage server-side plugins and routing" />
 
     <Preference
         android:key="nautical_advanced_tuning"
@@ -499,6 +499,16 @@
         android:layout="@layout/preference_with_descr"
         android:title="@string/nautical_mob_audio_guidance" />
 
+    <Preference
+        android:key="nautical_test_alarm"
+        android:layout="@layout/preference_with_descr"
+        android:title="@string/nautical_test_alarm" />
+
+    <Preference
+        android:key="nautical_test_tts"
+        android:layout="@layout/preference_with_descr"
+        android:title="@string/nautical_test_tts" />
+
     <net.osmand.plus.settings.preferences.EditTextPreferenceEx
         android:key="nautical_look_ahead_radius_nm"
         android:layout="@layout/preference_with_descr"
@@ -577,6 +587,12 @@
         android:title="@string/nautical_show_laylines" />
 
     <net.osmand.plus.settings.preferences.SwitchPreferenceEx
+        android:key="nautical_show_infinite_laylines"
+        android:layout="@layout/preference_with_descr"
+        android:title="@string/nautical_show_infinite_laylines"
+        android:summary="@string/nautical_show_infinite_laylines_desc" />
+
+    <net.osmand.plus.settings.preferences.SwitchPreferenceEx
         android:key="nautical_show_wind_shifts"
         android:layout="@layout/preference_with_descr"
         android:title="@string/nautical_show_wind_shifts" />
@@ -585,6 +601,18 @@
         android:key="nautical_show_trajectory"
         android:layout="@layout/preference_with_descr"
         android:title="@string/nautical_show_trajectory" />
+
+    <net.osmand.plus.settings.preferences.ListPreferenceEx
+        android:key="nautical_trajectory_color"
+        android:layout="@layout/preference_with_descr"
+        android:title="Trajectory Color"
+        android:dependency="nautical_show_trajectory" />
+
+    <net.osmand.plus.settings.preferences.ListPreferenceEx
+        android:key="nautical_trajectory_thickness"
+        android:layout="@layout/preference_with_descr"
+        android:title="Trajectory Thickness"
+        android:dependency="nautical_show_trajectory" />
 
     <net.osmand.plus.settings.preferences.SwitchPreferenceEx
         android:key="nautical_show_tides"
@@ -671,6 +699,13 @@
         android:title="@string/nautical_leeway_coefficient"
         android:inputType="numberDecimal" />
 
+    <net.osmand.plus.settings.preferences.EditTextPreferenceEx
+        android:key="nautical_manual_leeway_angle"
+        android:layout="@layout/preference_with_descr"
+        android:title="@string/nautical_manual_leeway_angle"
+        android:summary="@string/nautical_manual_leeway_angle_desc"
+        android:inputType="numberDecimal" />
+
     <net.osmand.plus.settings.preferences.SwitchPreferenceEx
         android:key="nautical_predictive_steering"
         android:layout="@layout/preference_with_descr"
@@ -681,6 +716,14 @@
         android:key="nautical_wave_bias_sensitivity"
         android:layout="@layout/preference_with_descr"
         android:title="@string/nautical_wave_bias_sensitivity"
+        android:dependency="nautical_predictive_steering" />
+
+    <net.osmand.plus.settings.preferences.EditTextPreferenceEx
+        android:key="nautical_wave_nudge_threshold"
+        android:layout="@layout/preference_with_descr"
+        android:title="@string/nautical_wave_nudge_threshold"
+        android:summary="Minimum wave height (meters) to trigger anticipation"
+        android:inputType="numberDecimal"
         android:dependency="nautical_predictive_steering" />
 
     <!-- Section 8: Maintenance & Tools -->
@@ -736,6 +779,12 @@
         android:key="s63_permit_manager"
         android:layout="@layout/preference_with_descr"
         android:title="@string/s63_manager_title" />
+
+    <Preference
+        android:key="nautical_replay_manager"
+        android:layout="@layout/preference_with_descr"
+        android:title="@string/nautical_replay_title"
+        android:summary="Replay NMEA logs or record live data for analysis" />
 
     <Preference
         android:key="nautical_clear_data"

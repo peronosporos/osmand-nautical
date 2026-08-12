@@ -8,25 +8,40 @@ object MobVectorEngine {
 
     /**
      * Calculates the return vector from the boat's current position back to the MOB coordinates.
+     * Accounts for casualty drift based on current and wind.
      *
      * @param currentLocation The boat's live position.
      * @param mobEvent The recorded MOB event data.
      * @param sog Current Speed Over Ground in meters per second (m/s).
+     * @param driftMps Current drift speed (m/s) if available.
+     * @param driftDeg Current drift direction (degrees) if available.
      * @return A [MobReturnVector] containing distance, bearing, and ETA.
      */
     fun calculateReturnVector(
         currentLocation: LatLon,
         mobEvent: MobEvent,
-        sog: Double
+        sog: Double,
+        driftMps: Double = 0.0,
+        driftDeg: Double = 0.0
     ): MobReturnVector {
         val dropLocation = mobEvent.dropLocation
+        val timeElapsedSec = (System.currentTimeMillis() - mobEvent.dropTimestamp) / 1000.0
+        
+        // Account for casualty drift: Casualty position moves with the current
+        val estimatedCasualtyLoc = if (driftMps > 0.01) {
+            val driftDist = driftMps * timeElapsedSec
+            val p = KMapUtils.rhumbDestinationPoint(dropLocation.latitude, dropLocation.longitude, driftDist, driftDeg)
+            LatLon(p.latitude, p.longitude)
+        } else {
+            dropLocation
+        }
 
         val distanceMeters = KMapUtils.getDistance(
             currentLocation.latitude, currentLocation.longitude,
-            dropLocation.latitude, dropLocation.longitude
+            estimatedCasualtyLoc.latitude, estimatedCasualtyLoc.longitude
         )
 
-        val bearingDegrees = calculateBearingDegrees(currentLocation, dropLocation)
+        val bearingDegrees = calculateBearingDegrees(currentLocation, estimatedCasualtyLoc)
 
         val etaSeconds = if (sog > 0.1) {
             distanceMeters / sog

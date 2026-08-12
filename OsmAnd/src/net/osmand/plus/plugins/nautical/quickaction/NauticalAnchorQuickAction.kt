@@ -1,5 +1,6 @@
 package net.osmand.plus.plugins.nautical.quickaction
 
+import androidx.annotation.Keep
 import android.os.Bundle
 import net.osmand.plus.R
 import net.osmand.plus.activities.MapActivity
@@ -23,6 +24,7 @@ class NauticalAnchorQuickAction : QuickAction {
 
     constructor() : super(TYPE)
 
+    @Keep
     constructor(action: QuickAction) : super(action)
 
     override fun execute(mapActivity: MapActivity, params: Bundle?) {

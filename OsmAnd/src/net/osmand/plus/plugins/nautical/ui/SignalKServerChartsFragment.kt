@@ -45,10 +45,10 @@ class SignalKServerChartsFragment : BaseOsmAndFragment() {
     }
 
     private fun enableChartOverlay(chart: SignalKChart) {
-        // For now, we reuse SignalKRasterLayer logic or similar
-        // Implementation might involve updating a setting that the layer observes
-        app.showToastMessage("Enabling overlay for ${chart.name ?: chart.identifier}")
-        // Future: settings.NAUTICAL_ACTIVE_SERVER_CHART.set(chart.identifier)
+        app.settings.NAUTICAL_ACTIVE_SERVER_CHART.set(chart.identifier)
+        app.settings.NAUTICAL_SHOW_RASTER_CHARTS.set(true)
+        app.showToastMessage(getString(R.string.nautical_chart_overlay_enabled, chart.name ?: chart.identifier))
+        app.osmandMap.refreshMap()
     }
 
     private class ChartsAdapter(private val onEnable: (SignalKChart) -> Unit) : ListAdapter<SignalKChart, ChartViewHolder>(DiffCallback()) {

@@ -2,8 +2,10 @@ package net.osmand.plus.plugins.nautical.laylines.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.withContext
 import net.osmand.plus.OsmandApplication
 import net.osmand.plus.R
 import net.osmand.plus.plugins.nautical.NauticalPlugin
@@ -15,9 +17,8 @@ import net.osmand.plus.plugins.nautical.repository.SailingPerformanceRepository
 import net.osmand.plus.helpers.TargetPointsHelper
 import net.osmand.plus.settings.backend.OsmandSettings
 import net.osmand.plus.plugins.nautical.network.LivePerformanceData
-import net.osmand.plus.plugins.nautical.utils.AngleEMA
-import net.osmand.plus.plugins.nautical.utils.EMA
 import kotlin.math.PI
+import kotlin.time.Duration.Companion.milliseconds
 
 data class LaylineUiState(
     val boatLat: Double? = null,
@@ -29,8 +30,9 @@ data class LaylineUiState(
     val targetWaypoint: LatLon? = null
 )
 
+@OptIn(kotlinx.coroutines.FlowPreview::class)
 class LaylineViewModel(
-    private val app: OsmandApplication,
+    app: OsmandApplication,
     private val performanceRepo: SailingPerformanceRepository,
     private val gribRepo: GribRepository?
 ) : ViewModel() {
@@ -40,9 +42,6 @@ class LaylineViewModel(
 
     private val _uiState = MutableStateFlow(LaylineUiState())
     val uiState: StateFlow<LaylineUiState> = _uiState.asStateFlow()
-
-    private val twdEma = AngleEMA(0.1) // 5s EMA at 1Hz
-    private val stwEma = EMA(0.1)
 
     init {
         startTracking()
@@ -56,25 +55,28 @@ class LaylineViewModel(
             awaitClose { settings.NAUTICAL_LEEWAY_COEFFICIENT.removeListener(listener) }
         }
 
+        val manualLeewayFlow = callbackFlow {
+            val listener = net.osmand.StateChangedListener<Float> { trySend(it) }
+            settings.NAUTICAL_MANUAL_LEEWAY_ANGLE.addListener(listener)
+            trySend(settings.NAUTICAL_MANUAL_LEEWAY_ANGLE.get())
+            awaitClose { settings.NAUTICAL_MANUAL_LEEWAY_ANGLE.removeListener(listener) }
+        }
+
         performanceRepo.livePerformanceData
             .combine(performanceRepo.activePolarProfile) { liveData, polar ->
                 Pair(liveData, polar)
             }
-            .combine(leewayFlow) { (liveData, polar), leeway ->
-                Triple(liveData, polar, leeway)
+            .combine(combine(leewayFlow, manualLeewayFlow) { a, b -> Pair(a, b) }) { a, b ->
+                Triple(a.first, a.second, b)
             }
-            .onEach { (liveData, polar, leeway) ->
-                val lat = liveData.latitude ?: return@onEach
-                val lon = liveData.longitude ?: return@onEach
+            .sample(500.milliseconds) // Task: Frequency reduction (2Hz)
+            .onEach { (liveData, polar, leewayPair) ->
+                withContext(Dispatchers.Default) { // Task: Offload heavy math to background
+                    val (k, manual) = leewayPair
+                    val lat = liveData.latitude ?: return@withContext
+                    val lon = liveData.longitude ?: return@withContext
+                    val boatPos = LatLon(lat, lon)
 
-                val propManager = net.osmand.plus.plugins.nautical.engine.PropulsionContextManager.getInstance(app)
-                if (propManager.isEngineRunning()) {
-                    _uiState.value = LaylineUiState(boatLat = lat, boatLon = lon)
-                    return@onEach
-                }
-
-                val boatPos = LatLon(lat, lon)
-                
                 val plugin = NauticalPlugin.getInstance()
                 val caps = plugin?.capabilityManager?.capabilities?.value
                 val serverLaylines = NauticalPlugin.engine?.getCurrentState()?.serverLaylines
@@ -92,26 +94,62 @@ class LaylineViewModel(
                             R.string.layline_status_tack_required,
                         targetWaypoint = serverLaylines.targetWaypoint
                     )
-                    return@onEach
+                    return@withContext
                 }
 
                 val targetPoint = targetPointsHelper.pointToNavigate
+                val infiniteEnabled = settings.NAUTICAL_SHOW_INFINITE_LAYLINES.get()
+                
+                val tacticalLat = settings.NAUTICAL_TACTICAL_TARGET_LAT.get()
+                val tacticalLon = settings.NAUTICAL_TACTICAL_TARGET_LON.get()
+                
                 val target = targetPoint?.let { 
                     LatLon(it.latitude, it.longitude) 
-                } ?: return@onEach
+                } ?: if (tacticalLat != 0.0) {
+                    LatLon(tacticalLat, tacticalLon)
+                } else if (infiniteEnabled) {
+                    val cog = liveData.courseOverGround ?: liveData.headingTrue ?: 0.0
+                    val dist = 1852.0 * 10.0 // Dummy target 10 NM ahead for direction
+                    LaylineMathEngine.projectPoint(boatPos, cog, dist)
+                } else null
 
-                val twaRad = liveData.targetAngle ?: polar?.twa?.firstOrNull()?.let { Math.toRadians(it) } ?: Math.toRadians(45.0)
-                val rawTwd = calculateTwdRad(liveData) ?: 0.0
-                val twdRad = twdEma.update(rawTwd)
-                
-                val rawStw = liveData.speedThroughWater ?: 0.0
-                val stwMs = stwEma.update(rawStw)
-                
-                val leewayRad = liveData.leeway?.let { kotlin.math.abs(it) } ?: Math.toRadians(leeway.toDouble())
+                if (target == null) {
+                    _uiState.value = LaylineUiState(boatLat = lat, boatLon = lon)
+                    return@withContext
+                }
 
-                // Current Vector from GRIB or fallback to zero
-                val current = getTidalCurrent(lat, lon)
-                val variation = liveData.magneticVariation ?: 0.0
+                val stwMs = liveData.speedThroughWater ?: liveData.speedOverGround ?: 0.0
+                val twsMs = liveData.windSpeedTrue ?: 0.0
+
+                // Fallback to Tack Angle setting (TASK-FALLBACK)
+                val fallbackTwa = Math.toRadians(settings.NAUTICAL_LAYLINES_TACK_ANGLE.get().toDouble() / 2.0)
+
+                val twaRad = liveData.targetAngle ?: run {
+                    polar?.let { p ->
+                        val engine = net.osmand.plus.plugins.nautical.maneuvers.PolarDiagram()
+                        engine.loadFromProfile(p)
+                        engine.getOptimalUpwindTwaRad(twsMs)
+                    } ?: fallbackTwa
+                }
+
+                val twdRad = calculateTwdRad(liveData) ?: 0.0
+                
+                // Observed Current (Task 3)
+                val observedDrift = liveData.drift ?: 0.0
+                val observedSet = liveData.setTrue ?: 0.0
+                val current = if (observedDrift > 0.05) {
+                    TidalCurrentVector(observedDrift, observedSet)
+                } else {
+                    getTidalCurrent(lat, lon)
+                }
+
+                val manualLeewayRad = Math.toRadians(manual.toDouble())
+                val dynamicLeewayRad = net.osmand.plus.plugins.nautical.utils.LeewayCalculator.calculateLeewayRadians(
+                    liveData.roll ?: 0.0,
+                    stwMs,
+                    k
+                )
+                val leewayRad = liveData.leeway ?: (if (manualLeewayRad > 0) manualLeewayRad else dynamicLeewayRad)
 
                 val result = LaylineMathEngine.calculateApparentLaylines(
                     boatPosition = boatPos,
@@ -121,8 +159,9 @@ class LaylineViewModel(
                     boatSpeed = stwMs,
                     current = current,
                     leewayRadians = leewayRad,
-                    magneticVariation = variation,
-                    isMagneticInput = liveData.headingTrue == null && liveData.headingMagnetic != null
+                    magneticVariation = liveData.magneticVariation ?: 0.0,
+                    isMagneticInput = false, // calculateTwdRad already handles True frame
+                    isInfinite = targetPoint == null && infiniteEnabled
                 )
 
                 _uiState.value = LaylineUiState(
@@ -137,14 +176,16 @@ class LaylineViewModel(
                         R.string.layline_status_tack_required,
                     targetWaypoint = result.targetWaypoint
                 )
+                }
             }
             .launchIn(viewModelScope)
     }
 
     private fun calculateTwdRad(liveData: LivePerformanceData): Double? {
-        val heading = liveData.headingTrue ?: return null
+        val variation = liveData.magneticVariation ?: 0.0
+        val headingTrue = liveData.headingTrue ?: liveData.headingMagnetic?.let { (it + variation) % (2 * PI) }
         val twa = liveData.windAngleTrueWater ?: return null
-        return (heading + twa + 2 * PI) % (2 * PI)
+        return headingTrue?.let { (it + twa + 2 * PI) % (2 * PI) }
     }
 
     private fun getTidalCurrent(lat: Double, lon: Double): TidalCurrentVector {

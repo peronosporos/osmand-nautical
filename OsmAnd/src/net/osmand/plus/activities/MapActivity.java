@@ -1023,6 +1023,24 @@ public class MapActivity extends OsmandActionBarActivity implements DownloadEven
 	}
 
 	@Override
+	public boolean onGenericMotionEvent(MotionEvent event) {
+		if (event.getAction() == MotionEvent.ACTION_SCROLL &&
+				event.isFromSource(android.view.InputDevice.SOURCE_ROTARY_ENCODER)) {
+			float delta = -event.getAxisValue(android.view.MotionEvent.AXIS_SCROLL);
+			if (delta != 0) {
+				OsmandMapTileView mapView = getMapView();
+				if (delta > 0) {
+					mapView.setIntZoom(mapView.getZoom() + 1, true);
+				} else {
+					mapView.setIntZoom(mapView.getZoom() - 1, true);
+				}
+				return true;
+			}
+		}
+		return super.onGenericMotionEvent(event);
+	}
+
+	@Override
 	protected void onStart() {
 		super.onStart();
 		stopped = false;

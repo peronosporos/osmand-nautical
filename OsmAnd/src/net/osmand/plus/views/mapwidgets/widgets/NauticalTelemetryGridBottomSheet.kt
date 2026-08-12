@@ -9,9 +9,9 @@ import android.widget.TextView
 import androidx.fragment.app.FragmentManager
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import net.osmand.plus.OsmandApplication
 import net.osmand.plus.R
+import net.osmand.plus.plugins.nautical.ui.widgets.BaseNauticalBottomSheet
 import net.osmand.plus.plugins.nautical.NauticalPlugin
 import net.osmand.plus.plugins.nautical.engine.MarineState
 import net.osmand.plus.plugins.nautical.engine.SignalKUnitConverter
@@ -22,7 +22,7 @@ import net.osmand.plus.plugins.nautical.ui.NauticalSparklineView
 import net.osmand.plus.settings.fragments.SettingsScreenType
 import net.osmand.plus.views.mapwidgets.WidgetType
 
-class NauticalTelemetryGridBottomSheet : BottomSheetDialogFragment() {
+class NauticalTelemetryGridBottomSheet : BaseNauticalBottomSheet() {
 
     private var recyclerView: RecyclerView? = null
     private var adapter: TelemetryAdapter? = null
@@ -43,8 +43,7 @@ class NauticalTelemetryGridBottomSheet : BottomSheetDialogFragment() {
         super.onViewCreated(view, savedInstanceState)
 
         val app = requireContext().applicationContext as OsmandApplication
-        val plugin = NauticalPlugin.getInstance()
-        plugin?.applyNightVisionFilter(view)
+        // Red filter handled by BaseNauticalBottomSheet
 
         recyclerView = view.findViewById(R.id.recycler_view)
         recyclerView?.layoutManager = GridLayoutManager(context, 3)
@@ -109,9 +108,6 @@ class NauticalTelemetryGridBottomSheet : BottomSheetDialogFragment() {
             val color = getSemanticColor(widget, state)
             holder.value.setTextColor(color)
 
-            // Graphical Views
-            bindGraphicalViews(holder, widget, engine)
-            
             holder.itemView.setOnClickListener {
                 NauticalDataBottomSheet.newInstance(widget).show(parentFragmentManager, "nautical_data")
             }
@@ -129,40 +125,6 @@ class NauticalTelemetryGridBottomSheet : BottomSheetDialogFragment() {
                     else NauticalColorResolver.getColor(requireContext(), NauticalSemanticColor.PRIMARY)
                 }
                 else -> NauticalColorResolver.getColor(requireContext(), NauticalSemanticColor.PRIMARY)
-            }
-        }
-
-        private fun bindGraphicalViews(holder: TelemetryViewHolder, widget: WidgetType, engine: net.osmand.plus.plugins.nautical.engine.SignalKEngine?) {
-            val sparkline = holder.itemView.findViewById<NauticalSparklineView>(R.id.sparkline)
-            val miniRose = holder.itemView.findViewById<NauticalMiniRoseView>(R.id.mini_rose)
-            val textContainer = holder.itemView.findViewById<View>(R.id.text_container)
-            
-            sparkline.visibility = View.GONE
-            miniRose.visibility = View.GONE
-            textContainer.visibility = View.VISIBLE
-
-            val color = NauticalColorResolver.getColor(requireContext(), NauticalSemanticColor.ACCENT)
-
-            when (widget) {
-                WidgetType.NAUTICAL_DEPTH_KEEL -> {
-                    val history = engine?.getDepthKeelHistory()?.map { it.first }
-                    if (!history.isNullOrEmpty()) {
-                        sparkline.visibility = View.VISIBLE
-                        sparkline.setData(history, color)
-                        textContainer.visibility = View.INVISIBLE // Show sparkline as background
-                    }
-                }
-                WidgetType.NAUTICAL_AWA -> {
-                    val state = engine?.getCurrentState()
-                    if (state?.windDirectionApparent != null) {
-                        miniRose.visibility = View.VISIBLE
-                        miniRose.setAngle(state.windDirectionApparent, color, relative = true)
-                        holder.icon.visibility = View.GONE
-                    }
-                }
-                else -> {
-                    holder.icon.visibility = View.VISIBLE
-                }
             }
         }
 

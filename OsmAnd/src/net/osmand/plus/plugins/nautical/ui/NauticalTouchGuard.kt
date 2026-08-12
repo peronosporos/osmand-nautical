@@ -3,7 +3,6 @@ package net.osmand.plus.plugins.nautical.ui
 import android.annotation.SuppressLint
 import android.os.Handler
 import android.os.Looper
-import android.os.SystemClock
 import android.view.HapticFeedbackConstants
 import android.view.MotionEvent
 import android.view.View
@@ -32,11 +31,8 @@ class NauticalTouchGuard(
         val context = view.context
         Toast.makeText(context, context.getString(R.string.nautical_control_unlocked), Toast.LENGTH_SHORT).show()
         
-        // Inject a simulated DOWN event at the current position to start Slider/View tracking
-        val now = SystemClock.uptimeMillis()
-        val downEvent = MotionEvent.obtain(now, now, MotionEvent.ACTION_DOWN, lastX, lastY, 0)
-        view.onTouchEvent(downEvent)
-        downEvent.recycle()
+        // Use a more robust way to trigger the view's own touch handling
+        // by resetting the state and letting the next MOVE/UP events pass through
     }
 
     @SuppressLint("ClickableViewAccessibility")
@@ -50,36 +46,39 @@ class NauticalTouchGuard(
                 return@setOnTouchListener true
             }
 
+            // For Sliders and other complex views, the simulated injection is fragile.
+            // If the view is NOT currently locked by a global/emergency state, 
+            // we should allow immediate interaction for better usability,
+            // relying on the explicit "Safety Lock" toggle in the UI for protection.
+            if (lockSwitch == null && isLockedCheck == null) {
+                return@setOnTouchListener false 
+            }
+
             lastX = event.x
             lastY = event.y
 
             when (event.action) {
                 MotionEvent.ACTION_DOWN -> {
-                    if (isInteracting) return@setOnTouchListener false
+                    if (isUnlocked) return@setOnTouchListener false
                     isUnlocked = false
-                    handler.postDelayed(unlockRunnable, 600) // Reduced delay to 600ms
-                    true // Consume DOWN to prevent immediate interaction (e.g. Slider jump)
+                    isInteracting = false
+                    handler.postDelayed(unlockRunnable, 500) 
+                    true 
                 }
                 MotionEvent.ACTION_MOVE -> {
-                    if (isInteracting) return@setOnTouchListener false
-                    if (!isUnlocked) {
-                        // If user moves significantly before unlock, cancel the unlock to avoid accidental drag
-                        if (abs(event.x - lastX) > 20 || abs(event.y - lastY) > 20) {
-                            handler.removeCallbacks(unlockRunnable)
-                        }
-                        true // Block the move
-                    } else {
-                        false // Allow the move (shouldn't really hit this due to isInteracting logic)
+                    if (isUnlocked) return@setOnTouchListener false
+                    if (abs(event.x - lastX) > 30 || abs(event.y - lastY) > 30) {
+                        handler.removeCallbacks(unlockRunnable)
                     }
+                    true
                 }
                 MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                     handler.removeCallbacks(unlockRunnable)
-                    if (isInteracting) {
-                        isInteracting = false
+                    if (isUnlocked) {
+                        isUnlocked = false
                         return@setOnTouchListener false
                     }
-                    isUnlocked = false
-                    true // Prevent final jump on UP if it was never unlocked
+                    true
                 }
                 else -> false
             }

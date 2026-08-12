@@ -13,7 +13,9 @@ data class S57Object(
     val acronym: String,
     val primitiveType: S57PrimitiveType,
     val attributes: Map<String, String> = emptyMap(),
-    val geometries: List<S57Geometry> = emptyList()
+    val geometries: List<S57Geometry> = emptyList(),
+    val updateInstruction: Int = 1, // 1: Insert, 2: Modify, 3: Delete
+    val recordVersion: Int = 1
 )
 
 /**

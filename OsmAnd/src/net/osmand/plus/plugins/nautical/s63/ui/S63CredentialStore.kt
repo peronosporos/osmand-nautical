@@ -34,6 +34,7 @@ class S63CredentialStore(private val app: OsmandApplication) {
     
     // Memory cache to avoid repeated SharedPreferences reads during high-frequency map events
     private val cellKeyCache = ConcurrentHashMap<String, String>()
+    private val expiryCache = ConcurrentHashMap<String, String>()
     private var cachedHwid: ByteArray? = null
 
     init {
@@ -64,31 +65,40 @@ class S63CredentialStore(private val app: OsmandApplication) {
 
     /**
      * Retrieves or generates the 5-byte HWID for this device.
-     * Caches the result in memory for the duration of the app session.
+     * Uses a combination of hardware properties for increased stability across factory resets
+     * if ANDROID_ID changes, but primarily relies on ANDROID_ID as the standard seed.
      */
     @SuppressLint("HardwareIds")
     fun getHwid(): ByteArray {
         cachedHwid?.let { return it }
-        // We use ANDROID_ID as the hardware seed to generate the 5-byte HWID mandated by the IHO S-63 standard.
-        // This is necessary for compatibility with S-63 User Permits and cell decryption.
+        
         val androidId = Settings.Secure.getString(app.contentResolver, Settings.Secure.ANDROID_ID)
-        val hwid = S63PermitGenerator.generateHWID(androidId ?: "fallback_seed")
+        val hardwareSeed = "${androidId}_${android.os.Build.BOARD}_${android.os.Build.BRAND}_${android.os.Build.MANUFACTURER}"
+        
+        val hwid = S63PermitGenerator.generateHWID(hardwareSeed)
         cachedHwid = hwid
         return hwid
     }
 
     /**
-     * Stores a map of Cell Name to Decrypted Cell Key.
+     * Stores a map of Cell Name to Permit Information.
      */
-    fun saveCellKeys(keys: Map<String, String>) {
+    fun savePermits(permits: Map<String, S63PermitGenerator.PermitInfo>) {
         prefs.edit {
-            prefs.all.keys.filter { it.startsWith(PREFIX_CELL_KEY) }.forEach { remove(it) }
+            prefs.all.keys.filter { it.startsWith(PREFIX_CELL_KEY) || it.startsWith(PREFIX_CELL_EXPIRY) }.forEach { remove(it) }
 
-            keys.forEach { (cell, key) ->
-                putString(PREFIX_CELL_KEY + cell, key)
-                cellKeyCache[cell] = key
+            permits.forEach { (cell, info) ->
+                putString(PREFIX_CELL_KEY + cell, info.cellKey)
+                putString(PREFIX_CELL_EXPIRY + cell, info.expiryDate)
+                cellKeyCache[cell] = info.cellKey
+                expiryCache[cell] = info.expiryDate
             }
         }
+    }
+
+    @Deprecated("Use savePermits", ReplaceWith("savePermits(keys.mapValues { S63PermitGenerator.PermitInfo(it.value, \"\") })"))
+    fun saveCellKeys(keys: Map<String, String>) {
+        savePermits(keys.mapValues { S63PermitGenerator.PermitInfo(it.value, "") })
     }
 
     fun getCellKey(cellName: String): String? {
@@ -100,6 +110,15 @@ class S63CredentialStore(private val app: OsmandApplication) {
         return key
     }
 
+    fun getExpiryDate(cellName: String): String? {
+        expiryCache[cellName]?.let { return it }
+        val expiry = prefs.getString(PREFIX_CELL_EXPIRY + cellName, null)
+        if (expiry != null) {
+            expiryCache[cellName] = expiry
+        }
+        return expiry
+    }
+
     fun getLoadedCellCount(): Int {
         return prefs.all.keys.count { it.startsWith(PREFIX_CELL_KEY) }
     }
@@ -108,5 +127,6 @@ class S63CredentialStore(private val app: OsmandApplication) {
         private const val KEY_M_ID = "m_id"
         private const val KEY_M_KEY = "m_key"
         private const val PREFIX_CELL_KEY = "cell_key_"
+        private const val PREFIX_CELL_EXPIRY = "cell_expiry_"
     }
 }

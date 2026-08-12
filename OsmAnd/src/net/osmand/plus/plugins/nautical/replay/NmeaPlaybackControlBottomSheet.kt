@@ -55,10 +55,19 @@ class NmeaPlaybackControlBottomSheet : BaseMaterialBottomSheetDialogFragment() {
 
     private fun setupUI(view: View) {
         val seekPlayback = view.findViewById<SeekBar>(R.id.seek_playback)
+        seekPlayback.max = 1000 // Standardize resolution
+
         val btnPlayPause = view.findViewById<MaterialButton>(R.id.btn_play_pause)
         val btnStop = view.findViewById<MaterialButton>(R.id.btn_stop)
         val toggleSpeed = view.findViewById<MaterialButtonToggleGroup>(R.id.toggle_speed)
         val btnSelectFile = view.findViewById<MaterialButton>(R.id.btn_select_file)
+
+        // SYNC Speed Toggle
+        when (viewModel.playbackSpeed.value) {
+            1.0f -> toggleSpeed.check(R.id.btn_speed_1x)
+            2.0f -> toggleSpeed.check(R.id.btn_speed_2x)
+            5.0f -> toggleSpeed.check(R.id.btn_speed_5x)
+        }
 
         btnPlayPause.setOnClickListener { viewModel.togglePlayback() }
         btnStop.setOnClickListener { viewModel.stopPlayback() }

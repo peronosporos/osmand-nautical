@@ -10,20 +10,19 @@ import androidx.preference.PreferenceCategory
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import net.osmand.plus.R
-import net.osmand.plus.plugins.nautical.viewmodel.SailingPerformanceSettingsViewModel
 import net.osmand.plus.plugins.nautical.di.SailingDependencyContainer
 import net.osmand.plus.plugins.nautical.discovery.SignalKDiscoveryManager
 import net.osmand.plus.plugins.nautical.engine.SignalKUnitConverter
+import net.osmand.plus.plugins.nautical.viewmodel.SailingPerformanceSettingsViewModel
 import net.osmand.plus.settings.enums.NauticalDisplayMode
+import net.osmand.plus.settings.enums.VesselContext
 import net.osmand.plus.settings.fragments.BaseSettingsFragment
 import net.osmand.plus.settings.fragments.OnPreferenceChanged
 import net.osmand.plus.settings.fragments.SettingsScreenType
-import net.osmand.plus.settings.enums.VesselContext
 import net.osmand.plus.settings.preferences.EditTextPreferenceEx
-
 import net.osmand.plus.settings.preferences.ListPreferenceEx
 import net.osmand.plus.settings.preferences.SwitchPreferenceEx
-import java.util.*
+import java.util.Locale
 
 class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
 
@@ -178,7 +177,7 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
         }
 
         findPreference<Preference>("nautical_boat_ai")?.apply {
-            setIcon(R.drawable.ic_action_settings) // Replace with AI icon if available
+            setIcon(R.drawable.ic_action_android)
             setOnPreferenceClickListener {
                 showInstance(requireActivity(), SettingsScreenType.BOAT_AI)
                 true
@@ -205,6 +204,14 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
             setIcon(R.drawable.ic_action_additional_option)
             setOnPreferenceClickListener {
                 showInstance(requireActivity(), SettingsScreenType.NAUTICAL_SAFETY_REGIONS)
+                true
+            }
+        }
+
+        findPreference<Preference>("nautical_replay_manager")?.apply {
+            setIcon(R.drawable.ic_action_play_dark)
+            setOnPreferenceClickListener {
+                net.osmand.plus.plugins.nautical.replay.NmeaPlaybackControlBottomSheet.show(parentFragmentManager)
                 true
             }
         }
@@ -563,6 +570,22 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
             isChecked = settings.NAUTICAL_MOB_AUDIO_GUIDANCE.get() && available
         }
 
+        findPreference<Preference>("nautical_test_alarm")?.apply {
+            setIcon(R.drawable.ic_action_volume_up)
+            setOnPreferenceClickListener {
+                net.osmand.plus.plugins.nautical.audio.NauticalAudioArbiter.getInstance(app).dispatchAlarm(net.osmand.plus.plugins.nautical.audio.AlarmType.MAP_HAZARD, loop = false)
+                true
+            }
+        }
+
+        findPreference<Preference>("nautical_test_tts")?.apply {
+            setIcon(R.drawable.ic_action_volume_up)
+            setOnPreferenceClickListener {
+                net.osmand.plus.plugins.nautical.audio.NauticalAudioArbiter.getInstance(app).dispatchTts(getString(R.string.nautical_test_tts_msg))
+                true
+            }
+        }
+
         findPreference<Preference>("nautical_compass_wizard")?.apply {
             setIcon(R.drawable.ic_action_compass)
             setOnPreferenceClickListener {
@@ -639,9 +662,38 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
         findPreference<PreferenceCategory>("telemetry_widgets_group")?.apply {
             title = "Telemetry (Text Widgets)"
         }
+
+        findPreference<ListPreferenceEx>(settings.NAUTICAL_TRAJECTORY_COLOR.id)?.apply {
+            entries = arrayOf("Magenta", "Red", "Green", "Blue", "Yellow", "Cyan", "White", "Black")
+            entryValues = arrayOf(
+                0xFFFF00FF.toInt().toString(),
+                0xFFFF0000.toInt().toString(),
+                0xFF00FF00.toInt().toString(),
+                0xFF0000FF.toInt().toString(),
+                0xFFFFFF00.toInt().toString(),
+                0xFF00FFFF.toInt().toString(),
+                0xFFFFFFFF.toInt().toString(),
+                0xFF000000.toInt().toString()
+            )
+            val current = settings.NAUTICAL_TRAJECTORY_COLOR.get()
+            value = current.toString()
+            summary = entries.getOrNull(entryValues.indexOf(value)) ?: "Custom"
+            setIcon(R.drawable.ic_action_appearance)
+        }
+
+        findPreference<ListPreferenceEx>(settings.NAUTICAL_TRAJECTORY_THICKNESS.id)?.apply {
+            val values = arrayOf("4", "6", "8", "10", "12", "16", "20")
+            entries = values.map { "$it px" }.toTypedArray()
+            entryValues = values
+            val current = settings.NAUTICAL_TRAJECTORY_THICKNESS.get()
+            value = current.toInt().toString()
+            summary = "$value px"
+            setIcon(R.drawable.ic_action_additional_option)
+        }
         
         val overlays = listOf(
             settings.NAUTICAL_SHOW_LAYLINES,
+            settings.NAUTICAL_SHOW_INFINITE_LAYLINES,
             settings.NAUTICAL_SHOW_WIND_SHIFTS,
             settings.NAUTICAL_SHOW_TRAJECTORY,
             settings.NAUTICAL_SHOW_TIDES,
@@ -694,6 +746,7 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
                 settings.NAUTICAL_ANCHOR_BOW_OFFSET.id -> settings.NAUTICAL_ANCHOR_BOW_OFFSET.get().toDouble()
                 settings.NAUTICAL_ANCHOR_FREEBOARD.id -> settings.NAUTICAL_ANCHOR_FREEBOARD.get().toDouble()
                 settings.NAUTICAL_ANCHOR_SAFETY_MARGIN.id -> settings.NAUTICAL_ANCHOR_SAFETY_MARGIN.get().toDouble()
+                settings.NAUTICAL_WAVE_NUDGE_THRESHOLD.id -> settings.NAUTICAL_WAVE_NUDGE_THRESHOLD.get().toDouble()
                 else -> 0.0
             }
             val (v, u) = SignalKUnitConverter.formatValue(app, settings, meters, "depth")
@@ -779,9 +832,22 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
             summary = settings.NAUTICAL_LEEWAY_COEFFICIENT.get().toString()
         }
 
+        findPreference<EditTextPreferenceEx>(settings.NAUTICAL_MANUAL_LEEWAY_ANGLE.id)?.apply {
+            setIcon(R.drawable.ic_action_additional_option)
+            summary = "${settings.NAUTICAL_MANUAL_LEEWAY_ANGLE.get()}°"
+        }
+
         findPreference<SwitchPreferenceEx>(settings.NAUTICAL_PREDICTIVE_STEERING.id)?.apply {
             setIcon(R.drawable.ic_action_wind)
             isChecked = settings.NAUTICAL_PREDICTIVE_STEERING.get()
+            
+            // Item 14 & 15: Enhance summary with status warning
+            val grib = SailingDependencyContainer.gribRepository?.gridData
+            val hasWaves = grib?.timeSteps?.any { it.waveHeightGrid != null } ?: false
+            
+            if (!hasWaves) {
+                summary = "${getString(R.string.nautical_predictive_steering_desc)} (${getString(R.string.nautical_wave_data_missing)})"
+            }
         }
 
         findPreference<SwitchPreferenceEx>(settings.NAUTICAL_SHADOW_DRIVE.id)?.apply {
@@ -796,6 +862,8 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
             value = current.toString()
             summary = "$current%"
         }
+
+        setupDepthPreference(settings.NAUTICAL_WAVE_NUDGE_THRESHOLD.id, R.string.nautical_wave_nudge_threshold, R.drawable.ic_action_additional_option)
     }
 
     private fun setupAisCategory() {
@@ -950,26 +1018,33 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
 
     private fun updateModuleDetailsVisibility() {
         val caps = NauticalPlugin.engine?.capabilityManager?.capabilities?.value
+        val isWatch = WearOsNauticalManager(requireContext()).isWatchMode()
         
-        findPreference<PreferenceCategory>("ais_details_group")?.isVisible = settings.NAUTICAL_AIS_ENABLED.get()
-        findPreference<PreferenceCategory>("vhf_details_group")?.isVisible = settings.NAUTICAL_VHF_ENABLED.get()
-        findPreference<PreferenceCategory>("navtex_details_group")?.isVisible = settings.NAUTICAL_NAVTEX_ENABLED.get()
-        findPreference<PreferenceCategory>("logbook_details_group")?.isVisible = settings.NAUTICAL_MODULE_LOGBOOK.get()
-        findPreference<PreferenceCategory>("grib_details_group")?.isVisible = settings.NAUTICAL_MODULE_GRIB.get()
+        findPreference<PreferenceCategory>("ais_details_group")?.isVisible = settings.NAUTICAL_AIS_ENABLED.get() && !isWatch
+        findPreference<PreferenceCategory>("vhf_details_group")?.isVisible = settings.NAUTICAL_VHF_ENABLED.get() && !isWatch
+        findPreference<PreferenceCategory>("navtex_details_group")?.isVisible = settings.NAUTICAL_NAVTEX_ENABLED.get() && !isWatch
+        findPreference<PreferenceCategory>("logbook_details_group")?.isVisible = settings.NAUTICAL_MODULE_LOGBOOK.get() && !isWatch
+        findPreference<PreferenceCategory>("grib_details_group")?.isVisible = settings.NAUTICAL_MODULE_GRIB.get() && !isWatch
         
-        findPreference<PreferenceCategory>("nautical_autopilot_tuning_category")?.isVisible = caps?.hasAdvancedAutopilot == true
-        findPreference<PreferenceCategory>("nautical_energy_category")?.isVisible = caps?.hasEnergyManagement == true
+        findPreference<PreferenceCategory>("nautical_autopilot_tuning_category")?.isVisible = caps?.hasAdvancedAutopilot == true && !isWatch
+        findPreference<PreferenceCategory>("nautical_energy_category")?.isVisible = caps?.hasEnergyManagement == true && !isWatch
         
-        val hasSmart = caps?.hasNavtex == true || caps?.hasMediaControl == true
+        val hasSmart = (caps?.hasNavtex == true || caps?.hasAiBridge == true) && !isWatch
         findPreference<PreferenceCategory>("nautical_smart_category")?.isVisible = hasSmart
-        findPreference<Preference>("nautical_boat_ai")?.isVisible = caps?.hasMediaControl == true
+        findPreference<Preference>("nautical_boat_ai")?.isVisible = caps?.hasAiBridge == true && !isWatch
         findPreference<Preference>("nautical_notifications")?.isVisible = true
-        findPreference<Preference>("nautical_safety_regions")?.isVisible = true
-        findPreference<Preference>("nautical_checklists")?.isVisible = caps?.hasChecklists == true
+        findPreference<Preference>("nautical_safety_regions")?.isVisible = !isWatch
+        findPreference<Preference>("nautical_checklists")?.isVisible = caps?.hasChecklists == true && !isWatch
         
         // Maneuver section logic - hide if not in BOAT mode (safety)
         val isBoat = app.settings.APPLICATION_MODE.get().isDerivedRoutingFrom(net.osmand.plus.settings.backend.ApplicationMode.BOAT)
-        findPreference<PreferenceCategory>("nautical_maneuver_category")?.isVisible = isBoat
+        findPreference<PreferenceCategory>("nautical_maneuver_category")?.isVisible = isBoat && !isWatch
+        
+        // Hide advanced maintenance on watch
+        findPreference<Preference>("nautical_advanced_tuning")?.isVisible = !isWatch
+        findPreference<Preference>("nautical_diagnostics")?.isVisible = !isWatch
+        findPreference<Preference>("nautical_master_telemetry_setup")?.isVisible = !isWatch
+        findPreference<Preference>("nautical_discovery_mdns")?.isVisible = !isWatch
     }
 
     private fun updateSecureSettingsVisibility(useSecure: Boolean) {
@@ -1102,6 +1177,7 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
                         settings.NAUTICAL_ANCHOR_BOW_OFFSET.id -> settings.NAUTICAL_ANCHOR_BOW_OFFSET.set(meters.toFloat())
                         settings.NAUTICAL_ANCHOR_FREEBOARD.id -> settings.NAUTICAL_ANCHOR_FREEBOARD.set(meters.toFloat())
                         settings.NAUTICAL_ANCHOR_SAFETY_MARGIN.id -> settings.NAUTICAL_ANCHOR_SAFETY_MARGIN.set(meters.toFloat())
+                        settings.NAUTICAL_WAVE_NUDGE_THRESHOLD.id -> settings.NAUTICAL_WAVE_NUDGE_THRESHOLD.set(meters.toFloat())
                     }
                     val (v, u) = SignalKUnitConverter.formatValue(app, settings, meters, "depth")
                     preference.summary = "$v $u"
@@ -1112,6 +1188,7 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
                 settings.NAUTICAL_WIND_ALIGNMENT.id -> preference.summary = "${newString}°"
                 settings.NAUTICAL_LAYLINES_TACK_ANGLE.id -> preference.summary = "${newString}°"
                 settings.NAUTICAL_LEEWAY_COEFFICIENT.id -> preference.summary = newString
+                settings.NAUTICAL_MANUAL_LEEWAY_ANGLE.id -> preference.summary = "${newString}°"
                 settings.NAUTICAL_OFF_COURSE_ALARM.id -> preference.summary = "${newString}°"
                 settings.NAUTICAL_ACTUATOR_ALARM_THRESHOLD.id -> preference.summary = "$newString%"
                 
@@ -1158,6 +1235,14 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
                 }
                 settings.NAUTICAL_LOOK_AHEAD_TIME.id -> {
                     preference.summary = "$newString ${getString(R.string.shared_string_min)}"
+                }
+
+                settings.NAUTICAL_TRAJECTORY_COLOR.id -> {
+                    val listPref = preference as ListPreferenceEx
+                    preference.summary = listPref.entries.getOrNull(listPref.entryValues.indexOf(newString)) ?: "Custom"
+                }
+                settings.NAUTICAL_TRAJECTORY_THICKNESS.id -> {
+                    preference.summary = "$newString px"
                 }
 
                 plugin?.aisObjLostTimeout?.id -> preference.summary = "$newString ${getString(R.string.shared_string_minute_lowercase)}"
@@ -1220,8 +1305,6 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         
-        if (NauticalPlugin.isNightVision(app)) {
-            NauticalPlugin.getInstance()?.applyNightVisionFilter(view)
-        }
+        // Activity decorView filter handles scotopic rendering
     }
 }

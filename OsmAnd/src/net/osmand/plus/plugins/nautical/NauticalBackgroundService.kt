@@ -21,16 +21,47 @@ class NauticalBackgroundService : NavigationService() {
     private val log = PlatformUtil.getLog(NauticalBackgroundService::class.java)
     private var wakeLock: PowerManager.WakeLock? = null
     private var wifiLock: WifiManager.WifiLock? = null
+    private var lastDataTime = System.currentTimeMillis()
+    private val handler = android.os.Handler(android.os.Looper.getMainLooper())
+    private val lockMonitor = object : Runnable {
+        override fun run() {
+            val now = System.currentTimeMillis()
+            if (now - lastDataTime > 120000) { // 2 minutes idle
+                if (wifiLock?.isHeld == true) {
+                    log.info("Nautical: Releasing high-perf WiFi lock due to inactivity.")
+                    wifiLock?.release()
+                }
+            }
+            handler.postDelayed(this, 30000)
+        }
+    }
+    
+    private val engineListener: (net.osmand.plus.plugins.nautical.engine.MarineState) -> Unit = {
+        lastDataTime = System.currentTimeMillis()
+        if (wifiLock != null && !wifiLock!!.isHeld) {
+            log.info("Nautical: Re-acquiring high-perf WiFi lock (data resumed).")
+            wifiLock?.acquire()
+        }
+    }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         log.info("NauticalBackgroundService: Starting...")
         val result = super.onStartCommand(intent, flags, startId)
         acquireLocks()
+        handler.post(lockMonitor)
+        
+        // Task: Monitor SignalK engine to reset inactivity timer (Safe registration)
+        net.osmand.plus.plugins.nautical.NauticalPlugin.engine?.let {
+            it.unregisterListener(engineListener)
+            it.registerListener(engineListener)
+        }
         return result
     }
 
     override fun onDestroy() {
         log.info("NauticalBackgroundService: Destroying...")
+        handler.removeCallbacks(lockMonitor)
+        net.osmand.plus.plugins.nautical.NauticalPlugin.engine?.unregisterListener(engineListener)
         try {
             // Service teardown logic
         } finally {

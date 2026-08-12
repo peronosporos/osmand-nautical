@@ -21,13 +21,10 @@ class ManeuverSpeechHelper(
     private val speechScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
 
     /**
-     * Dispatches TTS requests asynchronously to avoid blocking the UI thread
-     * during complex string generation or data parsing.
+     * Dispatches TTS requests directly to the NauticalAudioArbiter.
      */
     fun speakAsync(text: String, type: AlarmType = AlarmType.TTS_INSTRUCTION) {
-        speechScope.launch {
-            arbiter.dispatchTts(text, type)
-        }
+        arbiter.dispatchTts(text, type)
     }
 
     fun startListening() {

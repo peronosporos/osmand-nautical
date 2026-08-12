@@ -62,9 +62,10 @@ class TidalCurrentsMapLayer(context: Context) : OsmandMapLayer(context) {
         val now = System.currentTimeMillis() + timeOffset
         val center = tileBox.centerLatLon
 
+        val moveThreshold = if (tileBox.zoom > 12) 0.002 else 0.01
         if (renderCache.zoom != tileBox.zoom || 
-            renderCache.centerLat != center.latitude || 
-            renderCache.centerLon != center.longitude ||
+            abs(renderCache.centerLat - center.latitude) > moveThreshold || 
+            abs(renderCache.centerLon - center.longitude) > moveThreshold ||
             abs(renderCache.timestamp - now) > 600000) { // Refresh every 10 mins
             triggerCacheUpdate(tileBox, now)
         }
@@ -82,34 +83,43 @@ class TidalCurrentsMapLayer(context: Context) : OsmandMapLayer(context) {
             val tideManager = plugin?.tideManager
             
             val newCache = withContext(Dispatchers.Default) {
-                val stations = parser?.getStations() ?: emptyList()
+                val bounds = tileBox.getLatLonBounds()
+                val stationsInViewport = parser?.getStationsInBounds(
+                    bounds.bottom, bounds.top, 
+                    bounds.left, bounds.right
+                ) ?: emptyList()
+                
                 val skStations = tideManager?.stations?.value?.values ?: emptyList()
                 
                 val arrows = mutableListOf<TidalArrow>()
                 
                 // Local harmonic stations
-                for (station in stations) {
+                for (station in stationsInViewport) {
                     if (!tileBox.containsLatLon(station.latitude, station.longitude)) continue
 
                     val x = tileBox.getPixXFromLatLon(station.latitude, station.longitude)
                     val y = tileBox.getPixYFromLatLon(station.latitude, station.longitude)
 
                     val height = engine?.calculateHeight(station, timestamp) ?: 0.0
-                    val nextHeight = engine?.calculateHeight(station, timestamp + 1000 * 3600) ?: 0.0
+                    val nextHeight = engine?.calculateHeight(station, timestamp + 1000 * 300) ?: 0.0 // 5 min interval for rate
                     
-                    val velocity = (nextHeight - height).coerceIn(-3.0, 3.0)
-                    val angle = if (velocity >= 0) 0.0 else Math.PI
+                    // Improved Rate calculation (meters per hour)
+                    val rateMph = (nextHeight - height) * 12.0
+                    val velocity = rateMph.coerceIn(-5.0, 5.0)
+                    
+                    // Item 16: Support station-specific orientation for flood/ebb
+                    val baseAngle = station.orientationDeg?.let { Math.toRadians(it) } ?: 0.0
+                    val angle = if (velocity >= 0) baseAngle else (baseAngle + Math.PI)
                     
                     arrows.add(TidalArrow(x, y, abs(velocity), angle))
                 }
 
-                // Signal K current stations (if identified as such)
+                // Signal K current stations
                 for (skStation in skStations) {
                     val lat = skStation.position.coordinates[1]
                     val lon = skStation.position.coordinates[0]
                     if (!tileBox.containsLatLon(lat, lon)) continue
                     
-                    // Basic check if it's a current station (based on name or properties)
                     val isCurrent = skStation.name.contains("Current", ignoreCase = true) || 
                                     skStation.properties?.get("type") == "current"
                     
@@ -117,8 +127,6 @@ class TidalCurrentsMapLayer(context: Context) : OsmandMapLayer(context) {
                         val x = tileBox.getPixXFromLatLon(lat, lon)
                         val y = tileBox.getPixYFromLatLon(lat, lon)
                         
-                        // For SK stations, we might need to fetch timeline to get velocity at timestamp
-                        // For now, we use a placeholder or check real-time state if it's the "default" station
                         val marineState = NauticalPlugin.engine?.marineStateFlow?.value
                         if (skStation.name == marineState?.tide?.stationName) {
                             val drift = marineState.drift ?: 0.0

@@ -6,9 +6,13 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
 import android.widget.TextView
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.launch
 import net.osmand.plus.R
 import net.osmand.plus.base.BaseBottomSheetDialogFragment
 import net.osmand.plus.plugins.nautical.NauticalPlugin
+import net.osmand.plus.plugins.nautical.engine.NauticalAisManager
 import net.osmand.shared.aistracker.AisObject
 import java.util.Locale
 
@@ -41,6 +45,15 @@ class NauticalAisDetailsDialog : BaseBottomSheetDialogFragment() {
         val ais = NauticalPlugin.getAisObject(mmsi)
         if (ais != null) {
             updateView(view, ais)
+            
+            // Task: Live Updates (Item 12)
+            viewLifecycleOwner.lifecycleScope.launch {
+                NauticalPlugin.getInstance()?.aisManager?.aisEvents?.filter { 
+                    (it is NauticalAisManager.AisEvent.Updated) && it.obj.mmsi == mmsi 
+                }?.collect { event ->
+                    updateView(view, (event as NauticalAisManager.AisEvent.Updated).obj)
+                }
+            }
         } else {
             dismiss()
         }

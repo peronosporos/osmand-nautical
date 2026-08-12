@@ -12,10 +12,13 @@ import net.osmand.plus.plugins.nautical.nmea.connection.NmeaTransport
 import okio.FileSystem
 import okio.Path.Companion.toPath
 import okio.buffer
+import okio.Source
+import okio.Buffer
 import java.io.File
 
 /**
  * Replay engine that simulates live NMEA hardware by reading timestamped logs.
+ * Uses byte-accurate tracking to prevent progress drift.
  */
 class NmeaPlaybackEngine(
     private val logFile: File,
@@ -36,6 +39,7 @@ class NmeaPlaybackEngine(
     val progress = _progress.asStateFlow()
 
     var speedMultiplier = 1.0f
+    var pauseInBackground = false
 
     private var playbackJob: Job? = null
     private var isRunning = false
@@ -71,21 +75,22 @@ class NmeaPlaybackEngine(
             try {
                 replayLoop()
             } catch (e: Exception) {
-                log.error("Error in NMEA replay loop", e)
+                if (e !is CancellationException) {
+                    log.error("Error in NMEA replay loop", e)
+                }
                 _playbackState.value = PlaybackState.STOPPED
             }
         }
     }
 
     fun onAppBackgrounded() {
-        if (_playbackState.value == PlaybackState.PLAYING) {
+        if (pauseInBackground && _playbackState.value == PlaybackState.PLAYING) {
             log.info("NmeaPlaybackEngine: Auto-pausing playback in background.")
             pause()
         }
     }
 
     fun onAppForegrounded() {
-        // We don't auto-resume playback to avoid sudden noise/CPU burst
     }
 
     fun pause() {
@@ -102,28 +107,31 @@ class NmeaPlaybackEngine(
 
     override fun close() {
         stop()
-        scope.cancel()
     }
 
     private suspend fun replayLoop() = coroutineScope {
-        val fileSystem = FileSystem.SYSTEM
-        val source = fileSystem.source(logFile.absolutePath.toPath()).buffer()
-        
         val fileSize = logFile.length()
-        if (seekByteOffset > 0) {
-            source.skip(seekByteOffset.coerceAtMost(fileSize))
-            // Skip partial line if we are in the middle of the file
-            if (seekByteOffset < fileSize) {
-                source.readUtf8Line()
-            }
+        if (fileSize == 0L) {
+            stop()
+            return@coroutineScope
         }
-        
-        var lastSentenceTime = -1L
-        var bytesRead = seekByteOffset
 
-        val regex = Regex("\\[(\\d+)] (.*)")
+        val rawSource = FileSystem.SYSTEM.source(logFile.absolutePath.toPath())
+        val countingSource = CountingSource(rawSource)
+        val source = countingSource.buffer()
 
         try {
+            if (seekByteOffset > 0) {
+                source.skip(seekByteOffset.coerceAtMost(fileSize))
+                // Skip partial line if we are in the middle of the file
+                if (seekByteOffset < fileSize) {
+                    source.readUtf8Line()
+                }
+            }
+            
+            var lastSentenceTime = -1L
+            val regex = Regex("\\[(\\d+)] (.*)")
+
             while (isActive && isRunning) {
                 if (_playbackState.value != PlaybackState.PLAYING) {
                     delay(100.milliseconds)
@@ -131,21 +139,24 @@ class NmeaPlaybackEngine(
                 }
 
                 val line = source.readUtf8Line() ?: break
-                val lineLength = line.length + 1L // approximate
-                bytesRead += lineLength
-                seekByteOffset = bytesRead
+                val bytesRead = countingSource.bytesRead + seekByteOffset
                 _progress.value = (bytesRead.toFloat() / fileSize).coerceIn(0f, 1f)
 
                 val match = regex.find(line)
-                
                 if (match != null) {
-                    val timestamp = match.groupValues[1].toLong()
+                    val timestamp = try {
+                        match.groupValues[1].toLong()
+                    } catch (e: NumberFormatException) {
+                        log.warn("Malformed timestamp in line: $line")
+                        continue
+                    }
                     val sentence = match.groupValues[2]
 
                     if (lastSentenceTime != -1L) {
                         val delta = (timestamp - lastSentenceTime).coerceAtLeast(0)
                         if (delta > 0) {
-                            delay((delta / speedMultiplier).toLong().milliseconds)
+                            val multiplier = speedMultiplier.coerceAtLeast(0.001f)
+                            delay((delta / multiplier).toLong().milliseconds)
                         }
                     }
                     
@@ -155,7 +166,7 @@ class NmeaPlaybackEngine(
             }
         } finally {
             source.close()
-            if (isActive && bytesRead >= fileSize) {
+            if (isActive && countingSource.bytesRead + seekByteOffset >= fileSize) {
                 stop()
             }
         }
@@ -168,6 +179,19 @@ class NmeaPlaybackEngine(
         this._progress.value = progress
         if (wasPlaying) {
             play()
+        }
+    }
+
+    private class CountingSource(private val delegate: Source) : Source by delegate {
+        var bytesRead = 0L
+            private set
+
+        override fun read(sink: Buffer, byteCount: Long): Long {
+            val read = delegate.read(sink, byteCount)
+            if (read != -1L) {
+                bytesRead += read
+            }
+            return read
         }
     }
 }
