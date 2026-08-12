@@ -6,6 +6,7 @@ import net.osmand.plus.routing.RouteCalculationParams
 import net.osmand.plus.routing.RouteCalculationResult
 import net.osmand.PlatformUtil
 import net.osmand.plus.routing.GPXRouteParams.GPXRouteParamsBuilder
+import net.osmand.plus.routing.RouteProvider
 import net.osmand.plus.routing.RouteService
 import net.osmand.shared.gpx.GpxFile
 import net.osmand.shared.gpx.primitives.Track
@@ -65,7 +66,7 @@ class SignalKRouteProvider private constructor() {
                                 params.gpxRoute = builder.build(params.ctx)
                                 
                                 // Recalculate using GPX logic
-                                return@runBlocking params.ctx.getRoutingHelper().getProvider().calculateRouteImpl(params)
+                                return@runBlocking RouteProvider().calculateRouteImpl(params)
                             }
                         }
                     }
