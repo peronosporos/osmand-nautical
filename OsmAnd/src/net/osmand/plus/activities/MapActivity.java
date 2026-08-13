@@ -1030,9 +1030,9 @@ public class MapActivity extends OsmandActionBarActivity implements DownloadEven
 			if (delta != 0) {
 				OsmandMapTileView mapView = getMapView();
 				if (delta > 0) {
-					mapView.setIntZoom(mapView.getZoom() + 1, true);
+					mapView.setIntZoom(mapView.getZoom() + 1);
 				} else {
-					mapView.setIntZoom(mapView.getZoom() - 1, true);
+					mapView.setIntZoom(mapView.getZoom() - 1);
 				}
 				return true;
 			}
