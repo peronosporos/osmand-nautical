@@ -1,0 +1,5 @@
+- [x] Fix redundant `@Deprecated` annotations in AIDL files
+    - [x] [MODIFY] [IOsmAndAidlInterface.aidl](file:///home/administrator/AndroidStudioProjects/osmand-nautical/OsmAnd/src/net/osmand/aidl/IOsmAndAidlInterface.aidl)
+    - [x] [MODIFY] [IOsmAndAidlInterface.aidl](file:///home/administrator/AndroidStudioProjects/osmand-nautical/OsmAnd-api/src/net/osmand/aidlapi/IOsmAndAidlInterface.aidl) (Checked, no change needed)
+    - [x] [MODIFY] [IOsmAndAidlInterface.aidl](file:///home/administrator/AndroidStudioProjects/osmand-nautical/OsmAnd-telegram/src/net/osmand/aidl/IOsmAndAidlInterface.aidl) (Checked, no change needed)
+- [x] Verify fix (Manual verification of source code and grep for redundant annotations)

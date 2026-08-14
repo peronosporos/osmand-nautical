@@ -549,7 +549,6 @@ interface IOsmAndAidlInterface {
      * @deprecated
      * Use the {@link #setNavDrawerLogoWithParams(NavDrawerHeaderParams params)} method.
      */
-    @JavaPassthrough(annotation="@java.lang.Deprecated")
     boolean setNavDrawerLogo(in String imageUri);
 
     /**
