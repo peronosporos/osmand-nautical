@@ -102,7 +102,7 @@ data class ForwardHazard(
     val distance: Double,
     val bearing: Double,
     val severity: NotificationState,
-    val location: Pair<Double, Double>? = null
+    val position: Pair<Double, Double>? = null
 ) : Serializable
 
 @kotlinx.serialization.Serializable
@@ -251,7 +251,7 @@ data class MarineState(
 
     // Autopilot Status
     val autopilotState: String = "standby",
-    val autopilotTargetHeading: Double? = null, // Radians (rad)
+    val autopilotHeadingSet: Double? = null, // Radians (rad)
     val autopilotWindAngleSet: Double? = null, // Radians (rad)
     val connectionStatus: ConnectionStatus = ConnectionStatus.DISCONNECTED,
 
