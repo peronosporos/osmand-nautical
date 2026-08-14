@@ -11,7 +11,6 @@ import kotlinx.serialization.descriptors.buildClassSerialDescriptor
 import kotlinx.serialization.descriptors.buildSerialDescriptor
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
-import kotlin.reflect.KClass
 
 object RangeTrackFilterSerializer : KSerializer<RangeTrackFilter<*>> {
 
@@ -27,17 +26,34 @@ object RangeTrackFilterSerializer : KSerializer<RangeTrackFilter<*>> {
 
 	override fun serialize(encoder: Encoder, value: RangeTrackFilter<*>) {
 		val compositeOutput = encoder.beginStructure(descriptor)
-		val serializer = serializerForClass(value.minValue::class)
 		compositeOutput.encodeSerializableElement(
 			descriptor,
 			0,
 			TrackFilterType.serializer(),
 			value.trackFilterType)
-		compositeOutput.encodeSerializableElement(descriptor, 1, serializer, value.minValue)
-		compositeOutput.encodeSerializableElement(descriptor, 2, serializer, value.maxValue)
-		compositeOutput.encodeSerializableElement(descriptor, 3, serializer, value.valueFrom)
-		compositeOutput.encodeSerializableElement(descriptor, 4, serializer, value.valueTo)
+		
+		when (val mv = value.minValue) {
+			is Int -> encodeRangeElements(compositeOutput, mv, value.maxValue as Int, value.valueFrom as Int, value.valueTo as Int, Int.serializer())
+			is Long -> encodeRangeElements(compositeOutput, mv, value.maxValue as Long, value.valueFrom as Long, value.valueTo as Long, Long.serializer())
+			is Double -> encodeRangeElements(compositeOutput, mv, value.maxValue as Double, value.valueFrom as Double, value.valueTo as Double, Double.serializer())
+			is Float -> encodeRangeElements(compositeOutput, mv, value.maxValue as Float, value.valueFrom as Float, value.valueTo as Float, Float.serializer())
+			else -> throw SerializationException("No serializer for class ${value.minValue::class}")
+		}
 		compositeOutput.endStructure(descriptor)
+	}
+
+	private fun <T : Comparable<T>> encodeRangeElements(
+		compositeOutput: kotlinx.serialization.encoding.CompositeEncoder,
+		minValue: T,
+		maxValue: T,
+		valueFrom: T,
+		valueTo: T,
+		serializer: KSerializer<T>
+	) {
+		compositeOutput.encodeSerializableElement(descriptor, 1, serializer, minValue)
+		compositeOutput.encodeSerializableElement(descriptor, 2, serializer, maxValue)
+		compositeOutput.encodeSerializableElement(descriptor, 3, serializer, valueFrom)
+		compositeOutput.encodeSerializableElement(descriptor, 4, serializer, valueTo)
 	}
 
 	override fun deserialize(decoder: Decoder): RangeTrackFilter<*> {
@@ -52,52 +68,36 @@ object RangeTrackFilterSerializer : KSerializer<RangeTrackFilter<*>> {
 			0,
 			TrackFilterType.serializer())
 
-		val parameterSerializer = when (trackFilterType.property?.typeClass) {
-			Int::class -> Int.serializer()
-			Long::class -> Long.serializer()
-			Double::class -> Double.serializer()
-			Float::class -> Float.serializer()
+		val filter = when (trackFilterType.property?.typeClass) {
+			Int::class -> decodeRangeFilter(compositeInput, trackFilterType, Int.serializer())
+			Long::class -> decodeRangeFilter(compositeInput, trackFilterType, Long.serializer())
+			Double::class -> decodeRangeFilter(compositeInput, trackFilterType, Double.serializer())
+			Float::class -> decodeRangeFilter(compositeInput, trackFilterType, Float.serializer())
 			else -> throw IllegalArgumentException("Unsupported data type")
 		}
 
-		minValue = compositeInput.decodeSerializableElement(
-			descriptor,
-			1,
-			parameterSerializer as KSerializer<Comparable<Any>>)
-		maxValue = compositeInput.decodeSerializableElement(
-			descriptor,
-			2,
-			parameterSerializer as KSerializer<Comparable<Any>>)
-		valueFrom = compositeInput.decodeSerializableElement(
-			descriptor,
-			3,
-			parameterSerializer as KSerializer<Comparable<Any>>)
-		valueTo = compositeInput.decodeSerializableElement(
-			descriptor,
-			4,
-			parameterSerializer as KSerializer<Comparable<Any>>)
-
 		compositeInput.endStructure(descriptor)
 		TrackFiltersHelper.createFilter(trackFilterType, null)
-		val filter = RangeTrackFilter(
+		return filter
+	}
+
+	private fun <T : Comparable<T>> decodeRangeFilter(
+		compositeInput: kotlinx.serialization.encoding.CompositeDecoder,
+		trackFilterType: TrackFilterType,
+		serializer: KSerializer<T>
+	): RangeTrackFilter<T> {
+		val minValue = compositeInput.decodeSerializableElement(descriptor, 1, serializer)
+		val maxValue = compositeInput.decodeSerializableElement(descriptor, 2, serializer)
+		val valueFrom = compositeInput.decodeSerializableElement(descriptor, 3, serializer)
+		val valueTo = compositeInput.decodeSerializableElement(descriptor, 4, serializer)
+		return RangeTrackFilter<T>(
 			minValue = minValue,
 			maxValue = maxValue,
 			trackFilterType = trackFilterType,
 			null
-		)
-		filter.valueTo = valueTo
-		filter.valueFrom = valueFrom
-		return filter
-	}
-
-	private fun serializerForClass(kClass: KClass<*>): KSerializer<Any> {
-		return when (kClass) {
-			Int::class -> Int.serializer()
-			Double::class -> Double.serializer()
-			String::class -> String.serializer()
-			Long::class -> Long.serializer()
-			Float::class -> Float.serializer()
-			else -> throw SerializationException("No serializer for class $kClass")
-		} as KSerializer<Any>
+		).apply {
+			this.valueFrom = valueFrom
+			this.valueTo = valueTo
+		}
 	}
 }

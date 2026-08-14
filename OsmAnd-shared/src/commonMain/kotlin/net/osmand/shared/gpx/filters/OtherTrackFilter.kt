@@ -93,20 +93,7 @@ class OtherTrackFilter : BaseTrackFilter {
 
 	override fun initWithValue(value: BaseTrackFilter) {
 		if (value is OtherTrackFilter) {
-			if (value.selectedParams != null) {
-				selectedParams = ArrayList(value.selectedParams)
-			} else {
-				selectedParams = ArrayList()
-				if (value.isVisibleOnMap == true) {
-					selectedParams.add(OtherTrackParam.VISIBLE_ON_MAP)
-				}
-				if (value.hasWaypoints == true) {
-					selectedParams.add(OtherTrackParam.WITH_WAYPOINTS)
-				}
-				if (value.hasVM == true) {
-					selectedParams.add(OtherTrackParam.HAS_VEHICLE_METRICS)
-				}
-			}
+			selectedParams = ArrayList(value.selectedParams)
 			super.initWithValue(value)
 		}
 	}

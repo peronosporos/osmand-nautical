@@ -1,25 +1,31 @@
 package net.osmand.plus.views.mapwidgets.widgets
 
 import android.view.View
+import net.osmand.plus.R
 import net.osmand.plus.activities.MapActivity
 import net.osmand.plus.plugins.nautical.NauticalPlugin
 import net.osmand.plus.plugins.nautical.engine.MarineState
-import net.osmand.plus.plugins.nautical.ui.widgets.NauticalElectricalDashboardBottomSheet
 import net.osmand.plus.views.layers.base.OsmandMapLayer
 import net.osmand.plus.views.mapwidgets.WidgetType
 import net.osmand.plus.views.mapwidgets.WidgetsPanel
 import java.util.Locale
 
-class NauticalElectricalWidget(
+class NauticalCompassWidget(
     mapActivity: MapActivity,
     widgetType: WidgetType,
     customId: String?,
     panel: WidgetsPanel?,
 ) : SimpleWidget(mapActivity, widgetType, customId, panel) {
 
+    init {
+        setIcons(widgetType)
+    }
+
     private val marineStateListener: (MarineState) -> Unit = {
         mapActivity.runOnUiThread { updateInfo(null) }
     }
+
+    override fun getWidgetName(): String = mapActivity.getString(R.string.map_widget_compass)
 
     override fun setupView(view: View) {
         super.setupView(view)
@@ -34,29 +40,33 @@ class NauticalElectricalWidget(
                 }
             },
         )
-        
-        view.setOnClickListener {
-            NauticalElectricalDashboardBottomSheet.show(mapActivity.supportFragmentManager)
-        }
     }
 
     override fun updateSimpleWidgetInfo(drawSettings: OsmandMapLayer.DrawSettings?) {
-        val engine = NauticalPlugin.engine
-        if (engine == null) {
-            setText("--", "N/A")
+        val state = NauticalPlugin.engine?.getCurrentState()
+        if (state == null) {
+            setText("--", "")
             return
         }
-        val state = engine.getCurrentState()
 
-        val battery = state.batteries.values.firstOrNull()
-        if (battery?.voltage != null) {
-            val volt = String.format(Locale.US, "%.1f V", battery.voltage)
-            val sub = if (battery.current != null) {
-                String.format(Locale.US, "%+.1f A", battery.current)
-            } else ""
-            setText(volt, sub)
-        } else {
-            setText("--", "")
+        val heading = state.headingMagnetic ?: state.headingTrue
+        val mainText = heading?.let { String.format(Locale.US, "%.0f°", Math.toDegrees(it)) } ?: "--"
+
+        val variation = state.magneticVariation?.let { 
+            val deg = Math.toDegrees(it)
+            val dir = if (deg >= 0) "E" else "W"
+            String.format(Locale.US, "%.1f°%s", Math.abs(deg), dir)
+        } ?: ""
+
+        setText(mainText, variation)
+        updateIcon()
+    }
+
+    override fun getOnClickListener(): View.OnClickListener {
+        return View.OnClickListener {
+            if (!mapActivity.isFinishing) {
+                NauticalCompassWizardDialog().show(mapActivity.supportFragmentManager, NauticalCompassWizardDialog.TAG)
+            }
         }
     }
 }

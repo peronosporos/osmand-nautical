@@ -11,7 +11,7 @@ import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import net.osmand.plus.OsmandApplication
 import net.osmand.plus.R
-import net.osmand.plus.plugins.nautical.ui.widgets.BaseNauticalBottomSheet
+import net.osmand.plus.plugins.nautical.ui.widgets.NauticalMenuBottomSheetDialogFragment
 import net.osmand.plus.plugins.nautical.NauticalPlugin
 import net.osmand.plus.plugins.nautical.engine.MarineState
 import net.osmand.plus.plugins.nautical.engine.SignalKUnitConverter
@@ -23,52 +23,74 @@ import net.osmand.plus.plugins.nautical.ui.NauticalSparklineView
 import net.osmand.plus.settings.fragments.SettingsScreenType
 import net.osmand.plus.views.mapwidgets.WidgetType
 
-class NauticalTelemetryGridBottomSheet : BaseNauticalBottomSheet() {
+class NauticalTelemetryGridBottomSheet : NauticalMenuBottomSheetDialogFragment() {
 
     private var recyclerView: RecyclerView? = null
     private var adapter: TelemetryAdapter? = null
     private var stateListener: ((MarineState) -> Unit)? = null
+    private var widgetId: String? = null
 
     companion object {
-        fun show(manager: FragmentManager) {
+        const val KEY_WIDGET_ID = "widget_id"
+
+        fun show(manager: FragmentManager, widgetId: String?) {
             val fragment = NauticalTelemetryGridBottomSheet()
+            val args = Bundle()
+            args.putString(KEY_WIDGET_ID, widgetId)
+            fragment.arguments = args
             fragment.show(manager, "nautical_telemetry_grid")
         }
     }
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
-        return inflater.inflate(R.layout.bottom_sheet_nautical_telemetry_grid, container, false)
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        widgetId = arguments?.getString(KEY_WIDGET_ID)
     }
 
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        super.onViewCreated(view, savedInstanceState)
-
+    override fun createMenuItems(savedInstanceState: Bundle?) {
         val app = requireContext().applicationContext as OsmandApplication
+        val workflowState = NauticalPlugin.getInstance()?.workflowEngine?.currentWorkflow?.value
         
-        val workflowState = net.osmand.plus.plugins.nautical.NauticalPlugin.getInstance()?.workflowEngine?.currentWorkflow?.value
-        view.findViewById<TextView>(R.id.title).text = getString(R.string.nautical_master_telemetry) + " - " + getPresetName(workflowState)
+        addTitleItem(getString(R.string.nautical_master_telemetry) + " - " + getPresetName(workflowState))
 
-        recyclerView = view.findViewById(R.id.recycler_view)
-        recyclerView?.layoutManager = GridLayoutManager(context, 3)
-
-        val itemIds = app.settings.NAUTICAL_MASTER_TELEMETRY_ITEMS.get().split(",").filter { it.isNotEmpty() }
+        var itemIdsString = app.settings.NAUTICAL_MASTER_TELEMETRY_ITEMS.get()
+        if (itemIdsString.isEmpty()) {
+            itemIdsString = "nautical_sog,nautical_cog,nautical_depth_keel,nautical_wind,nautical_vmg,nautical_battery_volt"
+            app.settings.NAUTICAL_MASTER_TELEMETRY_ITEMS.set(itemIdsString)
+        }
+        val itemIds = itemIdsString.split(",").filter { it.isNotEmpty() }
         val widgets = itemIds.mapNotNull { WidgetType.getById(it) }
 
+        val gridView = LayoutInflater.from(requireContext()).inflate(R.layout.bottom_sheet_nautical_telemetry_grid, null)
+        recyclerView = gridView.findViewById(R.id.recycler_view)
+        recyclerView?.layoutManager = GridLayoutManager(requireContext(), 3)
+        
         adapter = TelemetryAdapter(widgets, app)
         recyclerView?.adapter = adapter
+        
+        // Hide standard header in gridView since we use addTitleItem
+        gridView.findViewById<View>(R.id.title).visibility = View.GONE
+        gridView.findViewById<View>(R.id.btn_settings).visibility = View.GONE
 
-        view.findViewById<View>(R.id.btn_settings).setOnClickListener {
+        items.add(net.osmand.plus.base.bottomsheetmenu.BaseBottomSheetItem.Builder().setCustomView(gridView).create())
+    }
+
+    override fun getRightBottomButtonTextId(): Int = R.string.shared_string_settings
+
+    override fun onRightBottomButtonClick() {
+        if (widgetId != null) {
+            net.osmand.plus.settings.fragments.BaseSettingsFragment.showInstance(
+                requireActivity(), 
+                SettingsScreenType.NAUTICAL_MASTER_TELEMETRY,
+                null,
+                Bundle().apply { putString(net.osmand.plus.views.mapwidgets.configure.settings.WidgetInfoBaseFragment.KEY_WIDGET_ID, widgetId) },
+                null
+            )
+        } else {
+            // Fallback if no widgetId
             net.osmand.plus.settings.fragments.BaseSettingsFragment.showInstance(requireActivity(), SettingsScreenType.NAUTICAL_MASTER_TELEMETRY)
-            dismiss()
         }
-
-        stateListener = { _ ->
-            view.post {
-                if (isAdded) {
-                    adapter?.notifyDataSetChanged()
-                }
-            }
-        }
+        dismiss()
     }
 
     private fun getPresetName(state: net.osmand.plus.plugins.nautical.engine.SailingWorkflowState?): String {
@@ -82,6 +104,15 @@ class NauticalTelemetryGridBottomSheet : BaseNauticalBottomSheet() {
 
     override fun onStart() {
         super.onStart()
+        if (stateListener == null) {
+            stateListener = { _ ->
+                view?.post {
+                    if (isAdded) {
+                        adapter?.notifyDataSetChanged()
+                    }
+                }
+            }
+        }
         stateListener?.let { NauticalPlugin.engine?.registerListener(it) }
     }
 
@@ -227,8 +258,7 @@ class NauticalTelemetryGridBottomSheet : BaseNauticalBottomSheet() {
         val icon: ImageView = view.findViewById(R.id.icon)
         val value: TextView = view.findViewById(R.id.value)
         val unit: TextView = view.findViewById(R.id.unit)
-        val miniRose: net.osmand.plus.plugins.nautical.ui.NauticalMiniRoseView = view.findViewById(R.id.mini_rose)
-        val sparkline: net.osmand.plus.plugins.nautical.ui.NauticalSparklineView = view.findViewById(R.id.sparkline)
+        val miniRose: NauticalMiniRoseView = view.findViewById(R.id.mini_rose)
+        val sparkline: NauticalSparklineView = view.findViewById(R.id.sparkline)
     }
 }
-

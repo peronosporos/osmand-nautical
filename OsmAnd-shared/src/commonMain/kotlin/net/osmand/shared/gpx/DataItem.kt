@@ -34,13 +34,17 @@ abstract class DataItem(val file: KFile) {
 
 	abstract fun getParameters(): Map<GpxParameter, Any?>
 
-	fun <T> requireParameter(parameter: GpxParameter): T {
-		val res = getParameter(parameter) as? T
+	inline fun <reified T> requireParameter(parameter: GpxParameter): T {
+		val res = getParameter<T>(parameter)
 		return res ?: throw IllegalStateException("Requested parameter '$parameter' is null.")
 	}
 
-	@Suppress("UNCHECKED_CAST")
-	fun <T> getParameter(parameter: GpxParameter): T? {
+	inline fun <reified T> getParameter(parameter: GpxParameter): T? {
+		val value = getParameterValue(parameter)
+		return value as? T
+	}
+
+	fun getParameterValue(parameter: GpxParameter): Any? {
 		var value: Any? = null
 		if (map.containsKey(parameter)) {
 			value = map[parameter]
@@ -48,7 +52,7 @@ abstract class DataItem(val file: KFile) {
 		if (value == null && !parameter.isAppearanceParameter()) {
 			value = parameter.defaultValue
 		}
-		return value as? T
+		return value
 	}
 
 	fun setParameter(parameter: GpxParameter, value: Any?): Boolean {

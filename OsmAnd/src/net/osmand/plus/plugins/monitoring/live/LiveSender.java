@@ -10,7 +10,7 @@ import androidx.annotation.NonNull;
 import net.osmand.PlatformUtil;
 import net.osmand.plus.OsmandApplication;
 import net.osmand.plus.utils.AndroidNetworkUtils;
-import net.osmand.shared.gpx.GpxFormatter;
+import net.osmand.shared.gpx.GpxFormatterKt;
 import net.osmand.util.Algorithms;
 
 import org.apache.commons.logging.Log;
@@ -131,10 +131,10 @@ class LiveSender extends AsyncTask<Void, Void, Void> {
 		for (int i = 0; i < maxLen + 1; i++) {
 			switch (i) {
 				case 0:
-					prm.add(GpxFormatter.INSTANCE.formatLatLon(data.lat));
+					prm.add(GpxFormatterKt.getGpxFormatter().formatLatLon(data.lat));
 					break;
 				case 1:
-					prm.add(GpxFormatter.INSTANCE.formatLatLon(data.lon));
+					prm.add(GpxFormatterKt.getGpxFormatter().formatLatLon(data.lon));
 					break;
 				case 2:
 					prm.add(data.time + "");

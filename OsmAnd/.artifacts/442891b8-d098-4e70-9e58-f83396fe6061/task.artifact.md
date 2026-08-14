@@ -1,0 +1,10 @@
+- [x] Implement `NauticalPilotWidget.kt`
+- [x] Implement `NauticalCompassWidget.kt`
+- [x] Update `NauticalPlugin.kt`
+    - [x] Update `createWidgets` to register all allowed nautical widgets
+    - [x] Update `createMapWidgetForParams` to handle Pilot and Compass widgets
+    - [x] Simplify `isWidgetAllowed`
+- [x] Revert unrelated changes in `ExternalSensorsPlugin.java`
+- [x] Revert unrelated changes in `OsmandMonitoringPlugin.java`
+- [ ] Verify nautical widgets can be added in "Configure map" screen
+- [ ] Verify nautical widget functionality (tapping opens sheets)

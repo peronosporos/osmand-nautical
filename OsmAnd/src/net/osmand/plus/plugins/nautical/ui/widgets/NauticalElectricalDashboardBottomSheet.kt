@@ -17,6 +17,7 @@ import com.google.android.material.slider.Slider
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import net.osmand.plus.R
+import net.osmand.plus.base.bottomsheetmenu.BaseBottomSheetItem
 import net.osmand.plus.plugins.nautical.NauticalPlugin
 import net.osmand.plus.plugins.nautical.engine.*
 import java.util.Locale
@@ -33,34 +34,32 @@ class NauticalElectricalDashboardBottomSheet : BaseNauticalBottomSheet() {
     private val watermakerAdapter = WatermakerAdapter()
     private val windlassAdapter = WindlassAdapter()
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
-        return themedInflater.inflate(R.layout.bottom_sheet_nautical_electrical, container, false)
-    }
+    override fun createMenuItems(savedInstanceState: Bundle?) {
+        addTitleItem(getString(R.string.nautical_electrical_dashboard))
 
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        super.onViewCreated(view, savedInstanceState)
-
-        view.findViewById<RecyclerView>(R.id.rv_batteries).apply {
+        val customView = LayoutInflater.from(requireContext()).inflate(R.layout.bottom_sheet_nautical_electrical, null)
+        
+        customView.findViewById<RecyclerView>(R.id.rv_batteries).apply {
             layoutManager = GridLayoutManager(context, 2)
             adapter = batteryAdapter
         }
-        view.findViewById<RecyclerView>(R.id.rv_tanks).apply {
+        customView.findViewById<RecyclerView>(R.id.rv_tanks).apply {
             layoutManager = LinearLayoutManager(context)
             adapter = tankAdapter
         }
-        view.findViewById<RecyclerView>(R.id.rv_conversion).apply {
+        customView.findViewById<RecyclerView>(R.id.rv_conversion).apply {
             layoutManager = LinearLayoutManager(context)
             adapter = conversionAdapter
         }
-        view.findViewById<RecyclerView>(R.id.rv_switches).apply {
+        customView.findViewById<RecyclerView>(R.id.rv_switches).apply {
             layoutManager = LinearLayoutManager(context)
             adapter = switchAdapter
         }
-        view.findViewById<RecyclerView>(R.id.rv_watermakers).apply {
+        customView.findViewById<RecyclerView>(R.id.rv_watermakers).apply {
             layoutManager = LinearLayoutManager(context)
             adapter = watermakerAdapter
         }
-        view.findViewById<RecyclerView>(R.id.rv_windlass).apply {
+        customView.findViewById<RecyclerView>(R.id.rv_windlass).apply {
             layoutManager = LinearLayoutManager(context)
             adapter = windlassAdapter
         }
@@ -77,27 +76,29 @@ class NauticalElectricalDashboardBottomSheet : BaseNauticalBottomSheet() {
                 state.inverters.forEach { (_, inverter) -> conversionItems.add(ConversionItem.InverterItem(inverter)) }
                 conversionAdapter.submitList(conversionItems)
                 
-                view.findViewById<View>(R.id.txt_conversion_label).visibility = if (conversionItems.isEmpty()) View.GONE else View.VISIBLE
+                customView.findViewById<View>(R.id.txt_conversion_label).visibility = if (conversionItems.isEmpty()) View.GONE else View.VISIBLE
 
                 val watermakerItems = state.watermakers.values.toList()
                 watermakerAdapter.submitList(watermakerItems)
-                view.findViewById<View>(R.id.txt_watermaker_label).visibility = if (watermakerItems.isEmpty()) View.GONE else View.VISIBLE
-                view.findViewById<RecyclerView>(R.id.rv_watermakers).visibility = if (watermakerItems.isEmpty()) View.GONE else View.VISIBLE
+                customView.findViewById<View>(R.id.txt_watermaker_label).visibility = if (watermakerItems.isEmpty()) View.GONE else View.VISIBLE
+                customView.findViewById<RecyclerView>(R.id.rv_watermakers).visibility = if (watermakerItems.isEmpty()) View.GONE else View.VISIBLE
 
                 val switches = state.switches.asSequence().map { it.toPair() }.sortedBy { it.first }.toList()
                 switchAdapter.updateData(switches, state.timestamps, state.pathMeta, state.dimmers)
                 
                 val showWindlass = caps?.hasWindlassControl == true
-                view.findViewById<View>(R.id.txt_windlass_label).visibility = if (showWindlass) View.VISIBLE else View.GONE
-                view.findViewById<RecyclerView>(R.id.rv_windlass).visibility = if (showWindlass) View.VISIBLE else View.GONE
+                customView.findViewById<View>(R.id.txt_windlass_label).visibility = if (showWindlass) View.VISIBLE else View.GONE
+                customView.findViewById<RecyclerView>(R.id.rv_windlass).visibility = if (showWindlass) View.VISIBLE else View.GONE
                 if (showWindlass) {
                     windlassAdapter.updateState(state.isEngineRunning, state.rodeDeployed)
                 }
 
-                view.findViewById<View>(R.id.txt_empty_switches).visibility = 
+                customView.findViewById<View>(R.id.txt_empty_switches).visibility = 
                     if (switches.isEmpty() && state.batteries.isEmpty() && state.tanks.isEmpty() && conversionItems.isEmpty()) View.VISIBLE else View.GONE
             }
         }
+
+        items.add(BaseBottomSheetItem.Builder().setCustomView(customView).create())
     }
 
     private class BatteryAdapter : ListAdapter<Battery, BatteryViewHolder>(BatteryDiffCallback()) {

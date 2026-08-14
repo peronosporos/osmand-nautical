@@ -2,6 +2,7 @@ package net.osmand.plus.views.controls.maphudbuttons
 
 import android.graphics.Canvas
 import android.graphics.ColorFilter
+import android.graphics.PixelFormat
 import android.graphics.drawable.Drawable
 import androidx.core.graphics.withRotation
 
@@ -52,6 +53,6 @@ class CompassDrawable(private val original: Drawable) : Drawable() {
 
 	@Deprecated("Deprecated in Java")
 	override fun getOpacity(): Int {
-		return original.opacity
+		return PixelFormat.TRANSLUCENT
 	}
 }

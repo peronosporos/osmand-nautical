@@ -5,7 +5,7 @@ internal data class NetworkProxyData(
 	val port: Int
 )
 
-internal expect class NetworkProxyState() {
+internal interface NetworkProxyState {
 
 	val proxyHost: String?
 
@@ -17,3 +17,5 @@ internal expect class NetworkProxyState() {
 
 	fun setProxy(host: String?, port: Int)
 }
+
+internal expect fun NetworkProxyState(): NetworkProxyState

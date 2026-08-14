@@ -3,6 +3,8 @@ package net.osmand.shared.gpx.helper
 import net.osmand.shared.gpx.GpxFile
 import okio.Source
 
-expect object ImportHelper {
+interface IImportHelper {
 	fun loadGPXFileFromArchive(source: Source): Pair<GpxFile, Long>
 }
+
+expect val ImportHelper: IImportHelper

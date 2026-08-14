@@ -9,31 +9,25 @@ import android.widget.TextView
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import net.osmand.plus.R
+import net.osmand.plus.base.bottomsheetmenu.BaseBottomSheetItem
 import net.osmand.plus.plugins.nautical.NauticalPlugin
 import net.osmand.plus.settings.enums.VesselType
 import net.osmand.plus.settings.fragments.SettingsScreenType
 
 class NauticalManeuversBottomSheet : BaseNauticalBottomSheet() {
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
-        return themedInflater.inflate(R.layout.nautical_maneuvers_bottom_sheet, container, false)
-    }
+    override fun createMenuItems(savedInstanceState: Bundle?) {
+        addTitleItem(getString(R.string.nautical_maneuver_menu))
 
-    override fun onStart() {
-        super.onStart()
-        (dialog as? com.google.android.material.bottomsheet.BottomSheetDialog)?.setCanceledOnTouchOutside(true)
-    }
-
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        super.onViewCreated(view, savedInstanceState)
+        val customView = LayoutInflater.from(requireContext()).inflate(R.layout.nautical_maneuvers_bottom_sheet, null)
         
-        val recyclerView = view.findViewById<RecyclerView>(R.id.maneuvers_list)
+        val recyclerView = customView.findViewById<RecyclerView>(R.id.maneuvers_list)
         recyclerView.layoutManager = LinearLayoutManager(requireContext())
         
-        val btnExecute = view.findViewById<android.widget.Button>(R.id.btn_execute)
-        val txtInstructions = view.findViewById<TextView>(R.id.txt_maneuver_instructions)
+        val btnExecute = customView.findViewById<android.widget.Button>(R.id.btn_execute)
+        val txtInstructions = customView.findViewById<TextView>(R.id.txt_maneuver_instructions)
         
-        setupParams(view)
+        setupParams(customView)
 
         val state = NauticalPlugin.engine?.getCurrentState()
         val awaDeg = state?.windDirectionApparent?.let { kotlin.math.abs(Math.toDegrees(it)) } ?: 0.0
@@ -91,7 +85,7 @@ class NauticalManeuversBottomSheet : BaseNauticalBottomSheet() {
             txtInstructions.text = getString(R.string.nautical_maneuver_armed_instructions, item.name)
             
             // Re-run setupParams to update labels for armed state
-            setupParams(view)
+            setupParams(customView)
         }
 
         btnExecute.setOnClickListener {
@@ -99,10 +93,12 @@ class NauticalManeuversBottomSheet : BaseNauticalBottomSheet() {
             dismiss()
         }
 
-        view.findViewById<View>(R.id.btn_passage_plan).setOnClickListener {
+        customView.findViewById<View>(R.id.btn_passage_plan).setOnClickListener {
             net.osmand.plus.settings.fragments.BaseSettingsFragment.showInstance(requireActivity(), SettingsScreenType.NAUTICAL_PASSAGE_PLAN)
             dismiss()
         }
+
+        items.add(BaseBottomSheetItem.Builder().setCustomView(customView).create())
     }
 
     private fun setupParams(view: View) {

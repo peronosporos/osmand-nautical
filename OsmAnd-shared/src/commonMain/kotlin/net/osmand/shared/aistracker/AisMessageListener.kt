@@ -376,13 +376,11 @@ open class AisMessageListener {
                 ais = AisObject(mmsi, msgType, timeStamp, navStatus, manInd, heading, cog, sog, lat, lon, rot)
             }
             else -> {
-                LoggerFactory.getLogger("AisMessageListener").error("handleAisMessage() invalid argument aisType: \$aisType")
+                LoggerFactory.getLogger("AisMessageListener").error("handleAisMessage() invalid argument aisType: $aisType")
                 return
             }
         }
-        if (ais != null) {
-            dataListener.onAisObjectReceived(ais)
-        }
+        dataListener.onAisObjectReceived(ais)
     }
 
     private fun initEmbeddedLister(aisType: Int, listener: SentenceListener) {

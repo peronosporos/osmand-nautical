@@ -137,6 +137,8 @@ import net.osmand.plus.plugins.nautical.ui.WorkflowHeaderView
 import net.osmand.plus.plugins.nautical.ui.anchor.AnchorWatchHudView
 import net.osmand.plus.plugins.nautical.ui.widgets.NauticalElectricalDashboardBottomSheet
 import net.osmand.plus.plugins.nautical.ui.widgets.NauticalManeuversBottomSheet
+import net.osmand.plus.views.mapwidgets.widgets.NauticalPilotWidget
+import net.osmand.plus.views.mapwidgets.widgets.NauticalCompassWidget
 import net.osmand.plus.plugins.nautical.utils.NauticalLog
 import net.osmand.plus.plugins.nautical.utils.TemporalUtils
 import net.osmand.plus.plugins.nautical.viewmodel.PolarConfigViewModel
@@ -274,12 +276,7 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
     }
 
     private fun isWidgetAllowed(type: WidgetType): Boolean {
-        return when (type) {
-            WidgetType.NAUTICAL_VHF -> isModuleEnabled(NauticalModule.VHF)
-            WidgetType.NAUTICAL_MOB -> true // Always allowed for safety
-            WidgetType.NAUTICAL_DEPTH, WidgetType.NAUTICAL_WIND -> true // Basic telemetry
-            else -> true
-        }
+        return type.isAllowed
     }
 
     val application: OsmandApplication
@@ -1253,6 +1250,8 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
             WidgetType.NAUTICAL_ROLL,
             WidgetType.NAUTICAL_PITCH,
             WidgetType.NAUTICAL_DEPTH_KEEL,
+            WidgetType.NAUTICAL_DEPTH,
+            WidgetType.NAUTICAL_WIND,
             WidgetType.NAUTICAL_WATER_TEMP,
             WidgetType.NAUTICAL_OUTSIDE_TEMP,
             WidgetType.NAUTICAL_PRESSURE,
@@ -1263,6 +1262,7 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
             WidgetType.NAUTICAL_FUEL_LEVEL,
             WidgetType.NAUTICAL_FRESH_WATER_LEVEL,
             WidgetType.NAUTICAL_WASTE_WATER_LEVEL,
+            WidgetType.NAUTICAL_POLAR_RATIO,
             WidgetType.NAUTICAL_ROT,
             WidgetType.NAUTICAL_XTE,
             WidgetType.NAUTICAL_TTW,
@@ -1297,7 +1297,29 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
             WidgetType.NAUTICAL_AC_FREQUENCY,
             WidgetType.NAUTICAL_VHF_CHANNEL,
             WidgetType.NAUTICAL_RIGGING_LOAD,
+            WidgetType.NAUTICAL_RIGGING_LOADS,
+            WidgetType.NAUTICAL_WIND_SHIFT_WIDGET,
+            WidgetType.NAUTICAL_RACING_TIMER,
+            WidgetType.NAUTICAL_WATERMAKER,
+            WidgetType.NAUTICAL_BOOST_PRESSURE,
+            WidgetType.NAUTICAL_EXHAUST_TEMP,
+            WidgetType.NAUTICAL_ALTERNATOR_VOLT,
+            WidgetType.NAUTICAL_ALTERNATOR_CURR,
+            WidgetType.NAUTICAL_TRANS_GEAR,
+            WidgetType.NAUTICAL_TRANS_PRESS,
+            WidgetType.NAUTICAL_TRANS_OIL_TEMP,
+            WidgetType.NAUTICAL_INV_STATE,
+            WidgetType.NAUTICAL_CHG_STATE,
+            WidgetType.NAUTICAL_WATERMAKER_RATE,
+            WidgetType.NAUTICAL_WATERMAKER_TOTAL,
+            WidgetType.NAUTICAL_WATERMAKER_SALINITY,
+            WidgetType.NAUTICAL_REEFS,
+            WidgetType.NAUTICAL_AC_SYSTEM,
+            WidgetType.NAUTICAL_NOTIFICATIONS_LIST,
+            WidgetType.NAUTICAL_SUNLIGHT_MODE,
         -> MarineTextWidget(mapActivity, widgetType, customId, widgetsPanel)
+            WidgetType.NAUTICAL_PILOT -> NauticalPilotWidget(mapActivity, widgetType, customId, widgetsPanel)
+            WidgetType.NAUTICAL_COMPASS -> NauticalCompassWidget(mapActivity, widgetType, customId, widgetsPanel)
             WidgetType.NAUTICAL_MEDIA -> NauticalMediaWidget(mapActivity, widgetType, customId, widgetsPanel)
             WidgetType.NAUTICAL_CAMERA -> NauticalCameraWidget(mapActivity, widgetType, customId, widgetsPanel)
             WidgetType.NAUTICAL_ELECTRICAL -> NauticalElectricalWidget(mapActivity, widgetType, customId, widgetsPanel)
@@ -1326,37 +1348,24 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
         layoutMode: ScreenLayoutMode?,
     ) {
         if (!appMode.isDerivedRoutingFrom(ApplicationMode.BOAT)) return
-        
-        createMapWidgetForParams(activity, WidgetType.MANEUVER_OVERLAY, null, WidgetsPanel.BOTTOM)?.let { widget ->
-            widgetInfos.add(
-                object : MapWidgetInfo(
-                    WidgetType.MANEUVER_OVERLAY.id, widget, 0, 0, R.string.maneuver_overlay, null, 0, 0, WidgetsPanel.BOTTOM,
-                ) {
-                    override fun getUpdatedPanel(appMode: ApplicationMode, layoutMode: ScreenLayoutMode?): WidgetsPanel {
-                        return WidgetsPanel.BOTTOM
+
+        for (type in WidgetType.values()) {
+            val isNautical = type.id.startsWith("nautical_") || type == WidgetType.MANEUVER_OVERLAY
+            if (isNautical && type.isAllowed) {
+                // Ensure we don't duplicate if already added by some chance
+                if (widgetInfos.none { it.key == type.id }) {
+                    createMapWidgetForParams(activity, type, null, type.defaultPanel)?.let { widget ->
+                        widgetInfos.add(object : MapWidgetInfo(
+                            type.id, widget, 0, 0, type.titleId, null, 0, 0, type.defaultPanel
+                        ) {
+                            override fun getUpdatedPanel(appMode: ApplicationMode, layoutMode: ScreenLayoutMode?): WidgetsPanel {
+                                if (type == WidgetType.MANEUVER_OVERLAY) return WidgetsPanel.BOTTOM
+                                return widgetPanel
+                            }
+                        })
                     }
                 }
-            )
-        }
-
-        createMapWidgetForParams(activity, WidgetType.NAUTICAL_POLAR_RATIO, null, WidgetsPanel.RIGHT)?.let { polarRatioWidget ->
-            widgetInfos.add(object : MapWidgetInfo(
-                WidgetType.NAUTICAL_POLAR_RATIO.id, polarRatioWidget, 0, 0, R.string.nautical_polar_ratio, null, 0, 0, WidgetsPanel.RIGHT
-            ) {
-                override fun getUpdatedPanel(appMode: ApplicationMode, layoutMode: ScreenLayoutMode?): WidgetsPanel = widgetPanel
-            })
-        }
-
-        createMapWidgetForParams(activity, WidgetType.NAUTICAL_VMG, null, WidgetsPanel.RIGHT)?.let { targetVmgWidget ->
-            widgetInfos.add(object : MapWidgetInfo(WidgetType.NAUTICAL_VMG.id, targetVmgWidget, 0, 0, R.string.nautical_widget_vmg_label, null, 0, 0, WidgetsPanel.RIGHT) {
-                override fun getUpdatedPanel(appMode: ApplicationMode, layoutMode: ScreenLayoutMode?): WidgetsPanel = widgetPanel
-            })
-        }
-
-        createMapWidgetForParams(activity, WidgetType.NAUTICAL_ELECTRICAL, null, WidgetsPanel.RIGHT)?.let { electricalWidget ->
-            widgetInfos.add(object : MapWidgetInfo(WidgetType.NAUTICAL_ELECTRICAL.id, electricalWidget, 0, 0, R.string.nautical_switches_label, null, 0, 0, WidgetsPanel.RIGHT) {
-                override fun getUpdatedPanel(appMode: ApplicationMode, layoutMode: ScreenLayoutMode?): WidgetsPanel = widgetPanel
-            })
+            }
         }
     }
 

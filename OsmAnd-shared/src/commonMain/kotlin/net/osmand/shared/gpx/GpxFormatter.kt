@@ -1,6 +1,6 @@
 package net.osmand.shared.gpx
 
-expect object GpxFormatter {
+interface IGpxFormatter {
 
     // 0.00#####
     fun formatLatLon(value: Double): String
@@ -8,3 +8,5 @@ expect object GpxFormatter {
     // #.#
     fun formatDecimal(value: Double): String
 }
+
+expect val GpxFormatter: IGpxFormatter

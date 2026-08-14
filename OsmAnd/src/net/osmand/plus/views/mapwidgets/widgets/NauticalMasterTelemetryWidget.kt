@@ -56,7 +56,7 @@ class NauticalMasterTelemetryWidget(
     override fun getOnClickListener(): View.OnClickListener {
         return View.OnClickListener {
             if (!mapActivity.isFinishing) {
-                NauticalTelemetryGridBottomSheet.show(mapActivity.supportFragmentManager)
+                NauticalTelemetryGridBottomSheet.show(mapActivity.supportFragmentManager, customId ?: widgetType.id)
             }
         }
     }

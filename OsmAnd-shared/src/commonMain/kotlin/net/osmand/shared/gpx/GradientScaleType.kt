@@ -36,7 +36,6 @@ enum class GradientScaleType(
 			SPEED -> RouteColorize.ColorizationType.SPEED
 			ALTITUDE -> RouteColorize.ColorizationType.ELEVATION
 			SLOPE -> RouteColorize.ColorizationType.SLOPE
-			else -> RouteColorize.ColorizationType.NONE
 		}
 	}
 

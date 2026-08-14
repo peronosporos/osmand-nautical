@@ -1,8 +1,12 @@
 package net.osmand.plus.plugins.monitoring;
 
 import static net.osmand.aidlapi.OsmAndCustomizationConstants.PLUGIN_OSMAND_MONITORING;
+import static net.osmand.plus.views.mapwidgets.WidgetType.TRIP_RECORDING_AVERAGE_SLOPE;
+import static net.osmand.plus.views.mapwidgets.WidgetType.TRIP_RECORDING_AVG_SPEED;
 import static net.osmand.plus.views.mapwidgets.WidgetType.TRIP_RECORDING_DISTANCE;
 import static net.osmand.plus.views.mapwidgets.WidgetType.TRIP_RECORDING_DOWNHILL;
+import static net.osmand.plus.views.mapwidgets.WidgetType.TRIP_RECORDING_MAX_SPEED;
+import static net.osmand.plus.views.mapwidgets.WidgetType.TRIP_RECORDING_MOVING_TIME;
 import static net.osmand.plus.views.mapwidgets.WidgetType.TRIP_RECORDING_TIME;
 import static net.osmand.plus.views.mapwidgets.WidgetType.TRIP_RECORDING_UPHILL;
 
@@ -200,6 +204,18 @@ public class OsmandMonitoringPlugin extends OsmandPlugin {
 
 		MapWidget downhillWidget = createMapWidgetForParams(mapActivity, TRIP_RECORDING_DOWNHILL);
 		widgetsInfos.add(creator.createWidgetInfo(downhillWidget));
+
+		MapWidget avgSlopeWidget = createMapWidgetForParams(mapActivity, TRIP_RECORDING_AVERAGE_SLOPE);
+		widgetsInfos.add(creator.createWidgetInfo(avgSlopeWidget));
+
+		MapWidget maxSpeedWidget = createMapWidgetForParams(mapActivity, TRIP_RECORDING_MAX_SPEED);
+		widgetsInfos.add(creator.createWidgetInfo(maxSpeedWidget));
+
+		MapWidget avgSpeedWidget = createMapWidgetForParams(mapActivity, TRIP_RECORDING_AVG_SPEED);
+		widgetsInfos.add(creator.createWidgetInfo(avgSpeedWidget));
+
+		MapWidget movingTimeWidget = createMapWidgetForParams(mapActivity, TRIP_RECORDING_MOVING_TIME);
+		widgetsInfos.add(creator.createWidgetInfo(movingTimeWidget));
 	}
 
 	@Nullable

@@ -12,21 +12,24 @@ import java.io.IOException
 import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
 
-actual object ImportHelper {
+object JvmImportHelper : IImportHelper {
 
 	@Throws(IOException::class)
-	actual fun loadGPXFileFromArchive(source: Source): Pair<GpxFile, Long> {
+	override fun loadGPXFileFromArchive(source: Source): Pair<GpxFile, Long> {
 		val stream = ZipInputStream(SourceInputStream(source))
-		var entry: ZipEntry
+		var entry: ZipEntry?
 		while ((stream.nextEntry.also { entry = it }) != null) {
-			if (entry.name.endsWith(IndexConstants.GPX_FILE_EXT)) {
-				val fileSize = entry.size
+			val zipEntry = entry!!
+			if (zipEntry.name.endsWith(IndexConstants.GPX_FILE_EXT)) {
+				val fileSize = zipEntry.size
 				return Pair(loadGpxFile(stream.source()), fileSize)
 			}
-			if (entry.name.endsWith(IndexConstants.KML_SUFFIX)) {
+			if (zipEntry.name.endsWith(IndexConstants.KML_SUFFIX)) {
 				return loadGPXFileFromKml(stream.source())
 			}
 		}
 		return errorImport("Archive doesn't have GPX/KLM files")
 	}
 }
+
+actual val ImportHelper: IImportHelper = JvmImportHelper

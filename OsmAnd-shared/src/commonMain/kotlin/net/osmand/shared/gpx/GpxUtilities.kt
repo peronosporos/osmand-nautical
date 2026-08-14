@@ -12,8 +12,6 @@ import net.osmand.shared.KException
 import net.osmand.shared.data.KQuadRect
 import net.osmand.shared.extensions.currentTimeMillis
 import net.osmand.shared.gpx.GpxFile.Companion.XML_COLON
-import net.osmand.shared.gpx.GpxFormatter.formatDecimal
-import net.osmand.shared.gpx.GpxFormatter.formatLatLon
 import net.osmand.shared.gpx.GpxTrackAnalysis.TrackPointsAnalyser
 import net.osmand.shared.gpx.primitives.Author
 import net.osmand.shared.gpx.primitives.Bounds
@@ -107,10 +105,11 @@ object GpxUtilities {
 					"yyyy-MM-dd'T'HH:mmXXXXX",        // GPX_TIME_PATTERN_NO_SECONDS
 					"yyyy-MM-dd'T'HH:mm",             // GPX_TIME_PATTERN_NO_SECONDS_NO_TZ
 					"yyyy-MM-dd'T'HH:mm:ssXXXXX'Z'",  // GPX_TIME_PATTERN_TZ_EXTRA_Z
-					"yyyy-MM-dd'T'HH:mm:ssXXXX",      // GPX_TIME_PATTERN_TZ_NO_SEPARATOR
+					"yyyy-MM-dd'T'HH:mm:ssXXXX"       // GPX_TIME_PATTERN_TZ_NO_SEPARATOR
 					// Note: any pattern updates must be covered by ParseTimeTest.kt
-				);
+				)
 				for (pattern in patterns) {
+					@OptIn(FormatStringsInDatetimeFormats::class)
 					formats.add(DateTimeComponents.Format { byUnicodePattern(pattern) })
 				}
 			}
@@ -768,10 +767,10 @@ object GpxUtilities {
 	}
 
 	private fun writeWpt(serializer: XmlSerializer, p: WptPt, progress: IProgress?, file: GpxFile) {
-		serializer.attribute(null, "lat", formatLatLon(p.lat))
-		serializer.attribute(null, "lon", formatLatLon(p.lon))
+		serializer.attribute(null, "lat", GpxFormatter.formatLatLon(p.lat))
+		serializer.attribute(null, "lon", GpxFormatter.formatLatLon(p.lon))
 		if (!p.ele.isNaN()) {
-			writeNotNullText(serializer, POINT_ELEVATION, formatDecimal(p.ele))
+			writeNotNullText(serializer, POINT_ELEVATION, GpxFormatter.formatDecimal(p.ele))
 		}
 		if (p.time != 0L) {
 			writeNotNullText(serializer, "time", formatTime(p.time))
@@ -782,10 +781,10 @@ object GpxUtilities {
 		writeLinks(serializer, p.links)
 		writeNotNullText(serializer, "type", p.category)
 		if (!p.hdop.isNaN()) {
-			writeNotNullText(serializer, "hdop", formatDecimal(p.hdop.toDouble()))
+			writeNotNullText(serializer, "hdop", GpxFormatter.formatDecimal(p.hdop.toDouble()))
 		}
 		if (p.speed > 0) {
-			p.getExtensionsToWrite()[POINT_SPEED] = formatDecimal(p.speed.toDouble())
+			p.getExtensionsToWrite()[POINT_SPEED] = GpxFormatter.formatDecimal(p.speed.toDouble())
 		}
 		if (!p.heading.isNaN()) {
 			p.getExtensionsToWrite()["heading"] = round(p.heading).toString()
@@ -905,10 +904,10 @@ object GpxUtilities {
 
 	private fun writeBounds(serializer: XmlSerializer, bounds: Bounds) {
 		serializer.startTag(null, "bounds")
-		serializer.attribute(null, "minlat", formatLatLon(bounds.minlat))
-		serializer.attribute(null, "minlon", formatLatLon(bounds.minlon))
-		serializer.attribute(null, "maxlat", formatLatLon(bounds.maxlat))
-		serializer.attribute(null, "maxlon", formatLatLon(bounds.maxlon))
+		serializer.attribute(null, "minlat", GpxFormatter.formatLatLon(bounds.minlat))
+		serializer.attribute(null, "minlon", GpxFormatter.formatLatLon(bounds.minlon))
+		serializer.attribute(null, "maxlat", GpxFormatter.formatLatLon(bounds.maxlat))
+		serializer.attribute(null, "maxlon", GpxFormatter.formatLatLon(bounds.maxlon))
 		serializer.endTag(null, "bounds")
 	}
 

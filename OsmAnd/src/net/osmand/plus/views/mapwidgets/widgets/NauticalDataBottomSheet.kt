@@ -3,17 +3,16 @@ package net.osmand.plus.views.mapwidgets.widgets
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
-import android.view.ViewGroup
 import android.widget.TextView
 import net.osmand.plus.R
-import net.osmand.plus.plugins.nautical.ui.widgets.BaseNauticalBottomSheet
+import net.osmand.plus.plugins.nautical.ui.widgets.NauticalMenuBottomSheetDialogFragment
 import net.osmand.plus.plugins.nautical.NauticalPlugin
 import net.osmand.plus.plugins.nautical.engine.MarineState
 import net.osmand.plus.plugins.nautical.engine.SignalKPaths
 import net.osmand.plus.plugins.nautical.engine.SignalKUnitConverter
 import net.osmand.plus.views.mapwidgets.WidgetType
 
-class NauticalDataBottomSheet : BaseNauticalBottomSheet() {
+class NauticalDataBottomSheet : NauticalMenuBottomSheetDialogFragment() {
 
     private var type: WidgetType? = null
     private var graph: NauticalGraphView? = null
@@ -46,82 +45,86 @@ class NauticalDataBottomSheet : BaseNauticalBottomSheet() {
         }
     }
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
-        return inflater.inflate(R.layout.bottom_sheet_nautical_data, container, false)
-    }
-
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        super.onViewCreated(view, savedInstanceState)
-        // Red filter handled by BaseNauticalBottomSheet
-
-        val titleView = view.findViewById<TextView>(R.id.graph_title)
-        graph = view.findViewById(R.id.graph_view)
-
+    override fun createMenuItems(savedInstanceState: Bundle?) {
         if (type == null) {
             dismiss()
             return
         }
 
-        val name = when (type) {
-            WidgetType.NAUTICAL_DEPTH -> context?.getString(R.string.nautical_widget_depth_label)
-            WidgetType.NAUTICAL_WIND -> context?.getString(R.string.nautical_widget_wind_label)
-            WidgetType.NAUTICAL_VMG -> context?.getString(R.string.nautical_widget_vmg_label)
-            WidgetType.NAUTICAL_COG -> context?.getString(R.string.nautical_widget_cog_label)
-            WidgetType.NAUTICAL_SOG -> context?.getString(R.string.nautical_sog)
-            WidgetType.NAUTICAL_STW -> context?.getString(R.string.nautical_stw)
-            WidgetType.NAUTICAL_HEADING_MAGNETIC -> context?.getString(R.string.nautical_heading_magnetic)
-            WidgetType.NAUTICAL_LOG -> context?.getString(R.string.nautical_log)
-            WidgetType.NAUTICAL_TRIP_LOG -> context?.getString(R.string.nautical_trip_log)
-            WidgetType.NAUTICAL_ROLL -> context?.getString(R.string.nautical_roll)
-            WidgetType.NAUTICAL_PITCH -> context?.getString(R.string.nautical_pitch)
-            WidgetType.NAUTICAL_DEPTH_KEEL -> context?.getString(R.string.nautical_depth_keel)
-            WidgetType.NAUTICAL_WATER_TEMP -> context?.getString(R.string.nautical_water_temp)
-            WidgetType.NAUTICAL_OUTSIDE_TEMP -> context?.getString(R.string.nautical_outside_temp)
-            WidgetType.NAUTICAL_PRESSURE -> context?.getString(R.string.nautical_pressure)
-            WidgetType.NAUTICAL_ENGINE_RPM -> context?.getString(R.string.nautical_engine_rpm)
-            WidgetType.NAUTICAL_ENGINE_TEMP -> context?.getString(R.string.nautical_engine_temp)
-            WidgetType.NAUTICAL_BATTERY_VOLT -> context?.getString(R.string.nautical_battery_volt)
-            WidgetType.NAUTICAL_BATTERY_SOC -> context?.getString(R.string.nautical_battery_soc)
-            WidgetType.NAUTICAL_FUEL_LEVEL -> context?.getString(R.string.nautical_fuel_level)
-            WidgetType.NAUTICAL_FRESH_WATER_LEVEL -> context?.getString(R.string.nautical_fresh_water_level)
-            WidgetType.NAUTICAL_WASTE_WATER_LEVEL -> context?.getString(R.string.nautical_waste_water_level)
-            WidgetType.NAUTICAL_POLAR_RATIO -> context?.getString(R.string.nautical_polar_ratio)
-            WidgetType.NAUTICAL_ROT -> context?.getString(R.string.nautical_rot)
-            WidgetType.NAUTICAL_XTE -> context?.getString(R.string.nautical_xte)
-            WidgetType.NAUTICAL_TTW -> context?.getString(R.string.nautical_ttw)
-            WidgetType.NAUTICAL_DTW -> context?.getString(R.string.nautical_dtw)
-            WidgetType.NAUTICAL_ETA -> context?.getString(R.string.nautical_eta)
-            WidgetType.NAUTICAL_AWA -> context?.getString(R.string.nautical_awa)
-            WidgetType.NAUTICAL_AWS -> context?.getString(R.string.nautical_aws)
-            WidgetType.NAUTICAL_TWA -> context?.getString(R.string.nautical_twa)
-            WidgetType.NAUTICAL_TWD -> context?.getString(R.string.nautical_twd)
-            WidgetType.NAUTICAL_OIL_PRESSURE -> context?.getString(R.string.nautical_oil_pressure)
-            WidgetType.NAUTICAL_ENGINE_LOAD -> context?.getString(R.string.nautical_engine_load)
-            WidgetType.NAUTICAL_BATTERY_CURRENT -> context?.getString(R.string.nautical_battery_current)
-            WidgetType.NAUTICAL_SOLAR_CURRENT -> context?.getString(R.string.nautical_solar_current)
-            WidgetType.NAUTICAL_ENGINE_RUNTIME -> context?.getString(R.string.nautical_engine_runtime)
-            WidgetType.NAUTICAL_ENGINE_COOLANT -> context?.getString(R.string.nautical_engine_coolant)
-            WidgetType.NAUTICAL_HUMIDITY -> context?.getString(R.string.nautical_humidity)
-            WidgetType.NAUTICAL_AC_VOLTAGE -> context?.getString(R.string.nautical_ac_voltage)
-            WidgetType.NAUTICAL_AC_CURRENT -> context?.getString(R.string.nautical_ac_current)
-            WidgetType.NAUTICAL_AC_FREQUENCY -> context?.getString(R.string.nautical_ac_frequency)
-            else -> context?.getString(R.string.nautical_data_telemetry)
-        }
+        val name = getWidgetName()
         if (name != null) {
-            titleView?.text = context?.getString(R.string.nautical_history_title_pattern, name)
+            addTitleItem(getString(R.string.nautical_history_title_pattern, name))
+        }
+
+        val graphView = LayoutInflater.from(requireContext()).inflate(R.layout.bottom_sheet_nautical_data, null)
+        graph = graphView.findViewById(R.id.graph_view)
+        
+        // Hide standard header in graphView since we use addTitleItem
+        graphView.findViewById<View>(R.id.graph_title).visibility = View.GONE
+
+        items.add(net.osmand.plus.base.bottomsheetmenu.BaseBottomSheetItem.Builder().setCustomView(graphView).create())
+    }
+
+    private fun getWidgetName(): String? {
+        return when (type) {
+            WidgetType.NAUTICAL_DEPTH -> getString(R.string.nautical_widget_depth_label)
+            WidgetType.NAUTICAL_WIND -> getString(R.string.nautical_widget_wind_label)
+            WidgetType.NAUTICAL_VMG -> getString(R.string.nautical_widget_vmg_label)
+            WidgetType.NAUTICAL_COG -> getString(R.string.nautical_widget_cog_label)
+            WidgetType.NAUTICAL_SOG -> getString(R.string.nautical_sog)
+            WidgetType.NAUTICAL_STW -> getString(R.string.nautical_stw)
+            WidgetType.NAUTICAL_HEADING_MAGNETIC -> getString(R.string.nautical_heading_magnetic)
+            WidgetType.NAUTICAL_LOG -> getString(R.string.nautical_log)
+            WidgetType.NAUTICAL_TRIP_LOG -> getString(R.string.nautical_trip_log)
+            WidgetType.NAUTICAL_ROLL -> getString(R.string.nautical_roll)
+            WidgetType.NAUTICAL_PITCH -> getString(R.string.nautical_pitch)
+            WidgetType.NAUTICAL_DEPTH_KEEL -> getString(R.string.nautical_depth_keel)
+            WidgetType.NAUTICAL_WATER_TEMP -> getString(R.string.nautical_water_temp)
+            WidgetType.NAUTICAL_OUTSIDE_TEMP -> getString(R.string.nautical_outside_temp)
+            WidgetType.NAUTICAL_PRESSURE -> getString(R.string.nautical_pressure)
+            WidgetType.NAUTICAL_ENGINE_RPM -> getString(R.string.nautical_engine_rpm)
+            WidgetType.NAUTICAL_ENGINE_TEMP -> getString(R.string.nautical_engine_temp)
+            WidgetType.NAUTICAL_BATTERY_VOLT -> getString(R.string.nautical_battery_volt)
+            WidgetType.NAUTICAL_BATTERY_SOC -> getString(R.string.nautical_battery_soc)
+            WidgetType.NAUTICAL_FUEL_LEVEL -> getString(R.string.nautical_fuel_level)
+            WidgetType.NAUTICAL_FRESH_WATER_LEVEL -> getString(R.string.nautical_fresh_water_level)
+            WidgetType.NAUTICAL_WASTE_WATER_LEVEL -> getString(R.string.nautical_waste_water_level)
+            WidgetType.NAUTICAL_POLAR_RATIO -> getString(R.string.nautical_polar_ratio)
+            WidgetType.NAUTICAL_ROT -> getString(R.string.nautical_rot)
+            WidgetType.NAUTICAL_XTE -> getString(R.string.nautical_xte)
+            WidgetType.NAUTICAL_TTW -> getString(R.string.nautical_ttw)
+            WidgetType.NAUTICAL_DTW -> getString(R.string.nautical_dtw)
+            WidgetType.NAUTICAL_ETA -> getString(R.string.nautical_eta)
+            WidgetType.NAUTICAL_AWA -> getString(R.string.nautical_awa)
+            WidgetType.NAUTICAL_AWS -> getString(R.string.nautical_aws)
+            WidgetType.NAUTICAL_TWA -> getString(R.string.nautical_twa)
+            WidgetType.NAUTICAL_TWD -> getString(R.string.nautical_twd)
+            WidgetType.NAUTICAL_OIL_PRESSURE -> getString(R.string.nautical_oil_pressure)
+            WidgetType.NAUTICAL_ENGINE_LOAD -> getString(R.string.nautical_engine_load)
+            WidgetType.NAUTICAL_BATTERY_CURRENT -> getString(R.string.nautical_battery_current)
+            WidgetType.NAUTICAL_SOLAR_CURRENT -> getString(R.string.nautical_solar_current)
+            WidgetType.NAUTICAL_ENGINE_RUNTIME -> getString(R.string.nautical_engine_runtime)
+            WidgetType.NAUTICAL_ENGINE_COOLANT -> getString(R.string.nautical_engine_coolant)
+            WidgetType.NAUTICAL_HUMIDITY -> getString(R.string.nautical_humidity)
+            WidgetType.NAUTICAL_AC_VOLTAGE -> getString(R.string.nautical_ac_voltage)
+            WidgetType.NAUTICAL_AC_CURRENT -> getString(R.string.nautical_ac_current)
+            WidgetType.NAUTICAL_AC_FREQUENCY -> getString(R.string.nautical_ac_frequency)
+            else -> getString(R.string.nautical_data_telemetry)
         }
     }
 
     override fun onStart() {
         super.onStart()
 
-        myListener = { _ ->
-            val now = System.currentTimeMillis()
-            if (now - lastUpdateTime > throttleMs) {
-                lastUpdateTime = now
-                view?.post {
-                    if (!isAdded) return@post
-                    updateGraphData()
+        if (myListener == null) {
+            myListener = { _ ->
+                val now = System.currentTimeMillis()
+                if (now - lastUpdateTime > throttleMs) {
+                    lastUpdateTime = now
+                    view?.post {
+                        if (!isAdded) return@post
+                        updateGraphData()
+                    }
                 }
             }
         }
@@ -139,7 +142,7 @@ class NauticalDataBottomSheet : BaseNauticalBottomSheet() {
         if (!isAdded) return
         val engine = NauticalPlugin.engine ?: return
         val g = graph ?: return
-        val ctx = context ?: return
+        val ctx = requireContext()
         val instance = arguments?.getString(WIDGET_INSTANCE) ?: "0"
 
         val path = when (type) {

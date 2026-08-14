@@ -119,8 +119,6 @@ object TrackFiltersHelper {
 					trackFilterType,
 					filterChangedListener)
 			}
-
-			else -> throw IllegalArgumentException("Unknown filterType $trackFilterType")
 		}
 		return newFilter
 	}
@@ -146,8 +144,6 @@ object TrackFiltersHelper {
 			SINGLE_FIELD_LIST -> {
 				ListTrackFilter::class
 			}
-
-			else -> throw IllegalArgumentException("Unknown filterType $trackFilterType")
 		}
 		return filterClass
 	}

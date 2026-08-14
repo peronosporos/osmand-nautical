@@ -1,7 +1,6 @@
 package net.osmand.shared.gpx
 
 import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.ClassDiscriminatorMode
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.modules.SerializersModule
 import kotlinx.serialization.modules.polymorphic
@@ -49,7 +48,6 @@ class SmartFolderHelper {
 			useArrayPolymorphism = false
 			encodeDefaults = true
 			classDiscriminator = "className"
-			classDiscriminatorMode = ClassDiscriminatorMode.NONE
 			serializersModule = trackFilterSerializersModule
 		}
 	}

@@ -1,23 +1,23 @@
 package net.osmand.shared.api
 
-internal actual class NetworkProxyState actual constructor() {
+internal class AndroidNetworkProxyState : NetworkProxyState {
 
 	private var proxyData: NetworkProxyData? = null
 
-	actual val proxyHost: String?
+	override val proxyHost: String?
 		get() = proxyData?.host
 
-	actual val proxyPort: Int
+	override val proxyPort: Int
 		get() = proxyData?.port ?: 0
 
-	actual val ktorProxyData: NetworkProxyData?
+	override val ktorProxyData: NetworkProxyData?
 		get() = proxyData
 
-	actual fun hasProxy(): Boolean {
+	override fun hasProxy(): Boolean {
 		return proxyData != null
 	}
 
-	actual fun setProxy(host: String?, port: Int) {
+	override fun setProxy(host: String?, port: Int) {
 		proxyData = if (!host.isNullOrEmpty() && port > 0) {
 			NetworkProxyData(host, port)
 		} else {
@@ -25,3 +25,5 @@ internal actual class NetworkProxyState actual constructor() {
 		}
 	}
 }
+
+internal actual fun NetworkProxyState(): NetworkProxyState = AndroidNetworkProxyState()

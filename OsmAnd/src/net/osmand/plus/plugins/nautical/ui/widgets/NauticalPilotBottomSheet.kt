@@ -20,6 +20,7 @@ import com.google.android.material.button.MaterialButtonToggleGroup
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import net.osmand.plus.R
+import net.osmand.plus.base.bottomsheetmenu.BaseBottomSheetItem
 import net.osmand.plus.plugins.nautical.NauticalPlugin
 import net.osmand.plus.plugins.nautical.engine.ConnectionStatus
 import net.osmand.plus.plugins.nautical.engine.MarineState
@@ -103,78 +104,7 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
         }
     }
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        isCancelable = true
-    }
-
-    override fun onStart() {
-        super.onStart()
-        dialog?.window?.setBackgroundDrawableResource(android.R.color.transparent)
-        (dialog as? com.google.android.material.bottomsheet.BottomSheetDialog)?.let { sheetDialog ->
-            sheetDialog.setCanceledOnTouchOutside(true)
-            sheetDialog.findViewById<View>(com.google.android.material.R.id.design_bottom_sheet)?.let { bottomSheet ->
-                val behavior = com.google.android.material.bottomsheet.BottomSheetBehavior.from(bottomSheet)
-                val metrics = resources.displayMetrics
-                val isLandscape = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-                val screenHeightDp = metrics.heightPixels / metrics.density
-
-                if (isLandscape || (screenHeightDp < 600)) {
-                    behavior.halfExpandedRatio = 0.8f
-                    behavior.state = com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_EXPANDED
-                } else {
-                    behavior.halfExpandedRatio = 0.6f
-                    behavior.state = com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_COLLAPSED
-                }
-                behavior.isDraggable = true
-                behavior.isHideable = true
-            }
-        }
-    }
-
-    private fun syncUiWithState() {
-        refreshTacticalButtons()
-    }
-
-    private fun refreshTacticalButtons() {
-        val state = NauticalPlugin.engine?.getCurrentState()
-        val isProa = (settings.NAUTICAL_VESSEL_TYPE.get() == VesselType.PROA)
-        
-        // ITEM 9 FIX: Hysteresis for Tack/Gybe labels
-        val upwind = state?.windDirectionApparent?.let { awa ->
-            val deg = Math.toDegrees(awa)
-            // Use 100 deg threshold when armed, 80 when not, to prevent label flipping during turn
-            val threshold = if (isArmedPort || isArmedStbd) 100.0 else 80.0
-            kotlin.math.abs(deg) < threshold
-        } ?: true
-
-        val defaultColor = ContextCompat.getColor(requireContext(), if (nightMode) R.color.text_color_primary_dark_v2 else R.color.text_color_primary_light_v2)
-        val armedColor = ContextCompat.getColor(requireContext(), R.color.text_color_negative)
-
-        if (isArmedPort) {
-            minus1Btn.setTextColor(armedColor)
-            minus1Btn.text = if (isProa) getString(R.string.nautical_shunt) else if (upwind) getString(R.string.nautical_tack) else getString(R.string.nautical_gybe)
-        } else {
-            minus1Btn.setTextColor(defaultColor)
-            minus1Btn.text = if (isProa) getString(R.string.nautical_shunt) else "-1"
-        }
-
-        if (isArmedStbd) {
-            plus1Btn.setTextColor(armedColor)
-            plus1Btn.text = if (isProa) getString(R.string.nautical_shunt) else if (upwind) getString(R.string.nautical_tack) else getString(R.string.nautical_gybe)
-        } else {
-            plus1Btn.setTextColor(defaultColor)
-            plus1Btn.text = if (isProa) getString(R.string.nautical_shunt) else "+1"
-        }
-    }
-
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
-        return inflater.inflate(R.layout.nautical_pilot_bottom_sheet, container, false)
-    }
-
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        super.onViewCreated(view, savedInstanceState)
-
+    override fun createMenuItems(savedInstanceState: Bundle?) {
         val engine = NauticalPlugin.engine
         val autopilot = NauticalPlugin.autopilot
         val plugin = NauticalPlugin.getInstance()
@@ -184,16 +114,20 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
             return
         }
 
-        errorLinear = view.findViewById(R.id.heading_error_linear)
-        arcView = view.findViewById(R.id.heading_arc_view)
-        steeringCard = view.findViewById(R.id.steering_card)
-        authWarning = view.findViewById(R.id.auth_warning)
-        modeToggleGroup = view.findViewById(R.id.mode_toggle_group)
-        lockBtn = view.findViewById(R.id.btn_lock_unlock)
-        rudderView = view.findViewById(R.id.rudder_view)
-        predictiveActiveImg = view.findViewById(R.id.img_predictive_active)
-        minus1Btn = view.findViewById(R.id.btn_minus_1)
-        plus1Btn = view.findViewById(R.id.btn_plus_1)
+        addTitleItem(getString(R.string.nautical_pilot_title))
+
+        val customView = LayoutInflater.from(requireContext()).inflate(R.layout.nautical_pilot_bottom_sheet, null)
+
+        errorLinear = customView.findViewById(R.id.heading_error_linear)
+        arcView = customView.findViewById(R.id.heading_arc_view)
+        steeringCard = customView.findViewById(R.id.steering_card)
+        authWarning = customView.findViewById(R.id.auth_warning)
+        modeToggleGroup = customView.findViewById(R.id.mode_toggle_group)
+        lockBtn = customView.findViewById(R.id.btn_lock_unlock)
+        rudderView = customView.findViewById(R.id.rudder_view)
+        predictiveActiveImg = customView.findViewById(R.id.img_predictive_active)
+        minus1Btn = customView.findViewById(R.id.btn_minus_1)
+        plus1Btn = customView.findViewById(R.id.btn_plus_1)
         
         authWarning.setOnClickListener {
             net.osmand.plus.settings.fragments.BaseSettingsFragment.showInstance(requireActivity(), net.osmand.plus.settings.fragments.SettingsScreenType.NAUTICAL_SETTINGS)
@@ -211,17 +145,17 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
             }
         }
 
-        minus10Btn = view.findViewById(R.id.btn_minus_10)
-        plus10Btn = view.findViewById(R.id.btn_plus_10)
-        stopBtn = view.findViewById(R.id.btn_mode_stop)
-        windBtn = view.findViewById(R.id.btn_mode_wind)
-        routeBtn = view.findViewById(R.id.btn_mode_route)
+        minus10Btn = customView.findViewById(R.id.btn_minus_10)
+        plus10Btn = customView.findViewById(R.id.btn_plus_10)
+        stopBtn = customView.findViewById(R.id.btn_mode_stop)
+        windBtn = customView.findViewById(R.id.btn_mode_wind)
+        routeBtn = customView.findViewById(R.id.btn_mode_route)
 
-        val advancedBtn = view.findViewById<View>(R.id.btn_advanced)
-        val maneuversBtn = view.findViewById<View>(R.id.btn_maneuvers)
-        val toolCenterBtn = view.findViewById<View>(R.id.btn_tool_center)
-        val switchesBtn = view.findViewById<View>(R.id.btn_switches)
-        val systemsBtn = view.findViewById<View>(R.id.btn_systems)
+        val advancedBtn = customView.findViewById<View>(R.id.btn_advanced)
+        val maneuversBtn = customView.findViewById<View>(R.id.btn_maneuvers)
+        val toolCenterBtn = customView.findViewById<View>(R.id.btn_tool_center)
+        val switchesBtn = customView.findViewById<View>(R.id.btn_switches)
+        val systemsBtn = customView.findViewById<View>(R.id.btn_systems)
 
         isCourseLocked = app.settings.NAUTICAL_LOCK_TOUCH_DURING_MANEUVERS.get()
         updateLockButton()
@@ -229,7 +163,7 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
         lockBtn.setOnClickListener {
             isCourseLocked = !isCourseLocked
             updateLockButton()
-            view.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
+            customView.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
         }
 
         routeBtn.setOnLongClickListener {
@@ -370,7 +304,7 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
                         }
                     }
                     actualDeg?.let { plugin?.speakHeading(it.toInt()) }
-                    view.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS)
+                    customView.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS)
                 }
             }
         }
@@ -445,6 +379,68 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
 
         // Apply Touch Guard to HeadingArcView with explicit lock check
         NauticalTouchGuard.apply(arcView, isLockedCheck = { isCourseLocked })
+
+        items.add(BaseBottomSheetItem.Builder().setCustomView(customView).create())
+    }
+
+    override fun onStart() {
+        super.onStart()
+        dialog?.window?.setBackgroundDrawableResource(android.R.color.transparent)
+        (dialog as? com.google.android.material.bottomsheet.BottomSheetDialog)?.let { sheetDialog ->
+            sheetDialog.setCanceledOnTouchOutside(true)
+            sheetDialog.findViewById<View>(com.google.android.material.R.id.design_bottom_sheet)?.let { bottomSheet ->
+                val behavior = com.google.android.material.bottomsheet.BottomSheetBehavior.from(bottomSheet)
+                val metrics = resources.displayMetrics
+                val isLandscape = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+                val screenHeightDp = metrics.heightPixels / metrics.density
+
+                if (isLandscape || (screenHeightDp < 600)) {
+                    behavior.halfExpandedRatio = 0.8f
+                    behavior.state = com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_EXPANDED
+                } else {
+                    behavior.halfExpandedRatio = 0.6f
+                    behavior.state = com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_COLLAPSED
+                }
+                behavior.isDraggable = true
+                behavior.isHideable = true
+            }
+        }
+    }
+
+    private fun syncUiWithState() {
+        refreshTacticalButtons()
+    }
+
+    private fun refreshTacticalButtons() {
+        val state = NauticalPlugin.engine?.getCurrentState()
+        val isProa = (settings.NAUTICAL_VESSEL_TYPE.get() == VesselType.PROA)
+        
+        // ITEM 9 FIX: Hysteresis for Tack/Gybe labels
+        val upwind = state?.windDirectionApparent?.let { awa ->
+            val deg = Math.toDegrees(awa)
+            // Use 100 deg threshold when armed, 80 when not, to prevent label flipping during turn
+            val threshold = if (isArmedPort || isArmedStbd) 100.0 else 80.0
+            kotlin.math.abs(deg) < threshold
+        } ?: true
+
+        val defaultColor = ContextCompat.getColor(requireContext(), if (nightMode) R.color.text_color_primary_dark_v2 else R.color.text_color_primary_light_v2)
+        val armedColor = ContextCompat.getColor(requireContext(), R.color.text_color_negative)
+
+        if (isArmedPort) {
+            minus1Btn.setTextColor(armedColor)
+            minus1Btn.text = if (isProa) getString(R.string.nautical_shunt) else if (upwind) getString(R.string.nautical_tack) else getString(R.string.nautical_gybe)
+        } else {
+            minus1Btn.setTextColor(defaultColor)
+            minus1Btn.text = if (isProa) getString(R.string.nautical_shunt) else "-1"
+        }
+
+        if (isArmedStbd) {
+            plus1Btn.setTextColor(armedColor)
+            plus1Btn.text = if (isProa) getString(R.string.nautical_shunt) else if (upwind) getString(R.string.nautical_tack) else getString(R.string.nautical_gybe)
+        } else {
+            plus1Btn.setTextColor(defaultColor)
+            plus1Btn.text = if (isProa) getString(R.string.nautical_shunt) else "+1"
+        }
     }
 
     private fun updateLockButton() {

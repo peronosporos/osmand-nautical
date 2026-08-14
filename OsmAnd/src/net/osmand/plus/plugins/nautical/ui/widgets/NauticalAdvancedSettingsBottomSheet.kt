@@ -19,6 +19,7 @@ import androidx.lifecycle.lifecycleScope
 import android.widget.Button
 import android.widget.ProgressBar
 import net.osmand.plus.R
+import net.osmand.plus.base.bottomsheetmenu.BaseBottomSheetItem
 import net.osmand.plus.plugins.nautical.NauticalPlugin
 import net.osmand.plus.plugins.nautical.engine.SignalKUnitConverter
 import net.osmand.plus.plugins.nautical.ui.NauticalTouchGuard
@@ -30,25 +31,7 @@ class NauticalAdvancedSettingsBottomSheet : BaseNauticalBottomSheet() {
         fun newInstance() = NauticalAdvancedSettingsBottomSheet()
     }
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
-        return themedInflater.inflate(R.layout.bottom_sheet_nautical_advanced, container, false)
-    }
-
-    override fun onStart() {
-        super.onStart()
-        (dialog as? com.google.android.material.bottomsheet.BottomSheetDialog)?.let { sheetDialog ->
-            sheetDialog.setCanceledOnTouchOutside(true)
-            sheetDialog.findViewById<View>(com.google.android.material.R.id.design_bottom_sheet)?.let { bottomSheet ->
-                val behavior = com.google.android.material.bottomsheet.BottomSheetBehavior.from(bottomSheet)
-                behavior.isHideable = true
-                behavior.state = com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_EXPANDED
-            }
-        }
-    }
-
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        super.onViewCreated(view, savedInstanceState)
-
+    override fun createMenuItems(savedInstanceState: Bundle?) {
         val autopilot = NauticalPlugin.autopilot ?: return
         val plugin = NauticalPlugin.getInstance() ?: return
         
@@ -57,7 +40,11 @@ class NauticalAdvancedSettingsBottomSheet : BaseNauticalBottomSheet() {
         val arbitrator = net.osmand.plus.plugins.nautical.engine.NauticalHelmArbitrator.getInstance(app)
         val isEmergencyLocked = arbitrator.isLockedByEmergency()
 
-        val safetyLock = view.findViewById<SwitchMaterial>(R.id.safety_lock)
+        addTitleItem(getString(R.string.nautical_advanced_settings))
+
+        val customView = LayoutInflater.from(requireContext()).inflate(R.layout.bottom_sheet_nautical_advanced, null)
+        
+        val safetyLock = customView.findViewById<SwitchMaterial>(R.id.safety_lock)
 
         if (isEmergencyLocked) {
             safetyLock.isChecked = true
@@ -66,32 +53,32 @@ class NauticalAdvancedSettingsBottomSheet : BaseNauticalBottomSheet() {
             safetyLock.setTextColor(ContextCompat.getColor(requireContext(), R.color.text_color_negative))
         }
 
-        val sliderRudderGain = view.findViewById<Slider>(R.id.slider_rudder_gain)
-        val sliderCounterRudder = view.findViewById<Slider>(R.id.slider_counter_rudder)
-        val sliderAutoTrim = view.findViewById<Slider>(R.id.slider_auto_trim)
-        val sliderFilterSensitivity = view.findViewById<Slider>(R.id.slider_filter_sensitivity)
-        val sliderRudderLimit = view.findViewById<Slider>(R.id.slider_rudder_limit)
-        val sliderOffCourse = view.findViewById<Slider>(R.id.slider_off_course)
-        val sliderXteThreshold = view.findViewById<Slider>(R.id.slider_xte_threshold)
-        val sliderKeelOffset = view.findViewById<Slider>(R.id.slider_keel_offset)
-        val txtKeelOffsetValue = view.findViewById<android.widget.TextView>(R.id.txt_value_keel_offset)
-        val sliderWindAlignment = view.findViewById<Slider>(R.id.slider_wind_alignment)
-        val txtWindAlignmentValue = view.findViewById<android.widget.TextView>(R.id.txt_value_wind_alignment)
-        val txtXteThresholdValue = view.findViewById<android.widget.TextView>(R.id.txt_value_xte_threshold)
-        val vesselTypeToggle = view.findViewById<com.google.android.material.button.MaterialButtonToggleGroup>(R.id.vessel_type_toggle)
+        val sliderRudderGain = customView.findViewById<Slider>(R.id.slider_rudder_gain)
+        val sliderCounterRudder = customView.findViewById<Slider>(R.id.slider_counter_rudder)
+        val sliderAutoTrim = customView.findViewById<Slider>(R.id.slider_auto_trim)
+        val sliderFilterSensitivity = customView.findViewById<Slider>(R.id.slider_filter_sensitivity)
+        val sliderRudderLimit = customView.findViewById<Slider>(R.id.slider_rudder_limit)
+        val sliderOffCourse = customView.findViewById<Slider>(R.id.slider_off_course)
+        val sliderXteThreshold = customView.findViewById<Slider>(R.id.slider_xte_threshold)
+        val sliderKeelOffset = customView.findViewById<Slider>(R.id.slider_keel_offset)
+        val txtKeelOffsetValue = customView.findViewById<android.widget.TextView>(R.id.txt_value_keel_offset)
+        val sliderWindAlignment = customView.findViewById<Slider>(R.id.slider_wind_alignment)
+        val txtWindAlignmentValue = customView.findViewById<android.widget.TextView>(R.id.txt_value_wind_alignment)
+        val txtXteThresholdValue = customView.findViewById<android.widget.TextView>(R.id.txt_value_xte_threshold)
+        val vesselTypeToggle = customView.findViewById<com.google.android.material.button.MaterialButtonToggleGroup>(R.id.vessel_type_toggle)
 
-        val sliderSeaState = view.findViewById<Slider>(R.id.slider_sea_state)
-        val txtSeaStateValue = view.findViewById<android.widget.TextView>(R.id.txt_value_sea_state)
-        val switchAutoSeaState = view.findViewById<SwitchMaterial>(R.id.switch_auto_sea_state)
-        val sliderWaveBias = view.findViewById<Slider>(R.id.slider_wave_bias)
-        val sliderActuatorThreshold = view.findViewById<Slider>(R.id.slider_actuator_threshold)
+        val sliderSeaState = customView.findViewById<Slider>(R.id.slider_sea_state)
+        val txtSeaStateValue = customView.findViewById<android.widget.TextView>(R.id.txt_value_sea_state)
+        val switchAutoSeaState = customView.findViewById<SwitchMaterial>(R.id.switch_auto_sea_state)
+        val sliderWaveBias = customView.findViewById<Slider>(R.id.slider_wave_bias)
+        val sliderActuatorThreshold = customView.findViewById<Slider>(R.id.slider_actuator_threshold)
 
-        val tabLayout = view.findViewById<TabLayout>(R.id.tab_layout)
-        val containerTuning = view.findViewById<View>(R.id.container_tuning)
-        val containerLimits = view.findViewById<View>(R.id.container_limits)
-        val containerVessel = view.findViewById<View>(R.id.container_vessel)
-        val containerEnv = view.findViewById<View>(R.id.container_env)
-        val containerPypilot = view.findViewById<View>(R.id.container_pypilot)
+        val tabLayout = customView.findViewById<TabLayout>(R.id.tab_layout)
+        val containerTuning = customView.findViewById<View>(R.id.container_tuning)
+        val containerLimits = customView.findViewById<View>(R.id.container_limits)
+        val containerVessel = customView.findViewById<View>(R.id.container_vessel)
+        val containerEnv = customView.findViewById<View>(R.id.container_env)
+        val containerPypilot = customView.findViewById<View>(R.id.container_pypilot)
 
         tabLayout.addTab(tabLayout.newTab().setText("Tuning"))
         tabLayout.addTab(tabLayout.newTab().setText("Limits"))
@@ -114,19 +101,19 @@ class NauticalAdvancedSettingsBottomSheet : BaseNauticalBottomSheet() {
             override fun onTabReselected(tab: TabLayout.Tab?) {}
         })
 
-        val sliderP = view.findViewById<Slider>(R.id.slider_p)
-        val sliderI = view.findViewById<Slider>(R.id.slider_i)
-        val sliderD = view.findViewById<Slider>(R.id.slider_d)
-        val sliderDD = view.findViewById<Slider>(R.id.slider_dd)
-        val sliderPR = view.findViewById<Slider>(R.id.slider_pr)
-        val sliderFF = view.findViewById<Slider>(R.id.slider_ff)
-        val sliderWG = view.findViewById<Slider>(R.id.slider_wg)
-        val sliderDeadzone = view.findViewById<Slider>(R.id.slider_deadzone)
+        val sliderP = customView.findViewById<Slider>(R.id.slider_p)
+        val sliderI = customView.findViewById<Slider>(R.id.slider_i)
+        val sliderD = customView.findViewById<Slider>(R.id.slider_d)
+        val sliderDD = customView.findViewById<Slider>(R.id.slider_dd)
+        val sliderPR = customView.findViewById<Slider>(R.id.slider_pr)
+        val sliderFF = customView.findViewById<Slider>(R.id.slider_ff)
+        val sliderWG = customView.findViewById<Slider>(R.id.slider_wg)
+        val sliderDeadzone = customView.findViewById<Slider>(R.id.slider_deadzone)
         
-        val progressCompass = view.findViewById<ProgressBar>(R.id.progress_compass)
-        val progressRudder = view.findViewById<ProgressBar>(R.id.progress_rudder)
-        val btnCalibrateCompass = view.findViewById<Button>(R.id.btn_calibrate_compass)
-        val btnCalibrateRudder = view.findViewById<Button>(R.id.btn_calibrate_rudder)
+        val progressCompass = customView.findViewById<ProgressBar>(R.id.progress_compass)
+        val progressRudder = customView.findViewById<ProgressBar>(R.id.progress_rudder)
+        val btnCalibrateCompass = customView.findViewById<Button>(R.id.btn_calibrate_compass)
+        val btnCalibrateRudder = customView.findViewById<Button>(R.id.btn_calibrate_rudder)
 
         // Apply Touch Guards to ALL interactive elements, but with the safety lock logic
         val allSliders = listOf(
@@ -159,7 +146,7 @@ class NauticalAdvancedSettingsBottomSheet : BaseNauticalBottomSheet() {
             }
         }
 
-        val chart = view.findViewById<LineChart>(R.id.pid_preview_chart)
+        val chart = customView.findViewById<LineChart>(R.id.pid_preview_chart)
 
         // Init values from settings
         sliderRudderGain.value = (settings.NAUTICAL_RUDDER_GAIN.get() as Float).coerceIn(sliderRudderGain.valueFrom, sliderRudderGain.valueTo)
@@ -219,7 +206,7 @@ class NauticalAdvancedSettingsBottomSheet : BaseNauticalBottomSheet() {
         sliderAutoTrim.addOnChangeListener { _, _, _ -> updateChart() }
         updateChart()
 
-        view.findViewById<Button>(R.id.btn_save).setOnClickListener {
+        customView.findViewById<Button>(R.id.btn_save).setOnClickListener {
             settings.NAUTICAL_RUDDER_GAIN.set(sliderRudderGain.value)
             settings.NAUTICAL_COUNTER_RUDDER.set(sliderCounterRudder.value)
             settings.NAUTICAL_AUTO_TRIM.set(sliderAutoTrim.value)
@@ -241,8 +228,8 @@ class NauticalAdvancedSettingsBottomSheet : BaseNauticalBottomSheet() {
             dismissAllowingStateLoss()
         }
 
-        view.findViewById<Button>(R.id.btn_cancel).setOnClickListener { dismissAllowingStateLoss() }
-        view.findViewById<Button>(R.id.btn_reset_defaults).setOnClickListener {
+        customView.findViewById<Button>(R.id.btn_cancel).setOnClickListener { dismissAllowingStateLoss() }
+        customView.findViewById<Button>(R.id.btn_reset_defaults).setOnClickListener {
             sliderRudderGain.value = (settings.NAUTICAL_RUDDER_GAIN.defaultValue as Float)
             sliderCounterRudder.value = (settings.NAUTICAL_COUNTER_RUDDER.defaultValue as Float)
             sliderAutoTrim.value = (settings.NAUTICAL_AUTO_TRIM.defaultValue as Float)
@@ -269,12 +256,26 @@ class NauticalAdvancedSettingsBottomSheet : BaseNauticalBottomSheet() {
 
         btnCalibrateCompass.setOnClickListener { autopilot.startPypilotCalibration("compass") }
         btnCalibrateRudder.setOnClickListener { autopilot.startPypilotCalibration("rudder") }
-        view.findViewById<Button>(R.id.btn_stop_compass_calib)?.setOnClickListener { autopilot.stopPypilotCalibration("compass") }
-        view.findViewById<Button>(R.id.btn_stop_rudder_calib)?.setOnClickListener { autopilot.stopPypilotCalibration("rudder") }
-        view.findViewById<Button>(R.id.btn_select_pypilot_profile)?.setOnClickListener {
+        customView.findViewById<Button>(R.id.btn_stop_compass_calib)?.setOnClickListener { autopilot.stopPypilotCalibration("compass") }
+        customView.findViewById<Button>(R.id.btn_stop_rudder_calib)?.setOnClickListener { autopilot.stopPypilotCalibration("rudder") }
+        customView.findViewById<Button>(R.id.btn_select_pypilot_profile)?.setOnClickListener {
             val profiles = arrayOf("Default", "Slow", "Heavy", "Racing")
             androidx.appcompat.app.AlertDialog.Builder(requireContext()).setTitle(R.string.nautical_pypilot_profile)
                 .setItems(profiles) { _, which -> autopilot.setPypilotProfile(profiles[which]) }.show()
+        }
+
+        items.add(BaseBottomSheetItem.Builder().setCustomView(customView).create())
+    }
+
+    override fun onStart() {
+        super.onStart()
+        (dialog as? com.google.android.material.bottomsheet.BottomSheetDialog)?.let { sheetDialog ->
+            sheetDialog.setCanceledOnTouchOutside(true)
+            sheetDialog.findViewById<View>(com.google.android.material.R.id.design_bottom_sheet)?.let { bottomSheet ->
+                val behavior = com.google.android.material.bottomsheet.BottomSheetBehavior.from(bottomSheet)
+                behavior.isHideable = true
+                behavior.state = com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_EXPANDED
+            }
         }
     }
 

@@ -5,7 +5,7 @@ import platform.Foundation.NSNumber
 import platform.Foundation.NSNumberFormatter
 import platform.Foundation.NSNumberFormatterDecimalStyle
 
-actual object GpxFormatter {
+object IosGpxFormatter : IGpxFormatter {
 
     private val LAT_LON_FORMAT: NSNumberFormatter = NSNumberFormatter().apply {
         numberStyle = NSNumberFormatterDecimalStyle
@@ -25,10 +25,12 @@ actual object GpxFormatter {
     }
 
     // 0.00#####
-    actual fun formatLatLon(value: Double): String =
+    override fun formatLatLon(value: Double): String =
         LAT_LON_FORMAT.stringFromNumber(NSNumber(value)) ?: ""
 
     // #.#
-    actual fun formatDecimal(value: Double): String =
+    override fun formatDecimal(value: Double): String =
         DECIMAL_FORMAT.stringFromNumber(NSNumber(value)) ?: ""
 }
+
+actual val GpxFormatter: IGpxFormatter = IosGpxFormatter

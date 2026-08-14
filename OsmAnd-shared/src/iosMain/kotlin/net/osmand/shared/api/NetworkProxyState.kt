@@ -7,18 +7,18 @@ import platform.CoreFoundation.CFDictionaryContainsKey
 import platform.CoreFoundation.CFRelease
 
 @OptIn(ExperimentalForeignApi::class)
-internal actual class NetworkProxyState actual constructor() {
+internal class IosNetworkProxyState : NetworkProxyState {
 
-	actual val proxyHost: String?
+	override val proxyHost: String?
 		get() = null
 
-	actual val proxyPort: Int
+	override val proxyPort: Int
 		get() = 0
 
-	actual val ktorProxyData: NetworkProxyData?
+	override val ktorProxyData: NetworkProxyData?
 		get() = null
 
-	actual fun hasProxy(): Boolean {
+	override fun hasProxy(): Boolean {
 		val httpProxyKey = kCFNetworkProxiesHTTPProxy ?: return false
 		val settings = CFNetworkCopySystemProxySettings() ?: return false
 		return try {
@@ -28,7 +28,9 @@ internal actual class NetworkProxyState actual constructor() {
 		}
 	}
 
-	actual fun setProxy(host: String?, port: Int) {
+	override fun setProxy(host: String?, port: Int) {
 		// Proxy is configured externally on iOS.
 	}
 }
+
+internal actual fun NetworkProxyState(): NetworkProxyState = IosNetworkProxyState()
