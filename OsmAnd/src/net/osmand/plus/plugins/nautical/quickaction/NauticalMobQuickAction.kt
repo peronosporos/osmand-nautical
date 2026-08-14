@@ -1,5 +1,6 @@
 package net.osmand.plus.plugins.nautical.quickaction
 
+import androidx.annotation.Keep
 import android.os.Bundle
 import net.osmand.data.LatLon
 import net.osmand.plus.R
@@ -10,7 +11,8 @@ import net.osmand.plus.quickaction.QuickAction
 import net.osmand.plus.quickaction.QuickActionIds.NAUTICAL_MOB_ACTION_ID
 import net.osmand.plus.quickaction.QuickActionType
 
-class NauticalMobQuickAction : QuickAction(TYPE) {
+@Keep
+class NauticalMobQuickAction : QuickAction {
 
     companion object {
         @JvmField
@@ -19,6 +21,12 @@ class NauticalMobQuickAction : QuickAction(TYPE) {
             .iconRes(R.drawable.ic_action_alert)
             .category(QuickActionType.MAP_INTERACTIONS)
     }
+
+    @Keep
+    constructor() : super(TYPE)
+
+    @Keep
+    constructor(action: QuickAction) : super(action)
 
     override fun execute(mapActivity: MapActivity, params: Bundle?) {
         val plugin = PluginsHelper.getPlugin(NauticalPlugin::class.java)

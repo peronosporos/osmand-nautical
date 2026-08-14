@@ -1,5 +1,6 @@
 package net.osmand.plus.plugins.nautical.quickaction
 
+import androidx.annotation.Keep
 import android.os.Bundle
 import net.osmand.plus.R
 import net.osmand.plus.activities.MapActivity
@@ -8,7 +9,8 @@ import net.osmand.plus.quickaction.QuickAction
 import net.osmand.plus.quickaction.QuickActionIds.NAUTICAL_NIGHT_VISION_ACTION_ID
 import net.osmand.plus.quickaction.QuickActionType
 
-class NauticalNightVisionQuickAction : QuickAction(TYPE) {
+@Keep
+class NauticalNightVisionQuickAction : QuickAction {
 
     companion object {
         @JvmField
@@ -17,6 +19,12 @@ class NauticalNightVisionQuickAction : QuickAction(TYPE) {
             .iconRes(R.drawable.ic_action_red_filter_overlay_on)
             .category(QuickActionType.CONFIGURE_SCREEN)
     }
+
+    @Keep
+    constructor() : super(TYPE)
+
+    @Keep
+    constructor(action: QuickAction) : super(action)
 
     override fun execute(mapActivity: MapActivity, params: Bundle?) {
         val plugin = NauticalPlugin.getInstance()

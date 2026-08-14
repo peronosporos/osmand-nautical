@@ -12,6 +12,7 @@ import net.osmand.plus.quickaction.QuickAction
 import net.osmand.plus.quickaction.QuickActionIds.NAUTICAL_ANCHOR_ACTION_ID
 import net.osmand.plus.quickaction.QuickActionType
 
+@Keep
 class NauticalAnchorQuickAction : QuickAction {
 
     companion object {
@@ -22,6 +23,7 @@ class NauticalAnchorQuickAction : QuickAction {
             .category(QuickActionType.MAP_INTERACTIONS)
     }
 
+    @Keep
     constructor() : super(TYPE)
 
     @Keep

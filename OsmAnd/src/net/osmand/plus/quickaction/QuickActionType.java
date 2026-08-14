@@ -92,7 +92,7 @@ public class QuickActionType {
 	public QuickAction createNew(@NonNull QuickAction action) {
 		if (cl != null) {
 			try {
-				return cl.getConstructor(QuickAction.class).newInstance(action);
+				return cl.getDeclaredConstructor(QuickAction.class).newInstance(action);
 			} catch (InstantiationException | IllegalAccessException | NoSuchMethodException | InvocationTargetException e) {
 				throw new UnsupportedOperationException(e);
 			}

@@ -1,0 +1,9 @@
+- [x] Fix `ViewSwitcher` / `ViewFlipper` issue in `dialog_nautical_setup_wizard.xml` (Confirmed fixed in master)
+- [x] Fix NPE in `TextInfoWidget.java` (`isViewVisible`) (Confirmed fixed in master)
+- [x] Fix NPE in `SimpleWidget.java` (`recreateView`) (Confirmed fixed in master)
+- [x] Fix NPE in `WidgetInfoBaseFragment.java` (`initParams`) (Confirmed fixed in master)
+- [x] Fix NPE in `MapWidgetRegistry.java` (`getWidgetInfoById`) (Confirmed fixed in master)
+- [x] Fix reflection issue in `QuickActionType.java`
+- [x] Fix listener conflict in `SignalKDiscovery.kt`
+- [x] Fix inflation error in `nautical_pilot_bottom_sheet.xml`
+- [x] Verify build and fixes

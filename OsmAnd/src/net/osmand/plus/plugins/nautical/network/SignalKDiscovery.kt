@@ -21,7 +21,7 @@ class SignalKDiscovery(private val app: OsmandApplication) {
         override fun onServiceFound(service: NsdServiceInfo) {
             log.info("Signal K Service candidate found: ${service.serviceName}")
             if (service.serviceType.contains("_signalk-ws") || service.serviceType.contains("_signalk-http")) {
-                nsdManager.resolveService(service, resolveListener)
+                nsdManager.resolveService(service, createResolveListener())
             }
         }
 
@@ -42,7 +42,7 @@ class SignalKDiscovery(private val app: OsmandApplication) {
         }
     }
 
-    private val resolveListener = object : NsdManager.ResolveListener {
+    private fun createResolveListener() = object : NsdManager.ResolveListener {
         override fun onResolveFailed(serviceInfo: NsdServiceInfo, errorCode: Int) {
             log.error("Signal K Service Resolve failed: $errorCode")
         }
@@ -51,7 +51,7 @@ class SignalKDiscovery(private val app: OsmandApplication) {
             val host = serviceInfo.host.hostAddress
             val port = serviceInfo.port
             log.info("Signal K Service resolved: $host:$port")
-            
+
             if (app.settings.NAUTICAL_SERVER_IP.get().isEmpty()) {
                 app.settings.NAUTICAL_SERVER_IP.set(host)
                 app.settings.NAUTICAL_SERVER_PORT.set(port.toString())

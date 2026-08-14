@@ -378,6 +378,7 @@
 		<item name="strokeWidth">0dp</item>
 		<item name="cardBackgroundColor">?attr/list_background_color</item>
 		<item name="shapeAppearanceOverlay">@style/Shape.Card12</item>
+		<item name="android:stateListAnimator">@null</item>
 	</style>
 
 	<style name="Widget.App.Material.ActionCheckableTileCard" parent="Widget.Material3.CardView.Outlined">
