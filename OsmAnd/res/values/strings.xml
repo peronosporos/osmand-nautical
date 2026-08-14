@@ -1,4 +1,5 @@
 <resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
+    <string name="nautical_nmea_source_internal">Internal GPS</string>
     <string name="nautical_ai_actions_executed">Action executed: %1$d command(s) sent to boat.</string>
     <string name="nautical_ai_actions_partial">Partial success: %1$d of %2$d commands sent to boat.</string>
     <string name="nautical_ai_actions_failed">Failed to execute boat commands. Please check manual controls.</string>
@@ -284,6 +285,14 @@
     <string name="nautical_buddy_mmsi">Buddy MMSI: %1$d</string>
     <string name="nautical_add_to_buddies">Add to AIS Buddies</string>
     <string name="nautical_remove_from_buddies">Remove from Buddies</string>
+    <string name="nautical_buddy_delete_confirm">Are you sure you want to remove vessel %1$d from your buddies list?</string>
+    <string name="nautical_chart_delete_confirm">Are you sure you want to delete chart %1$s from the Signal K server?</string>
+    <string name="nautical_chart_deleted">Chart deleted from server</string>
+    <string name="nautical_course_reset">Course reset to current heading</string>
+    <string name="nautical_lighting_control">Lighting Control</string>
+    <string name="nautical_pumps_status">Pumps Status</string>
+    <string name="nautical_pressure_label">Baro: %s</string>
+    <string name="nautical_water_temp_label">Sea: %s</string>
     <string name="nautical_vessel_data_unavailable">Vessel data not available</string>
     <string name="nautical_buddy_type_status">Type: %1$s | Status: %2$s</string>
     <string name="nautical_checklist_sync_failed">Checklist Sync Failed</string>

@@ -25,6 +25,7 @@ object SignalKPaths {
     const val NAV_DTW = "navigation.distanceToWaypoint"
     const val NAV_TWD = "navigation.trueWindDirection"
     const val NAV_STATE = "navigation.state"
+    const val NAV_FLAGS = "navigation.state.flags"
     const val NAV_DESTINATION = "navigation.destination.commonName"
     const val NAV_GNSS_PREFIX = "navigation.gnss."
     const val NAV_ANCHOR_PREFIX = "navigation.anchor."

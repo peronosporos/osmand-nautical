@@ -6,6 +6,8 @@ import net.osmand.plus.views.layers.base.OsmandMapLayer
 import net.osmand.plus.views.mapwidgets.WidgetType
 import net.osmand.plus.views.mapwidgets.WidgetsPanel
 
+import net.osmand.plus.plugins.nautical.NauticalPlugin
+
 /**
  * Visual guide for International Maritime Signal Flags.
  */
@@ -16,7 +18,7 @@ class NauticalFlagsWidget(
     panel: WidgetsPanel?
 ) : SimpleWidget(mapActivity, widgetType, customId, panel) {
 
-    private val flags = mapOf(
+    private val allFlags = mapOf(
         "A" to "Diver Down",
         "B" to "Dangerous Cargo",
         "O" to "Man Overboard",
@@ -26,17 +28,30 @@ class NauticalFlagsWidget(
     )
 
     private var currentFlagIndex = 0
-    private val flagKeys = flags.keys.toList()
+    private val flagKeys = allFlags.keys.toList()
 
     override fun updateSimpleWidgetInfo(drawSettings: OsmandMapLayer.DrawSettings?) {
+        val state = NauticalPlugin.engine?.getCurrentState()
+        val activeFlags = state?.flags ?: emptyList()
+        
         updateIcon()
-        val key = flagKeys[currentFlagIndex]
-        setText(key, flags[key] ?: "")
+        
+        if (activeFlags.isNotEmpty()) {
+            val key = activeFlags[currentFlagIndex % activeFlags.size]
+            setText(key, allFlags[key] ?: "Active Flag")
+        } else {
+            val key = flagKeys[currentFlagIndex % flagKeys.size]
+            setText(key, allFlags[key] ?: "")
+        }
     }
 
     override fun getOnClickListener(): View.OnClickListener {
         return View.OnClickListener {
-            currentFlagIndex = (currentFlagIndex + 1) % flagKeys.size
+            val state = NauticalPlugin.engine?.getCurrentState()
+            val activeFlags = state?.flags ?: emptyList()
+            
+            val listSize = if (activeFlags.isNotEmpty()) activeFlags.size else flagKeys.size
+            currentFlagIndex = (currentFlagIndex + 1) % listSize
             updateInfo(null)
         }
     }

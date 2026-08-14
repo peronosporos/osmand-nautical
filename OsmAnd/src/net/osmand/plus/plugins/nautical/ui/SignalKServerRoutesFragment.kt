@@ -6,6 +6,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
 import androidx.lifecycle.lifecycleScope
+import androidx.appcompat.app.AlertDialog
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.ListAdapter
@@ -27,7 +28,8 @@ class SignalKServerRoutesFragment : BaseOsmAndFragment() {
         
         adapter = RoutesAdapter(
             onNavigate = { routeId, route -> navigateWithOsmAnd(routeId, route) },
-            onPush = { routeId, route -> pushToAutopilot(routeId, route) }
+            onPush = { routeId, route -> pushToAutopilot(routeId, route) },
+            onDelete = { routeId, route -> confirmDeleteRoute(routeId, route) }
         )
         recyclerView.layoutManager = LinearLayoutManager(requireContext())
         recyclerView.adapter = adapter
@@ -45,6 +47,21 @@ class SignalKServerRoutesFragment : BaseOsmAndFragment() {
                 view?.findViewById<View>(R.id.txt_empty_list)?.visibility = if (routes.isEmpty()) View.VISIBLE else View.GONE
             }
         }
+    }
+
+    private fun confirmDeleteRoute(id: String, route: SignalKRoute) {
+        AlertDialog.Builder(requireContext())
+            .setMessage("Are you sure you want to delete route '${route.name ?: id}' from Signal K server?")
+            .setPositiveButton(R.string.shared_string_delete) { _, _ ->
+                lifecycleScope.launch {
+                    try {
+                        NauticalPlugin.engine?.deleteRouteFromServer(id)
+                        refreshRoutes()
+                    } catch (_: Exception) {}
+                }
+            }
+            .setNegativeButton(R.string.shared_string_cancel, null)
+            .show()
     }
 
     private fun navigateWithOsmAnd(id: String, route: SignalKRoute) {
@@ -95,7 +112,8 @@ class SignalKServerRoutesFragment : BaseOsmAndFragment() {
 
     private class RoutesAdapter(
         private val onNavigate: (String, SignalKRoute) -> Unit,
-        private val onPush: (String, SignalKRoute) -> Unit
+        private val onPush: (String, SignalKRoute) -> Unit,
+        private val onDelete: (String, SignalKRoute) -> Unit
     ) : ListAdapter<Map.Entry<String, SignalKRoute>, RouteViewHolder>(DiffCallback()) {
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RouteViewHolder {
@@ -104,7 +122,7 @@ class SignalKServerRoutesFragment : BaseOsmAndFragment() {
         }
 
         override fun onBindViewHolder(holder: RouteViewHolder, position: Int) {
-            holder.bind(getItem(position), onNavigate, onPush)
+            holder.bind(getItem(position), onNavigate, onPush, onDelete)
         }
     }
 
@@ -118,13 +136,16 @@ class SignalKServerRoutesFragment : BaseOsmAndFragment() {
         private val txtDesc: TextView = view.findViewById(R.id.txt_route_desc)
         private val btnNavigate: MaterialButton = view.findViewById(R.id.btn_navigate)
         private val btnPush: MaterialButton = view.findViewById(R.id.btn_push)
+        private val btnDelete: MaterialButton = view.findViewById(R.id.btn_delete_route)
 
-        fun bind(entry: Map.Entry<String, SignalKRoute>, onNav: (String, SignalKRoute) -> Unit, onP: (String, SignalKRoute) -> Unit) {
+        fun bind(entry: Map.Entry<String, SignalKRoute>, onNav: (String, SignalKRoute) -> Unit, onP: (String, SignalKRoute) -> Unit, onDel: (String, SignalKRoute) -> Unit) {
             val route = entry.value
             txtName.text = route.name ?: "Unnamed Route"
             txtDesc.text = route.description ?: ""
             btnNavigate.setOnClickListener { onNav(entry.key, route) }
             btnPush.setOnClickListener { onP(entry.key, route) }
+            btnDelete.setOnClickListener { onDel(entry.key, route) }
         }
     }
 }
+

@@ -29,10 +29,12 @@ class NauticalLocationProvider(
         isActive = true
         engine?.registerListener(listener)
 
-        // Auto-switch to Signal K source once on activation
-        if (app.settings.LOCATION_SOURCE.get() != LocationSource.EXTERNAL_SIGNALK) {
-            app.runInUIThread {
-                app.settings.LOCATION_SOURCE.set(LocationSource.EXTERNAL_SIGNALK)
+        // Auto-switch to Signal K source once on activation, unless Internal GPS is explicitly selected
+        if (app.settings.NAUTICAL_NMEA_SOURCE.get() != net.osmand.plus.settings.enums.NmeaSource.INTERNAL) {
+            if (app.settings.LOCATION_SOURCE.get() != LocationSource.EXTERNAL_SIGNALK) {
+                app.runInUIThread {
+                    app.settings.LOCATION_SOURCE.set(LocationSource.EXTERNAL_SIGNALK)
+                }
             }
         }
         
@@ -91,6 +93,12 @@ class NauticalLocationProvider(
         loc.time = currentTime
         
         state.speedOverGround?.let { loc.speed = it.toFloat() }
+        state.altitude?.let { loc.altitude = it }
+
+        // Dynamic Accuracy from HDOP
+        val hdop = state.gnss?.horizontalDilution ?: 1.0
+        // Heuristic: 5m base accuracy * HDOP
+        loc.accuracy = (hdop * 5.0).toFloat()
         
         val caps = engine?.capabilityManager?.capabilities?.value ?: CapabilityManager.ServerCapabilityMap()
         

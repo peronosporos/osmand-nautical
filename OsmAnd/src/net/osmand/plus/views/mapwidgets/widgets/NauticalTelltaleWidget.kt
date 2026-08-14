@@ -29,20 +29,22 @@ class NauticalTelltaleWidget(
             return
         }
 
-        // Assuming SignalK path performance.telltales.port/starboard.state
-        // For now using custom values if available
-        val portState = state.customValues["performance.telltales.port.state"] ?: 0.5
-        val stbdState = state.customValues["performance.telltales.starboard.state"] ?: 0.5
+        val portState = state.customValues["performance.telltales.port.state"]
+        val stbdState = state.customValues["performance.telltales.starboard.state"]
 
-        val main = if (portState > 0.5) "OK" else "STALL"
-        val sub = if (stbdState > 0.5) "OK" else "STALL"
+        if (portState == null && stbdState == null) {
+            setText("Telltale", "No Data")
+            view.alpha = 0.5f
+            return
+        }
+
+        val main = if ((portState ?: 0.5) > 0.5) "OK" else "STALL"
+        val sub = if ((stbdState ?: 0.5) > 0.5) "OK" else "STALL"
 
         setText("P:$main", "S:$sub")
         
-        // Update icons or colors based on stall state
-        val color = if ((portState < 0.5 || stbdState < 0.5)) stalledColor else laminarColor
+        val color = if (((portState ?: 0.5) < 0.5 || (stbdState ?: 0.5) < 0.5)) stalledColor else laminarColor
         val iconColor = if (state.connectionStatus == net.osmand.plus.plugins.nautical.engine.ConnectionStatus.DISCONNECTED) neutralColor else color
-        // apply styling here if needed
         view.alpha = if (iconColor == neutralColor) 0.5f else 1.0f
     }
 }

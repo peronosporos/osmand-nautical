@@ -33,12 +33,24 @@ class NauticalSystemsBottomSheet : BaseNauticalBottomSheet() {
         val btnUp = view.findViewById<Button>(R.id.btn_windlass_up)
         val btnDown = view.findViewById<Button>(R.id.btn_windlass_down)
         val btnChecklists = view.findViewById<Button>(R.id.btn_open_checklists)
+        val btnLighting = view.findViewById<Button>(R.id.btn_lighting_control)
+        val btnPumps = view.findViewById<Button>(R.id.btn_pumps_status)
         
         setupWindlassButton(btnUp, "electrical.switches.windlass.up")
         setupWindlassButton(btnDown, "electrical.switches.windlass.down")
         
         btnChecklists.setOnClickListener {
             net.osmand.plus.plugins.nautical.ui.checklist.NauticalChecklistFragment.show(parentFragmentManager)
+            dismiss()
+        }
+
+        btnLighting.setOnClickListener {
+            NauticalElectricalDashboardBottomSheet.show(parentFragmentManager)
+            dismiss()
+        }
+
+        btnPumps.setOnClickListener {
+            NauticalElectricalDashboardBottomSheet.show(parentFragmentManager)
             dismiss()
         }
     }

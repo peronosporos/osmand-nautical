@@ -194,6 +194,23 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
         predictiveActiveImg = view.findViewById(R.id.img_predictive_active)
         minus1Btn = view.findViewById(R.id.btn_minus_1)
         plus1Btn = view.findViewById(R.id.btn_plus_1)
+        
+        authWarning.setOnClickListener {
+            net.osmand.plus.settings.fragments.BaseSettingsFragment.showInstance(requireActivity(), net.osmand.plus.settings.fragments.SettingsScreenType.NAUTICAL_SETTINGS)
+        }
+
+        predictiveActiveImg.setOnClickListener {
+            net.osmand.plus.settings.fragments.BaseSettingsFragment.showInstance(requireActivity(), net.osmand.plus.settings.fragments.SettingsScreenType.NAUTICAL_ADVANCED_SETTINGS)
+        }
+
+        errorLinear.setOnClickListener {
+            val state = NauticalPlugin.engine?.getCurrentState()
+            state?.headingTrue?.let { hdg ->
+                NauticalPlugin.autopilot?.setTargetHeading(Math.toDegrees(hdg))
+                app.showToastMessage(R.string.nautical_course_reset)
+            }
+        }
+
         minus10Btn = view.findViewById(R.id.btn_minus_10)
         plus10Btn = view.findViewById(R.id.btn_plus_10)
         stopBtn = view.findViewById(R.id.btn_mode_stop)

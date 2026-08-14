@@ -103,6 +103,8 @@ class DirectNmeaMultiplexer(
         
         AisDecoder.decode(sentence)?.let { delta ->
             aggregator.handleDelta(delta)
+            // Task 2: Bridge NMEA AIS data to the Nautical AIS Manager via SignalKEngine
+            net.osmand.plus.plugins.nautical.NauticalPlugin.engine?.handleDelta(delta)
         }
     }
 

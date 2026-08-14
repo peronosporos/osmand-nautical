@@ -15,6 +15,7 @@ import net.osmand.plus.plugins.nautical.ui.widgets.BaseNauticalBottomSheet
 import net.osmand.plus.plugins.nautical.NauticalPlugin
 import net.osmand.plus.plugins.nautical.engine.MarineState
 import net.osmand.plus.plugins.nautical.engine.SignalKUnitConverter
+import net.osmand.plus.plugins.nautical.engine.SignalKPaths
 import net.osmand.plus.plugins.nautical.ui.NauticalColorResolver
 import net.osmand.plus.plugins.nautical.ui.NauticalMiniRoseView
 import net.osmand.plus.plugins.nautical.ui.NauticalSemanticColor
@@ -43,7 +44,9 @@ class NauticalTelemetryGridBottomSheet : BaseNauticalBottomSheet() {
         super.onViewCreated(view, savedInstanceState)
 
         val app = requireContext().applicationContext as OsmandApplication
-        // Red filter handled by BaseNauticalBottomSheet
+        
+        val workflowState = net.osmand.plus.plugins.nautical.NauticalPlugin.getInstance()?.workflowEngine?.currentWorkflow?.value
+        view.findViewById<TextView>(R.id.title).text = getString(R.string.nautical_master_telemetry) + " - " + getPresetName(workflowState)
 
         recyclerView = view.findViewById(R.id.recycler_view)
         recyclerView?.layoutManager = GridLayoutManager(context, 3)
@@ -62,13 +65,18 @@ class NauticalTelemetryGridBottomSheet : BaseNauticalBottomSheet() {
         stateListener = { _ ->
             view.post {
                 if (isAdded) {
-                    adapter?.let { adapter ->
-                        for (i in 0 until adapter.itemCount) {
-                            adapter.notifyItemChanged(i)
-                        }
-                    }
+                    adapter?.notifyDataSetChanged()
                 }
             }
+        }
+    }
+
+    private fun getPresetName(state: net.osmand.plus.plugins.nautical.engine.SailingWorkflowState?): String {
+        return when (state) {
+            net.osmand.plus.plugins.nautical.engine.SailingWorkflowState.TACTICAL_PASSAGE -> getString(R.string.nautical_workflow_tactical)
+            net.osmand.plus.plugins.nautical.engine.SailingWorkflowState.CLOSE_QUARTERS -> getString(R.string.nautical_workflow_close_quarters)
+            net.osmand.plus.plugins.nautical.engine.SailingWorkflowState.STATIONARY_ANCHORED -> getString(R.string.nautical_workflow_anchored)
+            else -> ""
         }
     }
 
@@ -107,6 +115,47 @@ class NauticalTelemetryGridBottomSheet : BaseNauticalBottomSheet() {
             // Color Coding
             val color = getSemanticColor(widget, state)
             holder.value.setTextColor(color)
+            
+            holder.miniRose.visibility = View.GONE
+            holder.sparkline.visibility = View.GONE
+            holder.icon.visibility = View.VISIBLE
+
+            // Graphical activation
+            when (widget) {
+                WidgetType.NAUTICAL_HEADING_MAGNETIC, WidgetType.NAUTICAL_COG -> {
+                    val angle = if (widget == WidgetType.NAUTICAL_HEADING_MAGNETIC) state?.headingMagnetic else state?.courseOverGroundTrue
+                    if (angle != null) {
+                        holder.miniRose.visibility = View.VISIBLE
+                        holder.icon.visibility = View.GONE
+                        holder.miniRose.setAngle(angle, color, relative = false)
+                    }
+                }
+                WidgetType.NAUTICAL_AWA, WidgetType.NAUTICAL_TWA -> {
+                    val angle = if (widget == WidgetType.NAUTICAL_AWA) state?.windDirectionApparent else state?.trueWindAngle
+                    if (angle != null) {
+                        holder.miniRose.visibility = View.VISIBLE
+                        holder.icon.visibility = View.GONE
+                        holder.miniRose.setAngle(angle, color, relative = true)
+                    }
+                }
+                WidgetType.NAUTICAL_DEPTH_KEEL, WidgetType.NAUTICAL_SOG, WidgetType.NAUTICAL_STW, WidgetType.NAUTICAL_WIND -> {
+                    val path = when(widget) {
+                        WidgetType.NAUTICAL_DEPTH_KEEL -> SignalKPaths.ENV_DEPTH_BELOW_KEEL
+                        WidgetType.NAUTICAL_SOG -> SignalKPaths.NAV_SPEED_OVER_GROUND
+                        WidgetType.NAUTICAL_STW -> SignalKPaths.NAV_SPEED_THROUGH_WATER
+                        WidgetType.NAUTICAL_WIND -> SignalKPaths.ENV_WIND_SPEED_TRUE
+                        else -> ""
+                    }
+                    if (path.isNotEmpty()) {
+                        val history = engine?.getHistory(path)
+                        if (!history.isNullOrEmpty()) {
+                            holder.sparkline.visibility = View.VISIBLE
+                            holder.sparkline.setData(history.map { it.first }, color)
+                        }
+                    }
+                }
+                else -> {}
+            }
 
             holder.itemView.setOnClickListener {
                 NauticalDataBottomSheet.newInstance(widget).show(parentFragmentManager, "nautical_data")
@@ -178,5 +227,8 @@ class NauticalTelemetryGridBottomSheet : BaseNauticalBottomSheet() {
         val icon: ImageView = view.findViewById(R.id.icon)
         val value: TextView = view.findViewById(R.id.value)
         val unit: TextView = view.findViewById(R.id.unit)
+        val miniRose: net.osmand.plus.plugins.nautical.ui.NauticalMiniRoseView = view.findViewById(R.id.mini_rose)
+        val sparkline: net.osmand.plus.plugins.nautical.ui.NauticalSparklineView = view.findViewById(R.id.sparkline)
     }
 }
+

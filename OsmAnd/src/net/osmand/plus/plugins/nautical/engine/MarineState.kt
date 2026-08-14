@@ -1,15 +1,117 @@
 package net.osmand.plus.plugins.nautical.engine
 
-import net.osmand.plus.settings.enums.XteDirection
 import java.io.Serializable
+import net.osmand.data.LatLon
+import net.osmand.plus.settings.enums.XteDirection
+
+@kotlinx.serialization.Serializable
+data class Engine(
+    val instance: String = "0",
+    val revolutions: Double? = null,
+    val temperature: Double? = null,
+    val coolantTemperature: Double? = null,
+    val oilPressure: Double? = null,
+    val oilTemperature: Double? = null,
+    val fuelRate: Double? = null,
+    val fuelEconomy: Double? = null,
+    val load: Double? = null,
+    val exhaustTemperature: Double? = null,
+    val transmissionGear: String? = null,
+    val transmissionPressure: Double? = null,
+    val transmissionOilTemperature: Double? = null,
+    val alternatorVoltage: Double? = null,
+    val alternatorCurrent: Double? = null,
+    val boostPressure: Double? = null,
+    val driveTrimState: Double? = null,
+    val runTime: Double? = null,
+    val state: String? = null
+) : Serializable
+
+@kotlinx.serialization.Serializable
+data class Battery(
+    val instance: String,
+    val name: String? = null,
+    val voltage: Double? = null,
+    val current: Double? = null,
+    val temperature: Double? = null,
+    val stateOfCharge: Double? = null,
+    val stateOfHealth: Double? = null,
+    val timeRemaining: Double? = null,
+    val timeToFull: Double? = null,
+    val cellVoltages: List<Double> = emptyList()
+) : Serializable
+
+@kotlinx.serialization.Serializable
+data class Tank(
+    val instance: String,
+    val type: String,
+    val name: String? = null,
+    val currentLevel: Double? = null,
+    val currentVolume: Double? = null,
+    val capacity: Double? = null
+) : Serializable
+
+@kotlinx.serialization.Serializable
+data class Charger(
+    val instance: String,
+    val name: String? = null,
+    val state: String? = null,
+    val mode: String? = null,
+    val voltage: Double? = null,
+    val current: Double? = null,
+    val temperature: Double? = null
+) : Serializable
+
+@kotlinx.serialization.Serializable
+data class Inverter(
+    val instance: String,
+    val name: String? = null,
+    val state: String? = null,
+    val mode: String? = null,
+    val acVoltage: Double? = null,
+    val acCurrent: Double? = null,
+    val acFrequency: Double? = null,
+    val temperature: Double? = null,
+    val load: Double? = null
+) : Serializable
+
+@kotlinx.serialization.Serializable
+data class Watermaker(
+    val instance: String,
+    val state: String? = null,
+    val rate: Double? = null,
+    val salinity: Double? = null,
+    val totalProduction: Double? = null
+) : Serializable
+
+@kotlinx.serialization.Serializable
+data class MediaInfo(
+    val title: String? = null,
+    val artist: String? = null,
+    val album: String? = null,
+    val playbackState: String? = null,
+    val source: String? = null,
+    val volume: Double? = null,
+    val volumeZones: Map<String, Double> = emptyMap()
+) : Serializable
+
+@kotlinx.serialization.Serializable
+data class ForwardHazard(
+    val id: String,
+    val name: String,
+    val distance: Double,
+    val bearing: Double,
+    val severity: NotificationState,
+    val location: Pair<Double, Double>? = null
+) : Serializable
 
 @kotlinx.serialization.Serializable
 data class Sail(
     val id: String,
     val name: String,
     val type: String,
-    val area: Double? = null,
     val active: Boolean = false,
+    val area: Double? = null,
     val reefs: Int? = null,
     val maxReefs: Int? = null
 ) : Serializable
@@ -24,100 +126,28 @@ data class GnssState(
 ) : Serializable
 
 @kotlinx.serialization.Serializable
-data class Engine(
-    val instance: String,
-    val revolutions: Double? = null, // Hertz (Hz) - Signal K standard
-    val temperature: Double? = null, // Kelvin (K)
-    val oilPressure: Double? = null, // Pascal (Pa)
-    val oilTemperature: Double? = null, // Kelvin (K)
-    val fuelRate: Double? = null, // Cubic meters per second (m3/s)
-    val fuelEconomy: Double? = null,
-    val boostPressure: Double? = null, // Pascal (Pa)
-    val load: Double? = null, // Ratio 0-1
-    val coolantTemperature: Double? = null, // Kelvin (K)
-    val exhaustTemperature: Double? = null, // Kelvin (K)
-    val runTime: Double? = null, // Seconds (s)
-    val state: String? = null,
-    val driveTrimState: Double? = null,
-    val transmissionGear: String? = null,
-    val transmissionPressure: Double? = null, // Pascal (Pa)
-    val transmissionOilTemperature: Double? = null, // Kelvin (K)
-    val alternatorVoltage: Double? = null, // Volt (V)
-    val alternatorCurrent: Double? = null // Ampere (A)
-) : Serializable
-
-@kotlinx.serialization.Serializable
-data class Battery(
-    val instance: String,
-    val name: String? = null,
-    val voltage: Double? = null, // Volt (V)
-    val current: Double? = null, // Ampere (A)
-    val temperature: Double? = null, // Kelvin (K)
-    val stateOfCharge: Double? = null, // Ratio 0-1
-    val stateOfHealth: Double? = null, // Ratio 0-1
-    val timeRemaining: Double? = null, // Seconds (s)
-    val timeToFull: Double? = null, // Seconds (s)
-    val cellVoltages: List<Double> = emptyList() // Volts (V)
-) : Serializable
-
-@kotlinx.serialization.Serializable
-data class Charger(
-    val instance: String,
-    val name: String? = null,
-    val state: String? = null,
-    val mode: String? = null,
-    val voltage: Double? = null,
-    val current: Double? = null
-) : Serializable
-
-@kotlinx.serialization.Serializable
-data class Inverter(
-    val instance: String,
-    val name: String? = null,
-    val state: String? = null,
-    val mode: String? = null,
-    val acVoltage: Double? = null,
-    val acCurrent: Double? = null,
-    val acFrequency: Double? = null,
-    val load: Double? = null
-) : Serializable
-
-@kotlinx.serialization.Serializable
 data class AnchorState(
     val state: String? = null,
-    val maxDrift: Double? = null,
-    val radius: Double? = null,
-    val selection: String? = null,
+    @kotlinx.serialization.Contextual
+    val position: LatLon? = null,
     val latitude: Double? = null,
-    val longitude: Double? = null
-) : Serializable
-
-@kotlinx.serialization.Serializable
-data class Tank(
-    val instance: String,
-    val type: String,
-    val name: String? = null,
-    val currentLevel: Double? = null,
-    val currentVolume: Double? = null,
-    val capacity: Double? = null
-) : Serializable
-
-@kotlinx.serialization.Serializable
-data class SignalKNotification(
-    val message: String,
-    val state: NotificationState,
-    val method: List<String> = emptyList(),
-    val source: String? = null
+    val longitude: Double? = null,
+    val radius: Double? = null,
+    val maxDrift: Double? = null,
+    val selection: String? = null
 ) : Serializable
 
 @kotlinx.serialization.Serializable
 data class TideState(
-    val heightNow: Double? = null,
     val stationName: String? = null,
-    val state: String? = null, // "rising", "falling"
-    val nextExtremeTime: Long? = null,
+    val stationId: String? = null,
+    val height: Double? = null,
+    val heightNow: Double? = null,
+    val state: String? = null,
+    val nextExtreme: String? = null,
+    val nextExtremeType: String? = null,
     val nextExtremeHeight: Double? = null,
-    val nextExtremeType: String? = null // "High", "Low"
+    val nextExtremeTime: Long? = null
 ) : Serializable
 
 @kotlinx.serialization.Serializable
@@ -153,27 +183,12 @@ data class PypilotCalibrationState(
 ) : Serializable
 
 @kotlinx.serialization.Serializable
-data class ForwardHazard(
-    val id: String,
-    val name: String,
-    val distance: Double,
-    val bearing: Double,
-    val severity: NotificationState,
-    val position: Pair<Double, Double>? = null
-) : Serializable
-
-@kotlinx.serialization.Serializable
-data class MediaInfo(
-    val title: String? = null,
-    val artist: String? = null,
-    val playbackState: String? = null, // "playing", "paused", "stopped"
-    val source: String? = null,
-    val volume: Double? = null,
-    val volumeZones: Map<String, Double> = emptyMap()
-) : Serializable
-
-enum class NotificationState {
-    NORMAL, ALERT, WARN, ALARM, EMERGENCY
+enum class NotificationState(val priority: Int) {
+    NORMAL(0),
+    ALERT(1),
+    WARN(2),
+    ALARM(3),
+    EMERGENCY(4)
 }
 
 /**
@@ -184,11 +199,11 @@ object MarineStateConstants {
     const val MAX_LAT = 90.0
     const val MIN_LON = -180.0
     const val MAX_LON = 180.0
-    
+
     const val MAX_WIND_SPEED_MS = 77.17 // ~150 knots
     const val MAX_BOAT_SPEED_MS = 51.44 // ~100 knots
     const val MAX_DEPTH_METERS = 11000.0
-    
+
     const val MIN_MMSI = 201000000
     const val MAX_MMSI = 775999999
 
@@ -199,15 +214,6 @@ object MarineStateConstants {
     fun isValidDepth(depth: Double) = !depth.isNaN() && depth in 0.0..MAX_DEPTH_METERS
     fun isValidMmsi(mmsi: Int) = mmsi in MIN_MMSI..MAX_MMSI || mmsi == 0
 }
-
-@kotlinx.serialization.Serializable
-data class Watermaker(
-    val instance: String,
-    val state: String? = null,
-    val rate: Double? = null, // Liters per hour
-    val totalProduction: Double? = null,
-    val salinity: Double? = null
-) : Serializable
 
 @kotlinx.serialization.Serializable
 data class MarineState(
@@ -242,11 +248,10 @@ data class MarineState(
     val roll: Double? = null, // Radians (rad)
     val pitch: Double? = null, // Radians (rad)
     val yaw: Double? = null, // Radians (rad)
-    val heel: Double? = null, // Radians (rad) (Sail-specific)
 
-    // Status Data
-    val autopilotState: String = "standby", // standby, wind, track, auto
-    val autopilotHeadingSet: Double? = null, // Radians (rad)
+    // Autopilot Status
+    val autopilotState: String = "standby",
+    val autopilotTargetHeading: Double? = null, // Radians (rad)
     val autopilotWindAngleSet: Double? = null, // Radians (rad)
     val connectionStatus: ConnectionStatus = ConnectionStatus.DISCONNECTED,
 
@@ -384,6 +389,7 @@ data class MarineState(
 
     // Communication
     val vhfChannel: String? = null,
+    val flags: List<String> = emptyList(),
     val crewNames: List<String> = emptyList(),
     val aisBuddies: Set<Int> = emptySet(),
 
@@ -449,6 +455,7 @@ data class MarineState(
 
     val timestamps: Map<String, Long> = emptyMap(),
     val stalePaths: Set<String> = emptySet(),
+    val lastMessageTime: Long = 0,
 
     // Orchestration
     val isochrones: List<net.osmand.plus.plugins.nautical.network.SignalKRegion> = emptyList(),
@@ -479,3 +486,11 @@ enum class ConnectionStatus {
     UNAUTHORIZED,
     DISCONNECTED
 }
+
+@kotlinx.serialization.Serializable
+data class SignalKNotification(
+    val message: String,
+    val state: NotificationState,
+    val methods: List<String> = emptyList(),
+    val source: String? = null
+) : Serializable

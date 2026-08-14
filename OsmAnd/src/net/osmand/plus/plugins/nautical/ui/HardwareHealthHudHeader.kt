@@ -44,7 +44,8 @@ class HardwareHealthHudHeader @JvmOverloads constructor(
             }
             ConnectionStatus.STALE -> {
                 icon.setColorFilter(ContextCompat.getColor(context, R.color.nautical_status_yellow))
-                statusText.text = context.getString(R.string.nautical_system_stale, 30) // Example 30s
+                val age = if (state.lastMessageTime > 0) (System.currentTimeMillis() - state.lastMessageTime) / 1000 else 30
+                statusText.text = context.getString(R.string.nautical_system_stale, age.toInt())
                 latencyText.text = "--"
             }
             ConnectionStatus.DISCONNECTED, ConnectionStatus.CONNECTING, ConnectionStatus.UNAUTHORIZED -> {

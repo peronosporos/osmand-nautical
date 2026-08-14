@@ -233,6 +233,7 @@ data class LivePerformanceData(
         const val PATH_COG = "navigation.courseOverGroundTrue"
         const val PATH_HEADING_TRUE = "navigation.headingTrue"
         const val PATH_HEADING_MAG = "navigation.headingMagnetic"
+        const val PATH_MAG_VARIATION = "navigation.magneticVariation"
         const val PATH_POSITION = "navigation.position"
         const val PATH_DEPTH = "environment.depth.belowTransducer"
         const val PATH_POLAR_SPEED = "performance.polarSpeed"

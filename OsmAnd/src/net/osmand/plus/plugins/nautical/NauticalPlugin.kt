@@ -168,6 +168,7 @@ import net.osmand.plus.views.mapwidgets.widgets.NauticalElectricalWidget
 import net.osmand.plus.views.mapwidgets.widgets.NauticalFlagsWidget
 import net.osmand.plus.views.mapwidgets.widgets.NauticalMasterTelemetryWidget
 import net.osmand.plus.views.mapwidgets.widgets.NauticalMobWidget
+import net.osmand.plus.views.mapwidgets.widgets.NauticalMediaWidget
 import net.osmand.plus.views.mapwidgets.widgets.NauticalTelltaleWidget
 import net.osmand.plus.views.mapwidgets.widgets.NauticalVhfWidget
 import net.osmand.plus.views.mapwidgets.widgets.PolarSpeedRatioWidget
@@ -1297,6 +1298,7 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
             WidgetType.NAUTICAL_VHF_CHANNEL,
             WidgetType.NAUTICAL_RIGGING_LOAD,
         -> MarineTextWidget(mapActivity, widgetType, customId, widgetsPanel)
+            WidgetType.NAUTICAL_MEDIA -> NauticalMediaWidget(mapActivity, widgetType, customId, widgetsPanel)
             WidgetType.NAUTICAL_CAMERA -> NauticalCameraWidget(mapActivity, widgetType, customId, widgetsPanel)
             WidgetType.NAUTICAL_ELECTRICAL -> NauticalElectricalWidget(mapActivity, widgetType, customId, widgetsPanel)
             WidgetType.NAUTICAL_MOB -> NauticalMobWidget(mapActivity, widgetType, customId, widgetsPanel)
@@ -1933,12 +1935,18 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
         multiplexer.stopAll()
 
         when (source) {
+            NmeaSource.INTERNAL -> {
+                // Do nothing, let system GPS work. Ensure SignalK engine is NOT driving location.
+                locationProvider?.stop()
+            }
             NmeaSource.SIGNALK -> {
                 // Connection initiated via startEngine() separately if needed, 
                 // or we call it here but ensure no double calls.
+                locationProvider?.start()
                 startEngine()
             }
             NmeaSource.BLUETOOTH -> {
+                locationProvider?.start()
                 val address = app.settings.NAUTICAL_BT_DEVICE_ADDRESS.get()
                 if (address.isNotEmpty()) {
                     val client = net.osmand.plus.plugins.nautical.nmea.connection.BluetoothNmeaClient(address, pluginScope!!)
@@ -1946,6 +1954,7 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
                 }
             }
             NmeaSource.USB -> {
+                locationProvider?.start()
                 val deviceName = app.settings.NAUTICAL_USB_DEVICE_NAME.get()
                 val usbManager = app.getSystemService(Context.USB_SERVICE) as android.hardware.usb.UsbManager
                 val device = usbManager.deviceList[deviceName]
@@ -1956,6 +1965,7 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
                 }
             }
             NmeaSource.TCP -> {
+                locationProvider?.start()
                 val ip = app.settings.NAUTICAL_SERVER_IP.get()
                 val port = app.settings.NAUTICAL_SERVER_PORT.get().toIntOrNull() ?: 3000
                 val client = net.osmand.plus.plugins.nautical.nmea.connection.TcpNmeaClient(ip, port, pluginScope!!)
@@ -2382,7 +2392,7 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
                 .registerOnSharedPreferenceChangeListener(prefChangeListener)
 
             updateNmeaSource()
-            locationProvider?.start()
+            // locationProvider.start() is now managed inside updateNmeaSource based on selection
             updateNauticalBackgroundService()
             updateFeatureLifecycle()
 
@@ -3224,7 +3234,13 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
                             app.runInUIThread {
                                 AlertDialog.Builder(mapActivity)
                                     .setTitle(R.string.nautical_server_charts)
-                                    .setItems(names, null)
+                                    .setItems(names) { _, which ->
+                                        val chart = charts.values.toList()[which]
+                                        app.settings.NAUTICAL_ACTIVE_SERVER_CHART.set(chart.identifier)
+                                        app.settings.NAUTICAL_SHOW_RASTER_CHARTS.set(true)
+                                        app.showToastMessage(app.getString(R.string.nautical_chart_overlay_enabled, chart.name ?: chart.identifier))
+                                        app.osmandMap.refreshMap()
+                                    }
                                     .show()
                             }
                         } else {

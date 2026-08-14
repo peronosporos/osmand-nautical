@@ -31,44 +31,54 @@ object AisDecoder {
             val values = mutableListOf<Value>()
 
             when (message) {
+                is AISMessage05 -> {
+                    values.add(Value("name", message.name))
+                    values.add(Value("navigation.callsign", message.callSign))
+                    values.add(Value("design.type", mapOf("id" to message.typeOfShipAndCargoType)))
+                    values.add(Value("design.draft", message.maximumDraught))
+                    values.add(Value("navigation.destination.commonName", message.destination))
+                    values.add(Value("imo", message.iMONumber))
+                    values.add(Value("design.dimensions", mapOf(
+                        "bow" to message.bow, "stern" to message.stern,
+                        "port" to message.port, "starboard" to message.starboard
+                    )))
+                }
+                is AISMessage24 -> {
+                    if (message.partNumber == 0) {
+                        values.add(Value("name", message.name))
+                    } else {
+                        values.add(Value("navigation.callsign", message.callSign))
+                        values.add(Value("design.type", mapOf("id" to message.typeOfShipAndCargoType)))
+                        values.add(Value("design.dimensions", mapOf(
+                            "bow" to message.bow, "stern" to message.stern,
+                            "port" to message.port, "starboard" to message.starboard
+                        )))
+                    }
+                }
+                is AISMessage19 -> {
+                    values.add(Value("name", message.name))
+                    values.add(Value("design.type", mapOf("id" to message.typeOfShipAndCargoType)))
+                    values.add(Value("design.dimensions", mapOf(
+                        "bow" to message.bow, "stern" to message.stern,
+                        "port" to message.port, "starboard" to message.starboard
+                    )))
+                    addPositionValues(values, message)
+                }
+                is AISMessage21 -> {
+                    values.add(Value("name", message.name))
+                    values.add(Value("design.type", mapOf("id" to message.aidType))) // Aid to Navigation type
+                    values.add(Value("design.dimensions", mapOf(
+                        "bow" to message.bow, "stern" to message.stern,
+                        "port" to message.port, "starboard" to message.starboard
+                    )))
+                    addPositionValues(values, message)
+                }
+                is AISMessage09 -> {
+                    addPositionValues(values, message)
+                    values.add(Value("navigation.position.altitude", message.altitude.toDouble()))
+                }
                 is AISPositionInfo -> {
-                    if (message.hasLatitude() && message.hasLongitude()) {
-                        val lat = message.latitudeInDegrees
-                        val lon = message.longitudeInDegrees
-                        if (MarineStateConstants.isValidLat(lat) && MarineStateConstants.isValidLon(lon)) {
-                            values.add(Value("navigation.position", mapOf("latitude" to lat, "longitude" to lon)))
-                        }
-                    }
-                    
-                    if (message is AISPositionReport) {
-                        if (message.hasSpeedOverGround()) {
-                            val sogKnots = message.speedOverGround
-                            val sogMs = sogKnots * 0.514444
-                            if (MarineStateConstants.isValidSpeed(sogMs)) {
-                                values.add(Value("navigation.speedOverGround", sogMs))
-                            }
-                        }
-                        if (message.hasCourseOverGround()) {
-                            values.add(Value("navigation.courseOverGroundTrue", Math.toRadians(message.courseOverGround)))
-                        }
-                        if (message.hasTrueHeading()) {
-                            val hdg = message.trueHeading
-                            if (hdg < 360) {
-                                values.add(Value("navigation.headingTrue", Math.toRadians(hdg.toDouble())))
-                            }
-                        }
-                    } else if (message is AISPositionReportB) {
-                         if (message.hasSpeedOverGround()) {
-                            val sogKnots = message.speedOverGround
-                            val sogMs = sogKnots * 0.514444
-                            if (MarineStateConstants.isValidSpeed(sogMs)) {
-                                values.add(Value("navigation.speedOverGround", sogMs))
-                            }
-                        }
-                        if (message.hasCourseOverGround()) {
-                            values.add(Value("navigation.courseOverGroundTrue", Math.toRadians(message.courseOverGround)))
-                        }
-                    }
+                    addPositionValues(values, message)
                 }
             }
 
@@ -87,6 +97,44 @@ object AisDecoder {
         } catch (e: Exception) {
             log.error("AIS decoding failed: ${e.message}")
             return null
+        }
+    }
+
+    private fun addPositionValues(values: MutableList<Value>, message: AISPositionInfo) {
+        if (message.hasLatitude() && message.hasLongitude()) {
+            val lat = message.latitudeInDegrees
+            val lon = message.longitudeInDegrees
+            if (MarineStateConstants.isValidLat(lat) && MarineStateConstants.isValidLon(lon)) {
+                values.add(Value("navigation.position", mapOf("latitude" to lat, "longitude" to lon)))
+            }
+        }
+
+        if (message is AISPositionReport) {
+            if (message.hasSpeedOverGround()) {
+                val sogMs = message.speedOverGround * 0.514444
+                if (MarineStateConstants.isValidSpeed(sogMs)) {
+                    values.add(Value("navigation.speedOverGround", sogMs))
+                }
+            }
+            if (message.hasCourseOverGround()) {
+                values.add(Value("navigation.courseOverGroundTrue", Math.toRadians(message.courseOverGround)))
+            }
+            if (message.hasTrueHeading()) {
+                val hdg = message.trueHeading
+                if (hdg < 360) {
+                    values.add(Value("navigation.headingTrue", Math.toRadians(hdg.toDouble())))
+                }
+            }
+        } else if (message is AISPositionReportB) {
+            if (message.hasSpeedOverGround()) {
+                val sogMs = message.speedOverGround * 0.514444
+                if (MarineStateConstants.isValidSpeed(sogMs)) {
+                    values.add(Value("navigation.speedOverGround", sogMs))
+                }
+            }
+            if (message.hasCourseOverGround()) {
+                values.add(Value("navigation.courseOverGroundTrue", Math.toRadians(message.courseOverGround)))
+            }
         }
     }
 }

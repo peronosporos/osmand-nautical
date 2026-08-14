@@ -43,6 +43,16 @@ class SailingDataAggregator {
         lastUpdateTime = System.currentTimeMillis()
         val updates = delta.updates ?: return
         
+        // Task 3: Filter by context to prevent AIS targets from corrupting own vessel telemetry
+        val context = delta.context ?: "vessels.self"
+        val plugin = net.osmand.plus.plugins.nautical.NauticalPlugin.getInstance()
+        val ownMmsi = plugin?.getSettings()?.NAUTICAL_AIS_OWN_MMSI?.get() ?: 0
+        
+        val isSelf = (context == "vessels.self") || (context == "") ||
+                (ownMmsi != 0 && context == "vessels.urn:mrn:imo:mmsi:$ownMmsi")
+        
+        if (!isSelf) return
+
         _aggregatedData.update { current ->
             var updated = current
             val newTimestamps = updated.timestamps.toMutableMap()

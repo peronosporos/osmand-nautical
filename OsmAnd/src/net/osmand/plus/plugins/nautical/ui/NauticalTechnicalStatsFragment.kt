@@ -38,6 +38,16 @@ class NauticalTechnicalStatsFragment : BaseOsmAndFragment() {
     private fun setupClickListeners(root: View) {
         val identity = root.findViewById<View>(R.id.grid_identity)
         
+        // Flag / Port
+        identity.findViewById<View>(R.id.cell_1_1)?.setOnClickListener {
+             showFlagPortEditDialog()
+        }
+
+        // Callsign
+        identity.findViewById<View>(R.id.cell_1_2)?.setOnClickListener {
+             showEditDesignDialog(getString(R.string.nautical_vessel_callsign), "design.callsignVhf")
+        }
+
         // MMSI
         identity.findViewById<View>(R.id.cell_1_3)?.setOnClickListener {
              showEditDesignDialog(getString(R.string.nautical_vessel_mmsi_label), "mmsi")
@@ -57,6 +67,38 @@ class NauticalTechnicalStatsFragment : BaseOsmAndFragment() {
         identity.findViewById<View>(R.id.cell_2_3)?.setOnClickListener {
              showEditDesignDialog(getString(R.string.nautical_vessel_displacement_label), "design.displacement")
         }
+    }
+
+    private fun showFlagPortEditDialog() {
+        val context = context ?: return
+        val layout = android.widget.LinearLayout(context).apply {
+            orientation = android.widget.LinearLayout.VERTICAL
+            setPadding(48, 24, 48, 24)
+        }
+        
+        val flagInput = EditText(context).apply {
+            hint = "Flag (e.g. USA)"
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_CHARACTERS
+        }
+        val portInput = EditText(context).apply {
+            hint = "Home Port"
+            inputType = InputType.TYPE_CLASS_TEXT
+        }
+        
+        layout.addView(flagInput)
+        layout.addView(portInput)
+        
+        AlertDialog.Builder(context)
+            .setTitle(R.string.nautical_vessel_flag_port)
+            .setView(layout)
+            .setPositiveButton(R.string.shared_string_save) { _, _ ->
+                val flag = flagInput.text.toString()
+                if (flag.isNotEmpty()) NauticalPlugin.engine?.controlManager?.updateVesselDesign("design.flag", flag)
+                val port = portInput.text.toString()
+                if (port.isNotEmpty()) NauticalPlugin.engine?.controlManager?.updateVesselDesign("design.port", port)
+            }
+            .setNegativeButton(R.string.shared_string_cancel, null)
+            .show()
     }
 
     private fun showDimensionEditDialog() {

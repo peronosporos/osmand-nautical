@@ -1,10 +1,13 @@
 package net.osmand.plus.views.mapwidgets.widgets
 
 import android.view.View
-import android.widget.FrameLayout
-import android.widget.ImageView
+import androidx.appcompat.app.AlertDialog
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
 import net.osmand.plus.R
 import net.osmand.plus.activities.MapActivity
+import net.osmand.plus.plugins.nautical.NauticalPlugin
+import net.osmand.plus.plugins.nautical.network.SignalKChart
 import net.osmand.plus.views.layers.base.OsmandMapLayer
 import net.osmand.plus.views.mapwidgets.WidgetType
 import net.osmand.plus.views.mapwidgets.WidgetsPanel
@@ -19,32 +22,71 @@ class NauticalCameraWidget(
     panel: WidgetsPanel?
 ) : SimpleWidget(mapActivity, widgetType, customId, panel) {
 
-    private var pipActive = false
+    private var availableCameras: List<SignalKChart> = emptyList()
 
     override fun updateSimpleWidgetInfo(drawSettings: OsmandMapLayer.DrawSettings?) {
         updateIcon()
-        setText(mapActivity.getString(R.string.nautical_camera), if (pipActive) "LIVE" else "")
+        val sub = if (availableCameras.isNotEmpty()) "${availableCameras.size} CAM" else ""
+        setText(mapActivity.getString(R.string.nautical_camera), sub)
+    }
+
+    override fun setupView(view: View) {
+        super.setupView(view)
+        refreshCameraList()
+    }
+
+    private fun refreshCameraList() {
+        val rest = NauticalPlugin.engine?.getRestService() ?: return
+        mapActivity.lifecycleScope.launch {
+            try {
+                val response = rest.getCharts()
+                if (response.isSuccessful) {
+                    availableCameras = response.body()?.values?.filter {
+                        it.identifier.contains("camera", ignoreCase = true) ||
+                        it.name?.contains("camera", ignoreCase = true) == true ||
+                        it.type?.contains("onvif", ignoreCase = true) == true
+                    } ?: emptyList()
+                    updateInfo(null)
+                }
+            } catch (_: Exception) {}
+        }
     }
 
     override fun getOnClickListener(): View.OnClickListener {
         return View.OnClickListener {
-            pipActive = !pipActive
-            if (pipActive) {
-                showPipOverlay()
+            if (availableCameras.isEmpty()) {
+                refreshCameraList()
+                mapActivity.app.showToastMessage("Searching for cameras...")
             } else {
-                hidePipOverlay()
+                showCameraSelector()
             }
-            updateInfo(null)
         }
     }
 
-    private fun showPipOverlay() {
-        // Implementation of actual stream would go here.
-        // For now we simulate with a toast or placeholder in the HUD.
-        mapActivity.app.showToastMessage("Connecting to Signal K ONVIF Stream...")
+    private fun showCameraSelector() {
+        val names = availableCameras.map { it.name ?: it.identifier }.toTypedArray()
+        AlertDialog.Builder(mapActivity)
+            .setTitle(R.string.nautical_camera)
+            .setItems(names) { _, which ->
+                watchCamera(availableCameras[which])
+            }
+            .setNeutralButton("Refresh") { _, _ -> refreshCameraList() }
+            .show()
     }
 
-    private fun hidePipOverlay() {
-        mapActivity.app.showToastMessage("Camera Disconnected")
+    private fun watchCamera(camera: SignalKChart) {
+        val ip = app.settings.NAUTICAL_SERVER_IP.get()
+        val port = app.settings.NAUTICAL_SERVER_PORT.get()
+        val protocol = if (app.settings.NAUTICAL_USE_SECURE_CONNECTION.get()) "https" else "http"
+        
+        // Signal K standard for chart-based cameras often uses the tilejson URL or a proxy path
+        val url = "$protocol://$ip:$port/signalk/v1/api/resources/charts/${camera.identifier}/stream"
+        
+        mapActivity.app.showToastMessage("Connecting to stream: ${camera.name ?: camera.identifier}")
+        
+        // Task: Open in full-screen WebView/VideoView fragment
+        // For now, use browser as placeholder for the external player
+        val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url))
+        mapActivity.startActivity(intent)
     }
 }

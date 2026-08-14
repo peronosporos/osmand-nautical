@@ -25,7 +25,13 @@ class SignalKDiagnosticsFragment : BaseOsmAndFragment() {
         val view = themedInflater.inflate(R.layout.recyclerview_fragment, container, false)
         val recyclerView: RecyclerView = view.findViewById(R.id.recycler_view)
         
-        adapter = DiagnosticAdapter()
+        adapter = DiagnosticAdapter {
+            val ip = app.settings.NAUTICAL_SERVER_IP.get()
+            val port = app.settings.NAUTICAL_SERVER_PORT.get()
+            val url = "http://$ip:$port/admin"
+            val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url))
+            requireActivity().startActivity(intent)
+        }
         recyclerView.layoutManager = LinearLayoutManager(requireContext())
         recyclerView.adapter = adapter
 
@@ -57,14 +63,14 @@ class SignalKDiagnosticsFragment : BaseOsmAndFragment() {
 
     private data class DiagnosticItem(val feature: String, val active: Boolean, val guidance: String)
 
-    private class DiagnosticAdapter : ListAdapter<DiagnosticItem, DiagnosticViewHolder>(
+    private class DiagnosticAdapter(private val onClick: () -> Unit) : ListAdapter<DiagnosticItem, DiagnosticViewHolder>(
         object : androidx.recyclerview.widget.DiffUtil.ItemCallback<DiagnosticItem>() {
             override fun areItemsTheSame(oldItem: DiagnosticItem, newItem: DiagnosticItem): Boolean = oldItem.feature == newItem.feature
             override fun areContentsTheSame(oldItem: DiagnosticItem, newItem: DiagnosticItem): Boolean = oldItem == newItem
         }
     ) {
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): DiagnosticViewHolder {
-            val view = LayoutInflater.from(parent.context).inflate(R.layout.list_item_with_descr, parent, false)
+            val view = LayoutInflater.from(parent.context).inflate(R.layout.list_item_icon_and_menu, parent, false)
             return DiagnosticViewHolder(view)
         }
 
@@ -74,11 +80,20 @@ class SignalKDiagnosticsFragment : BaseOsmAndFragment() {
             holder.description.text = if (item.active) "Active / Configured" else item.guidance
             val colorRes = if (item.active) R.color.nautical_status_green else R.color.nautical_status_red
             holder.description.setTextColor(ContextCompat.getColor(holder.itemView.context, colorRes))
+            
+            holder.icon.setImageResource(if (item.active) R.drawable.ic_action_done else R.drawable.ic_action_alert)
+            holder.secondaryIcon.setImageResource(R.drawable.ic_action_settings)
+            holder.secondaryIcon.visibility = View.VISIBLE
+            holder.secondaryIcon.setOnClickListener { onClick() }
+            holder.toggle.visibility = View.GONE
         }
     }
 
     private class DiagnosticViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         val title: TextView = view.findViewById(R.id.title)
         val description: TextView = view.findViewById(R.id.description)
+        val icon: android.widget.ImageView = view.findViewById(R.id.icon)
+        val secondaryIcon: android.widget.ImageView = view.findViewById(R.id.secondary_icon)
+        val toggle: View = view.findViewById(R.id.toggle_item)
     }
 }

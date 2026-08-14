@@ -50,6 +50,8 @@ class HeadingErrorLinearView @JvmOverloads constructor(
     }
 
     init {
+        isClickable = true
+        isFocusable = true
         updateColors()
         paint.strokeCap = Paint.Cap.ROUND
         textPaint.textAlign = Paint.Align.CENTER

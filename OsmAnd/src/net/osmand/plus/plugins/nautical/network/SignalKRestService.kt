@@ -76,6 +76,9 @@ interface SignalKRestService {
     @GET("signalk/v2/api/resources/charts")
     suspend fun getCharts(): Response<Map<String, SignalKChart>>
 
+    @DELETE("signalk/v2/api/resources/charts/{id}")
+    suspend fun deleteChart(@Path("id") id: String): Response<Void>
+
     @GET("signalk/v2/api/resources/regions")
     suspend fun getRegions(): Response<Map<String, SignalKRegion>>
 

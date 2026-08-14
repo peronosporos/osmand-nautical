@@ -45,6 +45,8 @@ class NmeaSentenceParser(private val app: OsmandApplication) {
             "DBT", "DBS", "DPT" -> parseDepth(parts)
             "HDG", "HDT", "HDM" -> parseHeading(parts)
             "VHW" -> parseVHW(parts)
+            "GGA" -> parseGGA(parts, talker)
+            "GNS" -> parseGNS(parts, talker)
             else -> emptyList()
         }
         
@@ -105,6 +107,14 @@ class NmeaSentenceParser(private val app: OsmandApplication) {
                 values.add(Value(LivePerformanceData.PATH_POSITION, mapOf("latitude" to lat, "longitude" to lon)))
             }
         }
+
+        // Magnetic Variation: $--RMC,...,x.x,a,m*hh
+        if (parts.size >= 12 && shouldProcess(LivePerformanceData.PATH_MAG_VARIATION, talker)) {
+            parts[10].toDoubleOrNull()?.let { varDeg ->
+                val varRad = Math.toRadians(if (parts[11] == "W") -varDeg else varDeg)
+                values.add(Value(LivePerformanceData.PATH_MAG_VARIATION, varRad))
+            }
+        }
         
         return values
     }
@@ -115,11 +125,78 @@ class NmeaSentenceParser(private val app: OsmandApplication) {
         val angle = parts[1].toDoubleOrNull() ?: return emptyList()
         val rad = Math.toRadians(angle)
         
-        return when (type) {
-            "HDT" -> listOf(Value(LivePerformanceData.PATH_HEADING_TRUE, rad))
-            "HDG", "HDM" -> listOf(Value(LivePerformanceData.PATH_HEADING_MAG, rad))
-            else -> emptyList()
+        val values = mutableListOf<Value>()
+        when (type) {
+            "HDT" -> values.add(Value(LivePerformanceData.PATH_HEADING_TRUE, rad))
+            "HDG", "HDM" -> values.add(Value(LivePerformanceData.PATH_HEADING_MAG, rad))
         }
+
+        // HDG Variation: $--HDG,x.x,x.x,a,x.x,a*hh
+        if (type == "HDG" && parts.size >= 5) {
+            parts[4].toDoubleOrNull()?.let { varDeg ->
+                val varRad = Math.toRadians(if (parts[5] == "W") -varDeg else varDeg)
+                values.add(Value(LivePerformanceData.PATH_MAG_VARIATION, varRad))
+            }
+        }
+        
+        return values
+    }
+
+    private fun parseGGA(parts: List<String>, talker: String): List<Value> {
+        // $--GGA,hhmmss.ss,llll.ll,a,yyyyy.yy,a,x,xx,x.x,x.x,M,x.x,M,x.x,xxxx*hh
+        if (parts.size < 10) return emptyList()
+        val values = mutableListOf<Value>()
+
+        if (shouldProcess(LivePerformanceData.PATH_POSITION, talker)) {
+            val lat = parseNmeaLatitude(parts[2], parts[3])
+            val lon = parseNmeaLongitude(parts[4], parts[5])
+            if (MarineStateConstants.isValidLat(lat) && MarineStateConstants.isValidLon(lon)) {
+                values.add(Value(LivePerformanceData.PATH_POSITION, mapOf("latitude" to lat, "longitude" to lon)))
+            }
+        }
+
+        // Altitude
+        parts[9].toDoubleOrNull()?.let { alt ->
+            values.add(Value("navigation.gnss.antennaAltitude", alt))
+        }
+
+        // HDOP
+        parts[8].toDoubleOrNull()?.let { hdop ->
+            values.add(Value("navigation.gnss.horizontalDilution", hdop))
+        }
+
+        // Satellites
+        parts[7].toIntOrNull()?.let { sats ->
+            values.add(Value("navigation.gnss.satellites", sats))
+        }
+
+        return values
+    }
+
+    private fun parseGNS(parts: List<String>, talker: String): List<Value> {
+        // $--GNS,hhmmss.ss,llll.ll,a,yyyyy.yy,a,c--c,xx,x.x,x.x,x.x,x.x,x.x,a*hh
+        if (parts.size < 10) return emptyList()
+        val values = mutableListOf<Value>()
+
+        if (shouldProcess(LivePerformanceData.PATH_POSITION, talker)) {
+            val lat = parseNmeaLatitude(parts[2], parts[3])
+            val lon = parseNmeaLongitude(parts[4], parts[5])
+            if (MarineStateConstants.isValidLat(lat) && MarineStateConstants.isValidLon(lon)) {
+                values.add(Value(LivePerformanceData.PATH_POSITION, mapOf("latitude" to lat, "longitude" to lon)))
+            }
+        }
+
+        // HDOP
+        parts[8].toDoubleOrNull()?.let { hdop ->
+            values.add(Value("navigation.gnss.horizontalDilution", hdop))
+        }
+
+        // Satellites
+        parts[7].toIntOrNull()?.let { sats ->
+            values.add(Value("navigation.gnss.satellites", sats))
+        }
+
+        return values
     }
 
     private fun parseVHW(parts: List<String>): List<Value> {

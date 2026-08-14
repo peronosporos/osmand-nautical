@@ -119,7 +119,16 @@ class NauticalAisManager(private val app: OsmandApplication) {
             delay(5.seconds)
             while (isActive) {
                 updateAllCpa()
-                delay(10.seconds)
+                
+                // Adaptive Interval: Speed-dependent
+                val ownPosition = app.locationProvider.lastKnownLocation
+                val speedMs = ownPosition?.speed ?: 0.0f
+                val delaySec = when {
+                    speedMs > 2.5f -> 5L  // > 5 kts: 5s
+                    speedMs > 1.0f -> 10L // > 2 kts: 10s
+                    else -> 20L           // Stationary: 20s
+                }
+                delay(delaySec.seconds)
             }
         }
     }

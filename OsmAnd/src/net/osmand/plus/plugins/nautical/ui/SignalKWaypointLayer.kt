@@ -30,7 +30,7 @@ class SignalKWaypointLayer(private val mapActivity: MapActivity) : OsmandMapLaye
         typeface = Typeface.DEFAULT_BOLD
     }
 
-    private var skWaypoints = listOf<net.osmand.plus.plugins.nautical.network.SignalKWaypoint>()
+    private var skWaypointsMap = mapOf<String, net.osmand.plus.plugins.nautical.network.SignalKWaypoint>()
     private var lastSearchRect: Rect? = null
     private var searchJob: Job? = null
     private val layerScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
@@ -62,7 +62,7 @@ class SignalKWaypointLayer(private val mapActivity: MapActivity) : OsmandMapLaye
         }
 
         poiPaint.color = getColor(R.color.nautical_status_green)
-        val snapshot = skWaypoints
+        val snapshot = skWaypointsMap.values
         snapshot.forEach { wp ->
             val coords = wp.feature.geometry.coordinates
             val x = tileBox.getPixXFromLatLon(coords[1], coords[0])
@@ -91,7 +91,7 @@ class SignalKWaypointLayer(private val mapActivity: MapActivity) : OsmandMapLaye
                 try {
                     val skResults = NauticalPlugin.engine?.getRestService()?.getWaypoints()
                     if (skResults?.isSuccessful == true) {
-                        skWaypoints = skResults.body()?.values?.toList() ?: emptyList()
+                        skWaypointsMap = skResults.body() ?: emptyMap()
                         mapActivity.mapView.refreshMap()
                     }
                 } catch (e: Exception) {
@@ -106,7 +106,7 @@ class SignalKWaypointLayer(private val mapActivity: MapActivity) : OsmandMapLaye
         val tileBox = result.tileBox
         val radius = getScaledTouchRadius(application, tileBox.defaultRadiusPoi) * TOUCH_RADIUS_MULTIPLIER
 
-        skWaypoints.forEach { wp ->
+        skWaypointsMap.values.forEach { wp ->
             val coords = wp.feature.geometry.coordinates
             if (tileBox.isLatLonNearPixel(coords[1], coords[0], point.x, point.y, radius)) {
                 result.collect(wp, this)
@@ -126,6 +126,8 @@ class SignalKWaypointLayer(private val mapActivity: MapActivity) : OsmandMapLaye
 
     fun registerContextMenuActions(adapter: ContextMenuAdapter, obj: Any?) {
         val wp = (obj as? net.osmand.plus.plugins.nautical.network.SignalKWaypoint) ?: return
+        val id = skWaypointsMap.entries.find { it.value == wp }?.key
+        
         adapter.addItem(
             ContextMenuItem("sk_wp_info").apply {
                 title = mapActivity.getString(R.string.nautical_signal_k_waypoint)
@@ -133,6 +135,51 @@ class SignalKWaypointLayer(private val mapActivity: MapActivity) : OsmandMapLaye
                 icon = R.drawable.ic_action_info_dark
             },
         )
+        
+        adapter.addItem(
+            ContextMenuItem("sk_wp_steer").apply {
+                setTitleId(R.string.nautical_steer_here, mapActivity)
+                icon = R.drawable.ic_action_direction_compass
+                setListener { _, _, _, _ ->
+                    val coords = wp.feature.geometry.coordinates
+                    NauticalPlugin.autopilot?.sendActiveWaypoint(coords[1], coords[0])
+                    mapActivity.app.showToastMessage(R.string.nautical_command_sent)
+                    true
+                }
+            }
+        )
+        
+        if (id != null) {
+            adapter.addItem(
+                ContextMenuItem("sk_wp_delete").apply {
+                    setTitleId(R.string.shared_string_delete, mapActivity)
+                    icon = R.drawable.ic_action_delete_dark
+                    setListener { _, _, _, _ ->
+                        confirmDeleteWaypoint(id, wp.name ?: id)
+                        true
+                    }
+                }
+            )
+        }
+    }
+
+    private fun confirmDeleteWaypoint(id: String, name: String) {
+        androidx.appcompat.app.AlertDialog.Builder(mapActivity)
+            .setMessage("Are you sure you want to delete waypoint '$name' from server?")
+            .setPositiveButton(R.string.shared_string_delete) { _, _ ->
+                layerScope.launch {
+                    try {
+                        val response = NauticalPlugin.engine?.getRestService()?.deleteWaypoint(id)
+                        if (response?.isSuccessful == true) {
+                            mapActivity.app.showToastMessage("Waypoint deleted")
+                            skWaypointsMap = skWaypointsMap.filterKeys { it != id }
+                            mapActivity.mapView.refreshMap()
+                        }
+                    } catch (_: Exception) {}
+                }
+            }
+            .setNegativeButton(R.string.shared_string_cancel, null)
+            .show()
     }
 
     override fun onSingleTap(point: PointF, tileBox: RotatedTileBox): Boolean = false
