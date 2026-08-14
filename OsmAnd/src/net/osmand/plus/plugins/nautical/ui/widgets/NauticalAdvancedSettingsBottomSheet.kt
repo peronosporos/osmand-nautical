@@ -65,7 +65,6 @@ class NauticalAdvancedSettingsBottomSheet : BaseNauticalBottomSheet() {
         val sliderWindAlignment = customView.findViewById<Slider>(R.id.slider_wind_alignment)
         val txtWindAlignmentValue = customView.findViewById<android.widget.TextView>(R.id.txt_value_wind_alignment)
         val txtXteThresholdValue = customView.findViewById<android.widget.TextView>(R.id.txt_value_xte_threshold)
-        val vesselTypeToggle = customView.findViewById<com.google.android.material.button.MaterialButtonToggleGroup>(R.id.vessel_type_toggle)
 
         val sliderSeaState = customView.findViewById<Slider>(R.id.slider_sea_state)
         val txtSeaStateValue = customView.findViewById<android.widget.TextView>(R.id.txt_value_sea_state)
@@ -82,7 +81,6 @@ class NauticalAdvancedSettingsBottomSheet : BaseNauticalBottomSheet() {
 
         tabLayout.addTab(tabLayout.newTab().setText("Tuning"))
         tabLayout.addTab(tabLayout.newTab().setText("Limits"))
-        tabLayout.addTab(tabLayout.newTab().setText("Vessel"))
         tabLayout.addTab(tabLayout.newTab().setText("Env"))
 
         if (plugin.capabilityManager?.capabilities?.value?.hasAutopilot == true) {
@@ -93,9 +91,8 @@ class NauticalAdvancedSettingsBottomSheet : BaseNauticalBottomSheet() {
             override fun onTabSelected(tab: TabLayout.Tab?) {
                 containerTuning.visibility = if (tab?.position == 0) View.VISIBLE else View.GONE
                 containerLimits.visibility = if (tab?.position == 1) View.VISIBLE else View.GONE
-                containerVessel.visibility = if (tab?.position == 2) View.VISIBLE else View.GONE
-                containerEnv.visibility = if (tab?.position == 3) View.VISIBLE else View.GONE
-                containerPypilot.visibility = if (tab?.position == 4) View.VISIBLE else View.GONE
+                containerEnv.visibility = if (tab?.position == 2) View.VISIBLE else View.GONE
+                containerPypilot.visibility = if (tab?.position == 3) View.VISIBLE else View.GONE
             }
             override fun onTabUnselected(tab: TabLayout.Tab?) {}
             override fun onTabReselected(tab: TabLayout.Tab?) {}
@@ -177,8 +174,6 @@ class NauticalAdvancedSettingsBottomSheet : BaseNauticalBottomSheet() {
         sliderSeaState.isEnabled = !switchAutoSeaState.isChecked
         sliderSeaState.alpha = if (switchAutoSeaState.isChecked) 0.5f else 1.0f
 
-        vesselTypeToggle.check(if (settings.NAUTICAL_VESSEL_TYPE.get() as VesselType == VesselType.PROA) R.id.btn_vessel_proa else R.id.btn_vessel_conv)
-
         sliderSeaState.addOnChangeListener { _, value, _ -> txtSeaStateValue.text = value.toInt().toString() }
         sliderKeelOffset.addOnChangeListener { _, value, _ ->
             val (v, u) = SignalKUnitConverter.formatValue(app, settings, value.toDouble(), "depth")
@@ -201,9 +196,19 @@ class NauticalAdvancedSettingsBottomSheet : BaseNauticalBottomSheet() {
         val updateChart = {
             updatePreviewChart(chart, sliderRudderGain.value.toDouble(), sliderCounterRudder.value.toDouble(), sliderAutoTrim.value.toDouble())
         }
-        sliderRudderGain.addOnChangeListener { _, _, _ -> updateChart() }
-        sliderCounterRudder.addOnChangeListener { _, _, _ -> updateChart() }
-        sliderAutoTrim.addOnChangeListener { _, _, _ -> updateChart() }
+
+        sliderRudderGain.addOnChangeListener { _, value, fromUser -> 
+            if (fromUser) autopilot.setRudderGain(value.toDouble())
+            updateChart()
+        }
+        sliderCounterRudder.addOnChangeListener { _, value, fromUser -> 
+            if (fromUser) autopilot.setCounterRudder(value.toDouble())
+            updateChart()
+        }
+        sliderAutoTrim.addOnChangeListener { _, value, fromUser -> 
+            if (fromUser) autopilot.setAutoTrim(value.toDouble())
+            updateChart()
+        }
         updateChart()
 
         customView.findViewById<Button>(R.id.btn_save).setOnClickListener {
@@ -220,7 +225,6 @@ class NauticalAdvancedSettingsBottomSheet : BaseNauticalBottomSheet() {
             settings.NAUTICAL_PILOT_AUTO_SEA_STATE.set(switchAutoSeaState.isChecked)
             settings.NAUTICAL_WAVE_BIAS_SENSITIVITY.set(sliderWaveBias.value.toInt())
             settings.NAUTICAL_ACTUATOR_ALARM_THRESHOLD.set(sliderActuatorThreshold.value)
-            settings.NAUTICAL_VESSEL_TYPE.set(if (vesselTypeToggle.checkedButtonId == R.id.btn_vessel_proa) VesselType.PROA else VesselType.CONVENTIONAL)
 
             NauticalPlugin.engine?.setAutoSeaStateEnabled(switchAutoSeaState.isChecked)
             autopilot.setSeaState(sliderSeaState.value.toInt())

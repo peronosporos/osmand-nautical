@@ -235,7 +235,6 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
         findPreference<Preference>("nautical_clear_data")?.apply {
             setIcon(OsmAndR.drawable.ic_action_delete_dark)
             setOnPreferenceClickListener {
-                // Task 60: Add confirmation dialog to prevent accidental data loss
                 AlertDialog.Builder(requireContext())
                     .setTitle(OsmAndR.string.nautical_clear_marine_data)
                     .setMessage(OsmAndR.string.nautical_clear_data_confirm)
@@ -777,7 +776,8 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
                 settings.NAUTICAL_SAFETY_CORRIDOR_BUFFER.id -> settings.NAUTICAL_SAFETY_CORRIDOR_BUFFER.get().toDouble()
                 else -> 0.0
             }
-            val (v, u) = SignalKUnitConverter.formatValue(app, settings, nm * 1852.0, "distance")
+            val meters = nm * 1852.0
+            val (v, u) = SignalKUnitConverter.formatValue(app, settings, meters, "distance")
             title = "${getString(titleId)} ($u)"
             summary = "$v $u"
             text = nm.toString()

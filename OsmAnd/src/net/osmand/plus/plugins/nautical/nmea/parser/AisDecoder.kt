@@ -88,7 +88,7 @@ object AisDecoder {
                 context = context,
                 updates = listOf(
                     Update(
-                        timestamp = System.currentTimeMillis().toString(),
+                        timestamp = net.osmand.plus.plugins.nautical.utils.TemporalUtils.now().toString(),
                         source = mapOf("label" to "ais-decoder"),
                         values = values
                     )

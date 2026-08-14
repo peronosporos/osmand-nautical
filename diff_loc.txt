@@ -1,0 +1,106 @@
+--- OsmAnd/src/net/osmand/plus/plugins/nautical/engine/NauticalLocationProvider.kt	2026-08-15 02:18:47.780690980 +0300
++++ NauticalLocationProvider_Advanced.kt	2026-08-15 02:34:45.277819276 +0300
+@@ -28,6 +28,14 @@
+         if (isActive) return
+         isActive = true
+         engine?.registerListener(listener)
++
++        // Auto-switch to Signal K source once on activation
++        if (app.settings.LOCATION_SOURCE.get() != LocationSource.EXTERNAL_SIGNALK) {
++            app.runInUIThread {
++                app.settings.LOCATION_SOURCE.set(LocationSource.EXTERNAL_SIGNALK)
++            }
++        }
++        
+         log.info("Nautical Location Bridge: Active.")
+     }
+ 
+@@ -35,6 +43,13 @@
+         if (!isActive) return
+         isActive = false
+         engine?.unregisterListener(listener)
++        
++        // Restore default location source if we were using SignalK
++        if (app.settings.LOCATION_SOURCE.get() == LocationSource.EXTERNAL_SIGNALK) {
++            app.runInUIThread {
++                app.settings.LOCATION_SOURCE.set(LocationSource.ANDROID_API)
++            }
++        }
+         log.info("Nautical Location Bridge: Stopped.")
+     }
+ 
+@@ -45,19 +60,19 @@
+ 
+         val currentTime = System.currentTimeMillis()
+         
+-        // Staleness detection for Position (relaxed to 30s)
++        // Staleness detection for Position
+         val positionTimestamp = state.timestamps["navigation.position"] ?: 0L
+         val positionAge = currentTime - positionTimestamp
+-        if (positionAge > 30000 && positionTimestamp != 0L) {
+-            log.warn("Nautical: Position stale (${positionAge}ms old)")
++        if (positionAge > 2000 && positionTimestamp != 0L) {
++            log.warn("Nautical: Rejecting stale location update (${positionAge}ms old)")
+             return
+         }
+ 
+-        // Staleness detection for Heading (relaxed to 10s)
++        // Staleness detection for Heading
+         val headingTimestamp = state.timestamps["navigation.headingTrue"] ?: 0L
+         val headingAge = currentTime - headingTimestamp
+         
+-        if (headingAge > 10000 && headingTimestamp != 0L) {
++        if (headingAge > 3000 && headingTimestamp != 0L) {
+             if (!isHeadingStale) {
+                 isHeadingStale = true
+                 triggerHeadingStaleWarning()
+@@ -76,29 +91,33 @@
+         loc.time = currentTime
+         
+         state.speedOverGround?.let { loc.speed = it.toFloat() }
+-        state.altitude?.let { loc.altitude = it }
+-
+-        // Dynamic Accuracy from HDOP
+-        val hdop = state.gnss?.horizontalDilution ?: 1.0
+-        // Industry Standard: 5m base accuracy * HDOP
+-        loc.accuracy = (hdop * 5.0).toFloat().coerceIn(1.0f, 100f)
+         
+-        // Bearing logic: Prioritize True Heading, fallback to COG
+         val caps = engine?.capabilityManager?.capabilities?.value ?: CapabilityManager.ServerCapabilityMap()
+-        val heading = if (!isHeadingStale) state.headingTrue else null
+         
+-        if (caps.hasGpsHeadingFallback && heading != null) {
+-             loc.bearing = Math.toDegrees(heading).toFloat()
+-        } else if (heading != null) {
+-            loc.bearing = Math.toDegrees(heading).toFloat()
++        // Fallback logic for bearing
++        if (caps.hasGpsHeadingFallback) {
++            // SignalK Server Managed Heading
++            if (!isHeadingStale && state.headingTrue != null) {
++                loc.bearing = Math.toDegrees(state.headingTrue).toFloat()
++            } else {
++                // Secondary fallback to COG if server heading is lost
++                state.courseOverGroundTrue?.let { loc.bearing = Math.toDegrees(it).toFloat() }
++            }
++        } else if (isHeadingStale || state.headingTrue == null) {
++            val internalHeading = app.locationProvider.heading
++            if (internalHeading != null) {
++                loc.bearing = internalHeading
++            } else {
++                state.courseOverGroundTrue?.let { loc.bearing = Math.toDegrees(it).toFloat() }
++            }
+         } else {
+-            state.courseOverGroundTrue?.let { loc.bearing = Math.toDegrees(it).toFloat() }
++            loc.bearing = Math.toDegrees(state.headingTrue).toFloat()
+         }
+         
++        loc.accuracy = 1.0f
++
+         app.runInUIThread {
+-            if (app.settings.LOCATION_SOURCE.get() == LocationSource.EXTERNAL_SIGNALK) {
+-                app.locationProvider.setLocationFromService(loc)
+-            }
++            app.locationProvider.setLocationFromService(loc)
+         }
+     }
+ 

@@ -1821,7 +1821,6 @@ else if (context.isNotEmpty()) {
             isRacing -> 100L // 10Hz for racing
             speed > 1.0 -> 250L // 4Hz for active sailing
             powerSaveMode -> 2000L // 0.5Hz for power save
-            state.latitude != null -> 500L // 2Hz for position updates even if slow
             else -> 1000L // 1Hz for stationary/normal
         }
 

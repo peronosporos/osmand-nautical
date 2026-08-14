@@ -73,8 +73,13 @@ class LaylineViewModel(
             .onEach { (liveData, polar, leewayPair) ->
                 withContext(Dispatchers.Default) { // Task: Offload heavy math to background
                     val (k, manual) = leewayPair
-                    val lat = liveData.latitude ?: return@withContext
-                    val lon = liveData.longitude ?: return@withContext
+                    val lat = liveData.latitude
+                    val lon = liveData.longitude
+                    
+                    if (lat == null || lon == null) {
+                         _uiState.value = LaylineUiState()
+                         return@withContext
+                    }
                     val boatPos = LatLon(lat, lon)
 
                 val plugin = NauticalPlugin.getInstance()

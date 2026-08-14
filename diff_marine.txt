@@ -1,0 +1,220 @@
+--- OsmAnd/src/net/osmand/plus/views/mapwidgets/widgets/MarineTextWidget.kt	2026-08-15 02:18:13.657240340 +0300
++++ MarineTextWidget_Advanced.kt	2026-08-15 02:20:48.402281344 +0300
+@@ -39,12 +39,16 @@
+     override fun updateIcon() {
+         val iconId = iconId
+         if (iconId != 0) {
+-            if (widgetType == WidgetType.NAUTICAL_DEPTH || widgetType == WidgetType.NAUTICAL_WIND) {
+-                setImageDrawable(iconId)
++            val engine = NauticalPlugin.engine
++            val state = engine?.getCurrentState()
++            val isStale = state?.let { isWidgetDataStale(it) } ?: false
++            
++            val color = if (isStale) {
++                ContextCompat.getColor(app, R.color.icon_color_warning)
+             } else {
+-                val color = settings.applicationMode.getProfileColor(isNightMode)
+-                setImageDrawable(iconsCache.getPaintedIcon(iconId, color))
++                ContextCompat.getColor(app, R.color.map_widget_icon_color)
+             }
++            setImageDrawable(iconsCache.getPaintedIcon(iconId, color))
+         }
+     }
+ 
+@@ -91,7 +95,9 @@
+         return View.OnClickListener {
+             if (!mapActivity.isFinishing) {
+                 when (widgetType) {
+-                    WidgetType.NAUTICAL_ENGINE_STATE -> toggleEngineState()
++                    WidgetType.NAUTICAL_ENGINE_STATE -> {
++                        toggleEngineState()
++                    }
+                     WidgetType.NAUTICAL_VHF_CHANNEL -> {
+                         net.osmand.plus.plugins.nautical.ui.VhfChannelPickerDialog.show(mapActivity.supportFragmentManager)
+                     }
+@@ -108,7 +114,7 @@
+         val engine = NauticalPlugin.engine ?: return
+         val autopilot = NauticalPlugin.autopilot ?: return
+         val state = engine.getCurrentState()
+-        val instance = customId?.substringAfterLast("#") ?: "0"
++        val instance = "0" // Default to instance 0 for single-engine toggle
+         val isStarted = state.engines[instance]?.state?.lowercase(Locale.US) == "started"
+         autopilot.setEngineState(instance, !isStarted)
+     }
+@@ -132,9 +138,29 @@
+             WidgetType.NAUTICAL_XTE -> SignalKPaths.NAV_XTE
+             WidgetType.NAUTICAL_AWA -> SignalKPaths.ENV_WIND_ANGLE_APPARENT
+             WidgetType.NAUTICAL_AWS -> SignalKPaths.ENV_WIND_SPEED_APPARENT
++            WidgetType.NAUTICAL_HUMIDITY -> SignalKPaths.ENV_OUTSIDE_HUMIDITY
++            WidgetType.NAUTICAL_AC_VOLTAGE -> "electrical.ac.0.voltage"
++            WidgetType.NAUTICAL_AC_CURRENT -> "electrical.ac.0.current"
++            WidgetType.NAUTICAL_AC_FREQUENCY -> "electrical.ac.0.frequency"
+             WidgetType.NAUTICAL_VHF_CHANNEL -> SignalKPaths.COMMUNICATION_VHF_CHANNEL
++            WidgetType.NAUTICAL_GNSS_QUALITY -> "navigation.gnss.horizontalDilution"
+             WidgetType.NAUTICAL_SALINITY -> SignalKPaths.ENV_WATER_SALINITY
+             WidgetType.NAUTICAL_DEW_POINT -> SignalKPaths.ENV_AIR_DEW_POINT
++            WidgetType.NAUTICAL_ILLUMINANCE -> SignalKPaths.ENV_OUTSIDE_ILLUMINANCE
++            WidgetType.NAUTICAL_RIGGING_LOAD -> "rigging.loads.0"
++            WidgetType.NAUTICAL_MEDIA -> SignalKPaths.MEDIA_TITLE
++            WidgetType.NAUTICAL_WIND_SHIFT_WIDGET -> SignalKPaths.PERF_WIND_SHIFT
++            WidgetType.NAUTICAL_RACING_TIMER -> SignalKPaths.PERF_RACING_TIMER
++            WidgetType.NAUTICAL_WATERMAKER -> "propulsion.watermaker.0.rate"
++            WidgetType.NAUTICAL_BOOST_PRESSURE -> "propulsion.0.boostPressure"
++            WidgetType.NAUTICAL_EXHAUST_TEMP -> "propulsion.0.exhaustTemperature"
++            WidgetType.NAUTICAL_ALTERNATOR_VOLT -> "propulsion.0.alternatorVoltage"
++            WidgetType.NAUTICAL_ALTERNATOR_CURR -> "propulsion.0.alternatorCurrent"
++            WidgetType.NAUTICAL_TRANS_GEAR -> "propulsion.0.transmissionGear"
++            WidgetType.NAUTICAL_TRANS_PRESS -> "propulsion.0.transmissionPressure"
++            WidgetType.NAUTICAL_TRANS_OIL_TEMP -> "propulsion.0.transmissionOilTemperature"
++            WidgetType.NAUTICAL_INV_STATE -> "electrical.inverters.0.state"
++            WidgetType.NAUTICAL_CHG_STATE -> "electrical.chargers.0.state"
+             WidgetType.NAUTICAL_REEFS -> SignalKPaths.SAILS_REEFS
+             else -> customId ?: ""
+         }
+@@ -144,8 +170,8 @@
+         val age = (now - timestamp) / 1000.0
+ 
+         return when {
+-            age > 30.0 -> IntegrityState.ALARM // Relaxed from 10s
+-            (age > 10.0) || state.stalePaths.contains(path) -> IntegrityState.STALE // Relaxed from 3s
++            age > 10.0 -> IntegrityState.ALARM
++            (age > 3.0) || state.stalePaths.contains(path) || (state.connectionStatus == net.osmand.plus.plugins.nautical.engine.ConnectionStatus.STALE) -> IntegrityState.STALE
+             else -> IntegrityState.VALID
+         }
+     }
+@@ -177,15 +203,13 @@
+         val integrity = getIntegrityState(state)
+ 
+         updateIcon()
++        applyIntegrityStyling(integrity)
+ 
+         if (integrity == IntegrityState.DISCONNECTED) {
+             setText(mapActivity.getString(R.string.nautical_status_off), mapActivity.getString(R.string.n_a))
+-            contentView?.alpha = 0.5f
+             return
+         }
+ 
+-        contentView?.alpha = if (integrity == IntegrityState.STALE) 0.6f else 1.0f
+-
+         val instance = customId?.substringAfterLast("#") ?: "0"
+         val variation = state.magneticVariation
+ 
+@@ -387,7 +411,49 @@
+                     String.format(Locale.US, "%s%02d:%02d", sign, m, s) to ""
+                 } else mapActivity.getString(R.string.n_a) to ""
+             }
++            WidgetType.NAUTICAL_WATERMAKER -> {
++                val watermaker = state.watermakers[instance] ?: state.watermakers.values.firstOrNull()
++                if (watermaker != null) {
++                    val rate = watermaker.rate ?: 0.0
++                    String.format(Locale.US, "%.1f", rate) to "L/h"
++                } else mapActivity.getString(R.string.n_a) to "L/h"
++            }
++            WidgetType.NAUTICAL_BOOST_PRESSURE -> SignalKUnitConverter.formatValue(mapActivity, settings, state.engines[instance]?.boostPressure, "pressure")
++            WidgetType.NAUTICAL_EXHAUST_TEMP -> SignalKUnitConverter.formatValue(mapActivity, settings, state.engines[instance]?.exhaustTemperature, SignalKPaths.ENV_WATER_TEMP)
++            WidgetType.NAUTICAL_ALTERNATOR_VOLT -> SignalKUnitConverter.formatValue(mapActivity, settings, state.engines[instance]?.alternatorVoltage, "voltage")
++            WidgetType.NAUTICAL_ALTERNATOR_CURR -> SignalKUnitConverter.formatValue(mapActivity, settings, state.engines[instance]?.alternatorCurrent, "current")
++            WidgetType.NAUTICAL_TRANS_GEAR -> (state.engines[instance]?.transmissionGear ?: mapActivity.getString(R.string.n_a)) to ""
++            WidgetType.NAUTICAL_TRANS_PRESS -> SignalKUnitConverter.formatValue(mapActivity, settings, state.engines[instance]?.transmissionPressure, "pressure")
++            WidgetType.NAUTICAL_TRANS_OIL_TEMP -> SignalKUnitConverter.formatValue(mapActivity, settings, state.engines[instance]?.transmissionOilTemperature, SignalKPaths.ENV_WATER_TEMP)
++            WidgetType.NAUTICAL_INV_STATE -> (state.inverters[instance]?.state ?: mapActivity.getString(R.string.n_a)) to ""
++            WidgetType.NAUTICAL_CHG_STATE -> (state.chargers[instance]?.state ?: mapActivity.getString(R.string.n_a)) to ""
++            WidgetType.NAUTICAL_WATERMAKER_RATE -> SignalKUnitConverter.formatValue(mapActivity, settings, state.watermakers[instance]?.rate, "watermakerRate")
++            WidgetType.NAUTICAL_WATERMAKER_TOTAL -> SignalKUnitConverter.formatValue(mapActivity, settings, state.watermakers[instance]?.totalProduction, "volume")
++            WidgetType.NAUTICAL_WATERMAKER_SALINITY -> SignalKUnitConverter.formatValue(mapActivity, settings, state.watermakers[instance]?.salinity, "salinity")
+             WidgetType.NAUTICAL_REEFS -> (state.reefs?.toString() ?: mapActivity.getString(R.string.n_a)) to ""
++            WidgetType.NAUTICAL_RIGGING_LOADS -> {
++                val loads = if (instance == "0") state.riggingLoads.values else state.riggingLoads.filterKeys { it.startsWith(instance) }.values
++                if (loads.isNotEmpty()) {
++                    val max = loads.max()
++                    String.format(Locale.US, "%.0f", max) to "kgf (${loads.size})"
++                } else mapActivity.getString(R.string.n_a) to "kgf"
++            }
++            WidgetType.NAUTICAL_AC_SYSTEM -> {
++                val inv = state.inverters[instance] ?: state.inverters["0"]
++                val chg = state.chargers[instance] ?: state.chargers["0"]
++                val v = inv?.acVoltage ?: 0.0
++                if (v > 50) {
++                    String.format(Locale.US, "%.0f", v) to "V AC"
++                } else if (chg != null) {
++                    (chg.state?.uppercase(Locale.US) ?: "CHG") to "AC"
++                } else mapActivity.getString(R.string.n_a) to "AC"
++            }
++            WidgetType.NAUTICAL_NOTIFICATIONS_LIST -> {
++                val count = state.notifications.size
++                if (count > 0) {
++                    count.toString() to mapActivity.getString(R.string.nautical_notifications)
++                } else "OK" to ""
++            }
+             else -> {
+                 val customVal = state.customValues[customId]
+                 if (customVal != null) {
+@@ -462,4 +528,68 @@
+         val valueText = "$main $sub"
+         contentView?.contentDescription = "$label, $valueText, $integrityLabel"
+     }
++
++    private fun applyIntegrityStyling(integrity: IntegrityState) {
++        val view = getView()
++        val bgView = view.findViewById(R.id.widget_bg) ?: view
++        val text = textView ?: return
++
++        // Reset strike-through
++        text.paint.isStrikeThruText = false
++
++        when (integrity) {
++            IntegrityState.VALID -> {
++                contentView?.alpha = 1.0f
++                if (text.textColor == Color.RED || text.textColor == ContextCompat.getColor(app, R.color.nautical_status_yellow)) {
++                    text.textColor = if (nightMode) ContextCompat.getColor(app, R.color.text_color_primary_dark) else ContextCompat.getColor(app, R.color.text_color_primary_light)
++                }
++                bgView.setBackgroundColor(Color.TRANSPARENT)
++            }
++            IntegrityState.STALE -> {
++                contentView?.alpha = 0.8f
++                text.textColor = ContextCompat.getColor(app, R.color.nautical_status_yellow)
++                bgView.setBackgroundColor(Color.TRANSPARENT)
++            }
++            IntegrityState.ALARM -> {
++                contentView?.alpha = 1.0f
++                text.textColor = Color.RED
++                bgView.setBackgroundColor(Color.TRANSPARENT)
++            }
++            IntegrityState.DISCONNECTED -> {
++                contentView?.alpha = 0.5f
++                text.textColor = ContextCompat.getColor(app, R.color.text_color_secondary_light)
++                bgView.setBackgroundColor(Color.TRANSPARENT)
++            }
++        }
++    }
++
++
++    private fun isWidgetDataStale(state: MarineState): Boolean {
++        val paths = when (widgetType) {
++            WidgetType.NAUTICAL_DEPTH -> listOf(SignalKPaths.ENV_DEPTH_BELOW_TRANSDUCER)
++            WidgetType.NAUTICAL_WIND -> listOf(SignalKPaths.ENV_WIND_SPEED_TRUE, SignalKPaths.ENV_WIND_ANGLE_TRUE)
++            WidgetType.NAUTICAL_SOG -> listOf(SignalKPaths.NAV_SPEED_OVER_GROUND)
++            WidgetType.NAUTICAL_COG -> listOf(SignalKPaths.NAV_COURSE_OVER_GROUND)
++            WidgetType.NAUTICAL_STW -> listOf(SignalKPaths.NAV_SPEED_THROUGH_WATER)
++            WidgetType.NAUTICAL_HEADING_MAGNETIC -> listOf(SignalKPaths.NAV_HEADING_MAG)
++            WidgetType.NAUTICAL_XTE -> listOf(SignalKPaths.NAV_XTE, SignalKPaths.NAV_XTE_RHUMB)
++            WidgetType.NAUTICAL_AWA -> listOf(SignalKPaths.ENV_WIND_ANGLE_APPARENT)
++            WidgetType.NAUTICAL_AWS -> listOf(SignalKPaths.ENV_WIND_SPEED_APPARENT)
++            WidgetType.NAUTICAL_BOOST_PRESSURE -> listOf("propulsion.0.boostPressure")
++            WidgetType.NAUTICAL_EXHAUST_TEMP -> listOf("propulsion.0.exhaustTemperature")
++            WidgetType.NAUTICAL_ALTERNATOR_VOLT -> listOf("propulsion.0.alternatorVoltage")
++            WidgetType.NAUTICAL_ALTERNATOR_CURR -> listOf("propulsion.0.alternatorCurrent")
++            WidgetType.NAUTICAL_TRANS_GEAR -> listOf("propulsion.0.transmissionGear")
++            WidgetType.NAUTICAL_TRANS_PRESS -> listOf("propulsion.0.transmissionPressure")
++            WidgetType.NAUTICAL_TRANS_OIL_TEMP -> listOf("propulsion.0.transmissionOilTemperature")
++            WidgetType.NAUTICAL_INV_STATE -> listOf("electrical.inverters.0.state")
++            WidgetType.NAUTICAL_CHG_STATE -> listOf("electrical.chargers.0.state")
++            WidgetType.NAUTICAL_WATERMAKER_RATE -> listOf("propulsion.watermaker.0.rate")
++            WidgetType.NAUTICAL_WATERMAKER_TOTAL -> listOf("propulsion.watermaker.0.totalProduction")
++            WidgetType.NAUTICAL_WATERMAKER_SALINITY -> listOf("propulsion.watermaker.0.salinity")
++            WidgetType.NAUTICAL_REEFS -> listOf(SignalKPaths.SAILS_REEFS)
++            else -> emptyList()
++        }
++        return paths.any { state.stalePaths.contains(it) }
++    }
+ }

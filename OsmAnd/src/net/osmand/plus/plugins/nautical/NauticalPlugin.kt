@@ -1994,8 +1994,8 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
     }
 
     /**
-     * Purges Signal K buffers, GRIB cache, and S-63 temporary files from device storage.
-     * Triggered by "Clear Marine Data" or significant chart directory changes.
+     * Purges Signal K buffers, GRIB cache, and AIS extras from device storage.
+     * Triggered by "Clear Marine Data".
      */
     fun clearMarineData() {
         pluginScope?.launch(Dispatchers.IO) {
@@ -2011,10 +2011,16 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
                     gribDir.deleteRecursively()
                 }
 
-                // 3. S-63 and KAP decrypted fragments
-                net.osmand.plus.plugins.nautical.s63.crypto.S63Decryptor.cleanup(app)
-                // We only delete temporary or cache files here, not imported charts themselves unless poison is suspected.
-                // For now, clean standard temp dirs.
+                // 3. AIS Data
+                aisManager?.cleanupResources()
+                aisManager = null
+
+                // 4. Anchor Watch
+                app.settings.NAUTICAL_ANCHOR_LAT.set(0.0)
+                app.settings.NAUTICAL_ANCHOR_LON.set(0.0)
+                anchorWatchdog?.stop()
+
+                // 5. Cache cleanup
                 val cacheDir = File(app.cacheDir, "nautical")
                 if (cacheDir.exists()) {
                     cacheDir.deleteRecursively()

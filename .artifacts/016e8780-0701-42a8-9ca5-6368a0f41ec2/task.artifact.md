@@ -1,0 +1,46 @@
+# Task List - Nautical Regression Restoration
+
+Restoring features and visuals to the high standard of commit `3b6ba78`.
+
+- `[x]` 1. Pilot Widget Restoration
+    - `[x]` Recreate `map_hud_pilot_widget.xml` (deleted in HEAD)
+    - `[x]` Update `NauticalPilotWidget.kt` with rudder indicator and tactical gate logic
+- `[x]` 2. GPS & Location Stability
+    - `[x]` Stop forced switch to `EXTERNAL_SIGNALK` in `NauticalLocationProvider.kt`
+    - `[x]` Relax aggressive staleness checks for position and heading
+- `[x]` 3. Telemetry Widget Visuals
+    - `[x]` Simplify styling in `MarineTextWidget.kt` (standardize colors)
+    - `[x]` Remove distracting "TIMEOUT"/"X" placeholders for non-critical data
+- `[x]` 4. Laylines & Wind Shifts
+    - `[x]` Fix map rotation sign bug in `SailingLaylinesMapLayer.kt`
+    - `[x]` Simplify layline rendering (remove over-engineered intermediate point caching)
+- `[x]` 5. Post-Restoration Refinements
+    - `[x]` Restore missing telemetry types in `MarineTextWidget.kt`
+    - `[x]` Restore Proa shunt logic in `NauticalPilotWidget.kt`
+    - `[x]` Re-integrate `CapabilityManager` in `NauticalLocationProvider.kt`
+- `[x]` 6. Advanced Logic Restoration
+    - `[x]` Restore Accessibility logic in `MarineTextWidget.kt`
+    - `[x]` Re-implement Coroutine Flow support in Widgets
+    - `[x]` Restore Dynamic Accuracy (HDOP) in Location Provider
+    - `[x]` Restore Safety Bounds in `SignalKUnitConverter.kt`
+    - `[x]` Restore Server-side Laylines support
+- `[x]` 7. Final Advanced Hybrid Integration
+    - `[x]` Restore Pilot HUD Nudge Controls & Blinking
+    - `[x]` Restore Helm Lock security logic
+    - `[x]` Restore Great Circle curved laylines
+    - `[x]` Consolidate all 77 telemetry integrity paths
+- `[x]` 8. Final Verification & Audit
+    - `[x]` Verify single/double tap gestures match 3b6ba78
+    - `[x]` Verify Material 3 nudge button dimensions
+    - `[x]` Verify all 77 SignalK paths are mapped to correct staleness trackers
+    - `[x]` Verify no useful code was lost in deletions
+- `[x]` 9. Deep Reconciliation (User Feedback)
+    - `[x]` Revert Pilot HUD to sleek 3b6ba78 layout (remove nudge buttons)
+    - `[x]` Restore 100% of advanced `SignalKUnitConverter` logic
+    - `[x]` Restore 100% of advanced `NauticalLocationProvider` logic (minus source forcing)
+    - `[x]` Final audit of all 77 paths in `MarineTextWidget`
+- `[/]` 10. Gold Standard Verification
+    - `[ ]` Confirm HUD sleekness
+    - `[ ]` Confirm dashboard availability (Double-tap)
+    - `[ ]` Confirm TalkBack support
+    - `[ ]` Confirm outlier filtering is active

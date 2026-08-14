@@ -25,6 +25,18 @@
             app:layout_constraintTop_toTopOf="parent"
             android:contentDescription="@string/shared_string_options" />
 
+        <ImageButton
+            android:id="@+id/btn_settings_gear"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_marginEnd="8dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:src="@drawable/ic_action_settings"
+            app:tint="?attr/icon_color_primary"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            android:contentDescription="@string/shared_string_settings" />
+
         <!-- 1. Dashboard Header (Mode Toggles) -->
         <com.google.android.material.button.MaterialButtonToggleGroup
             android:id="@+id/mode_toggle_group"

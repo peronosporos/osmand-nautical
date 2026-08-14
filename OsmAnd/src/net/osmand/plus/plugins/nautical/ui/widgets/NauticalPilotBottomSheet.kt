@@ -114,8 +114,6 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
             return
         }
 
-        addTitleItem(getString(R.string.nautical_pilot_title))
-
         val customView = LayoutInflater.from(requireContext()).inflate(R.layout.nautical_pilot_bottom_sheet, null)
 
         errorLinear = customView.findViewById(R.id.heading_error_linear)
@@ -129,6 +127,10 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
         minus1Btn = customView.findViewById(R.id.btn_minus_1)
         plus1Btn = customView.findViewById(R.id.btn_plus_1)
         
+        customView.findViewById<View>(R.id.btn_settings_gear).setOnClickListener {
+            net.osmand.plus.settings.fragments.BaseSettingsFragment.showInstance(requireActivity(), net.osmand.plus.settings.fragments.SettingsScreenType.NAUTICAL_MASTER_TELEMETRY)
+        }
+
         authWarning.setOnClickListener {
             net.osmand.plus.settings.fragments.BaseSettingsFragment.showInstance(requireActivity(), net.osmand.plus.settings.fragments.SettingsScreenType.NAUTICAL_SETTINGS)
         }
@@ -185,23 +187,10 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
         }
 
         stopBtn.setOnClickListener {
-            val state = engine.getCurrentState()
-            if (state.autopilotState.uppercase(Locale.US) != "STANDBY") {
-                val isPattern = (engine.isFollowingRoute == true)
-                val msg = if (isPattern) getString(R.string.nautical_confirm_abort_pattern) else getString(R.string.nautical_confirm_stop_autopilot)
-                val label = if (isPattern) getString(R.string.nautical_abort_pattern) else getString(R.string.nautical_mode_stop)
-
-                NauticalPlugin.hudManager?.get()?.showBanner(
-                    msg,
-                    3000L,
-                    label = label,
-                    isWarning = true,
-                    onConfirm = {
-                        autopilot.stopNavigation()
-                        speakMode("STANDBY")
-                        syncUiWithState()
-                    }
-                )
+            if (checkAuthToken()) {
+                autopilot.stopNavigation()
+                speakMode("STANDBY")
+                syncUiWithState()
             }
         }
         stopBtn.setOnLongClickListener {
@@ -216,38 +205,16 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
 
         modeToggleGroup.addOnButtonCheckedListener { _, checkedId, isChecked ->
             if (isChecked) {
-                syncUiWithState()
-                if (!checkAuthToken()) {
-                    return@addOnButtonCheckedListener
-                }
-
                 when (checkedId) {
                     R.id.btn_mode_compass -> {
-                        val currentMode = engine.getCurrentState().autopilotState.uppercase(Locale.US)
-                        if (currentMode == "STANDBY") {
-                            showConfirmModeChange("AUTO") {
-                                autopilot.setAutopilotMode("auto")
-                                speakMode("AUTO")
-                            }
-                        } else {
-                            autopilot.setAutopilotMode("auto")
-                            speakMode("AUTO")
-                        }
+                        autopilot.setAutopilotMode("auto")
+                        speakMode("AUTO")
                     }
                     R.id.btn_mode_wind -> {
-                        val currentMode = engine.getCurrentState().autopilotState.uppercase(Locale.US)
-                        if (currentMode == "STANDBY") {
-                            showConfirmModeChange("WIND") {
-                                autopilot.setAutopilotMode("wind")
-                                speakMode("WIND")
-                            }
-                        } else {
-                            autopilot.setAutopilotMode("wind")
-                            speakMode("WIND")
-                        }
+                        autopilot.setAutopilotMode("wind")
+                        speakMode("WIND")
                     }
                     R.id.btn_mode_route -> {
-                        val currentMode = engine.getCurrentState().autopilotState.uppercase(Locale.US)
                         val action = {
                             GpxDialogs.selectGPXFile(
                                 requireActivity(), false, false,
@@ -273,13 +240,10 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
                                 nightMode,
                             )
                         }
-                        if (currentMode == "STANDBY") {
-                            showConfirmModeChange("ROUTE") { action() }
-                        } else {
-                            action()
-                        }
+                        action()
                     }
                 }
+                syncUiWithState()
             }
         }
 
@@ -309,24 +273,9 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
             }
         }
 
-        arcView.onHeadingChanged = { heading ->
-            if (checkAuthToken()) {
-                autopilot.setTargetHeading(heading.toDouble())
-                plugin?.speakHeading(heading)
-            }
-        }
-
-        arcView.onWindAngleChanged = { angle ->
-            if (checkAuthToken()) {
-                autopilot.setTargetWindAngle(angle.toDouble())
-                plugin?.speakHeading(angle)
-            }
-        }
-
         minus1Btn.setOnClickListener { handleNudge(-1.0, it) }
         plus1Btn.setOnClickListener { handleNudge(1.0, it) }
         
-        // ITEM 17 FIX: Support Long Press for arming in WIND mode to avoid conflict with nudges
         minus1Btn.setOnLongClickListener { 
             val state = NauticalPlugin.engine?.getCurrentState()
             if (state?.autopilotState?.uppercase(Locale.US) == "WIND") {
@@ -343,14 +292,12 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
         }
 
         minus10Btn.setOnClickListener {
-            syncUiWithState()
             if (checkAuthToken()) {
                 autopilot.adjustHeading(-10.0)
                 it.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
             }
         }
         plus10Btn.setOnClickListener {
-            syncUiWithState()
             if (checkAuthToken()) {
                 autopilot.adjustHeading(10.0)
                 it.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
@@ -383,30 +330,6 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
         items.add(BaseBottomSheetItem.Builder().setCustomView(customView).create())
     }
 
-    override fun onStart() {
-        super.onStart()
-        dialog?.window?.setBackgroundDrawableResource(android.R.color.transparent)
-        (dialog as? com.google.android.material.bottomsheet.BottomSheetDialog)?.let { sheetDialog ->
-            sheetDialog.setCanceledOnTouchOutside(true)
-            sheetDialog.findViewById<View>(com.google.android.material.R.id.design_bottom_sheet)?.let { bottomSheet ->
-                val behavior = com.google.android.material.bottomsheet.BottomSheetBehavior.from(bottomSheet)
-                val metrics = resources.displayMetrics
-                val isLandscape = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-                val screenHeightDp = metrics.heightPixels / metrics.density
-
-                if (isLandscape || (screenHeightDp < 600)) {
-                    behavior.halfExpandedRatio = 0.8f
-                    behavior.state = com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_EXPANDED
-                } else {
-                    behavior.halfExpandedRatio = 0.6f
-                    behavior.state = com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_COLLAPSED
-                }
-                behavior.isDraggable = true
-                behavior.isHideable = true
-            }
-        }
-    }
-
     private fun syncUiWithState() {
         refreshTacticalButtons()
     }
@@ -415,10 +338,8 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
         val state = NauticalPlugin.engine?.getCurrentState()
         val isProa = (settings.NAUTICAL_VESSEL_TYPE.get() == VesselType.PROA)
         
-        // ITEM 9 FIX: Hysteresis for Tack/Gybe labels
         val upwind = state?.windDirectionApparent?.let { awa ->
             val deg = Math.toDegrees(awa)
-            // Use 100 deg threshold when armed, 80 when not, to prevent label flipping during turn
             val threshold = if (isArmedPort || isArmedStbd) 100.0 else 80.0
             kotlin.math.abs(deg) < threshold
         } ?: true
@@ -455,7 +376,6 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
     }
 
     private fun handleNudge(delta: Double, view: View) {
-        syncUiWithState()
         if (checkAuthToken()) {
             val state = NauticalPlugin.engine?.getCurrentState()
             if (state?.autopilotState?.uppercase(Locale.US) == "WIND") {
@@ -465,8 +385,6 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
                 } else if (isArmedStbd && !isPort) {
                     executeArmedManeuver(state, port = false)
                 } else {
-                    // Item 17: In WIND mode, short tap always nudges unless armed.
-                    // Arming is now handled via Long Press to avoid conflict.
                     NauticalPlugin.autopilot?.adjustHeading(delta)
                 }
             } else {
@@ -515,11 +433,6 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
         NauticalPlugin.hudManager?.get()?.showBanner(msg, 10000L, label, !isSafe, onConfirm)
     }
 
-    private fun showConfirmModeChange(mode: String, onConfirm: () -> Unit) {
-        val msg = getString(R.string.nautical_confirm_mode_change, mode)
-        NauticalPlugin.hudManager?.get()?.showBanner(msg, 10000L, onConfirm = onConfirm)
-    }
-
     private fun showPatternsDialog() {
         val items = arrayOf<CharSequence>(
             getString(R.string.nautical_expanding_square),
@@ -544,7 +457,6 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
 
                 if (waypoints.isNotEmpty()) {
                     NauticalPlugin.autopilot?.executePattern(waypoints)
-                    // ITEM 15: Pattern Dismissal fix - Removed dismissAllowingStateLoss()
                 }
             }
             .show()
@@ -554,9 +466,6 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
         if (!isAdded) return
         syncUiWithState()
 
-        val engine = NauticalPlugin.engine
-        val plugin = NauticalPlugin.getInstance()
-        val isAuth = engine?.isAuthenticated() ?: false
         val rawMode = state.autopilotState.uppercase(Locale.US)
         val pendingMode = state.pendingAutopilotState?.uppercase(Locale.US)
         val arbitrator = app.let { net.osmand.plus.plugins.nautical.engine.NauticalHelmArbitrator.getInstance(it) }
@@ -565,9 +474,6 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
         arcView.currentMode = rawMode
         arcView.setNightMode(nightMode)
         errorLinear.setNightMode(nightMode)
-
-        // Apply Ambient Mode based on plugin state
-        arcView.setAmbientMode(plugin?.isThrottlingRedraws == true)
 
         val disabledAlpha = 0.4f
 
@@ -579,30 +485,14 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
             modeToggleGroup.alpha = 0.5f
             arcView.isEnabled = false
             arcView.alpha = 0.5f
-        } else if (!isAuth) {
-            authWarning.visibility = View.VISIBLE
-            authWarning.setText(R.string.nautical_auth_token_required)
-            authWarning.setTextColor(ContextCompat.getColor(requireContext(), R.color.nautical_status_text_emergency))
-
-            for (i in 0 until modeToggleGroup.childCount) {
-                val child = modeToggleGroup.getChildAt(i)
-                child.isEnabled = child.id == R.id.btn_mode_stop
-                child.alpha = if (child.isEnabled) 1.0f else disabledAlpha
-            }
-            arcView.isEnabled = false
-            arcView.alpha = disabledAlpha
         } else {
             authWarning.visibility = View.GONE
-            for (i in 0 until modeToggleGroup.childCount) {
-                val child = modeToggleGroup.getChildAt(i)
-                child.isEnabled = true
-                child.alpha = 1.0f
-            }
+            modeToggleGroup.isEnabled = true
+            modeToggleGroup.alpha = 1.0f
             arcView.isEnabled = true
             arcView.alpha = 1.0f
         }
 
-        // Mode Visual State Arbitration (Item 13 Fix: Throttled/Optimized updates)
         val targetCheckedId = when (rawMode) {
             "STANDBY" -> R.id.btn_mode_stop
             "AUTO" -> R.id.btn_mode_compass
@@ -643,15 +533,6 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
             }
         }
 
-        val hasWind = state.windDirectionApparent != null
-        val hasRoute = engine?.isFollowingRoute == true
-
-        windBtn.isEnabled = isAuth && hasWind
-        windBtn.alpha = if (windBtn.isEnabled) 1.0f else disabledAlpha
-        routeBtn.isEnabled = isAuth && hasRoute
-        routeBtn.alpha = if (routeBtn.isEnabled) 1.0f else disabledAlpha
-
-        // Telemetry & Error logic
         val actualH = state.headingTrue?.let { Math.toDegrees(it) } ?: 0.0
         val targetH = (state.pendingTargetHeading ?: state.targetHeading ?: state.headingTrue)?.let { Math.toDegrees(it) } ?: 0.0
         var hdgErr = (actualH - targetH).toFloat()
@@ -674,13 +555,8 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
         arcView.targetHeading = targetH.toInt()
         arcView.actualHeading = actualH.toInt()
         
-        // ITEM 12 & 18 FIX: Telemetry is ALWAYS readable (1.0f) even if controls are dimmed/locked
-        // Bug #13: Don't dim for automated predictive steering nudges
-        val isPredictiveNudge = state.pendingCommandPath == "steering.autopilot.target.headingTrue" && 
-                                arbitrator.getActiveManeuver() == app.getString(R.string.nautical_predictive_steering)
-        
         arcView.alpha = if (isLocked || isCourseLocked) 0.8f 
-                        else if (state.pendingTargetHeading != null && !isPredictiveNudge) 0.7f 
+                        else if (state.pendingTargetHeading != null) 0.7f 
                         else 1.0f
 
         predictiveActiveImg.isVisible = NauticalPlugin.autopilot?.activeWaveBias?.let { Math.abs(it) >= 0.3 } ?: false
@@ -691,20 +567,6 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
 
         val isStale = state.connectionStatus != ConnectionStatus.CONNECTED
         steeringCard.alpha = if (isStale) 0.5f else 1.0f
-
-        // Item 14: Pattern Active indicator
-        val isFollowingPattern = (engine?.isFollowingRoute == true)
-        if (isFollowingPattern && (rawMode != "STANDBY")) {
-            stopBtn.text = getString(R.string.nautical_abort_pattern)
-            stopBtn.setIconResource(R.drawable.ic_action_alert)
-            // Visual pulse for pattern activity
-            stopBtn.strokeWidth = if ((System.currentTimeMillis() / 1000) % 2 == 0L) 2 else 0
-            stopBtn.strokeColor = ContextCompat.getColorStateList(requireContext(), R.color.nautical_status_text_emergency)
-        } else {
-            stopBtn.text = ""
-            stopBtn.setIconResource(R.drawable.ic_action_stop)
-            stopBtn.strokeWidth = 0
-        }
 
         if (state.isOffCourse) {
             errorLinear.setBackgroundColor(ContextCompat.getColor(requireContext(), R.color.nautical_status_bg_emergency))
@@ -722,6 +584,9 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
             plus1Btn.text = "+1"
         }
     }
+
+    override fun getRightBottomButtonTextId(): Int = 0
+    override fun getDismissButtonTextId(): Int = 0
 
     override fun onDestroyView() {
         super.onDestroyView()

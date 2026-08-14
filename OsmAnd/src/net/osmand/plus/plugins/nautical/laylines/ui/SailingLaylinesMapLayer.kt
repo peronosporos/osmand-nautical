@@ -9,8 +9,8 @@ import net.osmand.plus.plugins.nautical.NauticalPlugin
 import net.osmand.plus.plugins.nautical.engine.SignalKPaths
 import net.osmand.plus.plugins.nautical.laylines.viewmodel.LaylineUiState
 import net.osmand.plus.views.layers.base.OsmandMapLayer
-import kotlin.math.*
 import androidx.core.graphics.toColorInt
+import kotlin.math.abs
 
 /**
  * Custom map layer for rendering tactical laylines and wind shifts.
@@ -277,16 +277,15 @@ class SailingLaylinesMapLayer(context: Context) : OsmandMapLayer(context), Share
         val centerX = tileBox.getPixXFromLatLon(boatLat, boatLon)
         val centerY = tileBox.getPixYFromLatLon(boatLat, boatLon)
         
-        // Scale radius by zoom and density (TASK-ZOOM)
+        // Scale radius by zoom and density
         val baseRadius = 250f * tileBox.density
         val zoomFactor = (tileBox.zoom / 14f).coerceIn(0.5f, 2.0f)
         val radius = baseRadius * zoomFactor
 
         windShiftRect.set(centerX - radius, centerY - radius, centerX + radius, centerY + radius)
         
-        // Adjust for Android canvas startAngle (0 at East, clockwise) vs Nautical (0 at North, clockwise)
-        // Correct rotation sign (TASK-ROTATION)
-        val startAngle = cachedStartOfMaxGapPlusGap - 90.0 + tileBox.rotate
+        // Correct rotation sign
+        val startAngle = cachedStartOfMaxGapPlusGap - 90.0 - tileBox.rotate
         
         canvas.drawArc(windShiftRect, startAngle.toFloat(), cachedSweepAngle, true, windShiftPaint)
     }

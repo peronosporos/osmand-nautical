@@ -34,11 +34,8 @@ import net.osmand.plus.plugins.nautical.audio.NauticalAudioArbiter
 import net.osmand.plus.plugins.nautical.di.SailingDependencyContainer
 import net.osmand.plus.plugins.nautical.laylines.engine.LatLon
 import net.osmand.plus.plugins.nautical.laylines.engine.LaylineData
-import net.osmand.plus.plugins.nautical.network.DeltaMessage
 import net.osmand.plus.plugins.nautical.network.LivePerformanceData
 import net.osmand.plus.plugins.nautical.network.SignalKCourse
-import net.osmand.plus.plugins.nautical.network.Update
-import net.osmand.plus.plugins.nautical.network.Value
 import net.osmand.plus.plugins.nautical.network.SignalKLineString
 import net.osmand.plus.plugins.nautical.network.SignalKRestService
 import net.osmand.plus.plugins.nautical.network.SignalKRoute
@@ -1241,7 +1238,6 @@ class SignalKEngine(
     fun handleIncomingMessage(jsonMessage: String) {
         lastUpdateTimestamp = TemporalUtils.now()
         resetWatchdog()
-        dataBroker.updateState { it.copy(lastMessageTime = System.currentTimeMillis()) }
 
         if (powerSaveMode) {
             val now = System.currentTimeMillis()
@@ -1253,101 +1249,6 @@ class SignalKEngine(
         if (!result.isSuccess) {
             log.warn("SignalK message buffer full, message dropped")
         }
-    }
-
-    /**
-     * Directly handles a pre-parsed Signal K DeltaMessage.
-     * Used for bridging NMEA-decoded data (e.g. AIS) into the Signal K engine.
-     */
-    fun handleDelta(delta: DeltaMessage) {
-        lastUpdateTimestamp = TemporalUtils.now()
-        resetWatchdog()
-        
-        val context = delta.context ?: "vessels.self"
-        processDeltaUpdates(delta, context)
-    }
-
-    private fun processDeltaUpdates(delta: DeltaMessage, context: String) {
-        val currentMmsi = dataBroker.marineState.value.vesselMmsi
-        val isSelf = (context == "vessels.self") || (context == "") || (context == trueSelfContext) ||
-                (currentMmsi != null && context == "vessels.urn:mrn:imo:mmsi:$currentMmsi")
-
-        var aisTarget: AisObject? = null
-        if (!isSelf) {
-            aisTarget = resolveAisTargetFromContext(context)
-        }
-
-        val updates = delta.updates ?: return
-        var currentBatchState: MarineState? = null
-        var stateUpdated = false
-
-        for (update in updates) {
-            val updateTimestamp = update.timestamp?.let { 
-                TemporalUtils.parseIso8601(it).takeIf { it > 0 } 
-            } ?: TemporalUtils.now()
-            val updateSource = update.source?.get("label")?.toString()
-
-            val values = update.values ?: continue
-            for (v in values) {
-                val path = v.path ?: continue
-                val value = v.value
-
-                if (isSelf) {
-                    if (currentBatchState == null) {
-                        currentBatchState = dataBroker.marineState.value
-                    }
-                    val res = parseSelfValue(currentBatchState, path, value, updateTimestamp, updateSource)
-                    currentBatchState = res.first
-                    if (res.second) stateUpdated = true
-                } else if (aisTarget != null) {
-                    if (path == SignalKPaths.AIS_THREAT_LEVEL) {
-                        val level = (value as? Number)?.toInt() ?: 0
-                        NauticalPlugin.getInstance()?.aisManager?.updateAisThreatLevel(aisTarget.mmsi, level)
-                    } else {
-                        aisTarget = updateAisTarget(aisTarget, path, value, updateTimestamp)
-                    }
-                }
-            }
-        }
-
-        if (isSelf && stateUpdated && currentBatchState != null) {
-            finalizeAndNotifyState(currentBatchState)
-        } else if (aisTarget != null) {
-            val pos = aisTarget.position
-            if (pos != null && pos.latitude != AisObjectConstants.INVALID_LAT && pos.longitude != AisObjectConstants.INVALID_LON) {
-                val copy = AisObject(aisTarget)
-                aisListener?.invoke(copy)
-            }
-        }
-    }
-
-    private fun resolveAisTargetFromContext(context: String): AisObject? {
-        val type = context.substringBefore(".")
-        val rawId = context.substringAfter("$type.", "")
-        
-        if (rawId.isNotEmpty() && (type == "vessels" || type == "aircraft" || type == "atons" || type == "sar")) {
-            val numericMmsi: Int = if (rawId.startsWith("urn:mrn:imo:mmsi:")) {
-                rawId.substringAfter("urn:mrn:imo:mmsi:").toIntOrNull() ?: (rawId.hashCode().absoluteValue % 1000000000)
-            } else if (rawId.startsWith("urn:mrn:signalk:uuid:")) {
-                (rawId.hashCode() and 0x7FFFFFFF)
-            } else {
-                rawId.toIntOrNull() ?: (rawId.hashCode().absoluteValue % 1000000000)
-            }
-            
-            return aisCache.getOrPut(numericMmsi) { 
-                log.info("Nautical: New AIS target discovered from context: $context (MMSI: $numericMmsi)")
-                val msgType = when(type) {
-                    "aircraft" -> 9
-                    "atons" -> 21
-                    "sar" -> 14
-                    else -> 1 // Default vessel
-                }
-                AisObject(numericMmsi, msgType, 
-                    AisObjectConstants.INVALID_LAT, 
-                    AisObjectConstants.INVALID_LON)
-            }
-        }
-        return null
     }
 
     private fun handleSelfIdentity(self: String) {
@@ -1821,7 +1722,6 @@ else if (context.isNotEmpty()) {
             isRacing -> 100L // 10Hz for racing
             speed > 1.0 -> 250L // 4Hz for active sailing
             powerSaveMode -> 2000L // 0.5Hz for power save
-            state.latitude != null -> 500L // 2Hz for position updates even if slow
             else -> 1000L // 1Hz for stationary/normal
         }
 
@@ -2076,26 +1976,6 @@ else if (context.isNotEmpty()) {
                     Pair(stateWithTs.copy(magneticVariation = v), true)
                 } else Pair(stateWithTs, false)
             }
-            "navigation.gnss.antennaAltitude", "navigation.position.altitude" -> {
-                val v = (valueObj as? Number)?.toDouble() ?: Double.NaN
-                if (!v.isNaN()) {
-                    Pair(stateWithTs.copy(altitude = v), true)
-                } else Pair(stateWithTs, false)
-            }
-            "navigation.gnss.horizontalDilution" -> {
-                val v = (valueObj as? Number)?.toDouble() ?: Double.NaN
-                if (!v.isNaN()) {
-                    val currentGnss = stateWithTs.gnss ?: GnssState()
-                    Pair(stateWithTs.copy(gnss = currentGnss.copy(horizontalDilution = v)), true)
-                } else Pair(stateWithTs, false)
-            }
-            "navigation.gnss.satellites" -> {
-                val v = (valueObj as? Number)?.toInt() ?: -1
-                if (v >= 0) {
-                    val currentGnss = stateWithTs.gnss ?: GnssState()
-                    Pair(stateWithTs.copy(gnss = currentGnss.copy(satellites = v)), true)
-                } else Pair(stateWithTs, false)
-            }
             SignalKPaths.NAV_COURSE_OVER_GROUND -> {
                 val v = (valueObj as? Number)?.toDouble() ?: Double.NaN
                 if (!v.isNaN()) {
@@ -2247,18 +2127,6 @@ else if (context.isNotEmpty()) {
                     getBuffer(SignalKPaths.NAV_SET_TRUE).add(Pair(value, now))
                     updated = true
                 }
-            }
-            SignalKPaths.NAV_FLAGS -> {
-                val flagList = mutableListOf<String>()
-                if (valueObj is JSONArray) {
-                    for (i in 0 until valueObj.length()) {
-                        flagList.add(valueObj.getString(i))
-                    }
-                } else if (valueObj is List<*>) {
-                    valueObj.filterIsInstance<String>().forEach { flagList.add(it) }
-                }
-                state = state.copy(flags = flagList)
-                updated = true
             }
             SignalKPaths.NAV_COURSE_OVER_GROUND -> {
                 if (!value.isNaN()) {
@@ -3517,7 +3385,7 @@ else if (context.isNotEmpty()) {
 
                 NauticalPlugin.hudManager?.get()?.showBanner(
                     app.getString(R.string.nautical_actuator_maintenance_required),
-                    0L, // Persistent
+                    0, // Persistent
                     isWarning = true,
                     onConfirm = { acknowledgeActuatorAlarm() }
                 )

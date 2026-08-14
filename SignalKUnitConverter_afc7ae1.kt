@@ -88,11 +88,12 @@ object SignalKUnitConverter {
             }
         }
 
-        // Safety Bounds (Re-incorporated, but relaxed)
+        // Extreme outlier prevention (Industry Standard Safety Bounds)
         val isOutlier = when {
-            path.contains("speed", ignoreCase = true) -> (effectiveValue < -5.0) || (effectiveValue > 150.0)
-            path.contains("depth", ignoreCase = true) -> (effectiveValue < -50.0) || (effectiveValue > 20000.0)
-            path.contains("voltage", ignoreCase = true) -> (effectiveValue < 0.0) || (effectiveValue > 1000.0)
+            path.contains("speed", ignoreCase = true) -> (effectiveValue < -5.0) || (effectiveValue > 100.0)
+            path.contains("depth", ignoreCase = true) -> (effectiveValue < -20.0) || (effectiveValue > 15000.0)
+            path.contains("temperature", ignoreCase = true) -> (effectiveValue < 200.0) || (effectiveValue > 1000.0)
+            path.contains("voltage", ignoreCase = true) -> (effectiveValue < 0.0) || (effectiveValue > 600.0)
             else -> false
         }
         if (isOutlier) return "---" to ""

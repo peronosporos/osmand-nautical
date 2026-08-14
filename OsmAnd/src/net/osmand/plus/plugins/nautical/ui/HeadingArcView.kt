@@ -290,25 +290,20 @@ class HeadingArcView @JvmOverloads constructor(
                     val y2 = centerY + (radius - tickLen) * sinRad
                     drawLine(x1, y1, x2, y2, tickPaint)
 
-                    if (isCardinal || isMajor) {
+                    if (isCardinal) {
                         paint.style = Paint.Style.FILL
-                        paint.textSize = if (isCardinal) cardinalSize else majorSize
+                        paint.textSize = cardinalSize
                         paint.textAlign = Paint.Align.CENTER
-                        paint.color = if (isCardinal) accentColor else textColorSecondary
+                        paint.color = accentColor
                         paint.alpha = 255
-                        paint.typeface = if (isCardinal) cardinalTypeface else normalTypeface
+                        paint.typeface = cardinalTypeface
 
                         val textOffset = radius * 0.28f
                         val tx = centerX + (radius - textOffset) * cosRad
                         val ty = centerY + (radius - textOffset) * sinRad
                         
                         withRotation(animatedTargetHeading - hDeg + 90f, tx, ty) {
-                            if (isCardinal) {
-                                drawText(cardinalLabels[cardinalIdx], tx, ty + (paint.textSize / 3f), paint)
-                            } else {
-                                val count = NauticalFormatter.formatInt(normH, degreeBuffer)
-                                drawText(degreeBuffer, 0, count, tx, ty + (paint.textSize / 3f), paint)
-                            }
+                            drawText(cardinalLabels[cardinalIdx], tx, ty + (paint.textSize / 3f), paint)
                         }
                     }
                 }
@@ -411,70 +406,15 @@ class HeadingArcView @JvmOverloads constructor(
         val x = event.x - width / 2f
         val y = event.y - height / 2f
         val dist = sqrt(x.pow(2) + y.pow(2))
-        val radius = min(width, height) / 2f * 0.85f
 
         when (event.action) {
-            MotionEvent.ACTION_DOWN -> {
-                // Task: Better touch ring (60% to 115% of radius) for easier grabbing
-                if (dist > radius * 0.6f && dist < radius * 1.15f) {
-                    dragStartedX = event.x
-                    dragStartedY = event.y
-                    dragStartTime = System.currentTimeMillis()
-                    parent.requestDisallowInterceptTouchEvent(true)
-                    return true
-                }
-            }
-            MotionEvent.ACTION_MOVE -> {
-                if (!isDragging && (dragStartedX != 0f)) {
-                    val moveDist = sqrt((event.x - dragStartedX).pow(2) + (event.y - dragStartedY).pow(2))
-                    val timeElapsed = System.currentTimeMillis() - dragStartTime
-                    
-                    // Task: Delay activation to prevent accidental slides
-                    if (moveDist > dragSlop && timeElapsed > activationDelay) {
-                        isDragging = true
-                        performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
-                    }
-                }
-                
-                if (isDragging) {
-                    val angleRad = atan2(y.toDouble(), x.toDouble())
-                    var angleDeg = Math.toDegrees(angleRad).toInt() + 90
-                    angleDeg = (angleDeg + 360) % 360
-                    
-                    if (currentMode == "WIND") {
-                        targetWindAngleApparent = (angleDeg + 360) % 360
-                    } else {
-                        targetHeading = angleDeg
-                    }
-                    return true
-                }
-            }
             MotionEvent.ACTION_UP -> {
-                val wasDragging = isDragging
-                dragStartedX = 0f
-                dragStartedY = 0f
-                dragStartTime = 0L
-                if (isDragging) {
-                    isDragging = false
-                    if (currentMode == "WIND") {
-                        targetWindAngleApparent?.let { onWindAngleChanged?.invoke(it) }
-                    } else {
-                        onHeadingChanged?.invoke(targetHeading)
-                    }
-                    return true
-                }
-                if (!wasDragging && dist < (min(width, height) / 4f)) {
+                if (dist < (min(width, height) / 4f)) {
                     onCenterClicked?.invoke()
                     performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
                     performClick()
                     return true
                 }
-            }
-            MotionEvent.ACTION_CANCEL -> {
-                isDragging = false
-                dragStartedX = 0f
-                dragStartedY = 0f
-                dragStartTime = 0L
             }
         }
         return super.onTouchEvent(event)

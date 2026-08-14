@@ -1,0 +1,69 @@
+--- OsmAnd/src/net/osmand/plus/plugins/nautical/engine/SignalKUnitConverter.kt	2026-08-15 02:18:35.896534076 +0300
++++ SignalKUnitConverter_Advanced.kt	2026-08-15 02:34:45.269819209 +0300
+@@ -14,17 +14,23 @@
+ object SignalKUnitConverter {
+ 
+     const val KELVIN_ZERO_CELSIUS = 273.15
++    const val KELVIN_OFFSET_CELSIUS = -273.15
+     const val PASCAL_TO_HPA = 0.01
+     const val PASCAL_TO_BAR = 1.0e-5
+     const val METERS_TO_NM = 1.0 / 1852.0
++    const val METERS_TO_FEET = 3.2808399
+     const val METERS_TO_MILES = 1.0 / 1609.344
++    const val KNOTS_TO_MS = 0.514444
+     const val MS_TO_KNOTS = 1.94384449
+ 
+     fun kelvinToCelsius(k: Double): Double = k - KELVIN_ZERO_CELSIUS
+     fun radToDeg(rad: Double): Double = Math.toDegrees(rad)
++    fun msToKnots(ms: Double): Double = ms * MS_TO_KNOTS
+     fun pascalToHpa(pa: Double): Double = pa * PASCAL_TO_HPA
+     fun pascalToBar(pa: Double): Double = pa * PASCAL_TO_BAR
++    fun metersToNm(m: Double): Double = m * METERS_TO_NM
+     fun nmToMeters(nm: Double): Double = nm * 1852.0
++    fun metersToFeet(m: Double): Double = m * METERS_TO_FEET
+     fun hertzToRpm(hz: Double): Double = hz * 60.0
+ 
+     fun getUserDistanceToMeters(value: Double, settings: OsmandSettings): Double {
+@@ -38,7 +44,7 @@
+ 
+     fun metersToUserDistance(meters: Double, settings: OsmandSettings): Double {
+         return when (settings.METRIC_SYSTEM.get().getDistanceUnit()) {
+-            net.osmand.shared.units.LengthUnits.NAUTICAL_MILES -> meters / 1852.0
++            net.osmand.shared.units.LengthUnits.NAUTICAL_MILES -> metersToNm(meters)
+             net.osmand.shared.units.LengthUnits.MILES -> meters * METERS_TO_MILES
+             net.osmand.shared.units.LengthUnits.KILOMETERS -> meters / 1000.0
+             else -> meters
+@@ -86,7 +92,7 @@
+         val isOutlier = when {
+             path.contains("speed", ignoreCase = true) -> (effectiveValue < -5.0) || (effectiveValue > 100.0)
+             path.contains("depth", ignoreCase = true) -> (effectiveValue < -20.0) || (effectiveValue > 15000.0)
+-            path.contains("temperature", ignoreCase = true) -> (effectiveValue < 200.0) && (effectiveValue != 0.0) // Kelvin check
++            path.contains("temperature", ignoreCase = true) -> (effectiveValue < 200.0) || (effectiveValue > 1000.0)
+             path.contains("voltage", ignoreCase = true) -> (effectiveValue < 0.0) || (effectiveValue > 600.0)
+             else -> false
+         }
+@@ -127,6 +133,14 @@
+             path.contains("voltage", ignoreCase = true) -> {
+                 format(effectiveValue, context.getString(R.string.nautical_unit_volt), "%.2f")
+             }
++            path.contains("area", ignoreCase = true) -> {
++                val sys = settings.METRIC_SYSTEM.get()
++                if (sys.shouldUseFeet()) {
++                    format(effectiveValue * 10.76391, context.getString(R.string.nautical_unit_sqft), "%.1f")
++                } else {
++                    format(effectiveValue, context.getString(R.string.nautical_unit_m2), "%.1f")
++                }
++            }
+             path.contains("current", ignoreCase = true) -> {
+                 format(effectiveValue, context.getString(R.string.nautical_unit_ampere), "%.1f")
+             }
+@@ -136,6 +150,9 @@
+             path.contains("runTime", ignoreCase = true) || path.contains("engineHours", ignoreCase = true) -> {
+                 format(effectiveValue / 3600.0, context.getString(R.string.nautical_unit_hours), "%.1f")
+             }
++            path.contains("rawDistance") -> {
++                format(metersToUserDistance(effectiveValue, settings), "")
++            }
+             else -> format(effectiveValue, "")
+         }
+     }

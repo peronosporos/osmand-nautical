@@ -1,0 +1,271 @@
+--- OsmAnd/src/net/osmand/plus/views/mapwidgets/widgets/MarineTextWidget.kt	2026-08-15 02:28:33.408386408 +0300
++++ MarineTextWidget_afc7ae1.kt	2026-08-15 02:35:21.535127536 +0300
+@@ -39,12 +39,16 @@
+     override fun updateIcon() {
+         val iconId = iconId
+         if (iconId != 0) {
+-            if (widgetType == WidgetType.NAUTICAL_DEPTH || widgetType == WidgetType.NAUTICAL_WIND) {
+-                setImageDrawable(iconId)
++            val engine = NauticalPlugin.engine
++            val state = engine?.getCurrentState()
++            val isStale = state?.let { isWidgetDataStale(it) } ?: false
++            
++            val color = if (isStale) {
++                ContextCompat.getColor(app, R.color.icon_color_warning)
+             } else {
+-                val color = settings.applicationMode.getProfileColor(isNightMode)
+-                setImageDrawable(iconsCache.getPaintedIcon(iconId, color))
++                ContextCompat.getColor(app, R.color.map_widget_icon_color)
+             }
++            setImageDrawable(iconsCache.getPaintedIcon(iconId, color))
+         }
+     }
+ 
+@@ -91,7 +95,9 @@
+         return View.OnClickListener {
+             if (!mapActivity.isFinishing) {
+                 when (widgetType) {
+-                    WidgetType.NAUTICAL_ENGINE_STATE -> toggleEngineState()
++                    WidgetType.NAUTICAL_ENGINE_STATE -> {
++                        toggleEngineState()
++                    }
+                     WidgetType.NAUTICAL_VHF_CHANNEL -> {
+                         net.osmand.plus.plugins.nautical.ui.VhfChannelPickerDialog.show(mapActivity.supportFragmentManager)
+                     }
+@@ -108,7 +114,7 @@
+         val engine = NauticalPlugin.engine ?: return
+         val autopilot = NauticalPlugin.autopilot ?: return
+         val state = engine.getCurrentState()
+-        val instance = customId?.substringAfterLast("#") ?: "0"
++        val instance = "0" // Default to instance 0 for single-engine toggle
+         val isStarted = state.engines[instance]?.state?.lowercase(Locale.US) == "started"
+         autopilot.setEngineState(instance, !isStarted)
+     }
+@@ -122,21 +128,7 @@
+             return IntegrityState.DISCONNECTED
+         }
+ 
+-        val path = getSignalKPath()
+-        val now = TemporalUtils.now()
+-        val timestamp = state.timestamps[path] ?: 0L
+-        val age = (now - timestamp) / 1000.0
+-
+-        return when {
+-            age > 30.0 -> IntegrityState.ALARM 
+-            (age > 10.0) || state.stalePaths.contains(path) || (state.connectionStatus == net.osmand.plus.plugins.nautical.engine.ConnectionStatus.STALE) -> IntegrityState.STALE
+-            else -> IntegrityState.VALID
+-        }
+-    }
+-
+-    private fun getSignalKPath(): String {
+-        val instance = customId?.substringAfterLast("#") ?: "0"
+-        return when (widgetType) {
++        val path = when (widgetType) {
+             WidgetType.NAUTICAL_DEPTH -> SignalKPaths.ENV_DEPTH_BELOW_TRANSDUCER
+             WidgetType.NAUTICAL_WIND -> SignalKPaths.ENV_WIND_SPEED_TRUE
+             WidgetType.NAUTICAL_SOG -> SignalKPaths.NAV_SPEED_OVER_GROUND
+@@ -146,60 +138,42 @@
+             WidgetType.NAUTICAL_XTE -> SignalKPaths.NAV_XTE
+             WidgetType.NAUTICAL_AWA -> SignalKPaths.ENV_WIND_ANGLE_APPARENT
+             WidgetType.NAUTICAL_AWS -> SignalKPaths.ENV_WIND_SPEED_APPARENT
++            WidgetType.NAUTICAL_HUMIDITY -> SignalKPaths.ENV_OUTSIDE_HUMIDITY
++            WidgetType.NAUTICAL_AC_VOLTAGE -> "electrical.ac.0.voltage"
++            WidgetType.NAUTICAL_AC_CURRENT -> "electrical.ac.0.current"
++            WidgetType.NAUTICAL_AC_FREQUENCY -> "electrical.ac.0.frequency"
+             WidgetType.NAUTICAL_VHF_CHANNEL -> SignalKPaths.COMMUNICATION_VHF_CHANNEL
++            WidgetType.NAUTICAL_GNSS_QUALITY -> "navigation.gnss.horizontalDilution"
+             WidgetType.NAUTICAL_SALINITY -> SignalKPaths.ENV_WATER_SALINITY
+             WidgetType.NAUTICAL_DEW_POINT -> SignalKPaths.ENV_AIR_DEW_POINT
+-            WidgetType.NAUTICAL_REEFS -> SignalKPaths.SAILS_REEFS
++            WidgetType.NAUTICAL_ILLUMINANCE -> SignalKPaths.ENV_OUTSIDE_ILLUMINANCE
+             WidgetType.NAUTICAL_RIGGING_LOAD -> "rigging.loads.0"
+             WidgetType.NAUTICAL_MEDIA -> SignalKPaths.MEDIA_TITLE
+             WidgetType.NAUTICAL_WIND_SHIFT_WIDGET -> SignalKPaths.PERF_WIND_SHIFT
+             WidgetType.NAUTICAL_RACING_TIMER -> SignalKPaths.PERF_RACING_TIMER
+             WidgetType.NAUTICAL_WATERMAKER -> "propulsion.watermaker.0.rate"
+-            WidgetType.NAUTICAL_LOG -> SignalKPaths.NAV_LOG
+-            WidgetType.NAUTICAL_TRIP_LOG -> SignalKPaths.NAV_TRIP_LOG
+-            WidgetType.NAUTICAL_ROLL, WidgetType.NAUTICAL_PITCH, WidgetType.NAUTICAL_YAW -> SignalKPaths.NAV_ATTITUDE
+-            WidgetType.NAUTICAL_DEPTH_KEEL -> SignalKPaths.ENV_DEPTH_BELOW_KEEL
+-            WidgetType.NAUTICAL_WATER_TEMP -> SignalKPaths.ENV_WATER_TEMP
+-            WidgetType.NAUTICAL_OUTSIDE_TEMP -> SignalKPaths.ENV_OUTSIDE_TEMP
+-            WidgetType.NAUTICAL_PRESSURE -> SignalKPaths.ENV_OUTSIDE_PRESSURE
+-            WidgetType.NAUTICAL_ENGINE_RPM -> "propulsion.$instance.revolutions"
+-            WidgetType.NAUTICAL_ENGINE_TEMP -> "propulsion.$instance.temperature"
+-            WidgetType.NAUTICAL_BATTERY_VOLT -> "electrical.batteries.$instance.voltage"
+-            WidgetType.NAUTICAL_BATTERY_SOC -> "electrical.batteries.$instance.stateOfCharge"
+-            WidgetType.NAUTICAL_FUEL_LEVEL -> "tanks.fuel.$instance.currentLevel"
+-            WidgetType.NAUTICAL_FRESH_WATER_LEVEL -> "tanks.freshWater.$instance.currentLevel"
+-            WidgetType.NAUTICAL_WASTE_WATER_LEVEL -> "tanks.wasteWater.$instance.currentLevel"
+-            WidgetType.NAUTICAL_POLAR_RATIO -> SignalKPaths.PERF_POLAR_RATIO
+-            WidgetType.NAUTICAL_ROT -> SignalKPaths.NAV_RATE_OF_TURN
+-            WidgetType.NAUTICAL_TTW -> SignalKPaths.NAV_TTW
+-            WidgetType.NAUTICAL_DTW -> SignalKPaths.NAV_DTW
+-            WidgetType.NAUTICAL_TWA -> SignalKPaths.ENV_WIND_ANGLE_TRUE
+-            WidgetType.NAUTICAL_TWD -> SignalKPaths.NAV_TWD
+-            WidgetType.NAUTICAL_OIL_PRESSURE -> "propulsion.$instance.oilPressure"
+-            WidgetType.NAUTICAL_ENGINE_LOAD -> "propulsion.$instance.engineLoad"
+-            WidgetType.NAUTICAL_BATTERY_CURRENT -> "electrical.batteries.$instance.current"
+-            WidgetType.NAUTICAL_SOLAR_CURRENT -> "electrical.solar.$instance.current"
+-            WidgetType.NAUTICAL_ENGINE_RUNTIME -> "propulsion.$instance.runTime"
+-            WidgetType.NAUTICAL_ENGINE_COOLANT -> "propulsion.$instance.coolantTemperature"
+-            WidgetType.NAUTICAL_MAG_VARIATION -> SignalKPaths.NAV_MAG_VARIATION
+-            WidgetType.NAUTICAL_CPA -> SignalKPaths.NAV_CLOSEST_APPROACH
+-            WidgetType.NAUTICAL_TCPA -> "navigation.cpa.tcpa"
+-            WidgetType.NAUTICAL_RUDDER_ANGLE_TEXT -> SignalKPaths.STEERING_RUDDER_ANGLE
+-            WidgetType.NAUTICAL_POLAR_TARGET_SPEED -> SignalKPaths.PERF_TARGET_SPEED
+-            WidgetType.NAUTICAL_RANGE -> "navigation.estimatedRange"
+-            WidgetType.NAUTICAL_SET_DRIFT -> SignalKPaths.NAV_SET_TRUE
+-            WidgetType.NAUTICAL_MOON_PHASE -> SignalKPaths.NAV_DATETIME_MOON_PHASE
+-            WidgetType.NAUTICAL_SUNLIGHT_MODE -> "environment.mode"
+-            WidgetType.NAUTICAL_AC_VOLTAGE -> "electrical.ac.$instance.voltage"
+-            WidgetType.NAUTICAL_AC_CURRENT -> "electrical.ac.$instance.current"
+-            WidgetType.NAUTICAL_AC_FREQUENCY -> "electrical.ac.$instance.frequency"
+-            WidgetType.NAUTICAL_GNSS_QUALITY -> "navigation.gnss.horizontalDilution"
+-            WidgetType.NAUTICAL_ILLUMINANCE -> SignalKPaths.ENV_OUTSIDE_ILLUMINANCE
+-            WidgetType.NAUTICAL_RIGGING_LOADS -> "rigging.loads"
+-            WidgetType.NAUTICAL_AC_SYSTEM -> "electrical.ac.0"
+-            WidgetType.NAUTICAL_NOTIFICATIONS_LIST -> "notifications"
++            WidgetType.NAUTICAL_BOOST_PRESSURE -> "propulsion.0.boostPressure"
++            WidgetType.NAUTICAL_EXHAUST_TEMP -> "propulsion.0.exhaustTemperature"
++            WidgetType.NAUTICAL_ALTERNATOR_VOLT -> "propulsion.0.alternatorVoltage"
++            WidgetType.NAUTICAL_ALTERNATOR_CURR -> "propulsion.0.alternatorCurrent"
++            WidgetType.NAUTICAL_TRANS_GEAR -> "propulsion.0.transmissionGear"
++            WidgetType.NAUTICAL_TRANS_PRESS -> "propulsion.0.transmissionPressure"
++            WidgetType.NAUTICAL_TRANS_OIL_TEMP -> "propulsion.0.transmissionOilTemperature"
++            WidgetType.NAUTICAL_INV_STATE -> "electrical.inverters.0.state"
++            WidgetType.NAUTICAL_CHG_STATE -> "electrical.chargers.0.state"
++            WidgetType.NAUTICAL_REEFS -> SignalKPaths.SAILS_REEFS
+             else -> customId ?: ""
+         }
++
++        val now = TemporalUtils.now()
++        val timestamp = state.timestamps[path] ?: 0L
++        val age = (now - timestamp) / 1000.0
++
++        return when {
++            age > 10.0 -> IntegrityState.ALARM
++            (age > 3.0) || state.stalePaths.contains(path) || (state.connectionStatus == net.osmand.plus.plugins.nautical.engine.ConnectionStatus.STALE) -> IntegrityState.STALE
++            else -> IntegrityState.VALID
++        }
+     }
+ 
+     private var lastFormattedMain: String? = null
+@@ -229,15 +203,13 @@
+         val integrity = getIntegrityState(state)
+ 
+         updateIcon()
++        applyIntegrityStyling(integrity)
+ 
+         if (integrity == IntegrityState.DISCONNECTED) {
+             setText(mapActivity.getString(R.string.nautical_status_off), mapActivity.getString(R.string.n_a))
+-            contentView?.alpha = 0.5f
+             return
+         }
+ 
+-        contentView?.alpha = if (integrity == IntegrityState.STALE) 0.6f else 1.0f
+-
+         val instance = customId?.substringAfterLast("#") ?: "0"
+         val variation = state.magneticVariation
+ 
+@@ -504,6 +476,7 @@
+ 
+         if (integrity == IntegrityState.ALARM) {
+             val safetyCritical = (widgetType == WidgetType.NAUTICAL_DEPTH) || 
++                                (widgetType == WidgetType.NAUTICAL_DEPTH_KEEL) || 
+                                 (widgetType == WidgetType.NAUTICAL_XTE)
+             val msg = if (safetyCritical) mapActivity.getString(R.string.nautical_timeout) else "X"
+             setText(msg, "")
+@@ -524,6 +497,23 @@
+             WidgetType.NAUTICAL_XTE -> mapActivity.getString(R.string.nautical_xte)
+             WidgetType.NAUTICAL_AWA -> mapActivity.getString(R.string.nautical_awa)
+             WidgetType.NAUTICAL_AWS -> mapActivity.getString(R.string.nautical_aws)
++            WidgetType.NAUTICAL_TWA -> mapActivity.getString(R.string.nautical_twa)
++            WidgetType.NAUTICAL_TWD -> mapActivity.getString(R.string.nautical_twd)
++            WidgetType.NAUTICAL_DEPTH_KEEL -> mapActivity.getString(R.string.nautical_depth_keel)
++            WidgetType.NAUTICAL_WATER_TEMP -> mapActivity.getString(R.string.nautical_water_temp)
++            WidgetType.NAUTICAL_OUTSIDE_TEMP -> mapActivity.getString(R.string.nautical_outside_temp)
++            WidgetType.NAUTICAL_PRESSURE -> mapActivity.getString(R.string.nautical_pressure)
++            WidgetType.NAUTICAL_ENGINE_RPM -> mapActivity.getString(R.string.nautical_engine_rpm)
++            WidgetType.NAUTICAL_BATTERY_VOLT -> mapActivity.getString(R.string.nautical_battery_volt)
++            WidgetType.NAUTICAL_BATTERY_SOC -> mapActivity.getString(R.string.nautical_battery_soc)
++            WidgetType.NAUTICAL_FUEL_LEVEL -> mapActivity.getString(R.string.nautical_fuel_level)
++            WidgetType.NAUTICAL_TTW -> mapActivity.getString(R.string.nautical_ttw)
++            WidgetType.NAUTICAL_DTW -> mapActivity.getString(R.string.nautical_dtw)
++            WidgetType.NAUTICAL_ETA -> mapActivity.getString(R.string.nautical_eta)
++            WidgetType.NAUTICAL_ROT -> mapActivity.getString(R.string.nautical_rot)
++            WidgetType.NAUTICAL_CPA -> mapActivity.getString(R.string.nautical_cpa)
++            WidgetType.NAUTICAL_TCPA -> mapActivity.getString(R.string.nautical_tcpa)
++            WidgetType.NAUTICAL_RUDDER_ANGLE_TEXT -> mapActivity.getString(R.string.nautical_rudder_angle)
+             WidgetType.NAUTICAL_VHF_CHANNEL -> mapActivity.getString(R.string.nautical_vhf_channel)
+             else -> widgetType.id
+         }
+@@ -538,4 +528,68 @@
+         val valueText = "$main $sub"
+         contentView?.contentDescription = "$label, $valueText, $integrityLabel"
+     }
++
++    private fun applyIntegrityStyling(integrity: IntegrityState) {
++        val view = getView()
++        val bgView = view.findViewById(R.id.widget_bg) ?: view
++        val text = textView ?: return
++
++        // Reset strike-through
++        text.paint.isStrikeThruText = false
++
++        when (integrity) {
++            IntegrityState.VALID -> {
++                contentView?.alpha = 1.0f
++                if (text.textColor == Color.RED || text.textColor == ContextCompat.getColor(app, R.color.nautical_status_yellow)) {
++                    text.textColor = if (nightMode) ContextCompat.getColor(app, R.color.text_color_primary_dark) else ContextCompat.getColor(app, R.color.text_color_primary_light)
++                }
++                bgView.setBackgroundColor(Color.TRANSPARENT)
++            }
++            IntegrityState.STALE -> {
++                contentView?.alpha = 0.8f
++                text.textColor = ContextCompat.getColor(app, R.color.nautical_status_yellow)
++                bgView.setBackgroundColor(Color.TRANSPARENT)
++            }
++            IntegrityState.ALARM -> {
++                contentView?.alpha = 1.0f
++                text.textColor = Color.RED
++                bgView.setBackgroundColor(Color.TRANSPARENT)
++            }
++            IntegrityState.DISCONNECTED -> {
++                contentView?.alpha = 0.5f
++                text.textColor = ContextCompat.getColor(app, R.color.text_color_secondary_light)
++                bgView.setBackgroundColor(Color.TRANSPARENT)
++            }
++        }
++    }
++
++
++    private fun isWidgetDataStale(state: MarineState): Boolean {
++        val paths = when (widgetType) {
++            WidgetType.NAUTICAL_DEPTH -> listOf(SignalKPaths.ENV_DEPTH_BELOW_TRANSDUCER)
++            WidgetType.NAUTICAL_WIND -> listOf(SignalKPaths.ENV_WIND_SPEED_TRUE, SignalKPaths.ENV_WIND_ANGLE_TRUE)
++            WidgetType.NAUTICAL_SOG -> listOf(SignalKPaths.NAV_SPEED_OVER_GROUND)
++            WidgetType.NAUTICAL_COG -> listOf(SignalKPaths.NAV_COURSE_OVER_GROUND)
++            WidgetType.NAUTICAL_STW -> listOf(SignalKPaths.NAV_SPEED_THROUGH_WATER)
++            WidgetType.NAUTICAL_HEADING_MAGNETIC -> listOf(SignalKPaths.NAV_HEADING_MAG)
++            WidgetType.NAUTICAL_XTE -> listOf(SignalKPaths.NAV_XTE, SignalKPaths.NAV_XTE_RHUMB)
++            WidgetType.NAUTICAL_AWA -> listOf(SignalKPaths.ENV_WIND_ANGLE_APPARENT)
++            WidgetType.NAUTICAL_AWS -> listOf(SignalKPaths.ENV_WIND_SPEED_APPARENT)
++            WidgetType.NAUTICAL_BOOST_PRESSURE -> listOf("propulsion.0.boostPressure")
++            WidgetType.NAUTICAL_EXHAUST_TEMP -> listOf("propulsion.0.exhaustTemperature")
++            WidgetType.NAUTICAL_ALTERNATOR_VOLT -> listOf("propulsion.0.alternatorVoltage")
++            WidgetType.NAUTICAL_ALTERNATOR_CURR -> listOf("propulsion.0.alternatorCurrent")
++            WidgetType.NAUTICAL_TRANS_GEAR -> listOf("propulsion.0.transmissionGear")
++            WidgetType.NAUTICAL_TRANS_PRESS -> listOf("propulsion.0.transmissionPressure")
++            WidgetType.NAUTICAL_TRANS_OIL_TEMP -> listOf("propulsion.0.transmissionOilTemperature")
++            WidgetType.NAUTICAL_INV_STATE -> listOf("electrical.inverters.0.state")
++            WidgetType.NAUTICAL_CHG_STATE -> listOf("electrical.chargers.0.state")
++            WidgetType.NAUTICAL_WATERMAKER_RATE -> listOf("propulsion.watermaker.0.rate")
++            WidgetType.NAUTICAL_WATERMAKER_TOTAL -> listOf("propulsion.watermaker.0.totalProduction")
++            WidgetType.NAUTICAL_WATERMAKER_SALINITY -> listOf("propulsion.watermaker.0.salinity")
++            WidgetType.NAUTICAL_REEFS -> listOf(SignalKPaths.SAILS_REEFS)
++            else -> emptyList()
++        }
++        return paths.any { state.stalePaths.contains(it) }
++    }
+ }

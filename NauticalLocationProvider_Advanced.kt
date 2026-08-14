@@ -28,6 +28,14 @@ class NauticalLocationProvider(
         if (isActive) return
         isActive = true
         engine?.registerListener(listener)
+
+        // Auto-switch to Signal K source once on activation
+        if (app.settings.LOCATION_SOURCE.get() != LocationSource.EXTERNAL_SIGNALK) {
+            app.runInUIThread {
+                app.settings.LOCATION_SOURCE.set(LocationSource.EXTERNAL_SIGNALK)
+            }
+        }
+        
         log.info("Nautical Location Bridge: Active.")
     }
 
@@ -35,6 +43,13 @@ class NauticalLocationProvider(
         if (!isActive) return
         isActive = false
         engine?.unregisterListener(listener)
+        
+        // Restore default location source if we were using SignalK
+        if (app.settings.LOCATION_SOURCE.get() == LocationSource.EXTERNAL_SIGNALK) {
+            app.runInUIThread {
+                app.settings.LOCATION_SOURCE.set(LocationSource.ANDROID_API)
+            }
+        }
         log.info("Nautical Location Bridge: Stopped.")
     }
 
@@ -45,19 +60,19 @@ class NauticalLocationProvider(
 
         val currentTime = System.currentTimeMillis()
         
-        // Position Staleness check
+        // Staleness detection for Position
         val positionTimestamp = state.timestamps["navigation.position"] ?: 0L
         val positionAge = currentTime - positionTimestamp
-        if (positionAge > 30000 && positionTimestamp != 0L) {
-            log.warn("Nautical: Position stale (${positionAge}ms old)")
+        if (positionAge > 2000 && positionTimestamp != 0L) {
+            log.warn("Nautical: Rejecting stale location update (${positionAge}ms old)")
             return
         }
 
-        // Heading Staleness check
+        // Staleness detection for Heading
         val headingTimestamp = state.timestamps["navigation.headingTrue"] ?: 0L
         val headingAge = currentTime - headingTimestamp
         
-        if (headingAge > 10000 && headingTimestamp != 0L) {
+        if (headingAge > 3000 && headingTimestamp != 0L) {
             if (!isHeadingStale) {
                 isHeadingStale = true
                 triggerHeadingStaleWarning()
@@ -76,29 +91,33 @@ class NauticalLocationProvider(
         loc.time = currentTime
         
         state.speedOverGround?.let { loc.speed = it.toFloat() }
-        state.altitude?.let { loc.altitude = it }
-
-        // Dynamic Accuracy from HDOP
-        val hdop = state.gnss?.horizontalDilution ?: 1.0
-        loc.accuracy = (hdop * 5.0).toFloat().coerceIn(1.0f, 100f)
         
-        // Bearing logic: Respect server-managed fallbacks from CapabilityManager
         val caps = engine?.capabilityManager?.capabilities?.value ?: CapabilityManager.ServerCapabilityMap()
-        val heading = if (!isHeadingStale) state.headingTrue else null
         
-        if (caps.hasGpsHeadingFallback && heading != null) {
-             loc.bearing = Math.toDegrees(heading).toFloat()
-        } else if (heading != null) {
-            loc.bearing = Math.toDegrees(heading).toFloat()
+        // Fallback logic for bearing
+        if (caps.hasGpsHeadingFallback) {
+            // SignalK Server Managed Heading
+            if (!isHeadingStale && state.headingTrue != null) {
+                loc.bearing = Math.toDegrees(state.headingTrue).toFloat()
+            } else {
+                // Secondary fallback to COG if server heading is lost
+                state.courseOverGroundTrue?.let { loc.bearing = Math.toDegrees(it).toFloat() }
+            }
+        } else if (isHeadingStale || state.headingTrue == null) {
+            val internalHeading = app.locationProvider.heading
+            if (internalHeading != null) {
+                loc.bearing = internalHeading
+            } else {
+                state.courseOverGroundTrue?.let { loc.bearing = Math.toDegrees(it).toFloat() }
+            }
         } else {
-            state.courseOverGroundTrue?.let { loc.bearing = Math.toDegrees(it).toFloat() }
+            loc.bearing = Math.toDegrees(state.headingTrue).toFloat()
         }
         
+        loc.accuracy = 1.0f
+
         app.runInUIThread {
-            // Only inject if user has manually selected EXTERNAL_SIGNALK
-            if (app.settings.LOCATION_SOURCE.get() == LocationSource.EXTERNAL_SIGNALK) {
-                app.locationProvider.setLocationFromService(loc)
-            }
+            app.locationProvider.setLocationFromService(loc)
         }
     }
 

@@ -49,10 +49,7 @@ class NauticalTelemetryGridBottomSheet : NauticalMenuBottomSheetDialogFragment()
 
     override fun createMenuItems(savedInstanceState: Bundle?) {
         val app = requireContext().applicationContext as OsmandApplication
-        val workflowState = NauticalPlugin.getInstance()?.workflowEngine?.currentWorkflow?.value
         
-        addTitleItem(getString(R.string.nautical_master_telemetry) + " - " + getPresetName(workflowState))
-
         var itemIdsString = app.settings.NAUTICAL_MASTER_TELEMETRY_ITEMS.get()
         if (itemIdsString.isEmpty()) {
             itemIdsString = "nautical_sog,nautical_cog,nautical_depth_keel,nautical_wind,nautical_vmg,nautical_battery_volt"
@@ -68,14 +65,16 @@ class NauticalTelemetryGridBottomSheet : NauticalMenuBottomSheetDialogFragment()
         adapter = TelemetryAdapter(widgets, app)
         recyclerView?.adapter = adapter
         
-        // Hide standard header in gridView since we use addTitleItem
         gridView.findViewById<View>(R.id.title).visibility = View.GONE
-        gridView.findViewById<View>(R.id.btn_settings).visibility = View.GONE
+        val btnSettings = gridView.findViewById<View>(R.id.btn_settings)
+        btnSettings.visibility = View.VISIBLE
+        btnSettings.setOnClickListener { onRightBottomButtonClick() }
 
         items.add(net.osmand.plus.base.bottomsheetmenu.BaseBottomSheetItem.Builder().setCustomView(gridView).create())
     }
 
-    override fun getRightBottomButtonTextId(): Int = R.string.shared_string_settings
+    override fun getRightBottomButtonTextId(): Int = 0
+    override fun getDismissButtonTextId(): Int = 0
 
     override fun onRightBottomButtonClick() {
         if (widgetId != null) {

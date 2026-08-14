@@ -27,7 +27,7 @@ import java.util.concurrent.ConcurrentHashMap
 class NauticalAisLayer(context: Context) : OsmandMapLayer(context), ContextMenuLayer.IContextMenuProvider {
 
     companion object {
-        const val START_ZOOM = 6
+        const val START_ZOOM = 1
         const val START_ZOOM_SHOW_SHAPE = 16
         const val START_ZOOM_SHOW_DIRECTION = 10
         private const val AIS_RENDER_REFRESH_INTERVAL_MS = 200L
@@ -125,6 +125,10 @@ class NauticalAisLayer(context: Context) : OsmandMapLayer(context), ContextMenuL
             }
         }
 
+        getApplication().runInUIThread {
+            tileView?.refreshMap()
+        }
+
         var drawable = objectDrawables[mmsi]
         if (drawable == null) {
             if (isOwnObjectHidden(ais)) return
@@ -173,6 +177,9 @@ class NauticalAisLayer(context: Context) : OsmandMapLayer(context), ContextMenuL
             objectDrawables[ais.mmsi]?.clearAisRenderData(markersCollection!!, vectorLinesCollection!!)
         }
         objectDrawables.remove(ais.mmsi)
+        getApplication().runInUIThread {
+            tileView?.refreshMap()
+        }
     }
 
     private fun isOwnObject(ais: AisObject): Boolean {
