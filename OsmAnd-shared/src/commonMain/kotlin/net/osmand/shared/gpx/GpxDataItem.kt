@@ -167,7 +167,7 @@ class GpxDataItem(
 		map.remove(GpxParameter.SPLIT_INTERVAL)
 	}
 
-	inline fun <reified T: Any> getAppearanceParameter(parameter: GpxParameter): T? {
+	fun <T : Any> getAppearanceParameter(parameter: GpxParameter): T? {
 		var value: Any? = getAppearanceParameter<Any>(this, parameter)
 		if (value == null) {
 			value = parameter.defaultValue
@@ -175,7 +175,7 @@ class GpxDataItem(
 		return castGpxParameter<T>(parameter, value)
 	}
 
-	inline fun <reified T: Any> getAppearanceParameter(file: KFile, parameter: GpxParameter): T? {
+	fun <T : Any> getAppearanceParameter(file: KFile, parameter: GpxParameter): T? {
 		val item = GpxDbHelper.getItem(file)
 		if (item != null) {
 			return getAppearanceParameter<T>(item, parameter)
@@ -183,7 +183,8 @@ class GpxDataItem(
 		return null
 	}
 
-	inline fun <reified T: Any> getAppearanceParameter(item: GpxDataItem, parameter: GpxParameter): T? {
+	@Suppress("UNCHECKED_CAST")
+	fun <T : Any> getAppearanceParameter(item: GpxDataItem, parameter: GpxParameter): T? {
 		var value: T? = item.getParameter(parameter)
 		if (value != null) {
 			return castGpxParameter<T>(parameter, value)
@@ -199,8 +200,9 @@ class GpxDataItem(
 		return null
 	}
 
-	inline fun <reified T : Any> castGpxParameter(parameter: GpxParameter, value: Any?): T? {
-		return if (parameter.typeClass.isInstance(value)) value as? T else null
+	@Suppress("UNCHECKED_CAST")
+	fun <T : Any> castGpxParameter(parameter: GpxParameter, value: Any?): T? {
+		return if (value != null && parameter.typeClass.isInstance(value)) value as T else null
 	}
 
 	override fun getParameters(): Map<GpxParameter, Any?> =

@@ -1,0 +1,5 @@
+- [x] Fix Java compatibility for `DataItem` and `GpxDataItem`
+    - [x] Modify `DataItem.kt` to remove `inline` and `reified` from `getParameter` and `requireParameter`.
+    - [x] Modify `GpxDataItem.kt` to remove `inline` and `reified` from `getAppearanceParameter` and `castGpxParameter`.
+- [/] Verify build
+    - [ ] Run `./gradlew :OsmAnd:assembleAndroidFullLegacyArm64Debug -x test --no-daemon`

@@ -34,14 +34,15 @@ abstract class DataItem(val file: KFile) {
 
 	abstract fun getParameters(): Map<GpxParameter, Any?>
 
-	inline fun <reified T> requireParameter(parameter: GpxParameter): T {
+	fun <T> requireParameter(parameter: GpxParameter): T {
 		val res = getParameter<T>(parameter)
 		return res ?: throw IllegalStateException("Requested parameter '$parameter' is null.")
 	}
 
-	inline fun <reified T> getParameter(parameter: GpxParameter): T? {
+	@Suppress("UNCHECKED_CAST")
+	fun <T> getParameter(parameter: GpxParameter): T? {
 		val value = getParameterValue(parameter)
-		return value as? T
+		return if (value != null && parameter.typeClass.isInstance(value)) value as T else null
 	}
 
 	fun getParameterValue(parameter: GpxParameter): Any? {
