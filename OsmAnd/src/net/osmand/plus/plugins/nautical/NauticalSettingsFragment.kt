@@ -315,6 +315,11 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
             }
         }
 
+        findPreference<SwitchPreferenceEx>(settings.NAUTICAL_MULTIHULL_SHUNTING.id)?.apply {
+            setIcon(OsmAndR.drawable.ic_action_sail_boat_dark)
+            isChecked = settings.NAUTICAL_MULTIHULL_SHUNTING.get()
+        }
+
         setupDepthPreference(settings.NAUTICAL_VESSEL_DRAFT.id, OsmAndR.string.nautical_vessel_draft_base, OsmAndR.drawable.ic_action_sail_boat_dark)
         setupDepthPreference(settings.NAUTICAL_AIR_DRAFT.id, OsmAndR.string.nautical_vessel_air_draft_label, OsmAndR.drawable.ic_action_altitude)
         setupDepthPreference(settings.NAUTICAL_KEEL_OFFSET.id, OsmAndR.string.nautical_keel_offset_title, OsmAndR.drawable.ic_action_additional_option)
@@ -653,6 +658,7 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
             setOnPreferenceClickListener {
                 settings.NAUTICAL_ANCHOR_LAT.set(0.0)
                 settings.NAUTICAL_ANCHOR_LON.set(0.0)
+                NauticalPlugin.getInstance()?.anchorWatchdog?.stop()
                 app.showToastMessage(OsmAndR.string.nautical_anchor_cleared)
                 true
             }
@@ -708,6 +714,7 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
             settings.NAUTICAL_SHOW_WINDY_TILES,
             settings.NAUTICAL_SHOW_RAIN_RADAR,
             settings.NAUTICAL_SHOW_OPENMETEO_TILES,
+            settings.NAUTICAL_SHOW_SMHI_TILES,
             settings.NAUTICAL_SHOW_NOAA_TILES,
             settings.NAUTICAL_SHOW_LOGBOOK_LAYER,
             settings.NAUTICAL_SHOW_PMTILES
@@ -778,7 +785,8 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
             }
             val meters = nm * 1852.0
             val (v, u) = SignalKUnitConverter.formatValue(app, settings, meters, "distance")
-            title = "${getString(titleId)} ($u)"
+            val baseTitle = getString(titleId).replace(" (NM)", "")
+            title = "$baseTitle ($u)"
             summary = "$v $u"
             text = nm.toString()
             setOnPreferenceChangeListener { _, newValue ->

@@ -37,7 +37,7 @@
         android:summary="@string/nautical_modules_desc" />
 
     <net.osmand.plus.settings.preferences.SwitchPreferenceEx
-        android:key="nautical_module_ais"
+        android:key="nautical_ais_enabled"
         android:layout="@layout/preference_with_descr"
         android:title="AIS Tracking"
         android:summary="Track nearby vessels via AIS" />
@@ -55,7 +55,7 @@
         android:summary="Layer weather data from GRIB files or Signal K" />
 
     <net.osmand.plus.settings.preferences.SwitchPreferenceEx
-        android:key="nautical_module_vhf"
+        android:key="nautical_vhf_enabled"
         android:layout="@layout/preference_with_descr"
         android:title="VHF Integration"
         android:summary="Connect to VHF radio backend for history and status" />
@@ -656,14 +656,24 @@
         android:title="Windy.com Forecast" />
 
     <net.osmand.plus.settings.preferences.SwitchPreferenceEx
-        android:key="nautical_show_openmeteo"
+        android:key="nautical_show_openmeteo_tiles"
         android:layout="@layout/preference_with_descr"
         android:title="OpenMeteo Weather" />
 
     <net.osmand.plus.settings.preferences.SwitchPreferenceEx
-        android:key="nautical_show_noaa_weather"
+        android:key="nautical_show_smhi_tiles"
+        android:layout="@layout/preference_with_descr"
+        android:title="SMHI Weather Forecast" />
+
+    <net.osmand.plus.settings.preferences.SwitchPreferenceEx
+        android:key="nautical_show_noaa_tiles"
         android:layout="@layout/preference_with_descr"
         android:title="NOAA Weather Alerts" />
+
+    <net.osmand.plus.settings.preferences.SwitchPreferenceEx
+        android:key="nautical_show_pmtiles"
+        android:layout="@layout/preference_with_descr"
+        android:title="PMTiles Vector Charts" />
 
     <net.osmand.plus.settings.preferences.SwitchPreferenceEx
         android:key="nautical_show_logbook_layer"
