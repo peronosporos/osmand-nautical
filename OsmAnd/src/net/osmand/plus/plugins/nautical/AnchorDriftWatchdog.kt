@@ -14,6 +14,7 @@ import net.osmand.plus.plugins.nautical.audio.AlarmType
 import net.osmand.plus.plugins.nautical.audio.NauticalAudioArbiter
 import net.osmand.plus.plugins.nautical.engine.ConnectionStatus
 import net.osmand.plus.plugins.nautical.engine.NotificationState
+import net.osmand.plus.plugins.nautical.engine.hasValidFix
 import net.osmand.shared.util.KMapUtils
 import kotlin.math.abs
 
@@ -44,6 +45,7 @@ class AnchorDriftWatchdog(private val app: OsmandApplication) {
         observationJob?.cancel()
         observationJob = scope.launch {
             NauticalPlugin.engine?.marineStateFlow?.collect { state ->
+                if (!state.hasValidFix) return@collect
                 // 1. Sync with server-side anchor notifications
                 state.notifications["notifications.navigation.anchor"]?.let { notification ->
                     if ((notification.state == NotificationState.ALARM) || (notification.state == NotificationState.EMERGENCY)) {

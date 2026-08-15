@@ -238,6 +238,9 @@ class NauticalAisManager(private val app: OsmandApplication) {
 
 
     private fun updateAllCpa() = managerScope.launch(Dispatchers.Default) {
+        val state = NauticalPlugin.engine?.getCurrentState() ?: return@launch
+        if (!state.hasValidFix) return@launch
+        
         val ownPosition = app.locationProvider.lastKnownLocation ?: return@launch
         val now = System.currentTimeMillis()
         

@@ -1307,6 +1307,7 @@ class SignalKEngine(
     private var lastRealtimeMessageTimestamp: Long = 0
 
     fun handleIncomingMessage(jsonMessage: String) {
+        log.debug("SignalK Ingress: $jsonMessage")
         lastUpdateTimestamp = TemporalUtils.now()
         lastRealtimeMessageTimestamp = System.currentTimeMillis()
         resetWatchdog()
@@ -3432,8 +3433,15 @@ class SignalKEngine(
     }
 
     fun onInternalLocationUpdate(loc: net.osmand.Location) {
-        val currentStatus = dataBroker.marineState.value.connectionStatus
-        if (currentStatus == ConnectionStatus.CONNECTED) return
+        val state = dataBroker.marineState.value
+        val currentStatus = state.connectionStatus
+        
+        // Task 1: Fallback if CONNECTED but NO VALID EXTERNAL FIX
+        if (currentStatus == ConnectionStatus.CONNECTED && state.hasValidFix) return
+        
+        if (currentStatus == ConnectionStatus.CONNECTED) {
+            log.info("SignalK: External GPS missing or stale while CONNECTED. Engaging Internal GPS fallback.")
+        }
         
         dataBroker.setDeadReckoningActive(false)
         

@@ -40,6 +40,7 @@ class OkHttpSignalKConnection(private val client: OkHttpClient) : SignalKConnect
         if (isConnecting || isConnected) return
         isConnecting = true
         
+        log.info("SignalK: Initiating WebSocket connection to $url (AuthToken: ${if (authToken != null) "SET" else "NONE"})")
         val requestBuilder = Request.Builder().url(url)
         if (!authToken.isNullOrEmpty()) {
             requestBuilder.addHeader("Authorization", "Bearer $authToken")
@@ -53,7 +54,7 @@ class OkHttpSignalKConnection(private val client: OkHttpClient) : SignalKConnect
             request,
             object : WebSocketListener() {
                 override fun onOpen(webSocket: WebSocket, response: Response) {
-                    log.debug("WebSocket Connected Successfully!")
+                    log.info("WebSocket Connected Successfully to $url! (Code: ${response.code})")
                     isConnected = true
                     isConnecting = false
                     lastPingTime = System.currentTimeMillis()
@@ -72,7 +73,7 @@ class OkHttpSignalKConnection(private val client: OkHttpClient) : SignalKConnect
                 }
 
                 override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
-                    log.error("WebSocket Failure: ${t.message}")
+                    log.error("WebSocket Failure: ${t.message} (Code: ${response?.code})")
                     isConnected = false
                     isConnecting = false
                     if (response?.code == 401) {
@@ -84,13 +85,14 @@ class OkHttpSignalKConnection(private val client: OkHttpClient) : SignalKConnect
 
                 override fun onClosing(webSocket: WebSocket, code: Int, reason: String) {
                     webSocket.close(1000, null)
-                    log.debug("WebSocket Closing: $reason")
+                    log.info("WebSocket Closing: $code / $reason")
                     isConnected = false
                     isConnecting = false
                     onFailure?.invoke()
                 }
 
                 override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
+                    log.info("WebSocket Closed: $code / $reason")
                     isConnected = false
                 }
             },

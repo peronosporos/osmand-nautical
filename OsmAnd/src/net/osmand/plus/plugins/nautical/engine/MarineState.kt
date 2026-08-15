@@ -478,6 +478,15 @@ data class MarineState(
     val timeOfDriftFix: Long = 0
 ) : Serializable
 
+val MarineState.hasValidFix: Boolean
+    get() {
+        val lat = latitude ?: 0.0
+        val lon = longitude ?: 0.0
+        val timestamp = timestamps["navigation.position"] ?: 0L
+        val age = System.currentTimeMillis() - timestamp
+        return (lat != 0.0 || lon != 0.0) && age < 30000
+    }
+
 @kotlinx.serialization.Serializable
 enum class ConnectionStatus {
     CONNECTED,

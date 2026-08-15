@@ -31,6 +31,7 @@ class DirectNmeaMultiplexer(
     private val parser: NmeaSentenceParser = NmeaSentenceParser(app),
     private val navtexRepo: NavtexRepository? = null
 ) {
+    private val log = PlatformUtil.getLog(DirectNmeaMultiplexer::class.java)
     private val activeClients = mutableListOf<NmeaTransport>()
     private val collectionJobs = mutableMapOf<NmeaTransport, Job>()
     private val statusJobs = mutableMapOf<NmeaTransport, Job>()
@@ -76,6 +77,7 @@ class DirectNmeaMultiplexer(
     var deltaConsumer: ((net.osmand.plus.plugins.nautical.network.DeltaMessage) -> Unit)? = null
 
     private suspend fun processSentence(transport: NmeaTransport?, sentence: String) {
+        log.debug("NMEA RX [${transport?.javaClass?.simpleName ?: "Unknown"}]: $sentence")
         // FEEDBACK LOOP PREVENTION: Do not record replayed sentences
         if (transport !is NmeaPlaybackEngine) {
             recorder?.recordSentence(sentence)
@@ -115,6 +117,7 @@ class DirectNmeaMultiplexer(
     }
 
     fun start(client: NmeaTransport) {
+        log.info("NMEA Multiplexer: Starting transport ${client.javaClass.simpleName}")
         scope.launch {
             mutex.withLock {
                 if (activeClients.contains(client)) return@withLock
@@ -157,11 +160,13 @@ class DirectNmeaMultiplexer(
                 }
                 
                 client.connect()
+                log.info("NMEA Multiplexer: Transport ${client.javaClass.simpleName} connected/initiated.")
             }
         }
     }
 
     fun stop(client: NmeaTransport) {
+        log.info("NMEA Multiplexer: Stopping transport ${client.javaClass.simpleName}")
         scope.launch {
             mutex.withLock {
                 client.disconnect()

@@ -60,6 +60,7 @@ import net.osmand.plus.plugins.nautical.engine.ConnectionStatus
 import net.osmand.plus.plugins.nautical.engine.ElectricalController
 import net.osmand.plus.plugins.nautical.engine.GpxStreamer
 import net.osmand.plus.plugins.nautical.engine.MarineState
+import net.osmand.plus.plugins.nautical.engine.hasValidFix
 import net.osmand.plus.plugins.nautical.engine.NauticalAisManager
 import net.osmand.plus.plugins.nautical.engine.NauticalLocationProvider
 import net.osmand.plus.plugins.nautical.engine.NauticalNotificationManager
@@ -536,6 +537,7 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
     }
 
     private fun evaluateVesselSafety(state: MarineState, notifications: MutableMap<String, SignalKNotification>) {
+        if (!state.hasValidFix) return
         checkOffCourseAlert(state, notifications)
         checkDepthSafety(state, notifications)
         checkAccidentalGybeAlert(state, notifications)
