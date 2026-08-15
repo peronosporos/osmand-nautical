@@ -46,6 +46,9 @@ Thumbs.db
 
 # Output files
 build
+build_artifacts/
+androidFullLegacyArm64/
+*.apk
 
 #Rendering test files
 OsmAnd-java/src/test/resources/rendering/*

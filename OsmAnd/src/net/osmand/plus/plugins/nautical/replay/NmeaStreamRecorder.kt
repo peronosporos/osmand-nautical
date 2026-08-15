@@ -25,7 +25,10 @@ class NmeaStreamRecorder(
     private val log = PlatformUtil.getLog(NmeaStreamRecorder::class.java)
     private var sink: BufferedSink? = null
     private var consumerJob: Job? = null
-    private val sentenceChannel = Channel<String>(capacity = 5000)
+    private val sentenceChannel = Channel<String>(
+        capacity = 5000,
+        onBufferOverflow = kotlinx.coroutines.channels.BufferOverflow.DROP_OLDEST
+    )
 
     private val _isRecording = MutableStateFlow(false)
     val isRecording = _isRecording.asStateFlow()

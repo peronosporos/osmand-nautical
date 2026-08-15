@@ -113,54 +113,72 @@ class SignalKDataBroker(private val settings: OsmandSettings? = null) {
     private var lastRudderTime = 0L
 
     @Synchronized
-    fun processHeadingUpdate(value: Double) {
-        val now = TemporalUtils.now()
+    fun applyHeadingUpdate(state: MarineState, value: Double, now: Long): MarineState {
         val smoothed = headingEma.update(value)
-        if (shouldUpdate(smoothed, _marineState.value.headingTrue, now, lastHeadingTime, angleThreshold)) {
-            _marineState.update { it.copy(headingTrue = smoothed, timeOfHeadingFix = now) }
+        return if (shouldUpdate(smoothed, state.headingTrue, now, lastHeadingTime, angleThreshold)) {
             lastHeadingTime = now
-        }
+            state.copy(headingTrue = smoothed, timeOfHeadingFix = now)
+        } else state
     }
 
     @Synchronized
-    fun processWindAngleUpdate(value: Double) {
+    fun processHeadingUpdate(value: Double) {
         val now = TemporalUtils.now()
+        _marineState.update { applyHeadingUpdate(it, value, now) }
+    }
+
+    @Synchronized
+    fun applyWindAngleUpdate(state: MarineState, value: Double, now: Long): MarineState {
         val offsetDeg = settings?.NAUTICAL_WIND_ALIGNMENT?.get() ?: 0.0f
         val offsetRad = Math.toRadians(offsetDeg.toDouble())
         val correctedValue = (((value + offsetRad) % (2 * Math.PI)) + (2 * Math.PI)) % (2 * Math.PI)
         val smoothed = windAngleEma.update(correctedValue)
 
-        if (shouldUpdate(smoothed, _marineState.value.windDirectionApparent, now, lastWindAngleTime, angleThreshold)) {
-            _marineState.update { it.copy(windDirectionApparent = smoothed, timeOfWindFix = now) }
+        return if (shouldUpdate(smoothed, state.windDirectionApparent, now, lastWindAngleTime, angleThreshold)) {
             lastWindAngleTime = now
-        }
+            state.copy(windDirectionApparent = smoothed, timeOfWindFix = now)
+        } else state
+    }
+
+    @Synchronized
+    fun processWindAngleUpdate(value: Double) {
+        val now = TemporalUtils.now()
+        _marineState.update { applyWindAngleUpdate(it, value, now) }
+    }
+
+    @Synchronized
+    fun applyWindSpeedUpdate(state: MarineState, value: Double, now: Long): MarineState {
+        val smoothed = windSpeedEma.update(value)
+        return if (shouldUpdate(smoothed, state.windSpeedApparent, now, lastWindSpeedTime, speedThreshold)) {
+            lastWindSpeedTime = now
+            state.copy(windSpeedApparent = smoothed, timeOfWindFix = now)
+        } else state
     }
 
     @Synchronized
     fun processWindSpeedUpdate(value: Double) {
         val now = TemporalUtils.now()
-        val smoothed = windSpeedEma.update(value)
-        if (shouldUpdate(smoothed, _marineState.value.windSpeedApparent, now, lastWindSpeedTime, speedThreshold)) {
-            _marineState.update { it.copy(windSpeedApparent = smoothed, timeOfWindFix = now) }
-            lastWindSpeedTime = now
-        }
+        _marineState.update { applyWindSpeedUpdate(it, value, now) }
     }
 
     @Synchronized
-    fun processDepthUpdate(value: Double) {
-        val now = TemporalUtils.now()
+    fun applyDepthUpdate(state: MarineState, value: Double, now: Long): MarineState {
         val safetyManager = NauticalPlugin.getInstance()?.safetyManager
         val keelOffset = safetyManager?.getKeelOffset() ?: settings?.NAUTICAL_KEEL_OFFSET?.get()?.toDouble() ?: 0.0
         val trueDepth = value + keelOffset
         val smoothed = depthEma.update(trueDepth)
         
-        _marineState.update { 
-            it.copy(
-                depthBelowTransducer = value,
-                depthBelowKeel = smoothed,
-                timeOfDepthFix = now,
-            ) 
-        }
+        return state.copy(
+            depthBelowTransducer = value,
+            depthBelowKeel = smoothed,
+            timeOfDepthFix = now,
+        )
+    }
+
+    @Synchronized
+    fun processDepthUpdate(value: Double) {
+        val now = TemporalUtils.now()
+        _marineState.update { applyDepthUpdate(it, value, now) }
     }
 
     private var lastStwValue: Double? = null
@@ -168,24 +186,34 @@ class SignalKDataBroker(private val settings: OsmandSettings? = null) {
     private var stwUnreliableStartTime: Long = 0
 
     @Synchronized
-    fun processStwUpdate(value: Double) {
-        val now = TemporalUtils.now()
-        lastStwValue = value
-        checkStwReliability(now)
-        _marineState.update { it.copy(speedThroughWater = value, timeOfSogFix = now) }
+    fun applySogUpdate(state: MarineState, value: Double, now: Long): MarineState {
+        lastSogValue = value
+        val unreliable = calculateStwReliabilityStatus(state, now)
+        return state.copy(speedOverGround = value, timeOfSogFix = now, isStwUnreliable = unreliable)
     }
 
     @Synchronized
     fun processSogUpdate(value: Double) {
         val now = TemporalUtils.now()
-        lastSogValue = value
-        checkStwReliability(now)
-        _marineState.update { it.copy(speedOverGround = value, timeOfSogFix = now) }
+        _marineState.update { applySogUpdate(it, value, now) }
     }
 
-    private fun checkStwReliability(now: Long) {
-        val stw = lastStwValue ?: return
-        val sog = lastSogValue ?: return
+    @Synchronized
+    fun applyStwUpdate(state: MarineState, value: Double, now: Long): MarineState {
+        lastStwValue = value
+        val unreliable = calculateStwReliabilityStatus(state, now)
+        return state.copy(speedThroughWater = value, timeOfSogFix = now, isStwUnreliable = unreliable)
+    }
+
+    @Synchronized
+    fun processStwUpdate(value: Double) {
+        val now = TemporalUtils.now()
+        _marineState.update { applyStwUpdate(it, value, now) }
+    }
+
+    private fun calculateStwReliabilityStatus(state: MarineState, now: Long): Boolean {
+        val stw = lastStwValue ?: return state.isStwUnreliable
+        val sog = lastSogValue ?: return state.isStwUnreliable
         
         // Link to profile-specific settings (TASK-LOGIC-001)
         val minStw = settings?.NAUTICAL_STW_REL_MIN_STW?.get()?.toDouble() ?: 0.1
@@ -195,46 +223,55 @@ class SignalKDataBroker(private val settings: OsmandSettings? = null) {
         // Indicating a fouled paddlewheel: STW is near zero while SOG is steady above stall threshold
         val isPotentiallyUnreliable = (stw < minStw) && (sog > minSog) 
         
-        if (isPotentiallyUnreliable) {
+        return if (isPotentiallyUnreliable) {
             if (stwUnreliableStartTime == 0L) {
                 stwUnreliableStartTime = now
+                state.isStwUnreliable
             } else if ((now - stwUnreliableStartTime) > delayMs) { 
-                _marineState.update { it.copy(isStwUnreliable = true) }
+                true
+            } else {
+                state.isStwUnreliable
             }
         } else {
             stwUnreliableStartTime = 0
-            _marineState.update { it.copy(isStwUnreliable = false) }
+            false
         }
+    }
+
+    @Synchronized
+    fun applyRollUpdate(state: MarineState, value: Double, now: Long): MarineState {
+        val smoothed = rollEma.update(value)
+        return if (shouldUpdate(smoothed, state.roll, now, lastRollTime, angleThreshold)) {
+            lastRollTime = now
+            state.copy(roll = smoothed, timeOfAttitudeFix = now)
+        } else state
     }
 
     @Synchronized
     fun processRollUpdate(value: Double) {
         val now = TemporalUtils.now()
-        val smoothed = rollEma.update(value)
-        if (shouldUpdate(smoothed, _marineState.value.roll, now, lastRollTime, angleThreshold)) {
-            _marineState.update { it.copy(roll = smoothed, timeOfAttitudeFix = now) }
-            lastRollTime = now
-        }
+        _marineState.update { applyRollUpdate(it, value, now) }
+    }
+
+    @Synchronized
+    fun applyPitchUpdate(state: MarineState, value: Double, now: Long): MarineState {
+        val smoothed = pitchEma.update(value)
+        return if (shouldUpdate(smoothed, state.pitch, now, lastPitchTime, angleThreshold)) {
+            lastPitchTime = now
+            state.copy(pitch = smoothed, timeOfAttitudeFix = now)
+        } else state
     }
 
     @Synchronized
     fun processPitchUpdate(value: Double) {
         val now = TemporalUtils.now()
-        val smoothed = pitchEma.update(value)
-        if (shouldUpdate(smoothed, _marineState.value.pitch, now, lastPitchTime, angleThreshold)) {
-            _marineState.update { it.copy(pitch = smoothed, timeOfAttitudeFix = now) }
-            lastPitchTime = now
-        }
+        _marineState.update { applyPitchUpdate(it, value, now) }
     }
 
     @Synchronized
-    fun processRudderUpdate(value: Double) {
-        val now = TemporalUtils.now()
+    fun applyRudderUpdate(state: MarineState, value: Double, now: Long): MarineState {
         val smoothed = rudderEma.update(value)
         
-        // ITEM 5 FIX: Debounce Shadow Drive to avoid false positives in heavy seas
-        // Require > 8.0 degrees of delta while engaged to trigger manual override
-        val state = _marineState.value
         val shadowDriveEnabled = settings?.NAUTICAL_SHADOW_DRIVE?.get() ?: true
         if (shadowDriveEnabled && (state.autopilotState != "standby") && (state.pendingCommandPath == null)) {
             state.rudderAngle?.let { lastRudder ->
@@ -244,10 +281,16 @@ class SignalKDataBroker(private val settings: OsmandSettings? = null) {
             }
         }
 
-        if (shouldUpdate(smoothed, _marineState.value.rudderAngle, now, lastRudderTime, angleThreshold)) {
-            _marineState.update { it.copy(rudderAngle = smoothed, timeOfRudderFix = now) }
+        return if (shouldUpdate(smoothed, state.rudderAngle, now, lastRudderTime, angleThreshold)) {
             lastRudderTime = now
-        }
+            state.copy(rudderAngle = smoothed, timeOfRudderFix = now)
+        } else state
+    }
+
+    @Synchronized
+    fun processRudderUpdate(value: Double) {
+        val now = TemporalUtils.now()
+        _marineState.update { applyRudderUpdate(it, value, now) }
     }
 
     // ITEM 6 FIX: External control for DR to avoid GPS conflicts

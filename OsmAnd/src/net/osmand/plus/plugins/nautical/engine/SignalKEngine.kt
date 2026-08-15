@@ -13,6 +13,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -37,8 +38,6 @@ import net.osmand.plus.plugins.nautical.laylines.engine.LaylineData
 import net.osmand.plus.plugins.nautical.network.DeltaMessage
 import net.osmand.plus.plugins.nautical.network.LivePerformanceData
 import net.osmand.plus.plugins.nautical.network.SignalKCourse
-import net.osmand.plus.plugins.nautical.network.Update
-import net.osmand.plus.plugins.nautical.network.Value
 import net.osmand.plus.plugins.nautical.network.SignalKLineString
 import net.osmand.plus.plugins.nautical.network.SignalKRestService
 import net.osmand.plus.plugins.nautical.network.SignalKRoute
@@ -95,7 +94,10 @@ class SignalKEngine(
     // Isolated scope for background parsing tasks to prevent ripple failures
     private val parsingScope = CoroutineScope(Dispatchers.Default + SupervisorJob() + engineExceptionHandler)
 
-    private val messageChannel = Channel<String>(capacity = 128)
+    private val messageChannel = Channel<String>(
+        capacity = 5000,
+        onBufferOverflow = BufferOverflow.DROP_OLDEST
+    )
     private var messageProcessingJob: Job? = null
 
     val marineStateFlow: StateFlow<MarineState> = dataBroker.marineState
@@ -205,14 +207,56 @@ class SignalKEngine(
     private fun startMessageProcessing() {
         messageProcessingJob?.cancel()
         messageProcessingJob = parsingScope.launch {
-            for (message in messageChannel) {
-                processJsonMessage(message)
+            val batch = mutableListOf<String>()
+            while (isActive) {
+                try {
+                    // Wait for at least one message
+                    val first = messageChannel.receive()
+                    batch.add(first)
+
+                    // Drain up to 100 messages or until empty
+                    var count = 0
+                    while (count < 100) {
+                        val next = messageChannel.tryReceive().getOrNull() ?: break
+                        batch.add(next)
+                        count++
+                    }
+
+                    if (batch.isNotEmpty()) {
+                        var currentState = dataBroker.marineState.value
+                        var stateChanged = false
+                        
+                        for (message in batch) {
+                            val res = processJsonMessage(message, currentState)
+                            currentState = res.first
+                            if (res.second) stateChanged = true
+                        }
+                        
+                        // Update the last message time in state once per batch
+                        currentState = currentState.copy(lastMessageTime = lastRealtimeMessageTimestamp)
+                        
+                        if (stateChanged) {
+                            finalizeAndNotifyState(currentState)
+                        } else {
+                             dataBroker.updateState { currentState }
+                        }
+                        batch.clear()
+                    }
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    log.error("Batch processing error: ${e.message}")
+                    batch.clear()
+                    delay(100.milliseconds) // Cooling off
+                }
             }
         }
     }
 
-    private fun processJsonMessage(jsonMessage: String) {
+    private fun processJsonMessage(jsonMessage: String, initialState: MarineState): Pair<MarineState, Boolean> {
         val reader = JsonReader(StringReader(jsonMessage))
+        var currentState = initialState
+        var stateChanged = false
         try {
             reader.beginObject()
             var context: String? = null
@@ -231,7 +275,9 @@ class SignalKEngine(
                         if (isHello) {
                             reader.skipValue()
                         } else {
-                            processUpdates(reader, context ?: "vessels.self")
+                            val res = processUpdates(reader, context ?: "vessels.self", currentState)
+                            currentState = res.first
+                            if (res.second) stateChanged = true
                         }
                     }
                     else -> reader.skipValue()
@@ -239,10 +285,12 @@ class SignalKEngine(
             }
             reader.endObject()
         } catch (e: Exception) {
-            log.error("JsonReader error: ${e.message}")
+            val preview = if (jsonMessage.length > 100) jsonMessage.substring(0, 100) + "..." else jsonMessage
+            log.error("JsonReader error: ${e.message}. Snippet: $preview", e)
         } finally {
             try { reader.close() } catch (_: Exception) {}
         }
+        return Pair(currentState, stateChanged)
     }
 
     private var lastRestUrl: String? = null
@@ -1241,10 +1289,13 @@ class SignalKEngine(
         trajectoryBuffer.copyTo(target)
     }
 
+    @Volatile
+    private var lastRealtimeMessageTimestamp: Long = 0
+
     fun handleIncomingMessage(jsonMessage: String) {
         lastUpdateTimestamp = TemporalUtils.now()
+        lastRealtimeMessageTimestamp = System.currentTimeMillis()
         resetWatchdog()
-        dataBroker.updateState { it.copy(lastMessageTime = System.currentTimeMillis()) }
 
         if (powerSaveMode) {
             val now = System.currentTimeMillis()
@@ -1281,7 +1332,7 @@ class SignalKEngine(
         }
 
         val updates = delta.updates ?: return
-        var currentBatchState: MarineState? = null
+        var currentState = dataBroker.marineState.value
         var stateUpdated = false
 
         for (update in updates) {
@@ -1296,11 +1347,8 @@ class SignalKEngine(
                 val value = v.value
 
                 if (isSelf) {
-                    if (currentBatchState == null) {
-                        currentBatchState = dataBroker.marineState.value
-                    }
-                    val res = parseSelfValue(currentBatchState, path, value, updateTimestamp, updateSource)
-                    currentBatchState = res.first
+                    val res = parseSelfValue(currentState, path, value, updateTimestamp, updateSource)
+                    currentState = res.first
                     if (res.second) stateUpdated = true
                 } else if (aisTarget != null) {
                     if (path == SignalKPaths.AIS_THREAT_LEVEL) {
@@ -1313,8 +1361,8 @@ class SignalKEngine(
             }
         }
 
-        if (isSelf && stateUpdated && currentBatchState != null) {
-            finalizeAndNotifyState(currentBatchState)
+        if (isSelf && stateUpdated) {
+            finalizeAndNotifyState(currentState)
         } else if (aisTarget != null) {
             val pos = aisTarget.position
             if (pos != null && pos.latitude != AisObjectConstants.INVALID_LAT && pos.longitude != AisObjectConstants.INVALID_LON) {
@@ -1371,49 +1419,18 @@ class SignalKEngine(
         }
     }
 
-    private fun processUpdates(reader: JsonReader, context: String) {
-        val currentMmsi = dataBroker.marineState.value.vesselMmsi
+    private fun processUpdates(reader: JsonReader, context: String, initialState: MarineState): Pair<MarineState, Boolean> {
+        val currentMmsi = initialState.vesselMmsi
         val isSelf = (context == "vessels.self") || (context == "") || (context == trueSelfContext) ||
                 (currentMmsi != null && context == "vessels.urn:mrn:imo:mmsi:$currentMmsi")
 
         var aisTarget: AisObject? = null
         if (!isSelf) {
-            // Task: Robust Context Parsing (Industry Standard)
-            // Handle: vessels.*, aircraft.*, atons.*, sar.*
-            val type = context.substringBefore(".")
-            val rawId = context.substringAfter("$type.", "")
-            
-            if (rawId.isNotEmpty() && (type == "vessels" || type == "aircraft" || type == "atons" || type == "sar")) {
-                val numericMmsi: Int = if (rawId.startsWith("urn:mrn:imo:mmsi:")) {
-                    rawId.substringAfter("urn:mrn:imo:mmsi:").toIntOrNull() ?: (rawId.hashCode().absoluteValue % 1000000000)
-                } else if (rawId.startsWith("urn:mrn:signalk:uuid:")) {
-                    // Robust 31-bit hash for UUIDs to minimize collisions while fitting in Int
-                    (rawId.hashCode() and 0x7FFFFFFF)
-                } else {
-                    rawId.toIntOrNull() ?: (rawId.hashCode().absoluteValue % 1000000000)
-                }
-                
-                aisTarget = aisCache.getOrPut(numericMmsi) { 
-                    log.info("Nautical: New AIS target discovered from context: $context (MMSI: $numericMmsi)")
-                    val msgType = when(type) {
-                        "aircraft" -> 9
-                        "atons" -> 21
-                        "sar" -> 14
-                        else -> 1 // Default vessel
-                    }
-                    // Initialize with INVALID coordinates to avoid showing at (0,0)
-                    AisObject(numericMmsi, msgType, 
-                        AisObjectConstants.INVALID_LAT, 
-                        AisObjectConstants.INVALID_LON)
-                }
-            }
-else if (context.isNotEmpty()) {
-                log.debug("Nautical: Ignoring Signal K update for unknown context: $context")
-            }
+            aisTarget = resolveAisTargetFromContext(context)
         }
 
         reader.beginArray()
-        var currentBatchState: MarineState? = null
+        var currentState = initialState
         var stateUpdated = false
 
         while (reader.hasNext()) {
@@ -1430,8 +1447,6 @@ else if (context.isNotEmpty()) {
                             val parsed = TemporalUtils.parseIso8601(ts)
                             if (parsed > 0) {
                                 updateTimestamp = parsed
-                            } else {
-                                log.debug("Signal K: Malformed string timestamp received, using device time: $ts")
                             }
                         }
                     }
@@ -1444,7 +1459,10 @@ else if (context.isNotEmpty()) {
                         }
                     }
                     "meta" -> {
-                        if (isSelf) processMeta(reader) else reader.skipValue()
+                        if (isSelf) {
+                            currentState = processMetaBatch(reader, currentState)
+                            stateUpdated = true
+                        } else reader.skipValue()
                     }
                     "values" -> {
                         reader.beginArray()
@@ -1457,13 +1475,9 @@ else if (context.isNotEmpty()) {
                                     "path" -> path = reader.nextString()
                                     "value" -> {
                                         if (isSelf && path != null) {
-                                            if (currentBatchState == null) {
-                                                currentBatchState = dataBroker.marineState.value
-                                            }
-                                            // Pass the update timestamp to parsers
-                                            val res = parseOptimizedSelfValue(currentBatchState, path, reader, updateTimestamp)
+                                            val res = parseOptimizedSelfValue(currentState, path, reader, updateTimestamp)
                                             if (res != null) {
-                                                currentBatchState = res.first
+                                                currentState = res.first
                                                 if (res.second) stateUpdated = true
                                                 path = null // Handled
                                             } else {
@@ -1471,9 +1485,6 @@ else if (context.isNotEmpty()) {
                                             }
                                         } else {
                                             value = readJsonValue(reader)
-                                            if (aisTarget != null && path != null) {
-                                                log.debug("Nautical: Received AIS update for ${aisTarget.mmsi} - Path: $path, Value: $value")
-                                            }
                                         }
                                     }
                                     else -> reader.skipValue()
@@ -1483,18 +1494,13 @@ else if (context.isNotEmpty()) {
 
                             if (path != null) {
                                 if (isSelf) {
-                                    if (currentBatchState == null) {
-                                        currentBatchState = dataBroker.marineState.value
-                                    }
-                                    val res = parseSelfValue(currentBatchState, path, value, updateTimestamp, updateSource)
-                                    currentBatchState = res.first
+                                    val res = parseSelfValue(currentState, path, value, updateTimestamp, updateSource)
+                                    currentState = res.first
                                     if (res.second) stateUpdated = true
                                 } else if (aisTarget != null) {
-                                        if (path == SignalKPaths.AIS_THREAT_LEVEL) {
+                                    if (path == SignalKPaths.AIS_THREAT_LEVEL) {
                                         val level = (value as? Number)?.toInt() ?: 0
-                                        aisTarget.let {
-                                            NauticalPlugin.getInstance()?.aisManager?.updateAisThreatLevel(it.mmsi, level)
-                                        }
+                                        NauticalPlugin.getInstance()?.aisManager?.updateAisThreatLevel(aisTarget.mmsi, level)
                                     } else {
                                         aisTarget = updateAisTarget(aisTarget, path, value, updateTimestamp)
                                     }
@@ -1510,15 +1516,44 @@ else if (context.isNotEmpty()) {
         }
         reader.endArray()
 
-        if (isSelf && stateUpdated && currentBatchState != null) {
-            finalizeAndNotifyState(currentBatchState)
-        } else if (aisTarget != null) {
+        if (!isSelf && aisTarget != null) {
             val pos = aisTarget.position
             if (pos != null && pos.latitude != AisObjectConstants.INVALID_LAT && pos.longitude != AisObjectConstants.INVALID_LON) {
                 val copy = AisObject(aisTarget)
                 aisListener?.invoke(copy)
             }
         }
+        
+        return Pair(currentState, stateUpdated)
+    }
+
+    private fun processMetaBatch(reader: JsonReader, s: MarineState): MarineState {
+        reader.beginArray()
+        val currentMeta = s.pathMeta.toMutableMap()
+        while (reader.hasNext()) {
+            reader.beginObject()
+            var path: String? = null
+            var value: JSONObject? = null
+            while (reader.hasNext()) {
+                when (reader.nextName()) {
+                    "path" -> path = reader.nextString()
+                    "value" -> value = readJsonValue(reader) as? JSONObject
+                    else -> reader.skipValue()
+                }
+            }
+            reader.endObject()
+            if (path != null && value != null) {
+                val metaMap = mutableMapOf<String, Any>()
+                val keys = value.keys()
+                while (keys.hasNext()) {
+                    val key = keys.next()
+                    metaMap[key] = value.get(key)
+                }
+                currentMeta[path] = metaMap
+            }
+        }
+        reader.endArray()
+        return s.copy(pathMeta = currentMeta)
     }
 
     private fun parseOptimizedSelfValue(s: MarineState, path: String, reader: JsonReader, now: Long): Pair<MarineState, Boolean>? {
@@ -1562,19 +1597,19 @@ else if (context.isNotEmpty()) {
                         }
                     }
                     reader.endObject()
-                    val state = s.copy(
-                        roll = if (roll.isNaN()) s.roll else roll,
-                        pitch = if (pitch.isNaN()) s.pitch else pitch,
+                    
+                    var state = s.copy(
                         yaw = if (yaw.isNaN()) s.yaw else yaw,
                         timestamps = newTimestamps
                     )
+                    
                     if (!roll.isNaN()) {
                         getBuffer(SignalKPaths.NAV_ATTITUDE + ".roll").add(Pair(roll, now))
-                        dataBroker.processRollUpdate(roll)
+                        state = dataBroker.applyRollUpdate(state, roll, now)
                     }
                     if (!pitch.isNaN()) {
                         getBuffer(SignalKPaths.NAV_ATTITUDE + ".pitch").add(Pair(pitch, now))
-                        dataBroker.processPitchUpdate(pitch)
+                        state = dataBroker.applyPitchUpdate(state, pitch, now)
                     }
                     Pair(state, true)
                 } else null
@@ -1596,7 +1631,6 @@ else if (context.isNotEmpty()) {
                     reader.endObject()
                     if (!cpa.isNaN() && !tcpa.isNaN()) {
                         val cpaNm = SignalKUnitConverter.metersToNm(cpa)
-                        dataBroker.updateClosestApproach(cpaNm, tcpa, name)
                         val state = s.copy(cpa = cpaNm, tcpa = tcpa, threatName = name, timestamps = newTimestamps)
                         Pair(state, true)
                     } else null
@@ -1726,20 +1760,21 @@ else if (context.isNotEmpty()) {
                     reader.endObject()
 
                     if (!nextLat.isNaN()) {
-                        val oldPoint = dataBroker.marineState.value.serverNextPoint
+                        val oldPoint = s.serverNextPoint
                         val newPoint = LatLon(nextLat, nextLon)
                         if (oldPoint != newPoint) {
-                            dataBroker.updateState { it.copy(serverNextPoint = newPoint) }
-                            // ITEM 4 FIX: Trigger listeners when server advances waypoint
+                            val state = s.copy(serverNextPoint = newPoint, timestamps = newTimestamps)
+                            // Trigger listeners when server advances waypoint
                             engineScope.launch(Dispatchers.Main) {
                                 routeStepListeners.forEach { it.invoke() }
                             }
+                            return Pair(state, true)
                         }
                     }
                     radius?.let { arrivalRadiusMeters = it }
                     if (activeRouteHref != null) isFollowingRoute = true
 
-                    Pair(s, true)
+                    Pair(s.copy(timestamps = newTimestamps), true)
                 } else null
             }
             else -> null
@@ -1778,34 +1813,6 @@ else if (context.isNotEmpty()) {
         }
     }
 
-    private fun processMeta(reader: JsonReader) {
-        reader.beginArray()
-        val currentMeta = dataBroker.marineState.value.pathMeta.toMutableMap()
-        while (reader.hasNext()) {
-            reader.beginObject()
-            var path: String? = null
-            var value: JSONObject? = null
-            while (reader.hasNext()) {
-                when (reader.nextName()) {
-                    "path" -> path = reader.nextString()
-                    "value" -> value = readJsonValue(reader) as? JSONObject
-                    else -> reader.skipValue()
-                }
-            }
-            reader.endObject()
-            if (path != null && value != null) {
-                val metaMap = mutableMapOf<String, Any>()
-                val keys = value.keys()
-                while (keys.hasNext()) {
-                    val key = keys.next()
-                    metaMap[key] = value.get(key)
-                }
-                currentMeta[path] = metaMap
-            }
-        }
-        dataBroker.updateState { it.copy(pathMeta = currentMeta) }
-        reader.endArray()
-    }
 
     private var lastStateUpdateTime: Long = 0
     @Volatile
@@ -1816,23 +1823,8 @@ else if (context.isNotEmpty()) {
             pendingFinalState = state
         }
         val now = TemporalUtils.now()
-        
-        // Task: Dynamic Calculation Throttling
-        val speed = state.speedOverGround ?: 0.0
-        val isRacing = (state.racingTimer ?: -100.0) > -60.0 && (state.racingTimer ?: 500.0) < 300.0
-        val dynamicInterval = when {
-            isRacing -> 100L // 10Hz for racing
-            speed > 1.0 -> 250L // 4Hz for active sailing
-            powerSaveMode -> 2000L // 0.5Hz for power save
-            state.latitude != null -> 500L // 2Hz for position updates even if slow
-            else -> 1000L // 1Hz for stationary/normal
-        }
-
-        if (now - lastStateUpdateTime < dynamicInterval) {
-            return
-        }
         lastStateUpdateTime = now
-        val currentState = synchronized(this) { pendingFinalState } ?: return
+        val currentState = state
         
         // Task 11: Engine Guard Logic
         val isEngineRunning = currentState.engines.values.any {
@@ -2088,6 +2080,7 @@ else if (context.isNotEmpty()) {
 
         // Flattened high-performance path dispatch
         return when (path) {
+            SignalKPaths.ENV_DEPTH_BELOW_TRANSDUCER -> processDepthBelowTransducer(stateWithTs, valueObj, now)
             SignalKPaths.NAV_HEADING_TRUE -> processHeadingTrue(stateWithTs, valueObj, now)
             SignalKPaths.NAV_HEADING_MAG -> processHeadingMag(stateWithTs, valueObj, now)
             SignalKPaths.NAV_SPEED_OVER_GROUND -> processSog(stateWithTs, valueObj, now)
@@ -2115,7 +2108,6 @@ else if (context.isNotEmpty()) {
             SignalKPaths.NAV_MAG_VARIATION -> {
                 val v = (valueObj as? Number)?.toDouble() ?: Double.NaN
                 if (!v.isNaN()) {
-                    dataBroker.processVariationUpdate(v)
                     Pair(stateWithTs.copy(magneticVariation = v), true)
                 } else Pair(stateWithTs, false)
             }
@@ -2176,16 +2168,15 @@ else if (context.isNotEmpty()) {
             val buffer = getBuffer(SignalKPaths.ENV_DEPTH_BELOW_TRANSDUCER)
             buffer.add(Pair(value, now))
             val smoothedValue = buffer.getAverage { it.first }
-            dataBroker.processDepthUpdate(smoothedValue)
-            Pair(s.copy(depthBelowTransducer = value, timeOfDepthFix = now), true)
+            val state = dataBroker.applyDepthUpdate(s, smoothedValue, now)
+            Pair(state, true)
         } else Pair(s, false)
     }
 
     private fun processHeadingTrue(s: MarineState, valueObj: Any?, now: Long): Pair<MarineState, Boolean> {
         val value = (valueObj as? Number)?.toDouble() ?: Double.NaN
         return if (!value.isNaN()) {
-            val state = s.copy(headingTrue = value, timeOfHeadingFix = now)
-            dataBroker.processHeadingUpdate(value)
+            val state = dataBroker.applyHeadingUpdate(s, value, now)
             Pair(state, true)
         } else Pair(s, false)
     }
@@ -2193,9 +2184,7 @@ else if (context.isNotEmpty()) {
     private fun processHeadingMag(s: MarineState, valueObj: Any?, now: Long): Pair<MarineState, Boolean> {
         val value = (valueObj as? Number)?.toDouble() ?: Double.NaN
         return if (!value.isNaN()) {
-            val state = s.copy(headingMagnetic = value, timeOfHeadingFix = now)
-            dataBroker.processHeadingUpdate(value)
-            dataBroker.processVariationUpdate(state.magneticVariation ?: 0.0)
+            val state = dataBroker.applyHeadingUpdate(s.copy(headingMagnetic = value), value, now)
             getBuffer(SignalKPaths.NAV_HEADING_MAG).add(Pair(value, now))
             Pair(state, true)
         } else Pair(s, false)
@@ -2204,9 +2193,8 @@ else if (context.isNotEmpty()) {
     private fun processSog(s: MarineState, valueObj: Any?, now: Long): Pair<MarineState, Boolean> {
         val value = (valueObj as? Number)?.toDouble() ?: Double.NaN
         return if (MarineStateConstants.isValidSpeed(value)) {
-            val state = s.copy(speedOverGround = value, timeOfSogFix = now)
+            val state = dataBroker.applySogUpdate(s, value, now)
             getBuffer(SignalKPaths.NAV_SPEED_OVER_GROUND).add(Pair(value, now))
-            dataBroker.processSogUpdate(value)
             Pair(state, true)
         } else Pair(s, false)
     }
@@ -2214,9 +2202,8 @@ else if (context.isNotEmpty()) {
     private fun processStw(s: MarineState, valueObj: Any?, now: Long): Pair<MarineState, Boolean> {
         val value = (valueObj as? Number)?.toDouble() ?: Double.NaN
         return if (MarineStateConstants.isValidSpeed(value)) {
-            val state = s.copy(speedThroughWater = value, timeOfSogFix = now)
+            val state = dataBroker.applyStwUpdate(s, value, now)
             getBuffer(SignalKPaths.NAV_SPEED_THROUGH_WATER).add(Pair(value, now))
-            dataBroker.processStwUpdate(value)
             Pair(state, true)
         } else Pair(s, false)
     }
@@ -2225,8 +2212,7 @@ else if (context.isNotEmpty()) {
         val value = (valueObj as? Number)?.toDouble() ?: Double.NaN
         return if (!value.isNaN()) {
             val corrected = environmentalFilterService?.correctWindAngle(value, s.roll ?: 0.0, s.pitch ?: 0.0) ?: value
-            val state = s.copy(windDirectionApparent = corrected, timeOfWindFix = now)
-            dataBroker.processWindAngleUpdate(corrected)
+            val state = dataBroker.applyWindAngleUpdate(s, corrected, now)
             getBuffer(SignalKPaths.ENV_WIND_ANGLE_APPARENT).add(Pair(corrected, now))
             Pair(state, true)
         } else Pair(s, false)
@@ -2236,8 +2222,7 @@ else if (context.isNotEmpty()) {
         val value = (valueObj as? Number)?.toDouble() ?: Double.NaN
         return if (MarineStateConstants.isValidWindSpeed(value)) {
             val corrected = environmentalFilterService?.correctWindSpeed(value, s.pitch ?: 0.0) ?: value
-            val state = s.copy(windSpeedApparent = corrected, timeOfWindFix = now)
-            dataBroker.processWindSpeedUpdate(corrected)
+            val state = dataBroker.applyWindSpeedUpdate(s, corrected, now)
             getBuffer(SignalKPaths.ENV_WIND_SPEED_APPARENT).add(Pair(corrected, now))
             Pair(state, true)
         } else Pair(s, false)
@@ -2252,7 +2237,6 @@ else if (context.isNotEmpty()) {
             SignalKPaths.NAV_MAG_VARIATION -> {
                 if (!value.isNaN()) {
                     state = state.copy(magneticVariation = value)
-                    dataBroker.processVariationUpdate(value)
                     updated = true
                 }
             }
@@ -2491,7 +2475,6 @@ else if (context.isNotEmpty()) {
                     nextPendingMode = null
                 }
                 state = state.copy(autopilotState = normalized, pendingAutopilotState = nextPendingMode)
-                dataBroker.updateAutopilotState(normalized)
                 updated = true
             }
             SignalKPaths.STEERING_AUTOPILOT_DUTY_CYCLE -> {
@@ -2511,8 +2494,7 @@ else if (context.isNotEmpty()) {
             }
             SignalKPaths.STEERING_RUDDER_ANGLE -> {
                 if (!value.isNaN()) {
-                    state = state.copy(rudderAngle = value, timeOfRudderFix = now)
-                    dataBroker.processRudderUpdate(value)
+                    state = dataBroker.applyRudderUpdate(state, value, now)
                     updated = true
                 }
             }
@@ -2528,7 +2510,7 @@ else if (context.isNotEmpty()) {
             }
             SignalKPaths.STEERING_AUTOPILOT_TARGET_HDG_MAG -> {
                 if (!value.isNaN()) {
-                    dataBroker.updateAutopilotTargetHeadingMag(value)
+                    state = state.copy(autopilotHeadingSet = value)
                     updated = true
                 }
             }
@@ -2833,7 +2815,7 @@ else if (context.isNotEmpty()) {
         val value = (valueObj as? Number)?.toDouble() ?: Double.NaN
 
         when (path) {
-            SignalKPaths.ENV_DEPTH_BELOW_TRANSDUCER -> Pair(s, false) // Handled by optimized parser
+            SignalKPaths.ENV_DEPTH_BELOW_TRANSDUCER -> return processDepthBelowTransducer(s, valueObj, now)
             SignalKPaths.ENV_DEPTH_SURFACE_TO_TRANSDUCER -> {
                 if (MarineStateConstants.isValidDepth(value)) {
                     state = state.copy(depthSurfaceToTransducer = value, timeOfDepthFix = now)
@@ -2921,8 +2903,7 @@ else if (context.isNotEmpty()) {
             SignalKPaths.ENV_WIND_ANGLE_APPARENT -> {
                 if (!value.isNaN()) {
                     val corrected = environmentalFilterService?.correctWindAngle(value, state.roll ?: 0.0, state.pitch ?: 0.0) ?: value
-                    state = state.copy(windDirectionApparent = corrected, timeOfWindFix = now)
-                    dataBroker.processWindAngleUpdate(corrected)
+                    state = dataBroker.applyWindAngleUpdate(state, corrected, now)
                     getBuffer(SignalKPaths.ENV_WIND_ANGLE_APPARENT).add(Pair(corrected, now))
                     updated = true
                 }
@@ -2930,8 +2911,7 @@ else if (context.isNotEmpty()) {
             SignalKPaths.ENV_WIND_SPEED_APPARENT -> {
                 if (MarineStateConstants.isValidWindSpeed(value)) {
                     val corrected = environmentalFilterService?.correctWindSpeed(value, state.pitch ?: 0.0) ?: value
-                    state = state.copy(windSpeedApparent = corrected, timeOfWindFix = now)
-                    dataBroker.processWindSpeedUpdate(corrected)
+                    state = dataBroker.applyWindSpeedUpdate(state, corrected, now)
                     getBuffer(SignalKPaths.ENV_WIND_SPEED_APPARENT).add(Pair(corrected, now))
                     updated = true
                 }
@@ -2946,20 +2926,19 @@ else if (context.isNotEmpty()) {
             else -> {
                 when {
                     path.startsWith(SignalKPaths.ENV_TIDE_PREFIX) -> {
-                        dataBroker.processTideUpdate { currentTide ->
-                            val tide = currentTide ?: TideState()
-                            when {
-                                path.endsWith(".heightNow") -> tide.copy(heightNow = value)
-                                path.endsWith(".stationName") -> tide.copy(stationName = valueObj?.toString())
-                                path.endsWith(".state") -> tide.copy(state = valueObj?.toString())
-                                path.endsWith(".timeToNextExtreme") -> {
-                                    if (!value.isNaN()) tide.copy(nextExtremeTime = now + (value * 1000).toLong()) else tide
-                                }
-                                path.endsWith(".heightHigh") -> tide.copy(nextExtremeHeight = value, nextExtremeType = "High")
-                                path.endsWith(".heightLow") -> tide.copy(nextExtremeHeight = value, nextExtremeType = "Low")
-                                else -> tide
+                        val tide = state.tide ?: TideState()
+                        val nextTide = when {
+                            path.endsWith(".heightNow") -> tide.copy(heightNow = value)
+                            path.endsWith(".stationName") -> tide.copy(stationName = valueObj?.toString())
+                            path.endsWith(".state") -> tide.copy(state = valueObj?.toString())
+                            path.endsWith(".timeToNextExtreme") -> {
+                                if (!value.isNaN()) tide.copy(nextExtremeTime = now + (value * 1000).toLong()) else tide
                             }
+                            path.endsWith(".heightHigh") -> tide.copy(nextExtremeHeight = value, nextExtremeType = "High")
+                            path.endsWith(".heightLow") -> tide.copy(nextExtremeHeight = value, nextExtremeType = "Low")
+                            else -> tide
                         }
+                        state = state.copy(tide = nextTide)
                         updated = true
                     }
                     path.startsWith(SignalKPaths.ENV_CURRENT_PREFIX) -> {
@@ -3469,13 +3448,13 @@ else if (context.isNotEmpty()) {
             getBuffer("navigation.speedOverGround").add(Pair(sog, now))
             getBuffer("navigation.courseOverGroundTrue").add(Pair(cog, now))
 
-            s.copy(
+            val stateWithPos = s.copy(
                 latitude = lat,
                 longitude = lon,
-                speedOverGround = sog,
                 courseOverGroundTrue = cog,
                 timestamps = newTimestamps
             )
+            dataBroker.applySogUpdate(stateWithPos, sog, now)
         }
 
         val finalState = dataBroker.marineState.value

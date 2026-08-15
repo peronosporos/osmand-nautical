@@ -62,17 +62,18 @@ class DirectNmeaMultiplexer(
         }
         workerJob?.cancel()
         workerJob = scope.launch(Dispatchers.Default) {
-            try {
-                for ((transport, sentence) in sentenceChannel) {
+            for ((transport, sentence) in sentenceChannel) {
+                try {
                     processSentence(transport, sentence)
-                }
-            } catch (e: Exception) {
-                if (e !is CancellationException) {
-                    PlatformUtil.getLog(DirectNmeaMultiplexer::class.java).error("NMEA Worker Error: ${e.message}", e)
+                } catch (e: Exception) {
+                    if (e is CancellationException) throw e
+                    PlatformUtil.getLog(DirectNmeaMultiplexer::class.java).error("NMEA Worker: Error processing sentence: ${e.message}", e)
                 }
             }
         }
     }
+
+    var deltaConsumer: ((net.osmand.plus.plugins.nautical.network.DeltaMessage) -> Unit)? = null
 
     private suspend fun processSentence(transport: NmeaTransport?, sentence: String) {
         // FEEDBACK LOOP PREVENTION: Do not record replayed sentences
@@ -99,14 +100,18 @@ class DirectNmeaMultiplexer(
 
         parser.parse(sentence)?.let { delta ->
             aggregator.handleDelta(delta)
-            net.osmand.plus.plugins.nautical.NauticalPlugin.engine?.handleDelta(delta)
+            deltaConsumer?.invoke(delta) ?: net.osmand.plus.plugins.nautical.NauticalPlugin.engine?.handleDelta(delta)
         }
         
         AisDecoder.decode(sentence)?.let { delta ->
             aggregator.handleDelta(delta)
             // Bridge NMEA AIS data to the Nautical AIS Manager via SignalKEngine
-            net.osmand.plus.plugins.nautical.NauticalPlugin.engine?.handleDelta(delta)
+            deltaConsumer?.invoke(delta) ?: net.osmand.plus.plugins.nautical.NauticalPlugin.engine?.handleDelta(delta)
         }
+    }
+
+    suspend fun injectSentence(sentence: String, transport: NmeaTransport? = null) {
+        processSentence(transport, sentence)
     }
 
     fun start(client: NmeaTransport) {

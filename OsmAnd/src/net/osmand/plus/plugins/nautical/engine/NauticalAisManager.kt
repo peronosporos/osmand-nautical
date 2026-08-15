@@ -1,6 +1,7 @@
 package net.osmand.plus.plugins.nautical.engine
 
 import kotlinx.coroutines.*
+import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.sample
@@ -59,10 +60,16 @@ class NauticalAisManager(private val app: OsmandApplication) {
         data class Removed(val obj: AisObject) : AisEvent()
     }
 
-    private val _aisEvents = MutableSharedFlow<AisEvent>(extraBufferCapacity = 256)
+    private val _aisEvents = MutableSharedFlow<AisEvent>(
+        extraBufferCapacity = 256,
+        onBufferOverflow = BufferOverflow.DROP_OLDEST
+    )
     val aisEvents = _aisEvents.asSharedFlow()
 
-    private val batchUpdateFlow = MutableSharedFlow<AisObject>(extraBufferCapacity = 128)
+    private val batchUpdateFlow = MutableSharedFlow<AisObject>(
+        extraBufferCapacity = 128,
+        onBufferOverflow = BufferOverflow.DROP_OLDEST
+    )
 
     init {
         managerScope.launch {
