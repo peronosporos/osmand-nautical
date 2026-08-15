@@ -353,12 +353,22 @@ class AutopilotController(
     }
 
     fun buildVesselUrl(path: String): String? {
-        if (serverIp.isEmpty()) return null
+        val rawIp = (if (serverIp.isNotEmpty()) serverIp else app.settings.NAUTICAL_SERVER_IP.get())?.trim() ?: ""
+        if (rawIp.isEmpty()) return null
+
+        val cleanHost = rawIp.substringAfter("://").substringBefore("/").substringBefore(":")
+        if (cleanHost.isEmpty()) return null
+
+        val cleanPort = if (rawIp.contains(":") && rawIp.substringAfter("://").contains(":")) {
+            rawIp.substringAfter("://").substringAfter(":").substringBefore("/")
+        } else {
+            (if (serverPort.isNotEmpty()) serverPort else app.settings.NAUTICAL_SERVER_PORT.get())?.trim()?.ifEmpty { "3000" } ?: "3000"
+        }
 
         val useSecure = app.settings.NAUTICAL_USE_SECURE_CONNECTION.get()
-        val protocol = if (useSecure) "https" else "http"
+        val protocol = if (useSecure || rawIp.startsWith("https://") || rawIp.startsWith("wss://")) "https" else "http"
 
-        return "$protocol://$serverIp:$serverPort/signalk/v1/api/vessels/self/$path"
+        return "$protocol://$cleanHost:$cleanPort/signalk/v1/api/vessels/self/$path"
     }
 
     private fun buildUrl(path: String): String? {
@@ -1066,12 +1076,17 @@ class AutopilotController(
     }
 
     fun executePut(url: String, payload: String, successToastRes: Int?, showToast: Boolean, priority: Boolean = false, retryCount: Int = 0) {
-        // ITEM 2: Relax security for local IP ranges (RFC 1918)
-        val isLocal = serverIp.startsWith("127.0.0.1") || 
-                     serverIp.startsWith("localhost") ||
-                     serverIp.startsWith("192.168.") ||
-                     serverIp.startsWith("10.") ||
-                     (serverIp.startsWith("172.") && serverIp.split(".")[1].toIntOrNull() in 16..31)
+        val rawIp = (if (serverIp.isNotEmpty()) serverIp else app.settings.NAUTICAL_SERVER_IP.get())?.trim() ?: ""
+        val cleanHost = rawIp.substringAfter("://").substringBefore("/").substringBefore(":")
+        val isLocal = cleanHost.startsWith("127.") || 
+                     cleanHost.equals("localhost", ignoreCase = true) ||
+                     cleanHost.startsWith("192.168.") ||
+                     cleanHost.startsWith("10.") ||
+                     cleanHost.endsWith(".local", ignoreCase = true) ||
+                     cleanHost.endsWith(".lan", ignoreCase = true) ||
+                     (cleanHost.startsWith("172.") && cleanHost.split(".").getOrNull(1)?.toIntOrNull() in 16..31) ||
+                     app.settings.NAUTICAL_TRUST_ALL_CERTIFICATES.get() ||
+                     !app.settings.NAUTICAL_USE_SECURE_CONNECTION.get()
 
         if (!url.startsWith("https") && !isLocal) {
             log.warn("Nautical: Refusing to send command over insecure HTTP to public IP: $url")
@@ -1097,8 +1112,6 @@ class AutopilotController(
             val password = app.settings.NAUTICAL_SERVER_PASSWORD.get()
             if (!username.isNullOrEmpty() && !password.isNullOrEmpty()) {
                 requestBuilder.addHeader("Authorization", Credentials.basic(username, password))
-            } else if (showToast) {
-                NauticalPlugin.engine?.triggerAuthError()
             }
         }
 

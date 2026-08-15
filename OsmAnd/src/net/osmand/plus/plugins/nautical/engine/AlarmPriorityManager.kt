@@ -98,7 +98,7 @@ class AlarmPriorityManager(
         val cpaThreshold = app.settings.NAUTICAL_AIS_CPA_WARNING_DISTANCE.get()
         val tcpaThreshold = app.settings.NAUTICAL_AIS_CPA_WARNING_TIME.get().toDouble()
         
-        val isThreat = cpa < cpaThreshold && tcpa <= tcpaThreshold && tcpa >= 0.0
+        val isThreat = cpa > 0.0 && cpa < cpaThreshold && tcpa <= tcpaThreshold && tcpa > 0.0
 
         if (isThreat) {
             if (!_isCollisionAlarmActive.value) {

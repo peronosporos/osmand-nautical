@@ -1927,22 +1927,29 @@ else if (context.isNotEmpty()) {
 
         when (path) {
             "" -> {
+                var name = ""
+                var vName = ""
+                var type = -1
                 if (valueObj is JSONObject) {
-                    val name = valueObj.optString("name", "")
-                    val vName = valueObj.optString("vesselName", "")
-                    val shipName = name.ifEmpty { vName.ifEmpty { target.shipName } }
-                    val type = valueObj.optInt("vesselType", -1)
-                    val updated = AisObject(
-                        target.mmsi, effectiveMsgType,
-                        target.imo, target.callSign, shipName,
-                        if (type != -1) type else target.shipType,
-                        target.dimensionToBow, target.dimensionToStern,
-                        target.dimensionToPort, target.dimensionToStarboard,
-                        target.draught, target.destination,
-                        target.etaMon, target.etaDay, target.etaHour, target.etaMin
-                    )
-                    target.set(updated)
+                    name = valueObj.optString("name", "")
+                    vName = valueObj.optString("vesselName", "")
+                    type = valueObj.optInt("vesselType", -1)
+                } else if (valueObj is Map<*, *>) {
+                    name = valueObj["name"]?.toString() ?: ""
+                    vName = valueObj["vesselName"]?.toString() ?: ""
+                    type = (valueObj["vesselType"] as? Number)?.toInt() ?: -1
                 }
+                val shipName = name.ifEmpty { vName.ifEmpty { target.shipName } }
+                val updated = AisObject(
+                    target.mmsi, effectiveMsgType,
+                    target.imo, target.callSign, shipName,
+                    if (type != -1) type else target.shipType,
+                    target.dimensionToBow, target.dimensionToStern,
+                    target.dimensionToPort, target.dimensionToStarboard,
+                    target.draught, target.destination,
+                    target.etaMon, target.etaDay, target.etaHour, target.etaMin
+                )
+                target.set(updated)
             }
             "name", "vesselName" -> {
                 val shipName = valueObj?.toString()
@@ -1959,7 +1966,12 @@ else if (context.isNotEmpty()) {
                 target.set(updated)
             }
             "design.type" -> {
-                val type = if (valueObj is JSONObject) valueObj.optInt("id", -1) else (valueObj as? Number)?.toInt() ?: -1
+                val type = when (valueObj) {
+                    is JSONObject -> valueObj.optInt("id", -1)
+                    is Map<*, *> -> (valueObj["id"] as? Number)?.toInt() ?: -1
+                    is Number -> valueObj.toInt()
+                    else -> -1
+                }
                 if (type != -1) {
                     val updated = AisObject(
                         target.mmsi, effectiveMsgType,
@@ -1974,16 +1986,21 @@ else if (context.isNotEmpty()) {
                 }
             }
             "navigation.position" -> {
+                var lat = Double.NaN
+                var lon = Double.NaN
                 if (valueObj is JSONObject) {
-                    val lat = valueObj.optDouble("latitude", Double.NaN)
-                    val lon = valueObj.optDouble("longitude", Double.NaN)
-                    if (MarineStateConstants.isValidLat(lat) && MarineStateConstants.isValidLon(lon)) {
-                        val updated = AisObject(
-                            target.mmsi, effectiveMsgType, target.timeStamp, target.navStatus, target.manInd,
-                            target.heading, target.cog, target.sog, lat, lon, target.rot
-                        )
-                        target.set(updated)
-                    }
+                    lat = valueObj.optDouble("latitude", Double.NaN)
+                    lon = valueObj.optDouble("longitude", Double.NaN)
+                } else if (valueObj is Map<*, *>) {
+                    lat = (valueObj["latitude"] as? Number)?.toDouble() ?: Double.NaN
+                    lon = (valueObj["longitude"] as? Number)?.toDouble() ?: Double.NaN
+                }
+                if (MarineStateConstants.isValidLat(lat) && MarineStateConstants.isValidLon(lon)) {
+                    val updated = AisObject(
+                        target.mmsi, effectiveMsgType, target.timeStamp, target.navStatus, target.manInd,
+                        target.heading, target.cog, target.sog, lat, lon, target.rot
+                    )
+                    target.set(updated)
                 }
             }
             "navigation.speedOverGround" -> {
@@ -2077,8 +2094,23 @@ else if (context.isNotEmpty()) {
             SignalKPaths.NAV_SPEED_THROUGH_WATER -> processStw(stateWithTs, valueObj, now)
             SignalKPaths.ENV_WIND_ANGLE_APPARENT -> processWindAngleApparent(stateWithTs, valueObj, now)
             SignalKPaths.ENV_WIND_SPEED_APPARENT -> processWindSpeedApparent(stateWithTs, valueObj, now)
-            SignalKPaths.ENV_DEPTH_BELOW_TRANSDUCER -> processDepthBelowTransducer(stateWithTs, valueObj, now)
-            SignalKPaths.NAV_POSITION -> Pair(stateWithTs, false) // Handled by optimized parser
+            SignalKPaths.NAV_POSITION -> {
+                var lat: Double? = null
+                var lon: Double? = null
+                if (valueObj is Map<*, *>) {
+                    lat = (valueObj["latitude"] as? Number)?.toDouble()
+                    lon = (valueObj["longitude"] as? Number)?.toDouble()
+                } else if (valueObj is JSONObject) {
+                    lat = valueObj.optDouble("latitude", Double.NaN).takeIf { !it.isNaN() }
+                    lon = valueObj.optDouble("longitude", Double.NaN).takeIf { !it.isNaN() }
+                }
+                if (lat != null && lon != null && MarineStateConstants.isValidLat(lat) && MarineStateConstants.isValidLon(lon)) {
+                    dataBroker.processLocationUpdate(lat, lon)
+                    Pair(stateWithTs.copy(latitude = lat, longitude = lon), true)
+                } else {
+                    Pair(stateWithTs, false)
+                }
+            }
             
             // Navigation Fast Path
             SignalKPaths.NAV_MAG_VARIATION -> {

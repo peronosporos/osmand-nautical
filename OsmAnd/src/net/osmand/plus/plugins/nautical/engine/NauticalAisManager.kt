@@ -275,7 +275,8 @@ class NauticalAisManager(private val app: OsmandApplication) {
                 var danger = false
                 if (obj.cpa.valid) {
                     val tcpa = obj.cpa.tcpa
-                    if (tcpa > 0 && obj.cpa.cpa <= cpaWarningDistance.toDouble() && (tcpa * 60) <= cpaWarningTime.toDouble()) {
+                    val tcpaSeconds = tcpa * 3600.0
+                    if (tcpa > 0 && obj.cpa.cpa <= cpaWarningDistance.toDouble() && tcpaSeconds <= cpaWarningTime.toDouble()) {
                         if (obj.cpa.t1 >= 0 && obj.cpa.t2 >= 0) {
                             danger = true
                             anyDanger = true
