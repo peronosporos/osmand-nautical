@@ -561,8 +561,8 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
         }
     }
 
-    override fun getRightBottomButtonTextId(): Int = 0
-    override fun getDismissButtonTextId(): Int = 0
+    override fun getRightBottomButtonTextId(): Int = DEFAULT_VALUE
+    override fun getDismissButtonTextId(): Int = DEFAULT_VALUE
 
     override fun onDestroyView() {
         super.onDestroyView()

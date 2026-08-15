@@ -1260,8 +1260,11 @@ class SignalKEngine(
     private var powerSaveMode: Boolean = false
 
     fun setPowerSaveMode(enabled: Boolean) {
-        powerSaveMode = enabled
-        log.info("SignalK Engine Power Save Mode: $enabled")
+        val plugin = NauticalPlugin.getInstance()
+        val isBackground = plugin?.isAppInBackground ?: false
+        val actual = enabled && isBackground
+        powerSaveMode = actual
+        log.info("SignalK Engine Power Save Mode: $actual (requested: $enabled, isBackground: $isBackground)")
     }
 
     fun addTrajectoryPoint(lat: Double, lon: Double) {

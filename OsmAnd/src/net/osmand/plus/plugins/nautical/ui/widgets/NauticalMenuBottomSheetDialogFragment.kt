@@ -14,6 +14,11 @@ import net.osmand.plus.plugins.nautical.NauticalPlugin
  */
 abstract class NauticalMenuBottomSheetDialogFragment : MenuBottomSheetDialogFragment() {
 
+    override fun getDismissButtonTextId(): Int = DEFAULT_VALUE
+    override fun getRightBottomButtonTextId(): Int = DEFAULT_VALUE
+    override fun getThirdBottomButtonTextId(): Int = DEFAULT_VALUE
+    override fun hideButtonsContainer(): Boolean = true
+
     override fun createMenuItems(savedInstanceState: Bundle?) {
         // Subclasses implement this
     }
