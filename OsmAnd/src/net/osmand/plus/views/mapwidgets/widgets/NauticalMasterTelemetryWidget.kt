@@ -44,15 +44,6 @@ class NauticalMasterTelemetryWidget(
         settings.NAUTICAL_MASTER_TELEMETRY_ITEMS.set(preset)
     }
 
-    private fun getPresetName(state: net.osmand.plus.plugins.nautical.engine.SailingWorkflowState?): String {
-        return when (state) {
-            net.osmand.plus.plugins.nautical.engine.SailingWorkflowState.TACTICAL_PASSAGE -> mapActivity.getString(R.string.nautical_workflow_tactical)
-            net.osmand.plus.plugins.nautical.engine.SailingWorkflowState.CLOSE_QUARTERS -> mapActivity.getString(R.string.nautical_workflow_close_quarters)
-            net.osmand.plus.plugins.nautical.engine.SailingWorkflowState.STATIONARY_ANCHORED -> mapActivity.getString(R.string.nautical_workflow_anchored)
-            else -> ""
-        }
-    }
-
     override fun getOnClickListener(): View.OnClickListener {
         return View.OnClickListener {
             if (!mapActivity.isFinishing) {

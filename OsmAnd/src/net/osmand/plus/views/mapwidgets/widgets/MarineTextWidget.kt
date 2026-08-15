@@ -494,7 +494,7 @@ class MarineTextWidget(
         if (integrity == IntegrityState.ALARM) {
             val safetyCritical = (widgetType == WidgetType.NAUTICAL_DEPTH) || 
                                 (widgetType == WidgetType.NAUTICAL_XTE)
-            val msg = if (safetyCritical) mapActivity.getString(R.string.nautical_timeout) else "X"
+            val msg = if (safetyCritical) mapActivity.getString(R.string.nautical_timeout) else mapActivity.getString(R.string.n_a)
             setText(msg, "")
         } else {
             setText(main, sub)

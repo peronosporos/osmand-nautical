@@ -92,15 +92,6 @@ class NauticalTelemetryGridBottomSheet : NauticalMenuBottomSheetDialogFragment()
         dismiss()
     }
 
-    private fun getPresetName(state: net.osmand.plus.plugins.nautical.engine.SailingWorkflowState?): String {
-        return when (state) {
-            net.osmand.plus.plugins.nautical.engine.SailingWorkflowState.TACTICAL_PASSAGE -> getString(R.string.nautical_workflow_tactical)
-            net.osmand.plus.plugins.nautical.engine.SailingWorkflowState.CLOSE_QUARTERS -> getString(R.string.nautical_workflow_close_quarters)
-            net.osmand.plus.plugins.nautical.engine.SailingWorkflowState.STATIONARY_ANCHORED -> getString(R.string.nautical_workflow_anchored)
-            else -> ""
-        }
-    }
-
     override fun onStart() {
         super.onStart()
         if (stateListener == null) {
