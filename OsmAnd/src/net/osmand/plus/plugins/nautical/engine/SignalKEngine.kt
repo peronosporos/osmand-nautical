@@ -94,8 +94,8 @@ class SignalKEngine(
     // Isolated scope for background parsing tasks to prevent ripple failures
     private val parsingScope = CoroutineScope(Dispatchers.Default + SupervisorJob() + engineExceptionHandler)
 
-    private val messageChannel = Channel<String>(
-        capacity = 5000,
+    private var messageChannel = Channel<String>(
+        capacity = 2000,
         onBufferOverflow = BufferOverflow.DROP_OLDEST
     )
     private var messageProcessingJob: Job? = null
@@ -205,8 +205,15 @@ class SignalKEngine(
     }
 
     private fun startMessageProcessing() {
+        if (messageChannel.isClosedForSend) {
+            messageChannel = Channel(
+                capacity = 2000,
+                onBufferOverflow = BufferOverflow.DROP_OLDEST
+            )
+        }
         messageProcessingJob?.cancel()
         messageProcessingJob = parsingScope.launch {
+            log.info("SignalKEngine: Message processing loop started successfully")
             val batch = mutableListOf<String>()
             while (isActive) {
                 try {
@@ -227,9 +234,13 @@ class SignalKEngine(
                         var stateChanged = false
                         
                         for (message in batch) {
-                            val res = processJsonMessage(message, currentState)
-                            currentState = res.first
-                            if (res.second) stateChanged = true
+                            try {
+                                val res = processJsonMessage(message, currentState)
+                                currentState = res.first
+                                if (res.second) stateChanged = true
+                            } catch (t: Throwable) {
+                                log.error("SignalKEngine: Error processing individual json message: ${t.message}", t)
+                            }
                         }
                         
                         // Update the last message time in state once per batch
@@ -238,16 +249,16 @@ class SignalKEngine(
                         if (stateChanged) {
                             finalizeAndNotifyState(currentState)
                         } else {
-                             dataBroker.updateState { currentState }
+                            dataBroker.updateState { currentState }
                         }
                         batch.clear()
                     }
                 } catch (e: CancellationException) {
                     throw e
-                } catch (e: Exception) {
-                    log.error("Batch processing error: ${e.message}")
+                } catch (t: Throwable) {
+                    log.error("SignalKEngine: Batch processing error: ${t.message}", t)
                     batch.clear()
-                    delay(100.milliseconds) // Cooling off
+                    delay(50.milliseconds) // Cooling off
                 }
             }
         }
@@ -1303,10 +1314,7 @@ class SignalKEngine(
             lastMessageProcessedTime = now
         }
 
-        val result = messageChannel.trySend(jsonMessage)
-        if (!result.isSuccess) {
-            log.warn("SignalK message buffer full, message dropped")
-        }
+        messageChannel.trySend(jsonMessage)
     }
 
     /**
