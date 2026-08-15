@@ -116,7 +116,17 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
         plus1Btn = customView.findViewById(R.id.btn_plus_1)
         
         customView.findViewById<View>(R.id.btn_settings_gear).setOnClickListener {
-            net.osmand.plus.settings.fragments.BaseSettingsFragment.showInstance(requireActivity(), net.osmand.plus.settings.fragments.SettingsScreenType.NAUTICAL_MASTER_TELEMETRY)
+            net.osmand.plus.settings.fragments.BaseSettingsFragment.showInstance(
+                requireActivity(),
+                net.osmand.plus.settings.fragments.SettingsScreenType.NAUTICAL_SETTINGS
+            )
+        }
+        customView.findViewById<View>(R.id.btn_settings_gear).setOnLongClickListener {
+            net.osmand.plus.settings.fragments.BaseSettingsFragment.showInstance(
+                requireActivity(),
+                net.osmand.plus.settings.fragments.SettingsScreenType.NAUTICAL_ADVANCED_SETTINGS
+            )
+            true
         }
 
         predictiveActiveImg.setOnClickListener {
@@ -193,7 +203,10 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
                         speakMode("WIND")
                     }
                     R.id.btn_mode_route -> {
-                        val action = {
+                        if (engine.isFollowingRoute) {
+                            autopilot.setAutopilotMode("track")
+                            speakMode("TRACK")
+                        } else {
                             GpxDialogs.selectGPXFile(
                                 requireActivity(), false, false,
                                 { result ->
@@ -218,7 +231,6 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
                                 nightMode,
                             )
                         }
-                        action()
                     }
                 }
                 syncUiWithState()
