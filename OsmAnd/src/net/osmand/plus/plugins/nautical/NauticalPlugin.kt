@@ -485,6 +485,23 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
                     windTrendHudHeader?.update()
                     anchorWatchHudView?.update()
                     predictiveSteeringHudView?.update()
+
+                    // Update HUD components (Consolidated for performance)
+                    forwardWatchHudView?.updateHazards(state.forwardHazards)
+                    environmentHud?.let { hud ->
+                        hud.updateState(state)
+                        hud.isVisible = (state.outsideHumidity != null || state.moonPhase != null)
+                    }
+                    watchScheduleHudView?.let { hud ->
+                        hud.updateState(state)
+                        hud.isVisible = state.pathMeta.containsKey("communication.crew.watch.current")
+                    }
+                    heartbeatHudView?.updateState(state)
+                    tacticalHudView?.updateState(state)
+                    healthHudView?.updateState(state, connection?.getLatencyMs() ?: 0L)
+
+                    hudManager?.get()?.updateLayout()
+
                     lastAutopilotState = state.autopilotState
                     checkScreenAlwaysOn()
                     presentationManager?.updateState(state)
@@ -1670,15 +1687,6 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
         val hud = ForwardWatchHudView(activity)
         this.forwardWatchHudView = hud
         hudManager?.get()?.addHeader(hud, priority = 10) // Very high priority, just below MOB
-
-        activity.lifecycleScope.launch {
-            activity.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                engine?.marineStateFlow?.collect { state ->
-                    hud.updateHazards(state.forwardHazards)
-                    hudManager?.get()?.updateLayout()
-                }
-            }
-        }
     }
 
     private var environmentHud: NauticalEnvironmentWidgetView? = null
@@ -1689,16 +1697,6 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
         val hud = NauticalEnvironmentWidgetView(activity)
         this.environmentHud = hud
         hudManager?.get()?.addHeader(hud, priority = 350)
-
-        activity.lifecycleScope.launch {
-            activity.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                engine?.marineStateFlow?.collect { state ->
-                    hud.updateState(state)
-                    hud.isVisible = (state.outsideHumidity != null || state.moonPhase != null)
-                    hudManager?.get()?.updateLayout()
-                }
-            }
-        }
     }
 
     private fun initWatchScheduleSystem(activity: MapActivity) {
@@ -1707,17 +1705,6 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
         val hud = WatchScheduleHudView(activity)
         this.watchScheduleHudView = hud
         hudManager?.get()?.addHeader(hud, priority = 500) // Lower priority
-
-        activity.lifecycleScope.launch {
-            activity.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                engine?.marineStateFlow?.collect { state ->
-                    hud.updateState(state)
-                    // Only show if we have actual watch data
-                    hud.isVisible = state.pathMeta.containsKey("communication.crew.watch.current")
-                    hudManager?.get()?.updateLayout()
-                }
-            }
-        }
     }
 
     private fun initWorkflowSystem(activity: MapActivity) {
@@ -1741,12 +1728,6 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
                 }
             }.launchIn(activity.lifecycleScope)
             
-            engine?.registerListener { state: MarineState ->
-                app.runInUIThread {
-                    hb.updateState(state)
-                    hudManager?.get()?.updateLayout()
-                }
-            }
             return // Skip standard complex headers on watch
         }
 
@@ -1786,13 +1767,6 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
                     }
                 }
                 launch {
-                    engine?.marineStateFlow?.collect { state ->
-                        th.updateState(state)
-                        val latency = connection?.getLatencyMs() ?: 0L
-                        hh.updateState(state, latency)
-                    }
-                }
-                launch {
                     workflowManager?.getScreenTouchLockManager()?.isTouchLockActive?.collect { locked ->
                         lh.setLocked(locked)
                         hudManager?.get()?.updateLayout()
@@ -1829,8 +1803,6 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
                 viewModel.uiState.collect { state ->
                     hud.updateState(state)
                     controller.navtexLayer.updateState(state)
-                    hudManager?.get()?.updateLayout()
-                    requestRefresh()
                 }
             }
         }
@@ -1850,7 +1822,6 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
             activity.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.uiState.collect { state ->
                     controller.laylinesLayer.updateState(state)
-                    requestRefresh()
                 }
             }
         }
@@ -1872,8 +1843,6 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
                 viewModel.uiState.collect { state ->
                     header.updateState(state)
                     controller.drLayer.updateState(state)
-                    hudManager?.get()?.updateLayout()
-                    requestRefresh()
                 }
             }
         }
@@ -1925,8 +1894,6 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
                 viewModel.uiState.collect { state ->
                     header.updateState(state)
                     controller.mobLayer.updateState(state)
-                    hudManager?.get()?.updateLayout()
-                    requestRefresh()
 
                     // Screen awake logic: Ensure screen stays on during emergency
                     if (state.isMobActive) {

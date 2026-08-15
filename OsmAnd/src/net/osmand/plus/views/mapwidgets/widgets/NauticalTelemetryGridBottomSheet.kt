@@ -73,9 +73,6 @@ class NauticalTelemetryGridBottomSheet : NauticalMenuBottomSheetDialogFragment()
         items.add(net.osmand.plus.base.bottomsheetmenu.BaseBottomSheetItem.Builder().setCustomView(gridView).create())
     }
 
-    override fun getRightBottomButtonTextId(): Int = 0
-    override fun getDismissButtonTextId(): Int = 0
-
     override fun onRightBottomButtonClick() {
         if (widgetId != null) {
             net.osmand.plus.settings.fragments.BaseSettingsFragment.showInstance(

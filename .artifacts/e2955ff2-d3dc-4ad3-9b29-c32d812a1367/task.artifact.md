@@ -1,0 +1,11 @@
+- [ ] Fix crash in `NauticalTelemetryGridBottomSheet.kt`
+    - [ ] Remove `getRightBottomButtonTextId()` override returning `0`
+    - [ ] Remove `getDismissButtonTextId()` override returning `0`
+- [ ] Optimize performance in `NauticalPlugin.kt`
+    - [ ] Consolidate `hudManager?.get()?.updateLayout()` calls in `marineStateListener`
+    - [ ] Remove redundant `updateLayout()` calls from sub-system listeners
+- [ ] Verification & Deployment
+    - [ ] Run `git status -s`
+    - [ ] Run `git diff --stat`
+    - [ ] Commit and push to origin HEAD
+    - [ ] Monitor GitHub Actions run
