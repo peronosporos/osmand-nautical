@@ -233,7 +233,8 @@ class NauticalAisLayer(context: Context) : OsmandMapLayer(context), ContextMenuL
         this.textScale = currentTextScale
         // if (textScaleChanged) plugin?.aisImagesCache?.clearCache() // If we have one
 
-        val aisObjects = plugin?.aisManager?.getAisObjects() ?: emptyList()
+        val currentPlugin = plugin
+        val aisObjects = currentPlugin?.aisManager?.getAisObjects() ?: emptyList()
         mapRenderer?.let { renderer ->
             if (mapActivityInvalidated || mapRendererChanged || textScaleChanged) {
                 cleanupResources()
@@ -246,24 +247,25 @@ class NauticalAisLayer(context: Context) : OsmandMapLayer(context), ContextMenuL
                 renderer.addSymbolsProvider(markersCollection)
                 renderer.addSymbolsProvider(vectorLinesCollection)
 
-                val currentWorkflow = plugin?.workflowEngine?.currentWorkflow?.value
+                val currentWorkflow = currentPlugin?.workflowEngine?.currentWorkflow?.value
                 val isCloseQuarters = currentWorkflow == SailingWorkflowState.CLOSE_QUARTERS
 
                 for (ais in aisObjects) {
                     if (isOwnObjectHidden(ais)) continue
+                    if (currentPlugin == null) continue
                     
-                    val drawable = NauticalAisObjectDrawable(plugin!!, ais, imagesCache)
+                    val drawable = NauticalAisObjectDrawable(currentPlugin, ais, imagesCache)
                     drawable.setOwnObject(isOwnObject(ais))
                     
-                    val extras = plugin.aisManager?.getAisExtras(ais.mmsi)
+                    val extras = currentPlugin.aisManager?.getAisExtras(ais.mmsi)
                     extras?.let { 
                         drawable.setThreatLevel(it.threatLevel)
                         drawable.setRemote(it.isRemote)
                         drawable.setCpaWarning(it.hasCpaWarning)
                     }
                     
-                    if (isCloseQuarters && !(ais.cpa.valid) && (plugin.application.locationProvider.lastKnownLocation != null) && (ais.position != null)) {
-                        val ownLoc = plugin.application.locationProvider.lastKnownLocation!!
+                    if (isCloseQuarters && !(ais.cpa.valid) && (currentPlugin.application.locationProvider.lastKnownLocation != null) && (ais.position != null)) {
+                        val ownLoc = currentPlugin.application.locationProvider.lastKnownLocation!!
                         val dist = net.osmand.util.MapUtils.getDistance(
                             ownLoc.latitude,
                             ownLoc.longitude,

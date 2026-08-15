@@ -237,9 +237,9 @@ class HeadingArcView @JvmOverloads constructor(
         
         // Dynamic Font Scaling (Phase 1)
         val cardinalSize = (radius / 3.8f).coerceIn(dp12, dp24)
-        val majorSize = (radius / 5.5f).coerceIn(dp10, dp16)
-        val centerValueSize = (radius / 1.7f).coerceIn(dp28, dp48)
-        val labelSize = (radius / 7.5f).coerceIn(dp10, dp13)
+        val majorSize = (radius / 5.5f).coerceIn(dp10, dp18)
+        val centerValueSize = (radius / 1.7f).coerceIn(dp28, dp45)
+        val labelSize = (radius / 7.5f).coerceIn(dp10, dp14)
 
         val textColorPrimary = NauticalColorResolver.getColor(context, NauticalSemanticColor.PRIMARY)
         val textColorSecondary = NauticalColorResolver.getColor(context, NauticalSemanticColor.SECONDARY)

@@ -3448,24 +3448,23 @@ else if (context.isNotEmpty()) {
         }
 
         val finalState = dataBroker.marineState.value
+        val effectiveStw = if (finalState.isStwUnreliable) sog else finalState.speedThroughWater
+
         val perfData = LivePerformanceData(
-            latitude = lat,
-            longitude = lon,
+            speedThroughWater = effectiveStw,
+            windSpeedTrue = finalState.windSpeedTrue,
+            windAngleTrueWater = finalState.trueWindAngle,
             speedOverGround = sog,
             courseOverGround = cog,
-            speedThroughWater = finalState.speedThroughWater,
+            latitude = lat,
+            longitude = lon,
             headingTrue = finalState.headingTrue,
             headingMagnetic = finalState.headingMagnetic,
             magneticVariation = finalState.magneticVariation,
-            windSpeedTrue = finalState.windSpeedTrue,
-            windAngleTrueWater = finalState.windAngleTrueWater,
-            windAngleTrueGround = finalState.windAngleTrueGround,
-            windDirectionTrue = finalState.windDirectionTrue,
-            targetSpeed = finalState.targetBoatSpeed,
-            targetWindAngle = finalState.targetWindAngle,
-            targetVmg = finalState.targetVmg,
-            velocityMadeGood = finalState.velocityMadeGood,
-            polarSpeed = finalState.polarSpeed,
+            leeway = finalState.leeway,
+            depthBelowTransducer = finalState.depthBelowTransducer,
+            polarSpeed = finalState.polarTargetSpeed,
+            targetAngle = finalState.targetWindAngleApparent,
             polarSpeedRatio = finalState.polarSpeedRatio,
             roll = finalState.roll,
             pitch = finalState.pitch,

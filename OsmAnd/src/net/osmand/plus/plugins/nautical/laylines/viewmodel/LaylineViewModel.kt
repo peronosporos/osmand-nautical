@@ -192,10 +192,6 @@ class LaylineViewModel(
             ?: liveData.headingMagnetic?.let { (it + variation) % (2 * PI) }
             ?: liveData.courseOverGround
 
-        if (liveData.windDirectionTrue != null) {
-            return (liveData.windDirectionTrue + 2 * PI) % (2 * PI)
-        }
-
         val twa = liveData.windAngleTrueWater ?: liveData.windAngleApparent
         if (twa != null && headingTrue != null) {
             return (headingTrue + twa + 2 * PI) % (2 * PI)
