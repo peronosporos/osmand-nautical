@@ -2105,8 +2105,7 @@ else if (context.isNotEmpty()) {
                     lon = valueObj.optDouble("longitude", Double.NaN).takeIf { !it.isNaN() }
                 }
                 if (lat != null && lon != null && MarineStateConstants.isValidLat(lat) && MarineStateConstants.isValidLon(lon)) {
-                    dataBroker.processLocationUpdate(lat, lon)
-                    Pair(stateWithTs.copy(latitude = lat, longitude = lon), true)
+                    Pair(stateWithTs.copy(latitude = lat, longitude = lon, timeOfPositionFix = now), true)
                 } else {
                     Pair(stateWithTs, false)
                 }
