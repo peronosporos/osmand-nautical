@@ -188,9 +188,20 @@ class LaylineViewModel(
 
     private fun calculateTwdRad(liveData: LivePerformanceData): Double? {
         val variation = liveData.magneticVariation ?: 0.0
-        val headingTrue = liveData.headingTrue ?: liveData.headingMagnetic?.let { (it + variation) % (2 * PI) }
-        val twa = liveData.windAngleTrueWater ?: return null
-        return headingTrue?.let { (it + twa + 2 * PI) % (2 * PI) }
+        val headingTrue = liveData.headingTrue 
+            ?: liveData.headingMagnetic?.let { (it + variation) % (2 * PI) }
+            ?: liveData.courseOverGround
+
+        if (liveData.windDirectionTrue != null) {
+            return (liveData.windDirectionTrue + 2 * PI) % (2 * PI)
+        }
+
+        val twa = liveData.windAngleTrueWater ?: liveData.windAngleApparent
+        if (twa != null && headingTrue != null) {
+            return (headingTrue + twa + 2 * PI) % (2 * PI)
+        }
+
+        return null
     }
 
     private fun getTidalCurrent(lat: Double, lon: Double): TidalCurrentVector {

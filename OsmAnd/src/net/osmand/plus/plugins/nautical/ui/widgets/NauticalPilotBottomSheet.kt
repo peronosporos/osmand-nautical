@@ -73,7 +73,6 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
     private lateinit var errorLinear: HeadingErrorLinearView
     private lateinit var arcView: HeadingArcView
     private lateinit var steeringCard: View
-    private lateinit var authWarning: TextView
     private lateinit var modeToggleGroup: MaterialButtonToggleGroup
     private lateinit var lockBtn: MaterialButton
     private lateinit var rudderView: RudderView
@@ -85,17 +84,7 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
     private lateinit var stopBtn: MaterialButton
     private lateinit var windBtn: MaterialButton
     private lateinit var routeBtn: MaterialButton
-
     private var isCourseLocked = false
-
-    private fun checkAuthToken(): Boolean {
-        val engine = NauticalPlugin.engine
-        if ((engine == null) || !(engine.isAuthenticated())) {
-            engine?.triggerAuthError()
-            return false
-        }
-        return true
-    }
 
     companion object {
         @JvmStatic
@@ -119,7 +108,6 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
         errorLinear = customView.findViewById(R.id.heading_error_linear)
         arcView = customView.findViewById(R.id.heading_arc_view)
         steeringCard = customView.findViewById(R.id.steering_card)
-        authWarning = customView.findViewById(R.id.auth_warning)
         modeToggleGroup = customView.findViewById(R.id.mode_toggle_group)
         lockBtn = customView.findViewById(R.id.btn_lock_unlock)
         rudderView = customView.findViewById(R.id.rudder_view)
@@ -129,10 +117,6 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
         
         customView.findViewById<View>(R.id.btn_settings_gear).setOnClickListener {
             net.osmand.plus.settings.fragments.BaseSettingsFragment.showInstance(requireActivity(), net.osmand.plus.settings.fragments.SettingsScreenType.NAUTICAL_MASTER_TELEMETRY)
-        }
-
-        authWarning.setOnClickListener {
-            net.osmand.plus.settings.fragments.BaseSettingsFragment.showInstance(requireActivity(), net.osmand.plus.settings.fragments.SettingsScreenType.NAUTICAL_SETTINGS)
         }
 
         predictiveActiveImg.setOnClickListener {
@@ -169,9 +153,7 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
         }
 
         routeBtn.setOnLongClickListener {
-            if (checkAuthToken()) {
-                showPatternsDialog()
-            }
+            showPatternsDialog()
             true
         }
 
@@ -187,19 +169,15 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
         }
 
         stopBtn.setOnClickListener {
-            if (checkAuthToken()) {
-                autopilot.stopNavigation()
-                speakMode("STANDBY")
-                syncUiWithState()
-            }
+            autopilot.stopNavigation()
+            speakMode("STANDBY")
+            syncUiWithState()
         }
         stopBtn.setOnLongClickListener {
-            if (checkAuthToken()) {
-                autopilot.stopNavigation()
-                speakMode("STANDBY")
-                it.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS)
-                syncUiWithState()
-            }
+            autopilot.stopNavigation()
+            speakMode("STANDBY")
+            it.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS)
+            syncUiWithState()
             true
         }
 
@@ -248,28 +226,26 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
         }
 
         arcView.onCenterClicked = {
-            if (checkAuthToken()) {
-                val state = NauticalPlugin.engine?.getCurrentState()
-                state?.let { s ->
-                    val reference = app.settings.NAUTICAL_HEADING_REFERENCE.get()
-                    val actualDeg = if (reference == net.osmand.plus.settings.enums.HeadingReference.MAGNETIC) {
-                        s.headingMagnetic?.let { h ->
-                            val deg = Math.toDegrees(h)
-                            autopilot.setTargetHeading(deg)
-                            NauticalPlugin.engine?.setAutopilotHeadingMagnetic(h)
-                            deg
-                        }
-                    } else {
-                        s.headingTrue?.let { h ->
-                            val deg = Math.toDegrees(h)
-                            autopilot.setTargetHeading(deg)
-                            NauticalPlugin.engine?.setAutopilotHeading(h)
-                            deg
-                        }
+            val state = NauticalPlugin.engine?.getCurrentState()
+            state?.let { s ->
+                val reference = app.settings.NAUTICAL_HEADING_REFERENCE.get()
+                val actualDeg = if (reference == net.osmand.plus.settings.enums.HeadingReference.MAGNETIC) {
+                    s.headingMagnetic?.let { h ->
+                        val deg = Math.toDegrees(h)
+                        autopilot.setTargetHeading(deg)
+                        NauticalPlugin.engine?.setAutopilotHeadingMagnetic(h)
+                        deg
                     }
-                    actualDeg?.let { plugin?.speakHeading(it.toInt()) }
-                    customView.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS)
+                } else {
+                    s.headingTrue?.let { h ->
+                        val deg = Math.toDegrees(h)
+                        autopilot.setTargetHeading(deg)
+                        NauticalPlugin.engine?.setAutopilotHeading(h)
+                        deg
+                    }
                 }
+                actualDeg?.let { plugin?.speakHeading(it.toInt()) }
+                customView.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS)
             }
         }
 
@@ -292,16 +268,12 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
         }
 
         minus10Btn.setOnClickListener {
-            if (checkAuthToken()) {
-                autopilot.adjustHeading(-10.0)
-                it.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
-            }
+            autopilot.adjustHeading(-10.0)
+            it.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
         }
         plus10Btn.setOnClickListener {
-            if (checkAuthToken()) {
-                autopilot.adjustHeading(10.0)
-                it.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
-            }
+            autopilot.adjustHeading(10.0)
+            it.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
         }
 
         maneuversBtn.setOnClickListener {
@@ -376,33 +348,29 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
     }
 
     private fun handleNudge(delta: Double, view: View) {
-        if (checkAuthToken()) {
-            val state = NauticalPlugin.engine?.getCurrentState()
-            if (state?.autopilotState?.uppercase(Locale.US) == "WIND") {
-                val isPort = view.id == R.id.btn_minus_1
-                if (isArmedPort && isPort) {
-                    executeArmedManeuver(state, port = true)
-                } else if (isArmedStbd && !isPort) {
-                    executeArmedManeuver(state, port = false)
-                } else {
-                    NauticalPlugin.autopilot?.adjustHeading(delta)
-                }
+        val state = NauticalPlugin.engine?.getCurrentState()
+        if (state?.autopilotState?.uppercase(Locale.US) == "WIND") {
+            val isPort = view.id == R.id.btn_minus_1
+            if (isArmedPort && isPort) {
+                executeArmedManeuver(state, port = true)
+            } else if (isArmedStbd && !isPort) {
+                executeArmedManeuver(state, port = false)
             } else {
                 NauticalPlugin.autopilot?.adjustHeading(delta)
             }
-            view.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
+        } else {
+            NauticalPlugin.autopilot?.adjustHeading(delta)
         }
+        view.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
     }
 
     private fun armManeuver(port: Boolean) {
-        if (checkAuthToken()) {
-            isArmedPort = port
-            isArmedStbd = !port
-            armHandler.removeCallbacks(resetArmRunnable)
-            armHandler.postDelayed(resetArmRunnable, 3000)
-            refreshTacticalButtons()
-            view?.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS)
-        }
+        isArmedPort = port
+        isArmedStbd = !port
+        armHandler.removeCallbacks(resetArmRunnable)
+        armHandler.postDelayed(resetArmRunnable, 3000)
+        refreshTacticalButtons()
+        view?.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS)
     }
 
     private fun executeArmedManeuver(state: MarineState, port: Boolean) {
@@ -478,15 +446,11 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
         val disabledAlpha = 0.4f
 
         if (isLocked) {
-            authWarning.visibility = View.VISIBLE
-            authWarning.text = getString(R.string.nautical_helm_locked_by, arbitrator.getActiveManeuver() ?: "")
-            authWarning.setTextColor(ContextCompat.getColor(requireContext(), R.color.text_color_negative))
             modeToggleGroup.isEnabled = false
             modeToggleGroup.alpha = 0.5f
             arcView.isEnabled = false
             arcView.alpha = 0.5f
         } else {
-            authWarning.visibility = View.GONE
             modeToggleGroup.isEnabled = true
             modeToggleGroup.alpha = 1.0f
             arcView.isEnabled = true

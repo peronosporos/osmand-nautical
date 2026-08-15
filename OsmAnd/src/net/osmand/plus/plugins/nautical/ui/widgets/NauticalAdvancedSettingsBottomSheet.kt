@@ -75,7 +75,6 @@ class NauticalAdvancedSettingsBottomSheet : BaseNauticalBottomSheet() {
         val tabLayout = customView.findViewById<TabLayout>(R.id.tab_layout)
         val containerTuning = customView.findViewById<View>(R.id.container_tuning)
         val containerLimits = customView.findViewById<View>(R.id.container_limits)
-        val containerVessel = customView.findViewById<View>(R.id.container_vessel)
         val containerEnv = customView.findViewById<View>(R.id.container_env)
         val containerPypilot = customView.findViewById<View>(R.id.container_pypilot)
 

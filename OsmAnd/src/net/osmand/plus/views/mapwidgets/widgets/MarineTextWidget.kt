@@ -117,18 +117,24 @@ class MarineTextWidget(
     }
 
     private fun getIntegrityState(state: MarineState?): IntegrityState {
-        if ((state == null) || (state.connectionStatus == net.osmand.plus.plugins.nautical.engine.ConnectionStatus.DISCONNECTED)) {
+        if (state == null) {
+            return IntegrityState.VALID
+        }
+        if (state.connectionStatus == net.osmand.plus.plugins.nautical.engine.ConnectionStatus.DISCONNECTED) {
             return IntegrityState.DISCONNECTED
         }
 
         val path = getSignalKPath()
+        val timestamp = state.timestamps[path]
+        if (timestamp == null || timestamp == 0L) {
+            return if (state.connectionStatus == net.osmand.plus.plugins.nautical.engine.ConnectionStatus.STALE) IntegrityState.STALE else IntegrityState.VALID
+        }
+
         val now = TemporalUtils.now()
-        val timestamp = state.timestamps[path] ?: 0L
         val age = (now - timestamp) / 1000.0
 
         return when {
-            age > 30.0 -> IntegrityState.ALARM 
-            (age > 10.0) || state.stalePaths.contains(path) || (state.connectionStatus == net.osmand.plus.plugins.nautical.engine.ConnectionStatus.STALE) -> IntegrityState.STALE
+            state.stalePaths.contains(path) || (state.connectionStatus == net.osmand.plus.plugins.nautical.engine.ConnectionStatus.STALE) || age > 30.0 -> IntegrityState.STALE
             else -> IntegrityState.VALID
         }
     }

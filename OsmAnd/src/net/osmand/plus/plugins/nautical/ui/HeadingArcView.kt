@@ -111,13 +111,6 @@ class HeadingArcView @JvmOverloads constructor(
     private val normalTypeface = Typeface.create("sans-serif-condensed", Typeface.NORMAL)
     private val mediumTypeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
 
-    private var isDragging = false
-    private var dragStartedX = 0f
-    private var dragStartedY = 0f
-    private var dragStartTime = 0L
-    private val dragSlop = 20f // pixels (Reduced from 60f)
-    private val activationDelay = 200L // ms (Reduced from 800ms)
-
     private val cardinalLabels = Array(8) { "" }
     private val cardinalIndices = intArrayOf(0, 45, 90, 135, 180, 225, 270, 315)
     private val cardinalRes = intArrayOf(
@@ -243,10 +236,10 @@ class HeadingArcView @JvmOverloads constructor(
         if (radius <= 0 || radius.isNaN()) return
         
         // Dynamic Font Scaling (Phase 1)
-        val cardinalSize = (radius / 3.5f).coerceIn(dp14, dp28)
-        val majorSize = (radius / 5.5f).coerceIn(dp10, dp18)
-        val centerValueSize = (radius / 1.5f).coerceIn(dp32, dp64)
-        val labelSize = (radius / 7f).coerceIn(dp10, dp14)
+        val cardinalSize = (radius / 3.8f).coerceIn(dp12, dp24)
+        val majorSize = (radius / 5.5f).coerceIn(dp10, dp16)
+        val centerValueSize = (radius / 1.7f).coerceIn(dp28, dp48)
+        val labelSize = (radius / 7.5f).coerceIn(dp10, dp13)
 
         val textColorPrimary = NauticalColorResolver.getColor(context, NauticalSemanticColor.PRIMARY)
         val textColorSecondary = NauticalColorResolver.getColor(context, NauticalSemanticColor.SECONDARY)
@@ -380,20 +373,20 @@ class HeadingArcView @JvmOverloads constructor(
         if (isOffline) {
             textPaint.color = NauticalColorResolver.getColor(context, NauticalSemanticColor.STATUS_ERROR)
             textPaint.textSize = cardinalSize
-            canvas.drawText(offlineLabel, centerX, centerY + dp10, textPaint)
+            canvas.drawText(offlineLabel, centerX, centerY + dp6, textPaint)
         } else {
             textPaint.color = textColorPrimary
             textPaint.textSize = centerValueSize
             val centralValue = if (currentMode == "WIND") targetWindAngleApparent ?: 0 else targetHeading
-            NauticalFormatter.drawDeg(canvas, centralValue.toFloat(), centerX, centerY + (centerValueSize / 4f), textPaint, degreeBuffer)
+            NauticalFormatter.drawDeg(canvas, centralValue.toFloat(), centerX, centerY + (centerValueSize * 0.15f), textPaint, degreeBuffer)
         }
         
         paint.textSize = labelSize
         paint.color = textColorSecondary
-        paint.alpha = 150
+        paint.alpha = 180
         paint.typeface = mediumTypeface
         val label = if (currentMode == "WIND") awaLabel else setHeadingLabel
-        canvas.drawText(label, centerX, centerY + (centerValueSize * 0.7f), paint) // Moved up from 0.9f to avoid overlap
+        canvas.drawText(label, centerX, centerY + (centerValueSize * 0.65f), paint)
     }
 
     override fun onInitializeAccessibilityNodeInfo(info: AccessibilityNodeInfo) {

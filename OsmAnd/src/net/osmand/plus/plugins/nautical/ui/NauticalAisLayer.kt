@@ -33,7 +33,8 @@ class NauticalAisLayer(context: Context) : OsmandMapLayer(context), ContextMenuL
         private const val AIS_RENDER_REFRESH_INTERVAL_MS = 200L
     }
 
-    private val plugin: NauticalPlugin? = NauticalPlugin.getInstance()
+    private val plugin: NauticalPlugin?
+        get() = NauticalPlugin.getInstance()
     private val imagesCache by lazy { net.osmand.plus.plugins.aistracker.AisImagesCache(application) }
     private val bitmapPaint = Paint().apply {
         isAntiAlias = true
@@ -206,7 +207,22 @@ class NauticalAisLayer(context: Context) : OsmandMapLayer(context), ContextMenuL
         }
     }
 
-    override fun onDraw(canvas: Canvas, tileBox: RotatedTileBox, settings: DrawSettings) {}
+    override fun onDraw(canvas: Canvas, tileBox: RotatedTileBox, settings: DrawSettings) {
+        val renderer = mapRenderer
+        if (renderer == null && tileBox.zoom >= START_ZOOM) {
+            val aisObjects = plugin?.aisManager?.getAisObjects() ?: emptyList()
+            for (ais in aisObjects) {
+                if (isOwnObjectHidden(ais)) continue
+                var drawable = objectDrawables[ais.mmsi]
+                if (drawable == null) {
+                    val p = plugin ?: continue
+                    drawable = NauticalAisObjectDrawable(p, ais, imagesCache)
+                    objectDrawables[ais.mmsi] = drawable
+                }
+                drawable.draw(bitmapPaint, canvas, tileBox)
+            }
+        }
+    }
 
     override fun onPrepareBufferImage(canvas: Canvas, tileBox: RotatedTileBox, settings: DrawSettings) {
         super.onPrepareBufferImage(canvas, tileBox, settings)
@@ -280,7 +296,14 @@ class NauticalAisLayer(context: Context) : OsmandMapLayer(context), ContextMenuL
         } ?: run {
             if (tileBox.zoom >= START_ZOOM) {
                 for (ais in aisObjects) {
-                    objectDrawables[ais.mmsi]?.draw(bitmapPaint, canvas, tileBox)
+                    if (isOwnObjectHidden(ais)) continue
+                    var drawable = objectDrawables[ais.mmsi]
+                    if (drawable == null) {
+                        val p = plugin ?: continue
+                        drawable = NauticalAisObjectDrawable(p, ais, imagesCache)
+                        objectDrawables[ais.mmsi] = drawable
+                    }
+                    drawable.draw(bitmapPaint, canvas, tileBox)
                 }
             }
         }

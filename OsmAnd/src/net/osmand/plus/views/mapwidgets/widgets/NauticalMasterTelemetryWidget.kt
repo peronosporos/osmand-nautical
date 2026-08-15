@@ -28,7 +28,7 @@ class NauticalMasterTelemetryWidget(
             lastWorkflowState = currentState
         }
 
-        setText(mapActivity.getString(R.string.nautical_master_telemetry), getPresetName(currentState))
+        setText(mapActivity.getString(R.string.nautical_master_telemetry), "")
     }
 
     private fun applyPresetForState(state: net.osmand.plus.plugins.nautical.engine.SailingWorkflowState) {
