@@ -120,23 +120,25 @@ class MarineTextWidget(
         if (state == null) {
             return IntegrityState.VALID
         }
-        if (state.connectionStatus == net.osmand.plus.plugins.nautical.engine.ConnectionStatus.DISCONNECTED) {
-            return IntegrityState.DISCONNECTED
-        }
 
         val path = getSignalKPath()
         val timestamp = state.timestamps[path]
-        if (timestamp == null || timestamp == 0L) {
-            return if (state.connectionStatus == net.osmand.plus.plugins.nautical.engine.ConnectionStatus.STALE) IntegrityState.STALE else IntegrityState.VALID
-        }
-
         val now = TemporalUtils.now()
-        val age = (now - timestamp) / 1000.0
 
-        return when {
-            state.stalePaths.contains(path) || (state.connectionStatus == net.osmand.plus.plugins.nautical.engine.ConnectionStatus.STALE) || age > 30.0 -> IntegrityState.STALE
-            else -> IntegrityState.VALID
+        if (timestamp != null && timestamp > 0L) {
+            val age = (now - timestamp) / 1000.0
+            return when {
+                state.stalePaths.contains(path) || age > 30.0 -> IntegrityState.STALE
+                else -> IntegrityState.VALID
+            }
         }
+
+        if (state.connectionStatus == net.osmand.plus.plugins.nautical.engine.ConnectionStatus.DISCONNECTED &&
+            settings.NAUTICAL_NMEA_SOURCE.get() == net.osmand.plus.settings.enums.NmeaSource.SIGNALK) {
+            return IntegrityState.DISCONNECTED
+        }
+
+        return if (state.connectionStatus == net.osmand.plus.plugins.nautical.engine.ConnectionStatus.STALE) IntegrityState.STALE else IntegrityState.VALID
     }
 
     private fun getSignalKPath(): String {
@@ -229,6 +231,16 @@ class MarineTextWidget(
         if (engine == null) {
             setText("--", "N/A")
             return
+        }
+        if (dataJob == null && view?.isAttachedToWindow == true) {
+            engine.registerListener(marineStateListener)
+            dataJob = engine.dataBroker.marineState
+                .onEach {
+                    mapActivity.runOnUiThread {
+                        updateInfo(null)
+                    }
+                }
+                .launchIn(mapActivity.lifecycleScope)
         }
         val state = engine.getCurrentState()
         val integrity = getIntegrityState(state)

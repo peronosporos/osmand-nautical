@@ -2172,214 +2172,181 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
             initPlugin()
             val scope = pluginScope!!
 
-            // Sailing Integration Init
-            SailingDependencyContainer.performanceRepository?.fetchPolars()
-            val indexManager = S57SpatialIndex(app)
-            s57SpatialIndex = indexManager
-            scope.launch {
-                indexManager.indexCharts()
+            if (connection == null) {
+                initConnection()
             }
-            routingViewModel = RoutingViewModel()
-            app.settings.APPLICATION_MODE.addListener(applicationModeListener)
 
-            scope.launch {
-                // Background initialization
-                withContext(Dispatchers.IO) {
-                    if (connection == null) {
-                        initConnection()
-                    }
+            if (safetyManager == null) {
+                safetyManager = NauticalSafetyManager.getInstance(app)
+            }
+            if (safetyAlertService == null) {
+                safetyAlertService = NauticalSafetyAlertService(app)
+            }
 
-                    val ip = app.settings.NAUTICAL_SERVER_IP.get()
-                    val port = app.settings.NAUTICAL_SERVER_PORT.get()
-                    if (!ip.isNullOrEmpty()) {
-                        val protocol = if (app.settings.NAUTICAL_USE_SECURE_CONNECTION.get()) "https" else "http"
-                        val rest = SignalKRestService.create("$protocol://$ip:$port", okHttpClient!!)
-                        capabilityManager?.probe(rest)
-                    }
-
-                    if (safetyManager == null) {
-                        safetyManager = NauticalSafetyManager.getInstance(app)
-                    }
-                    if (safetyAlertService == null) {
-                        safetyAlertService = NauticalSafetyAlertService(app)
-                    }
-
-                    if (engine == null) {
-                        val newEngine = SignalKEngine(app, scope, capabilityManager)
-                        newEngine.addRouteStepListener(routeStepListener)
-                        newEngine.deltaSender = { delta -> connection?.sendDelta(delta) }
-                        engine = newEngine
-                        newEngine.loadBuffersFromDisk(app)
-                        
-                        // Sync initial state from settings
-                        newEngine.setAutoSeaStateEnabled(app.settings.NAUTICAL_PILOT_AUTO_SEA_STATE.get())
-                        
-                        val alarmManager = AlarmPriorityManager(app, newEngine.dataBroker)
-                        alarmPriorityManager = alarmManager
-                        
-                        // Observe Alarms
-                        scope.launch {
-                            launch {
-                                alarmManager.isCollisionAlarmActive.collect { active ->
-                                    if (active) {
-                                        val details = alarmManager.threatDetails.value
-                                        hudManager?.get()?.showBanner(
-                                            app.getString(R.string.nautical_collision_alert) + ": " + (details?.vesselName ?: ""),
-                                            0L, // Persistent
-                                            isWarning = true
-                                        )
-                                    } else {
-                                        hudManager?.get()?.hideBanner()
-                                    }
-                                }
-                            }
-                            launch {
-                                alarmManager.activeCriticalNotifications.collect { notifications ->
-                                    if (notifications.isNotEmpty() && !alarmManager.isCollisionAlarmActive.value) {
-                                        val first = notifications.values.first()
-                                        hudManager?.get()?.showBanner(first.message, 5000L, isWarning = true)
-                                    }
-                                }
-                            }
-                        }
-                        
-                        withContext(Dispatchers.Main) {
-                            requestRefresh()
-                        }
-                    }
-
-                    val currentEngine = engine
-                    val c = connection
-                    if (autopilot == null && currentEngine != null && c != null) {
-                        okHttpClient?.let { client ->
-                            val ap = AutopilotController(app, c, client, currentEngine.dataBroker)
-                            autopilot = ap
-                            electrical = ElectricalController(app, ap)
-                            
-                            SailingDependencyContainer.initialize(app, currentEngine.dataBroker, ap, client)
-                            currentEngine.environmentalFilterService = SailingDependencyContainer.environmentalFilterService
-
-                            // ITEM 1: Consolidated state reconciliation
-                            ap.reconcileState()
-                        }
-                    }
-
-                    if (workflowEngine == null) {
-                        workflowEngine = SailingWorkflowEngine(app, engine!!.dataBroker)
-                    }
-
-                    if (workflowManager == null) {
-                        workflowManager = NauticalWorkflowManager(app)
-                    }
-
-                    if (presentationManager == null) {
-                        presentationManager = NauticalPresentationManager(app)
-                    }
-
-                    if (aisManager == null) {
-                        aisManager = NauticalAisManager(app)
-                        aisManager?.startUpdates()
-                    }
-
-                    if (locationProvider == null) locationProvider = NauticalLocationProvider(app, engine)
-                    if (tideManager == null) {
-                        tideManager = SignalKTideManager(app, scope)
-                        tideManager?.start()
-                    }
-                    if (vhfManager == null) {
-                        vhfManager = NauticalVhfManager(app)
-                    }
-                    vhfManager?.start()
-
-                    if (anchorWatchdog == null) {
-                        anchorWatchdog = AnchorDriftWatchdog(app)
-                        if (app.settings.NAUTICAL_ANCHOR_LAT.get() != 0.0) {
-                            anchorWatchdog?.start()
-                        }
-                    }
-
-                    if (maneuverManager == null) {
-                        val mm = ManeuverManager(app)
-                        mm.registerManeuver("anchoring", AnchoringManeuver(app))
-                        mm.registerManeuver("docking", DockingManeuver(app))
-                        mm.registerManeuver("gybing", GybingManeuver(app))
-                        mm.registerManeuver("heaving_to", HeavingToManeuver(app))
-                        mm.registerManeuver("mooring", MooringManeuver(app))
-                        mm.registerManeuver("med_mooring", MedMooringManeuver(app))
-                        mm.registerManeuver("shunting", ShuntingManeuver(app))
-                        mm.registerManeuver("slip_exit", SlipExitManeuver(app))
-                        mm.registerManeuver("tacking", TackingManeuver(app))
-                        mm.registerManeuver("weighing_anchor", WeighingAnchorManeuver(app))
-
-                        val speech = ManeuverSpeechHelper(app, mm)
-                        val tts = ManeuverTtsHelper(app)
-                        mm.registerListener(tts)
-                        mm.registerListener(object : ManeuverManager.ManeuverStateListener {
-                            override fun onStateChanged(newState: ManeuverState) {
-                                if (newState == ManeuverState.ARMED) {
-                                    speech.startListening()
-                                } else {
-                                    speech.stopListening()
-                                }
-                                updateNauticalBackgroundService()
-                                updatePowerManagement(newState)
-                            }
-                        })
-
-                        maneuverManager = mm
-                        tacticalProcessor = TacticalProcessor(app)
-                        tacticalStartManager = TacticalStartManager(app)
-                        speechHelper = speech
-                        ttsHelper = tts
-
-                        // Restore state if needed
-                        val savedId = app.settings.NAUTICAL_ACTIVE_MANEUVER_ID.get()
-                        if (!savedId.isNullOrEmpty()) {
-                            mm.getManeuverById(savedId)?.let {
-                                mm.setActiveManeuver(savedId)
+            if (engine == null) {
+                val newEngine = SignalKEngine(app, scope, capabilityManager)
+                newEngine.addRouteStepListener(routeStepListener)
+                newEngine.deltaSender = { delta -> connection?.sendDelta(delta) }
+                engine = newEngine
+                newEngine.setAutoSeaStateEnabled(app.settings.NAUTICAL_PILOT_AUTO_SEA_STATE.get())
+                
+                val alarmManager = AlarmPriorityManager(app, newEngine.dataBroker)
+                alarmPriorityManager = alarmManager
+                
+                scope.launch {
+                    launch {
+                        alarmManager.isCollisionAlarmActive.collect { active ->
+                            if (active) {
+                                val details = alarmManager.threatDetails.value
+                                hudManager?.get()?.showBanner(
+                                    app.getString(R.string.nautical_collision_alert) + ": " + (details?.vesselName ?: ""),
+                                    0L, // Persistent
+                                    isWarning = true
+                                )
+                            } else {
+                                hudManager?.get()?.hideBanner()
                             }
                         }
                     }
-
-                    if (logbookEngine == null) {
-                        val repo = logbookRepository!!
-                        val signalK = engine!!
-                        val perfRepo = SailingDependencyContainer.performanceRepository
-                        if (perfRepo != null) {
-                            logbookEngine = AutomatedLogbookEngine(app, repo, signalK, perfRepo)
-                            notificationManager = NauticalNotificationManager(app, repo)
+                    launch {
+                        alarmManager.activeCriticalNotifications.collect { notifications ->
+                            if (notifications.isNotEmpty() && !alarmManager.isCollisionAlarmActive.value) {
+                                val first = notifications.values.first()
+                                hudManager?.get()?.showBanner(first.message, 5000L, isWarning = true)
+                            }
                         }
                     }
-                    logbookEngine?.start()
+                }
+            }
 
-                    if (skDiscovery == null) {
-                        skDiscovery = SignalKDiscovery(app)
-                        skDiscovery?.start()
+            val currentEngine = engine!!
+            val c = connection
+            if (autopilot == null && c != null) {
+                okHttpClient?.let { client ->
+                    val ap = AutopilotController(app, c, client, currentEngine.dataBroker)
+                    autopilot = ap
+                    electrical = ElectricalController(app, ap)
+                    
+                    SailingDependencyContainer.initialize(app, currentEngine.dataBroker, ap, client)
+                    currentEngine.environmentalFilterService = SailingDependencyContainer.environmentalFilterService
+                    ap.reconcileState()
+                }
+            }
+
+            if (workflowEngine == null) {
+                workflowEngine = SailingWorkflowEngine(app, currentEngine.dataBroker)
+            }
+
+            if (workflowManager == null) {
+                workflowManager = NauticalWorkflowManager(app)
+            }
+
+            if (presentationManager == null) {
+                presentationManager = NauticalPresentationManager(app)
+            }
+
+            if (aisManager == null) {
+                aisManager = NauticalAisManager(app)
+                aisManager?.startUpdates()
+            }
+
+            if (locationProvider == null) locationProvider = NauticalLocationProvider(app, currentEngine)
+            if (tideManager == null) {
+                tideManager = SignalKTideManager(app, scope)
+                tideManager?.start()
+            }
+            if (vhfManager == null) {
+                vhfManager = NauticalVhfManager(app)
+            }
+            vhfManager?.start()
+
+            if (anchorWatchdog == null) {
+                anchorWatchdog = AnchorDriftWatchdog(app)
+                if (app.settings.NAUTICAL_ANCHOR_LAT.get() != 0.0) {
+                    anchorWatchdog?.start()
+                }
+            }
+
+            if (maneuverManager == null) {
+                val mm = ManeuverManager(app)
+                mm.registerManeuver("anchoring", AnchoringManeuver(app))
+                mm.registerManeuver("docking", DockingManeuver(app))
+                mm.registerManeuver("gybing", GybingManeuver(app))
+                mm.registerManeuver("heaving_to", HeavingToManeuver(app))
+                mm.registerManeuver("mooring", MooringManeuver(app))
+                mm.registerManeuver("med_mooring", MedMooringManeuver(app))
+                mm.registerManeuver("shunting", ShuntingManeuver(app))
+                mm.registerManeuver("slip_exit", SlipExitManeuver(app))
+                mm.registerManeuver("tacking", TackingManeuver(app))
+                mm.registerManeuver("weighing_anchor", WeighingAnchorManeuver(app))
+
+                val speech = ManeuverSpeechHelper(app, mm)
+                val tts = ManeuverTtsHelper(app)
+                mm.registerListener(tts)
+                mm.registerListener(object : ManeuverManager.ManeuverStateListener {
+                    override fun onStateChanged(newState: ManeuverState) {
+                        if (newState == ManeuverState.ARMED) {
+                            speech.startListening()
+                        } else {
+                            speech.stopListening()
+                        }
+                        updateNauticalBackgroundService()
+                        updatePowerManagement(newState)
+                    }
+                })
+
+                maneuverManager = mm
+                tacticalProcessor = TacticalProcessor(app)
+                tacticalStartManager = TacticalStartManager(app)
+                speechHelper = speech
+                ttsHelper = tts
+
+                // Restore state if needed
+                val savedId = app.settings.NAUTICAL_ACTIVE_MANEUVER_ID.get()
+                if (!savedId.isNullOrEmpty()) {
+                    mm.getManeuverById(savedId)?.let {
+                        mm.setActiveManeuver(savedId)
                     }
                 }
+            }
 
-                mapActivity?.let {
-                    hudManager = WeakReference(NauticalHudManager(it))
-                    registerLayers(app, it)
+            if (logbookEngine == null) {
+                val repo = logbookRepository!!
+                val perfRepo = SailingDependencyContainer.performanceRepository
+                if (perfRepo != null) {
+                    logbookEngine = AutomatedLogbookEngine(app, repo, currentEngine, perfRepo)
+                    notificationManager = NauticalNotificationManager(app, repo)
                 }
+            }
+            logbookEngine?.start()
 
-                if (autopilotListener == null) {
-                    val listener = AutopilotRouteListener(app.routingHelper)
-                    autopilotListener = listener
-                    app.routingHelper.addListener(listener)
+            if (skDiscovery == null) {
+                skDiscovery = SignalKDiscovery(app)
+                skDiscovery?.start()
+            }
+
+            mapActivity?.let {
+                hudManager = WeakReference(NauticalHudManager(it))
+                registerLayers(app, it)
+            }
+
+            if (autopilotListener == null) {
+                val listener = AutopilotRouteListener(app.routingHelper)
+                autopilotListener = listener
+                app.routingHelper.addListener(listener)
+            }
+
+            val ip = app.settings.NAUTICAL_SERVER_IP.get()
+            if (ip.isNullOrEmpty()) {
+                val now = System.currentTimeMillis()
+                if (now - lastIpToastTime > 60000) {
+                    app.showToastMessage(R.string.nautical_ip_not_configured)
+                    lastIpToastTime = now
                 }
+            }
 
-                val ip = app.settings.NAUTICAL_SERVER_IP.get()
-                if (ip.isNullOrEmpty()) {
-                    val now = System.currentTimeMillis()
-                    if (now - lastIpToastTime > 60000) {
-                        app.showToastMessage(R.string.nautical_ip_not_configured)
-                        lastIpToastTime = now
-                    }
-                }
-
-            engine?.registerListener(marineStateListener)
-            engine?.registerAisListener { target: AisObject ->
+            currentEngine.registerListener(marineStateListener)
+            currentEngine.registerAisListener { target: AisObject ->
                 aisManager?.onAisObjectReceived(target)
             }
             app.settings.NAUTICAL_RECEIVE_IN_BACKGROUND.addListener(receiveInBackgroundPrefListener)
@@ -2405,6 +2372,11 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
 
             app.getSharedPreferences(SHARED_PREFERENCES_NAME, Context.MODE_PRIVATE)
                 .registerOnSharedPreferenceChangeListener(prefChangeListener)
+
+            val indexManager = S57SpatialIndex(app)
+            s57SpatialIndex = indexManager
+            routingViewModel = RoutingViewModel()
+            app.settings.APPLICATION_MODE.addListener(applicationModeListener)
 
             updateNmeaSource()
             // locationProvider.start() is now managed inside updateNmeaSource based on selection
@@ -2442,6 +2414,20 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
                     mapActivity?.let {
                         NauticalSetupWizardDialog.show(it.supportFragmentManager)
                     }
+                }
+
+            // Async background loading tasks
+            scope.launch(Dispatchers.IO) {
+                currentEngine.loadBuffersFromDisk(app)
+                indexManager.indexCharts()
+                SailingDependencyContainer.performanceRepository?.fetchPolars()
+
+                val serverIp = app.settings.NAUTICAL_SERVER_IP.get()
+                val port = app.settings.NAUTICAL_SERVER_PORT.get()
+                if (!serverIp.isNullOrEmpty()) {
+                    val protocol = if (app.settings.NAUTICAL_USE_SECURE_CONNECTION.get()) "https" else "http"
+                    val rest = SignalKRestService.create("$protocol://$serverIp:$port", okHttpClient!!)
+                    capabilityManager?.probe(rest)
                 }
             }
         } else {
@@ -2670,16 +2656,20 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
     }
 
     private fun startEngine() {
-        var ip = app.settings.NAUTICAL_SERVER_IP.get()
-        val port = app.settings.NAUTICAL_SERVER_PORT.get()
+        val rawIp = app.settings.NAUTICAL_SERVER_IP.get()?.trim() ?: ""
+        if (rawIp.isEmpty()) return
+
+        val host = rawIp.substringAfter("://").substringBefore("/").substringBefore(":")
+        val port = if (rawIp.substringAfter("://").contains(":")) {
+            rawIp.substringAfter("://").substringAfter(":").substringBefore("/")
+        } else {
+            app.settings.NAUTICAL_SERVER_PORT.get()?.trim()?.ifEmpty { "3000" } ?: "3000"
+        }
         val useSecure = app.settings.NAUTICAL_USE_SECURE_CONNECTION.get()
         val username = app.settings.NAUTICAL_SERVER_USERNAME.get()
         val password = app.settings.NAUTICAL_SERVER_PASSWORD.get()
 
-        if (ip.isNullOrEmpty()) return
-
-        // Sanitize IP
-        ip = ip.substringAfter("://").substringBefore("/")
+        if (host.isEmpty()) return
 
         if (connection != null) {
             connection!!.disconnect()
@@ -2688,7 +2678,7 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
         engine?.dataBroker?.updateState { it.copy(connectionStatus = ConnectionStatus.CONNECTING) }
 
         val protocol = if (useSecure) "wss" else "ws"
-        val wsUrl = "$protocol://$ip:$port/signalk/v1/stream?subscribe=all"
+        val wsUrl = "$protocol://$host:$port/signalk/v1/stream?subscribe=all"
         val authToken = app.settings.NAUTICAL_SIGNAL_K_AUTH_TOKEN.get()
         
         val failureCallback = {
