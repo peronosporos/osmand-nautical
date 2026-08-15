@@ -238,7 +238,7 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
     }
 
     private fun applyPowerThrottling() {
-        val throttled = (isBatteryLow || isPowerSaveMode || isAppInBackground) && !isRacingCountdownActive()
+        val throttled = isAppInBackground && !app.settings.NAUTICAL_RECEIVE_IN_BACKGROUND.get() && !isRacingCountdownActive()
         SailingDependencyContainer.gribRepository?.isThrottled = throttled
         engine?.setPowerSaveMode(throttled)
         locationProvider?.setAppInBackground(isAppInBackground)
@@ -1665,6 +1665,7 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
     }
 
     private fun initForwardWatchSystem(activity: MapActivity) {
+        if (forwardWatchHudView?.context == activity) return
         hudManager?.get()?.removeHeader(forwardWatchHudView)
         val hud = ForwardWatchHudView(activity)
         this.forwardWatchHudView = hud
@@ -1683,6 +1684,7 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
     private var environmentHud: NauticalEnvironmentWidgetView? = null
 
     private fun initEnvironmentSystem(activity: MapActivity) {
+        if (environmentHud?.context == activity) return
         hudManager?.get()?.removeHeader(environmentHud)
         val hud = NauticalEnvironmentWidgetView(activity)
         this.environmentHud = hud
@@ -1700,6 +1702,7 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
     }
 
     private fun initWatchScheduleSystem(activity: MapActivity) {
+        if (watchScheduleHudView?.context == activity) return
         hudManager?.get()?.removeHeader(watchScheduleHudView)
         val hud = WatchScheduleHudView(activity)
         this.watchScheduleHudView = hud
@@ -1719,6 +1722,7 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
 
     private fun initWorkflowSystem(activity: MapActivity) {
         val workflowEng = workflowEngine ?: return
+        if (workflowHeaderView?.context == activity) return
         hudManager?.get()?.removeHeader(workflowHeaderView)
         hudManager?.get()?.removeHeader(tacticalHudView)
         hudManager?.get()?.removeHeader(healthHudView)
@@ -1810,6 +1814,7 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
 
 
     private fun initNavtexSystem(activity: MapActivity, controller: SailingMapLayerController) {
+        if (navtexHudView?.context == activity) return
         val repo = net.osmand.plus.plugins.nautical.hazard.data.NavtexRepository(app)
         val viewModel = NavtexViewModel(app, repo)
         this.navtexViewModel = viewModel
@@ -1832,6 +1837,7 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
     }
 
     private fun initLaylineSystem(activity: MapActivity, controller: SailingMapLayerController) {
+        if (laylineViewModel != null) return
         val perfRepo = SailingDependencyContainer.performanceRepository ?: return
         val viewModel = LaylineViewModel(
             app,
@@ -1851,6 +1857,7 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
     }
 
     private fun initDrSystem(activity: MapActivity, controller: SailingMapLayerController) {
+        if (drHeaderView?.context == activity) return
         val perfRepo = SailingDependencyContainer.performanceRepository ?: return
         val viewModel = DeadReckoningViewModel(app, perfRepo)
         this.drViewModel = viewModel
@@ -1873,6 +1880,7 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
     }
 
     private fun initTacticalHudSystem(activity: MapActivity) {
+        if (tacticsHudHeader?.context == activity) return
         hudManager?.get()?.removeHeader(startLineHudHeader)
         hudManager?.get()?.removeHeader(tacticsHudHeader)
         hudManager?.get()?.removeHeader(windTrendHudHeader)
@@ -1902,6 +1910,7 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
 
     private fun initMobSystem(activity: MapActivity, controller: SailingMapLayerController) {
         val sm = mobStateMachine ?: return
+        if (mobHeaderView?.context == activity) return
         val viewModel = MobViewModel(app, sm, mobAudioAlertManager)
         this.mobViewModel = viewModel
 
@@ -1987,9 +1996,7 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
     fun reconnect() {
         app.runInUIThread {
             updateNmeaSource()
-            // startEngine() is called inside updateNmeaSource() for SIGNALK
-            // For other sources, if we still need SignalK (e.g. for telemetry that NMEA doesn't provide), 
-            // we might call it, but updateNmeaSource should be the master.
+            startEngine()
         }
     }
 

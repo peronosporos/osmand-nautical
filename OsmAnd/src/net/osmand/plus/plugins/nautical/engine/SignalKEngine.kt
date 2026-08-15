@@ -1308,12 +1308,6 @@ class SignalKEngine(
         lastRealtimeMessageTimestamp = System.currentTimeMillis()
         resetWatchdog()
 
-        if (powerSaveMode) {
-            val now = System.currentTimeMillis()
-            if (now - lastMessageProcessedTime < 2000) return
-            lastMessageProcessedTime = now
-        }
-
         messageChannel.trySend(jsonMessage)
     }
 
