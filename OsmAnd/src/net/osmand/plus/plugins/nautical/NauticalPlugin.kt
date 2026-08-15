@@ -207,7 +207,7 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
         private set
     private var isBatteryLow = false
     private var isPowerSaveMode = false
-    private var isAppInBackground = false
+    var isAppInBackground = false
     private var lastForcedRefreshTime = 0L
     private var thermalWarningView: ThermalWarningView? = null
     private var defaultExceptionHandler: Thread.UncaughtExceptionHandler? = null
