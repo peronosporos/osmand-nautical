@@ -740,6 +740,10 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
         }
 
         private fun debounceReconnect(reason: String) {
+            if (System.currentTimeMillis() - pluginStartTime < 5000) {
+                log.info("Nautical: Network change during startup ($reason). Ignoring to allow initial connection.")
+                return
+            }
             reconnectJob?.cancel()
             reconnectJob = pluginScope?.launch {
                 delay(2.seconds)
@@ -1084,9 +1088,12 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
     }
 
     private var isPluginInitialized = false
+    private var pluginStartTime = 0L
+
     private fun initPlugin() {
         if (isPluginInitialized) return
         isPluginInitialized = true
+        pluginStartTime = System.currentTimeMillis()
         NauticalLog.init(app)
         NauticalLog.i("Nautical Plugin Initializing...")
         
@@ -2631,6 +2638,7 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
         }
     }
 
+    @Synchronized
     private fun startEngine() {
         val rawIp = app.settings.NAUTICAL_SERVER_IP.get()?.trim() ?: ""
         if (rawIp.isEmpty()) return
@@ -2642,19 +2650,27 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
             app.settings.NAUTICAL_SERVER_PORT.get()?.trim()?.ifEmpty { "3000" } ?: "3000"
         }
         val useSecure = app.settings.NAUTICAL_USE_SECURE_CONNECTION.get()
+        val protocol = if (useSecure) "wss" else "ws"
+        val wsUrl = "$protocol://$host:$port/signalk/v1/stream?subscribe=all"
         val username = app.settings.NAUTICAL_SERVER_USERNAME.get()
         val password = app.settings.NAUTICAL_SERVER_PASSWORD.get()
 
         if (host.isEmpty()) return
 
-        if (connection != null) {
-            connection!!.disconnect()
+        val currentConn = connection
+        if (currentConn != null && (currentConn.isConnected() || currentConn.isConnecting())) {
+            if (currentConn.url == wsUrl) {
+                log.info("SignalK: Already connected or connecting to $wsUrl. Skipping.")
+                return
+            }
+            log.info("SignalK: Host changed from ${currentConn.url} to $wsUrl. Reconnecting...")
+            currentConn.disconnect()
         }
+
         initConnection()
+        connection?.url = wsUrl
         engine?.dataBroker?.updateState { it.copy(connectionStatus = ConnectionStatus.CONNECTING) }
 
-        val protocol = if (useSecure) "wss" else "ws"
-        val wsUrl = "$protocol://$host:$port/signalk/v1/stream?subscribe=all"
         val authToken = app.settings.NAUTICAL_SIGNAL_K_AUTH_TOKEN.get()
         
         val failureCallback = {

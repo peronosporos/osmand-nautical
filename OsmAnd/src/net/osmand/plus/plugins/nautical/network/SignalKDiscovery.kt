@@ -5,6 +5,7 @@ import android.net.nsd.NsdManager
 import android.net.nsd.NsdServiceInfo
 import net.osmand.PlatformUtil
 import net.osmand.plus.OsmandApplication
+import net.osmand.plus.plugins.nautical.NauticalPlugin
 
 /**
  * mDNS Discovery for Signal K servers on the local network.
@@ -52,10 +53,14 @@ class SignalKDiscovery(private val app: OsmandApplication) {
             val port = serviceInfo.port
             log.info("Signal K Service resolved: $host:$port")
 
-            if (app.settings.NAUTICAL_SERVER_IP.get().isEmpty()) {
+            val currentIp = app.settings.NAUTICAL_SERVER_IP.get()
+            if (currentIp.isEmpty()) {
                 app.settings.NAUTICAL_SERVER_IP.set(host)
                 app.settings.NAUTICAL_SERVER_PORT.set(port.toString())
                 log.info("Signal K auto-configured to $host:$port")
+                NauticalPlugin.getInstance()?.reconnect()
+            } else if (currentIp == host) {
+                log.info("Signal K Discovery: Resolved host matches current configuration. Skipping.")
             }
         }
     }

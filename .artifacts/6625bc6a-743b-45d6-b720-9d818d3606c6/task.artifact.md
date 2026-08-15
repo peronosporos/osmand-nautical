@@ -1,0 +1,9 @@
+- `[x]` Research the reconnection loop triggers
+- `[x]` Modify `SignalKConnection.kt` interface
+- `[x]` Implement thread-safe connection guards in `OkHttpSignalKConnection.kt`
+- `[x]` Add ingress logging to `OkHttpSignalKConnection.kt`
+- `[x]` Add `pluginStartTime` and `@Synchronized startEngine` in `NauticalPlugin.kt`
+- `[x]` Refactor `startEngine()` to avoid redundant reconnections if URL is the same
+- `[x]` Debounce `networkCallback` during startup in `NauticalPlugin.kt`
+- `[x]` Add host matching guard in `SignalKDiscovery.kt`
+- `[ ]` Verify changes via remote CI (Git push required)

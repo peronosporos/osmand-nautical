@@ -6,6 +6,7 @@ import okhttp3.*
 class OkHttpSignalKConnection(private val client: OkHttpClient) : SignalKConnection {
     private val log = PlatformUtil.getLog(OkHttpSignalKConnection::class.java)
 
+    override var url: String? = null
     private var webSocket: WebSocket? = null
     private var isConnected = false
     private var isConnecting = false
@@ -17,6 +18,7 @@ class OkHttpSignalKConnection(private val client: OkHttpClient) : SignalKConnect
 
     override fun getLatencyMs(): Long = lastLatencyMs
 
+    @Synchronized
     override fun connect(
         url: String,
         username: String?,
@@ -28,6 +30,7 @@ class OkHttpSignalKConnection(private val client: OkHttpClient) : SignalKConnect
         connect(url, username, password, null, onFailure, onAuthError, onMessageReceived)
     }
 
+    @Synchronized
     fun connect(
         url: String,
         username: String?,
@@ -39,6 +42,7 @@ class OkHttpSignalKConnection(private val client: OkHttpClient) : SignalKConnect
     ) {
         if (isConnecting || isConnected) return
         isConnecting = true
+        this.url = url
         
         log.info("SignalK: Initiating WebSocket connection to $url (AuthToken: ${if (authToken != null) "SET" else "NONE"})")
         val requestBuilder = Request.Builder().url(url)
@@ -65,6 +69,7 @@ class OkHttpSignalKConnection(private val client: OkHttpClient) : SignalKConnect
                 }
 
                 override fun onMessage(webSocket: WebSocket, text: String) {
+                    log.info("SignalK Ingress: ${text.take(120)}...")
                     if (text.contains("\"self\"") && (lastPingTime > 0)) {
                         lastLatencyMs = System.currentTimeMillis() - lastPingTime
                         lastPingTime = 0 // Reset until next heartbeat
@@ -94,6 +99,7 @@ class OkHttpSignalKConnection(private val client: OkHttpClient) : SignalKConnect
                 override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
                     log.info("WebSocket Closed: $code / $reason")
                     isConnected = false
+                    isConnecting = false
                 }
             },
         )
