@@ -929,16 +929,16 @@ class SignalKDeltaParser(
                         }
                         "cells" -> {
                             if (valueObj is JSONObject) {
-                                val cellList = mutableListOf<BatteryCell>()
+                                val cellList = mutableListOf<Double>()
                                 val keys = valueObj.keys()
                                 while (keys.hasNext()) {
                                     val cell = keys.next()
                                     val v = valueObj.optDouble(cell, Double.NaN)
                                     if (!v.isNaN()) {
-                                        cellList.add(BatteryCell(cell, v))
+                                        cellList.add(v)
                                     }
                                 }
-                                updateBattery(state, instance) { it.copy(cells = cellList) }
+                                updateBattery(state, instance) { it.copy(cellVoltages = cellList) }
                             } else state
                         }
                         else -> state
@@ -987,55 +987,59 @@ class SignalKDeltaParser(
                     val instance = parts[0]
                     state = when (parts[1]) {
                         "state" -> updateInverter(state, instance) { it.copy(state = valueObj?.toString()) }
+                        "mode" -> updateInverter(state, instance) { it.copy(mode = valueObj?.toString()) }
                         "acVoltage" -> if (!value.isNaN()) updateInverter(state, instance) { it.copy(acVoltage = value) } else state
-                        "dcVoltage" -> if (!value.isNaN()) updateInverter(state, instance) { it.copy(dcVoltage = value) } else state
-                        "inverterCurrent" -> if (!value.isNaN()) updateInverter(state, instance) { it.copy(inverterCurrent = value) } else state
+                        "acCurrent" -> if (!value.isNaN()) updateInverter(state, instance) { it.copy(acCurrent = value) } else state
+                        "acFrequency" -> if (!value.isNaN()) updateInverter(state, instance) { it.copy(acFrequency = value) } else state
+                        "load" -> if (!value.isNaN()) updateInverter(state, instance) { it.copy(load = value) } else state
                         else -> state
                     }
                     updated = true
                 }
             }
-            path.startsWith(SignalKPaths.WATERMAKERS_PREFIX) -> {
-                val parts = path.removePrefix(SignalKPaths.WATERMAKERS_PREFIX).split(".")
+            path.startsWith("electrical.watermakers.") || path.startsWith("watermakers.") -> {
+                val prefix = if (path.startsWith("electrical.watermakers.")) "electrical.watermakers." else "watermakers."
+                val parts = path.removePrefix(prefix).split(".")
                 if (parts.size >= 2) {
                     val watermakerId = parts[0]
                     val watermakerField = parts[1]
                     state = when (watermakerField) {
                         "state" -> updateWatermaker(state, watermakerId) { it.copy(state = valueObj?.toString()) }
-                        "productionRate" -> if (!value.isNaN()) updateWatermaker(state, watermakerId) { it.copy(productionRate = value) } else state
+                        "rate", "productionRate" -> if (!value.isNaN()) updateWatermaker(state, watermakerId) { it.copy(rate = value) } else state
                         "salinity" -> if (!value.isNaN()) updateWatermaker(state, watermakerId) { it.copy(salinity = value) } else state
-                        "highPressure" -> if (!value.isNaN()) updateWatermaker(state, watermakerId) { it.copy(highPressure = value) } else state
-                        "lowPressure" -> if (!value.isNaN()) updateWatermaker(state, watermakerId) { it.copy(lowPressure = value) } else state
-                        "filterStatus" -> updateWatermaker(state, watermakerId) { it.copy(filterStatus = valueObj?.toString()) }
+                        "totalProduction" -> if (!value.isNaN()) updateWatermaker(state, watermakerId) { it.copy(totalProduction = value) } else state
                         else -> state
                     }
                     updated = true
                 }
             }
-            path.startsWith(SignalKPaths.SOLAR_PREFIX) -> {
-                val field = path.removePrefix(SignalKPaths.SOLAR_PREFIX)
+            path.startsWith("electrical.solar.") -> {
+                val field = path.removePrefix("electrical.solar.")
                 if (field.endsWith(".current") && !value.isNaN()) {
                     historyManager.getBuffer(path).add(Pair(value, now))
                     state = state.copy(solarCurrent = value)
                     updated = true
-                } else if (field.endsWith(".voltage") && !value.isNaN()) {
-                    state = state.copy(solarVoltage = value)
-                    updated = true
                 }
             }
-            path.startsWith(SignalKPaths.SWITCHES_PREFIX) -> {
-                val switchPath = path.removePrefix(SignalKPaths.SWITCHES_PREFIX)
-                if (switchPath.endsWith(".dimmingLevel") && !value.isNaN()) {
-                    val level = value.toFloat()
-                    val dimmers = state.dimmers.toMutableMap()
-                    dimmers[switchPath.removeSuffix(".dimmingLevel")] = level
-                    state = state.copy(dimmers = dimmers)
-                    updated = true
+            path.startsWith("electrical.switches.") || (path.startsWith("electrical.") && path.endsWith(".state")) || path.endsWith(".dimmingLevel") -> {
+                val switchPath = when {
+                    path.startsWith("electrical.switches.") -> path.removePrefix("electrical.switches.").substringBefore(".")
+                    path.startsWith("electrical.") -> path.removePrefix("electrical.").removeSuffix(".state").removeSuffix(".dimmingLevel")
+                    else -> path
+                }
+                if (path.endsWith(".dimmingLevel")) {
+                    val level = (valueObj as? Number)?.toDouble() ?: Double.NaN
+                    if (!level.isNaN()) {
+                        val dimmers = state.dimmers.toMutableMap()
+                        dimmers[switchPath] = level
+                        state = state.copy(dimmers = dimmers)
+                        updated = true
+                    }
                 } else {
                     val switchState = when (valueObj) {
                         is Boolean -> valueObj
-                        is Number -> valueObj.toInt() > 0
-                        is String -> valueObj.lowercase(Locale.US).let { it == "true" || it == "on" || it == "1" }
+                        is Number -> valueObj.toDouble() > 0.5
+                        is String -> valueObj.lowercase(Locale.US) == "on" || valueObj.lowercase(Locale.US) == "true" || valueObj == "1"
                         else -> false
                     }
                     val switches = state.switches.toMutableMap()
@@ -1111,20 +1115,27 @@ class SignalKDeltaParser(
                     updated = true
                 }
             }
-            SignalKPaths.ENV_DEPTH_BELOW_SURFACE -> {
+            SignalKPaths.ENV_DEPTH_SURFACE_TO_TRANSDUCER -> {
                 if (MarineStateConstants.isValidDepth(value)) {
                     historyManager.getBuffer(path).add(Pair(value, now))
-                    state = state.copy(depthBelowSurface = value)
+                    state = state.copy(depthSurfaceToTransducer = value)
                     updated = true
                 }
             }
-            SignalKPaths.ENV_CURRENT_SET -> {
+            SignalKPaths.ENV_DEPTH_BELOW_TRANSDUCER -> {
+                if (MarineStateConstants.isValidDepth(value)) {
+                    historyManager.getBuffer(path).add(Pair(value, now))
+                    state = state.copy(depthBelowTransducer = value)
+                    updated = true
+                }
+            }
+            SignalKPaths.NAV_SET_TRUE -> {
                 if (!value.isNaN()) {
                     state = state.copy(setTrue = value)
                     updated = true
                 }
             }
-            SignalKPaths.ENV_CURRENT_DRIFT -> {
+            SignalKPaths.NAV_DRIFT -> {
                 if (!value.isNaN()) {
                     state = state.copy(drift = value)
                     updated = true

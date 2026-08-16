@@ -164,7 +164,7 @@ class NauticalLayerManager(private val app: OsmandApplication) {
     }
 
     fun clearAisLayer() {
-        aisAisLayer?.clearAisData()
+        aisAisLayer?.cleanupResources()
     }
 
     fun suppressBasemap(suppress: Boolean) {
