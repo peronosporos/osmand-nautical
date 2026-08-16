@@ -544,6 +544,38 @@ class SignalKDeltaParser(
                     updated = true
                 }
             }
+            SignalKPaths.NAV_DATETIME_MOON_ILLUMINATION -> {
+                if (!value.isNaN()) {
+                    state = state.copy(moonIllumination = value)
+                    updated = true
+                }
+            }
+            SignalKPaths.NAV_DATETIME_SUNRISE -> {
+                val sunrise = valueObj?.toString()
+                if (!sunrise.isNullOrEmpty()) {
+                    state = state.copy(sunrise = sunrise)
+                    updated = true
+                }
+            }
+            SignalKPaths.NAV_DATETIME_SUNSET -> {
+                val sunset = valueObj?.toString()
+                if (!sunset.isNullOrEmpty()) {
+                    state = state.copy(sunset = sunset)
+                    updated = true
+                }
+            }
+            SignalKPaths.NAV_COURSE_RHUMB_LINE_NEXT_POINT_BEARING -> {
+                if (!value.isNaN()) {
+                    state = state.copy(rhumbLineBearing = value)
+                    updated = true
+                }
+            }
+            SignalKPaths.NAV_COURSE_RHUMB_LINE_NEXT_POINT_DISTANCE -> {
+                if (!value.isNaN()) {
+                    state = state.copy(rhumbLineDistance = value)
+                    updated = true
+                }
+            }
             SignalKPaths.NAV_TWD -> {
                 if (!value.isNaN()) {
                     state = state.copy(windDirectionTrue = value, timeOfWindFix = now)
@@ -599,6 +631,8 @@ class SignalKDeltaParser(
                         path.endsWith(".state") -> currentAnchor.copy(state = valueObj?.toString())
                         path.endsWith(".maxDrift") -> currentAnchor.copy(maxDrift = value)
                         path.endsWith(".radius") -> currentAnchor.copy(radius = value)
+                        path.endsWith(".maxRadius") -> currentAnchor.copy(maxRadius = value)
+                        path.endsWith(".rodeLength") -> currentAnchor.copy(rodeLength = value)
                         path.endsWith(".selection") -> currentAnchor.copy(selection = valueObj?.toString())
                         path.endsWith(".position") -> {
                             if (valueObj is JSONObject) {

@@ -30,7 +30,6 @@ object SignalKPaths {
     const val NAV_COURSE_RHUMB_LINE_NEXT_POINT_BEARING = "navigation.courseRhumbline.nextPoint.bearingTrue"
     const val NAV_COURSE_RHUMB_LINE_NEXT_POINT_DISTANCE = "navigation.courseRhumbline.nextPoint.distance"
     const val NAV_GNSS_PREFIX = "navigation.gnss."
-    const val NAV_GNSS_INTEGRITY = "navigation.gnss.integrity"
     const val NAV_ANCHOR_PREFIX = "navigation.anchor."
     const val NAV_ANCHOR_RODE_DEPLOYED = "navigation.anchor.rodeDeployed"
     const val NAV_ANCHOR_MAX_RADIUS = "navigation.anchor.maxRadius"

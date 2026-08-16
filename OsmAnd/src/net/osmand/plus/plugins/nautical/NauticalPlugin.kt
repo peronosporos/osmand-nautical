@@ -7,6 +7,7 @@ import android.content.SharedPreferences
 import android.graphics.ColorMatrix
 import android.graphics.ColorMatrixColorFilter
 import android.graphics.drawable.Drawable
+import android.net.Uri
 import android.os.Handler
 import android.os.Looper
 import androidx.core.content.ContextCompat
@@ -34,6 +35,7 @@ import net.osmand.plus.plugins.nautical.engine.AutopilotRouteListener
 import net.osmand.plus.plugins.nautical.engine.CapabilityManager
 import net.osmand.plus.plugins.nautical.engine.ConnectionStatus
 import net.osmand.plus.plugins.nautical.engine.ElectricalController
+import net.osmand.plus.plugins.nautical.engine.GpxStreamer
 import net.osmand.plus.plugins.nautical.engine.MarineState
 import net.osmand.plus.plugins.nautical.engine.NauticalAisManager
 import net.osmand.plus.plugins.nautical.engine.NauticalLocationProvider
@@ -1194,5 +1196,15 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
             NauticalAnchorQuickAction.TYPE,
             NauticalMobQuickAction.TYPE
         )
+    }
+
+    fun onGpxFileSelected(uri: Uri) {
+        pluginScope?.launch {
+            val routePoints = GpxStreamer(app).parseGpx(uri)
+            if (routePoints.isNotEmpty()) {
+                engine?.loadRoute(routePoints)
+                app.showToastMessage(R.string.nautical_loaded_points, routePoints.size)
+            }
+        }
     }
 }
