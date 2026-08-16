@@ -11,15 +11,14 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import net.osmand.data.LatLon
-import net.osmand.gpx.GPXUtilities.WptPt
 import net.osmand.plus.ContextMenuAdapter
 import net.osmand.plus.ContextMenuItem
-import net.osmand.plus.GPXUtilities
-import net.osmand.plus.GpxDialogs
 import net.osmand.plus.OsmandApplication
 import net.osmand.plus.R
 import net.osmand.plus.activities.MapActivity
-import net.osmand.plus.helpers.AndroidUtils
+import net.osmand.plus.track.GpxDialogs
+import net.osmand.plus.utils.AndroidUtils
+import net.osmand.shared.gpx.primitives.WptPt
 import net.osmand.plus.plugins.nautical.NauticalModule
 import net.osmand.plus.plugins.nautical.NauticalPlugin
 import net.osmand.plus.plugins.nautical.di.SailingDependencyContainer
@@ -750,7 +749,7 @@ class NauticalContextMenuHelper(private val app: OsmandApplication) {
                     if (uri != null) {
                         val intent = Intent(Intent.ACTION_SEND)
                         intent.type = "application/gpx+xml"
-                        intent.putExtra(Intent.EXTRA_STREAM, uri)
+                        intent.putExtra(Intent.EXTRA_STREAM, uri as android.os.Parcelable)
                         intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                         activity.startActivity(Intent.createChooser(intent, app.getString(R.string.nautical_export_trajectory)))
                     } else {

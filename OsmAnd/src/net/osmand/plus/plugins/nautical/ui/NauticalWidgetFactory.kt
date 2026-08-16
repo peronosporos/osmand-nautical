@@ -1,8 +1,8 @@
 package net.osmand.plus.plugins.nautical.ui
 
 import net.osmand.plus.activities.MapActivity
-import net.osmand.plus.maneuvers.ManeuverOverlayWidget
 import net.osmand.plus.plugins.nautical.maneuvers.ManeuverManager
+import net.osmand.plus.plugins.nautical.maneuvers.ManeuverOverlayWidget
 import net.osmand.plus.settings.backend.ApplicationMode
 import net.osmand.plus.settings.enums.ScreenLayoutMode
 import net.osmand.plus.views.mapwidgets.MapWidgetInfo
