@@ -90,8 +90,8 @@ class NauticalSystemManager(
     }
 
     private fun isRacingCountdownActive(): Boolean {
-        val tacticalStart = net.osmand.plus.plugins.nautical.NauticalPlugin.getInstance()?.tacticalStartManager
-        return tacticalStart?.state?.value?.isCountingDown == true
+        val timer = engineProvider()?.getCurrentState()?.racingTimer
+        return timer != null && timer > -60 && timer < 300
     }
 
     fun setupThermalListener() {

@@ -14,7 +14,7 @@ import net.osmand.plus.plugins.nautical.di.SailingDependencyContainer
 import net.osmand.plus.plugins.nautical.engine.ConnectionStatus
 import net.osmand.plus.plugins.nautical.engine.OkHttpSignalKConnection
 import net.osmand.plus.plugins.nautical.engine.SignalKEngine
-import net.osmand.plus.settings.backend.SettingsScreenType
+import net.osmand.plus.settings.fragments.SettingsScreenType
 import okhttp3.OkHttpClient
 import java.security.cert.X509Certificate
 import javax.net.ssl.SSLContext

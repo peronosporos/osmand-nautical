@@ -58,6 +58,7 @@ object SignalKPaths {
     const val ENV_SUNLIGHT_MODE = "environment.sunlight.mode"
     const val FORWARD_WATCH_DETECTIONS = "environment.forwardWatch.detections"
     const val ENV_TIDE_PREFIX = "environment.tide."
+    const val ENV_TIDE_HEIGHT = "environment.tide.heightNow"
     const val ENV_CURRENT_PREFIX = "environment.current."
 
     // Performance

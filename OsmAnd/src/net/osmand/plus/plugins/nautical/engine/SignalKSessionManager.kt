@@ -155,7 +155,7 @@ class SignalKSessionManager(
             val mmsi = extracted.toIntOrNull()
             if (mmsi != null) {
                 dataBroker.updateState { it.copy(vesselMmsi = mmsi) }
-                app.settings.NAUTICAL_VESSEL_MMSI.set(mmsi)
+                app.settings.NAUTICAL_AIS_OWN_MMSI.set(mmsi)
             }
         }
     }

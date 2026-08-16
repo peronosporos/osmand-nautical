@@ -164,17 +164,14 @@ class NauticalLayerManager(private val app: OsmandApplication) {
     }
 
     fun clearAisLayer() {
-        aisAisLayer?.clearCache()
+        aisAisLayer?.clearAisData()
     }
 
     fun suppressBasemap(suppress: Boolean) {
-        val mapActivity = app.osmandMap?.mapView?.mapActivity ?: return
-        val mapView = mapActivity.mapView
-        mapView.mapTileLayer?.isVisible = !suppress
-        mapView.mapVectorLayer?.isVisible = !suppress
-        app.runInUIThread {
-            mapView.refreshMap()
-        }
+        val value = if (suppress) "true" else "false"
+        app.settings.getCustomRenderProperty("hide_sea_marks", "false").set(value)
+        app.settings.getCustomRenderProperty("hide_coastline", "false").set(value)
+        app.settings.getCustomRenderProperty("no_osm_nautical", "false").set(value)
     }
 
     fun destroy() {

@@ -1132,9 +1132,9 @@ class SignalKDeltaParser(
             }
             SignalKPaths.ENV_TIDE_HEIGHT -> {
                 if (!value.isNaN()) {
-                    val tide = state.tidePrediction ?: TidePrediction(0L, 0.0, 0L, 0.0)
-                    val nextTide = tide.copy(currentHeight = value)
-                    state = state.copy(tidePrediction = nextTide)
+                    val currentTide = state.tide ?: TideState()
+                    val nextTide = currentTide.copy(height = value, heightNow = value)
+                    state = state.copy(tide = nextTide)
                     updated = true
                 }
             }
@@ -1147,35 +1147,35 @@ class SignalKDeltaParser(
         var updated = false
 
         when {
-            path == SignalKPaths.VESSEL_NAME -> {
+            path == SignalKPaths.NAME -> {
                 val name = valueObj?.toString()
                 if (!name.isNullOrEmpty()) {
                     state = state.copy(vesselName = name)
                     updated = true
                 }
             }
-            path == SignalKPaths.VESSEL_MMSI -> {
+            path == "mmsi" -> {
                 val mmsi = (valueObj as? Number)?.toInt() ?: valueObj?.toString()?.toIntOrNull()
                 if (mmsi != null && MarineStateConstants.isValidMmsi(mmsi)) {
                     state = state.copy(vesselMmsi = mmsi)
                     updated = true
                 }
             }
-            path == SignalKPaths.VESSEL_FLAG -> {
+            path == SignalKPaths.FLAG -> {
                 val flag = valueObj?.toString()
                 if (!flag.isNullOrEmpty()) {
                     state = state.copy(vesselFlag = flag)
                     updated = true
                 }
             }
-            path == SignalKPaths.VESSEL_PORT -> {
+            path == SignalKPaths.PORT -> {
                 val port = valueObj?.toString()
                 if (!port.isNullOrEmpty()) {
                     state = state.copy(vesselPort = port)
                     updated = true
                 }
             }
-            path == SignalKPaths.VESSEL_UUID -> {
+            path == SignalKPaths.UUID -> {
                 val uuid = valueObj?.toString()
                 if (!uuid.isNullOrEmpty()) {
                     state = state.copy(vesselUuid = uuid)
@@ -1217,8 +1217,8 @@ class SignalKDeltaParser(
                         updatedNotifications[path] = SignalKNotification(
                             message = message,
                             state = notificationState,
-                            method = methods,
-                            path = path
+                            methods = methods,
+                            source = source
                         )
                     }
 
@@ -1248,8 +1248,8 @@ class SignalKDeltaParser(
                     updatedNotifications[path] = SignalKNotification(
                         message = message,
                         state = notificationState,
-                        method = listOf("visual"),
-                        path = path
+                        methods = listOf("visual"),
+                        source = source
                     )
                     state = state.copy(notifications = updatedNotifications)
                     updated = true
@@ -1303,7 +1303,7 @@ class SignalKDeltaParser(
                 state = state.copy(tripLog = value)
                 updated = true
             }
-            SignalKPaths.PERF_POLAR_SPEED_RATIO -> {
+            SignalKPaths.PERF_POLAR_RATIO -> {
                 state = state.copy(polarSpeedRatio = value)
                 updated = true
             }

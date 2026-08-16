@@ -1,6 +1,6 @@
 package net.osmand.plus.plugins.nautical.engine
 
-import net.osmand.data.LatLon
+import net.osmand.plus.plugins.nautical.laylines.engine.LatLon
 import net.osmand.plus.plugins.nautical.network.SignalKCourse
 import net.osmand.plus.plugins.nautical.utils.TemporalUtils
 import net.osmand.shared.util.KMapUtils
