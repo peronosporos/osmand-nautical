@@ -17,21 +17,19 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import net.osmand.PlatformUtil
-import net.osmand.data.LatLon
 import net.osmand.plus.OsmandApplication
-import net.osmand.plus.R
 import net.osmand.plus.plugins.nautical.NauticalPlugin
 import net.osmand.plus.plugins.nautical.audio.AlarmType
 import net.osmand.plus.plugins.nautical.audio.NauticalAudioArbiter
 import net.osmand.plus.plugins.nautical.di.SailingDependencyContainer
-import kotlinx.coroutines.withContext
 import net.osmand.plus.plugins.nautical.network.DeltaMessage
 import net.osmand.plus.plugins.nautical.network.LivePerformanceData
 import net.osmand.plus.plugins.nautical.network.SignalKLineString
+import net.osmand.plus.plugins.nautical.network.SignalKRestService
 import net.osmand.plus.plugins.nautical.network.SignalKRoute
 import net.osmand.plus.plugins.nautical.network.SignalKRouteFeature
-import net.osmand.plus.plugins.nautical.network.SignalKRestService
 import net.osmand.plus.plugins.nautical.utils.TemporalUtils
 import net.osmand.shared.aistracker.AisObject
 import java.util.Locale
@@ -52,7 +50,6 @@ class SignalKEngine(
     val dataBroker = SignalKDataBroker(app.settings)
     val controlManager = SignalKControlManager(app, dataBroker, engineScope)
     val resourceManager = SignalKResourceManager(app, engineScope)
-    var environmentalFilterService: EnvironmentalFilterService? = null
 
     val historyManager = SignalKHistoryManager(app, capabilityManager)
     val routeTracker = SignalKRouteTracker()
@@ -314,7 +311,7 @@ class SignalKEngine(
 
     suspend fun uploadActiveRouteToSignalK(name: String, points: List<Pair<Double, Double>> = getRoutePoints()) = withContext(Dispatchers.IO) {
         try {
-            val pts = if (points.isNotEmpty()) points else {
+            val pts = points.ifEmpty {
                 val tp = mutableListOf<Pair<Double, Double>>()
                 app.targetPointsHelper.intermediatePointsNavigation.forEach { tp.add(it.latitude to it.longitude) }
                 app.targetPointsHelper.pointToNavigate?.let { tp.add(it.latitude to it.longitude) }
@@ -351,18 +348,8 @@ class SignalKEngine(
     fun setAnchor(lat: Double, lon: Double, radius: Double) = controlManager.setAnchor(lat, lon, radius)
     fun disarmAnchor() = controlManager.disarmAnchor()
 
-    fun getBuffer(path: String) = historyManager.getBuffer(path)
-
     fun clearBuffers(context: Context) {
         historyManager.clearBuffers(context)
-    }
-
-    suspend fun saveBuffersToDisk(context: Context) {
-        historyManager.saveBuffersToDisk(context)
-    }
-
-    suspend fun loadBuffersFromDisk(context: Context) {
-        historyManager.loadBuffersFromDisk(context)
     }
 
     @Synchronized
@@ -380,35 +367,6 @@ class SignalKEngine(
         dataBroker.stop()
         aisListener = null
         routeTracker.clearRoute()
-    }
-
-    fun refreshVesselState() {
-        engineScope.launch(Dispatchers.IO) {
-            try {
-                val restService = getRestService() ?: return@launch
-                val response = restService.getVesselSelf()
-                if (response.isSuccessful) {
-                    val body = response.body()
-                    if (body != null) {
-                        val res = deltaParser.processVesselTree(body, dataBroker.marineState.value)
-                        if (res.second) {
-                            finalizeAndNotifyState(res.first)
-                        }
-                    }
-                }
-
-                val courseResponse = restService.getCourse()
-                if (courseResponse.isSuccessful) {
-                    courseResponse.body()?.let { course ->
-                        routeTracker.processCourseObject(course) { nextPt ->
-                            dataBroker.updateState { it.copy(serverNextPoint = nextPt) }
-                        }
-                    }
-                }
-            } catch (e: Exception) {
-                log.error("Nautical: Failed to reconcile state via REST: ${e.message}")
-            }
-        }
     }
 
     fun isAuthenticated(): Boolean = sessionManager.isAuthenticated()
@@ -478,12 +436,11 @@ class SignalKEngine(
 
     private fun finalizeAndNotifyState(state: MarineState) {
         val now = TemporalUtils.now()
-        val currentState = state
 
-        val isEngineRunning = currentState.engines.values.any {
+        val isEngineRunning = state.engines.values.any {
             it.state?.lowercase() == "started" || (it.revolutions != null && it.revolutions > 100.0)
         }
-        val stateWithEngine = currentState.copy(isEngineRunning = isEngineRunning)
+        val stateWithEngine = state.copy(isEngineRunning = isEngineRunning)
 
         val caps = capabilityManager?.capabilities?.value ?: CapabilityManager.ServerCapabilityMap()
 
@@ -612,7 +569,7 @@ class SignalKEngine(
                 courseOverGroundTrue = cog,
                 timestamps = newTimestamps
             )
-            dataBroker.applySogUpdate(stateWithPos, sog, now)
+            dataBroker.applySpeedOverGroundUpdate(stateWithPos, sog, now)
         }
 
         val finalState = dataBroker.marineState.value
@@ -664,12 +621,6 @@ class SignalKEngine(
             )
         }
         notifyListeners(dataBroker.marineState.value)
-    }
-
-    fun updateFollowingState(currentLat: Double, currentLon: Double) {
-        routeTracker.updateFollowingState(currentLat, currentLon, capabilityManager) {
-            routeStepListeners.forEach { it.invoke() }
-        }
     }
 
     private fun updatePulseLifecycle() {

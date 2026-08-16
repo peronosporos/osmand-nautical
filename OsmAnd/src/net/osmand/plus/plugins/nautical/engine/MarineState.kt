@@ -122,7 +122,8 @@ data class GnssState(
     val satellites: Int? = null,
     val horizontalDilution: Double? = null,
     val verticalDilution: Double? = null,
-    val integrity: String? = null
+    val integrity: String? = null,
+    val integrityFlags: List<String> = emptyList()
 ) : Serializable
 
 @kotlinx.serialization.Serializable
@@ -133,6 +134,8 @@ data class AnchorState(
     val latitude: Double? = null,
     val longitude: Double? = null,
     val radius: Double? = null,
+    val maxRadius: Double? = null,
+    val rodeLength: Double? = null,
     val maxDrift: Double? = null,
     val selection: String? = null
 ) : Serializable
@@ -221,6 +224,7 @@ data class MarineState(
     val vesselName: String? = null,
     val vesselType: Int? = null,
     val vesselCallSign: String? = null,
+    val vesselCallsign: String? = null,
     val vesselMmsi: Int? = null,
     val vesselLength: Double? = null, // Meters (m)
     val vesselBeam: Double? = null, // Meters (m)
@@ -235,6 +239,7 @@ data class MarineState(
     val altitude: Double? = null, // Meters (m)
     val gnss: GnssState? = null,
     val anchor: AnchorState? = null,
+    val anchorState: AnchorState? = null,
     val headingTrue: Double? = null, // Radians (rad)
     val headingMagnetic: Double? = null, // Radians (rad)
     val magneticVariation: Double? = null, // Radians (rad)
@@ -301,6 +306,9 @@ data class MarineState(
     val outsideIlluminance: Double? = null, // Lux
     val airDewPoint: Double? = null, // Kelvin (K)
     val moonPhase: Double? = null, // Ratio 0-1
+    val moonIllumination: Double? = null, // Ratio 0-1
+    val sunrise: String? = null,
+    val sunset: String? = null,
     val sunlightMode: String? = null,
 
     // Propulsion & Systems (Multi-instance support)
@@ -409,9 +417,12 @@ data class MarineState(
     val xteDirection: XteDirection = XteDirection.ON_COURSE,
     val distanceToWaypoint: Double? = null,
     val timeToWaypoint: Double? = null, // Seconds (Signal K aggregate or derived)
-    val serverNextPoint: net.osmand.plus.plugins.nautical.laylines.engine.LatLon? = null,
+    @kotlinx.serialization.Contextual
+    val serverNextPoint: LatLon? = null,
     val vmgTimeToWaypoint: Double? = null, // Seconds
     val sogTimeToWaypoint: Double? = null, // Seconds
+    val rhumbLineBearing: Double? = null,
+    val rhumbLineDistance: Double? = null,
     val isOffCourse: Boolean = false,
     val isOutsideSafetyCorridor: Boolean = false,
     val isStwUnreliable: Boolean = false,

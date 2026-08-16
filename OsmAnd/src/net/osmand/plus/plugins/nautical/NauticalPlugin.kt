@@ -9,13 +9,11 @@ import android.graphics.ColorMatrixColorFilter
 import android.graphics.drawable.Drawable
 import android.os.Handler
 import android.os.Looper
-import android.os.PowerManager
 import androidx.core.content.ContextCompat
+import androidx.core.view.isVisible
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import net.osmand.PlatformUtil
@@ -25,57 +23,81 @@ import net.osmand.plus.R
 import net.osmand.plus.activities.MapActivity
 import net.osmand.plus.activities.TabActivity.TabItem
 import net.osmand.plus.helpers.DayNightHelper
-import net.osmand.plus.notifications.OsmandNotification.NotificationType
 import net.osmand.plus.plugins.OsmandPlugin
 import net.osmand.plus.plugins.nautical.audio.AlarmType
 import net.osmand.plus.plugins.nautical.audio.NauticalAudioArbiter
 import net.osmand.plus.plugins.nautical.di.SailingDependencyContainer
 import net.osmand.plus.plugins.nautical.dr.viewmodel.DeadReckoningViewModel
-import net.osmand.plus.plugins.nautical.engine.*
+import net.osmand.plus.plugins.nautical.engine.AlarmPriorityManager
+import net.osmand.plus.plugins.nautical.engine.AutopilotController
+import net.osmand.plus.plugins.nautical.engine.AutopilotRouteListener
+import net.osmand.plus.plugins.nautical.engine.CapabilityManager
+import net.osmand.plus.plugins.nautical.engine.ConnectionStatus
+import net.osmand.plus.plugins.nautical.engine.ElectricalController
+import net.osmand.plus.plugins.nautical.engine.MarineState
+import net.osmand.plus.plugins.nautical.engine.NauticalAisManager
+import net.osmand.plus.plugins.nautical.engine.NauticalLocationProvider
+import net.osmand.plus.plugins.nautical.engine.NauticalNotificationManager
+import net.osmand.plus.plugins.nautical.engine.NauticalSafetyEvaluator
+import net.osmand.plus.plugins.nautical.engine.NauticalSafetyManager
+import net.osmand.plus.plugins.nautical.engine.NauticalWorkflowManager
+import net.osmand.plus.plugins.nautical.engine.NotificationState
+import net.osmand.plus.plugins.nautical.engine.OkHttpSignalKConnection
+import net.osmand.plus.plugins.nautical.engine.SafetyStateArbitrator
+import net.osmand.plus.plugins.nautical.engine.SailingWorkflowEngine
+import net.osmand.plus.plugins.nautical.engine.SignalKEngine
+import net.osmand.plus.plugins.nautical.engine.SignalKNotification
+import net.osmand.plus.plugins.nautical.engine.SignalKTideManager
 import net.osmand.plus.plugins.nautical.hazard.engine.NavtexMessageDecoder
 import net.osmand.plus.plugins.nautical.hazard.viewmodel.NavtexViewModel
 import net.osmand.plus.plugins.nautical.laylines.viewmodel.LaylineViewModel
 import net.osmand.plus.plugins.nautical.logbook.data.MarineLogbookRepository
 import net.osmand.plus.plugins.nautical.logbook.engine.AutomatedLogbookEngine
-import net.osmand.plus.plugins.nautical.maneuvers.*
+import net.osmand.plus.plugins.nautical.maneuvers.ManeuverManager
+import net.osmand.plus.plugins.nautical.maneuvers.ManeuverSpeechHelper
+import net.osmand.plus.plugins.nautical.maneuvers.ManeuverTtsHelper
+import net.osmand.plus.plugins.nautical.maneuvers.TacticalProcessor
+import net.osmand.plus.plugins.nautical.maneuvers.TacticalStartManager
 import net.osmand.plus.plugins.nautical.map.NauticalLayerManager
-import net.osmand.plus.plugins.nautical.map.controller.SailingMapLayerController
-import net.osmand.plus.plugins.nautical.map.layers.OceanographicGribMapLayer
 import net.osmand.plus.plugins.nautical.mob.engine.MobStateMachine
 import net.osmand.plus.plugins.nautical.mob.viewmodel.MobAudioAlertManager
 import net.osmand.plus.plugins.nautical.mob.viewmodel.MobViewModel
 import net.osmand.plus.plugins.nautical.network.NauticalConnectionManager
 import net.osmand.plus.plugins.nautical.network.NauticalVhfManager
 import net.osmand.plus.plugins.nautical.network.SignalKDiscovery
-import net.osmand.plus.plugins.nautical.poi.ui.VhfPoiSearchLayer
 import net.osmand.plus.plugins.nautical.quickaction.NauticalAnchorQuickAction
 import net.osmand.plus.plugins.nautical.quickaction.NauticalMobQuickAction
 import net.osmand.plus.plugins.nautical.quickaction.NauticalNightVisionQuickAction
-import net.osmand.plus.plugins.nautical.raster.SignalKRasterLayer
 import net.osmand.plus.plugins.nautical.s57.S57SpatialIndex
 import net.osmand.plus.plugins.nautical.system.NauticalSystemManager
-import net.osmand.plus.plugins.nautical.tide.map.TidalCurrentsMapLayer
-import net.osmand.plus.plugins.nautical.ui.*
+import net.osmand.plus.plugins.nautical.ui.NauticalAisLayer
+import net.osmand.plus.plugins.nautical.ui.NauticalContextMenuHelper
+import net.osmand.plus.plugins.nautical.ui.NauticalUiOverlayManager
+import net.osmand.plus.plugins.nautical.ui.NauticalWidgetFactory
 import net.osmand.plus.plugins.nautical.utils.NauticalLog
-import net.osmand.plus.plugins.nautical.view.SignalKTideLayer
 import net.osmand.plus.plugins.nautical.viewmodel.PolarConfigViewModel
 import net.osmand.plus.plugins.nautical.viewmodel.RoutingViewModel
 import net.osmand.plus.plugins.nautical.viewmodel.WizardState
 import net.osmand.plus.quickaction.QuickActionType
 import net.osmand.plus.settings.backend.ApplicationMode
+import net.osmand.plus.settings.backend.OsmandSettings
 import net.osmand.plus.settings.backend.preferences.CommonPreference
-import net.osmand.plus.settings.enums.*
+import net.osmand.plus.settings.enums.CompassMode
+import net.osmand.plus.settings.enums.DayNightMode
+import net.osmand.plus.settings.enums.NauticalDisplayMode
+import net.osmand.plus.settings.enums.NmeaSource
+import net.osmand.plus.settings.enums.ScreenLayoutMode
+import net.osmand.plus.settings.enums.VesselContext
 import net.osmand.plus.settings.fragments.SettingsScreenType
 import net.osmand.plus.views.mapwidgets.MapWidgetInfo
 import net.osmand.plus.views.mapwidgets.WidgetType
 import net.osmand.plus.views.mapwidgets.WidgetsPanel
 import net.osmand.plus.views.mapwidgets.widgets.MapWidget
 import net.osmand.plus.widgets.ctxmenu.ContextMenuAdapter
+import net.osmand.render.RenderingRuleProperty
 import net.osmand.shared.aistracker.AisObject
 import net.osmand.shared.util.KMapUtils
 import net.osmand.util.MapUtils
-import net.osmand.render.RenderingRuleProperty
-import androidx.core.view.isVisible
 import okhttp3.OkHttpClient
 import java.io.File
 import java.lang.ref.WeakReference
@@ -149,15 +171,15 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
 
         @JvmStatic
         var engine: SignalKEngine? = null
-            private set
+            internal set
 
         @JvmStatic
         var autopilot: AutopilotController? = null
-            private set
+            internal set
 
         @JvmStatic
         var electrical: ElectricalController? = null
-            private set
+            internal set
 
         @JvmStatic
         var hudManager: WeakReference<NauticalHudManager>? = null
@@ -178,10 +200,6 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
 
     fun getConnection(): OkHttpSignalKConnection? = connectionManager.connection
 
-    var isThrottlingRedraws: Boolean
-        get() = systemManager.isThrottlingRedraws
-        internal set(value) { systemManager.isThrottlingRedraws = value }
-
     var isAppInBackground: Boolean
         get() = systemManager.isAppInBackground
         set(value) { systemManager.isAppInBackground = value }
@@ -189,10 +207,6 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
     var isNightVisionEnabled: Boolean
         get() = uiOverlayManager.isNightVisionEnabled
         internal set(value) { uiOverlayManager.isNightVisionEnabled = value }
-
-    var isSunlightModeEnabled: Boolean
-        get() = uiOverlayManager.isSunlightModeEnabled
-        internal set(value) { uiOverlayManager.isSunlightModeEnabled = value }
 
     val isConnectionLostAlertActive: Boolean
         get() = safetyEvaluator.isConnectionLostAlertActive
@@ -257,26 +271,8 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
     var workflowEngine: SailingWorkflowEngine? = null
         private set
 
-    val nauticalMapLayer: net.osmand.plus.plugins.nautical.NauticalMapLayer?
-        get() = layerManager.nauticalMapLayer
     val aisAisLayer: NauticalAisLayer?
         get() = layerManager.aisAisLayer
-    val skTideLayer: SignalKTideLayer?
-        get() = layerManager.skTideLayer
-    val tidalCurrentsMapLayer: TidalCurrentsMapLayer?
-        get() = layerManager.tidalCurrentsMapLayer
-    val oceanographicGribMapLayer: OceanographicGribMapLayer?
-        get() = layerManager.oceanographicGribMapLayer
-    val vhfPoiLayer: VhfPoiSearchLayer?
-        get() = layerManager.vhfPoiLayer
-    val skRasterLayer: SignalKRasterLayer?
-        get() = layerManager.skRasterLayer
-    val skLogbookLayer: SignalKLogbookLayer?
-        get() = layerManager.skLogbookLayer
-    val skWaypointLayer: SignalKWaypointLayer?
-        get() = layerManager.skWaypointLayer
-    val layerController: SailingMapLayerController?
-        get() = layerManager.layerController
 
     var tidalTimeOffsetMs: Long = 0L
         set(value) {
@@ -628,9 +624,87 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
     }
 
     private var isPluginInitialized = false
+    private var isListenersRegistered = false
+
+    private fun registerListeners() {
+        if (isListenersRegistered) return
+        isListenersRegistered = true
+
+        val settings = app.settings
+        settings.NAUTICAL_RECEIVE_IN_BACKGROUND.addListener(receiveInBackgroundPrefListener)
+        settings.enabledPluginsPreference.addListener(enabledPluginsListener)
+        settings.NAUTICAL_XTE_THRESHOLD.addListener(xteThresholdListener)
+        settings.NAUTICAL_SHOW_LAYLINES.addListener(laylinesEnabledListener)
+        settings.NAUTICAL_MOB_ACTIVE.addListener(mobActiveListener)
+        settings.NAUTICAL_DR_START_TIME.addListener(drEnabledListener)
+        settings.NAUTICAL_NAVTEX_ENABLED.addListener(navtexEnabledListener)
+        settings.NAUTICAL_AIS_ENABLED.addListener(aisEnabledListener)
+        settings.NAUTICAL_SHOW_WINDY_TILES.addListener(windyEnabledListener)
+        settings.NAUTICAL_AIS_OWN_MMSI.addListener(aisOwnMmsiListener)
+        settings.NAUTICAL_AIS_DISPLAY_OWN_POSITION.addListener(aisDisplayOwnPositionListener)
+        settings.NAUTICAL_SHOW_GRIB_WAVES.addListener(gribWavesEnabledListener)
+        settings.NAUTICAL_SHOW_GRIB_PRESSURE.addListener(gribPressureEnabledListener)
+        settings.NAUTICAL_DISPLAY_MODE.addListener(displayModeListener)
+        settings.NAUTICAL_HEAVY_WEATHER_MODE.addListener(heavyWeatherEnabledListener)
+
+        engine?.registerListener(marineStateListener)
+        engine?.addRouteStepListener(routeStepListener)
+
+        app.locationProvider.addLocationListener(locationListener)
+        autopilotListener?.let { app.routingHelper.addListener(it) }
+
+        app.getSharedPreferences(OsmandSettings.SHARED_PREFERENCES_NAME, Context.MODE_PRIVATE)
+            .registerOnSharedPreferenceChangeListener(prefChangeListener)
+
+        val intentFilter = IntentFilter().apply {
+            addAction(Intent.ACTION_SCREEN_OFF)
+            addAction(Intent.ACTION_SCREEN_ON)
+        }
+        app.registerReceiver(screenStateReceiver, intentFilter)
+    }
+
+    private fun unregisterListeners() {
+        if (!isListenersRegistered) return
+        isListenersRegistered = false
+
+        val settings = app.settings
+        settings.NAUTICAL_RECEIVE_IN_BACKGROUND.removeListener(receiveInBackgroundPrefListener)
+        settings.enabledPluginsPreference.removeListener(enabledPluginsListener)
+        settings.NAUTICAL_XTE_THRESHOLD.removeListener(xteThresholdListener)
+        settings.NAUTICAL_SHOW_LAYLINES.removeListener(laylinesEnabledListener)
+        settings.NAUTICAL_MOB_ACTIVE.removeListener(mobActiveListener)
+        settings.NAUTICAL_DR_START_TIME.removeListener(drEnabledListener)
+        settings.NAUTICAL_NAVTEX_ENABLED.removeListener(navtexEnabledListener)
+        settings.NAUTICAL_AIS_ENABLED.removeListener(aisEnabledListener)
+        settings.NAUTICAL_SHOW_WINDY_TILES.removeListener(windyEnabledListener)
+        settings.NAUTICAL_AIS_OWN_MMSI.removeListener(aisOwnMmsiListener)
+        settings.NAUTICAL_AIS_DISPLAY_OWN_POSITION.removeListener(aisDisplayOwnPositionListener)
+        settings.NAUTICAL_SHOW_GRIB_WAVES.removeListener(gribWavesEnabledListener)
+        settings.NAUTICAL_SHOW_GRIB_PRESSURE.removeListener(gribPressureEnabledListener)
+        settings.NAUTICAL_DISPLAY_MODE.removeListener(displayModeListener)
+        settings.NAUTICAL_HEAVY_WEATHER_MODE.removeListener(heavyWeatherEnabledListener)
+
+        engine?.unregisterListener(marineStateListener)
+        engine?.removeRouteStepListener(routeStepListener)
+
+        app.locationProvider.removeLocationListener(locationListener)
+        autopilotListener?.let { app.routingHelper.removeListener(it) }
+
+        app.getSharedPreferences(OsmandSettings.SHARED_PREFERENCES_NAME, Context.MODE_PRIVATE)
+            .unregisterOnSharedPreferenceChangeListener(prefChangeListener)
+
+        try {
+            app.unregisterReceiver(screenStateReceiver)
+        } catch (_: Exception) {
+            // Ignore
+        }
+    }
 
     private fun initPlugin() {
-        if (isPluginInitialized) return
+        if (isPluginInitialized) {
+            registerListeners()
+            return
+        }
         isPluginInitialized = true
         NauticalLog.init(app)
         NauticalLog.i("Nautical Plugin Initializing...")
@@ -640,15 +714,43 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
         }
         val scope = pluginScope!!
 
+        connectionManager.initConnection()
+        val client = connectionManager.okHttpClient!!
+        val conn = connectionManager.connection!!
+
         safetyArbitrator = SafetyStateArbitrator(app).apply { start() }
         if (capabilityManager == null) {
             capabilityManager = CapabilityManager(app)
         }
+
+        engine = SignalKEngine(app, scope, capabilityManager)
+        autopilot = AutopilotController(app, conn, client, engine?.dataBroker)
+        electrical = ElectricalController(app, autopilot!!)
+
+        SailingDependencyContainer.initialize(app, engine!!.dataBroker, autopilot!!, client)
+
         if (logbookRepository == null) {
             logbookRepository = MarineLogbookRepository(app)
         }
+        val performanceRepo = SailingDependencyContainer.performanceRepository
+        if (logbookEngine == null && performanceRepo != null) {
+            logbookEngine = AutomatedLogbookEngine(app, logbookRepository!!, engine!!, performanceRepo)
+        }
+        if (alarmPriorityManager == null) {
+            alarmPriorityManager = AlarmPriorityManager(app, engine!!.dataBroker)
+        }
+        if (ttsHelper == null) {
+            ttsHelper = ManeuverTtsHelper(app)
+        }
+        if (skDiscovery == null) {
+            skDiscovery = SignalKDiscovery(app)
+        }
+        if (autopilotListener == null) {
+            autopilotListener = AutopilotRouteListener(app.routingHelper)
+        }
+
         if (mobStateMachine == null) {
-            mobStateMachine = MobStateMachine(logbookRepository, scope)
+            mobStateMachine = MobStateMachine(logbookRepository!!, scope)
             restoreTacticalState(scope)
         }
         systemManager.processBlackBoxCrash(scope)
@@ -662,6 +764,8 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
                 }
             }
         }
+
+        registerListeners()
     }
 
     private fun restoreTacticalState(scope: CoroutineScope) {
@@ -683,7 +787,7 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
         }
     }
 
-    fun getSettings(): net.osmand.plus.settings.backend.OsmandSettings = app.settings
+    fun getSettings(): OsmandSettings = app.settings
 
     private val voiceHandler = Handler(Looper.getMainLooper())
     private var lastVoiceHeading: Int? = null
@@ -887,6 +991,7 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
 
     override fun disable(app: OsmandApplication) {
         super.disable(app)
+        unregisterListeners()
         refreshHandler.removeCallbacks(refreshRunnable)
     }
 
@@ -941,7 +1046,7 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
             isPluginActive = isActive,
             s57SpatialIndex = s57SpatialIndex,
             isModuleEnabled = { isModuleEnabled(it) },
-            onInitSubsystems = { controller ->
+            onInitSubsystems = { _ ->
                 mapActivity?.let { act -> initSubsystems(act) }
             }
         )
@@ -949,7 +1054,7 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
 
     override fun registerLayers(context: Context, mapActivity: MapActivity?) {
         if (isActive && mapActivity != null) {
-            layerManager.registerLayers(context, mapActivity, s57SpatialIndex) { controller ->
+            layerManager.registerLayers(context, mapActivity, s57SpatialIndex) { _ ->
                 initSubsystems(mapActivity)
             }
         }

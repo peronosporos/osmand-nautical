@@ -1,0 +1,12 @@
+- [ ] Implement `NAV_XTE_RHUMB` and `NAV_XTE_GC` handling in `parseNavigationValue`
+- [ ] Implement `NAV_FLAGS` handling in `parseOtherValue` (or `parseNavigationValue`)
+- [ ] Implement `NAV_ANCHOR_RODE_DEPLOYED` handling in `parseNavigationValue`
+- [ ] Implement `ENV_MOON_PHASE` and `ENV_SUNLIGHT_MODE` in `parseEnvironmentValue`
+- [ ] Implement `STEERING_AUTOPILOT_SEA_STATE` in `parseAutopilotValue`
+- [ ] Implement `RIGGING_LOAD_PREFIX` in `parseSystemValue`
+- [ ] Implement `ELECTRICAL_AC_PREFIX` in `parseSystemValue`
+- [ ] Implement `DESIGN_*` paths in `parseOtherValue`
+- [ ] Implement `COMMUNICATION_CREW_NAMES` in `parseOtherValue`
+- [ ] Implement `MEDIA_*` paths in `parseOtherValue`
+- [ ] Verify changes with a new test case in `SignalKEnginePipelineTest.kt`
+- [ ] Follow commit and push protocol

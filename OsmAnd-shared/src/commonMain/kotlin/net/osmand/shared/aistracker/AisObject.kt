@@ -80,7 +80,6 @@ class AisObject {
     var cpa: AisCpa = AisCpa()
         private set
     var lastUpdate: Long = 0
-        private set
 
     constructor(mmsi: Int, msgType: Int, lat: Double, lon: Double) {
         initObj(mmsi, msgType)

@@ -6,6 +6,8 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.setMain
+import kotlinx.coroutines.test.resetMain
 import net.osmand.plus.OsmandApplication
 import net.osmand.plus.plugins.nautical.network.DeltaMessage
 import net.osmand.plus.plugins.nautical.network.Update
@@ -143,6 +145,7 @@ class SignalKEnginePipelineTest {
             updates = listOf(
                 Update(
                     timestamp = "2026-08-15T12:00:00.000Z",
+                    source = null,
                     values = listOf(
                         Value("navigation.position", mapOf("latitude" to 52.3702, "longitude" to 4.8952)),
                         Value("name", "TEST_VESSEL")
@@ -163,5 +166,46 @@ class SignalKEnginePipelineTest {
         assertEquals(52.3702, target.position?.latitude ?: 0.0, 0.0001)
         assertEquals(4.8952, target.position?.longitude ?: 0.0, 0.0001)
         assertEquals("TEST_VESSEL", target.shipName)
+    }
+
+    @Test
+    fun testSignalKDeltaConnectedPaths() = runTest(testDispatcher) {
+        val jsonDelta = """
+            {
+              "context": "vessels.self",
+              "updates": [
+                {
+                  "timestamp": "2026-08-15T12:00:00.000Z",
+                  "values": [
+                    { "path": "navigation.courseRhumbline.crossTrackError", "value": 15.5 },
+                    { "path": "navigation.state.flags", "value": ["moored", "anchored"] },
+                    { "path": "navigation.anchor.rodeDeployed", "value": 45.0 },
+                    { "path": "environment.moon.phase", "value": 0.5 },
+                    { "path": "environment.sunlight.mode", "value": "night" },
+                    { "path": "steering.autopilot.seaState", "value": 3 },
+                    { "path": "design.length.overall", "value": 12.5 },
+                    { "path": "design.beam", "value": 3.8 },
+                    { "path": "entertainment.device.fusion.title", "value": "Nautical Song" },
+                    { "path": "entertainment.device.fusion.artist", "value": "Sea Band" }
+                  ]
+                }
+              ]
+            }
+        """.trimIndent()
+
+        engine.handleIncomingMessage(jsonDelta)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        val state = engine.getCurrentState()
+        assertEquals(15.5, state.crossTrackError!!, 0.001)
+        assertTrue(state.flags.contains("moored"))
+        assertEquals(45.0, state.rodeDeployed!!, 0.001)
+        assertEquals(0.5, state.moonPhase!!, 0.001)
+        assertEquals("night", state.sunlightMode)
+        assertEquals(3, state.seaState)
+        assertEquals(12.5, state.vesselLength!!, 0.001)
+        assertEquals(3.8, state.vesselBeam!!, 0.001)
+        assertEquals("Nautical Song", state.mediaInfo?.title)
+        assertEquals("Sea Band", state.mediaInfo?.artist)
     }
 }

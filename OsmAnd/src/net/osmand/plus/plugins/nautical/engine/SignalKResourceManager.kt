@@ -104,6 +104,14 @@ class SignalKResourceManager(
         syncJob = null
     }
 
+    suspend fun refreshAll() {
+        syncRoutes()
+        syncWaypoints()
+        syncNotes()
+        syncChecklists()
+        syncRegions()
+    }
+
     private fun checkAndSyncActiveRoute() {
         val caps = NauticalPlugin.engine?.capabilityManager?.capabilities?.value
         if (caps?.hasNavicoSync == true) {

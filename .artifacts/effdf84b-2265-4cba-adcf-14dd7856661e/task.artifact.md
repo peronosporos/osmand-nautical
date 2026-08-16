@@ -1,0 +1,5 @@
+- [ ] Instantiate core components in `initPlugin()`
+- [ ] Implement `registerListeners()` and `unregisterListeners()`
+- [ ] Connect listeners in `initPlugin()` and `disable()`
+- [ ] Fix redundant qualifiers and unused parameters
+- [ ] Verify changes with `analyze_file`

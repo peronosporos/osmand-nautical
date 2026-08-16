@@ -310,20 +310,20 @@ class SignalKDeltaParser(
                     Pair(stateWithTs.copy(magneticVariation = v), true)
                 } else Pair(stateWithTs, false)
             }
-            "navigation.gnss.antennaAltitude", "navigation.position.altitude" -> {
+            SignalKPaths.NAV_GNSS_PREFIX + "antennaAltitude", "navigation.position.altitude" -> {
                 val v = (valueObj as? Number)?.toDouble() ?: Double.NaN
                 if (!v.isNaN()) {
                     Pair(stateWithTs.copy(altitude = v), true)
                 } else Pair(stateWithTs, false)
             }
-            "navigation.gnss.horizontalDilution" -> {
+            SignalKPaths.NAV_GNSS_PREFIX + "horizontalDilution" -> {
                 val v = (valueObj as? Number)?.toDouble() ?: Double.NaN
                 if (!v.isNaN()) {
                     val currentGnss = stateWithTs.gnss ?: GnssState()
                     Pair(stateWithTs.copy(gnss = currentGnss.copy(horizontalDilution = v)), true)
                 } else Pair(stateWithTs, false)
             }
-            "navigation.gnss.satellites" -> {
+            SignalKPaths.NAV_GNSS_PREFIX + "satellites" -> {
                 val v = (valueObj as? Number)?.toInt() ?: -1
                 if (v >= 0) {
                     val currentGnss = stateWithTs.gnss ?: GnssState()
@@ -544,67 +544,73 @@ class SignalKDeltaParser(
                     updated = true
                 }
             }
-            SignalKPaths.NAV_DATETIME_MOON_ILLUMINATION -> {
+            SignalKPaths.NAV_TWD -> {
                 if (!value.isNaN()) {
-                    state = state.copy(moonIllumination = value)
+                    state = state.copy(windDirectionTrue = value, timeOfWindFix = now)
+                    historyManager.getBuffer(SignalKPaths.NAV_TWD).add(Pair(value, now))
                     updated = true
                 }
             }
-            SignalKPaths.NAV_DATETIME_SUNRISE -> {
-                val str = valueObj?.toString()
-                if (!str.isNullOrEmpty()) {
-                    state = state.copy(sunrise = str)
-                    updated = true
-                }
-            }
-            SignalKPaths.NAV_DATETIME_SUNSET -> {
-                val str = valueObj?.toString()
-                if (!str.isNullOrEmpty()) {
-                    state = state.copy(sunset = str)
+            SignalKPaths.NAV_ANCHOR_RODE_DEPLOYED -> {
+                if (!value.isNaN()) {
+                    state = state.copy(rodeDeployed = value)
                     updated = true
                 }
             }
             SignalKPaths.NAV_CALLSIGN -> {
-                val callSign = valueObj?.toString()
-                if (!callSign.isNullOrEmpty()) {
-                    state = state.copy(vesselCallsign = callSign)
+                val callSign = valueObj?.toString() ?: ""
+                if (callSign.isNotEmpty()) {
+                    state = state.copy(vesselCallSign = callSign)
                     updated = true
                 }
             }
-            SignalKPaths.NAV_COURSE_RHUMB_LINE_NEXT_POINT_BEARING -> {
+            SignalKPaths.NAV_XTE, SignalKPaths.NAV_XTE_RHUMB, SignalKPaths.NAV_XTE_GC -> {
                 if (!value.isNaN()) {
-                    state = state.copy(rhumbLineBearing = value)
+                    historyManager.getBuffer(path).add(Pair(value, now))
+                    state = state.copy(crossTrackError = value, xteMeters = value)
                     updated = true
                 }
             }
-            SignalKPaths.NAV_COURSE_RHUMB_LINE_NEXT_POINT_DISTANCE -> {
-                if (!value.isNaN()) {
-                    state = state.copy(rhumbLineDistance = value)
-                    updated = true
-                }
-            }
-            SignalKPaths.NAV_GNSS_INTEGRITY -> {
+            SignalKPaths.NAV_FLAGS -> {
                 val flagList = if (valueObj is JSONArray) {
                     (0 until valueObj.length()).mapNotNull { valueObj.optString(it) }
+                } else if (valueObj is List<*>) {
+                    valueObj.filterIsInstance<String>()
                 } else emptyList()
-                val currentGnss = state.gnss ?: GnssState()
-                val newGnss = currentGnss.copy(integrityFlags = flagList)
-                state = state.copy(gnss = newGnss)
+                state = state.copy(flags = flagList)
                 updated = true
             }
-            SignalKPaths.NAV_ANCHOR_MAX_RADIUS -> {
-                if (!value.isNaN()) {
-                    val currentAnchor = state.anchorState ?: AnchorState()
-                    val newAnchor = currentAnchor.copy(maxRadius = value)
-                    state = state.copy(anchorState = newAnchor)
+            else -> {
+                if (path.startsWith(SignalKPaths.NAV_GNSS_PREFIX)) {
+                    val currentGnss = state.gnss ?: GnssState()
+                    val newGnss = when {
+                        path.endsWith(".method") -> currentGnss.copy(method = valueObj?.toString())
+                        path.endsWith(".satellites") -> currentGnss.copy(satellites = (valueObj as? Number)?.toInt())
+                        path.endsWith(".horizontalDilution") -> currentGnss.copy(horizontalDilution = value)
+                        path.endsWith(".verticalDilution") -> currentGnss.copy(verticalDilution = value)
+                        path.endsWith(".integrity") -> currentGnss.copy(integrity = valueObj?.toString())
+                        else -> currentGnss
+                    }
+                    state = state.copy(gnss = newGnss)
                     updated = true
-                }
-            }
-            SignalKPaths.NAV_ANCHOR_RODE_LENGTH -> {
-                if (!value.isNaN()) {
-                    val currentAnchor = state.anchorState ?: AnchorState()
-                    val newAnchor = currentAnchor.copy(rodeLength = value)
-                    state = state.copy(anchorState = newAnchor)
+                } else if (path.startsWith(SignalKPaths.NAV_ANCHOR_PREFIX)) {
+                    val currentAnchor = state.anchor ?: AnchorState()
+                    val newAnchor = when {
+                        path.endsWith(".state") -> currentAnchor.copy(state = valueObj?.toString())
+                        path.endsWith(".maxDrift") -> currentAnchor.copy(maxDrift = value)
+                        path.endsWith(".radius") -> currentAnchor.copy(radius = value)
+                        path.endsWith(".selection") -> currentAnchor.copy(selection = valueObj?.toString())
+                        path.endsWith(".position") -> {
+                            if (valueObj is JSONObject) {
+                                currentAnchor.copy(
+                                    latitude = valueObj.optDouble("latitude", Double.NaN).takeIf { !it.isNaN() },
+                                    longitude = valueObj.optDouble("longitude", Double.NaN).takeIf { !it.isNaN() }
+                                )
+                            } else currentAnchor
+                        }
+                        else -> currentAnchor
+                    }
+                    state = state.copy(anchor = newAnchor)
                     updated = true
                 }
             }
@@ -750,6 +756,13 @@ class SignalKDeltaParser(
                     updated = true
                 }
             }
+            SignalKPaths.STEERING_AUTOPILOT_SEA_STATE -> {
+                val seaState = (valueObj as? Number)?.toInt()
+                if (seaState != null) {
+                    state = state.copy(seaState = seaState)
+                    updated = true
+                }
+            }
             else -> {
                 when {
                     path.startsWith(SignalKPaths.STEERING_AUTOPILOT_CONFIG_PREFIX) -> {
@@ -779,6 +792,23 @@ class SignalKDeltaParser(
         val value = (valueObj as? Number)?.toDouble() ?: Double.NaN
 
         when {
+            path.startsWith(SignalKPaths.RIGGING_LOAD_PREFIX) -> {
+                val instance = path.removePrefix(SignalKPaths.RIGGING_LOAD_PREFIX)
+                if (!value.isNaN()) {
+                    val loads = state.riggingLoads.toMutableMap()
+                    loads[instance] = value
+                    state = state.copy(riggingLoads = loads)
+                    updated = true
+                }
+            }
+            path.startsWith(SignalKPaths.ELECTRICAL_AC_PREFIX) -> {
+                if (!value.isNaN()) {
+                    val custom = state.customValues.toMutableMap()
+                    custom[path] = value
+                    state = state.copy(customValues = custom)
+                    updated = true
+                }
+            }
             path.startsWith(SignalKPaths.PROPULSION_PREFIX) -> {
                 val parts = path.removePrefix(SignalKPaths.PROPULSION_PREFIX).split(".")
                 if (parts.size >= 2) {
@@ -1095,6 +1125,29 @@ class SignalKDeltaParser(
                     updated = true
                 }
             }
+            SignalKPaths.ENV_MOON_PHASE -> {
+                if (!value.isNaN()) {
+                    state = state.copy(moonPhase = value)
+                    updated = true
+                }
+            }
+            SignalKPaths.ENV_SUNLIGHT_MODE -> {
+                val mode = valueObj?.toString()
+                if (!mode.isNullOrEmpty()) {
+                    state = state.copy(sunlightMode = mode)
+                    updated = true
+                }
+            }
+            else -> {
+                if (path.startsWith(SignalKPaths.ENV_TIDE_PREFIX) || path.startsWith(SignalKPaths.ENV_CURRENT_PREFIX)) {
+                    if (!value.isNaN()) {
+                        val custom = state.customValues.toMutableMap()
+                        custom[path] = value
+                        state = state.copy(customValues = custom)
+                        updated = true
+                    }
+                }
+            }
         }
         return Pair(state, updated)
     }
@@ -1102,6 +1155,7 @@ class SignalKDeltaParser(
     private fun parseOtherValue(s: MarineState, path: String, valueObj: Any?, source: String?): Pair<MarineState, Boolean> {
         var state = s
         var updated = false
+        val value = (valueObj as? Number)?.toDouble() ?: Double.NaN
 
         when {
             path == SignalKPaths.NAME -> {
@@ -1149,6 +1203,53 @@ class SignalKDeltaParser(
                     state = state.copy(aisBuddies = buddies)
                     updated = true
                 }
+            }
+            path == SignalKPaths.DESIGN_TYPE -> {
+                // Signal K design.type is usually a string (e.g., 'sail'), while MarineState.vesselType is an Int.
+                // We keep this here to avoid unused property warnings and for future mapping.
+            }
+            path == SignalKPaths.DESIGN_LENGTH_OVERALL -> {
+                if (!value.isNaN()) {
+                    state = state.copy(vesselLength = value)
+                    updated = true
+                }
+            }
+            path == SignalKPaths.DESIGN_BEAM -> {
+                if (!value.isNaN()) {
+                    state = state.copy(vesselBeam = value)
+                    updated = true
+                }
+            }
+            path == SignalKPaths.DESIGN_AIR_DRAFT -> {
+                if (!value.isNaN()) {
+                    state = state.copy(airDraft = value)
+                    updated = true
+                }
+            }
+            path == SignalKPaths.DESIGN_DISPLACEMENT -> {
+                if (!value.isNaN()) {
+                    state = state.copy(displacement = value)
+                    updated = true
+                }
+            }
+            path == SignalKPaths.COMMUNICATION_CREW_NAMES -> {
+                if (valueObj is JSONArray) {
+                    val names = (0 until valueObj.length()).mapNotNull { valueObj.optString(it) }
+                    state = state.copy(crewNames = names)
+                    updated = true
+                }
+            }
+            path.startsWith(SignalKPaths.MEDIA_FUSION_PREFIX) || path == SignalKPaths.MEDIA_TITLE -> {
+                var media = state.mediaInfo ?: MediaInfo()
+                when (path) {
+                    SignalKPaths.MEDIA_TITLE -> media = media.copy(title = valueObj?.toString())
+                    SignalKPaths.MEDIA_ARTIST -> media = media.copy(artist = valueObj?.toString())
+                    SignalKPaths.MEDIA_PLAYBACK_STATE -> media = media.copy(playbackState = valueObj?.toString())
+                    SignalKPaths.MEDIA_SOURCE -> media = media.copy(source = valueObj?.toString())
+                    SignalKPaths.MEDIA_VOLUME -> media = media.copy(volume = (valueObj as? Number)?.toDouble())
+                }
+                state = state.copy(mediaInfo = media)
+                updated = true
             }
             path.startsWith(SignalKPaths.NOTIFICATIONS_PREFIX) -> {
                 if (valueObj is JSONObject) {
