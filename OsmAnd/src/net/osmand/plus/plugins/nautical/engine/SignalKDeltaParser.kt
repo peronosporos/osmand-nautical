@@ -14,7 +14,6 @@ import net.osmand.plus.R
 import net.osmand.plus.plugins.nautical.NauticalPlugin
 import net.osmand.plus.plugins.nautical.di.SailingDependencyContainer
 import net.osmand.plus.plugins.nautical.network.DeltaMessage
-import net.osmand.plus.plugins.nautical.network.SignalKCourse
 import net.osmand.plus.plugins.nautical.utils.TemporalUtils
 import net.osmand.shared.aistracker.AisObject
 import org.json.JSONArray
@@ -22,6 +21,7 @@ import org.json.JSONObject
 import java.io.StringReader
 import java.util.Locale
 import java.util.concurrent.CopyOnWriteArraySet
+import kotlin.math.abs
 
 class SignalKDeltaParser(
     private val app: OsmandApplication,
@@ -89,10 +89,7 @@ class SignalKDeltaParser(
     }
 
     private suspend fun processUpdates(reader: JsonReader, context: String, initialState: MarineState): Pair<MarineState, Boolean> {
-        val currentMmsi = initialState.vesselMmsi
-        val trueSelf = sessionManager.trueSelfContext
-        val isSelf = (context == "vessels.self") || (context == "") || (context == trueSelf) ||
-                (currentMmsi != null && context == "vessels.urn:mrn:imo:mmsi:$currentMmsi")
+        val isSelf = isContextSelf(context, initialState)
 
         reader.beginArray()
         var currentState = initialState
@@ -157,25 +154,23 @@ class SignalKDeltaParser(
         return Pair(currentState, stateUpdated)
     }
 
-    suspend fun processDeltaUpdates(
+    fun processDeltaUpdates(
         delta: DeltaMessage,
         context: String,
         onFinalizeAndNotify: (MarineState) -> Unit
     ) {
-        val currentMmsi = dataBroker.marineState.value.vesselMmsi
-        val trueSelf = sessionManager.trueSelfContext
-        val isSelf = (context == "vessels.self") || (context == "") || (context == trueSelf) ||
-                (currentMmsi != null && context == "vessels.urn:mrn:imo:mmsi:$currentMmsi")
+        val initialState = dataBroker.marineState.value
+        val isSelf = isContextSelf(context, initialState)
 
         val updates = delta.updates ?: return
-        var currentState = dataBroker.marineState.value
+        var currentState = initialState
         var stateUpdated = false
 
         val aisManager = NauticalPlugin.getInstance()?.aisManager
         val routeToAis = context.startsWith("vessels.") && !isSelf
 
         for (update in updates) {
-            val updateTimestamp = update.timestamp?.let {
+            val updateTimestamp = update.timestamp?.let { it ->
                 TemporalUtils.parseIso8601(it).takeIf { it > 0 }
             } ?: TemporalUtils.now()
             val updateSource = update.source?.get("label")?.toString()
@@ -217,6 +212,19 @@ class SignalKDeltaParser(
         if (isSelf && stateUpdated) {
             onFinalizeAndNotify(currentState)
         }
+    }
+
+    private fun isContextSelf(context: String, currentState: MarineState): Boolean {
+        val trueSelf = sessionManager.trueSelfContext
+        val mmsi = currentState.vesselMmsi
+        val uuid = currentState.vesselUuid
+
+        return context == "vessels.self" ||
+                context == "" ||
+                context == trueSelf ||
+                (mmsi != null && context.contains("mmsi:$mmsi")) ||
+                (uuid != null && (context == uuid || context == "vessels.$uuid" || context.endsWith(uuid))) ||
+                (!context.contains("mmsi:") && !context.contains("imo:"))
     }
 
     private fun readJsonValue(reader: JsonReader): Any? {
@@ -604,11 +612,17 @@ class SignalKDeltaParser(
                 }
             }
             SignalKPaths.NAV_FLAGS -> {
-                val flagList = if (valueObj is JSONArray) {
-                    (0 until valueObj.length()).mapNotNull { valueObj.optString(it) }
-                } else if (valueObj is List<*>) {
-                    valueObj.filterIsInstance<String>()
-                } else emptyList()
+                val flagList = when (valueObj) {
+                    is JSONArray -> {
+                        (0 until valueObj.length()).mapNotNull { valueObj.optString(it) }
+                    }
+
+                    is List<*> -> {
+                        valueObj.filterIsInstance<String>()
+                    }
+
+                    else -> emptyList()
+                }
                 state = state.copy(flags = flagList)
                 updated = true
             }
@@ -631,8 +645,8 @@ class SignalKDeltaParser(
                         path.endsWith(".state") -> currentAnchor.copy(state = valueObj?.toString())
                         path.endsWith(".maxDrift") -> currentAnchor.copy(maxDrift = value)
                         path.endsWith(".radius") -> currentAnchor.copy(radius = value)
-                        path.endsWith(".maxRadius") -> currentAnchor.copy(maxRadius = value)
-                        path.endsWith(".rodeLength") -> currentAnchor.copy(rodeLength = value)
+                        path == SignalKPaths.NAV_ANCHOR_MAX_RADIUS || path.endsWith(".maxRadius") -> currentAnchor.copy(maxRadius = value)
+                        path == SignalKPaths.NAV_ANCHOR_RODE_LENGTH || path.endsWith(".rodeLength") -> currentAnchor.copy(rodeLength = value)
                         path.endsWith(".selection") -> currentAnchor.copy(selection = valueObj?.toString())
                         path.endsWith(".position") -> {
                             if (valueObj is JSONObject) {
@@ -771,7 +785,7 @@ class SignalKDeltaParser(
             SignalKPaths.STEERING_AUTOPILOT_TARGET_HDG_TRUE -> {
                 if (!value.isNaN()) {
                     var nextPendingHeading = state.pendingTargetHeading
-                    if (nextPendingHeading != null && Math.abs(value - nextPendingHeading) < 0.02) {
+                    if (nextPendingHeading != null && abs(value - nextPendingHeading) < 0.02) {
                         nextPendingHeading = null
                     }
                     state = state.copy(autopilotHeadingSet = value, pendingTargetHeading = nextPendingHeading)
@@ -1333,12 +1347,11 @@ class SignalKDeltaParser(
                     state = state.copy(notifications = updatedNotifications)
                     updated = true
                 } else if (valueObj is String) {
-                    val message = valueObj
                     val stateStr = "alert"
                     val notificationState = NotificationState.ALERT
                     val updatedNotifications = state.notifications.toMutableMap()
                     updatedNotifications[path] = SignalKNotification(
-                        message = message,
+                        message = valueObj,
                         state = notificationState,
                         methods = listOf("visual"),
                         source = source

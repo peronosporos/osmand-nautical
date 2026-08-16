@@ -182,6 +182,13 @@ class SignalKSessionManager(
                         val mmsi = (body?.get("mmsi") as? String)?.toIntOrNull()
                         val name = body?.get("name") as? String
                         val uuid = body?.get("uuid") as? String
+
+                        if (uuid != null) {
+                            trueSelfContext = if (uuid.startsWith("vessels.")) uuid else "vessels.$uuid"
+                        } else if (mmsi != null) {
+                            trueSelfContext = "vessels.urn:mrn:imo:mmsi:$mmsi"
+                        }
+
                         dataBroker.updateState { s ->
                             s.copy(
                                 vesselMmsi = mmsi ?: s.vesselMmsi,
