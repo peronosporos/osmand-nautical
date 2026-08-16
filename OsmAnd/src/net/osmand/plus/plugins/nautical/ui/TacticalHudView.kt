@@ -161,9 +161,10 @@ class TacticalHudView @JvmOverloads constructor(
         // Map context to icon if needed
         val iconRes = when(vesselContext) {
             VesselContext.SAILING -> R.drawable.ic_action_sail_boat_dark
-            VesselContext.MOTORING -> R.drawable.ic_action_car_dark // Assuming motor icon
-            VesselContext.ANCHORED -> R.drawable.ic_action_anchor
+            VesselContext.MOTORING -> R.drawable.ic_action_car_dark
+            VesselContext.ANCHORED, VesselContext.MOORED, VesselContext.DOCKING -> R.drawable.ic_action_anchor
             VesselContext.EMERGENCY_HEAVE_TO -> R.drawable.ic_action_alert
+            else -> R.drawable.ic_action_sail_boat_dark
         }
         contextButton.setIconResource(iconRes)
     }
