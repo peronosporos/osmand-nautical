@@ -282,7 +282,7 @@ public class WidgetInfoBaseFragment extends BaseFullScreenFragment {
 				widgetInfo = controllerAddedWidgetInfo;
 			}
 		}
-		if (widgetInfo == null && widgetId != null) {
+		if (widgetInfo == null && widgetId != null && widgetRegistry != null) {
 			widgetInfo = widgetRegistry.getWidgetInfoById(widgetId);
 		}
 

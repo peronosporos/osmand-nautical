@@ -22,7 +22,28 @@ class SignalKDiscovery(private val app: OsmandApplication) {
         override fun onServiceFound(service: NsdServiceInfo) {
             log.info("Signal K Service candidate found: ${service.serviceName}")
             if (service.serviceType.contains("_signalk-ws") || service.serviceType.contains("_signalk-http")) {
-                nsdManager.resolveService(service, createResolveListener())
+                val resolveListener = object : NsdManager.ResolveListener {
+                    override fun onResolveFailed(serviceInfo: NsdServiceInfo, errorCode: Int) {
+                        log.error("Signal K Service Resolve failed: $errorCode")
+                    }
+
+                    override fun onServiceResolved(serviceInfo: NsdServiceInfo) {
+                        val host = serviceInfo.host.hostAddress
+                        val port = serviceInfo.port
+                        log.info("Signal K Service resolved: $host:$port")
+
+                        val currentIp = app.settings.NAUTICAL_SERVER_IP.get()
+                        if (currentIp.isEmpty()) {
+                            app.settings.NAUTICAL_SERVER_IP.set(host)
+                            app.settings.NAUTICAL_SERVER_PORT.set(port.toString())
+                            log.info("Signal K auto-configured to $host:$port")
+                            NauticalPlugin.getInstance()?.reconnect()
+                        } else if (currentIp == host) {
+                            log.info("Signal K Discovery: Resolved host matches current configuration. Skipping.")
+                        }
+                    }
+                }
+                nsdManager.resolveService(service, resolveListener)
             }
         }
 
@@ -40,28 +61,6 @@ class SignalKDiscovery(private val app: OsmandApplication) {
 
         override fun onStopDiscoveryFailed(serviceType: String, errorCode: Int) {
             log.error("Signal K mDNS Discovery stop failed: $errorCode")
-        }
-    }
-
-    private fun createResolveListener() = object : NsdManager.ResolveListener {
-        override fun onResolveFailed(serviceInfo: NsdServiceInfo, errorCode: Int) {
-            log.error("Signal K Service Resolve failed: $errorCode")
-        }
-
-        override fun onServiceResolved(serviceInfo: NsdServiceInfo) {
-            val host = serviceInfo.host.hostAddress
-            val port = serviceInfo.port
-            log.info("Signal K Service resolved: $host:$port")
-
-            val currentIp = app.settings.NAUTICAL_SERVER_IP.get()
-            if (currentIp.isEmpty()) {
-                app.settings.NAUTICAL_SERVER_IP.set(host)
-                app.settings.NAUTICAL_SERVER_PORT.set(port.toString())
-                log.info("Signal K auto-configured to $host:$port")
-                NauticalPlugin.getInstance()?.reconnect()
-            } else if (currentIp == host) {
-                log.info("Signal K Discovery: Resolved host matches current configuration. Skipping.")
-            }
         }
     }
 

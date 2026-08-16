@@ -196,11 +196,15 @@ public abstract class SimpleWidget extends TextInfoWidget implements ISupportWid
 		findViews();
 
 		if (imageView != null && oldImageView != null) {
-			Drawable oldDrawable = oldImageView.getDrawable();
-			if (oldDrawable != null) {
-				imageView.setImageDrawable(oldDrawable);
+			try {
+				Drawable oldDrawable = oldImageView.getDrawable();
+				if (oldDrawable != null) {
+					imageView.setImageDrawable(oldDrawable);
+				}
+				copyView(imageView, oldImageView);
+			} catch (Exception e) {
+				// Guard against potential NullPointerException or other issues during drawable copy
 			}
-			copyView(imageView, oldImageView);
 		}
 		if (oldContainer != null && getView() != null) {
 			AndroidUiHelper.setVisibility(oldContainer.getVisibility(), getView());

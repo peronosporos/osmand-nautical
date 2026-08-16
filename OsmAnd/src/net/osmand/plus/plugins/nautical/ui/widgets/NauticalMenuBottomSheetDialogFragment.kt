@@ -14,9 +14,9 @@ import net.osmand.plus.plugins.nautical.NauticalPlugin
  */
 abstract class NauticalMenuBottomSheetDialogFragment : MenuBottomSheetDialogFragment() {
 
-    override fun getDismissButtonTextId(): Int = DEFAULT_VALUE
-    override fun getRightBottomButtonTextId(): Int = DEFAULT_VALUE
-    override fun getThirdBottomButtonTextId(): Int = DEFAULT_VALUE
+    override fun getDismissButtonTextId(): Int = net.osmand.plus.R.string.shared_string_cancel
+    override fun getRightBottomButtonTextId(): Int = 0
+    override fun getThirdBottomButtonTextId(): Int = 0
     override fun hideButtonsContainer(): Boolean = true
 
     override fun createMenuItems(savedInstanceState: Bundle?) {
@@ -38,7 +38,9 @@ abstract class NauticalMenuBottomSheetDialogFragment : MenuBottomSheetDialogFrag
     }
 
     protected fun addTitleItem(@StringRes titleId: Int) {
-        items.add(TitleItem(getString(titleId)))
+        if (titleId != 0 && titleId != -1) {
+            items.add(TitleItem(getString(titleId)))
+        }
     }
 
     protected fun addTitleItem(title: String) {

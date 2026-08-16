@@ -181,8 +181,12 @@ public class MapWidgetRegistry {
 		if (widgetId == null) {
 			return null;
 		}
-		for (MapWidgetInfo widgetInfo : getAllWidgets()) {
-			if (widgetId.equals(widgetInfo.key)) {
+		List<MapWidgetInfo> allWidgets = getAllWidgets();
+		if (allWidgets == null) {
+			return null;
+		}
+		for (MapWidgetInfo widgetInfo : allWidgets) {
+			if (widgetInfo != null && widgetId.equals(widgetInfo.key)) {
 				return widgetInfo;
 			}
 		}
