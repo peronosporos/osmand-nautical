@@ -620,107 +620,70 @@ class SignalKDeltaParser(
         when (path) {
             SignalKPaths.PERF_VMG -> {
                 if (!value.isNaN()) {
-                    historyManager.getBuffer(path).add(Pair(value, now))
                     state = state.copy(velocityMadeGood = value)
-                    updated = true
-                }
-            }
-            SignalKPaths.PERF_TARGET_SPEED -> {
-                if (!value.isNaN()) {
-                    state = state.copy(polarTargetSpeed = value)
-                    updated = true
-                }
-            }
-            SignalKPaths.PERF_TARGET_TWA -> {
-                if (!value.isNaN()) {
-                    state = state.copy(targetWindAngleApparent = value)
-                    updated = true
-                }
-            }
-            SignalKPaths.PERF_TARGET_HEADING_TRUE -> {
-                if (!value.isNaN()) {
-                    state = state.copy(targetHeadingTrue = value)
-                    updated = true
-                }
-            }
-            SignalKPaths.PERF_TARGET_HEADING_MAG -> {
-                if (!value.isNaN()) {
-                    state = state.copy(targetHeadingMagnetic = value)
-                    updated = true
-                }
-            }
-            SignalKPaths.PERF_VMG_TARGET_SPEED -> {
-                if (!value.isNaN()) {
-                    state = state.copy(targetVmg = value)
-                    updated = true
-                }
-            }
-            SignalKPaths.PERF_VMG_TARGET_ANGLE -> {
-                if (!value.isNaN()) {
-                    state = state.copy(targetTwa = value)
-                    updated = true
-                }
-            }
-            SignalKPaths.PERF_TARGET_AWA -> {
-                if (!value.isNaN()) {
-                    state = state.copy(targetWindAngleApparent = value)
-                    updated = true
-                }
-            }
-            SignalKPaths.PERF_POLAR_RATIO -> {
-                if (!value.isNaN()) {
-                    historyManager.getBuffer(path).add(Pair(value, now))
-                    state = state.copy(polarSpeedRatio = value)
-                    updated = true
-                }
-            }
-            SignalKPaths.PERF_POLAR_SPEED -> {
-                if (!value.isNaN()) {
-                    state = state.copy(polarTargetSpeed = value)
-                    updated = true
-                }
-            }
-            SignalKPaths.PERF_LEEWAY -> {
-                if (!value.isNaN()) {
-                    state = state.copy(leeway = value)
+                    historyManager.getBuffer(SignalKPaths.PERF_VMG).add(Pair(value, now))
                     updated = true
                 }
             }
             SignalKPaths.PERF_TACK_ANGLE -> {
                 if (!value.isNaN()) {
-                    state = state.copy(optimumTackAngle = value)
+                    state = state.copy(tackAngle = value)
                     updated = true
                 }
             }
-            SignalKPaths.PERF_GYBE_ANGLE -> {
+            SignalKPaths.PERF_WIND_SHIFT -> {
                 if (!value.isNaN()) {
-                    state = state.copy(optimumGybeAngle = value)
+                    state = state.copy(windShift = value)
                     updated = true
                 }
             }
-            SignalKPaths.PERF_LAYLINE_PORT, SignalKPaths.PERF_LAYLINE_STARBOARD -> {
+            SignalKPaths.PERF_LAYLINES -> {
                 if (valueObj is JSONObject) {
-                    val port = valueObj.optDouble("port", Double.NaN)
-                    val stbd = valueObj.optDouble("starboard", Double.NaN)
-                    val target = valueObj.optDouble("targetHeading", Double.NaN)
-                    val laylineData = LaylineData(
-                        portLayline = if (port.isNaN()) null else port,
-                        starboardLayline = if (stbd.isNaN()) null else stbd,
-                        targetHeading = if (target.isNaN()) null else target
-                    )
-                    state = state.copy(laylineData = laylineData)
-                    updated = true
+                    val port = valueObj.optJSONObject("portTackPoint")
+                    val stbd = valueObj.optJSONObject("starboardTackPoint")
+                    val target = valueObj.optJSONObject("targetWaypoint")
+                    if (target != null) {
+                        val laylineData = net.osmand.plus.plugins.nautical.laylines.engine.LaylineData(
+                            portTackPoint = port?.let { net.osmand.plus.plugins.nautical.laylines.engine.LatLon(it.optDouble("latitude"), it.optDouble("longitude")) },
+                            starboardTackPoint = stbd?.let { net.osmand.plus.plugins.nautical.laylines.engine.LatLon(it.optDouble("latitude"), it.optDouble("longitude")) },
+                            isFetchable = valueObj.optBoolean("isFetchable", true),
+                            targetWaypoint = net.osmand.plus.plugins.nautical.laylines.engine.LatLon(target.optDouble("latitude"), target.optDouble("longitude"))
+                        )
+                        state = state.copy(serverLaylines = laylineData)
+                        updated = true
+                    }
                 }
             }
-            SignalKPaths.PERF_VMG_WAYPOINT -> {
-                if (!value.isNaN()) {
-                    state = state.copy(velocityMadeGood = value)
-                    updated = true
-                }
-            }
-            SignalKPaths.PERF_POLAR_SPEED_RATIO -> {
+            SignalKPaths.PERF_POLAR_RATIO -> {
                 if (!value.isNaN()) {
                     state = state.copy(polarSpeedRatio = value)
+                    historyManager.getBuffer(SignalKPaths.PERF_POLAR_RATIO).add(Pair(value, now))
+                    updated = true
+                }
+            }
+            "performance.recordingStability" -> {
+                state = state.copy(recordingStability = valueObj as? Boolean ?: (valueObj?.toString() == "true"))
+                updated = true
+            }
+            "performance.recordingPointCount" -> {
+                state = state.copy(recordingPointCount = (valueObj as? Number)?.toInt() ?: 0)
+                updated = true
+            }
+            SignalKPaths.PERF_TARGET_SPEED, "performance.polarSpeed" -> {
+                if (MarineStateConstants.isValidSpeed(value)) {
+                    state = state.copy(polarTargetSpeed = value)
+                    updated = true
+                }
+            }
+            SignalKPaths.PERF_TARGET_ANGLE -> {
+                if (!value.isNaN()) {
+                    state = state.copy(targetWindAngleApparent = value)
+                    updated = true
+                }
+            }
+            SignalKPaths.PERF_RACING_TIMER -> {
+                if (!value.isNaN()) {
+                    state = state.copy(racingTimer = value)
                     updated = true
                 }
             }
