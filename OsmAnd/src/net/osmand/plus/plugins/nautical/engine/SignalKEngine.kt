@@ -25,8 +25,12 @@ import net.osmand.plus.plugins.nautical.NauticalPlugin
 import net.osmand.plus.plugins.nautical.audio.AlarmType
 import net.osmand.plus.plugins.nautical.audio.NauticalAudioArbiter
 import net.osmand.plus.plugins.nautical.di.SailingDependencyContainer
+import kotlinx.coroutines.withContext
 import net.osmand.plus.plugins.nautical.network.DeltaMessage
 import net.osmand.plus.plugins.nautical.network.LivePerformanceData
+import net.osmand.plus.plugins.nautical.network.SignalKLineString
+import net.osmand.plus.plugins.nautical.network.SignalKRoute
+import net.osmand.plus.plugins.nautical.network.SignalKRouteFeature
 import net.osmand.plus.plugins.nautical.network.SignalKRestService
 import net.osmand.plus.plugins.nautical.utils.TemporalUtils
 import net.osmand.shared.aistracker.AisObject
@@ -263,6 +267,69 @@ class SignalKEngine(
         lastRestUrl = url
         cachedRestService = SignalKRestService.create(url, client)
         return cachedRestService
+    }
+
+    suspend fun fetchRoutesFromServer(): Map<String, SignalKRoute>? = withContext(Dispatchers.IO) {
+        try {
+            val response = getRestService()?.getRoutes()
+            if (response?.isSuccessful == true) {
+                response.body()
+            } else {
+                null
+            }
+        } catch (e: Exception) {
+            log.error("Failed to fetch routes from server: ${e.message}")
+            null
+        }
+    }
+
+    suspend fun deleteRouteFromServer(routeId: String) = withContext(Dispatchers.IO) {
+        try {
+            getRestService()?.deleteRoute(routeId)
+        } catch (e: Exception) {
+            log.error("Failed to delete route from server: ${e.message}")
+        }
+    }
+
+    suspend fun updateRouteOnServer(routeId: String, name: String, points: List<Pair<Double, Double>>) = withContext(Dispatchers.IO) {
+        try {
+            val coords = points.map { listOf(it.second, it.first) }
+            val skRoute = SignalKRoute(
+                name = name,
+                description = "Updated from OsmAnd Nautical",
+                distance = null,
+                feature = SignalKRouteFeature(
+                    geometry = SignalKLineString(coordinates = coords)
+                )
+            )
+            getRestService()?.updateRoute(routeId, skRoute)
+        } catch (e: Exception) {
+            log.error("Failed to update route on server: ${e.message}")
+        }
+    }
+
+    suspend fun uploadActiveRouteToSignalK(name: String, points: List<Pair<Double, Double>> = getRoutePoints()) = withContext(Dispatchers.IO) {
+        try {
+            val pts = if (points.isNotEmpty()) points else {
+                val tp = mutableListOf<Pair<Double, Double>>()
+                app.targetPointsHelper.intermediatePointsNavigation.forEach { tp.add(it.latitude to it.longitude) }
+                app.targetPointsHelper.pointToNavigate?.let { tp.add(it.latitude to it.longitude) }
+                tp
+            }
+            if (pts.isEmpty()) return@withContext
+            val coords = pts.map { listOf(it.second, it.first) }
+            val skRoute = SignalKRoute(
+                name = name,
+                description = "Exported from OsmAnd Nautical",
+                distance = null,
+                feature = SignalKRouteFeature(
+                    geometry = SignalKLineString(coordinates = coords)
+                )
+            )
+            getRestService()?.createRoute(skRoute)
+        } catch (e: Exception) {
+            log.error("Failed to upload active route to Signal K: ${e.message}")
+        }
     }
 
     fun setSwitch(path: String, state: Boolean) = controlManager.setSwitchState(path, state)

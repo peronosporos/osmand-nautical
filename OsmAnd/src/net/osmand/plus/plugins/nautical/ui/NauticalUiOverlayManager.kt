@@ -303,7 +303,8 @@ class NauticalUiOverlayManager(private val app: OsmandApplication) {
     ) {
         val sm = mobStateMachine ?: return
         if (mobHeaderView?.context == activity) return
-        val viewModel = MobViewModel(app, sm, mobAudioAlertManager)
+        val am = mobAudioAlertManager ?: MobAudioAlertManager(app)
+        val viewModel = MobViewModel(app, sm, am)
         onMobVmCreated(viewModel)
 
         hudManager?.get()?.removeHeader(mobHeaderView)

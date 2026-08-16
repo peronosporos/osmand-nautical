@@ -2,15 +2,14 @@ package net.osmand.plus.plugins.nautical.ui
 
 import net.osmand.plus.activities.MapActivity
 import net.osmand.plus.maneuvers.ManeuverOverlayWidget
-import net.osmand.plus.plugins.nautical.NauticalModule
 import net.osmand.plus.plugins.nautical.maneuvers.ManeuverManager
-import net.osmand.plus.plugins.nautical.maneuvers.ManeuverOverlayWidget
 import net.osmand.plus.settings.backend.ApplicationMode
-import net.osmand.plus.views.mapwidgets.MapWidget
+import net.osmand.plus.settings.enums.ScreenLayoutMode
 import net.osmand.plus.views.mapwidgets.MapWidgetInfo
 import net.osmand.plus.views.mapwidgets.WidgetType
 import net.osmand.plus.views.mapwidgets.WidgetsPanel
 import net.osmand.plus.views.mapwidgets.widgets.ActuatorLoadWidget
+import net.osmand.plus.views.mapwidgets.widgets.MapWidget
 import net.osmand.plus.views.mapwidgets.widgets.MarineTextWidget
 import net.osmand.plus.views.mapwidgets.widgets.NauticalCameraWidget
 import net.osmand.plus.views.mapwidgets.widgets.NauticalCompassWidget
@@ -25,7 +24,6 @@ import net.osmand.plus.views.mapwidgets.widgets.NauticalTelltaleWidget
 import net.osmand.plus.views.mapwidgets.widgets.NauticalVhfWidget
 import net.osmand.plus.views.mapwidgets.widgets.PolarSpeedRatioWidget
 import net.osmand.plus.views.mapwidgets.widgets.TargetVmgWidget
-import net.osmand.plus.views.mapwidgets.ScreenLayoutMode
 
 class NauticalWidgetFactory {
 
@@ -157,9 +155,10 @@ class NauticalWidgetFactory {
             val isNautical = type.id.startsWith("nautical_") || type == WidgetType.MANEUVER_OVERLAY
             if (isNautical && type.isAllowed) {
                 if (widgetInfos.none { it.key == type.id }) {
-                    createMapWidgetForParams(activity, type, null, type.defaultPanel, maneuverManager)?.let { widget ->
+                    val wPanel = type.defaultPanel ?: WidgetsPanel.LEFT
+                    createMapWidgetForParams(activity, type, null, wPanel, maneuverManager)?.let { widget: MapWidget ->
                         widgetInfos.add(object : MapWidgetInfo(
-                            type.id, widget, 0, 0, type.titleId, null, 0, 0, type.defaultPanel
+                            type.id, widget, 0, 0, type.titleId, null, 0, 0, wPanel
                         ) {
                             override fun getUpdatedPanel(appMode: ApplicationMode, layoutMode: ScreenLayoutMode?): WidgetsPanel {
                                 if (type == WidgetType.MANEUVER_OVERLAY) return WidgetsPanel.BOTTOM
