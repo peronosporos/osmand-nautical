@@ -96,7 +96,7 @@ class NauticalAisLayer(context: Context) : OsmandMapLayer(context), ContextMenuL
         super.destroyLayer()
     }
 
-    override fun cleanupResources() {
+    public override fun cleanupResources() {
         val mapRenderer = mapRenderer
         if ((mapRenderer != null) && (markersCollection != null) && (vectorLinesCollection != null)) {
             markersCollection?.removeAllMarkers()
@@ -108,6 +108,10 @@ class NauticalAisLayer(context: Context) : OsmandMapLayer(context), ContextMenuL
         objectDrawables.clear()
         lastRenderZoom = -1
         lastRenderRefreshTimeMs = 0
+    }
+
+    fun clearAisData() {
+        cleanupResources()
     }
 
     fun onAisObjectReceived(ais: AisObject) {

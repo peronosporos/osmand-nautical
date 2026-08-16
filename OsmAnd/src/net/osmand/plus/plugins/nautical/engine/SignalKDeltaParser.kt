@@ -735,87 +735,75 @@ class SignalKDeltaParser(
 
         when (path) {
             SignalKPaths.STEERING_AUTOPILOT_STATE -> {
-                val raw = valueObj?.toString() ?: ""
-                val normalized = when (raw.lowercase(Locale.US)) {
-                    "auto", "compass", "heading" -> "compass"
-                    "wind", "wind vane", "vane" -> "wind"
-                    "route", "nav", "track", "waypoint" -> "route"
-                    "gps", "true" -> "gps"
-                    "standby", "off", "manual" -> "standby"
-                    else -> raw
+                val raw = (valueObj as? String ?: "standby").uppercase(Locale.US)
+                val normalized = when (raw) {
+                    "ROUTE", "TRACK" -> "track"
+                    else -> raw.lowercase(Locale.US)
                 }
-                var nextPendingMode = state.pendingAutopilotMode
-                if (nextPendingMode != null && nextPendingMode.equals(normalized, ignoreCase = true)) {
+                var nextPendingMode = state.pendingAutopilotState
+                if (normalized == nextPendingMode?.lowercase(Locale.US)) {
                     nextPendingMode = null
                 }
-                state = state.copy(autopilotState = normalized, pendingAutopilotMode = nextPendingMode)
+                state = state.copy(autopilotState = normalized, pendingAutopilotState = nextPendingMode)
                 updated = true
             }
-            SignalKPaths.STEERING_AUTOPILOT_TARGET_HEADING_TRUE -> {
+            SignalKPaths.STEERING_AUTOPILOT_DUTY_CYCLE -> {
                 if (!value.isNaN()) {
-                    var nextPendingHeading = state.pendingAutopilotHeading
-                    if (nextPendingHeading != null && Math.abs(nextPendingHeading - value) < 0.01) {
-                        nextPendingHeading = null
-                    }
-                    state = state.copy(autopilotTargetHeading = value, pendingAutopilotHeading = nextPendingHeading)
+                    historyManager.getBuffer(path).add(Pair(value, now))
                     updated = true
                 }
             }
-            SignalKPaths.STEERING_AUTOPILOT_TARGET_HEADING_MAG -> {
+            SignalKPaths.STEERING_ACTUATOR_CURRENT -> {
                 if (!value.isNaN()) {
-                    var nextPendingHeading = state.pendingAutopilotHeading
-                    if (nextPendingHeading != null && Math.abs(nextPendingHeading - value) < 0.01) {
-                        nextPendingHeading = null
-                    }
-                    state = state.copy(autopilotTargetHeading = value, pendingAutopilotHeading = nextPendingHeading)
-                    updated = true
-                }
-            }
-            SignalKPaths.STEERING_AUTOPILOT_TARGET_WIND_ANGLE -> {
-                if (!value.isNaN()) {
-                    state = state.copy(autopilotTargetWindAngle = value)
-                    updated = true
-                }
-            }
-            SignalKPaths.STEERING_AUTOPILOT_GAIN -> {
-                if (!value.isNaN()) {
-                    val level = value.toInt()
-                    state = state.copy(rudderGainLevel = level)
+                    historyManager.getBuffer(path).add(Pair(value, now))
                     updated = true
                 }
             }
             SignalKPaths.STEERING_RUDDER_ANGLE -> {
                 if (!value.isNaN()) {
-                    state = state.copy(rudderAngle = value)
+                    state = state.copy(rudderAngle = value, timeOfRudderFix = now)
                     updated = true
                 }
             }
-            SignalKPaths.STEERING_RUDDER_TARGET_ANGLE -> {
+            SignalKPaths.STEERING_AUTOPILOT_TARGET_HDG_TRUE -> {
                 if (!value.isNaN()) {
-                    state = state.copy(rudderTargetAngle = value)
+                    var nextPendingHeading = state.pendingTargetHeading
+                    if (nextPendingHeading != null && Math.abs(value - nextPendingHeading) < 0.02) {
+                        nextPendingHeading = null
+                    }
+                    state = state.copy(autopilotHeadingSet = value, pendingTargetHeading = nextPendingHeading)
                     updated = true
                 }
             }
-            SignalKPaths.STEERING_AUTOPILOT_DUTY_CYCLE -> {
+            SignalKPaths.STEERING_AUTOPILOT_TARGET_HDG_MAG -> {
                 if (!value.isNaN()) {
-                    historyManager.getBuffer(path).add(Pair(value, now))
-                    state = state.copy(actuatorDutyCycle = value)
+                    state = state.copy(autopilotHeadingSet = value)
+                    updated = true
+                }
+            }
+            SignalKPaths.STEERING_AUTOPILOT_TARGET_AWA -> {
+                if (!value.isNaN()) {
+                    state = state.copy(autopilotWindAngleSet = value)
                     updated = true
                 }
             }
             else -> {
-                if (path.startsWith(SignalKPaths.PYPILOT_CONFIG_PREFIX)) {
-                    val field = path.removePrefix(SignalKPaths.PYPILOT_CONFIG_PREFIX)
-                    state = updatePypilotConfig(state, field, valueObj)
-                    updated = true
-                } else if (path.startsWith(SignalKPaths.PYPILOT_SERVO_PREFIX)) {
-                    val field = path.removePrefix(SignalKPaths.PYPILOT_SERVO_PREFIX)
-                    state = updatePypilotServo(state, field, valueObj)
-                    updated = true
-                } else if (path.startsWith(SignalKPaths.PYPILOT_CALIBRATION_PREFIX)) {
-                    val field = path.removePrefix(SignalKPaths.PYPILOT_CALIBRATION_PREFIX)
-                    state = updatePypilotCalibration(state, field, valueObj)
-                    updated = true
+                when {
+                    path.startsWith(SignalKPaths.STEERING_AUTOPILOT_CONFIG_PREFIX) -> {
+                        val field = path.removePrefix(SignalKPaths.STEERING_AUTOPILOT_CONFIG_PREFIX)
+                        state = updatePypilotConfig(state, field, valueObj)
+                        updated = true
+                    }
+                    path.startsWith(SignalKPaths.STEERING_AUTOPILOT_SERVO_PREFIX) -> {
+                        val field = path.removePrefix(SignalKPaths.STEERING_AUTOPILOT_SERVO_PREFIX)
+                        state = updatePypilotServo(state, field, valueObj)
+                        updated = true
+                    }
+                    path.startsWith(SignalKPaths.STEERING_AUTOPILOT_CALIBRATION_PREFIX) -> {
+                        val field = path.removePrefix(SignalKPaths.STEERING_AUTOPILOT_CALIBRATION_PREFIX)
+                        state = updatePypilotCalibration(state, field, valueObj)
+                        updated = true
+                    }
                 }
             }
         }
@@ -876,15 +864,10 @@ class SignalKDeltaParser(
                                 updateEngine(state, instance) { it.copy(boostPressure = value) }
                             } else state
                         }
-                        "engineLoad" -> {
+                        "engineLoad", "load" -> {
                             if (!value.isNaN()) {
                                 historyManager.getBuffer(path).add(Pair(value, now))
-                                updateEngine(state, instance) { it.copy(engineLoad = value) }
-                            } else state
-                        }
-                        "coolantPressure" -> {
-                            if (!value.isNaN()) {
-                                updateEngine(state, instance) { it.copy(coolantPressure = value) }
+                                updateEngine(state, instance) { it.copy(load = value) }
                             } else state
                         }
                         "exhaustTemperature" -> {
