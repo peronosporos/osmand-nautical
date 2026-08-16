@@ -162,6 +162,6 @@ class SignalKEnginePipelineTest {
         assertEquals(244010952, target.mmsi)
         assertEquals(52.3702, target.position?.latitude ?: 0.0, 0.0001)
         assertEquals(4.8952, target.position?.longitude ?: 0.0, 0.0001)
-        assertEquals("TEST_VESSEL", target.name)
+        assertEquals("TEST_VESSEL", target.shipName)
     }
 }

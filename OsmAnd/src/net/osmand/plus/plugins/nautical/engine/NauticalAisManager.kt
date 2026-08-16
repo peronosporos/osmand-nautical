@@ -12,11 +12,15 @@ import net.osmand.plus.R
 import net.osmand.plus.plugins.nautical.NauticalPlugin
 import net.osmand.plus.plugins.nautical.audio.AlarmType
 import net.osmand.plus.plugins.nautical.audio.NauticalAudioArbiter
+import net.osmand.plus.plugins.nautical.utils.TemporalUtils
 import net.osmand.shared.aistracker.AisLocation
 import net.osmand.shared.aistracker.AisObject
 import net.osmand.shared.aistracker.AisObjectConstants
 import net.osmand.shared.aistracker.AisTrackerMath
+import org.json.JSONObject
 import java.util.Collections
+import java.util.Locale
+import kotlin.math.absoluteValue
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
@@ -168,6 +172,238 @@ class NauticalAisManager(private val app: OsmandApplication) {
         objects.clear()
     }
 
+    fun updateVessel(context: String, updateObj: JSONObject) {
+        val numericMmsi = resolveMmsiFromContext(context) ?: return
+        val target = objects.getOrPut(numericMmsi) {
+            val type = context.substringBefore(".")
+            val msgType = when (type) {
+                "aircraft" -> 9
+                "atons" -> 21
+                "sar" -> 14
+                else -> 1 // Default vessel
+            }
+            AisObject(numericMmsi, msgType, AisObjectConstants.INVALID_LAT, AisObjectConstants.INVALID_LON)
+        }
+
+        // Source Detection (APRS / Meshtastic)
+        val sourceObj = updateObj.optJSONObject("source")
+        val sourceStr = if (sourceObj != null) {
+            sourceObj.optString("label", sourceObj.optString("src", ""))
+        } else {
+            updateObj.optString("source", "")
+        }
+        if (sourceStr.lowercase(Locale.US).contains("aprs") || sourceStr.lowercase(Locale.US).contains("meshtastic")) {
+            markRemoteVessel(numericMmsi)
+        }
+
+        val values = updateObj.optJSONArray("values")
+        val timestampStr = updateObj.optString("timestamp", "")
+        val now = if (timestampStr.isNotEmpty()) TemporalUtils.parseIso8601(timestampStr) else System.currentTimeMillis()
+
+        if (values != null) {
+            for (i in 0 until values.length()) {
+                val valObj = values.getJSONObject(i)
+                val path = valObj.optString("path")
+                val value = valObj.opt("value")
+                if (path == SignalKPaths.AIS_THREAT_LEVEL) {
+                    val level = (value as? Number)?.toInt() ?: 0
+                    updateAisThreatLevel(numericMmsi, level)
+                } else {
+                    updateAisTargetInternal(target, path, value, now)
+                }
+            }
+        }
+
+        onAisObjectReceived(target)
+    }
+
+    internal fun resolveMmsiFromContext(context: String): Int? {
+        val type = context.substringBefore(".")
+        val rawId = context.substringAfter("$type.", "")
+        if (rawId.isEmpty()) return null
+
+        return if (rawId.startsWith("urn:mrn:imo:mmsi:")) {
+            rawId.substringAfter("urn:mrn:imo:mmsi:").toIntOrNull() ?: (rawId.hashCode().absoluteValue % 1000000000)
+        } else if (rawId.startsWith("urn:mrn:signalk:uuid:")) {
+            (rawId.hashCode() and 0x7FFFFFFF)
+        } else {
+            rawId.toIntOrNull() ?: (rawId.hashCode().absoluteValue % 1000000000)
+        }
+    }
+
+    private fun updateAisTargetInternal(target: AisObject, path: String, valueObj: Any?, now: Long) {
+        // Temporal check to prevent out-of-order AIS updates from overwriting newer data
+        if (now > 0 && now < target.lastUpdate) {
+            return
+        }
+
+        val effectiveMsgType = if (target.msgType != 0) target.msgType else 1
+        val currentLat = target.position?.latitude ?: Double.NaN
+        val currentLon = target.position?.longitude ?: Double.NaN
+
+        when (path) {
+            "" -> {
+                var name = ""
+                var vName = ""
+                var type = -1
+                if (valueObj is JSONObject) {
+                    name = valueObj.optString("name", "")
+                    vName = valueObj.optString("vesselName", "")
+                    type = valueObj.optInt("vesselType", -1)
+                } else if (valueObj is Map<*, *>) {
+                    name = valueObj["name"]?.toString() ?: ""
+                    vName = valueObj["vesselName"]?.toString() ?: ""
+                    type = (valueObj["vesselType"] as? Number)?.toInt() ?: -1
+                }
+                val shipName = name.ifEmpty { vName.ifEmpty { target.shipName } }
+                val updated = AisObject(
+                    target.mmsi, effectiveMsgType,
+                    target.imo, target.callSign, shipName,
+                    if (type != -1) type else target.shipType,
+                    target.dimensionToBow, target.dimensionToStern,
+                    target.dimensionToPort, target.dimensionToStarboard,
+                    target.draught, target.destination,
+                    target.etaMon, target.etaDay, target.etaHour, target.etaMin
+                )
+                target.set(updated)
+                target.lastUpdate = now
+            }
+            "name", "vesselName" -> {
+                val shipName = valueObj?.toString()
+                val updated = AisObject(
+                    target.mmsi, effectiveMsgType,
+                    target.imo, target.callSign, shipName,
+                    target.shipType,
+                    target.dimensionToBow, target.dimensionToStern,
+                    target.dimensionToPort, target.dimensionToStarboard,
+                    target.draught, target.destination,
+                    target.etaMon, target.etaDay, target.etaHour, target.etaMin
+                )
+                target.set(updated)
+                target.lastUpdate = now
+            }
+            "design.type" -> {
+                val type = when (valueObj) {
+                    is JSONObject -> valueObj.optInt("id", -1)
+                    is Map<*, *> -> (valueObj["id"] as? Number)?.toInt() ?: -1
+                    is Number -> valueObj.toInt()
+                    else -> -1
+                }
+                if (type != -1) {
+                    val updated = AisObject(
+                        target.mmsi, effectiveMsgType,
+                        target.imo, target.callSign, target.shipName,
+                        type,
+                        target.dimensionToBow, target.dimensionToStern,
+                        target.dimensionToPort, target.dimensionToStarboard,
+                        target.draught, target.destination,
+                        target.etaMon, target.etaDay, target.etaHour, target.etaMin
+                    )
+                    target.set(updated)
+                    target.lastUpdate = now
+                }
+            }
+            SignalKPaths.NAV_POSITION -> {
+                var lat = Double.NaN
+                var lon = Double.NaN
+                if (valueObj is JSONObject) {
+                    lat = valueObj.optDouble("latitude", Double.NaN)
+                    lon = valueObj.optDouble("longitude", Double.NaN)
+                } else if (valueObj is Map<*, *>) {
+                    lat = (valueObj["latitude"] as? Number)?.toDouble() ?: Double.NaN
+                    lon = (valueObj["longitude"] as? Number)?.toDouble() ?: Double.NaN
+                }
+                if (MarineStateConstants.isValidLat(lat) && MarineStateConstants.isValidLon(lon)) {
+                    val updated = AisObject(
+                        target.mmsi, effectiveMsgType, target.timeStamp, target.navStatus, target.manInd,
+                        target.heading, target.cog, target.sog, lat, lon, target.rot
+                    )
+                    target.set(updated)
+                    target.lastUpdate = now
+                }
+            }
+            SignalKPaths.NAV_SPEED_OVER_GROUND -> {
+                val sogMs = (valueObj as? Number)?.toDouble() ?: Double.NaN
+                if (MarineStateConstants.isValidSpeed(sogMs)) {
+                    val sogKnots = SignalKUnitConverter.msToKnots(sogMs)
+                    val lat = if (MarineStateConstants.isValidLat(currentLat)) currentLat else AisObjectConstants.INVALID_LAT
+                    val lon = if (MarineStateConstants.isValidLon(currentLon)) currentLon else AisObjectConstants.INVALID_LON
+                    val updated = AisObject(
+                        target.mmsi, effectiveMsgType, target.timeStamp, target.navStatus, target.manInd, target.heading,
+                        target.cog, sogKnots, lat, lon, target.rot
+                    )
+                    target.set(updated)
+                    target.lastUpdate = now
+                }
+            }
+            SignalKPaths.NAV_COURSE_OVER_GROUND -> {
+                val cogRad = (valueObj as? Number)?.toDouble() ?: Double.NaN
+                if (!cogRad.isNaN()) {
+                    val cogDeg = SignalKUnitConverter.radToDeg(cogRad)
+                    val lat = if (MarineStateConstants.isValidLat(currentLat)) currentLat else AisObjectConstants.INVALID_LAT
+                    val lon = if (MarineStateConstants.isValidLon(currentLon)) currentLon else AisObjectConstants.INVALID_LON
+                    val updated = AisObject(
+                        target.mmsi, effectiveMsgType, target.timeStamp, target.navStatus, target.manInd, target.heading,
+                        cogDeg, target.sog, lat, lon, target.rot
+                    )
+                    target.set(updated)
+                    target.lastUpdate = now
+                }
+            }
+            SignalKPaths.NAV_HEADING_TRUE -> {
+                val hdgRad = (valueObj as? Number)?.toDouble() ?: Double.NaN
+                if (!hdgRad.isNaN()) {
+                    val hdgDeg = SignalKUnitConverter.radToDeg(hdgRad).toInt()
+                    val lat = if (MarineStateConstants.isValidLat(currentLat)) currentLat else AisObjectConstants.INVALID_LAT
+                    val lon = if (MarineStateConstants.isValidLon(currentLon)) currentLon else AisObjectConstants.INVALID_LON
+                    val updated = AisObject(
+                        target.mmsi, effectiveMsgType, target.timeStamp, target.navStatus, target.manInd, hdgDeg,
+                        target.cog, target.sog, lat, lon, target.rot
+                    )
+                    target.set(updated)
+                    target.lastUpdate = now
+                }
+            }
+            SignalKPaths.NAV_DESTINATION -> {
+                val dest = valueObj?.toString()
+                val updated = AisObject(
+                    target.mmsi, effectiveMsgType,
+                    target.imo, target.callSign, target.shipName,
+                    target.shipType,
+                    target.dimensionToBow, target.dimensionToStern,
+                    target.dimensionToPort, target.dimensionToStarboard,
+                    target.draught, dest,
+                    target.etaMon, target.etaDay, target.etaHour, target.etaMin
+                )
+                target.set(updated)
+                target.lastUpdate = now
+            }
+            SignalKPaths.NAV_STATE -> {
+                val statusStr = valueObj?.toString() ?: ""
+                val status = when (statusStr.lowercase(Locale.US)) {
+                    "under way using engine", "motoring" -> 0
+                    "at anchor" -> 1
+                    "not under command" -> 2
+                    "restricted manoeuverability" -> 3
+                    "constrained by her draught" -> 4
+                    "moored" -> 5
+                    "aground" -> 6
+                    "engaged in fishing" -> 7
+                    "under way sailing", "sailing" -> 8
+                    else -> target.navStatus
+                }
+                val lat = if (MarineStateConstants.isValidLat(currentLat)) currentLat else AisObjectConstants.INVALID_LAT
+                val lon = if (MarineStateConstants.isValidLon(currentLon)) currentLon else AisObjectConstants.INVALID_LON
+                val updated = AisObject(
+                    target.mmsi, effectiveMsgType, target.timeStamp, status, target.manInd, target.heading,
+                    target.cog, target.sog, lat, lon, target.rot
+                )
+                target.set(updated)
+                target.lastUpdate = now
+            }
+        }
+    }
+
     fun onAisObjectReceived(ais: AisObject) {
         val mmsi = ais.mmsi
         val obj = objects.getOrPut(mmsi) { AisObject(ais) }
@@ -205,6 +441,8 @@ class NauticalAisManager(private val app: OsmandApplication) {
     fun getAisExtras(mmsi: Int): AisExtras = aisExtras[mmsi] ?: AisExtras()
 
     fun getAisObjects(): List<AisObject> = objects.values.toList()
+
+    fun getAisObject(mmsi: Int): AisObject? = objects[mmsi]
 
     fun removeLostObjects() {
         val plugin = NauticalPlugin.getInstance() ?: return
