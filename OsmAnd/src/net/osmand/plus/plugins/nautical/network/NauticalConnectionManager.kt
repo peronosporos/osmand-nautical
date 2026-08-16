@@ -74,7 +74,7 @@ class NauticalConnectionManager(
         builder.connectTimeout(java.time.Duration.ofSeconds(5))
         builder.readTimeout(java.time.Duration.ofSeconds(10))
         builder.writeTimeout(java.time.Duration.ofSeconds(10))
-        builder.pingInterval(java.time.Duration.ofSeconds(30))
+        builder.pingInterval(15, java.util.concurrent.TimeUnit.SECONDS)
 
         builder.addInterceptor { chain ->
             val token = app.settings.NAUTICAL_SIGNAL_K_AUTH_TOKEN.get()

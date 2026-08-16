@@ -20,6 +20,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import net.osmand.PlatformUtil
+import net.osmand.data.LatLon
 import net.osmand.plus.OsmandApplication
 import net.osmand.plus.plugins.nautical.NauticalPlugin
 import net.osmand.plus.plugins.nautical.audio.AlarmType
@@ -140,6 +141,7 @@ class SignalKEngine(
 
     @Volatile
     private var lastRealtimeMessageTimestamp: Long = 0
+    private var lastVesselStateRefreshTime: Long = 0
 
     init {
         val settings = app.settings
@@ -270,6 +272,86 @@ class SignalKEngine(
 
     fun refreshResources() {
         resourceManager.startSync()
+        refreshVesselState()
+    }
+
+    fun refreshVesselState() {
+        val now = System.currentTimeMillis()
+        if (now - lastVesselStateRefreshTime < 30000) {
+            log.debug("Nautical: Skipping redundant vessel state refresh (cooldown active).")
+            return
+        }
+        lastVesselStateRefreshTime = now
+
+        engineScope.launch(Dispatchers.IO) {
+            try {
+                val restService = getRestService() ?: return@launch
+                val response = restService.getVesselSelf()
+                if (response.isSuccessful) {
+                    val body = response.body()
+                    if (body != null) {
+                        val res = deltaParser.processVesselTree(body, dataBroker.marineState.value)
+                        if (res.second) {
+                            finalizeAndNotifyState(res.first)
+                        }
+                        log.info("Nautical: Immediate background state refresh completed via REST.")
+                    }
+                }
+
+                // Course API Reconciliation (v2)
+                val courseResponse = restService.getCourse()
+                if (courseResponse.isSuccessful) {
+                    courseResponse.body()?.let { course ->
+                        routeTracker.processCourseObject(course) { nextPt ->
+                            dataBroker.updateState { it.copy(serverNextPoint = LatLon(nextPt.latitude, nextPt.longitude)) }
+                        }
+                    }
+                }
+
+                // History backfill if supported
+                if (capabilityManager?.capabilities?.value?.hasHistory == true) {
+                    fetchHistoryFromServer(restService)
+                }
+            } catch (e: Exception) {
+                log.error("Failed to refresh vessel state via REST: ${e.message}")
+            }
+        }
+    }
+
+    private suspend fun fetchHistoryFromServer(restService: SignalKRestService) {
+        try {
+            val paths = listOf(
+                SignalKPaths.ENV_DEPTH_BELOW_TRANSDUCER,
+                SignalKPaths.NAV_SPEED_OVER_GROUND,
+                SignalKPaths.ENV_WIND_SPEED_TRUE,
+                SignalKPaths.ENV_WIND_DIRECTION_TRUE
+            ).joinToString(",")
+
+            val from = TemporalUtils.formatIso8601(System.currentTimeMillis() - 3600000) // Last hour
+            val response = restService.getHistoryValues(paths, from)
+            if (response.isSuccessful) {
+                val body = response.body() ?: return
+                // Simple backfill: Signal K history format can be complex, usually { path: [ { v, t } ] }
+                body.forEach { (path, values) ->
+                    if (values is List<*>) {
+                        val buffer = historyManager.getBuffer(path)
+                        values.forEach { item ->
+                            if (item is Map<*, *>) {
+                                val v = (item["v"] as? Number)?.toDouble()
+                                val tStr = item["t"] as? String
+                                if (v != null && tStr != null) {
+                                    val t = TemporalUtils.parseIso8601(tStr)
+                                    if (t > 0) buffer.add(Pair(v, t))
+                                }
+                            }
+                        }
+                    }
+                }
+                log.info("Nautical: History backfill completed for $paths")
+            }
+        } catch (e: Exception) {
+            log.debug("History backfill failed (ignoring): ${e.message}")
+        }
     }
 
     suspend fun fetchRoutesFromServer(): Map<String, SignalKRoute>? = withContext(Dispatchers.IO) {
@@ -395,6 +477,19 @@ class SignalKEngine(
 
     fun setPowerSaveMode(enabled: Boolean) {
         historyManager.setPowerSaveMode(enabled)
+        if (enabled) {
+            cancelPendingBatchJobs()
+        } else {
+            startMessageProcessing()
+        }
+    }
+
+    fun cancelPendingBatchJobs() {
+        messageProcessingJob?.cancel()
+        messageProcessingJob = null
+        while (messageChannel.tryReceive().isSuccess) {
+            // Drain channel to prevent processing stale messages
+        }
     }
 
     fun addTrajectoryPoint(lat: Double, lon: Double) {
@@ -410,6 +505,7 @@ class SignalKEngine(
     }
 
     fun handleIncomingMessage(jsonMessage: String) {
+        if (historyManager.powerSaveMode) return
         log.debug("SignalK Ingress: $jsonMessage")
         sessionManager.lastUpdateTimestamp = TemporalUtils.now()
         lastRealtimeMessageTimestamp = System.currentTimeMillis()
@@ -422,6 +518,7 @@ class SignalKEngine(
     }
 
     fun handleDelta(delta: DeltaMessage) {
+        if (historyManager.powerSaveMode) return
         sessionManager.resetWatchdog(
             onNotifyListeners = { notifyListeners(it) },
             onUpdatePulse = { updatePulseLifecycle() },
@@ -511,7 +608,8 @@ class SignalKEngine(
     }
 
     fun loadRoute(route: List<Pair<Double, Double>>) {
-        routeTracker.loadRoute(route)
+        val current = dataBroker.marineState.value
+        routeTracker.loadRoute(route, current.latitude, current.longitude)
     }
 
     fun clearRoute() {

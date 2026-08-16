@@ -45,21 +45,18 @@ class NauticalHelmArbitrator private constructor(private val app: OsmandApplicat
      */
     @Synchronized
     fun acquireLock(priority: Int, maneuverName: String) {
-        if (priority < currentPriority.get()) {
-            // Overriding lower priority: Push current to stack
+        if (priority <= currentPriority.get()) {
+            // Overriding lower priority OR adding same priority: Push current to stack
+            // Bug #12 Fix: Allow same-priority recursive locks to prevent "sticky" rejection during rapid nudges
             priorityStack.push(Pair(currentPriority.get(), activeManeuverName ?: "Unknown"))
             currentPriority.set(priority)
             activeManeuverName = maneuverName
             resetTimeout()
-        } else if (priority > currentPriority.get()) {
+        } else {
             // Rejected: higher priority already active
             val msg = "Helm Locked by $activeManeuverName"
             notifyRejection(msg)
             throw HelmLockedException(currentPriority.get(), msg)
-        } else {
-            // Same priority, just update name and reset timeout
-            activeManeuverName = maneuverName
-            resetTimeout()
         }
     }
 

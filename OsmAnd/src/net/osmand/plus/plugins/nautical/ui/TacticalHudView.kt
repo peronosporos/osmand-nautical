@@ -114,6 +114,20 @@ class TacticalHudView @JvmOverloads constructor(
         ViewCompat.setAccessibilityDelegate(this, delegate)
     }
 
+    private var viewScope: kotlinx.coroutines.CoroutineScope? = null
+
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
+        viewScope?.cancel()
+        viewScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main + kotlinx.coroutines.SupervisorJob())
+    }
+
+    override fun onDetachedFromWindow() {
+        super.onDetachedFromWindow()
+        viewScope?.cancel()
+        viewScope = null
+    }
+
     override fun setCompactMode(enabled: Boolean) {
         val p = if (enabled) 2f else 6f
         val px = (p * context.resources.displayMetrics.density).toInt()
@@ -123,7 +137,8 @@ class TacticalHudView @JvmOverloads constructor(
     private fun resetWatchdog() {
         val plugin = NauticalPlugin.getInstance() ?: return
         val engine = NauticalPlugin.engine ?: return
-        plugin.pluginScope?.launch {
+        val scope = viewScope ?: plugin.pluginScope ?: return
+        scope.launch {
             val rest = engine.getRestService()
             if (rest != null) {
                 try {

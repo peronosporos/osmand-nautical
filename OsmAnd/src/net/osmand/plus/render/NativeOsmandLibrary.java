@@ -41,8 +41,18 @@ public class NativeOsmandLibrary extends NativeLibrary {
 						log.debug("Initializing rendering rules storage..."); //$NON-NLS-1$
 						initRenderingRulesStorage(storage);
 						isNativeSupported = true;
+					} catch (UnsatisfiedLinkError e) {
+						log.warn("Native OsmAnd library (libosmand.so) not available on this device/flavor, falling back to Java rendering: " + e.getMessage());
+						isNativeSupported = false;
+						library = null;
+					} catch (Exception e) {
+						log.error("Exception initializing NativeOsmandLibrary, falling back to Java rendering", e);
+						isNativeSupported = false;
+						library = null;
 					} catch (Throwable e) {
-						log.error("Failed to load native library", e); //$NON-NLS-1$
+						log.error("Failed to load native library, falling back to Java rendering", e); //$NON-NLS-1$
+						isNativeSupported = false;
+						library = null;
 					}
 				}
 			}

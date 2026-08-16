@@ -89,14 +89,10 @@ class AutopilotController(
             controllerScope.launch {
                 b.marineState.collect { state ->
                     if ((state.pendingCommandPath == null) && (state.pendingTargetHeading == null) && (state.pendingAutopilotState == null)) {
-                        // All commands reconciled, we can cancel the timeout job early
-                        // The Helm Lock is released inside the reconciliation job, 
-                        // so we might need a way to trigger it early.
+                        // All commands reconciled, cancel the timeout job.
+                        // The lock release is handled in the reconciliation job's finally block.
                         if (reconciliationJob?.isActive == true) {
                              reconciliationJob?.cancel()
-                             // The lock was held for reconciliation, but since we cancelled the job, 
-                             // we need to make sure the lock is released.
-                             // Actually, it's safer to let the job handle it or add a separate mechanism.
                         }
                     }
                 }
@@ -306,14 +302,13 @@ class AutopilotController(
                     vibrateShort()
                 }
             } finally {
-                // ITEM 1 & 5 FIX: Avoid releasing lock if cancelled by a subsequent command.
-                // Force release tactical locks on actual timeout or completion to avoid "sticky" hangs.
-                if (isActive) { 
-                    withContext(NonCancellable) {
-                        priority?.let { 
-                            val force = (priority == NauticalHelmArbitrator.PRIORITY_TACTICAL_MANEUVER)
-                            NauticalHelmArbitrator.getInstance(app).releaseLock(it, force = force) 
-                        }
+                // LOCK RECONCILIATION FIX: Use NonCancellable to ensure lock release even on early success (cancellation)
+                withContext(NonCancellable) {
+                    priority?.let { 
+                        // Separate standalone tactical locks from maneuver-managed locks (owned by ManeuverEngine).
+                        val force = (priority == NauticalHelmArbitrator.PRIORITY_TACTICAL_MANEUVER) && 
+                                   (path.contains("actions") || path.contains("williamson") || path.contains("anderson") || path.contains("scharnow"))
+                        NauticalHelmArbitrator.getInstance(app).releaseLock(it, force = force) 
                     }
                 }
             }

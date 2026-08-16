@@ -23,12 +23,12 @@ class SignalKRouteTracker {
 
     private var lastFollowingUpdateTimestamp: Long = 0
 
-    fun loadRoute(route: List<Pair<Double, Double>>) {
+    fun loadRoute(route: List<Pair<Double, Double>>, startLat: Double? = null, startLon: Double? = null) {
         routeQueue.clear()
         routeQueue.addAll(route)
         isFollowingRoute = true
-        lastWaypointLat = null
-        lastWaypointLon = null
+        lastWaypointLat = startLat
+        lastWaypointLon = startLon
     }
 
     fun clearRoute() {

@@ -283,37 +283,13 @@ class SignalKDataBroker(private val settings: OsmandSettings? = null) {
         speedThreshold = settings.NAUTICAL_EMA_SPEED_THRESHOLD_MS.get().toDouble()
         
         // Task: Reactive restart of staleness monitoring if watchdog timeout changed
-        startStalenessMonitoring()
+        // Consolidated into SignalKSessionManager
     }
 
     private var deadReckoningJob: Job? = null
-    private var stalenessJob: Job? = null
 
     init {
         startDeadReckoning()
-        startStalenessMonitoring()
-    }
-
-    private fun startStalenessMonitoring() {
-        stalenessJob?.cancel()
-        stalenessJob = scope.launch {
-            while (isActive) {
-                delay(1000.milliseconds)
-                val now = TemporalUtils.now()
-                val timeoutMs = (settings?.NAUTICAL_WATCHDOG_TIMEOUT_SEC?.get() ?: 10) * 1000L
-                
-                _marineState.update { state ->
-                    val stale = state.timestamps.filter { (_, ts) ->
-                        (now - ts) > timeoutMs
-                    }.keys
-                    if (stale != state.stalePaths) {
-                        state.copy(stalePaths = stale)
-                    } else {
-                        state
-                    }
-                }
-            }
-        }
     }
 
     private fun startDeadReckoning() {

@@ -235,25 +235,37 @@ class NauticalAudioArbiter private constructor(private val app: OsmandApplicatio
                     .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
                     .build()
 
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    if (audioFocusRequest.get() == null) {
-                        val request = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT)
-                            .setAudioAttributes(attributes)
-                            .setAcceptsDelayedFocusGain(true)
-                            .setOnAudioFocusChangeListener(focusChangeListener)
-                            .build()
-                        audioFocusRequest.set(request)
-                        audioManager.requestAudioFocus(request)
+                try {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        if (audioFocusRequest.get() == null) {
+                            val request = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT)
+                                .setAudioAttributes(attributes)
+                                .setAcceptsDelayedFocusGain(true)
+                                .setOnAudioFocusChangeListener(focusChangeListener)
+                                .build()
+                            audioFocusRequest.set(request)
+                            audioManager.requestAudioFocus(request)
+                        }
+                    } else {
+                        @Suppress("DEPRECATION")
+                        audioManager.requestAudioFocus(focusChangeListener, AudioManager.STREAM_ALARM, AudioManager.AUDIOFOCUS_GAIN_TRANSIENT)
                     }
-                } else {
-                    @Suppress("DEPRECATION")
-                    audioManager.requestAudioFocus(focusChangeListener, AudioManager.STREAM_ALARM, AudioManager.AUDIOFOCUS_GAIN_TRANSIENT)
+                } catch (e: SecurityException) {
+                    log.warn("NauticalAudioArbiter: SELinux/SecurityException requesting audio focus", e)
+                } catch (e: IllegalStateException) {
+                    log.warn("NauticalAudioArbiter: IllegalStateException requesting audio focus", e)
+                } catch (e: Exception) {
+                    log.warn("NauticalAudioArbiter: Failed to request audio focus", e)
                 }
 
-                if (previousAlarmVolume == -1) {
-                    previousAlarmVolume = audioManager.getStreamVolume(AudioManager.STREAM_ALARM)
+                try {
+                    if (previousAlarmVolume == -1) {
+                        previousAlarmVolume = audioManager.getStreamVolume(AudioManager.STREAM_ALARM)
+                    }
+                    handleVolumeConstraints(type)
+                } catch (e: Exception) {
+                    log.warn("NauticalAudioArbiter: Failed to get/set stream volume", e)
                 }
-                handleVolumeConstraints(type)
 
                 if (isEmergency(type)) {
                     try {
@@ -263,6 +275,8 @@ class NauticalAudioArbiter private constructor(private val app: OsmandApplicatio
                             audioManager.isSpeakerphoneOn = true
                             log.info("NauticalAudioArbiter: Forcing loudspeaker for emergency ${type.name}")
                         }
+                    } catch (e: SecurityException) {
+                        log.warn("NauticalAudioArbiter: SELinux/SecurityException setting speakerphone for ${type.name}", e)
                     } catch (e: Exception) {
                         log.error("NauticalAudioArbiter: Failed to set speakerphone for ${type.name}", e)
                     }
@@ -393,14 +407,18 @@ class NauticalAudioArbiter private constructor(private val app: OsmandApplicatio
                         tg.startTone(ToneGenerator.TONE_PROP_BEEP2, 200)
                     }
                 }
+            } catch (e: SecurityException) {
+                log.warn("NauticalAudioArbiter: SELinux/SecurityException in fallback tone for ${type.name}", e)
+            } catch (e: IllegalStateException) {
+                log.warn("NauticalAudioArbiter: IllegalStateException in fallback tone for ${type.name}", e)
             } catch (e: Exception) {
                 log.error("NauticalAudioArbiter: Fallback tone failed for ${type.name}", e)
+            } catch (t: Throwable) {
+                log.error("NauticalAudioArbiter: Throwable in fallback tone for ${type.name}", t)
             } finally {
                 try {
                     tg?.release()
-                } catch (e: Exception) {
-                    log.error("NauticalAudioArbiter: Failed to release local ToneGenerator", e)
-                }
+                } catch (_: Throwable) {}
             }
         }
     }
@@ -430,6 +448,10 @@ class NauticalAudioArbiter private constructor(private val app: OsmandApplicatio
                 }
                 else -> {}
             }
+        } catch (e: SecurityException) {
+            log.warn("NauticalAudioArbiter: SELinux/SecurityException adjusting volume", e)
+        } catch (e: IllegalStateException) {
+            log.warn("NauticalAudioArbiter: IllegalStateException adjusting volume", e)
         } catch (e: Exception) {
             log.error("NauticalAudioArbiter: Failed to adjust volume", e)
         }
@@ -449,6 +471,9 @@ class NauticalAudioArbiter private constructor(private val app: OsmandApplicatio
                 val command = player.newCommandBuilder().attention(text)
                 // binder call to Android TTS engine
                 player.playCommands(command)
+            } catch (e: SecurityException) {
+                log.warn("NauticalAudioArbiter: SELinux/SecurityException during TTS for ${type.name}", e)
+                playFallbackTone(type)
             } catch (e: Exception) {
                 log.error("NauticalAudioArbiter: TTS failed for ${type.name}, using fallback tone", e)
                 playFallbackTone(type)
@@ -495,8 +520,16 @@ class NauticalAudioArbiter private constructor(private val app: OsmandApplicatio
                     val gap = if (i % 2 == 0) 200L else 500L // Pair strikes
                     delay(gap.milliseconds)
                 }
+            } catch (e: SecurityException) {
+                log.warn("NauticalAudioArbiter: SELinux/SecurityException playing watch bells", e)
+            } catch (e: IllegalStateException) {
+                log.warn("NauticalAudioArbiter: IllegalStateException playing watch bells", e)
+            } catch (e: Exception) {
+                log.warn("NauticalAudioArbiter: Failed to play watch bells", e)
             } finally {
-                tg?.release()
+                try {
+                    tg?.release()
+                } catch (_: Exception) {}
             }
         }
     }
@@ -530,21 +563,35 @@ class NauticalAudioArbiter private constructor(private val app: OsmandApplicatio
                         originalSpeakerphoneState = null
                     }
                 }
+            } catch (e: SecurityException) {
+                log.warn("NauticalAudioArbiter: SELinux/SecurityException resetting speakerphone", e)
             } catch (e: Exception) {
                 log.error("NauticalAudioArbiter: Failed to reset speakerphone", e)
             }
 
             if (nextType == null && activeAlarmQueue.isEmpty() && previousAlarmVolume != -1) {
-                audioManager.setStreamVolume(AudioManager.STREAM_ALARM, previousAlarmVolume, 0)
+                try {
+                    audioManager.setStreamVolume(AudioManager.STREAM_ALARM, previousAlarmVolume, 0)
+                } catch (e: Exception) {
+                    log.warn("NauticalAudioArbiter: Failed to restore stream volume", e)
+                }
                 previousAlarmVolume = -1
             }
 
             if (abandonFocus) {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    audioFocusRequest.getAndSet(null)?.let { audioManager.abandonAudioFocusRequest(it) }
-                } else {
-                    @Suppress("DEPRECATION")
-                    audioManager.abandonAudioFocus(focusChangeListener)
+                try {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        audioFocusRequest.getAndSet(null)?.let { audioManager.abandonAudioFocusRequest(it) }
+                    } else {
+                        @Suppress("DEPRECATION")
+                        audioManager.abandonAudioFocus(focusChangeListener)
+                    }
+                } catch (e: SecurityException) {
+                    log.warn("NauticalAudioArbiter: SELinux/SecurityException abandoning audio focus", e)
+                } catch (e: IllegalStateException) {
+                    log.warn("NauticalAudioArbiter: IllegalStateException abandoning audio focus", e)
+                } catch (e: Exception) {
+                    log.warn("NauticalAudioArbiter: Failed to abandon audio focus", e)
                 }
             }
         } catch (e: Exception) {

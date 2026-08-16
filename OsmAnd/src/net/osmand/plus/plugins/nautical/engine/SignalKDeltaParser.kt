@@ -3,6 +3,7 @@ package net.osmand.plus.plugins.nautical.engine
 import android.util.JsonReader
 import android.util.JsonToken
 import android.util.Log
+import com.google.gson.Gson
 import com.google.gson.JsonParser
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -14,6 +15,7 @@ import net.osmand.plus.R
 import net.osmand.plus.plugins.nautical.NauticalPlugin
 import net.osmand.plus.plugins.nautical.di.SailingDependencyContainer
 import net.osmand.plus.plugins.nautical.network.DeltaMessage
+import net.osmand.plus.plugins.nautical.network.SignalKCourse
 import net.osmand.plus.plugins.nautical.utils.TemporalUtils
 import net.osmand.shared.aistracker.AisObject
 import org.json.JSONArray
@@ -222,9 +224,10 @@ class SignalKDeltaParser(
         return context == "vessels.self" ||
                 context == "" ||
                 context == trueSelf ||
+                context.startsWith("urn:mrn:signalk:uuid:") ||
                 (mmsi != null && context.contains("mmsi:$mmsi")) ||
                 (uuid != null && (context == uuid || context == "vessels.$uuid" || context.endsWith(uuid))) ||
-                (!context.contains("mmsi:") && !context.contains("imo:"))
+                (!context.contains("mmsi:") && !context.contains("imo:") && !context.startsWith("urn:mrn:imo:"))
     }
 
     private fun readJsonValue(reader: JsonReader): Any? {
@@ -342,7 +345,7 @@ class SignalKDeltaParser(
                 val v = (valueObj as? Number)?.toDouble() ?: Double.NaN
                 if (!v.isNaN()) {
                     historyManager.getBuffer(path).add(Pair(v, now))
-                    Pair(stateWithTs.copy(courseOverGroundTrue = v), true)
+                    Pair(stateWithTs.copy(courseOverGroundTrue = v, timeOfSogFix = now), true)
                 } else Pair(stateWithTs, false)
             }
             else -> {
@@ -382,7 +385,7 @@ class SignalKDeltaParser(
         return if (!value.isNaN()) {
             historyManager.getBuffer(SignalKPaths.NAV_HEADING_TRUE).add(Pair(value, now))
             val state = dataBroker.applyHeadingTrueUpdate(s, value, now)
-            Pair(state, true)
+            Pair(state.copy(timeOfHeadingFix = now), true)
         } else Pair(s, false)
     }
 
@@ -391,7 +394,7 @@ class SignalKDeltaParser(
         return if (!value.isNaN()) {
             historyManager.getBuffer(SignalKPaths.NAV_HEADING_MAG).add(Pair(value, now))
             val state = dataBroker.applyHeadingMagneticUpdate(s, value, now)
-            Pair(state, true)
+            Pair(state.copy(timeOfHeadingFix = now), true)
         } else Pair(s, false)
     }
 
@@ -400,7 +403,7 @@ class SignalKDeltaParser(
         return if (MarineStateConstants.isValidSpeed(value)) {
             historyManager.getBuffer(SignalKPaths.NAV_SPEED_OVER_GROUND).add(Pair(value, now))
             val state = dataBroker.applySpeedOverGroundUpdate(s, value, now)
-            Pair(state, true)
+            Pair(state.copy(timeOfSogFix = now), true)
         } else Pair(s, false)
     }
 
@@ -409,7 +412,7 @@ class SignalKDeltaParser(
         return if (MarineStateConstants.isValidSpeed(value)) {
             historyManager.getBuffer(SignalKPaths.NAV_SPEED_THROUGH_WATER).add(Pair(value, now))
             val state = dataBroker.applySpeedThroughWaterUpdate(s, value, now)
-            Pair(state, true)
+            Pair(state.copy(timeOfSogFix = now), true)
         } else Pair(s, false)
     }
 
@@ -417,8 +420,10 @@ class SignalKDeltaParser(
         val value = (valueObj as? Number)?.toDouble() ?: Double.NaN
         return if (!value.isNaN()) {
             historyManager.getBuffer(SignalKPaths.ENV_WIND_ANGLE_APPARENT).add(Pair(value, now))
-            val corrected = (value + 2 * Math.PI) % (2 * Math.PI)
-            val state = dataBroker.applyWindAngleApparentUpdate(s, corrected, now)
+            val filter = SailingDependencyContainer.environmentalFilterService
+            val correctedValue = filter?.correctWindAngle(value, s.roll ?: 0.0, s.pitch ?: 0.0) ?: value
+            val normalized = (correctedValue + 2 * Math.PI) % (2 * Math.PI)
+            val state = dataBroker.applyWindAngleApparentUpdate(s, normalized, now)
             Pair(state, true)
         } else Pair(s, false)
     }
@@ -427,7 +432,9 @@ class SignalKDeltaParser(
         val value = (valueObj as? Number)?.toDouble() ?: Double.NaN
         return if (MarineStateConstants.isValidWindSpeed(value)) {
             historyManager.getBuffer(SignalKPaths.ENV_WIND_SPEED_APPARENT).add(Pair(value, now))
-            val state = dataBroker.applyWindSpeedApparentUpdate(s, value, now)
+            val filter = SailingDependencyContainer.environmentalFilterService
+            val correctedValue = filter?.correctWindSpeed(value, s.pitch ?: 0.0) ?: value
+            val state = dataBroker.applyWindSpeedApparentUpdate(s, correctedValue, now)
             Pair(state, true)
         } else Pair(s, false)
     }
@@ -441,7 +448,7 @@ class SignalKDeltaParser(
             SignalKPaths.NAV_RATE_OF_TURN -> {
                 if (!value.isNaN()) {
                     historyManager.getBuffer(path).add(Pair(value, now))
-                    state = state.copy(rateOfTurn = value)
+                    state = state.copy(rateOfTurn = value, timeOfRotFix = now)
                     updated = true
                 }
             }
@@ -480,14 +487,14 @@ class SignalKDeltaParser(
             }
             SignalKPaths.NAV_COURSE_NEXT_POINT -> {
                 if (valueObj is JSONObject) {
-                    val pos = valueObj.optJSONObject("position")
-                    if (pos != null) {
-                        val lat = pos.optDouble("latitude", Double.NaN)
-                        val lon = pos.optDouble("longitude", Double.NaN)
-                        if (MarineStateConstants.isValidLat(lat) && MarineStateConstants.isValidLon(lon)) {
-                            state = state.copy(serverNextPoint = LatLon(lat, lon))
+                    try {
+                        val course = Gson().fromJson(valueObj.toString(), SignalKCourse::class.java)
+                        routeTracker.processCourseObject(course) { nextPt ->
+                            state = state.copy(serverNextPoint = LatLon(nextPt.latitude, nextPt.longitude))
                             updated = true
                         }
+                    } catch (e: Exception) {
+                        log?.error("Failed to parse course object: ${e.message}")
                     }
                 }
             }
@@ -543,7 +550,10 @@ class SignalKDeltaParser(
                     }
                     val arrivalCircle = valueObj.optDouble("arrivalCircle", Double.NaN)
                     if (!arrivalCircle.isNaN()) routeTracker.arrivalRadiusMeters = arrivalCircle
-                    if (valueObj.has("activeRoute")) routeTracker.isFollowingRoute = true
+                    
+                    val hasActiveRoute = !valueObj.isNull("activeRoute")
+                    val hasNextPoint = !valueObj.isNull("nextPoint")
+                    routeTracker.isFollowingRoute = hasActiveRoute || hasNextPoint
                 }
             }
             SignalKPaths.NAV_DATETIME_MOON_PHASE -> {
@@ -601,6 +611,20 @@ class SignalKDeltaParser(
                 val callSign = valueObj?.toString() ?: ""
                 if (callSign.isNotEmpty()) {
                     state = state.copy(vesselCallSign = callSign)
+                    updated = true
+                }
+            }
+            SignalKPaths.NAV_DTW -> {
+                if (!value.isNaN()) {
+                    state = state.copy(distanceToWaypoint = value)
+                    historyManager.getBuffer(path).add(Pair(value, now))
+                    updated = true
+                }
+            }
+            SignalKPaths.NAV_TTW -> {
+                if (!value.isNaN()) {
+                    state = state.copy(timeToWaypoint = value)
+                    historyManager.getBuffer(path).add(Pair(value, now))
                     updated = true
                 }
             }
@@ -850,11 +874,16 @@ class SignalKDeltaParser(
                 }
             }
             path.startsWith(SignalKPaths.ELECTRICAL_AC_PREFIX) -> {
+                val acPath = path.removePrefix(SignalKPaths.ELECTRICAL_AC_PREFIX)
                 if (!value.isNaN()) {
                     val custom = state.customValues.toMutableMap()
                     custom[path] = value
                     state = state.copy(customValues = custom)
-                    updated = true
+                    
+                    // Detailed AC mapping if instance matches common patterns
+                    if (acPath.endsWith(".voltage") || acPath.endsWith(".current") || acPath.endsWith(".frequency") || acPath.endsWith(".power")) {
+                        updated = true
+                    }
                 }
             }
             path.startsWith(SignalKPaths.PROPULSION_PREFIX) -> {
@@ -880,6 +909,11 @@ class SignalKDeltaParser(
                                 updateEngine(state, instance) { it.copy(oilPressure = value) }
                             } else state
                         }
+                        "oilTemperature" -> {
+                            if (!value.isNaN()) {
+                                updateEngine(state, instance) { it.copy(oilTemperature = value) }
+                            } else state
+                        }
                         "coolantTemperature" -> {
                             if (!value.isNaN()) {
                                 historyManager.getBuffer(path).add(Pair(value, now))
@@ -889,6 +923,11 @@ class SignalKDeltaParser(
                         "alternatorVoltage" -> {
                             if (!value.isNaN()) {
                                 updateEngine(state, instance) { it.copy(alternatorVoltage = value) }
+                            } else state
+                        }
+                        "alternatorCurrent", "current" -> {
+                            if (!value.isNaN()) {
+                                updateEngine(state, instance) { it.copy(alternatorCurrent = value) }
                             } else state
                         }
                         "fuelRate" -> {
@@ -916,6 +955,25 @@ class SignalKDeltaParser(
                                 updateEngine(state, instance) { it.copy(exhaustTemperature = value) }
                             } else state
                         }
+                        "runTime" -> {
+                            if (!value.isNaN()) {
+                                updateEngine(state, instance) { it.copy(runTime = value) }
+                            } else state
+                        }
+                        "transmissionGear", "gear" -> {
+                            val gear = valueObj?.toString()
+                            updateEngine(state, instance) { it.copy(transmissionGear = gear) }
+                        }
+                        "transmissionPressure" -> {
+                            if (!value.isNaN()) {
+                                updateEngine(state, instance) { it.copy(transmissionPressure = value) }
+                            } else state
+                        }
+                        "transmissionOilTemperature" -> {
+                            if (!value.isNaN()) {
+                                updateEngine(state, instance) { it.copy(transmissionOilTemperature = value) }
+                            } else state
+                        }
                         else -> state
                     }
                     updated = true
@@ -929,12 +987,18 @@ class SignalKDeltaParser(
                         "voltage" -> {
                             if (!value.isNaN()) {
                                 historyManager.getBuffer(path).add(Pair(value, now))
+                                if (instance == "0" || state.batteries.isEmpty()) {
+                                    state = state.copy(batteryVoltage = value)
+                                }
                                 updateBattery(state, instance) { it.copy(voltage = value) }
                             } else state
                         }
                         "current" -> {
                             if (!value.isNaN()) {
                                 historyManager.getBuffer(path).add(Pair(value, now))
+                                if (instance == "0" || state.batteries.isEmpty()) {
+                                    state = state.copy(batteryCurrent = value)
+                                }
                                 updateBattery(state, instance) { it.copy(current = value) }
                             } else state
                         }
@@ -946,6 +1010,9 @@ class SignalKDeltaParser(
                         "capacity" -> {
                             if (parts.size >= 3 && parts[2] == "stateOfCharge" && !value.isNaN()) {
                                 historyManager.getBuffer(path).add(Pair(value, now))
+                                if (instance == "0" || state.batteries.isEmpty()) {
+                                    state = state.copy(batterySoc = value)
+                                }
                                 updateBattery(state, instance) { it.copy(stateOfCharge = value) }
                             } else if (parts.size >= 3 && parts[2] == "timeRemaining" && !value.isNaN()) {
                                 updateBattery(state, instance) { it.copy(timeRemaining = value) }
@@ -1082,6 +1149,18 @@ class SignalKDeltaParser(
         val value = (valueObj as? Number)?.toDouble() ?: Double.NaN
 
         when (path) {
+            SignalKPaths.ENV_WATER_SALINITY -> {
+                if (!value.isNaN()) {
+                    state = state.copy(waterSalinity = value)
+                    updated = true
+                }
+            }
+            SignalKPaths.ENV_AIR_DEW_POINT -> {
+                if (!value.isNaN()) {
+                    state = state.copy(airDewPoint = value)
+                    updated = true
+                }
+            }
             SignalKPaths.ENV_WATER_TEMP -> {
                 if (!value.isNaN()) {
                     historyManager.getBuffer(path).add(Pair(value, now))
@@ -1120,48 +1199,49 @@ class SignalKDeltaParser(
             SignalKPaths.ENV_WIND_DIRECTION_TRUE -> {
                 if (!value.isNaN()) {
                     historyManager.getBuffer(path).add(Pair(value, now))
+                    historyManager.getBuffer(SignalKPaths.NAV_TWD).add(Pair(value, now))
                     val corrected = (value + 2 * Math.PI) % (2 * Math.PI)
-                    state = state.copy(windDirectionTrue = corrected)
+                    state = state.copy(windDirectionTrue = corrected, timeOfWindFix = now)
                     updated = true
                 }
             }
             SignalKPaths.ENV_WIND_SPEED_TRUE -> {
                 if (MarineStateConstants.isValidWindSpeed(value)) {
                     historyManager.getBuffer(path).add(Pair(value, now))
-                    state = state.copy(windSpeedTrue = value)
+                    state = state.copy(windSpeedTrue = value, timeOfWindFix = now)
                     updated = true
                 }
             }
             SignalKPaths.ENV_DEPTH_BELOW_KEEL -> {
                 if (MarineStateConstants.isValidDepth(value)) {
                     historyManager.getBuffer(path).add(Pair(value, now))
-                    state = state.copy(depthBelowKeel = value)
+                    state = state.copy(depthBelowKeel = value, timeOfDepthFix = now)
                     updated = true
                 }
             }
             SignalKPaths.ENV_DEPTH_SURFACE_TO_TRANSDUCER -> {
                 if (MarineStateConstants.isValidDepth(value)) {
                     historyManager.getBuffer(path).add(Pair(value, now))
-                    state = state.copy(depthSurfaceToTransducer = value)
+                    state = state.copy(depthSurfaceToTransducer = value, timeOfDepthFix = now)
                     updated = true
                 }
             }
             SignalKPaths.ENV_DEPTH_BELOW_TRANSDUCER -> {
                 if (MarineStateConstants.isValidDepth(value)) {
                     historyManager.getBuffer(path).add(Pair(value, now))
-                    state = state.copy(depthBelowTransducer = value)
+                    state = state.copy(depthBelowTransducer = value, timeOfDepthFix = now)
                     updated = true
                 }
             }
             SignalKPaths.NAV_SET_TRUE -> {
                 if (!value.isNaN()) {
-                    state = state.copy(setTrue = value)
+                    state = state.copy(setTrue = value, timeOfDriftFix = now)
                     updated = true
                 }
             }
             SignalKPaths.NAV_DRIFT -> {
                 if (!value.isNaN()) {
-                    state = state.copy(drift = value)
+                    state = state.copy(drift = value, timeOfDriftFix = now)
                     updated = true
                 }
             }
@@ -1299,6 +1379,24 @@ class SignalKDeltaParser(
                 state = state.copy(mediaInfo = media)
                 updated = true
             }
+            path == SignalKPaths.NOTIFICATIONS_WATCHDOG -> {
+                if (valueObj is JSONObject) {
+                    val message = valueObj.optString("message", "")
+                    val stateStr = valueObj.optString("state", "normal").lowercase(Locale.US)
+                    val notificationState = when (stateStr) {
+                        "alert" -> NotificationState.ALERT
+                        "warn" -> NotificationState.WARN
+                        "alarm" -> NotificationState.ALARM
+                        "emergency" -> NotificationState.EMERGENCY
+                        else -> NotificationState.NORMAL
+                    }
+                    state = state.copy(watchdogStatus = SignalKNotification(message, notificationState, source = source))
+                    updated = true
+                } else if (valueObj == null) {
+                    state = state.copy(watchdogStatus = null)
+                    updated = true
+                }
+            }
             path.startsWith(SignalKPaths.NOTIFICATIONS_PREFIX) -> {
                 if (valueObj is JSONObject) {
                     val message = valueObj.optString("message", "")
@@ -1331,7 +1429,8 @@ class SignalKDeltaParser(
                     if (path == SignalKPaths.NOTIFICATIONS_MOB) {
                         var mobLat: Double? = null
                         var mobLon: Double? = null
-                        val latLonRegex = Regex("([-+]?\\d*\\.?\\d+)[,\\s]+([-+]?\\d*\\.?\\d+)")
+                        // Robust regex for coordinates in various formats (e.g., "52.3456, 4.5678" or "LAT: 52.34 LON: 4.56")
+                        val latLonRegex = Regex("([-+]?\\d*\\.?\\d+)[,\\s\\w:]+([-+]?\\d*\\.?\\d+)")
                         val match = latLonRegex.find(message)
                         if (match != null) {
                             mobLat = match.groupValues[1].toDoubleOrNull()
@@ -1339,8 +1438,8 @@ class SignalKDeltaParser(
                         }
                         state = state.copy(
                             isMobActive = notificationState != NotificationState.NORMAL,
-                            mobLatitude = mobLat ?: state.latitude,
-                            mobLongitude = mobLon ?: state.longitude
+                            mobLatitude = mobLat,
+                            mobLongitude = mobLon
                         )
                     }
 

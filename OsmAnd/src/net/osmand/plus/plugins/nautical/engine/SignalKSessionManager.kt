@@ -105,30 +105,19 @@ class SignalKSessionManager(
 
                         var modified = false
                         val current = dataBroker.marineState.value
-                        val nextStalePaths = current.stalePaths.toMutableSet()
-                        val staleThreshold = 10000L
                         val timestamps = current.timestamps
+                        val watchdogTimeoutMs = app.settings.NAUTICAL_WATCHDOG_TIMEOUT_SEC.get() * 1000L
+                        val nextStalePaths = timestamps.filter { entry -> (now - entry.value) > watchdogTimeoutMs }.keys.toMutableSet()
+                        
+                        if (nextStalePaths != current.stalePaths) modified = true
 
-                        fun checkStale(path: String): Boolean {
-                            val isStale = (now - (timestamps[path] ?: 0L)) > staleThreshold
-                            if (isStale) {
-                                if (nextStalePaths.add(path)) modified = true
-                            } else {
-                                if (nextStalePaths.remove(path)) modified = true
-                            }
-                            return isStale
-                        }
+                        fun isStale(path: String) = nextStalePaths.contains(path)
 
-                        val sogStale = checkStale("navigation.speedOverGround")
-                        val cogStale = checkStale("navigation.courseOverGroundTrue")
-                        val hdgStale = checkStale("navigation.headingTrue") || checkStale("navigation.headingMagnetic")
-                        val depthStale = checkStale("environment.depth.belowTransducer")
-                        val windStale = checkStale("environment.wind.angleApparent") || checkStale("environment.wind.speedTrue") || checkStale("environment.wind.speedApparent")
-
-                        checkStale("navigation.speedThroughWater")
-                        checkStale("navigation.crossTrackError")
-                        checkStale("navigation.attitude.roll")
-                        checkStale("navigation.attitude.pitch")
+                        val sogStale = isStale("navigation.speedOverGround")
+                        val cogStale = isStale("navigation.courseOverGroundTrue")
+                        val hdgStale = isStale("navigation.headingTrue") || isStale("navigation.headingMagnetic")
+                        val depthStale = isStale("environment.depth.belowTransducer")
+                        val windStale = isStale("environment.wind.angleApparent") || isStale("environment.wind.speedTrue") || isStale("environment.wind.speedApparent")
 
                         val coreStale = sogStale || cogStale || hdgStale || depthStale || windStale
                         val nextStatus = if (coreStale) ConnectionStatus.STALE else ConnectionStatus.CONNECTED
@@ -148,7 +137,10 @@ class SignalKSessionManager(
     }
 
     fun handleSelfIdentity(self: String) {
-        trueSelfContext = self
+        if (self.isNotBlank()) {
+            trueSelfContext = self
+            log.info("Nautical: Identified own vessel context as '$self'")
+        }
         val currentMmsi = dataBroker.marineState.value.vesselMmsi
         if (self.contains("mmsi:") && currentMmsi == null) {
             val extracted = self.substringAfter("mmsi:").trim()
@@ -157,6 +149,8 @@ class SignalKSessionManager(
                 dataBroker.updateState { it.copy(vesselMmsi = mmsi) }
                 app.settings.NAUTICAL_AIS_OWN_MMSI.set(mmsi)
             }
+        } else if (self == "vessels.self") {
+            resolveSelfIdentity()
         }
     }
 
@@ -222,7 +216,7 @@ class SignalKSessionManager(
             return true
         }
 
-        return true
+        return false
     }
 
     private fun validateJwtToken(token: String): Boolean {

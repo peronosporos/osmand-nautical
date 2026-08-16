@@ -1005,6 +1005,7 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
             uiOverlayManager.updateHudVisibility(hudManager)
             updateNmeaSource()
             connectionManager.startEngine()
+            engine?.refreshVesselState()
         }
     }
 
@@ -1133,8 +1134,29 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
     }
 
     fun applyVesselContext(context: VesselContext) {
-        app.settings.NAUTICAL_VESSEL_CONTEXT.set(context)
+        val s = app.settings
+        s.NAUTICAL_VESSEL_CONTEXT.set(context)
         when (context) {
+            VesselContext.SAILING -> {
+                s.NAUTICAL_SHOW_LAYLINES.set(true)
+                s.NAUTICAL_MODULE_RASTER.set(true)
+                s.NAUTICAL_SHOW_RASTER_CHARTS.set(true)
+                s.NAUTICAL_LOOK_AHEAD_TIME.set(10)
+                s.NAUTICAL_SAFETY_CORRIDOR_BUFFER.set(0.1f)
+            }
+            VesselContext.MOTORING -> {
+                s.NAUTICAL_SHOW_LAYLINES.set(false)
+                s.NAUTICAL_MODULE_RASTER.set(true)
+                s.NAUTICAL_SHOW_RASTER_CHARTS.set(true)
+                s.NAUTICAL_LOOK_AHEAD_TIME.set(5)
+                s.NAUTICAL_SAFETY_CORRIDOR_BUFFER.set(0.2f)
+            }
+            VesselContext.EMERGENCY_HEAVE_TO -> {
+                s.NAUTICAL_HEAVY_WEATHER_MODE.set(true)
+                s.NAUTICAL_OFF_COURSE_ALARM.set(20.0f)
+                s.NAUTICAL_ARRIVAL_RADIUS.set(500.0f)
+                workflowManager?.onHeavyWeatherModeChanged(true, app.osmandMap?.mapView?.mapActivity)
+            }
             VesselContext.ANCHORED -> {
                 val loc = app.locationProvider.lastKnownLocation
                 if (loc != null) {
@@ -1144,8 +1166,8 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
             VesselContext.MOORED, VesselContext.DOCKING -> {
                 engine?.disarmAnchor()
             }
-            else -> {}
         }
+        updateFeatureLifecycle()
         requestRefresh()
     }
 

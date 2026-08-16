@@ -78,7 +78,12 @@ class OkHttpSignalKConnection(private val client: OkHttpClient) : SignalKConnect
                 }
 
                 override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
-                    log.error("WebSocket Failure: ${t.message} (Code: ${response?.code})")
+                    val isCleanDisconnection = t is java.net.SocketException || t is java.io.EOFException || (t.message?.contains("Socket closed", ignoreCase = true) == true)
+                    if (isCleanDisconnection) {
+                        log.warn("WebSocket Disconnected cleanly (${t.javaClass.simpleName}): ${t.message}")
+                    } else {
+                        log.error("WebSocket Failure: ${t.message} (Code: ${response?.code})", t)
+                    }
                     isConnected = false
                     isConnecting = false
                     if (response?.code == 401) {
@@ -89,7 +94,11 @@ class OkHttpSignalKConnection(private val client: OkHttpClient) : SignalKConnect
                 }
 
                 override fun onClosing(webSocket: WebSocket, code: Int, reason: String) {
-                    webSocket.close(1000, null)
+                    try {
+                        webSocket.close(1000, null)
+                    } catch (e: Exception) {
+                        log.warn("Exception closing WebSocket onClosing: ${e.message}")
+                    }
                     log.info("WebSocket Closing: $code / $reason")
                     isConnected = false
                     isConnecting = false
@@ -106,16 +115,25 @@ class OkHttpSignalKConnection(private val client: OkHttpClient) : SignalKConnect
     }
 
     override fun sendDelta(jsonPayload: String) {
-        val success = webSocket?.send(jsonPayload) ?: false
-        if (!success) {
-            log.error("Failed to send payload. Transmit buffer full or socket closed.")
+        try {
+            val success = webSocket?.send(jsonPayload) ?: false
+            if (!success) {
+                log.warn("Failed to send payload. Transmit buffer full or socket closed.")
+            }
+        } catch (e: Exception) {
+            log.warn("Exception sending delta payload: ${e.message}")
         }
     }
 
     override fun disconnect() {
-        webSocket?.close(1000, "User requested disconnect")
-        webSocket = null
-        isConnected = false
-        isConnecting = false
+        try {
+            webSocket?.close(1000, "User requested disconnect")
+        } catch (e: Exception) {
+            log.warn("Exception closing WebSocket: ${e.message}")
+        } finally {
+            webSocket = null
+            isConnected = false
+            isConnecting = false
+        }
     }
 }

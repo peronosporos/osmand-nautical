@@ -128,8 +128,13 @@ class EnvironmentalFilterService(
             windSamples.addLast(currentSample)
 
             // Prune history older than 3 seconds
-            while (windSamples.isNotEmpty() && (now - windSamples.first().timestamp > gustWindowMillis)) {
-                windSamples.removeFirst()
+            val iterator = windSamples.iterator()
+            while (iterator.hasNext()) {
+                if (now - iterator.next().timestamp > gustWindowMillis) {
+                    iterator.remove()
+                } else {
+                    break // Remaining samples are within window
+                }
             }
 
             if (windSamples.isEmpty()) return
