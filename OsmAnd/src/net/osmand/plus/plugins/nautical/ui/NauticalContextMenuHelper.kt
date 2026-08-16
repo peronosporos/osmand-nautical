@@ -19,8 +19,8 @@ import net.osmand.plus.activities.MapActivity
 import net.osmand.plus.track.GpxDialogs
 import net.osmand.plus.utils.AndroidUtils
 import net.osmand.shared.gpx.primitives.WptPt
-import net.osmand.plus.plugins.nautical.NauticalModule
 import net.osmand.plus.plugins.nautical.NauticalPlugin
+import net.osmand.plus.plugins.nautical.NauticalPlugin.NauticalModule
 import net.osmand.plus.plugins.nautical.di.SailingDependencyContainer
 import net.osmand.plus.plugins.nautical.engine.AutopilotController
 import net.osmand.plus.plugins.nautical.engine.GpxStreamer
@@ -41,10 +41,10 @@ import net.osmand.plus.plugins.nautical.s57.S57SpatialIndex
 import net.osmand.plus.plugins.nautical.ui.widgets.NauticalElectricalDashboardBottomSheet
 import net.osmand.plus.plugins.nautical.ui.widgets.NauticalManeuversBottomSheet
 import net.osmand.plus.plugins.nautical.viewmodel.RoutingViewModel
-import net.osmand.plus.render.RenderingRuleProperty
+import net.osmand.render.RenderingRuleProperty
 import net.osmand.plus.settings.backend.ApplicationMode
-import net.osmand.plus.settings.backend.OsmandSettings.ThemeUsageContext
-import net.osmand.plus.settings.backend.SettingsScreenType
+import net.osmand.plus.settings.enums.ThemeUsageContext
+import net.osmand.plus.settings.fragments.SettingsScreenType
 import net.osmand.plus.settings.backend.preferences.CommonPreference
 import net.osmand.shared.aistracker.AisObject
 import java.util.Date

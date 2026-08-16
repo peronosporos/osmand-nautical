@@ -269,6 +269,10 @@ class SignalKEngine(
         return cachedRestService
     }
 
+    fun refreshResources() {
+        resourceManager.startSync()
+    }
+
     suspend fun fetchRoutesFromServer(): Map<String, SignalKRoute>? = withContext(Dispatchers.IO) {
         try {
             val response = getRestService()?.getRoutes()

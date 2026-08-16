@@ -4,7 +4,7 @@ import android.content.Context
 import net.osmand.plus.OsmandApplication
 import net.osmand.plus.activities.MapActivity
 import net.osmand.plus.plugins.nautical.NauticalMapLayer
-import net.osmand.plus.plugins.nautical.NauticalModule
+import net.osmand.plus.plugins.nautical.NauticalPlugin.NauticalModule
 import net.osmand.plus.plugins.nautical.map.controller.SailingMapLayerController
 import net.osmand.plus.plugins.nautical.map.layers.OceanographicGribMapLayer
 import net.osmand.plus.plugins.nautical.poi.ui.VhfPoiSearchLayer

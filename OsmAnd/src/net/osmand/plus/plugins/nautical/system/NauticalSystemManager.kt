@@ -90,7 +90,7 @@ class NauticalSystemManager(
     }
 
     private fun isRacingCountdownActive(): Boolean {
-        val tacticalStart = SailingDependencyContainer.tacticalStartManager
+        val tacticalStart = net.osmand.plus.plugins.nautical.NauticalPlugin.getInstance()?.tacticalStartManager
         return tacticalStart?.state?.value?.isCountingDown == true
     }
 

@@ -117,7 +117,7 @@ class NauticalAisLayer(context: Context) : OsmandMapLayer(context), ContextMenuL
         val manager = plugin.aisManager
         val extras = manager?.getAisExtras(mmsi)
         val engine = NauticalPlugin.engine
-        val virtual = (engine != null) && (engine.aisCache.containsKey(mmsi))
+        val virtual = (manager != null) && (manager.getAisObject(mmsi) != null)
         
         // Task: Local Follow Mode handling
         if (mmsi == followedMmsi && ais.position != null) {
