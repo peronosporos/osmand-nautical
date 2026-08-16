@@ -34,7 +34,7 @@ class EnvironmentalFilterService(
 
     // History buffer for gust detection (timestamp, wind speed)
     private data class WindSample(val timestamp: Long, val speed: Double)
-    private val speedHistory = ArrayDeque<WindSample>()
+    private val windSamples = ArrayDeque<WindSample>()
     private val gustWindowMillis = 3000L // 3 seconds
     private val gustThresholdPercent = 0.15 // 15% increase
 
@@ -51,28 +51,36 @@ class EnvironmentalFilterService(
             // Combine or collect flows from dataBroker
             launch {
                 dataBroker.windAngleApparent.collect { rawAngle ->
-                    val state = dataBroker.marineState.value
-                    var aws = state.windSpeedApparent
-                    
-                    // GRIB Fallback if live data is missing
-                    if ((aws == null) || (aws == 0.0)) {
-                        val lat = state.latitude
-                        val lon = state.longitude
-                        if ((lat != null) && (lon != null)) {
-                            val gribWind = net.osmand.plus.plugins.nautical.di.SailingDependencyContainer.gribRepository?.getWindVector(lat, lon, System.currentTimeMillis())
-                            if (gribWind != null) {
-                                aws = gribWind.speed
+                    try {
+                        val state = dataBroker.marineState.value
+                        var aws = state.windSpeedApparent
+
+                        // GRIB Fallback if live data is missing
+                        if ((aws == null) || (aws == 0.0)) {
+                            val lat = state.latitude
+                            val lon = state.longitude
+                            if ((lat != null) && (lon != null)) {
+                                val gribWind = net.osmand.plus.plugins.nautical.di.SailingDependencyContainer.gribRepository?.getWindVector(lat, lon, System.currentTimeMillis())
+                                if (gribWind != null) {
+                                    aws = gribWind.speed
+                                }
                             }
                         }
+
+                        processWindUpdate(rawAngle, aws, state.roll ?: 0.0, state.pitch ?: 0.0)
+                    } catch (e: Exception) {
+                        log?.error("Error processing wind angle update: ${e.message}", e)
                     }
-                    
-                    processWindUpdate(rawAngle, aws, state.roll ?: 0.0, state.pitch ?: 0.0)
                 }
             }
             launch {
                 dataBroker.windSpeedApparent.collect { rawSpeed ->
-                    val state = dataBroker.marineState.value
-                    processWindUpdate(state.windDirectionApparent, rawSpeed, state.roll ?: 0.0, state.pitch ?: 0.0)
+                    try {
+                        val state = dataBroker.marineState.value
+                        processWindUpdate(state.windDirectionApparent, rawSpeed, state.roll ?: 0.0, state.pitch ?: 0.0)
+                    } catch (e: Exception) {
+                        log?.error("Error processing wind speed update: ${e.message}", e)
+                    }
                 }
             }
         }
@@ -114,44 +122,50 @@ class EnvironmentalFilterService(
 
     private fun checkGustAndManageAutopilot(currentSpeed: Double) {
         val now = System.currentTimeMillis()
-        speedHistory.addLast(WindSample(now, currentSpeed))
+        val currentSample = WindSample(now, currentSpeed)
+        
+        synchronized(windSamples) {
+            windSamples.addLast(currentSample)
 
-        // Prune history older than 3 seconds
-        while (speedHistory.isNotEmpty() && (now - speedHistory.first().timestamp > gustWindowMillis)) {
-            speedHistory.removeFirst()
-        }
+            // Prune history older than 3 seconds
+            while (windSamples.isNotEmpty() && (now - windSamples.first().timestamp > gustWindowMillis)) {
+                windSamples.removeFirst()
+            }
 
-        if (speedHistory.isEmpty()) return
+            if (windSamples.isEmpty()) return
 
-        val baselineSpeed = speedHistory.first().speed
-        if (baselineSpeed > 0.0) {
-            val increaseRatio = (currentSpeed - baselineSpeed) / baselineSpeed
-            val currentState = dataBroker.autopilotState.value.lowercase(Locale.US)
-            val isWindMode = currentState == "wind"
+            val baselineSample = windSamples.firstOrNull() ?: return
+            val baselineSpeed = baselineSample.speed
+            
+            if (baselineSpeed > 0.0) {
+                val increaseRatio = (currentSpeed - baselineSpeed) / baselineSpeed
+                val currentState = dataBroker.autopilotState.value.lowercase(Locale.US)
+                val isWindMode = currentState == "wind"
 
-            if (increaseRatio >= gustThresholdPercent) {
-                if (!_isGustActive.value) {
-                    _isGustActive.value = true
-                    log.warn("Wind gust detected! Speed increased by ${(increaseRatio * 100).toInt()}% in <3s.")
+                if (increaseRatio >= gustThresholdPercent) {
+                    if (!_isGustActive.value) {
+                        _isGustActive.value = true
+                        log?.warn("Wind gust detected! Speed increased by ${(increaseRatio * 100).toInt()}% in <3s.")
 
-                    if (isWindMode && !isBearAwayApplied) {
-                        // Bear away 5-10 degrees (e.g. 7 degrees) to keep boat flat
-                        bearAwayDegrees = 7.0
-                        isBearAwayApplied = true
-                        log.info("Autopilot in WIND mode: bearing away by $bearAwayDegrees degrees due to gust.")
-                        autopilotController.adjustHeading(bearAwayDegrees)
+                        if (isWindMode && !isBearAwayApplied) {
+                            // Bear away 5-10 degrees (e.g. 7 degrees) to keep boat flat
+                            bearAwayDegrees = 7.0
+                            isBearAwayApplied = true
+                            log?.info("Autopilot in WIND mode: bearing away by $bearAwayDegrees degrees due to gust.")
+                            autopilotController.adjustHeading(bearAwayDegrees)
+                        }
                     }
-                }
-            } else if (increaseRatio < 0.05 && _isGustActive.value) {
-                // Gust has passed
-                _isGustActive.value = false
-                log.info("Wind gust subsided.")
+                } else if (increaseRatio < 0.05 && _isGustActive.value) {
+                    // Gust has passed
+                    _isGustActive.value = false
+                    log?.info("Wind gust subsided.")
 
-                if (isWindMode && isBearAwayApplied) {
-                    log.info("Returning to original course by reversing bear away of -$bearAwayDegrees degrees.")
-                    autopilotController.adjustHeading(-bearAwayDegrees)
-                    isBearAwayApplied = false
-                    bearAwayDegrees = 0.0
+                    if (isWindMode && isBearAwayApplied) {
+                        log?.info("Returning to original course by reversing bear away of -$bearAwayDegrees degrees.")
+                        autopilotController.adjustHeading(-bearAwayDegrees)
+                        isBearAwayApplied = false
+                        bearAwayDegrees = 0.0
+                    }
                 }
             }
         }

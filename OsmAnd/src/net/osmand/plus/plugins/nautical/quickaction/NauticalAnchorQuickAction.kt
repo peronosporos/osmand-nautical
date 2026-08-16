@@ -27,7 +27,10 @@ class NauticalAnchorQuickAction : QuickAction {
     constructor() : super(TYPE)
 
     @Keep
-    constructor(action: QuickAction) : super(action)
+    constructor(quickAction: QuickAction) : super(quickAction)
+
+    @Keep
+    constructor(type: Int) : super(TYPE)
 
     override fun execute(mapActivity: MapActivity, params: Bundle?) {
         val app = mapActivity.app
