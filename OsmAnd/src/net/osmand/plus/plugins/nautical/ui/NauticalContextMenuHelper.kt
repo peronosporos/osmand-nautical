@@ -11,8 +11,8 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import net.osmand.data.LatLon
-import net.osmand.plus.ContextMenuAdapter
-import net.osmand.plus.ContextMenuItem
+import net.osmand.plus.widgets.ctxmenu.ContextMenuAdapter
+import net.osmand.plus.widgets.ctxmenu.data.ContextMenuItem
 import net.osmand.plus.OsmandApplication
 import net.osmand.plus.R
 import net.osmand.plus.activities.MapActivity
