@@ -3,7 +3,9 @@ package net.osmand.plus.plugins.nautical.engine
 import android.content.Context
 import android.util.JsonReader
 import android.util.JsonToken
+import android.util.Log
 import com.auth0.jwt.JWT
+import com.google.gson.JsonParser
 import com.auth0.jwt.exceptions.JWTDecodeException
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineExceptionHandler
@@ -265,6 +267,14 @@ class SignalKEngine(
     }
 
     private fun processJsonMessage(jsonMessage: String, initialState: MarineState): Pair<MarineState, Boolean> {
+        try {
+            val jsonObject = JsonParser.parseString(jsonMessage).asJsonObject
+            val context = jsonObject.get("context")?.asString
+            val updates = jsonObject.getAsJsonArray("updates")
+            Log.i("SignalKParser", "Context: $context | Updates count: ${updates?.size() ?: 0}")
+        } catch (e: Exception) {
+            Log.e("SignalKParser", "JSON parse error: ${e.message}")
+        }
         val reader = JsonReader(StringReader(jsonMessage))
         var currentState = initialState
         var stateChanged = false
