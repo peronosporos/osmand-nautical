@@ -10,7 +10,7 @@ import net.osmand.plus.activities.MapActivity
 import net.osmand.plus.utils.AndroidUtils
 import net.osmand.plus.plugins.nautical.ui.INauticalHudHeader
 
-class NauticalHudManager(private val activity: MapActivity) {
+class NauticalHudManager(val activity: MapActivity) {
     private var nauticalHudContainer: LinearLayout? = null
     private var topBarListener: View.OnLayoutChangeListener? = null
     private var topWidgetsListener: View.OnLayoutChangeListener? = null

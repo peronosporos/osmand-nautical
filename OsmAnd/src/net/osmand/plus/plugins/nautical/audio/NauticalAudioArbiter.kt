@@ -505,6 +505,10 @@ class NauticalAudioArbiter private constructor(private val app: OsmandApplicatio
         return activeAlarmQueue.any { isEmergency(it.type) }
     }
 
+    fun isHardwareAvailable(): Boolean {
+        return true
+    }
+
     private fun stopAlarmInternal(nextType: AlarmType?, abandonFocus: Boolean = true) {
         try {
             synchronized(playerLock) {

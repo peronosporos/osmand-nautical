@@ -18,6 +18,21 @@ import net.osmand.plus.notifications.OsmandNotification
  */
 class NauticalBackgroundService : NavigationService() {
 
+    companion object {
+        fun startService(app: OsmandApplication) {
+            val intent = Intent(app, NauticalBackgroundService::class.java)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                app.startForegroundService(intent)
+            } else {
+                app.startService(intent)
+            }
+        }
+
+        fun stopService(app: OsmandApplication) {
+            app.stopService(Intent(app, NauticalBackgroundService::class.java))
+        }
+    }
+
     private val log = PlatformUtil.getLog(NauticalBackgroundService::class.java)
     private var wakeLock: PowerManager.WakeLock? = null
     private var wifiLock: WifiManager.WifiLock? = null

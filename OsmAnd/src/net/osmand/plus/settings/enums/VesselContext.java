@@ -7,6 +7,8 @@ public enum VesselContext implements EnumWithTitleId {
     SAILING(R.string.vessel_context_sailing),
     MOTORING(R.string.vessel_context_motoring),
     ANCHORED(R.string.vessel_context_anchored),
+    MOORED(R.string.vessel_context_moored),
+    DOCKING(R.string.vessel_context_docking),
     EMERGENCY_HEAVE_TO(R.string.vessel_context_emergency);
 
     private final int titleId;

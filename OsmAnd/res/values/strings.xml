@@ -497,6 +497,8 @@
     <string name="vessel_context_sailing">Sailing</string>
     <string name="vessel_context_motoring">Motoring</string>
     <string name="vessel_context_anchored">Anchored</string>
+    <string name="vessel_context_moored">Moored</string>
+    <string name="vessel_context_docking">Docking</string>
     <string name="vessel_context_emergency">Emergency (Heave-To)</string>
     <string name="nautical_med_mooring_vessel_length">Vessel Length (m)</string>
     <string name="nautical_med_mooring_scope">Desired Anchor Scope</string>

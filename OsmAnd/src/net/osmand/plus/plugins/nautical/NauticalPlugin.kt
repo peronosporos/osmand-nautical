@@ -31,52 +31,13 @@ import net.osmand.plus.plugins.nautical.audio.AlarmType
 import net.osmand.plus.plugins.nautical.audio.NauticalAudioArbiter
 import net.osmand.plus.plugins.nautical.di.SailingDependencyContainer
 import net.osmand.plus.plugins.nautical.dr.viewmodel.DeadReckoningViewModel
-import net.osmand.plus.plugins.nautical.engine.AlarmPriorityManager
-import net.osmand.plus.plugins.nautical.engine.AnchorDriftWatchdog
-import net.osmand.plus.plugins.nautical.engine.AutopilotController
-import net.osmand.plus.plugins.nautical.engine.AutopilotRouteListener
-import net.osmand.plus.plugins.nautical.engine.CapabilityManager
-import net.osmand.plus.plugins.nautical.engine.ConnectionStatus
-import net.osmand.plus.plugins.nautical.engine.ElectricalController
-import net.osmand.plus.plugins.nautical.engine.EnvironmentalFilterService
-import net.osmand.plus.plugins.nautical.engine.MarineState
-import net.osmand.plus.plugins.nautical.engine.NauticalAisManager
-import net.osmand.plus.plugins.nautical.engine.NauticalLocationProvider
-import net.osmand.plus.plugins.nautical.engine.NauticalNotificationManager
-import net.osmand.plus.plugins.nautical.engine.NauticalSafetyAlertService
-import net.osmand.plus.plugins.nautical.engine.NauticalSafetyEvaluator
-import net.osmand.plus.plugins.nautical.engine.NauticalSafetyManager
-import net.osmand.plus.plugins.nautical.engine.NauticalWorkflowManager
-import net.osmand.plus.plugins.nautical.engine.NotificationState
-import net.osmand.plus.plugins.nautical.engine.OkHttpSignalKConnection
-import net.osmand.plus.plugins.nautical.engine.SafetyStateArbitrator
-import net.osmand.plus.plugins.nautical.engine.SailingWorkflowEngine
-import net.osmand.plus.plugins.nautical.engine.SignalKEngine
-import net.osmand.plus.plugins.nautical.engine.SignalKNotification
-import net.osmand.plus.plugins.nautical.engine.SignalKTideManager
-import net.osmand.plus.plugins.nautical.engine.events.NauticalEvent
-import net.osmand.plus.plugins.nautical.engine.events.NauticalEventBus
+import net.osmand.plus.plugins.nautical.engine.*
 import net.osmand.plus.plugins.nautical.hazard.engine.NavtexMessageDecoder
 import net.osmand.plus.plugins.nautical.hazard.viewmodel.NavtexViewModel
 import net.osmand.plus.plugins.nautical.laylines.viewmodel.LaylineViewModel
 import net.osmand.plus.plugins.nautical.logbook.data.MarineLogbookRepository
 import net.osmand.plus.plugins.nautical.logbook.engine.AutomatedLogbookEngine
-import net.osmand.plus.plugins.nautical.maneuvers.AnchoringManeuver
-import net.osmand.plus.plugins.nautical.maneuvers.DockingManeuver
-import net.osmand.plus.plugins.nautical.maneuvers.GybingManeuver
-import net.osmand.plus.plugins.nautical.maneuvers.HeavingToManeuver
-import net.osmand.plus.plugins.nautical.maneuvers.ManeuverManager
-import net.osmand.plus.plugins.nautical.maneuvers.ManeuverSpeechHelper
-import net.osmand.plus.plugins.nautical.maneuvers.ManeuverState
-import net.osmand.plus.plugins.nautical.maneuvers.ManeuverTtsHelper
-import net.osmand.plus.plugins.nautical.maneuvers.MedMooringManeuver
-import net.osmand.plus.plugins.nautical.maneuvers.MooringManeuver
-import net.osmand.plus.plugins.nautical.maneuvers.ShuntingManeuver
-import net.osmand.plus.plugins.nautical.maneuvers.SlipExitManeuver
-import net.osmand.plus.plugins.nautical.maneuvers.TackingManeuver
-import net.osmand.plus.plugins.nautical.maneuvers.TacticalProcessor
-import net.osmand.plus.plugins.nautical.maneuvers.TacticalStartManager
-import net.osmand.plus.plugins.nautical.maneuvers.WeighingAnchorManeuver
+import net.osmand.plus.plugins.nautical.maneuvers.*
 import net.osmand.plus.plugins.nautical.map.NauticalLayerManager
 import net.osmand.plus.plugins.nautical.map.controller.SailingMapLayerController
 import net.osmand.plus.plugins.nautical.map.layers.OceanographicGribMapLayer
@@ -94,28 +55,16 @@ import net.osmand.plus.plugins.nautical.raster.SignalKRasterLayer
 import net.osmand.plus.plugins.nautical.s57.S57SpatialIndex
 import net.osmand.plus.plugins.nautical.system.NauticalSystemManager
 import net.osmand.plus.plugins.nautical.tide.map.TidalCurrentsMapLayer
-import net.osmand.plus.plugins.nautical.ui.NauticalAisLayer
-import net.osmand.plus.plugins.nautical.ui.NauticalContextMenuHelper
-import net.osmand.plus.plugins.nautical.ui.NauticalSetupWizardDialog
-import net.osmand.plus.plugins.nautical.ui.NauticalUiOverlayManager
-import net.osmand.plus.plugins.nautical.ui.NauticalWidgetFactory
-import net.osmand.plus.plugins.nautical.ui.SignalKLogbookLayer
-import net.osmand.plus.plugins.nautical.ui.SignalKWaypointLayer
+import net.osmand.plus.plugins.nautical.ui.*
 import net.osmand.plus.plugins.nautical.utils.NauticalLog
 import net.osmand.plus.plugins.nautical.view.SignalKTideLayer
 import net.osmand.plus.plugins.nautical.viewmodel.PolarConfigViewModel
 import net.osmand.plus.plugins.nautical.viewmodel.RoutingViewModel
 import net.osmand.plus.plugins.nautical.viewmodel.WizardState
 import net.osmand.plus.quickaction.QuickActionType
-import net.osmand.plus.render.RenderingRuleProperty
 import net.osmand.plus.settings.backend.ApplicationMode
 import net.osmand.plus.settings.backend.preferences.CommonPreference
-import net.osmand.plus.settings.enums.CompassMode
-import net.osmand.plus.settings.enums.DayNightMode
-import net.osmand.plus.settings.enums.NauticalDisplayMode
-import net.osmand.plus.settings.enums.NmeaSource
-import net.osmand.plus.settings.enums.ScreenLayoutMode
-import net.osmand.plus.settings.enums.VesselContext
+import net.osmand.plus.settings.enums.*
 import net.osmand.plus.settings.fragments.SettingsScreenType
 import net.osmand.plus.views.mapwidgets.MapWidgetInfo
 import net.osmand.plus.views.mapwidgets.WidgetType
@@ -125,6 +74,8 @@ import net.osmand.plus.widgets.ctxmenu.ContextMenuAdapter
 import net.osmand.shared.aistracker.AisObject
 import net.osmand.shared.util.KMapUtils
 import net.osmand.util.MapUtils
+import net.osmand.render.RenderingRuleProperty
+import androidx.core.view.isVisible
 import okhttp3.OkHttpClient
 import java.io.File
 import java.lang.ref.WeakReference
@@ -955,7 +906,7 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
             hudManager = WeakReference(NauticalHudManager(activity))
         }
         val hud = hudManager?.get()
-        if (hud?.context != activity) {
+        if (hud?.activity != activity) {
             hudManager = WeakReference(NauticalHudManager(activity))
         }
 
@@ -1115,20 +1066,18 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
     override fun getSettingsScreenType(): SettingsScreenType = SettingsScreenType.NAUTICAL_SETTINGS
     override fun getId(): String = NAUTICAL_ID
     override fun getName(): String = app.getString(R.string.nautical_plugin_name)
-    override fun getDescription(): String = app.getString(R.string.nautical_plugin_description)
+    override fun getDescription(linksEnabled: Boolean): CharSequence = app.getString(R.string.nautical_plugin_description)
     override fun getPrefsDescription(): String = app.getString(R.string.nautical_plugin_description)
     override fun getLogoResourceId(): Int = R.drawable.ic_action_sail_boat_dark
-    override fun getAssetResourceImage(): String = "nautical.png"
+    override fun getAssetResourceImage(): Drawable? = ContextCompat.getDrawable(app, R.drawable.ic_plugin_nautical_map)
     override fun isMarketPlugin(): Boolean = false
 
     override fun addMyPlacesTab(myPlacesActivity: net.osmand.plus.myplaces.MyPlacesActivity, mTabs: MutableList<TabItem>, intent: Intent) {
         if (app.settings.APPLICATION_MODE.get().isDerivedRoutingFrom(ApplicationMode.BOAT)) {
             mTabs.add(
-                myPlacesActivity.createTab(
-                    "nautical_logbook",
-                    net.osmand.plus.plugins.nautical.logbook.ui.MarineLogbookFragment::class.java,
-                    R.string.nautical_logbook_title,
-                    R.drawable.ic_action_book
+                myPlacesActivity.getTabIndicator(
+                    R.string.logbook_title,
+                    net.osmand.plus.plugins.nautical.ui.logbook.MarineLogbookFragment::class.java
                 )
             )
         }
