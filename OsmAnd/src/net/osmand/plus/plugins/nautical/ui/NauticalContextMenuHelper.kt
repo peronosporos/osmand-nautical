@@ -444,7 +444,7 @@ class NauticalContextMenuHelper(private val app: OsmandApplication) {
                 icon = R.drawable.ic_action_import
                 setListener { _, _, _, _ ->
                     pluginScope?.launch {
-                        val routes = engine?.resourceManager?.getRoutes()
+                        val routes = engine?.fetchRoutesFromServer()
                         if (!routes.isNullOrEmpty()) {
                             val names = routes.values.map { (it.name ?: "Unnamed Route") as CharSequence }.toTypedArray()
                             val ids = routes.keys.toTypedArray()
@@ -462,21 +462,21 @@ class NauticalContextMenuHelper(private val app: OsmandApplication) {
                                                 pluginScope.launch {
                                                     when (actionIdx) {
                                                         0 -> {
-                                                            val fullRoute = engine.getRestService()?.getRouteById(routeId)?.body()
+                                                            val fullRoute = engine?.getRestService()?.getRouteById(routeId)?.body()
                                                             (fullRoute ?: selectedRoute)?.feature?.geometry?.coordinates?.let { coords ->
                                                                 val points = coords.map { Pair(it[1], it[0]) }
-                                                                engine.loadRoute(points)
+                                                                engine?.loadRoute(points)
                                                                 app.showToastMessage(R.string.nautical_loaded_points, points.size)
                                                             }
                                                         }
                                                         1 -> {
-                                                            val activePoints = engine.getRoutePoints()
+                                                            val activePoints = engine?.getRoutePoints() ?: emptyList()
                                                             if (activePoints.isNotEmpty()) {
-                                                                engine.resourceManager.updateRouteOnServer(routeId, selectedRoute?.name ?: "Updated", activePoints)
+                                                                engine?.updateRouteOnServer(routeId, selectedRoute?.name ?: "Updated", activePoints)
                                                             }
                                                         }
                                                         2 -> {
-                                                            engine.resourceManager.deleteRouteFromServer(routeId)
+                                                            engine?.deleteRouteFromServer(routeId)
                                                         }
                                                     }
                                                 }
@@ -531,7 +531,7 @@ class NauticalContextMenuHelper(private val app: OsmandApplication) {
                 setListener { _, _, _, _ ->
                     val name = "Route-${System.currentTimeMillis()}"
                     pluginScope?.launch {
-                        engine?.resourceManager?.uploadActiveRouteToSignalK(name, engine.getRoutePoints())
+                        engine?.uploadActiveRouteToSignalK(name)
                     }
                     true
                 }
