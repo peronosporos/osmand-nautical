@@ -545,6 +545,7 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
             app.settings.NAUTICAL_SHOW_TIDES.id,
             app.settings.NAUTICAL_SHOW_CMG_LINE.id,
             app.settings.NAUTICAL_SHOW_PMTILES.id,
+            app.settings.NAUTICAL_ARRIVAL_RADIUS.id,
             app.settings.NAUTICAL_RUDDER_GAIN.id,
             app.settings.NAUTICAL_COUNTER_RUDDER.id,
             app.settings.NAUTICAL_AUTO_TRIM.id,
@@ -572,6 +573,7 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
                     app.settings.NAUTICAL_VESSEL_DRAFT.id -> e.vesselDraft = app.settings.NAUTICAL_VESSEL_DRAFT.get().toDouble()
                     app.settings.NAUTICAL_CORRIDOR_WIDTH.id -> e.corridorWidthNm = app.settings.NAUTICAL_CORRIDOR_WIDTH.get().toDouble()
                     app.settings.NAUTICAL_SAFETY_CORRIDOR_BUFFER.id -> e.safetyCorridorBufferNm = app.settings.NAUTICAL_SAFETY_CORRIDOR_BUFFER.get().toDouble()
+                    app.settings.NAUTICAL_ARRIVAL_RADIUS.id -> e.arrivalRadiusMeters = app.settings.NAUTICAL_ARRIVAL_RADIUS.get().toDouble()
                     app.settings.NAUTICAL_RUDDER_GAIN.id,
                     app.settings.NAUTICAL_COUNTER_RUDDER.id,
                     app.settings.NAUTICAL_AUTO_TRIM.id,
@@ -768,6 +770,13 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
         }
 
         registerListeners()
+
+        // Cold-Start Fix: Initiate active data source connection on plugin initialization
+        if (app.settings.APPLICATION_MODE.get().isDerivedRoutingFrom(ApplicationMode.BOAT)) {
+            updateNmeaSource()
+            connectionManager.startEngine()
+            engine?.refreshVesselState()
+        }
     }
 
     private fun restoreTacticalState(scope: CoroutineScope) {
