@@ -11,7 +11,7 @@ import androidx.core.view.AccessibilityDelegateCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.accessibility.AccessibilityNodeInfoCompat
 import androidx.core.view.isVisible
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.*
 import net.osmand.PlatformUtil
 import net.osmand.plus.R
 import net.osmand.plus.plugins.nautical.NauticalPlugin
