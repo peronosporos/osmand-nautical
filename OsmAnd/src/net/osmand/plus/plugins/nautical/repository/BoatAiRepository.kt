@@ -147,11 +147,11 @@ class BoatAiRepository(private val app: OsmandApplication) {
             return BoatAiResult("Anchor watch disarmed.", actions)
         }
         if (q.contains("anchor")) {
-            val armed = state.anchorLatitude != null
+            val anchorObj = state.anchor ?: state.anchorState
+            val armed = anchorObj != null && (anchorObj.latitude != null || anchorObj.position != null || anchorObj.state == "set")
             val reply = if (armed) {
-                val dist = state.anchorDistanceMeters?.toInt() ?: 0
-                val radius = state.anchorRadiusMeters?.toInt() ?: 50
-                "Anchor Watch: ARMED. Distance from anchor: ${dist}m (Limit: ${radius}m)."
+                val radius = anchorObj?.radius?.toInt() ?: anchorObj?.maxRadius?.toInt() ?: 50
+                "Anchor Watch: ARMED (Radius: ${radius}m)."
             } else {
                 "Anchor Watch: DISARMED."
             }

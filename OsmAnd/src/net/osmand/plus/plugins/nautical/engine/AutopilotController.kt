@@ -70,7 +70,7 @@ class AutopilotController(
                     vibrateShort()
                     try {
                         net.osmand.plus.plugins.nautical.audio.NauticalAudioArbiter.getInstance(app)
-                            .dispatchAlarm(net.osmand.plus.plugins.nautical.audio.AlarmType.WARNING, loop = false)
+                            .dispatchAlarm(net.osmand.plus.plugins.nautical.audio.AlarmType.AUTOPILOT_COMMAND_REJECTED, loop = false)
                     } catch (_: Exception) {}
                 }
             }

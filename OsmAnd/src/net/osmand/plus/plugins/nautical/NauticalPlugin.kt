@@ -404,7 +404,6 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
 
                     uiOverlayManager.startLineHudHeader?.update()
                     uiOverlayManager.tacticsHudHeader?.update()
-                    uiOverlayManager.windTrendHudHeader?.update()
                     uiOverlayManager.anchorWatchHudView?.update()
                     uiOverlayManager.predictiveSteeringHudView?.update()
 
