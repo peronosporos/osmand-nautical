@@ -10,7 +10,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import net.osmand.plus.R
+import net.osmand.plus.activities.MapActivity
 import net.osmand.plus.plugins.nautical.engine.MarineState
 import java.util.Locale
 
@@ -44,15 +48,31 @@ class NauticalEnvironmentWidgetView @JvmOverloads constructor(
 
     override fun onAttachedToWindow() {
         super.onAttachedToWindow()
-        viewScope?.cancel()
-        val scope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main.immediate + kotlinx.coroutines.SupervisorJob())
-        viewScope = scope
-        val broker = net.osmand.plus.plugins.nautical.NauticalPlugin.engine?.dataBroker
-        if (broker != null) {
-            scope.launch {
-                broker.marineState.collect { state ->
-                    updateState(state)
-                    invalidate()
+        post {
+            if (isAttachedToWindow) {
+                val act = (context as? MapActivity)
+                viewScope?.cancel()
+                val scope = CoroutineScope(Dispatchers.Main.immediate + SupervisorJob())
+                viewScope = scope
+                val broker = net.osmand.plus.plugins.nautical.NauticalPlugin.engine?.dataBroker
+                if (broker != null) {
+                    if (act != null) {
+                        act.lifecycleScope.launch {
+                            act.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+                                broker.marineState.collect { state ->
+                                    updateState(state)
+                                    invalidate()
+                                }
+                            }
+                        }
+                    } else {
+                        scope.launch {
+                            broker.marineState.collect { state ->
+                                updateState(state)
+                                invalidate()
+                            }
+                        }
+                    }
                 }
             }
         }

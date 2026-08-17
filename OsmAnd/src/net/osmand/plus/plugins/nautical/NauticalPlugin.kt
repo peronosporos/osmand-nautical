@@ -772,11 +772,6 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
         }
 
         registerListeners()
-
-        // Cold-Start Fix: Initiate active data source connection on plugin initialization
-        updateNmeaSource()
-        nauticalConnectionManager.connect()
-        engine?.refreshVesselState()
     }
 
     private fun restoreTacticalState(scope: CoroutineScope) {
@@ -1014,11 +1009,15 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
     fun onMapActivityCreated(activity: MapActivity) {
         val isBoat = app.settings.APPLICATION_MODE.get().isDerivedRoutingFrom(ApplicationMode.BOAT)
         if (isActive && isBoat) {
-            initSubsystems(activity)
-            uiOverlayManager.updateHudVisibility(hudManager)
-            updateNmeaSource()
-            nauticalConnectionManager.connect()
-            engine?.refreshVesselState()
+            activity.window?.decorView?.post {
+                if (!activity.isFinishing && !activity.isDestroyed) {
+                    initSubsystems(activity)
+                    uiOverlayManager.updateHudVisibility(hudManager)
+                    updateNmeaSource()
+                    nauticalConnectionManager.connect()
+                    engine?.refreshVesselState()
+                }
+            }
         }
     }
 
@@ -1026,11 +1025,15 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
         super.mapActivityResume(activity)
         val isBoat = app.settings.APPLICATION_MODE.get().isDerivedRoutingFrom(ApplicationMode.BOAT)
         if (isActive && isBoat) {
-            initSubsystems(activity)
-            uiOverlayManager.updateHudVisibility(hudManager)
-            updateNmeaSource()
-            nauticalConnectionManager.connect()
-            engine?.refreshVesselState()
+            activity.window?.decorView?.post {
+                if (!activity.isFinishing && !activity.isDestroyed) {
+                    initSubsystems(activity)
+                    uiOverlayManager.updateHudVisibility(hudManager)
+                    updateNmeaSource()
+                    nauticalConnectionManager.connect()
+                    engine?.refreshVesselState()
+                }
+            }
         }
     }
 

@@ -1,7 +1,9 @@
 package net.osmand.plus.views.mapwidgets.widgets
 
 import android.view.View
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -28,14 +30,20 @@ class NauticalElectricalWidget(
         view.addOnAttachStateChangeListener(
             object : View.OnAttachStateChangeListener {
                 override fun onViewAttachedToWindow(v: View) {
-                    val broker = NauticalPlugin.engine?.dataBroker
-                    if (broker != null) {
-                        dataJob?.cancel()
-                        dataJob = mapActivity.lifecycleScope.launch(kotlinx.coroutines.Dispatchers.Main.immediate) {
-                            broker.marineState.collect {
-                                updateInfo(null)
-                                updateWidgetView()
-                                v.invalidate()
+                    v.post {
+                        if (v.isAttachedToWindow && !mapActivity.isFinishing && !mapActivity.isDestroyed) {
+                            val broker = NauticalPlugin.engine?.dataBroker
+                            if (broker != null) {
+                                dataJob?.cancel()
+                                dataJob = mapActivity.lifecycleScope.launch {
+                                    mapActivity.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+                                        broker.marineState.collect {
+                                            updateInfo(null)
+                                            updateWidgetView()
+                                            v.invalidate()
+                                        }
+                                    }
+                                }
                             }
                         }
                     }

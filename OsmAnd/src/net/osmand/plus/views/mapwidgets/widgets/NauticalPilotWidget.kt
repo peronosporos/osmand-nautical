@@ -14,7 +14,9 @@ import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.appcompat.widget.AppCompatImageView
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -58,15 +60,11 @@ class NauticalPilotWidget(
     override fun getIconId(): Int {
         val engine = NauticalPlugin.engine ?: return R.drawable.ic_plugin_nautical_map
         val state = engine.getCurrentState()
-
-        if (state.isOffCourse) {
-            return R.drawable.ic_action_alert
-        }
-
-        return when (state.autopilotState.lowercase(Locale.US)) {
-            "auto" -> R.drawable.ic_action_direction_compass
+        val mode = state.autopilotState.lowercase(Locale.US)
+        return when (mode) {
+            "compass", "heading" -> R.drawable.ic_action_compass
             "wind" -> R.drawable.ic_action_wind
-            "route", "track" -> R.drawable.ic_action_track_16
+            "nav", "track", "route" -> R.drawable.ic_action_point_to_navigation
             "emergency", "stop" -> R.drawable.ic_action_stop
             else -> R.drawable.ic_plugin_nautical_map
         }
@@ -161,25 +159,31 @@ class NauticalPilotWidget(
         view.addOnAttachStateChangeListener(
             object : View.OnAttachStateChangeListener {
                 override fun onViewAttachedToWindow(v: View) {
-                    val broker = NauticalPlugin.engine?.dataBroker
-                    if (broker != null) {
-                        dataJob?.cancel()
-                        dataJob = mapActivity.lifecycleScope.launch(kotlinx.coroutines.Dispatchers.Main.immediate) {
-                            broker.marineState.collect { state ->
-                                updateInfo(null)
-                                updateWidgetView()
-                                state.rudderAngle?.let { angle ->
-                                    val maxAngle = Math.toRadians(app.settings.NAUTICAL_RUDDER_LIMIT.get().toDouble())
-                                    val ratio = (angle.coerceIn(-maxAngle, maxAngle) / maxAngle).toFloat()
-                                    rudderMarker?.let { marker ->
-                                        val parent = marker.parent as? View
-                                        if (parent != null) {
-                                            val translationX = ratio * (parent.width / 2f - marker.width / 2f)
-                                            marker.translationX = translationX
+                    v.post {
+                        if (v.isAttachedToWindow && !mapActivity.isFinishing && !mapActivity.isDestroyed) {
+                            val broker = NauticalPlugin.engine?.dataBroker
+                            if (broker != null) {
+                                dataJob?.cancel()
+                                dataJob = mapActivity.lifecycleScope.launch {
+                                    mapActivity.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+                                        broker.marineState.collect { state ->
+                                            updateInfo(null)
+                                            updateWidgetView()
+                                            state.rudderAngle?.let { angle ->
+                                                val maxAngle = Math.toRadians(app.settings.NAUTICAL_RUDDER_LIMIT.get().toDouble())
+                                                val ratio = (angle.coerceIn(-maxAngle, maxAngle) / maxAngle).toFloat()
+                                                rudderMarker?.let { marker ->
+                                                    val parent = marker.parent as? View
+                                                    if (parent != null) {
+                                                        val translationX = ratio * (parent.width / 2f - marker.width / 2f)
+                                                        marker.translationX = translationX
+                                                    }
+                                                }
+                                            }
+                                            v.invalidate()
                                         }
                                     }
                                 }
-                                v.invalidate()
                             }
                         }
                     }

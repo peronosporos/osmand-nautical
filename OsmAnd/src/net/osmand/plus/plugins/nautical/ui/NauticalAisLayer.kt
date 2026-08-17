@@ -59,27 +59,29 @@ class NauticalAisLayer(context: Context) : OsmandMapLayer(context), ContextMenuL
         
         val activity = view.mapActivity
         if (activity != null) {
-            aisUpdateJob = activity.lifecycleScope.launch {
-                // Reactive AIS subscription with immediate initial load
-                while (isActive) {
-                    val currentPlugin = NauticalPlugin.getInstance()
-                    val manager = currentPlugin?.aisManager
-                    if (manager != null) {
-                        // Load initial state immediately
-                        manager.getAisObjects().forEach { onAisObjectReceived(it) }
-                        
-                        try {
-                            manager.aisEvents.collect { event ->
-                                when (event) {
-                                    is NauticalAisManager.AisEvent.Updated -> onAisObjectReceived(event.obj)
-                                    is NauticalAisManager.AisEvent.Removed -> onAisObjectRemoved(event.obj)
+            view.post {
+                if (aisUpdateJob?.isActive != true && !activity.isFinishing && !activity.isDestroyed) {
+                    aisUpdateJob = activity.lifecycleScope.launch(Dispatchers.Default) {
+                        while (isActive) {
+                            val currentPlugin = NauticalPlugin.getInstance()
+                            val manager = currentPlugin?.aisManager
+                            if (manager != null) {
+                                manager.getAisObjects().forEach { onAisObjectReceived(it) }
+                                
+                                try {
+                                    manager.aisEvents.collect { event ->
+                                        when (event) {
+                                            is NauticalAisManager.AisEvent.Updated -> onAisObjectReceived(event.obj)
+                                            is NauticalAisManager.AisEvent.Removed -> onAisObjectRemoved(event.obj)
+                                        }
+                                    }
+                                } catch (_: Exception) {
+                                    // If collection fails, loop will retry after a short delay
                                 }
                             }
-                        } catch (_: Exception) {
-                            // If collection fails, loop will retry after a short delay
+                            delay(500.milliseconds)
                         }
                     }
-                    delay(500.milliseconds) // Reduced delay for faster re-subscription
                 }
             }
         }
