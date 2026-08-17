@@ -65,8 +65,6 @@ class NauticalUiOverlayManager(private val app: OsmandApplication) {
         internal set
     var tacticsHudHeader: TacticsHudHeader? = null
         internal set
-    var windTrendHudHeader: WindTrendHudHeader? = null
-        internal set
     var anchorWatchHudView: AnchorWatchHudView? = null
         internal set
     var predictiveSteeringHudView: PredictiveSteeringHudView? = null
@@ -268,7 +266,6 @@ class NauticalUiOverlayManager(private val app: OsmandApplication) {
         if (tacticsHudHeader?.context == activity) return
         hudManager?.get()?.removeHeader(startLineHudHeader)
         hudManager?.get()?.removeHeader(tacticsHudHeader)
-        hudManager?.get()?.removeHeader(windTrendHudHeader)
         hudManager?.get()?.removeHeader(anchorWatchHudView)
         hudManager?.get()?.removeHeader(predictiveSteeringHudView)
 
@@ -279,10 +276,6 @@ class NauticalUiOverlayManager(private val app: OsmandApplication) {
         val th = TacticsHudHeader(activity)
         this.tacticsHudHeader = th
         hudManager?.get()?.addHeader(th, priority = 210)
-
-        val wt = WindTrendHudHeader(activity)
-        this.windTrendHudHeader = wt
-        hudManager?.get()?.addHeader(wt, priority = 250)
 
         val aw = AnchorWatchHudView(activity)
         this.anchorWatchHudView = aw

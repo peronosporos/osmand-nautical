@@ -173,7 +173,6 @@
     <string name="nautical_mob_btn_motor_return">Motor Return</string>
     <string name="nautical_mob_btn_hold_heading">Hold Heading</string>
     <string name="nautical_mob_heading_hold">MOB: Heading Hold Engaged</string>
-    <string name="nautical_wind_trend_hud_title">Wind Trend</string>
     <string name="shared_string_ok">OK</string>
     <string name="shared_string_no_items">No items</string>
     <string name="nautical_advanced_filter_sensitivity">Filter Sensitivity</string>
