@@ -1,6 +1,10 @@
 package net.osmand.plus.views.mapwidgets.widgets
 
 import android.view.View
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
 import net.osmand.plus.R
 import net.osmand.plus.activities.MapActivity
 import net.osmand.plus.plugins.nautical.NauticalPlugin

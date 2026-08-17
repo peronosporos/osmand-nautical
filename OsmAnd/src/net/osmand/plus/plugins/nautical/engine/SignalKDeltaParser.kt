@@ -319,13 +319,13 @@ class SignalKDeltaParser(
         return when (key.lowercase(Locale.US)) {
             "sog", "speedoverground", "speed_over_ground" -> SignalKPaths.NAV_SPEED_OVER_GROUND
             "stw", "speedthroughwater", "speed_through_water" -> SignalKPaths.NAV_SPEED_THROUGH_WATER
-            "cog", "cogtrue", "courseoverground", "course_over_ground", "courseovergroundtrue" -> SignalKPaths.NAV_COURSE_OVER_GROUND_TRUE
-            "cogmagnetic", "courseovergroundmagnetic" -> SignalKPaths.NAV_COURSE_OVER_GROUND_MAG
+            "cog", "cogtrue", "courseoverground", "course_over_ground", "courseovergroundtrue" -> SignalKPaths.NAV_COURSE_OVER_GROUND
+            "cogmagnetic", "courseovergroundmagnetic" -> "navigation.courseOverGroundMagnetic"
             "heading", "headingtrue", "hdg", "hdt", "heading_true" -> SignalKPaths.NAV_HEADING_TRUE
             "headingmagnetic", "heading_mag", "heading_magnetic", "hdm" -> SignalKPaths.NAV_HEADING_MAG
             "depth", "depthbelowtransducer", "depth_below_transducer", "dbt" -> SignalKPaths.ENV_DEPTH_BELOW_TRANSDUCER
             "depthbelowkeel", "depth_below_keel", "dbk" -> SignalKPaths.ENV_DEPTH_BELOW_KEEL
-            "depthbelowsurface", "depth_below_surface", "dbs" -> SignalKPaths.ENV_DEPTH_BELOW_SURFACE
+            "depthbelowsurface", "depth_below_surface", "dbs" -> SignalKPaths.ENV_DEPTH_SURFACE_TO_TRANSDUCER
             "windspeed", "windspeedapparent", "wind_speed_apparent", "aws" -> SignalKPaths.ENV_WIND_SPEED_APPARENT
             "windangle", "windangleapparent", "wind_angle_apparent", "awa" -> SignalKPaths.ENV_WIND_ANGLE_APPARENT
             "windspeedtrue", "wind_speed_true", "tws" -> SignalKPaths.ENV_WIND_SPEED_TRUE
@@ -333,17 +333,17 @@ class SignalKDeltaParser(
             "winddirectiontrue", "wind_direction_true", "twd" -> SignalKPaths.ENV_WIND_DIRECTION_TRUE
             "rudderangle", "rudder_angle", "rudder" -> SignalKPaths.STEERING_RUDDER_ANGLE
             "watertemperature", "water_temperature", "watertemp" -> SignalKPaths.ENV_WATER_TEMP
-            "outsidetemperature", "outside_temperature", "airtemp", "air_temperature" -> SignalKPaths.ENV_AIR_TEMP
+            "outsidetemperature", "outside_temperature", "airtemp", "air_temperature" -> SignalKPaths.ENV_OUTSIDE_TEMP
             "outsidepressure", "outside_pressure", "pressure", "barometer" -> SignalKPaths.ENV_OUTSIDE_PRESSURE
             "outsidehumidity", "outside_humidity", "humidity" -> SignalKPaths.ENV_OUTSIDE_HUMIDITY
             "magneticvariation", "magnetic_variation", "magvar" -> SignalKPaths.NAV_MAG_VARIATION
             "rateofturn", "rate_of_turn", "rot" -> SignalKPaths.NAV_RATE_OF_TURN
-            "roll" -> SignalKPaths.NAV_ATTITUDE_ROLL
-            "pitch" -> SignalKPaths.NAV_ATTITUDE_PITCH
-            "yaw" -> SignalKPaths.NAV_ATTITUDE_YAW
-            "leeway" -> SignalKPaths.PERF_LEEWAY
-            "drift" -> SignalKPaths.ENV_CURRENT_DRIFT
-            "settrue", "set_true", "set" -> SignalKPaths.ENV_CURRENT_SET_TRUE
+            "roll" -> "navigation.attitude.roll"
+            "pitch" -> "navigation.attitude.pitch"
+            "yaw" -> "navigation.attitude.yaw"
+            "leeway" -> "performance.leeway"
+            "drift" -> SignalKPaths.NAV_DRIFT
+            "settrue", "set_true", "set" -> SignalKPaths.NAV_SET_TRUE
             else -> null
         }
     }

@@ -14,6 +14,10 @@ import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.appcompat.widget.AppCompatImageView
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
 import net.osmand.plus.R
 import net.osmand.plus.activities.MapActivity
 import net.osmand.plus.plugins.nautical.NauticalPlugin

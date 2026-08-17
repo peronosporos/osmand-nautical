@@ -4,6 +4,9 @@ import android.annotation.SuppressLint
 import android.view.View
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import net.osmand.plus.R
@@ -223,14 +226,14 @@ class MarineTextWidget(
             return
         }
         if (dataJob == null && view?.isAttachedToWindow == true) {
-            engine.registerListener(marineStateListener)
-            dataJob = engine.dataBroker.marineState
-                .onEach {
-                    mapActivity.runOnUiThread {
-                        updateInfo(null)
-                    }
+            val broker = engine.dataBroker
+            dataJob = mapActivity.lifecycleScope.launch(Dispatchers.Main.immediate) {
+                broker.marineState.collect {
+                    updateInfo(null)
+                    updateWidgetView()
+                    view?.invalidate()
                 }
-                .launchIn(mapActivity.lifecycleScope)
+            }
         }
         val state = engine.getCurrentState()
         val integrity = getIntegrityState(state)
