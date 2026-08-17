@@ -69,9 +69,16 @@ class SignalKServerRoutesFragment : BaseOsmAndFragment() {
             val fullRoute = NauticalPlugin.engine?.getRestService()?.getRouteById(id)?.body() ?: route
             val points = fullRoute.feature.geometry.coordinates.map { Pair(it[1], it[0]) }
             if (points.isNotEmpty()) {
-                // Bridge to OsmAnd navigation
-                // For now, load into Engine which NauticalPlugin observes
                 NauticalPlugin.engine?.loadRoute(points)
+                try {
+                    val targetPointsHelper = app.targetPointsHelper
+                    targetPointsHelper.removeAllWayPoints(false, true)
+                    val lastPoint = points.last()
+                    points.drop(1).dropLast(1).forEach { (lat, lon) ->
+                        targetPointsHelper.navigateToPoint(net.osmand.data.LatLon(lat, lon), false, -1)
+                    }
+                    targetPointsHelper.navigateToPoint(net.osmand.data.LatLon(lastPoint.first, lastPoint.second), true, -1)
+                } catch (_: Exception) {}
                 app.showToastMessage(R.string.nautical_navigate_with_osmand)
             }
         }

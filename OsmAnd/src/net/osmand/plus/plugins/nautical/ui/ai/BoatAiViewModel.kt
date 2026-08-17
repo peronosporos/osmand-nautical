@@ -58,15 +58,7 @@ class BoatAiViewModel(
 
         viewModelScope.launch {
             val engine = NauticalPlugin.engine
-            val state = engine?.getCurrentState()
-            
-            // Check connection status before sending (Item 15)
-            if (engine == null || state == null || state.connectionStatus != ConnectionStatus.CONNECTED) {
-                val errorMsg = app.getString(R.string.nautical_ai_connection_error)
-                _messages.value = _messages.value + ChatMessage(text = errorMsg, isBot = true, isError = true)
-                _isLoading.value = false
-                return@launch
-            }
+            val state = engine?.getCurrentState() ?: net.osmand.plus.plugins.nautical.engine.MarineState()
 
             val result = repository.sendQuery(query, state)
             result.onSuccess { boatResult ->

@@ -68,6 +68,10 @@ class AutopilotController(
                         isWarning = true,
                     )
                     vibrateShort()
+                    try {
+                        net.osmand.plus.plugins.nautical.audio.NauticalAudioArbiter.getInstance(app)
+                            .dispatchAlarm(net.osmand.plus.plugins.nautical.audio.AlarmType.WARNING, loop = false)
+                    } catch (_: Exception) {}
                 }
             }
 

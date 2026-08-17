@@ -130,7 +130,7 @@ class NmeaPlaybackEngine(
             }
             
             var lastSentenceTime = -1L
-            val regex = Regex("\\[(\\d+)] (.*)")
+            val timestampRegex = Regex("^\\[(\\d+)]\\s*(.*)")
 
             while (isActive && isRunning) {
                 if (_playbackState.value != PlaybackState.PLAYING) {
@@ -139,19 +139,22 @@ class NmeaPlaybackEngine(
                 }
 
                 val line = source.readUtf8Line() ?: break
+                val trimmed = line.trim()
+                if (trimmed.isEmpty()) continue
+
                 val bytesRead = countingSource.bytesRead + seekByteOffset
                 _progress.value = (bytesRead.toFloat() / fileSize).coerceIn(0f, 1f)
 
-                val match = regex.find(line)
-                if (match != null) {
-                    val timestamp = try {
-                        match.groupValues[1].toLong()
-                    } catch (e: NumberFormatException) {
-                        log.warn("Malformed timestamp in line: $line")
-                        continue
-                    }
-                    val sentence = match.groupValues[2]
+                val match = timestampRegex.find(trimmed)
+                val (timestamp, sentence) = if (match != null) {
+                    val ts = match.groupValues[1].toLongOrNull() ?: System.currentTimeMillis()
+                    val sent = match.groupValues[2].trim()
+                    Pair(ts, sent)
+                } else {
+                    Pair(null, trimmed)
+                }
 
+                if (timestamp != null) {
                     if (lastSentenceTime != -1L) {
                         val delta = (timestamp - lastSentenceTime).coerceAtLeast(0)
                         if (delta > 0) {
@@ -159,9 +162,14 @@ class NmeaPlaybackEngine(
                             delay((delta / multiplier).toLong().milliseconds)
                         }
                     }
-                    
-                    _sentences.emit(sentence)
                     lastSentenceTime = timestamp
+                } else {
+                    val multiplier = speedMultiplier.coerceAtLeast(0.001f)
+                    delay((100L / multiplier).toLong().coerceAtLeast(1L).milliseconds)
+                }
+
+                if (sentence.startsWith("$") || sentence.startsWith("!")) {
+                    _sentences.emit(sentence)
                 }
             }
         } finally {

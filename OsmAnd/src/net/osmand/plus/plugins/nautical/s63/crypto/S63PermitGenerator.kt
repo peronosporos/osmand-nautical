@@ -100,15 +100,38 @@ object S63PermitGenerator {
         val cipher = Cipher.getInstance(BLOWFISH_ALGORITHM)
         cipher.init(Cipher.DECRYPT_MODE, keySpec)
 
-        permitTxt.lineSequence().forEach { line ->
-            // Format: PERMIT,CellName,ExpiryDate,CellKey1,CellKey2
-            val parts = line.split(",")
-            if ((parts.size >= 5) && (parts[0].trim().uppercase() == "PERMIT")) {
-                val cellName = parts[1].trim()
-                val expiryDate = parts[2].trim()
-                val encKey1 = parts[3].trim()
-                
-                if (encKey1.length == 16) {
+        permitTxt.lineSequence().forEach { rawLine ->
+            val line = rawLine.trim()
+            if (line.isEmpty() || line.startsWith("#") || line.startsWith("//")) return@forEach
+
+            // Format A: CSV format (e.g. "PERMIT,GB4X0000,20261231,B1C8E9D0A1B2C3D4,..." or "GB4X0000,20261231,B1C8E9D0A1B2C3D4,...")
+            if (line.contains(",")) {
+                val parts = line.split(",").map { it.trim() }
+                val (cellName, expiryDate, encKey1) = when {
+                    parts[0].equals("PERMIT", ignoreCase = true) && parts.size >= 4 -> {
+                        Triple(parts[1].uppercase(), parts[2], parts[3])
+                    }
+                    parts.size >= 3 && parts[0].length == 8 -> {
+                        Triple(parts[0].uppercase(), parts[1], parts[2])
+                    }
+                    else -> Triple("", "", "")
+                }
+                if (cellName.isNotEmpty() && encKey1.length == 16) {
+                    try {
+                        val encryptedBytes = fromHexString(encKey1)
+                        val decryptedBytes = cipher.doFinal(encryptedBytes)
+                        val cellKey = toHexString(decryptedBytes).uppercase()
+                        permits[cellName] = PermitInfo(cellKey, expiryDate)
+                    } catch (_: Exception) {}
+                }
+            } else if (line.length >= 32) {
+                // Format B: Standard raw S-63 permit string
+                // 8 chars CellName + 8 chars ExpiryDate + 16 chars EncKey1 (+ optional 16 chars EncKey2 + CRC)
+                val cellName = line.substring(0, 8).trim().uppercase()
+                val expiryDate = line.substring(8, 16).trim()
+                val encKey1 = line.substring(16, 32).trim()
+
+                if (encKey1.length == 16 && (cellName.matches(Regex("^[A-Z0-9]{8}$")) || cellName.length == 8)) {
                     try {
                         val encryptedBytes = fromHexString(encKey1)
                         val decryptedBytes = cipher.doFinal(encryptedBytes)

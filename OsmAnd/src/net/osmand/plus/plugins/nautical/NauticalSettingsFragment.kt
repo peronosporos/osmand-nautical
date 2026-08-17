@@ -248,7 +248,7 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
         }
         
         findPreference<Preference>("marine_raster_manager")?.setOnPreferenceClickListener {
-            net.osmand.plus.plugins.nautical.raster.MarineRasterSettingsControl.show(parentFragmentManager)
+            showInstance(requireActivity(), SettingsScreenType.MARINE_RASTER_MANAGER)
             true
         }
 
@@ -1270,7 +1270,10 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
                     preference.summary = mmsi.toString()
                     findPreference<Preference>(plugin.aisDisplayOwnPosition.id)?.isEnabled = mmsi != 0
                 }
-                settings.NAUTICAL_VHF_BACKEND_URL.id -> preference.summary = newString.ifEmpty { getString(OsmAndR.string.shared_string_none) }
+                settings.NAUTICAL_VHF_BACKEND_URL.id -> {
+                    preference.summary = newString.ifEmpty { getString(OsmAndR.string.shared_string_none) }
+                    plugin?.vhfManager?.start()
+                }
                 settings.NAVTEX_SUBJECT_FILTER.id -> preference.summary = newString.ifEmpty { getString(OsmAndR.string.shared_string_none) }
                 settings.NAVTEX_MAX_DISTANCE.id -> {
                     val dist = newString.toFloatOrNull() ?: 0f

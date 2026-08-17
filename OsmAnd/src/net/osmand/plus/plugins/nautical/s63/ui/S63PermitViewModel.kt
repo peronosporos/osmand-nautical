@@ -128,17 +128,8 @@ class S63PermitViewModel(
                     val hwid = store.getHwid()
                     val resultKeys = mutableMapOf<String, String>()
                     app.contentResolver.openInputStream(uri)?.use { input ->
-                        input.bufferedReader().useLines { lines ->
-                            lines.forEach { line ->
-                                val parts = line.split(",")
-                                if (parts.size >= 5 && parts[0].trim().uppercase() == "PERMIT") {
-                                    val encKey1 = parts[3].trim()
-                                    if (encKey1.length == 16) {
-                                        resultKeys.putAll(S63PermitGenerator.extractCellKeys(line, hwid))
-                                    }
-                                }
-                            }
-                        }
+                        val content = input.bufferedReader().use { it.readText() }
+                        resultKeys.putAll(S63PermitGenerator.extractCellKeys(content, hwid))
                     }
                     resultKeys
                 }
@@ -148,6 +139,10 @@ class S63PermitViewModel(
                     _uiState.value = _uiState.value.copy(
                         loadedCellCount = store.getLoadedCellCount(),
                         toastMessage = app.getString(R.string.s63_keys_loaded, keys.size)
+                    )
+                } else {
+                    _uiState.value = _uiState.value.copy(
+                        toastMessage = app.getString(R.string.s63_invalid_permit)
                     )
                 }
             } catch (e: Exception) {

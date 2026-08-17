@@ -231,7 +231,7 @@ class SignalKDataBroker(private val settings: OsmandSettings? = null) {
         val shadowDriveEnabled = settings?.NAUTICAL_SHADOW_DRIVE?.get() ?: true
         if (shadowDriveEnabled && (state.autopilotState != "standby") && (state.pendingCommandPath == null)) {
             state.rudderAngle?.let { lastRudder ->
-                if (abs(smoothed - lastRudder) > Math.toRadians(8.0)) {
+                if (abs(smoothed - lastRudder) > Math.toRadians(4.0)) {
                     scope.launch { _manualOverrideTriggered.emit(Unit) }
                 }
             }

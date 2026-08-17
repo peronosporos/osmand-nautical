@@ -1,4 +1,14 @@
 <resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
+    <string name="nautical_grib_sync_signalk">Download from Signal K</string>
+    <string name="nautical_grib_sync_success">GRIB weather data updated from Signal K</string>
+    <string name="nautical_grib_sync_fail">Failed to download GRIB from Signal K</string>
+    <string name="nautical_diag_probe_btn">Probe &amp; Synchronize Server</string>
+    <string name="nautical_diag_orchestrate_success">Server capabilities synchronized</string>
+    <string name="nautical_diag_orchestrate_fail">Server probe failed</string>
+    <string name="nautical_diag_server_info">Server Details</string>
+    <string name="nautical_diag_plugins_title">Server Plugins</string>
+    <string name="nautical_diag_capabilities_title">Detected Capabilities</string>
+    <string name="s63_invalid_permit">No valid S-63 permits found in file</string>
     <string name="rendering_value_simple_name">Simple</string>
     <string name="nautical_nmea_source_internal">Internal GPS</string>
     <string name="nautical_ai_actions_executed">Action executed: %1$d command(s) sent to boat.</string>

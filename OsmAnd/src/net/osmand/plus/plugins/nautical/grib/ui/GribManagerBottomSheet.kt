@@ -58,6 +58,17 @@ class GribManagerBottomSheet : BottomSheetDialogFragment() {
         
         recyclerView.layoutManager = LinearLayoutManager(context)
 
+        view.findViewById<View>(R.id.btn_sync_signalk_grib).setOnClickListener {
+            val rest = net.osmand.plus.plugins.nautical.NauticalPlugin.engine?.getRestService()
+            val repo = SailingDependencyContainer.gribRepository
+            if (rest != null && repo != null) {
+                repo.fetchFromSignalK(rest, "signalk-grib-weather-provider")
+            } else {
+                val app = activity?.application as? OsmandApplication
+                app?.showToastMessage(R.string.nautical_offline_status)
+            }
+        }
+
         view.findViewById<View>(R.id.btn_import_grib).setOnClickListener {
             importLauncher.launch("*/*")
         }

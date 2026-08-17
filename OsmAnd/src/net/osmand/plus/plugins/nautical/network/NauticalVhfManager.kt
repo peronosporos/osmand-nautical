@@ -75,8 +75,9 @@ class NauticalVhfManager(private val app: OsmandApplication) {
     }
 
     private suspend fun pollBackend() = withContext(Dispatchers.IO) {
-        val url = app.settings.NAUTICAL_VHF_BACKEND_URL.get()
-        if (url.isEmpty()) return@withContext
+        val rawUrl = app.settings.NAUTICAL_VHF_BACKEND_URL.get().trim()
+        if (rawUrl.isEmpty()) return@withContext
+        val url = if (!rawUrl.startsWith("http://") && !rawUrl.startsWith("https://")) "http://$rawUrl" else rawUrl
 
         try {
             val request = Request.Builder().url("${url.trimEnd('/')}/api/recordings").build()

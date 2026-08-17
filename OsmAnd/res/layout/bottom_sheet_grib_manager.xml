@@ -75,10 +75,19 @@
                 android:text="@string/grib_wave_direction_to" />
 
             <com.google.android.material.button.MaterialButton
-                android:id="@+id/btn_import_grib"
+                android:id="@+id/btn_sync_signalk_grib"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
+                android:text="@string/nautical_grib_sync_signalk"
+                app:icon="@drawable/ic_action_refresh_dark" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_import_grib"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
                 android:text="@string/shared_string_import"
                 app:icon="@drawable/ic_action_import" />
 

@@ -751,6 +751,15 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
         if (skDiscovery == null) {
             skDiscovery = SignalKDiscovery(app)
         }
+        if (tideManager == null) {
+            tideManager = SignalKTideManager(app, scope)
+        }
+        if (vhfManager == null) {
+            vhfManager = NauticalVhfManager(app)
+        }
+        if (app.settings.NAUTICAL_VHF_ENABLED.get()) {
+            vhfManager?.start()
+        }
         if (autopilotListener == null) {
             autopilotListener = AutopilotRouteListener(app.routingHelper)
         }
@@ -949,6 +958,15 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
             aisManager = null
         }
 
+        if (app.settings.NAUTICAL_VHF_ENABLED.get()) {
+            if (vhfManager == null) {
+                vhfManager = NauticalVhfManager(app)
+            }
+            vhfManager?.start()
+        } else {
+            vhfManager?.stop()
+        }
+
         layerManager.layerController?.updateLayerVisibility()
         app.osmandMap?.refreshMap()
     }
@@ -977,6 +995,7 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
         clearAisLayer()
         aisManager?.stopUpdates()
         aisManager = null
+        vhfManager?.stop()
         laylineViewModel?.clear()
         laylineViewModel = null
         drViewModel?.clear()
