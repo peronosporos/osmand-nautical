@@ -160,10 +160,10 @@ class BoatAiRepository(private val app: OsmandApplication) {
 
         // 6. Wind Information
         if (q.contains("wind") || q.contains("tws") || q.contains("twa") || q.contains("aws") || q.contains("awa")) {
-            val twsKn = (state.trueWindSpeed ?: 0.0) * 1.94384
-            val twdDeg = state.trueWindDirection?.let { (Math.toDegrees(it).toInt() + 360) % 360 } ?: 0
-            val awsKn = (state.apparentWindSpeed ?: 0.0) * 1.94384
-            val awaDeg = state.apparentWindAngle?.let { Math.toDegrees(it).toInt() } ?: 0
+            val twsKn = (state.windSpeedTrue ?: 0.0) * 1.94384
+            val twdDeg = state.windDirectionTrue?.let { (Math.toDegrees(it).toInt() + 360) % 360 } ?: 0
+            val awsKn = (state.windSpeedApparent ?: 0.0) * 1.94384
+            val awaDeg = state.windDirectionApparent?.let { Math.toDegrees(it).toInt() } ?: 0
             val side = if (awaDeg >= 0) "Starboard" else "Port"
             val reply = "Wind Report:\n• True Wind: %.1f kn @ %d°\n• Apparent Wind: %.1f kn @ %d° (%s)".format(
                 java.util.Locale.US, twsKn, twdDeg, kotlin.math.abs(awsKn), kotlin.math.abs(awaDeg), side
@@ -219,11 +219,11 @@ class BoatAiRepository(private val app: OsmandApplication) {
                 }
                 return BoatAiResult("Acknowledged active alarms.", actions)
             }
-            val activeNotifs = state.notifications.values.filter { it.state != "normal" }
+            val activeNotifs = state.notifications.values.filter { it.state != net.osmand.plus.plugins.nautical.engine.NotificationState.NORMAL }
             val reply = if (activeNotifs.isNotEmpty()) {
                 "Active Alarms (%d):\n%s".format(
                     activeNotifs.size,
-                    activeNotifs.joinToString("\n") { "• ${it.message ?: "Alert"} [${it.state}]" }
+                    activeNotifs.joinToString("\n") { "• ${it.message} [${it.state}]" }
                 )
             } else {
                 "All safety systems normal. No active alarms."
@@ -241,7 +241,7 @@ class BoatAiRepository(private val app: OsmandApplication) {
         // 12. General Status / Vessel Overview
         val sogKn = (state.speedOverGround ?: 0.0) * 1.94384
         val hdg = state.headingTrue?.let { (Math.toDegrees(it).toInt() + 360) % 360 } ?: 0
-        val twsKn = (state.trueWindSpeed ?: 0.0) * 1.94384
+        val twsKn = (state.windSpeedTrue ?: 0.0) * 1.94384
         val reply = "Vessel Status:\n• SOG: %.1f kn | HDG: %d°\n• True Wind: %.1f kn\n• Autopilot: %s\n\nYou can ask about wind, depth, speed, batteries, or command the autopilot and lights.".format(
             java.util.Locale.US, sogKn, hdg, twsKn, state.autopilotState ?: "STANDBY"
         )

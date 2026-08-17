@@ -45,7 +45,7 @@ class SignalKOrchestratorFragment : BaseOsmAndFragment() {
         }
 
         viewLifecycleOwner.lifecycleScope.launch {
-            NauticalPlugin.engine?.marineState?.collectLatest {
+            NauticalPlugin.engine?.marineStateFlow?.collectLatest {
                 adapter.notifyItemChanged(0)
             }
         }
@@ -156,14 +156,15 @@ class SignalKOrchestratorFragment : BaseOsmAndFragment() {
             val statusText = when (status) {
                 ConnectionStatus.CONNECTED -> "CONNECTED (WebSocket & REST)"
                 ConnectionStatus.CONNECTING -> "CONNECTING..."
+                ConnectionStatus.STALE -> "STALE DATA"
+                ConnectionStatus.UNAUTHORIZED -> "UNAUTHORIZED"
                 ConnectionStatus.DISCONNECTED -> "DISCONNECTED"
-                ConnectionStatus.ERROR -> "CONNECTION ERROR"
             }
             vh.desc.text = "Target: $ip:$port\nStatus: $statusText"
 
             val colorRes = when (status) {
                 ConnectionStatus.CONNECTED -> R.color.nautical_status_green
-                ConnectionStatus.CONNECTING -> R.color.nautical_color_amber
+                ConnectionStatus.CONNECTING, ConnectionStatus.STALE -> R.color.nautical_status_yellow
                 else -> R.color.nautical_status_red
             }
             vh.desc.setTextColor(ContextCompat.getColor(vh.itemView.context, colorRes))
