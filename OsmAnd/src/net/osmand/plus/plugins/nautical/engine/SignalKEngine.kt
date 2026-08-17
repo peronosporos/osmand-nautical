@@ -171,8 +171,14 @@ class SignalKEngine(
             controlManager.updateVesselDesign("design.airDraft", app.settings.NAUTICAL_AIR_DRAFT.get().toDouble())
         }
 
+        setPowerSaveMode(false)
         startMessageProcessing()
         startAutoSave()
+    }
+
+    fun startEngine() {
+        setPowerSaveMode(false)
+        startMessageProcessing()
     }
 
     private fun startAutoSave() {
@@ -186,7 +192,7 @@ class SignalKEngine(
     }
 
     @OptIn(DelicateCoroutinesApi::class)
-    private fun startMessageProcessing() {
+    fun startMessageProcessing() {
         if (messageChannel.isClosedForSend) {
             messageChannel = Channel(
                 capacity = 2000,
@@ -506,6 +512,9 @@ class SignalKEngine(
 
     fun handleIncomingMessage(jsonMessage: String) {
         if (historyManager.powerSaveMode) return
+        if (messageProcessingJob?.isActive != true) {
+            startMessageProcessing()
+        }
         log.debug("SignalK Ingress: $jsonMessage")
         sessionManager.lastUpdateTimestamp = TemporalUtils.now()
         lastRealtimeMessageTimestamp = System.currentTimeMillis()
@@ -519,6 +528,9 @@ class SignalKEngine(
 
     fun handleDelta(delta: DeltaMessage) {
         if (historyManager.powerSaveMode) return
+        if (messageProcessingJob?.isActive != true) {
+            startMessageProcessing()
+        }
         sessionManager.resetWatchdog(
             onNotifyListeners = { notifyListeners(it) },
             onUpdatePulse = { updatePulseLifecycle() },

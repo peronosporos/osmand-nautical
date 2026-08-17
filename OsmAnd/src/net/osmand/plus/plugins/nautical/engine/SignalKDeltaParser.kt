@@ -100,14 +100,33 @@ class SignalKDeltaParser(
         while (reader.hasNext()) {
             val updateObj = readJsonValue(reader) as? JSONObject ?: continue
 
-            // 1. Forward NMEA sentence updates to the NMEA Multiplexer
             val sourceObj = updateObj.optJSONObject("source")
+            val timestampStr = updateObj.optString("timestamp", "")
+            val updateTimestamp = if (timestampStr.isNotEmpty()) TemporalUtils.parseIso8601(timestampStr) else TemporalUtils.now()
+            val sourceLabel = if (sourceObj != null) {
+                sourceObj.optString("label", sourceObj.optString("src", sourceObj.toString()))
+            } else {
+                updateObj.optString("source")
+            }
+
+            // 1. Forward NMEA sentence updates to the NMEA Multiplexer
             val sentence = sourceObj?.optString("sentence") ?: updateObj.optString("sentence")
-            if (!sentence.isNullOrEmpty()) {
-                val fullSentence = updateObj.optString("raw") ?: updateObj.optString("sentence")
-                if (fullSentence.startsWith("$") || fullSentence.startsWith("!")) {
-                    SailingDependencyContainer.nmeaMultiplexer?.injectSentence(fullSentence)
+            val raw = updateObj.optString("raw").ifEmpty { sourceObj?.optString("raw") ?: "" }
+            var rawSentence: String? = null
+            if (raw.isNotEmpty()) {
+                rawSentence = raw
+            } else if (!sentence.isNullOrEmpty()) {
+                rawSentence = if (sentence.startsWith("$") || sentence.startsWith("!")) {
+                    sentence
+                } else if (sentence.contains(",")) {
+                    if (sentence.length >= 3 && !sentence.startsWith("$")) "\$$sentence" else "\$II$sentence"
+                } else {
+                    "\$II$sentence"
                 }
+            }
+
+            if (!rawSentence.isNullOrEmpty() && (rawSentence.startsWith("$") || rawSentence.startsWith("!"))) {
+                SailingDependencyContainer.nmeaMultiplexer?.processSentence(rawSentence)
             }
 
             // 3. Route AIS Contexts to AIS Manager
@@ -123,13 +142,6 @@ class SignalKDeltaParser(
 
             // 2. Parse values Array when Present
             val values = updateObj.optJSONArray("values")
-            val timestampStr = updateObj.optString("timestamp", "")
-            val updateTimestamp = if (timestampStr.isNotEmpty()) TemporalUtils.parseIso8601(timestampStr) else TemporalUtils.now()
-            val sourceLabel = if (sourceObj != null) {
-                sourceObj.optString("label", sourceObj.optString("src", sourceObj.toString()))
-            } else {
-                updateObj.optString("source")
-            }
 
             if (values != null && isSelf) {
                 for (j in 0 until values.length()) {
@@ -142,6 +154,11 @@ class SignalKDeltaParser(
                         if (res.second) stateUpdated = true
                     }
                 }
+            } else if (isSelf) {
+                // Parse decomposed keys directly in the update object
+                val res = parseDecomposedUpdateObject(currentState, updateObj, updateTimestamp, sourceLabel)
+                currentState = res.first
+                if (res.second) stateUpdated = true
             }
 
             // Handle meta
@@ -177,6 +194,20 @@ class SignalKDeltaParser(
             } ?: TemporalUtils.now()
             val updateSource = update.source?.get("label")?.toString()
 
+            val sentence = update.source?.get("sentence")?.toString() ?: update.source?.get("raw")?.toString()
+            if (!sentence.isNullOrEmpty()) {
+                val fullSentence = if (sentence.startsWith("$") || sentence.startsWith("!")) {
+                    sentence
+                } else if (sentence.contains(",")) {
+                    if (sentence.length >= 3 && !sentence.startsWith("$")) "\$$sentence" else "\$II$sentence"
+                } else {
+                    "\$II$sentence"
+                }
+                if (fullSentence.startsWith("$") || fullSentence.startsWith("!")) {
+                    SailingDependencyContainer.nmeaMultiplexer?.processSentence(fullSentence)
+                }
+            }
+
             if (routeToAis && aisManager != null) {
                 val updateObj = JSONObject()
                 updateObj.put("timestamp", update.timestamp)
@@ -198,12 +229,12 @@ class SignalKDeltaParser(
                 continue
             }
 
-            val values = update.values ?: continue
-            for (v in values) {
-                val path = v.path ?: continue
-                val value = v.value
+            val values = update.values
+            if (values != null && isSelf) {
+                for (v in values) {
+                    val path = v.path ?: continue
+                    val value = v.value
 
-                if (isSelf) {
                     val res = parseSelfValue(currentState, path, value, updateTimestamp, updateSource)
                     currentState = res.first
                     if (res.second) stateUpdated = true
@@ -213,6 +244,107 @@ class SignalKDeltaParser(
 
         if (isSelf && stateUpdated) {
             onFinalizeAndNotify(currentState)
+        }
+    }
+
+    private fun parseDecomposedUpdateObject(
+        s: MarineState,
+        updateObj: JSONObject,
+        updateTimestamp: Long,
+        sourceLabel: String?
+    ): Pair<MarineState, Boolean> {
+        var currentState = s
+        var updated = false
+
+        val nestedValueObj = updateObj.optJSONObject("value")
+        val targetObj = nestedValueObj ?: updateObj
+
+        var lat: Double? = null
+        var lon: Double? = null
+
+        val keys = targetObj.keys()
+        val ignoredKeys = setOf("source", "timestamp", "raw", "sentence", "meta", "\$schema", "context", "values")
+
+        while (keys.hasNext()) {
+            val key = keys.next()
+            if (ignoredKeys.contains(key)) continue
+
+            val value = targetObj.opt(key) ?: continue
+
+            when (key.lowercase(Locale.US)) {
+                "latitude", "lat" -> {
+                    (value as? Number)?.toDouble()?.let { lat = it }
+                    continue
+                }
+                "longitude", "lon", "lng" -> {
+                    (value as? Number)?.toDouble()?.let { lon = it }
+                    continue
+                }
+                "position", "pos", "location" -> {
+                    if (value is JSONObject) {
+                        val pLat = value.optDouble("latitude", Double.NaN)
+                        val pLon = value.optDouble("longitude", Double.NaN)
+                        if (!pLat.isNaN() && !pLon.isNaN()) {
+                            val res = parseSelfValue(currentState, SignalKPaths.NAV_POSITION, mapOf("latitude" to pLat, "longitude" to pLon), updateTimestamp, sourceLabel)
+                            currentState = res.first
+                            if (res.second) updated = true
+                        }
+                    }
+                    continue
+                }
+            }
+
+            val path = mapDecomposedKeyToPath(key)
+            if (path != null) {
+                val res = parseSelfValue(currentState, path, value, updateTimestamp, sourceLabel)
+                currentState = res.first
+                if (res.second) updated = true
+            } else if (key.contains(".")) {
+                val res = parseSelfValue(currentState, key, value, updateTimestamp, sourceLabel)
+                currentState = res.first
+                if (res.second) updated = true
+            }
+        }
+
+        if (lat != null && lon != null) {
+            val res = parseSelfValue(currentState, SignalKPaths.NAV_POSITION, mapOf("latitude" to lat!!, "longitude" to lon!!), updateTimestamp, sourceLabel)
+            currentState = res.first
+            if (res.second) updated = true
+        }
+
+        return Pair(currentState, updated)
+    }
+
+    private fun mapDecomposedKeyToPath(key: String): String? {
+        return when (key.lowercase(Locale.US)) {
+            "sog", "speedoverground", "speed_over_ground" -> SignalKPaths.NAV_SPEED_OVER_GROUND
+            "stw", "speedthroughwater", "speed_through_water" -> SignalKPaths.NAV_SPEED_THROUGH_WATER
+            "cog", "cogtrue", "courseoverground", "course_over_ground", "courseovergroundtrue" -> SignalKPaths.NAV_COURSE_OVER_GROUND_TRUE
+            "cogmagnetic", "courseovergroundmagnetic" -> SignalKPaths.NAV_COURSE_OVER_GROUND_MAG
+            "heading", "headingtrue", "hdg", "hdt", "heading_true" -> SignalKPaths.NAV_HEADING_TRUE
+            "headingmagnetic", "heading_mag", "heading_magnetic", "hdm" -> SignalKPaths.NAV_HEADING_MAG
+            "depth", "depthbelowtransducer", "depth_below_transducer", "dbt" -> SignalKPaths.ENV_DEPTH_BELOW_TRANSDUCER
+            "depthbelowkeel", "depth_below_keel", "dbk" -> SignalKPaths.ENV_DEPTH_BELOW_KEEL
+            "depthbelowsurface", "depth_below_surface", "dbs" -> SignalKPaths.ENV_DEPTH_BELOW_SURFACE
+            "windspeed", "windspeedapparent", "wind_speed_apparent", "aws" -> SignalKPaths.ENV_WIND_SPEED_APPARENT
+            "windangle", "windangleapparent", "wind_angle_apparent", "awa" -> SignalKPaths.ENV_WIND_ANGLE_APPARENT
+            "windspeedtrue", "wind_speed_true", "tws" -> SignalKPaths.ENV_WIND_SPEED_TRUE
+            "windangletrue", "wind_angle_true", "truewindangle", "twa" -> SignalKPaths.ENV_WIND_ANGLE_TRUE
+            "winddirectiontrue", "wind_direction_true", "twd" -> SignalKPaths.ENV_WIND_DIRECTION_TRUE
+            "rudderangle", "rudder_angle", "rudder" -> SignalKPaths.STEERING_RUDDER_ANGLE
+            "watertemperature", "water_temperature", "watertemp" -> SignalKPaths.ENV_WATER_TEMP
+            "outsidetemperature", "outside_temperature", "airtemp", "air_temperature" -> SignalKPaths.ENV_AIR_TEMP
+            "outsidepressure", "outside_pressure", "pressure", "barometer" -> SignalKPaths.ENV_OUTSIDE_PRESSURE
+            "outsidehumidity", "outside_humidity", "humidity" -> SignalKPaths.ENV_OUTSIDE_HUMIDITY
+            "magneticvariation", "magnetic_variation", "magvar" -> SignalKPaths.NAV_MAG_VARIATION
+            "rateofturn", "rate_of_turn", "rot" -> SignalKPaths.NAV_RATE_OF_TURN
+            "roll" -> SignalKPaths.NAV_ATTITUDE_ROLL
+            "pitch" -> SignalKPaths.NAV_ATTITUDE_PITCH
+            "yaw" -> SignalKPaths.NAV_ATTITUDE_YAW
+            "leeway" -> SignalKPaths.PERF_LEEWAY
+            "drift" -> SignalKPaths.ENV_CURRENT_DRIFT
+            "settrue", "set_true", "set" -> SignalKPaths.ENV_CURRENT_SET_TRUE
+            else -> null
         }
     }
 
@@ -547,13 +679,21 @@ class SignalKDeltaParser(
                                 }
                             }
                         }
+                    } else if (valueObj.has("nextPoint")) {
+                        state = state.copy(serverNextPoint = null)
+                        updated = true
                     }
                     val arrivalCircle = valueObj.optDouble("arrivalCircle", Double.NaN)
                     if (!arrivalCircle.isNaN()) routeTracker.arrivalRadiusMeters = arrivalCircle
                     
-                    val hasActiveRoute = !valueObj.isNull("activeRoute")
-                    val hasNextPoint = !valueObj.isNull("nextPoint")
+                    val activeRoute = valueObj.optJSONObject("activeRoute")
+                    val hasActiveRoute = activeRoute != null && !activeRoute.isNull("href")
+                    val hasNextPoint = nextPoint != null
                     routeTracker.isFollowingRoute = hasActiveRoute || hasNextPoint
+                } else if (valueObj == null) {
+                    routeTracker.isFollowingRoute = false
+                    state = state.copy(serverNextPoint = null)
+                    updated = true
                 }
             }
             SignalKPaths.NAV_DATETIME_MOON_PHASE -> {
@@ -957,7 +1097,12 @@ class SignalKDeltaParser(
                         }
                         "runTime" -> {
                             if (!value.isNaN()) {
-                                updateEngine(state, instance) { it.copy(runTime = value) }
+                                val stateWithRunTime = updateEngine(state, instance) { it.copy(runTime = value) }
+                                if (instance == "0") {
+                                    stateWithRunTime.copy(engineHours = value / 3600.0)
+                                } else {
+                                    stateWithRunTime
+                                }
                             } else state
                         }
                         "transmissionGear", "gear" -> {
@@ -1112,7 +1257,7 @@ class SignalKDeltaParser(
                     updated = true
                 }
             }
-            path.startsWith("electrical.switches.") || (path.startsWith("electrical.") && path.endsWith(".state")) || path.endsWith(".dimmingLevel") -> {
+            path.startsWith("electrical.switches.") || (path.startsWith("electrical.") && (path.endsWith(".state") || path.endsWith(".dimmingLevel"))) || path.endsWith(".dimmingLevel") -> {
                 val switchPath = when {
                     path.startsWith("electrical.switches.") -> path.removePrefix("electrical.switches.").substringBefore(".")
                     path.startsWith("electrical.") -> path.removePrefix("electrical.").removeSuffix(".state").removeSuffix(".dimmingLevel")

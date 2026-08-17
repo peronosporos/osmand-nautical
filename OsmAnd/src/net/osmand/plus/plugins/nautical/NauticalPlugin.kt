@@ -112,6 +112,8 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
     val wearOsManager = WearOsNauticalManager(app)
 
     val connectionManager = NauticalConnectionManager(app) { engine }
+    val nauticalConnectionManager: NauticalConnectionManager
+        get() = connectionManager
     val layerManager = NauticalLayerManager(app)
     val uiOverlayManager = NauticalUiOverlayManager(app)
     val widgetFactory = NauticalWidgetFactory()
@@ -772,11 +774,9 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
         registerListeners()
 
         // Cold-Start Fix: Initiate active data source connection on plugin initialization
-        if (app.settings.APPLICATION_MODE.get().isDerivedRoutingFrom(ApplicationMode.BOAT)) {
-            updateNmeaSource()
-            connectionManager.startEngine()
-            engine?.refreshVesselState()
-        }
+        updateNmeaSource()
+        nauticalConnectionManager.connect()
+        engine?.refreshVesselState()
     }
 
     private fun restoreTacticalState(scope: CoroutineScope) {
@@ -1006,6 +1006,22 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
         refreshHandler.removeCallbacks(refreshRunnable)
     }
 
+    override fun mapActivityCreate(activity: MapActivity) {
+        super.mapActivityCreate(activity)
+        onMapActivityCreated(activity)
+    }
+
+    fun onMapActivityCreated(activity: MapActivity) {
+        val isBoat = app.settings.APPLICATION_MODE.get().isDerivedRoutingFrom(ApplicationMode.BOAT)
+        if (isActive && isBoat) {
+            initSubsystems(activity)
+            uiOverlayManager.updateHudVisibility(hudManager)
+            updateNmeaSource()
+            nauticalConnectionManager.connect()
+            engine?.refreshVesselState()
+        }
+    }
+
     override fun mapActivityResume(activity: MapActivity) {
         super.mapActivityResume(activity)
         val isBoat = app.settings.APPLICATION_MODE.get().isDerivedRoutingFrom(ApplicationMode.BOAT)
@@ -1013,7 +1029,7 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
             initSubsystems(activity)
             uiOverlayManager.updateHudVisibility(hudManager)
             updateNmeaSource()
-            connectionManager.startEngine()
+            nauticalConnectionManager.connect()
             engine?.refreshVesselState()
         }
     }

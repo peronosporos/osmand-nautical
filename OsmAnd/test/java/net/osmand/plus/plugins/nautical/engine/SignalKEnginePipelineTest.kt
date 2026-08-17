@@ -208,4 +208,85 @@ class SignalKEnginePipelineTest {
         assertEquals("Nautical Song", state.mediaInfo?.title)
         assertEquals("Sea Band", state.mediaInfo?.artist)
     }
+
+    @Test
+    fun testSourceSentenceWithoutValuesArrayRoutesToMultiplexer() = runTest(testDispatcher) {
+        val jsonDelta = """
+            {
+              "context": "vessels.self",
+              "updates": [
+                {
+                  "timestamp": "2026-08-15T12:00:00.000Z",
+                  "source": { "sentence": "MWV", "talker": "II" },
+                  "raw": "${'$'}IIMWV,045.0,R,12.5,N,A*23"
+                }
+              ]
+            }
+        """.trimIndent()
+
+        engine.handleIncomingMessage(jsonDelta)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        val state = engine.getCurrentState()
+        // 12.5 knots * 0.514444 = 6.43055 m/s
+        assertNotNull(state.windSpeedApparent)
+        assertEquals(6.4305, state.windSpeedApparent!!, 0.01)
+        assertNotNull(state.windDirectionApparent)
+        assertEquals(Math.toRadians(45.0), state.windDirectionApparent!!, 0.001)
+    }
+
+    @Test
+    fun testDecomposedKeysInUpdateObjectDirectly() = runTest(testDispatcher) {
+        val jsonDelta = """
+            {
+              "context": "vessels.self",
+              "updates": [
+                {
+                  "timestamp": "2026-08-15T12:00:00.000Z",
+                  "sog": 7.2,
+                  "depth": 14.5,
+                  "latitude": 54.321,
+                  "longitude": 10.123
+                }
+              ]
+            }
+        """.trimIndent()
+
+        engine.handleIncomingMessage(jsonDelta)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        val state = engine.getCurrentState()
+        assertNotNull(state.speedOverGround)
+        assertEquals(7.2, state.speedOverGround!!, 0.001)
+        assertNotNull(state.depthBelowTransducer)
+        assertEquals(14.5, state.depthBelowTransducer!!, 0.001)
+        assertNotNull(state.latitude)
+        assertEquals(54.321, state.latitude!!, 0.0001)
+        assertNotNull(state.longitude)
+        assertEquals(10.123, state.longitude!!, 0.0001)
+    }
+
+    @Test
+    fun testVwtAndVtgSentenceParsing() = runTest(testDispatcher) {
+        // VWT: True wind 30 deg starboard, 15.0 knots -> 7.71666 m/s
+        val vwtSentence = "${'$'}IIVWT,030.0,R,15.0,N,07.7,M,027.8,K*23"
+        multiplexer.injectSentence(vwtSentence)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        val state = engine.getCurrentState()
+        assertNotNull(state.windSpeedTrue)
+        assertEquals(7.7, state.windSpeedTrue!!, 0.05)
+
+        // VTG: COG 120.5 deg, SOG 8.5 knots -> 4.37277 m/s
+        val vtgSentence = "${'$'}GPVTG,120.5,T,118.0,M,08.5,N,015.7,K,A*23"
+        multiplexer.injectSentence(vtgSentence)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        val state2 = engine.getCurrentState()
+        assertNotNull(state2.courseOverGroundTrue)
+        assertEquals(Math.toRadians(120.5), state2.courseOverGroundTrue!!, 0.001)
+        assertNotNull(state2.speedOverGround)
+        assertEquals(4.3727, state2.speedOverGround!!, 0.01)
+    }
 }
+

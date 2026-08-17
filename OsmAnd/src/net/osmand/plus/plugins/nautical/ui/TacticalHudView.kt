@@ -119,7 +119,17 @@ class TacticalHudView @JvmOverloads constructor(
     override fun onAttachedToWindow() {
         super.onAttachedToWindow()
         viewScope?.cancel()
-        viewScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main + kotlinx.coroutines.SupervisorJob())
+        val scope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main.immediate + kotlinx.coroutines.SupervisorJob())
+        viewScope = scope
+        val broker = NauticalPlugin.engine?.dataBroker
+        if (broker != null) {
+            scope.launch {
+                broker.marineState.collect { state ->
+                    updateState(state)
+                    invalidate()
+                }
+            }
+        }
     }
 
     override fun onDetachedFromWindow() {
@@ -279,5 +289,6 @@ class TacticalHudView @JvmOverloads constructor(
             announceForAccessibility(announcement)
             lastAnnouncementTime = now
         }
+        invalidate()
     }
 }

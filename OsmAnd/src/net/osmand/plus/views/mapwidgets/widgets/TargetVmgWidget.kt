@@ -1,6 +1,11 @@
 package net.osmand.plus.views.mapwidgets.widgets
 
+import android.view.View
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
 import net.osmand.plus.R
 import net.osmand.plus.activities.MapActivity
 import net.osmand.plus.plugins.nautical.NauticalPlugin
@@ -20,8 +25,36 @@ class TargetVmgWidget(
     panel: WidgetsPanel?,
 ) : SimpleWidget(mapActivity, widgetType, customId, panel) {
 
+    private var dataJob: Job? = null
+
     init {
         setIcons(widgetType)
+    }
+
+    override fun setupView(view: View) {
+        super.setupView(view)
+        view.addOnAttachStateChangeListener(
+            object : View.OnAttachStateChangeListener {
+                override fun onViewAttachedToWindow(v: View) {
+                    val broker = NauticalPlugin.engine?.dataBroker
+                    if (broker != null) {
+                        dataJob?.cancel()
+                        dataJob = mapActivity.lifecycleScope.launch(Dispatchers.Main.immediate) {
+                            broker.marineState.collect {
+                                updateInfo(null)
+                                updateWidgetView()
+                                v.invalidate()
+                            }
+                        }
+                    }
+                }
+
+                override fun onViewDetachedFromWindow(v: View) {
+                    dataJob?.cancel()
+                    dataJob = null
+                }
+            },
+        )
     }
 
     override fun updateIcon() {

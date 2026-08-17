@@ -1,6 +1,11 @@
 package net.osmand.plus.views.mapwidgets.widgets
 
 import android.graphics.Color
+import android.view.View
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
 import net.osmand.plus.activities.MapActivity
 import net.osmand.plus.plugins.nautical.NauticalPlugin
 import net.osmand.plus.views.layers.base.OsmandMapLayer
@@ -18,9 +23,36 @@ class NauticalTelltaleWidget(
     panel: WidgetsPanel?,
 ) : SimpleWidget(mapActivity, widgetType, customId, panel) {
 
+    private var dataJob: Job? = null
     private val laminarColor = Color.GREEN
     private val stalledColor = Color.RED
     private val neutralColor = Color.GRAY
+
+    override fun setupView(view: View) {
+        super.setupView(view)
+        view.addOnAttachStateChangeListener(
+            object : View.OnAttachStateChangeListener {
+                override fun onViewAttachedToWindow(v: View) {
+                    val broker = NauticalPlugin.engine?.dataBroker
+                    if (broker != null) {
+                        dataJob?.cancel()
+                        dataJob = mapActivity.lifecycleScope.launch(Dispatchers.Main.immediate) {
+                            broker.marineState.collect {
+                                updateInfo(null)
+                                updateWidgetView()
+                                v.invalidate()
+                            }
+                        }
+                    }
+                }
+
+                override fun onViewDetachedFromWindow(v: View) {
+                    dataJob?.cancel()
+                    dataJob = null
+                }
+            },
+        )
+    }
 
     override fun updateSimpleWidgetInfo(drawSettings: OsmandMapLayer.DrawSettings?) {
         val state = NauticalPlugin.engine?.getCurrentState()

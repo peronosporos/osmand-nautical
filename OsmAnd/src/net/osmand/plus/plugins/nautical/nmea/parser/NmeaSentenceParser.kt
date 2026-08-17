@@ -42,11 +42,15 @@ class NmeaSentenceParser(private val app: OsmandApplication) {
         val values = when (type) {
             "RMC" -> parseRMC(parts, talker)
             "MWV" -> parseMWV(parts)
+            "VWT" -> parseVWT(parts)
             "DBT", "DBS", "DPT" -> parseDepth(parts)
             "HDG", "HDT", "HDM" -> parseHeading(parts)
             "VHW" -> parseVHW(parts)
             "GGA" -> parseGGA(parts, talker)
             "GNS" -> parseGNS(parts, talker)
+            "GLL" -> parseGLL(parts, talker)
+            "VTG" -> parseVTG(parts, talker)
+            "VDR" -> parseVDR(parts)
             else -> emptyList()
         }
         
@@ -280,6 +284,86 @@ class NmeaSentenceParser(private val app: OsmandApplication) {
 
         val path = if (type == "DBS") "environment.depth.surfaceToTransducer" else LivePerformanceData.PATH_DEPTH
         return listOf(Value(path, depthMeters))
+    }
+
+    private fun parseVWT(parts: List<String>): List<Value> {
+        // $--VWT,x.x,a,x.x,N,x.x,M,x.x,K*hh
+        // Index: 0:ID, 1:calculated angle (0-180), 2:L/R, 3:speed knots, 4:N, 5:speed m/s, 6:M, 7:speed km/h, 8:K
+        if (parts.size < 4) return emptyList()
+        val angleDeg = parts[1].toDoubleOrNull() ?: return emptyList()
+        val lr = parts[2]
+        val speedKnots = parts[3].toDoubleOrNull()
+        val speedMs = if (parts.size >= 6 && parts[5].isNotEmpty()) {
+            parts[5].toDoubleOrNull() ?: (speedKnots?.times(0.514444))
+        } else {
+            speedKnots?.times(0.514444)
+        } ?: return emptyList()
+
+        if (!MarineStateConstants.isValidWindSpeed(speedMs)) return emptyList()
+
+        val rad = Math.toRadians(if (lr.equals("L", ignoreCase = true)) 360.0 - angleDeg else angleDeg)
+        return listOf(
+            Value(LivePerformanceData.PATH_TWS, speedMs),
+            Value(LivePerformanceData.PATH_TWA, rad)
+        )
+    }
+
+    private fun parseGLL(parts: List<String>, talker: String): List<Value> {
+        // $--GLL,llll.ll,a,yyyyy.yy,a,hhmmss.ss,A,a*hh
+        if (parts.size < 7) return emptyList()
+        if (parts[6] != "A") return emptyList()
+        if (!shouldProcess(LivePerformanceData.PATH_POSITION, talker)) return emptyList()
+
+        val lat = parseNmeaLatitude(parts[1], parts[2])
+        val lon = parseNmeaLongitude(parts[3], parts[4])
+        if (MarineStateConstants.isValidLat(lat) && MarineStateConstants.isValidLon(lon)) {
+            return listOf(Value(LivePerformanceData.PATH_POSITION, mapOf("latitude" to lat, "longitude" to lon)))
+        }
+        return emptyList()
+    }
+
+    private fun parseVTG(parts: List<String>, talker: String): List<Value> {
+        // $--VTG,x.x,T,x.x,M,x.x,N,x.x,K,a*hh
+        if (parts.size < 6) return emptyList()
+        val values = mutableListOf<Value>()
+
+        if (shouldProcess(LivePerformanceData.PATH_COG, talker)) {
+            parts[1].toDoubleOrNull()?.let { cogDeg ->
+                if (!cogDeg.isNaN()) {
+                    values.add(Value(LivePerformanceData.PATH_COG, Math.toRadians(cogDeg)))
+                }
+            }
+        }
+
+        if (shouldProcess(LivePerformanceData.PATH_SOG, talker)) {
+            parts[5].toDoubleOrNull()?.let { knots ->
+                val sogMs = knots * 0.514444
+                if (MarineStateConstants.isValidSpeed(sogMs)) {
+                    values.add(Value(LivePerformanceData.PATH_SOG, sogMs))
+                }
+            }
+        }
+
+        return values
+    }
+
+    private fun parseVDR(parts: List<String>): List<Value> {
+        // $--VDR,x.x,T,x.x,M,x.x,N*hh
+        if (parts.size < 6) return emptyList()
+        val values = mutableListOf<Value>()
+
+        parts[1].toDoubleOrNull()?.let { setDeg ->
+            values.add(Value("environment.current.setTrue", Math.toRadians(setDeg)))
+        }
+
+        parts[5].toDoubleOrNull()?.let { driftKnots ->
+            val driftMs = driftKnots * 0.514444
+            if (MarineStateConstants.isValidSpeed(driftMs)) {
+                values.add(Value("environment.current.drift", driftMs))
+            }
+        }
+
+        return values
     }
 
     private fun validateChecksum(content: String, providedChecksum: String): Boolean {

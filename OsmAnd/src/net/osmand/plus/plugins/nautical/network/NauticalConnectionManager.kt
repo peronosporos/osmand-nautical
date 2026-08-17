@@ -110,6 +110,10 @@ class NauticalConnectionManager(
         return builder.build()
     }
 
+    fun connect(connectionRestoredListener: () -> Unit = {}) {
+        startEngine(connectionRestoredListener)
+    }
+
     @Synchronized
     fun startEngine(connectionRestoredListener: () -> Unit = {}) {
         val rawIp = app.settings.NAUTICAL_SERVER_IP.get()?.trim() ?: ""
@@ -142,6 +146,7 @@ class NauticalConnectionManager(
         initConnection()
         connection?.url = wsUrl
         val engine = engineProvider()
+        engine?.startEngine()
         engine?.dataBroker?.updateState { it.copy(connectionStatus = ConnectionStatus.CONNECTING) }
 
         val authToken = app.settings.NAUTICAL_SIGNAL_K_AUTH_TOKEN.get()

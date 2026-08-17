@@ -141,6 +141,8 @@ class NauticalPilotWidget(
 
     override fun getContentLayoutId(): Int = R.layout.map_hud_pilot_widget
 
+    private var dataJob: kotlinx.coroutines.Job? = null
+
     @SuppressLint("ClickableViewAccessibility")
     override fun setupView(view: View) {
         super.setupView(view)
@@ -155,11 +157,33 @@ class NauticalPilotWidget(
         view.addOnAttachStateChangeListener(
             object : View.OnAttachStateChangeListener {
                 override fun onViewAttachedToWindow(v: View) {
-                    NauticalPlugin.engine?.registerListener(marineStateListener)
+                    val broker = NauticalPlugin.engine?.dataBroker
+                    if (broker != null) {
+                        dataJob?.cancel()
+                        dataJob = mapActivity.lifecycleScope.launch(kotlinx.coroutines.Dispatchers.Main.immediate) {
+                            broker.marineState.collect { state ->
+                                updateInfo(null)
+                                updateWidgetView()
+                                state.rudderAngle?.let { angle ->
+                                    val maxAngle = Math.toRadians(app.settings.NAUTICAL_RUDDER_LIMIT.get().toDouble())
+                                    val ratio = (angle.coerceIn(-maxAngle, maxAngle) / maxAngle).toFloat()
+                                    rudderMarker?.let { marker ->
+                                        val parent = marker.parent as? View
+                                        if (parent != null) {
+                                            val translationX = ratio * (parent.width / 2f - marker.width / 2f)
+                                            marker.translationX = translationX
+                                        }
+                                    }
+                                }
+                                v.invalidate()
+                            }
+                        }
+                    }
                 }
 
                 override fun onViewDetachedFromWindow(v: View) {
-                    NauticalPlugin.engine?.unregisterListener(marineStateListener)
+                    dataJob?.cancel()
+                    dataJob = null
                     holdHandler.removeCallbacksAndMessages(null)
                     pendingAnimator?.cancel()
                     pendingAnimator = null

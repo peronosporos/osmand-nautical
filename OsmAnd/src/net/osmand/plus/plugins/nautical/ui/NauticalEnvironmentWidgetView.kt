@@ -35,6 +35,30 @@ class NauticalEnvironmentWidgetView @JvmOverloads constructor(
         setPadding(p, p, p, p)
     }
 
+    private var viewScope: kotlinx.coroutines.CoroutineScope? = null
+
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
+        viewScope?.cancel()
+        val scope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main.immediate + kotlinx.coroutines.SupervisorJob())
+        viewScope = scope
+        val broker = net.osmand.plus.plugins.nautical.NauticalPlugin.engine?.dataBroker
+        if (broker != null) {
+            scope.launch {
+                broker.marineState.collect { state ->
+                    updateState(state)
+                    invalidate()
+                }
+            }
+        }
+    }
+
+    override fun onDetachedFromWindow() {
+        super.onDetachedFromWindow()
+        viewScope?.cancel()
+        viewScope = null
+    }
+
     fun updateState(state: MarineState) {
         humidityTxt.text = context.getString(R.string.nautical_humidity_label, String.format(Locale.US, "%.0f%%", (state.outsideHumidity ?: 0.0) * 100.0))
         
@@ -49,6 +73,7 @@ class NauticalEnvironmentWidgetView @JvmOverloads constructor(
         
         pressureTxt.visibility = if (state.outsidePressure != null) VISIBLE else GONE
         waterTempTxt.visibility = if (state.waterTemperature != null) VISIBLE else GONE
+        invalidate()
     }
 
     override fun setCompactMode(enabled: Boolean) {

@@ -47,12 +47,6 @@ class MarineTextWidget(
         }
     }
 
-    private val marineStateListener: (MarineState) -> Unit = {
-        mapActivity.runOnUiThread {
-            updateInfo(null)
-        }
-    }
-
     private var dataJob: kotlinx.coroutines.Job? = null
 
     override fun setupView(view: View) {
@@ -61,24 +55,20 @@ class MarineTextWidget(
         view.addOnAttachStateChangeListener(
             object : View.OnAttachStateChangeListener {
                 override fun onViewAttachedToWindow(v: View) {
-                    val engine = NauticalPlugin.engine
-                    engine?.registerListener(marineStateListener)
-                    
-                    val broker = engine?.dataBroker
+                    val broker = NauticalPlugin.engine?.dataBroker
                     if (broker != null) {
                         dataJob?.cancel()
-                        dataJob = broker.marineState
-                            .onEach {
-                                mapActivity.runOnUiThread {
-                                    updateInfo(null)
-                                }
+                        dataJob = mapActivity.lifecycleScope.launch(kotlinx.coroutines.Dispatchers.Main.immediate) {
+                            broker.marineState.collect {
+                                updateInfo(null)
+                                updateWidgetView()
+                                v.invalidate()
                             }
-                            .launchIn(mapActivity.lifecycleScope)
+                        }
                     }
                 }
 
                 override fun onViewDetachedFromWindow(v: View) {
-                    NauticalPlugin.engine?.unregisterListener(marineStateListener)
                     dataJob?.cancel()
                     dataJob = null
                 }

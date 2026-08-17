@@ -1,6 +1,10 @@
 package net.osmand.plus.views.mapwidgets.widgets
 
 import android.view.View
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
 import net.osmand.plus.R
 import net.osmand.plus.activities.MapActivity
 import net.osmand.plus.views.layers.base.OsmandMapLayer
@@ -14,7 +18,34 @@ class NauticalMasterTelemetryWidget(
     panel: WidgetsPanel?
 ) : SimpleWidget(mapActivity, widgetType, customId, panel) {
 
+    private var dataJob: Job? = null
     private var lastWorkflowState: net.osmand.plus.plugins.nautical.engine.SailingWorkflowState? = null
+
+    override fun setupView(view: View) {
+        super.setupView(view)
+        view.addOnAttachStateChangeListener(
+            object : View.OnAttachStateChangeListener {
+                override fun onViewAttachedToWindow(v: View) {
+                    val broker = net.osmand.plus.plugins.nautical.NauticalPlugin.engine?.dataBroker
+                    if (broker != null) {
+                        dataJob?.cancel()
+                        dataJob = mapActivity.lifecycleScope.launch(Dispatchers.Main.immediate) {
+                            broker.marineState.collect {
+                                updateInfo(null)
+                                updateWidgetView()
+                                v.invalidate()
+                            }
+                        }
+                    }
+                }
+
+                override fun onViewDetachedFromWindow(v: View) {
+                    dataJob?.cancel()
+                    dataJob = null
+                }
+            },
+        )
+    }
 
     override fun updateSimpleWidgetInfo(drawSettings: OsmandMapLayer.DrawSettings?) {
         updateIcon()

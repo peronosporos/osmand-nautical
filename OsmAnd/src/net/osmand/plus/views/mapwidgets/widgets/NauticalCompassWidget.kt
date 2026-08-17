@@ -21,9 +21,7 @@ class NauticalCompassWidget(
         setIcons(widgetType)
     }
 
-    private val marineStateListener: (MarineState) -> Unit = {
-        mapActivity.runOnUiThread { updateInfo(null) }
-    }
+    private var dataJob: kotlinx.coroutines.Job? = null
 
     override fun getWidgetName(): String = mapActivity.getString(R.string.map_widget_compass)
 
@@ -32,11 +30,22 @@ class NauticalCompassWidget(
         view.addOnAttachStateChangeListener(
             object : View.OnAttachStateChangeListener {
                 override fun onViewAttachedToWindow(v: View) {
-                    NauticalPlugin.engine?.registerListener(marineStateListener)
+                    val broker = NauticalPlugin.engine?.dataBroker
+                    if (broker != null) {
+                        dataJob?.cancel()
+                        dataJob = mapActivity.lifecycleScope.launch(kotlinx.coroutines.Dispatchers.Main.immediate) {
+                            broker.marineState.collect {
+                                updateInfo(null)
+                                updateWidgetView()
+                                v.invalidate()
+                            }
+                        }
+                    }
                 }
 
                 override fun onViewDetachedFromWindow(v: View) {
-                    NauticalPlugin.engine?.unregisterListener(marineStateListener)
+                    dataJob?.cancel()
+                    dataJob = null
                 }
             },
         )
