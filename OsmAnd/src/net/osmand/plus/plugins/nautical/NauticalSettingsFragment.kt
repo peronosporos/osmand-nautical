@@ -160,108 +160,18 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
     }
 
     private fun setupMaintenanceCategory() {
-        findPreference<Preference>("nautical_diagnostics")?.apply {
-            setIcon(OsmAndR.drawable.ic_action_info)
-            setOnPreferenceClickListener {
-                showInstance(requireActivity(), SettingsScreenType.SIGNALK_DIAGNOSTICS)
-                true
-            }
-        }
-
-        findPreference<Preference>("nautical_advanced_tuning")?.apply {
-            setIcon(OsmAndR.drawable.ic_action_settings)
-            setOnPreferenceClickListener {
-                showInstance(requireActivity(), SettingsScreenType.NAUTICAL_ADVANCED_SETTINGS)
-                true
-            }
-        }
-
-        findPreference<Preference>("nautical_boat_ai")?.apply {
-            setIcon(OsmAndR.drawable.ic_action_android)
-            setOnPreferenceClickListener {
-                showInstance(requireActivity(), SettingsScreenType.BOAT_AI)
-                true
-            }
-        }
-
-        findPreference<Preference>("nautical_checklists")?.apply {
-            setIcon(OsmAndR.drawable.ic_action_additional_option)
-            setOnPreferenceClickListener {
-                showInstance(requireActivity(), SettingsScreenType.NAUTICAL_CHECKLISTS)
-                true
-            }
-        }
-
-        findPreference<Preference>("nautical_notifications")?.apply {
-            setIcon(OsmAndR.drawable.ic_action_alert)
-            setOnPreferenceClickListener {
-                showInstance(requireActivity(), SettingsScreenType.NAUTICAL_NOTIFICATIONS)
-                true
-            }
-        }
-
-        findPreference<Preference>("nautical_safety_regions")?.apply {
-            setIcon(OsmAndR.drawable.ic_action_additional_option)
-            setOnPreferenceClickListener {
-                showInstance(requireActivity(), SettingsScreenType.NAUTICAL_SAFETY_REGIONS)
-                true
-            }
-        }
-
-        findPreference<Preference>("nautical_replay_manager")?.apply {
-            setIcon(OsmAndR.drawable.ic_action_play_dark)
-            setOnPreferenceClickListener {
-                net.osmand.plus.plugins.nautical.replay.NmeaPlaybackControlBottomSheet.show(parentFragmentManager)
-                true
-            }
-        }
-
-        findPreference<Preference>("nautical_hardware_health")?.apply {
-            setIcon(OsmAndR.drawable.ic_action_info)
-            setOnPreferenceClickListener {
-                showInstance(requireActivity(), SettingsScreenType.NAUTICAL_HARDWARE_STATS)
-                true
-            }
-        }
-
-        findPreference<Preference>("nautical_master_telemetry_setup")?.apply {
-            setIcon(OsmAndR.drawable.ic_action_settings)
-            setOnPreferenceClickListener {
-                showInstance(requireActivity(), SettingsScreenType.NAUTICAL_MASTER_TELEMETRY)
-                true
-            }
-        }
-
-        findPreference<Preference>("nautical_clear_data")?.apply {
-            setIcon(OsmAndR.drawable.ic_action_delete_dark)
-            setOnPreferenceClickListener {
-                AlertDialog.Builder(requireContext())
-                    .setTitle(OsmAndR.string.nautical_clear_marine_data)
-                    .setMessage(OsmAndR.string.nautical_clear_data_confirm)
-                    .setPositiveButton(OsmAndR.string.shared_string_delete) { _, _ ->
-                        NauticalPlugin.getInstance()?.clearMarineData()
-                    }
-                    .setNegativeButton(OsmAndR.string.shared_string_cancel, null)
-                    .show()
-                true
-            }
-        }
-        
-        findPreference<Preference>("marine_raster_manager")?.setOnPreferenceClickListener {
-            showInstance(requireActivity(), SettingsScreenType.MARINE_RASTER_MANAGER)
-            true
-        }
-
-        findPreference<Preference>("s63_permit_manager")?.setOnPreferenceClickListener {
-            showInstance(requireActivity(), SettingsScreenType.S63_PERMIT_MANAGER)
-            true
-        }
+        findPreference<Preference>("nautical_diagnostics")?.setIcon(OsmAndR.drawable.ic_action_info)
+        findPreference<Preference>("nautical_advanced_tuning")?.setIcon(OsmAndR.drawable.ic_action_settings)
+        findPreference<Preference>("nautical_boat_ai")?.setIcon(OsmAndR.drawable.ic_action_android)
+        findPreference<Preference>("nautical_checklists")?.setIcon(OsmAndR.drawable.ic_action_additional_option)
+        findPreference<Preference>("nautical_notifications")?.setIcon(OsmAndR.drawable.ic_action_alert)
+        findPreference<Preference>("nautical_safety_regions")?.setIcon(OsmAndR.drawable.ic_action_additional_option)
+        findPreference<Preference>("nautical_replay_manager")?.setIcon(OsmAndR.drawable.ic_action_play_dark)
+        findPreference<Preference>("nautical_hardware_health")?.setIcon(OsmAndR.drawable.ic_action_info)
+        findPreference<Preference>("nautical_master_telemetry_setup")?.setIcon(OsmAndR.drawable.ic_action_settings)
+        findPreference<Preference>("nautical_clear_data")?.setIcon(OsmAndR.drawable.ic_action_delete_dark)
 
         findPreference<Preference>("nautical_enc_manager")?.apply {
-            setOnPreferenceClickListener {
-                showInstance(requireActivity(), SettingsScreenType.ENC_CHART_MANAGER)
-                true
-            }
             NauticalPlugin.getInstance()?.s57SpatialIndex?.let { index ->
                 lifecycleScope.launch {
                     index.indexingStatus.collectLatest { status ->
@@ -272,30 +182,11 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
         }
 
         findPreference<Preference>("nautical_tide_manager")?.apply {
-            setOnPreferenceClickListener {
-                showInstance(requireActivity(), SettingsScreenType.TIDE_DATA_MANAGER)
-                true
-            }
             lifecycleScope.launch {
                 NauticalPlugin.engine?.marineStateFlow?.collectLatest { state ->
                     summary = state.tide?.stationName ?: getString(OsmAndR.string.shared_string_none)
                 }
             }
-        }
-
-        findPreference<Preference>("nautical_grib_manager")?.setOnPreferenceClickListener {
-            net.osmand.plus.plugins.nautical.grib.ui.GribManagerBottomSheet.show(parentFragmentManager)
-            true
-        }
-
-        findPreference<Preference>("nautical_server_routes")?.setOnPreferenceClickListener {
-            showInstance(requireActivity(), SettingsScreenType.SIGNALK_SERVER_ROUTES)
-            true
-        }
-
-        findPreference<Preference>("nautical_server_charts")?.setOnPreferenceClickListener {
-            showInstance(requireActivity(), SettingsScreenType.SIGNALK_SERVER_CHARTS)
-            true
         }
     }
 
@@ -1072,12 +963,151 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
         findPreference<Preference>(settings.NAUTICAL_NMEA_BAUD_RATE.id)?.isVisible = (source == net.osmand.plus.settings.enums.NmeaSource.USB)
     }
 
+    override fun onPreferenceClick(preference: Preference): Boolean {
+        val key = preference.key
+        when (key) {
+            "nautical_diagnostics" -> {
+                showInstance(requireActivity(), SettingsScreenType.SIGNALK_DIAGNOSTICS)
+                return true
+            }
+            "nautical_advanced_tuning" -> {
+                showInstance(requireActivity(), SettingsScreenType.NAUTICAL_ADVANCED_SETTINGS)
+                return true
+            }
+            "nautical_boat_ai" -> {
+                showInstance(requireActivity(), SettingsScreenType.BOAT_AI)
+                return true
+            }
+            "nautical_checklists" -> {
+                showInstance(requireActivity(), SettingsScreenType.NAUTICAL_CHECKLISTS)
+                return true
+            }
+            "nautical_notifications" -> {
+                showInstance(requireActivity(), SettingsScreenType.NAUTICAL_NOTIFICATIONS)
+                return true
+            }
+            "nautical_safety_regions" -> {
+                showInstance(requireActivity(), SettingsScreenType.NAUTICAL_SAFETY_REGIONS)
+                return true
+            }
+            "nautical_replay_manager" -> {
+                net.osmand.plus.plugins.nautical.replay.NmeaPlaybackControlBottomSheet.show(requireActivity().supportFragmentManager)
+                return true
+            }
+            "nautical_hardware_health" -> {
+                showInstance(requireActivity(), SettingsScreenType.NAUTICAL_HARDWARE_STATS)
+                return true
+            }
+            "nautical_master_telemetry_setup" -> {
+                showInstance(requireActivity(), SettingsScreenType.NAUTICAL_MASTER_TELEMETRY)
+                return true
+            }
+            "nautical_clear_data" -> {
+                AlertDialog.Builder(requireContext())
+                    .setTitle(OsmAndR.string.nautical_clear_marine_data)
+                    .setMessage(OsmAndR.string.nautical_clear_data_confirm)
+                    .setPositiveButton(OsmAndR.string.shared_string_delete) { _, _ ->
+                        NauticalPlugin.getInstance()?.clearMarineData()
+                    }
+                    .setNegativeButton(OsmAndR.string.shared_string_cancel, null)
+                    .show()
+                return true
+            }
+            "marine_raster_manager" -> {
+                showInstance(requireActivity(), SettingsScreenType.MARINE_RASTER_MANAGER)
+                return true
+            }
+            "s63_permit_manager" -> {
+                showInstance(requireActivity(), SettingsScreenType.S63_PERMIT_MANAGER)
+                return true
+            }
+            "nautical_enc_manager" -> {
+                showInstance(requireActivity(), SettingsScreenType.ENC_CHART_MANAGER)
+                return true
+            }
+            "nautical_tide_manager" -> {
+                showInstance(requireActivity(), SettingsScreenType.TIDE_DATA_MANAGER)
+                return true
+            }
+            "nautical_grib_manager" -> {
+                net.osmand.plus.plugins.nautical.grib.ui.GribManagerBottomSheet.show(requireActivity().supportFragmentManager)
+                return true
+            }
+            "nautical_server_routes" -> {
+                showInstance(requireActivity(), SettingsScreenType.SIGNALK_SERVER_ROUTES)
+                return true
+            }
+            "nautical_server_charts" -> {
+                showInstance(requireActivity(), SettingsScreenType.SIGNALK_SERVER_CHARTS)
+                return true
+            }
+            "nautical_discovery_mdns" -> {
+                showDiscoveryDialog()
+                return true
+            }
+            "nautical_test_alarm" -> {
+                net.osmand.plus.plugins.nautical.audio.NauticalAudioArbiter.getInstance(app).dispatchAlarm(net.osmand.plus.plugins.nautical.audio.AlarmType.MAP_HAZARD, loop = false)
+                return true
+            }
+            "nautical_test_tts" -> {
+                net.osmand.plus.plugins.nautical.audio.NauticalAudioArbiter.getInstance(app).dispatchTts(getString(OsmAndR.string.nautical_test_tts_msg))
+                return true
+            }
+            "nautical_compass_wizard" -> {
+                net.osmand.plus.views.mapwidgets.widgets.NauticalCompassWizardDialog.show(this)
+                return true
+            }
+            "nautical_clear_anchor" -> {
+                settings.NAUTICAL_ANCHOR_LAT.set(0.0)
+                settings.NAUTICAL_ANCHOR_LON.set(0.0)
+                NauticalPlugin.getInstance()?.anchorWatchdog?.stop()
+                app.showToastMessage(OsmAndR.string.nautical_anchor_cleared)
+                return true
+            }
+            "nautical_vhf_history_view" -> {
+                val url = settings.NAUTICAL_VHF_BACKEND_URL.get()
+                if (url.isEmpty()) {
+                    app.showToastMessage(OsmAndR.string.nautical_vhf_url_missing)
+                } else {
+                    net.osmand.plus.plugins.nautical.ui.VhfHistoryBottomSheet.show(requireActivity().supportFragmentManager)
+                }
+                return true
+            }
+            "nautical_switch_panel" -> {
+                showInstance(requireActivity(), SettingsScreenType.NAUTICAL_SWITCH_PANEL)
+                return true
+            }
+            "nautical_passage_plan" -> {
+                showInstance(requireActivity(), SettingsScreenType.NAUTICAL_PASSAGE_PLAN)
+                return true
+            }
+            settings.NAUTICAL_ACTIVE_SAIL_PLAN.id -> {
+                showInstance(requireActivity(), SettingsScreenType.SAIL_INVENTORY)
+                return true
+            }
+            "sailing_performance" -> {
+                showInstance(requireActivity(), SettingsScreenType.SAILING_PERFORMANCE_SETTINGS)
+                return true
+            }
+            "nautical_polar_wizard" -> {
+                showInstance(requireActivity(), SettingsScreenType.NAUTICAL_POLAR_WIZARD)
+                return true
+            }
+            "nautical_ais_buddies" -> {
+                showInstance(requireActivity(), SettingsScreenType.NAUTICAL_AIS_BUDDIES)
+                return true
+            }
+        }
+        return super.onPreferenceClick(preference)
+    }
+
     override fun onPreferenceChanged(prefId: String) {
         val plugin = NauticalPlugin.getInstance()
         when (prefId) {
             settings.NAUTICAL_DISPLAY_MODE.id -> {
                 val mode = settings.NAUTICAL_DISPLAY_MODE.get()
-                plugin?.applyDisplayMode(requireActivity() as net.osmand.plus.activities.MapActivity, mode)
+                val mapActivity = (activity as? net.osmand.plus.activities.MapActivity) ?: app.osmandMap?.mapView?.mapActivity
+                mapActivity?.let { plugin?.applyDisplayMode(it, mode) }
             }
             settings.NAUTICAL_VESSEL_CONTEXT.id -> {
                 val ctx = settings.NAUTICAL_VESSEL_CONTEXT.get()
@@ -1130,16 +1160,36 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
                         NauticalDisplayMode.SUNLIGHT -> getString(OsmAndR.string.nautical_display_mode_sunlight)
                         else -> getString(OsmAndR.string.nautical_display_mode_normal)
                     }
+                    onPreferenceChanged(key)
                 }
-                settings.NAUTICAL_SERVER_IP.id -> preference.summary = newString.ifEmpty { getString(OsmAndR.string.nautical_server_ip_desc) }
-                settings.NAUTICAL_SERVER_PORT.id -> preference.summary = newString.ifEmpty { getString(OsmAndR.string.nautical_server_port_desc) }
-                settings.NAUTICAL_SERVER_USERNAME.id -> preference.summary = newString.ifEmpty { getString(OsmAndR.string.nautical_server_username_desc) }
-                settings.NAUTICAL_SERVER_PASSWORD.id -> preference.summary = if (newString.isEmpty()) getString(OsmAndR.string.nautical_server_password_desc) else getString(OsmAndR.string.nautical_password_mask)
-                settings.NAUTICAL_SIGNAL_K_AUTH_TOKEN.id -> preference.summary = if (newString.isEmpty()) getString(OsmAndR.string.shared_string_none) else getString(OsmAndR.string.nautical_password_mask)
-                settings.NAUTICAL_USE_SECURE_CONNECTION.id -> updateSecureSettingsVisibility(newValue as Boolean)
+                settings.NAUTICAL_SERVER_IP.id -> {
+                    preference.summary = newString.ifEmpty { getString(OsmAndR.string.nautical_server_ip_desc) }
+                    onPreferenceChanged(key)
+                }
+                settings.NAUTICAL_SERVER_PORT.id -> {
+                    preference.summary = newString.ifEmpty { getString(OsmAndR.string.nautical_server_port_desc) }
+                    onPreferenceChanged(key)
+                }
+                settings.NAUTICAL_SERVER_USERNAME.id -> {
+                    preference.summary = newString.ifEmpty { getString(OsmAndR.string.nautical_server_username_desc) }
+                    onPreferenceChanged(key)
+                }
+                settings.NAUTICAL_SERVER_PASSWORD.id -> {
+                    preference.summary = if (newString.isEmpty()) getString(OsmAndR.string.nautical_server_password_desc) else getString(OsmAndR.string.nautical_password_mask)
+                    onPreferenceChanged(key)
+                }
+                settings.NAUTICAL_SIGNAL_K_AUTH_TOKEN.id -> {
+                    preference.summary = if (newString.isEmpty()) getString(OsmAndR.string.shared_string_none) else getString(OsmAndR.string.nautical_password_mask)
+                    onPreferenceChanged(key)
+                }
+                settings.NAUTICAL_USE_SECURE_CONNECTION.id -> {
+                    updateSecureSettingsVisibility(newValue as Boolean)
+                    onPreferenceChanged(key)
+                }
                 settings.NAUTICAL_RECEIVE_IN_BACKGROUND.id -> {
                     val isEnabled = newString.toBoolean()
                     preference.summary = if (isEnabled) getString(OsmAndR.string.shared_string_yes) else getString(OsmAndR.string.shared_string_no)
+                    onPreferenceChanged(key)
                 }
                 
                 settings.NAUTICAL_XTE_THRESHOLD.id,
@@ -1159,6 +1209,7 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
                     val (v, u) = SignalKUnitConverter.formatValue(app, settings, meters, "distance")
                     preference.summary = "$v $u"
                     (preference as? EditTextPreferenceEx)?.text = v
+                    onPreferenceChanged(key)
                     return false
                 }
 
@@ -1194,15 +1245,34 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
                     val (v, u) = SignalKUnitConverter.formatValue(app, settings, meters, "depth")
                     preference.summary = "$v $u"
                     (preference as? EditTextPreferenceEx)?.text = String.format(Locale.US, "%.2f", floatValue)
+                    onPreferenceChanged(key)
                     return false
                 }
 
-                settings.NAUTICAL_WIND_ALIGNMENT.id -> preference.summary = "${newString}°"
-                settings.NAUTICAL_LAYLINES_TACK_ANGLE.id -> preference.summary = "${newString}°"
-                settings.NAUTICAL_LEEWAY_COEFFICIENT.id -> preference.summary = newString
-                settings.NAUTICAL_MANUAL_LEEWAY_ANGLE.id -> preference.summary = "${newString}°"
-                settings.NAUTICAL_OFF_COURSE_ALARM.id -> preference.summary = "${newString}°"
-                settings.NAUTICAL_ACTUATOR_ALARM_THRESHOLD.id -> preference.summary = "$newString%"
+                settings.NAUTICAL_WIND_ALIGNMENT.id -> {
+                    preference.summary = "${newString}°"
+                    onPreferenceChanged(key)
+                }
+                settings.NAUTICAL_LAYLINES_TACK_ANGLE.id -> {
+                    preference.summary = "${newString}°"
+                    onPreferenceChanged(key)
+                }
+                settings.NAUTICAL_LEEWAY_COEFFICIENT.id -> {
+                    preference.summary = newString
+                    onPreferenceChanged(key)
+                }
+                settings.NAUTICAL_MANUAL_LEEWAY_ANGLE.id -> {
+                    preference.summary = "${newString}°"
+                    onPreferenceChanged(key)
+                }
+                settings.NAUTICAL_OFF_COURSE_ALARM.id -> {
+                    preference.summary = "${newString}°"
+                    onPreferenceChanged(key)
+                }
+                settings.NAUTICAL_ACTUATOR_ALARM_THRESHOLD.id -> {
+                    preference.summary = "$newString%"
+                    onPreferenceChanged(key)
+                }
                 
                 settings.NAUTICAL_RUDDER_GAIN.id,
                 settings.NAUTICAL_COUNTER_RUDDER.id,
@@ -1210,16 +1280,20 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
                 settings.NAUTICAL_FILTER_SENSITIVITY.id,
                 settings.NAUTICAL_RUDDER_LIMIT.id -> {
                     preference.summary = newString
+                    onPreferenceChanged(key)
                 }
 
                 settings.NAUTICAL_ANCHOR_SCOPE_RATIO.id -> {
                     preference.summary = "$newString:1"
+                    onPreferenceChanged(key)
                 }
                 settings.NAUTICAL_STW_REL_DELAY_SEC.id -> {
                     preference.summary = "$newString s"
+                    onPreferenceChanged(key)
                 }
                 settings.NAUTICAL_WATCHDOG_TIMEOUT_SEC.id -> {
                     preference.summary = "$newString s"
+                    onPreferenceChanged(key)
                 }
 
                 settings.NAUTICAL_VESSEL_TYPE.id -> {
@@ -1227,15 +1301,26 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
                         "PROA" -> getString(OsmAndR.string.nautical_vessel_proa)
                         else -> getString(OsmAndR.string.nautical_vessel_conventional)
                     }
+                    onPreferenceChanged(key)
                 }
                 settings.NAUTICAL_NMEA_SOURCE.id -> {
                     val source = net.osmand.plus.settings.enums.NmeaSource.valueOf(newString)
                     updateHardwareVisibility(source)
                     preference.summary = getString(source.titleId)
+                    onPreferenceChanged(key)
                 }
-                settings.NAUTICAL_BT_DEVICE_ADDRESS.id -> preference.summary = newString.ifEmpty { getString(OsmAndR.string.shared_string_none) }
-                settings.NAUTICAL_USB_DEVICE_NAME.id -> preference.summary = newString.ifEmpty { getString(OsmAndR.string.shared_string_none) }
-                settings.NAUTICAL_NMEA_BAUD_RATE.id -> preference.summary = newString
+                settings.NAUTICAL_BT_DEVICE_ADDRESS.id -> {
+                    preference.summary = newString.ifEmpty { getString(OsmAndR.string.shared_string_none) }
+                    onPreferenceChanged(key)
+                }
+                settings.NAUTICAL_USB_DEVICE_NAME.id -> {
+                    preference.summary = newString.ifEmpty { getString(OsmAndR.string.shared_string_none) }
+                    onPreferenceChanged(key)
+                }
+                settings.NAUTICAL_NMEA_BAUD_RATE.id -> {
+                    preference.summary = newString
+                    onPreferenceChanged(key)
+                }
                 settings.NAUTICAL_TELEMETRY_REFRESH_RATE.id -> {
                     val rate = newString.toIntOrNull() ?: 1
                     preference.summary = when (rate) {
@@ -1244,59 +1329,102 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
                         5 -> getString(OsmAndR.string.nautical_refresh_rate_5s)
                         else -> getString(OsmAndR.string.nautical_refresh_rate_1s)
                     }
+                    onPreferenceChanged(key)
                 }
                 settings.NAUTICAL_LOOK_AHEAD_TIME.id -> {
                     preference.summary = "$newString ${getString(OsmAndR.string.shared_string_min)}"
+                    onPreferenceChanged(key)
                 }
 
                 settings.NAUTICAL_TRAJECTORY_COLOR.id -> {
                     val listPref = preference as ListPreferenceEx
                     preference.summary = listPref.entries.getOrNull(listPref.entryValues.indexOf(newString)) ?: "Custom"
+                    onPreferenceChanged(key)
                 }
                 settings.NAUTICAL_TRAJECTORY_THICKNESS.id -> {
                     preference.summary = "$newString px"
+                    onPreferenceChanged(key)
                 }
 
-                plugin?.aisObjLostTimeout?.id -> preference.summary = "$newString ${getString(OsmAndR.string.shared_string_minute_lowercase)}"
-                plugin?.aisShipLostTimeout?.id -> preference.summary = if (newString == "100") getString(OsmAndR.string.shared_string_disabled) else "$newString ${getString(OsmAndR.string.shared_string_minute_lowercase)}"
+                plugin?.aisObjLostTimeout?.id -> {
+                    preference.summary = "$newString ${getString(OsmAndR.string.shared_string_minute_lowercase)}"
+                    onPreferenceChanged(key)
+                }
+                plugin?.aisShipLostTimeout?.id -> {
+                    preference.summary = if (newString == "100") getString(OsmAndR.string.shared_string_disabled) else "$newString ${getString(OsmAndR.string.shared_string_minute_lowercase)}"
+                    onPreferenceChanged(key)
+                }
                 plugin?.aisCpaWarningTime?.id -> {
                     val time = newString.toIntOrNull() ?: 0
                     preference.summary = if (time == 0) getString(OsmAndR.string.shared_string_disabled) else "$newString ${getString(OsmAndR.string.shared_string_minute_lowercase)}"
                     findPreference<Preference>(plugin.aisCpaWarningDistance.id)?.isEnabled = time != 0
+                    onPreferenceChanged(key)
                 }
-                plugin?.aisCpaWarningDistance?.id -> preference.summary = "$newString NM"
+                plugin?.aisCpaWarningDistance?.id -> {
+                    preference.summary = "$newString NM"
+                    onPreferenceChanged(key)
+                }
                 plugin?.aisOwnMmsi?.id -> {
                     val mmsi = newString.toIntOrNull() ?: 0
                     preference.summary = mmsi.toString()
                     findPreference<Preference>(plugin.aisDisplayOwnPosition.id)?.isEnabled = mmsi != 0
+                    onPreferenceChanged(key)
                 }
                 settings.NAUTICAL_VHF_BACKEND_URL.id -> {
                     preference.summary = newString.ifEmpty { getString(OsmAndR.string.shared_string_none) }
                     plugin?.vhfManager?.start()
+                    onPreferenceChanged(key)
                 }
-                settings.NAVTEX_SUBJECT_FILTER.id -> preference.summary = newString.ifEmpty { getString(OsmAndR.string.shared_string_none) }
+                settings.NAVTEX_SUBJECT_FILTER.id -> {
+                    preference.summary = newString.ifEmpty { getString(OsmAndR.string.shared_string_none) }
+                    onPreferenceChanged(key)
+                }
                 settings.NAVTEX_MAX_DISTANCE.id -> {
                     val dist = newString.toFloatOrNull() ?: 0f
                     preference.summary = if (dist > 0) "$newString km" else getString(OsmAndR.string.shared_string_none)
+                    onPreferenceChanged(key)
                 }
-                settings.NAUTICAL_NAVTEX_EXPIRY_HOURS.id -> preference.summary = "$newString h"
+                settings.NAUTICAL_NAVTEX_EXPIRY_HOURS.id -> {
+                    preference.summary = "$newString h"
+                    onPreferenceChanged(key)
+                }
                 settings.NAUTICAL_LOGBOOK_INTERVAL.id -> {
                     val interval = newString.toIntOrNull() ?: 0
                     preference.summary = when (interval) {
                         0 -> "Immediate (Event-based)"
                         else -> "$newString min"
                     }
+                    onPreferenceChanged(key)
                 }
-                settings.NAUTICAL_HEADING_REFERENCE.id -> preference.summary = if (newString == "TRUE") getString(OsmAndR.string.nautical_heading_reference_true) else getString(OsmAndR.string.nautical_heading_reference_mag)
-                settings.NAUTICAL_TTW_MODE.id -> preference.summary = if (newString == "SOG") getString(OsmAndR.string.nautical_ttw_mode_sog) else getString(OsmAndR.string.nautical_ttw_mode_vmg)
+                settings.NAUTICAL_HEADING_REFERENCE.id -> {
+                    preference.summary = if (newString == "TRUE") getString(OsmAndR.string.nautical_heading_reference_true) else getString(OsmAndR.string.nautical_heading_reference_mag)
+                    onPreferenceChanged(key)
+                }
+                settings.NAUTICAL_TTW_MODE.id -> {
+                    preference.summary = if (newString == "SOG") getString(OsmAndR.string.nautical_ttw_mode_sog) else getString(OsmAndR.string.nautical_ttw_mode_vmg)
+                    onPreferenceChanged(key)
+                }
                 settings.NAUTICAL_VESSEL_CONTEXT.id -> {
                     val ctx = VesselContext.valueOf(newString)
                     preference.summary = getString(ctx.titleId)
+                    onPreferenceChanged(key)
                 }
-                settings.NAUTICAL_MED_MOORING_VESSEL_LENGTH.id -> preference.summary = "$newString m"
-                settings.NAUTICAL_MED_MOORING_SCOPE.id -> preference.summary = "$newString:1"
-                settings.NAUTICAL_TACKING_WIND_LIMIT.id -> preference.summary = "$newString kn"
-                settings.NAUTICAL_MOB_AUDIO_INTERVAL.id -> preference.summary = "$newString s"
+                settings.NAUTICAL_MED_MOORING_VESSEL_LENGTH.id -> {
+                    preference.summary = "$newString m"
+                    onPreferenceChanged(key)
+                }
+                settings.NAUTICAL_MED_MOORING_SCOPE.id -> {
+                    preference.summary = "$newString:1"
+                    onPreferenceChanged(key)
+                }
+                settings.NAUTICAL_TACKING_WIND_LIMIT.id -> {
+                    preference.summary = "$newString kn"
+                    onPreferenceChanged(key)
+                }
+                settings.NAUTICAL_MOB_AUDIO_INTERVAL.id -> {
+                    preference.summary = "$newString s"
+                    onPreferenceChanged(key)
+                }
                 settings.NAUTICAL_ARRIVAL_RADIUS.id -> {
                     val floatValue = newString.toFloatOrNull() ?: 35.0f
                     val meters = floatValue.toDouble()
@@ -1304,13 +1432,59 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
                     val (v, u) = SignalKUnitConverter.formatValue(app, settings, meters, "distance")
                     preference.summary = "$v $u"
                     (preference as? EditTextPreferenceEx)?.text = v
+                    onPreferenceChanged(key)
                     return false
                 }
                 settings.NAUTICAL_PILOT_SEA_STATE.id -> {
                     preference.summary = newString
+                    onPreferenceChanged(key)
                 }
-                settings.NAUTICAL_ACTIVE_SAIL_PLAN.id -> preference.summary = newString.ifEmpty { getString(OsmAndR.string.shared_string_none) }
-                settings.NAUTICAL_WAVE_BIAS_SENSITIVITY.id -> preference.summary = "$newString%"
+                settings.NAUTICAL_ACTIVE_SAIL_PLAN.id -> {
+                    preference.summary = newString.ifEmpty { getString(OsmAndR.string.shared_string_none) }
+                    onPreferenceChanged(key)
+                }
+                settings.NAUTICAL_WAVE_BIAS_SENSITIVITY.id -> {
+                    preference.summary = "$newString%"
+                    onPreferenceChanged(key)
+                }
+                
+                // Toggle-only items with no summary logic
+                settings.NAUTICAL_AIS_ENABLED.id,
+                settings.NAUTICAL_MODULE_TIDES.id,
+                settings.NAUTICAL_MODULE_GRIB.id,
+                settings.NAUTICAL_VHF_ENABLED.id,
+                settings.NAUTICAL_MODULE_LOGBOOK.id,
+                settings.NAUTICAL_MODULE_ENC.id,
+                settings.NAUTICAL_MODULE_RASTER.id,
+                settings.NAUTICAL_NAVTEX_ENABLED.id,
+                settings.NAUTICAL_HEAVY_WEATHER_MODE.id,
+                settings.NAUTICAL_MULTIHULL_SHUNTING.id,
+                settings.NAUTICAL_PREDICTIVE_STEERING.id,
+                settings.NAUTICAL_SHADOW_DRIVE.id,
+                settings.NAUTICAL_TRUST_ALL_CERTIFICATES.id,
+                settings.NAUTICAL_FORCE_WATCH_LAYOUT.id,
+                settings.NAUTICAL_MOB_AUDIO_GUIDANCE.id,
+                settings.NAUTICAL_LOCK_TOUCH_DURING_MANEUVERS.id,
+                settings.NAUTICAL_SHOW_LAYLINES.id,
+                settings.NAUTICAL_SHOW_INFINITE_LAYLINES.id,
+                settings.NAUTICAL_SHOW_WIND_SHIFTS.id,
+                settings.NAUTICAL_SHOW_TRAJECTORY.id,
+                settings.NAUTICAL_SHOW_TIDES.id,
+                settings.NAUTICAL_SHOW_HEADING_LINE.id,
+                settings.NAUTICAL_SHOW_COG_LINE.id,
+                settings.NAUTICAL_SHOW_CMG_LINE.id,
+                settings.NAUTICAL_SHOW_CURRENT_VECTOR.id,
+                settings.NAUTICAL_RESTRICTED_AREAS_ENABLED.id,
+                settings.NAUTICAL_SHOW_WINDY_TILES.id,
+                settings.NAUTICAL_SHOW_RAIN_RADAR.id,
+                settings.NAUTICAL_SHOW_OPENMETEO_TILES.id,
+                settings.NAUTICAL_SHOW_SMHI_TILES.id,
+                settings.NAUTICAL_SHOW_NOAA_TILES.id,
+                settings.NAUTICAL_SHOW_PMTILES.id,
+                settings.NAUTICAL_SHOW_LOGBOOK_LAYER.id,
+                settings.NAUTICAL_GRIB_SOURCE_SIGNALK.id -> {
+                    onPreferenceChanged(key)
+                }
             }
         }
         return changed

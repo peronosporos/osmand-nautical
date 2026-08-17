@@ -379,10 +379,11 @@ class AnchorDriftWatchdog(private val app: OsmandApplication) {
             
             // Advanced Drag Logic: Account for Scope Ratio and Water Depth (TASK-110)
             val anchorDepth = app.settings.NAUTICAL_ANCHOR_DEPTH.get().toDouble()
+            val tideRise = app.settings.NAUTICAL_ANCHOR_TIDE_RISE.get().toDouble()
             val freeboard = app.settings.NAUTICAL_ANCHOR_FREEBOARD.get().toDouble()
             val scopeRatio = app.settings.NAUTICAL_ANCHOR_SCOPE_RATIO.get().toDouble().coerceAtLeast(1.0)
             
-            val totalVertical = anchorDepth + freeboard
+            val totalVertical = anchorDepth + tideRise + freeboard
             
             // If we have chain counter data, we use it. Otherwise fallback to preferred scope ratio.
             val effectiveRode = state.rodeDeployed ?: (totalVertical * scopeRatio)
@@ -393,8 +394,9 @@ class AnchorDriftWatchdog(private val app: OsmandApplication) {
                 5.0 // Minimum safety floor
             }
 
+            val bowOffset = app.settings.NAUTICAL_ANCHOR_BOW_OFFSET.get().toDouble()
             val userSafetyMargin = app.settings.NAUTICAL_ANCHOR_SAFETY_MARGIN.get().toDouble()
-            val totalAllowedDistance = maxTheoreticalSwing + userSafetyMargin
+            val totalAllowedDistance = maxTheoreticalSwing + userSafetyMargin + bowOffset
 
             // If distance > totalAllowedDistance, anchor is dragging
             if (distance > totalAllowedDistance) {

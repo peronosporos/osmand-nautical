@@ -221,6 +221,7 @@ class MobViewModel(
     }
 
     private fun announceGuidance() {
+        if (!app.settings.NAUTICAL_MOB_AUDIO_GUIDANCE.get()) return
         val status = stateMachine.mobStatus.value
         val vector = status.returnVector ?: return
         

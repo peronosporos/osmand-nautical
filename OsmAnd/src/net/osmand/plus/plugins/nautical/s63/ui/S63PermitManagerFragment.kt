@@ -99,14 +99,6 @@ class S63PermitManagerFragment : BaseSettingsFragment(), OnPreferenceChanged {
                 state.userPermit.isNotEmpty() -> state.userPermit
                 else -> getString(R.string.shared_string_none)
             }
-            if (state.userPermit.isNotEmpty()) {
-                setOnPreferenceClickListener {
-                    copyToClipboard(state.userPermit)
-                    true
-                }
-            } else {
-                onPreferenceClickListener = null
-            }
         }
 
         findPreference<Preference>("s63_load_permit_txt")?.apply {
@@ -141,33 +133,46 @@ class S63PermitManagerFragment : BaseSettingsFragment(), OnPreferenceChanged {
         }
     }
 
-    private fun setupImportConfig() {
-        findPreference<Preference>("s63_import_config")?.setOnPreferenceClickListener {
-            val intent = Intent(Intent.ACTION_GET_CONTENT).apply {
-                type = "application/json"
-                addCategory(Intent.CATEGORY_OPENABLE)
+    override fun onPreferenceClick(preference: Preference): Boolean {
+        when (preference.key) {
+            "s63_user_permit" -> {
+                val state = viewModel.uiState.value
+                if (state.userPermit.isNotEmpty()) {
+                    copyToClipboard(state.userPermit)
+                    return true
+                }
             }
-            configPicker.launch(intent)
-            true
+            "s63_import_config" -> {
+                val intent = Intent(Intent.ACTION_GET_CONTENT).apply {
+                    type = "application/json"
+                    addCategory(Intent.CATEGORY_OPENABLE)
+                }
+                configPicker.launch(intent)
+                return true
+            }
+            "s63_load_permit_txt" -> {
+                val intent = Intent(Intent.ACTION_GET_CONTENT).apply {
+                    type = "text/plain"
+                    addCategory(Intent.CATEGORY_OPENABLE)
+                }
+                permitTxtPicker.launch(intent)
+                return true
+            }
+            "s63_import_charts" -> {
+                chartPicker.launch(arrayOf("*/*"))
+                return true
+            }
         }
+        return super.onPreferenceClick(preference)
+    }
+
+    private fun setupImportConfig() {
     }
 
     private fun setupLoadPermitTxt() {
-        findPreference<Preference>("s63_load_permit_txt")?.setOnPreferenceClickListener {
-            val intent = Intent(Intent.ACTION_GET_CONTENT).apply {
-                type = "text/plain"
-                addCategory(Intent.CATEGORY_OPENABLE)
-            }
-            permitTxtPicker.launch(intent)
-            true
-        }
     }
 
     private fun setupImportCharts() {
-        findPreference<Preference>("s63_import_charts")?.setOnPreferenceClickListener {
-            chartPicker.launch(arrayOf("*/*"))
-            true
-        }
     }
 
     private fun copyToClipboard(text: String) {

@@ -146,6 +146,14 @@ class AutopilotController(
         setFilterSensitivity(s.NAUTICAL_FILTER_SENSITIVITY.get().toDouble())
         setRudderLimit(s.NAUTICAL_RUDDER_LIMIT.get().toDouble())
         setOffCourseAlarm(s.NAUTICAL_OFF_COURSE_ALARM.get().toDouble())
+        
+        // Push Pypilot specific gains
+        setPypilotGain("p", s.NAUTICAL_PYPILOT_P.get().toDouble())
+        setPypilotGain("i", s.NAUTICAL_PYPILOT_I.get().toDouble())
+        setPypilotGain("d", s.NAUTICAL_PYPILOT_D.get().toDouble())
+        setPypilotGain("pr", s.NAUTICAL_PYPILOT_PR.get().toDouble())
+        setPypilotGain("ff", s.NAUTICAL_PYPILOT_FF.get().toDouble())
+        
         log.info("Pushed all autopilot settings to hardware")
     }
 

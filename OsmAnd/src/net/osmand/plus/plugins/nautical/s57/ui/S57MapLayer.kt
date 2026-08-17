@@ -165,8 +165,11 @@ class S57MapLayer(context: Context, private val indexManager: S57SpatialIndex) :
             return
         }
 
+        val showRestricted = app.settings.NAUTICAL_RESTRICTED_AREAS_ENABLED.get()
+
         for (pf in preparedFeatures) {
             if (tileBox.zoom < 12 && (pf.acronym == "DEPCNT" || pf.acronym == "SOUNDG")) continue
+            if (!showRestricted && (pf.acronym == "RESARE" || pf.acronym == "CTNARE" || pf.acronym == "MIPARE")) continue
 
             val style = pf.style
             val scale = (tileBox.density * (tileBox.zoom / 15f)).coerceAtLeast(1.0f)

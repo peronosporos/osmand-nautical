@@ -51,6 +51,7 @@ class NmeaSentenceParser(private val app: OsmandApplication) {
             "GLL" -> parseGLL(parts, talker)
             "VTG" -> parseVTG(parts, talker)
             "VDR" -> parseVDR(parts)
+            "RSA" -> parseRSA(parts)
             else -> emptyList()
         }
         
@@ -364,6 +365,17 @@ class NmeaSentenceParser(private val app: OsmandApplication) {
         }
 
         return values
+    }
+
+    private fun parseRSA(parts: List<String>): List<Value> {
+        // $--RSA,x.x,A,x.x,A*hh (Starboard / Main Rudder, Status, Port Rudder, Status)
+        if (parts.size < 3) return emptyList()
+        val status = parts.getOrNull(2)
+        if (status != null && status != "A") return emptyList()
+
+        val angleDeg = parts[1].toDoubleOrNull() ?: return emptyList()
+        val angleRad = Math.toRadians(angleDeg)
+        return listOf(Value("steering.rudderAngle", angleRad))
     }
 
     private fun validateChecksum(content: String, providedChecksum: String): Boolean {

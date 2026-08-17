@@ -934,7 +934,7 @@ class SignalKDeltaParser(
             }
             SignalKPaths.STEERING_RUDDER_ANGLE -> {
                 if (!value.isNaN()) {
-                    state = state.copy(rudderAngle = value, timeOfRudderFix = now)
+                    state = dataBroker.applyRudderUpdate(state, value, now)
                     updated = true
                 }
             }

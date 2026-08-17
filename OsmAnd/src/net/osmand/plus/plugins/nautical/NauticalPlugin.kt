@@ -520,6 +520,23 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
         workflowManager?.onHeavyWeatherModeChanged(enabled ?: false, activity)
     }
 
+    private val vesselContextListener = StateChangedListener<VesselContext> { ctx ->
+        if (ctx != null) applyVesselContext(ctx)
+    }
+    private val tidesModuleListener = StateChangedListener<Boolean> { updateFeatureLifecycle() }
+    private val gribModuleListener = StateChangedListener<Boolean> { updateFeatureLifecycle() }
+    private val vhfModuleListener = StateChangedListener<Boolean> { updateFeatureLifecycle() }
+    private val logbookModuleListener = StateChangedListener<Boolean> { updateFeatureLifecycle() }
+    private val encModuleListener = StateChangedListener<Boolean> { updateFeatureLifecycle() }
+    private val rasterModuleListener = StateChangedListener<Boolean> { updateFeatureLifecycle() }
+    private val nmeaSourceListener = StateChangedListener<net.osmand.plus.settings.enums.NmeaSource> { updateNmeaSource() }
+    private val serverIpListener = StateChangedListener<String> { reconnect() }
+    private val serverPortListener = StateChangedListener<String> { reconnect() }
+    private val serverSecureListener = StateChangedListener<Boolean> { reconnect() }
+    private val serverUsernameListener = StateChangedListener<String> { reconnect() }
+    private val serverPasswordListener = StateChangedListener<String> { reconnect() }
+    private val signalKTokenListener = StateChangedListener<String> { reconnect() }
+
     private val prefChangeListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
         val watchedKeys = setOf(
             app.settings.NAUTICAL_VESSEL_DRAFT.id,
@@ -553,6 +570,12 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
             app.settings.NAUTICAL_FILTER_SENSITIVITY.id,
             app.settings.NAUTICAL_RUDDER_LIMIT.id,
             app.settings.NAUTICAL_OFF_COURSE_ALARM.id,
+            app.settings.NAUTICAL_PILOT_SEA_STATE.id,
+            app.settings.NAUTICAL_PYPILOT_P.id,
+            app.settings.NAUTICAL_PYPILOT_I.id,
+            app.settings.NAUTICAL_PYPILOT_D.id,
+            app.settings.NAUTICAL_PYPILOT_PR.id,
+            app.settings.NAUTICAL_PYPILOT_FF.id,
             app.settings.NAUTICAL_EMA_ALPHA_HEADING.id,
             app.settings.NAUTICAL_EMA_ALPHA_WIND_ANGLE.id,
             app.settings.NAUTICAL_EMA_ALPHA_WIND_SPEED.id,
@@ -580,7 +603,13 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
                     app.settings.NAUTICAL_AUTO_TRIM.id,
                     app.settings.NAUTICAL_FILTER_SENSITIVITY.id,
                     app.settings.NAUTICAL_RUDDER_LIMIT.id,
-                    app.settings.NAUTICAL_OFF_COURSE_ALARM.id -> autopilot?.pushAllSettings()
+                    app.settings.NAUTICAL_OFF_COURSE_ALARM.id,
+                    app.settings.NAUTICAL_PYPILOT_P.id,
+                    app.settings.NAUTICAL_PYPILOT_I.id,
+                    app.settings.NAUTICAL_PYPILOT_D.id,
+                    app.settings.NAUTICAL_PYPILOT_PR.id,
+                    app.settings.NAUTICAL_PYPILOT_FF.id -> autopilot?.pushAllSettings()
+                    app.settings.NAUTICAL_PILOT_SEA_STATE.id -> autopilot?.setSeaState(app.settings.NAUTICAL_PILOT_SEA_STATE.get() ?: 3)
                     app.settings.NAUTICAL_EMA_ALPHA_HEADING.id,
                     app.settings.NAUTICAL_EMA_ALPHA_WIND_ANGLE.id,
                     app.settings.NAUTICAL_EMA_ALPHA_WIND_SPEED.id,
@@ -651,6 +680,20 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
         settings.NAUTICAL_SHOW_GRIB_PRESSURE.addListener(gribPressureEnabledListener)
         settings.NAUTICAL_DISPLAY_MODE.addListener(displayModeListener)
         settings.NAUTICAL_HEAVY_WEATHER_MODE.addListener(heavyWeatherEnabledListener)
+        settings.NAUTICAL_VESSEL_CONTEXT.addListener(vesselContextListener)
+        settings.NAUTICAL_MODULE_TIDES.addListener(tidesModuleListener)
+        settings.NAUTICAL_MODULE_GRIB.addListener(gribModuleListener)
+        settings.NAUTICAL_VHF_ENABLED.addListener(vhfModuleListener)
+        settings.NAUTICAL_MODULE_LOGBOOK.addListener(logbookModuleListener)
+        settings.NAUTICAL_MODULE_ENC.addListener(encModuleListener)
+        settings.NAUTICAL_MODULE_RASTER.addListener(rasterModuleListener)
+        settings.NAUTICAL_NMEA_SOURCE.addListener(nmeaSourceListener)
+        settings.NAUTICAL_SERVER_IP.addListener(serverIpListener)
+        settings.NAUTICAL_SERVER_PORT.addListener(serverPortListener)
+        settings.NAUTICAL_USE_SECURE_CONNECTION.addListener(serverSecureListener)
+        settings.NAUTICAL_SERVER_USERNAME.addListener(serverUsernameListener)
+        settings.NAUTICAL_SERVER_PASSWORD.addListener(serverPasswordListener)
+        settings.NAUTICAL_SIGNAL_K_AUTH_TOKEN.addListener(signalKTokenListener)
 
         engine?.registerListener(marineStateListener)
         engine?.addRouteStepListener(routeStepListener)
@@ -688,6 +731,20 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
         settings.NAUTICAL_SHOW_GRIB_PRESSURE.removeListener(gribPressureEnabledListener)
         settings.NAUTICAL_DISPLAY_MODE.removeListener(displayModeListener)
         settings.NAUTICAL_HEAVY_WEATHER_MODE.removeListener(heavyWeatherEnabledListener)
+        settings.NAUTICAL_VESSEL_CONTEXT.removeListener(vesselContextListener)
+        settings.NAUTICAL_MODULE_TIDES.removeListener(tidesModuleListener)
+        settings.NAUTICAL_MODULE_GRIB.removeListener(gribModuleListener)
+        settings.NAUTICAL_VHF_ENABLED.removeListener(vhfModuleListener)
+        settings.NAUTICAL_MODULE_LOGBOOK.removeListener(logbookModuleListener)
+        settings.NAUTICAL_MODULE_ENC.removeListener(encModuleListener)
+        settings.NAUTICAL_MODULE_RASTER.removeListener(rasterModuleListener)
+        settings.NAUTICAL_NMEA_SOURCE.removeListener(nmeaSourceListener)
+        settings.NAUTICAL_SERVER_IP.removeListener(serverIpListener)
+        settings.NAUTICAL_SERVER_PORT.removeListener(serverPortListener)
+        settings.NAUTICAL_USE_SECURE_CONNECTION.removeListener(serverSecureListener)
+        settings.NAUTICAL_SERVER_USERNAME.removeListener(serverUsernameListener)
+        settings.NAUTICAL_SERVER_PASSWORD.removeListener(serverPasswordListener)
+        settings.NAUTICAL_SIGNAL_K_AUTH_TOKEN.removeListener(signalKTokenListener)
 
         engine?.unregisterListener(marineStateListener)
         engine?.removeRouteStepListener(routeStepListener)
