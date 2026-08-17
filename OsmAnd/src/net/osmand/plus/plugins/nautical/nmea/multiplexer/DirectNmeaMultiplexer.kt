@@ -114,14 +114,6 @@ class DirectNmeaMultiplexer(
 
     fun processSentence(sentence: String) {
         sentenceChannel.trySend(Pair(null, sentence))
-        scope.launch {
-            try {
-                processSentence(null, sentence)
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-                log.error("NMEA Multiplexer: Error processing direct sentence: ${e.message}", e)
-            }
-        }
     }
 
     suspend fun injectSentence(sentence: String, transport: NmeaTransport? = null) {

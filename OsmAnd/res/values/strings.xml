@@ -1,4 +1,5 @@
 <resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
+    <string name="rendering_value_simple_name">Simple</string>
     <string name="nautical_nmea_source_internal">Internal GPS</string>
     <string name="nautical_ai_actions_executed">Action executed: %1$d command(s) sent to boat.</string>
     <string name="nautical_ai_actions_partial">Partial success: %1$d of %2$d commands sent to boat.</string>

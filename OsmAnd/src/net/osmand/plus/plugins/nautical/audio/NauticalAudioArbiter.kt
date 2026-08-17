@@ -497,14 +497,17 @@ class NauticalAudioArbiter private constructor(private val app: OsmandApplicatio
                 
                 delay(delayMs.coerceAtLeast(100L).milliseconds)
                 
-                val triggerTime = Calendar.getInstance()
-                playWatchBells(triggerTime.get(Calendar.HOUR_OF_DAY), triggerTime.get(Calendar.MINUTE))
+                if (app.settings.NAUTICAL_WATCH_BELLS_ENABLED.get()) {
+                    val triggerTime = Calendar.getInstance()
+                    playWatchBells(triggerTime.get(Calendar.HOUR_OF_DAY), triggerTime.get(Calendar.MINUTE))
+                }
                 delay(5.seconds) // Debounce
             }
         }
     }
 
     private fun playWatchBells(hour: Int, min: Int) {
+        if (!app.settings.NAUTICAL_WATCH_BELLS_ENABLED.get()) return
         val watchHour = hour % 4
         val bells = (watchHour * 2) + (if (min == 30) 1 else 0)
         val finalBells = if (bells == 0) 8 else bells

@@ -69,7 +69,7 @@ class OkHttpSignalKConnection(private val client: OkHttpClient) : SignalKConnect
                 }
 
                 override fun onMessage(webSocket: WebSocket, text: String) {
-                    log.info("SignalK Ingress: ${text.take(120)}...")
+                    log.debug("SignalK Ingress: ${text.take(120)}...")
                     if (text.contains("\"self\"") && (lastPingTime > 0)) {
                         lastLatencyMs = System.currentTimeMillis() - lastPingTime
                         lastPingTime = 0 // Reset until next heartbeat

@@ -3638,6 +3638,7 @@ public class OsmandSettings {
 	public final CommonPreference<Float> NAUTICAL_ANCHOR_PREVIEW_RADIUS = registerFloatPreference("nautical_anchor_preview_radius", 0f).makeProfile();
 	public final CommonPreference<Float> NAUTICAL_ANCHOR_DEPTH = registerFloatPreference("nautical_anchor_depth", 0f).makeProfile();
 	public final CommonPreference<Float> NAUTICAL_ANCHOR_TIDE_RISE = registerFloatPreference("nautical_anchor_tide_rise", 0f).makeProfile();
+	public final CommonPreference<Boolean> NAUTICAL_WATCH_BELLS_ENABLED = registerBooleanPreference("nautical_watch_bells_enabled", false).makeProfile();
 	public final CommonPreference<Float> NAUTICAL_ANCHOR_BOW_OFFSET = registerFloatPreference("nautical_anchor_bow_offset", 0f).makeProfile();
 	public final CommonPreference<Float> NAUTICAL_ANCHOR_FREEBOARD = registerFloatPreference("nautical_anchor_freeboard", 1.0f).makeProfile();
 	public final CommonPreference<Float> NAUTICAL_ANCHOR_SAFETY_MARGIN = registerFloatPreference("nautical_anchor_safety_margin", 5f).makeProfile();

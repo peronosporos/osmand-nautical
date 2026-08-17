@@ -43,14 +43,6 @@ class SignalKDeltaParser(
         initialState: MarineState,
         onSelfIdentity: (String) -> Unit
     ): Pair<MarineState, Boolean> {
-        try {
-            val jsonObject = JsonParser.parseString(jsonMessage).asJsonObject
-            val context = jsonObject.get("context")?.asString
-            val updates = jsonObject.getAsJsonArray("updates")
-            Log.i("SignalKParser", "Context: $context | Updates count: ${updates?.size() ?: 0}")
-        } catch (e: Exception) {
-            Log.e("SignalKParser", "JSON parse error: ${e.message}")
-        }
         val reader = JsonReader(StringReader(jsonMessage))
         var currentState = initialState
         var stateChanged = false

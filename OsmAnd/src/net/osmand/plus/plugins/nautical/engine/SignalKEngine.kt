@@ -68,9 +68,18 @@ class SignalKEngine(
         capacity = 2000,
         onBufferOverflow = BufferOverflow.DROP_OLDEST
     )
+    private var deltaChannel = Channel<DeltaMessage>(
+        capacity = 2000,
+        onBufferOverflow = BufferOverflow.DROP_OLDEST
+    )
     private var messageProcessingJob: Job? = null
+    private var deltaProcessingJob: Job? = null
     private var autoSaveJob: Job? = null
     private var pulseJob: Job? = null
+
+    private var lastUiNotificationTime = 0L
+    private var pendingUiState: MarineState? = null
+    private var uiNotificationJob: Job? = null
 
     val marineStateFlow: StateFlow<MarineState> = dataBroker.marineState
 
@@ -199,6 +208,12 @@ class SignalKEngine(
                 onBufferOverflow = BufferOverflow.DROP_OLDEST
             )
         }
+        if (deltaChannel.isClosedForSend) {
+            deltaChannel = Channel(
+                capacity = 2000,
+                onBufferOverflow = BufferOverflow.DROP_OLDEST
+            )
+        }
         messageProcessingJob?.cancel()
         messageProcessingJob = parsingScope.launch {
             log.info("SignalKEngine: Message processing loop started successfully")
@@ -245,6 +260,46 @@ class SignalKEngine(
                 } catch (t: Throwable) {
                     log.error("SignalKEngine: Batch processing error: ${t.message}", t)
                     batch.clear()
+                    delay(50.milliseconds)
+                }
+            }
+        }
+
+        deltaProcessingJob?.cancel()
+        deltaProcessingJob = parsingScope.launch {
+            val deltaBatch = mutableListOf<DeltaMessage>()
+            while (isActive) {
+                try {
+                    val first = deltaChannel.receive()
+                    deltaBatch.add(first)
+
+                    var count = 0
+                    while (count < 100) {
+                        val next = deltaChannel.tryReceive().getOrNull() ?: break
+                        deltaBatch.add(next)
+                        count++
+                    }
+
+                    if (deltaBatch.isNotEmpty()) {
+                        var currentState = dataBroker.marineState.value
+                        var anyDeltaChanged = false
+                        for (delta in deltaBatch) {
+                            val context = delta.context ?: "vessels.self"
+                            deltaParser.processDeltaUpdates(delta, context) { updatedState ->
+                                currentState = updatedState
+                                anyDeltaChanged = true
+                            }
+                        }
+                        if (anyDeltaChanged) {
+                            finalizeAndNotifyState(currentState)
+                        }
+                        deltaBatch.clear()
+                    }
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (t: Throwable) {
+                    log.error("SignalKEngine: Delta batch processing error: ${t.message}", t)
+                    deltaBatch.clear()
                     delay(50.milliseconds)
                 }
             }
@@ -479,6 +534,31 @@ class SignalKEngine(
         stateListeners.forEach { it.invoke(state) }
     }
 
+    private fun scheduleUiNotification(state: MarineState) {
+        val isCritical = state.isMobActive || state.isActuatorOverloaded || state.notifications.values.any { it.state == NotificationState.ALARM || it.state == NotificationState.EMERGENCY }
+        val now = System.currentTimeMillis()
+        if (isCritical || (now - lastUiNotificationTime) >= 50L) {
+            lastUiNotificationTime = now
+            pendingUiState = null
+            engineScope.launch(Dispatchers.Main.immediate) {
+                notifyListeners(state)
+            }
+        } else {
+            pendingUiState = state
+            if (uiNotificationJob?.isActive != true) {
+                uiNotificationJob = engineScope.launch(Dispatchers.Default) {
+                    delay(50.milliseconds)
+                    val delayedState = pendingUiState ?: return@launch
+                    pendingUiState = null
+                    lastUiNotificationTime = System.currentTimeMillis()
+                    withContext(Dispatchers.Main.immediate) {
+                        notifyListeners(delayedState)
+                    }
+                }
+            }
+        }
+    }
+
     fun getHistory(path: String): List<Pair<Double, Long>> = historyManager.getHistory(path)
 
     fun setPowerSaveMode(enabled: Boolean) {
@@ -493,8 +573,13 @@ class SignalKEngine(
     fun cancelPendingBatchJobs() {
         messageProcessingJob?.cancel()
         messageProcessingJob = null
+        deltaProcessingJob?.cancel()
+        deltaProcessingJob = null
         while (messageChannel.tryReceive().isSuccess) {
             // Drain channel to prevent processing stale messages
+        }
+        while (deltaChannel.tryReceive().isSuccess) {
+            // Drain channel
         }
     }
 
@@ -519,7 +604,7 @@ class SignalKEngine(
         sessionManager.lastUpdateTimestamp = TemporalUtils.now()
         lastRealtimeMessageTimestamp = System.currentTimeMillis()
         sessionManager.resetWatchdog(
-            onNotifyListeners = { notifyListeners(it) },
+            onNotifyListeners = { scheduleUiNotification(it) },
             onUpdatePulse = { updatePulseLifecycle() },
             onResetRoute = { isFollowingRoute = false }
         )
@@ -528,21 +613,15 @@ class SignalKEngine(
 
     fun handleDelta(delta: DeltaMessage) {
         if (historyManager.powerSaveMode) return
-        if (messageProcessingJob?.isActive != true) {
+        if (deltaProcessingJob?.isActive != true) {
             startMessageProcessing()
         }
         sessionManager.resetWatchdog(
-            onNotifyListeners = { notifyListeners(it) },
+            onNotifyListeners = { scheduleUiNotification(it) },
             onUpdatePulse = { updatePulseLifecycle() },
             onResetRoute = { isFollowingRoute = false }
         )
-
-        val context = delta.context ?: "vessels.self"
-        parsingScope.launch {
-            deltaParser.processDeltaUpdates(delta, context) { finalState ->
-                finalizeAndNotifyState(finalState)
-            }
-        }
+        deltaChannel.trySend(delta)
     }
 
     private fun finalizeAndNotifyState(state: MarineState) {
@@ -610,9 +689,7 @@ class SignalKEngine(
         SailingDependencyContainer.nmeaMultiplexer?.aggregator?.handleLivePerformanceData(perfData)
         dataBroker.updateState { finalState }
 
-        engineScope.launch(Dispatchers.Main) {
-            notifyListeners(finalState)
-        }
+        scheduleUiNotification(finalState)
 
         metricsCalculator.checkActuatorLoad(finalState, dataBroker, historyManager) {
             acknowledgeActuatorAlarm()
@@ -720,7 +797,7 @@ class SignalKEngine(
         dataBroker.updatePerformanceData(perfData)
         SailingDependencyContainer.nmeaMultiplexer?.aggregator?.handleLivePerformanceData(perfData)
 
-        notifyListeners(finalState)
+        scheduleUiNotification(finalState)
     }
 
     fun updatePendingCommand(targetHeading: Double? = null, mode: String? = null, path: String? = null) {
