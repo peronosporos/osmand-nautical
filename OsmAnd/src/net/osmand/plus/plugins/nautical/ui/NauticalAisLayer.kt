@@ -59,7 +59,7 @@ class NauticalAisLayer(context: Context) : OsmandMapLayer(context), ContextMenuL
         
         val activity = view.mapActivity
         if (activity != null) {
-            view.post {
+            activity.window?.decorView?.post {
                 if (aisUpdateJob?.isActive != true && !activity.isFinishing && !activity.isDestroyed) {
                     aisUpdateJob = activity.lifecycleScope.launch(Dispatchers.Default) {
                         while (isActive) {

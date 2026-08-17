@@ -62,9 +62,9 @@ class NauticalPilotWidget(
         val state = engine.getCurrentState()
         val mode = state.autopilotState.lowercase(Locale.US)
         return when (mode) {
-            "compass", "heading" -> R.drawable.ic_action_compass
+            "compass", "heading", "auto" -> R.drawable.ic_action_compass
             "wind" -> R.drawable.ic_action_wind
-            "nav", "track", "route" -> R.drawable.ic_action_point_to_navigation
+            "nav", "track", "route" -> R.drawable.ic_action_track_16
             "emergency", "stop" -> R.drawable.ic_action_stop
             else -> R.drawable.ic_plugin_nautical_map
         }
