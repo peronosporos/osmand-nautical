@@ -176,9 +176,9 @@ class S63PermitManagerFragment : BaseSettingsFragment(), OnPreferenceChanged {
     }
 
     private fun copyToClipboard(text: String) {
-        val clipboard = requireContext().getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+        val clipboard = requireContext().getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
         val clip = ClipData.newPlainText(getString(R.string.s63_user_permit_label), text)
-        clipboard.setPrimaryClip(clip)
+        clipboard?.setPrimaryClip(clip)
         app.showToastMessage(R.string.s63_permit_copied)
     }
 

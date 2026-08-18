@@ -273,11 +273,11 @@ class SignalKOrchestratorFragment : BaseOsmAndFragment() {
 
             AlertDialog.Builder(requireContext())
                 .setTitle(plugin.name)
-                .setView(LayoutInflater.from(context).inflate(R.layout.mapillary_web_view, null).apply {
-                    val webView = findViewById<WebView>(R.id.webView)
-                    webView.webViewClient = WebViewClient()
-                    webView.settings.javaScriptEnabled = true
-                    webView.loadUrl(url)
+                .setView(LayoutInflater.from(requireContext()).inflate(R.layout.mapillary_web_view, null).apply {
+                    val webView = findViewById<WebView?>(R.id.webView)
+                    webView?.webViewClient = WebViewClient()
+                    webView?.settings?.javaScriptEnabled = true
+                    webView?.loadUrl(url)
                 })
                 .setPositiveButton("Close", null)
                 .show()

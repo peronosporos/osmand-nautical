@@ -52,9 +52,8 @@ class MarineRasterManagerFragment : BaseOsmAndFragment() {
         // Add footer button for import
         if (listView != null) {
             val footerView = inflater.inflate(R.layout.bottom_sheet_button, listView, false)
-            val importBtn = footerView.findViewById<Button?>(R.id.button) ?: footerView.findViewById<TextView?>(R.id.button)
-            importBtn?.text = getString(R.string.raster_import_btn)
-            importBtn?.setOnClickListener {
+            footerView.findViewById<TextView>(R.id.button_text)?.text = getString(R.string.raster_import_btn)
+            footerView.setOnClickListener {
                 importLauncher.launch(arrayOf("application/octet-stream", "*/*"))
             }
             listView.addFooterView(footerView)

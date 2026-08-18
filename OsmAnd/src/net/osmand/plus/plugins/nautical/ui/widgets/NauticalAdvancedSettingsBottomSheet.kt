@@ -202,15 +202,15 @@ class NauticalAdvancedSettingsBottomSheet : BaseNauticalBottomSheet() {
         txtValueActuatorThreshold.text = "${sliderActuatorThreshold.value.toInt()}%"
 
         sliderKeelOffset.value = (settings.NAUTICAL_KEEL_OFFSET.get() as Float).coerceIn(sliderKeelOffset.valueFrom, sliderKeelOffset.valueTo)
-        val initialKeel = SignalKUnitConverter.formatValue(app, settings, sliderKeelOffset.value.toDouble(), "depth")
+        val initialKeel = SignalKUnitConverter.formatValue(requireContext(), settings, sliderKeelOffset.value.toDouble(), "depth")
         txtKeelOffsetValue.text = "${initialKeel.first} ${initialKeel.second}"
 
         sliderWindAlignment.value = (settings.NAUTICAL_WIND_ALIGNMENT.get() as Float).coerceIn(sliderWindAlignment.valueFrom, sliderWindAlignment.valueTo)
-        val initialWind = SignalKUnitConverter.formatValue(app, settings, Math.toRadians(sliderWindAlignment.value.toDouble()), "angle")
+        val initialWind = SignalKUnitConverter.formatValue(requireContext(), settings, Math.toRadians(sliderWindAlignment.value.toDouble()), "angle")
         txtWindAlignmentValue.text = "${initialWind.first}${initialWind.second}"
 
         sliderXteThreshold.value = (settings.NAUTICAL_XTE_THRESHOLD.get() as Float).coerceIn(sliderXteThreshold.valueFrom, sliderXteThreshold.valueTo)
-        val initialXte = SignalKUnitConverter.formatValue(app, settings, SignalKUnitConverter.nmToMeters(sliderXteThreshold.value.toDouble()), "distance")
+        val initialXte = SignalKUnitConverter.formatValue(requireContext(), settings, SignalKUnitConverter.nmToMeters(sliderXteThreshold.value.toDouble()), "distance")
         txtXteThresholdValue.text = "${initialXte.first} ${initialXte.second}"
 
         sliderSeaState.value = (settings.NAUTICAL_PILOT_SEA_STATE.get() ?: 3).toFloat().coerceIn(sliderSeaState.valueFrom, sliderSeaState.valueTo)
@@ -272,16 +272,16 @@ class NauticalAdvancedSettingsBottomSheet : BaseNauticalBottomSheet() {
             txtValueActuatorThreshold.text = "${value.toInt()}%"
         }
         sliderKeelOffset.addOnChangeListener { _, value, _ ->
-            val (v, u) = SignalKUnitConverter.formatValue(app, settings, value.toDouble(), "depth")
+            val (v, u) = SignalKUnitConverter.formatValue(requireContext(), settings, value.toDouble(), "depth")
             txtKeelOffsetValue.text = "$v $u"
         }
         sliderWindAlignment.addOnChangeListener { _, value, _ ->
-            val (v, u) = SignalKUnitConverter.formatValue(app, settings, Math.toRadians(value.toDouble()), "angle")
+            val (v, u) = SignalKUnitConverter.formatValue(requireContext(), settings, Math.toRadians(value.toDouble()), "angle")
             txtWindAlignmentValue.text = "$v$u"
         }
         sliderXteThreshold.addOnChangeListener { _, value, _ ->
             val meters = SignalKUnitConverter.nmToMeters(value.toDouble())
-            val (v, u) = SignalKUnitConverter.formatValue(app, settings, meters, "distance")
+            val (v, u) = SignalKUnitConverter.formatValue(requireContext(), settings, meters, "distance")
             txtXteThresholdValue.text = "$v $u"
         }
         sliderSeaState.addOnChangeListener { _, value, fromUser -> 
@@ -386,18 +386,18 @@ class NauticalAdvancedSettingsBottomSheet : BaseNauticalBottomSheet() {
 
             sliderXteThreshold.value = (settings.NAUTICAL_XTE_THRESHOLD.defaultValue as Float)
             val defaultXteMeters = SignalKUnitConverter.nmToMeters(sliderXteThreshold.value.toDouble())
-            val (xteV, xteU) = SignalKUnitConverter.formatValue(app, settings, defaultXteMeters, "distance")
+            val (xteV, xteU) = SignalKUnitConverter.formatValue(requireContext(), settings, defaultXteMeters, "distance")
             txtXteThresholdValue.text = "$xteV $xteU"
 
             sliderActuatorThreshold.value = (settings.NAUTICAL_ACTUATOR_ALARM_THRESHOLD.defaultValue as Float)
             txtValueActuatorThreshold.text = "${sliderActuatorThreshold.value.toInt()}%"
 
             sliderKeelOffset.value = (settings.NAUTICAL_KEEL_OFFSET.defaultValue as Float)
-            val (keelV, keelU) = SignalKUnitConverter.formatValue(app, settings, sliderKeelOffset.value.toDouble(), "depth")
+            val (keelV, keelU) = SignalKUnitConverter.formatValue(requireContext(), settings, sliderKeelOffset.value.toDouble(), "depth")
             txtKeelOffsetValue.text = "$keelV $keelU"
 
             sliderWindAlignment.value = (settings.NAUTICAL_WIND_ALIGNMENT.defaultValue as Float)
-            val (windV, windU) = SignalKUnitConverter.formatValue(app, settings, Math.toRadians(sliderWindAlignment.value.toDouble()), "angle")
+            val (windV, windU) = SignalKUnitConverter.formatValue(requireContext(), settings, Math.toRadians(sliderWindAlignment.value.toDouble()), "angle")
             txtWindAlignmentValue.text = "$windV$windU"
 
             sliderSeaState.value = (settings.NAUTICAL_PILOT_SEA_STATE.defaultValue as Number).toFloat()

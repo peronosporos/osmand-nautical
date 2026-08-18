@@ -498,7 +498,7 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
         findPreference<SwitchPreferenceEx>(settings.NAUTICAL_LOCK_TOUCH_DURING_MANEUVERS.id)?.apply {
             isChecked = settings.NAUTICAL_LOCK_TOUCH_DURING_MANEUVERS.get()
             setOnPreferenceChangeListener { _, newValue ->
-                settings.NAUTICAL_LOCK_TOUCH_DURING_MANEUVERS.set(newValue as Boolean)
+                settings.NAUTICAL_LOCK_TOUCH_DURING_MANEUVERS.set((newValue as? Boolean) ?: false)
                 true
             }
         }
@@ -614,7 +614,7 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
             findPreference<SwitchPreferenceEx>(pref.id)?.apply {
                 setIcon(OsmAndR.drawable.ic_action_additional_option)
                 setOnPreferenceChangeListener { _, newValue ->
-                    pref.set(newValue as Boolean)
+                    pref.set((newValue as? Boolean) ?: false)
                     plugin?.requestRefresh()
                     true
                 }
@@ -650,7 +650,7 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
                 settings.NAUTICAL_WAVE_NUDGE_THRESHOLD.id -> settings.NAUTICAL_WAVE_NUDGE_THRESHOLD.get().toDouble()
                 else -> 0.0
             }
-            val (v, u) = SignalKUnitConverter.formatValue(app, settings, meters, "depth")
+            val (v, u) = SignalKUnitConverter.formatValue(requireContext(), settings, meters, "depth")
             title = "${getString(titleId)} ($u)"
             dialogTitle = title
             summary = "$v $u"
@@ -675,7 +675,7 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
                 else -> 0.0
             }
             val meters = nm * 1852.0
-            val (v, u) = SignalKUnitConverter.formatValue(app, settings, meters, "distance")
+            val (v, u) = SignalKUnitConverter.formatValue(requireContext(), settings, meters, "distance")
             val baseTitle = getString(titleId).replace(" (NM)", "")
             title = "$baseTitle ($u)"
             summary = "$v $u"
@@ -1206,7 +1206,7 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
                         settings.NAUTICAL_CORRIDOR_WIDTH.id -> settings.NAUTICAL_CORRIDOR_WIDTH.set(nm)
                         settings.NAUTICAL_SAFETY_CORRIDOR_BUFFER.id -> settings.NAUTICAL_SAFETY_CORRIDOR_BUFFER.set(nm)
                     }
-                    val (v, u) = SignalKUnitConverter.formatValue(app, settings, meters, "distance")
+                    val (v, u) = SignalKUnitConverter.formatValue(requireContext(), settings, meters, "distance")
                     preference.summary = "$v $u"
                     (preference as? EditTextPreferenceEx)?.text = v
                     onPreferenceChanged(key)
@@ -1221,7 +1221,8 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
                 settings.NAUTICAL_ANCHOR_TIDE_RISE.id,
                 settings.NAUTICAL_ANCHOR_BOW_OFFSET.id,
                 settings.NAUTICAL_ANCHOR_FREEBOARD.id,
-                settings.NAUTICAL_ANCHOR_SAFETY_MARGIN.id -> {
+                settings.NAUTICAL_ANCHOR_SAFETY_MARGIN.id,
+                settings.NAUTICAL_WAVE_NUDGE_THRESHOLD.id -> {
                     val floatValue = newString.toFloatOrNull()
                     if (floatValue == null || floatValue < 0) {
                         app.showToastMessage(OsmAndR.string.shared_string_invalid_value)
@@ -1242,7 +1243,7 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
                         settings.NAUTICAL_ANCHOR_SAFETY_MARGIN.id -> settings.NAUTICAL_ANCHOR_SAFETY_MARGIN.set(meters.toFloat())
                         settings.NAUTICAL_WAVE_NUDGE_THRESHOLD.id -> settings.NAUTICAL_WAVE_NUDGE_THRESHOLD.set(meters.toFloat())
                     }
-                    val (v, u) = SignalKUnitConverter.formatValue(app, settings, meters, "depth")
+                    val (v, u) = SignalKUnitConverter.formatValue(requireContext(), settings, meters, "depth")
                     preference.summary = "$v $u"
                     (preference as? EditTextPreferenceEx)?.text = String.format(Locale.US, "%.2f", floatValue)
                     onPreferenceChanged(key)
@@ -1337,8 +1338,8 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
                 }
 
                 settings.NAUTICAL_TRAJECTORY_COLOR.id -> {
-                    val listPref = preference as ListPreferenceEx
-                    preference.summary = listPref.entries.getOrNull(listPref.entryValues.indexOf(newString)) ?: "Custom"
+                    val listPref = preference as? ListPreferenceEx
+                    preference.summary = listPref?.entries?.getOrNull(listPref.entryValues.indexOf(newString)) ?: "Custom"
                     onPreferenceChanged(key)
                 }
                 settings.NAUTICAL_TRAJECTORY_THICKNESS.id -> {
@@ -1429,7 +1430,7 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
                     val floatValue = newString.toFloatOrNull() ?: 35.0f
                     val meters = floatValue.toDouble()
                     settings.NAUTICAL_ARRIVAL_RADIUS.set(meters.toFloat())
-                    val (v, u) = SignalKUnitConverter.formatValue(app, settings, meters, "distance")
+                    val (v, u) = SignalKUnitConverter.formatValue(requireContext(), settings, meters, "distance")
                     preference.summary = "$v $u"
                     (preference as? EditTextPreferenceEx)?.text = v
                     onPreferenceChanged(key)
