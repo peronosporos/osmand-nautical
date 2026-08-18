@@ -61,6 +61,9 @@ class NauticalNotificationManager(
     }
 
     fun processNotifications(notifications: Map<String, SignalKNotification>) {
+        if (processedNotifications == notifications) {
+            return
+        }
         var changed = false
         val now = System.currentTimeMillis()
         notifications.forEach { (path, notification) ->
@@ -86,7 +89,12 @@ class NauticalNotificationManager(
             val entry = iterator.next()
             if (!notifications.containsKey(entry.key)) {
                 log.info("Notification cleared: ${entry.key}")
-                NotificationManagerCompat.from(app).cancel(entry.key.hashCode())
+                val notificationId = entry.key.hashCode()
+                scope.launch(Dispatchers.IO) {
+                    try {
+                        NotificationManagerCompat.from(app).cancel(notificationId)
+                    } catch (_: Exception) {}
+                }
                 
                 // Item 9 Fix: Only stop audio if no other notification of this alarm type is active
                 val alarmType = getAlarmTypeForPath(entry.key)
@@ -238,10 +246,14 @@ class NauticalNotificationManager(
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setColor(android.graphics.Color.RED)
 
-        try {
-            NotificationManagerCompat.from(app).notify(id.hashCode(), builder.build())
-        } catch (e: SecurityException) {
-            log.error("Missing notification permission for critical alert", e)
+        scope.launch(Dispatchers.IO) {
+            try {
+                NotificationManagerCompat.from(app).notify(id.hashCode(), builder.build())
+            } catch (e: SecurityException) {
+                log.error("Missing notification permission for critical alert", e)
+            } catch (e: Exception) {
+                log.error("Failed to post critical notification", e)
+            }
         }
     }
 

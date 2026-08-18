@@ -19,17 +19,30 @@ import net.osmand.plus.notifications.OsmandNotification
 class NauticalBackgroundService : NavigationService() {
 
     companion object {
+        @Volatile
+        private var isServiceRunning = false
+
         fun startService(app: OsmandApplication) {
+            if (isServiceRunning) return
             val intent = Intent(app, NauticalBackgroundService::class.java)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                app.startForegroundService(intent)
-            } else {
-                app.startService(intent)
+            try {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    app.startForegroundService(intent)
+                } else {
+                    app.startService(intent)
+                }
+            } catch (e: Exception) {
+                PlatformUtil.getLog(NauticalBackgroundService::class.java).error("Failed to start NauticalBackgroundService", e)
             }
         }
 
         fun stopService(app: OsmandApplication) {
-            app.stopService(Intent(app, NauticalBackgroundService::class.java))
+            if (!isServiceRunning) return
+            try {
+                app.stopService(Intent(app, NauticalBackgroundService::class.java))
+            } catch (e: Exception) {
+                PlatformUtil.getLog(NauticalBackgroundService::class.java).error("Failed to stop NauticalBackgroundService", e)
+            }
         }
     }
 
@@ -75,6 +88,7 @@ class NauticalBackgroundService : NavigationService() {
 
     override fun onDestroy() {
         log.info("NauticalBackgroundService: Destroying...")
+        isServiceRunning = false
         handler.removeCallbacks(lockMonitor)
         net.osmand.plus.plugins.nautical.NauticalPlugin.engine?.unregisterListener(engineListener)
         try {
@@ -134,10 +148,10 @@ class NauticalBackgroundService : NavigationService() {
     @Suppress("DEPRECATION")
     override fun onCreate() {
         super.onCreate()
-        // Ensure foreground service is started with correct types on Android 14+
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            val app = application as OsmandApplication
-            app.notificationHelper.buildTopNotification(this, OsmandNotification.NotificationType.NAUTICAL)?.let { notification ->
+        isServiceRunning = true
+        val app = application as OsmandApplication
+        app.notificationHelper.buildTopNotification(this, OsmandNotification.NotificationType.NAUTICAL)?.let { notification ->
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
                 startForeground(
                     OsmandNotification.TOP_NOTIFICATION_SERVICE_ID,
                     notification,
@@ -145,6 +159,8 @@ class NauticalBackgroundService : NavigationService() {
                             ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC or
                             ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE
                 )
+            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                startForeground(OsmandNotification.TOP_NOTIFICATION_SERVICE_ID, notification)
             }
         }
     }
