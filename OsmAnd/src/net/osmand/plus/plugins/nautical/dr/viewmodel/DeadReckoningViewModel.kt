@@ -178,18 +178,26 @@ class DeadReckoningViewModel(
     private fun stopDeadReckoning() {
         projectionJob?.cancel()
         projectionJob = null
-        settings.NAUTICAL_DR_START_TIME.set(0L)
-        settings.NAUTICAL_DR_LAST_LAT.set(0.0)
-        settings.NAUTICAL_DR_LAST_LON.set(0.0)
+        if (settings.NAUTICAL_DR_START_TIME.get() != 0L) {
+            settings.NAUTICAL_DR_START_TIME.set(0L)
+        }
+        if (settings.NAUTICAL_DR_LAST_LAT.get() != 0.0) {
+            settings.NAUTICAL_DR_LAST_LAT.set(0.0)
+        }
+        if (settings.NAUTICAL_DR_LAST_LON.get() != 0.0) {
+            settings.NAUTICAL_DR_LAST_LON.set(0.0)
+        }
     }
 
     fun clear() {
-        onCleared()
+        watchdogJob?.cancel()
+        watchdogJob = null
+        projectionJob?.cancel()
+        projectionJob = null
     }
 
     override fun onCleared() {
         super.onCleared()
-        watchdogJob?.cancel()
-        stopDeadReckoning()
+        clear()
     }
 }

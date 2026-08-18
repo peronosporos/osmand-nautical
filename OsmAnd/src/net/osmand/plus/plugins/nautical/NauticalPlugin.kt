@@ -499,7 +499,14 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
 
     private val laylinesEnabledListener = StateChangedListener<Boolean> { updateFeatureLifecycle() }
     private val mobActiveListener = StateChangedListener<Boolean> { updateFeatureLifecycle() }
-    private val drEnabledListener = StateChangedListener<Long> { updateFeatureLifecycle() }
+    private var isDrEnabled: Boolean? = null
+    private val drEnabledListener = StateChangedListener<Long> { startTime ->
+        val enabled = (startTime ?: 0L) != 0L
+        if (isDrEnabled != enabled) {
+            isDrEnabled = enabled
+            updateFeatureLifecycle()
+        }
+    }
     private val navtexEnabledListener = StateChangedListener<Boolean> { updateFeatureLifecycle() }
     private val aisEnabledListener = StateChangedListener<Boolean> { updateFeatureLifecycle() }
     private val windyEnabledListener = StateChangedListener<Boolean> { requestRefresh() }
