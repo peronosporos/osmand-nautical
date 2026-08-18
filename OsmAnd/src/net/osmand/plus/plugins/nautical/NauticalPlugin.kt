@@ -520,8 +520,11 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
         workflowManager?.onHeavyWeatherModeChanged(enabled ?: false, activity)
     }
 
+    private var isApplyingVesselContext = false
     private val vesselContextListener = StateChangedListener<VesselContext> { ctx ->
-        if (ctx != null) applyVesselContext(ctx)
+        if (ctx != null && !isApplyingVesselContext) {
+            applyVesselContext(ctx)
+        }
     }
     private val tidesModuleListener = StateChangedListener<Boolean> { updateFeatureLifecycle() }
     private val gribModuleListener = StateChangedListener<Boolean> { updateFeatureLifecycle() }
@@ -1245,41 +1248,49 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
     }
 
     fun applyVesselContext(context: VesselContext) {
-        val s = app.settings
-        s.NAUTICAL_VESSEL_CONTEXT.set(context)
-        when (context) {
-            VesselContext.SAILING -> {
-                s.NAUTICAL_SHOW_LAYLINES.set(true)
-                s.NAUTICAL_MODULE_RASTER.set(true)
-                s.NAUTICAL_SHOW_RASTER_CHARTS.set(true)
-                s.NAUTICAL_LOOK_AHEAD_TIME.set(10)
-                s.NAUTICAL_SAFETY_CORRIDOR_BUFFER.set(0.1f)
+        if (isApplyingVesselContext) return
+        isApplyingVesselContext = true
+        try {
+            val s = app.settings
+            if (s.NAUTICAL_VESSEL_CONTEXT.get() != context) {
+                s.NAUTICAL_VESSEL_CONTEXT.set(context)
             }
-            VesselContext.MOTORING -> {
-                s.NAUTICAL_SHOW_LAYLINES.set(false)
-                s.NAUTICAL_MODULE_RASTER.set(true)
-                s.NAUTICAL_SHOW_RASTER_CHARTS.set(true)
-                s.NAUTICAL_LOOK_AHEAD_TIME.set(5)
-                s.NAUTICAL_SAFETY_CORRIDOR_BUFFER.set(0.2f)
-            }
-            VesselContext.EMERGENCY_HEAVE_TO -> {
-                s.NAUTICAL_HEAVY_WEATHER_MODE.set(true)
-                s.NAUTICAL_OFF_COURSE_ALARM.set(20.0f)
-                s.NAUTICAL_ARRIVAL_RADIUS.set(500.0f)
-                workflowManager?.onHeavyWeatherModeChanged(true, app.osmandMap?.mapView?.mapActivity)
-            }
-            VesselContext.ANCHORED -> {
-                val loc = app.locationProvider.lastKnownLocation
-                if (loc != null) {
-                    engine?.setAnchor(loc.latitude, loc.longitude, app.settings.NAUTICAL_ANCHOR_RADIUS.get().toDouble())
+            when (context) {
+                VesselContext.SAILING -> {
+                    if (s.NAUTICAL_SHOW_LAYLINES.get() != true) s.NAUTICAL_SHOW_LAYLINES.set(true)
+                    if (s.NAUTICAL_MODULE_RASTER.get() != true) s.NAUTICAL_MODULE_RASTER.set(true)
+                    if (s.NAUTICAL_SHOW_RASTER_CHARTS.get() != true) s.NAUTICAL_SHOW_RASTER_CHARTS.set(true)
+                    if (s.NAUTICAL_LOOK_AHEAD_TIME.get() != 10) s.NAUTICAL_LOOK_AHEAD_TIME.set(10)
+                    if (s.NAUTICAL_SAFETY_CORRIDOR_BUFFER.get() != 0.1f) s.NAUTICAL_SAFETY_CORRIDOR_BUFFER.set(0.1f)
+                }
+                VesselContext.MOTORING -> {
+                    if (s.NAUTICAL_SHOW_LAYLINES.get() != false) s.NAUTICAL_SHOW_LAYLINES.set(false)
+                    if (s.NAUTICAL_MODULE_RASTER.get() != true) s.NAUTICAL_MODULE_RASTER.set(true)
+                    if (s.NAUTICAL_SHOW_RASTER_CHARTS.get() != true) s.NAUTICAL_SHOW_RASTER_CHARTS.set(true)
+                    if (s.NAUTICAL_LOOK_AHEAD_TIME.get() != 5) s.NAUTICAL_LOOK_AHEAD_TIME.set(5)
+                    if (s.NAUTICAL_SAFETY_CORRIDOR_BUFFER.get() != 0.2f) s.NAUTICAL_SAFETY_CORRIDOR_BUFFER.set(0.2f)
+                }
+                VesselContext.EMERGENCY_HEAVE_TO -> {
+                    if (s.NAUTICAL_HEAVY_WEATHER_MODE.get() != true) s.NAUTICAL_HEAVY_WEATHER_MODE.set(true)
+                    if (s.NAUTICAL_OFF_COURSE_ALARM.get() != 20.0f) s.NAUTICAL_OFF_COURSE_ALARM.set(20.0f)
+                    if (s.NAUTICAL_ARRIVAL_RADIUS.get() != 500.0f) s.NAUTICAL_ARRIVAL_RADIUS.set(500.0f)
+                    workflowManager?.onHeavyWeatherModeChanged(true, app.osmandMap?.mapView?.mapActivity)
+                }
+                VesselContext.ANCHORED -> {
+                    val loc = app.locationProvider.lastKnownLocation
+                    if (loc != null) {
+                        engine?.setAnchor(loc.latitude, loc.longitude, app.settings.NAUTICAL_ANCHOR_RADIUS.get().toDouble())
+                    }
+                }
+                VesselContext.MOORED, VesselContext.DOCKING -> {
+                    engine?.disarmAnchor()
                 }
             }
-            VesselContext.MOORED, VesselContext.DOCKING -> {
-                engine?.disarmAnchor()
-            }
+            updateFeatureLifecycle()
+            requestRefresh()
+        } finally {
+            isApplyingVesselContext = false
         }
-        updateFeatureLifecycle()
-        requestRefresh()
     }
 
     fun checkBatteryOptimization() {
