@@ -74,7 +74,6 @@ open class AisMessageListener {
                         LoggerFactory.getLogger("AisMessageListener").debug("TCP connection starting to $serverIp:$serverPort")
                         socket = aSocket(selectorManager).tcp().connect(serverIp, serverPort) {
                             reuseAddress = true
-                            reusePort = true
                         }
                         activeTcpSocket = socket
                         socket.socketContext.also { it.invokeOnCompletion { } } // Avoid crash
@@ -127,7 +126,6 @@ open class AisMessageListener {
                         LoggerFactory.getLogger("AisMessageListener").debug("UDP listener starting on port $udpPort")
                         socket = aSocket(selectorManager).udp().bind(InetSocketAddress("0.0.0.0", udpPort)) {
                             reuseAddress = true
-                            reusePort = true
                         }
                         activeUdpSocket = socket
                         while (isActive) {
