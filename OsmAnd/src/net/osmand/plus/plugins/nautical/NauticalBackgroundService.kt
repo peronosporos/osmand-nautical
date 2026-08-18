@@ -65,7 +65,7 @@ class NauticalBackgroundService : NavigationService() {
     }
     
     private var lastNotificationUpdateTime = 0L
-    private val notificationUpdateIntervalMs = 2000L
+    private val notificationUpdateIntervalMs = 1000L
 
     private val engineListener: (net.osmand.plus.plugins.nautical.engine.MarineState) -> Unit = {
         val now = System.currentTimeMillis()

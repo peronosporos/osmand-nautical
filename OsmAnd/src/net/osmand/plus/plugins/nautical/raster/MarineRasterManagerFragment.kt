@@ -31,7 +31,8 @@ class MarineRasterManagerFragment : BaseOsmAndFragment() {
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
-        val view = inflater.inflate(R.layout.fragment_simple_list, container, false)
+        val tInflater = themedInflater
+        val view = tInflater.inflate(R.layout.fragment_simple_list, container, false)
         
         view.findViewById<View>(R.id.closeButton)?.setOnClickListener {
             requireActivity().onBackPressedDispatcher.onBackPressed()
@@ -51,7 +52,7 @@ class MarineRasterManagerFragment : BaseOsmAndFragment() {
         
         // Add footer button for import
         if (listView != null) {
-            val footerView = inflater.inflate(R.layout.bottom_sheet_button, listView, false)
+            val footerView = tInflater.inflate(R.layout.bottom_sheet_button, listView, false)
             footerView.findViewById<TextView>(R.id.button_text)?.text = getString(R.string.raster_import_btn)
             footerView.setOnClickListener {
                 importLauncher.launch(arrayOf("application/octet-stream", "*/*"))
@@ -132,7 +133,7 @@ class MarineRasterManagerFragment : BaseOsmAndFragment() {
             .show()
     }
 
-    private class RasterFilesAdapter : BaseAdapter() {
+    private inner class RasterFilesAdapter : BaseAdapter() {
         private var files = emptyList<File>()
 
         fun setFiles(newFiles: List<File>) {
@@ -145,7 +146,7 @@ class MarineRasterManagerFragment : BaseOsmAndFragment() {
         override fun getItemId(position: Int): Long = position.toLong()
 
         override fun getView(position: Int, convertView: View?, parent: ViewGroup?): View {
-            val view = convertView ?: LayoutInflater.from(parent?.context)
+            val view = convertView ?: themedInflater
                 .inflate(R.layout.list_item_with_descr, parent, false)
             
             val file = files[position]
@@ -156,7 +157,7 @@ class MarineRasterManagerFragment : BaseOsmAndFragment() {
                 desc += " | " + parent?.context?.getString(R.string.nautical_kap_metadata_only)
             }
             view.findViewById<TextView>(R.id.description)?.text = desc
-            view.findViewById<ImageView>(R.id.icon)?.setImageResource(R.drawable.ic_action_world_globe)
+            view.findViewById<ImageView>(R.id.icon)?.setImageDrawable(getContentIcon(R.drawable.ic_action_world_globe))
             
             return view
         }

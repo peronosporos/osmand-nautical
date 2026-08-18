@@ -28,6 +28,11 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
 
     private var discoveryManager: SignalKDiscoveryManager? = null
 
+    private fun Preference.setThemedIcon(resId: Int) {
+        icon = getContentIcon(resId)
+    }
+
+
     override fun setupPreferences() {
         setupDisplayCategory()
         setupVesselContext()
@@ -118,17 +123,17 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
                 NauticalDisplayMode.SUNLIGHT -> getString(OsmAndR.string.nautical_display_mode_sunlight)
                 else -> getString(OsmAndR.string.nautical_display_mode_normal)
             }
-            setIcon(OsmAndR.drawable.ic_action_appearance)
+            setThemedIcon(OsmAndR.drawable.ic_action_appearance)
         }
 
         findPreference<SwitchPreferenceEx>(settings.NAUTICAL_HEAVY_WEATHER_MODE.id)?.apply {
-            setIcon(OsmAndR.drawable.ic_action_alert)
+            setThemedIcon(OsmAndR.drawable.ic_action_alert)
         }
     }
 
     private fun setupVesselContext() {
         findPreference<ListPreferenceEx>(settings.NAUTICAL_VESSEL_CONTEXT.id)?.apply {
-            setIcon(OsmAndR.drawable.ic_action_sail_boat_dark)
+            setThemedIcon(OsmAndR.drawable.ic_action_sail_boat_dark)
             entries = VesselContext.entries.map { getString(it.titleId) }.toTypedArray()
             entryValues = VesselContext.entries.map { it.name }.toTypedArray()
             val current = settings.NAUTICAL_VESSEL_CONTEXT.get()
@@ -150,26 +155,26 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
         )
         modules.forEach { pref ->
             findPreference<SwitchPreferenceEx>(pref.id)?.apply {
-                setIcon(OsmAndR.drawable.ic_action_additional_option)
+                setThemedIcon(OsmAndR.drawable.ic_action_additional_option)
             }
         }
 
         findPreference<SwitchPreferenceEx>(settings.NAUTICAL_GRIB_SOURCE_SIGNALK.id)?.apply {
-            setIcon(OsmAndR.drawable.ic_action_additional_option)
+            setThemedIcon(OsmAndR.drawable.ic_action_additional_option)
         }
     }
 
     private fun setupMaintenanceCategory() {
-        findPreference<Preference>("nautical_diagnostics")?.setIcon(OsmAndR.drawable.ic_action_info)
-        findPreference<Preference>("nautical_advanced_tuning")?.setIcon(OsmAndR.drawable.ic_action_settings)
-        findPreference<Preference>("nautical_boat_ai")?.setIcon(OsmAndR.drawable.ic_action_android)
-        findPreference<Preference>("nautical_checklists")?.setIcon(OsmAndR.drawable.ic_action_additional_option)
-        findPreference<Preference>("nautical_notifications")?.setIcon(OsmAndR.drawable.ic_action_alert)
-        findPreference<Preference>("nautical_safety_regions")?.setIcon(OsmAndR.drawable.ic_action_additional_option)
-        findPreference<Preference>("nautical_replay_manager")?.setIcon(OsmAndR.drawable.ic_action_play_dark)
-        findPreference<Preference>("nautical_hardware_health")?.setIcon(OsmAndR.drawable.ic_action_info)
-        findPreference<Preference>("nautical_master_telemetry_setup")?.setIcon(OsmAndR.drawable.ic_action_settings)
-        findPreference<Preference>("nautical_clear_data")?.setIcon(OsmAndR.drawable.ic_action_delete_dark)
+        findPreference<Preference>("nautical_diagnostics")?.setThemedIcon(OsmAndR.drawable.ic_action_info)
+        findPreference<Preference>("nautical_advanced_tuning")?.setThemedIcon(OsmAndR.drawable.ic_action_settings)
+        findPreference<Preference>("nautical_boat_ai")?.setThemedIcon(OsmAndR.drawable.ic_action_android)
+        findPreference<Preference>("nautical_checklists")?.setThemedIcon(OsmAndR.drawable.ic_action_additional_option)
+        findPreference<Preference>("nautical_notifications")?.setThemedIcon(OsmAndR.drawable.ic_action_alert)
+        findPreference<Preference>("nautical_safety_regions")?.setThemedIcon(OsmAndR.drawable.ic_action_additional_option)
+        findPreference<Preference>("nautical_replay_manager")?.setThemedIcon(OsmAndR.drawable.ic_action_play_dark)
+        findPreference<Preference>("nautical_hardware_health")?.setThemedIcon(OsmAndR.drawable.ic_action_info)
+        findPreference<Preference>("nautical_master_telemetry_setup")?.setThemedIcon(OsmAndR.drawable.ic_action_settings)
+        findPreference<Preference>("nautical_clear_data")?.setThemedIcon(OsmAndR.drawable.ic_action_delete_dark)
 
         findPreference<Preference>("nautical_enc_manager")?.apply {
             NauticalPlugin.getInstance()?.s57SpatialIndex?.let { index ->
@@ -192,7 +197,7 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
 
     private fun setupVesselCategory() {
         findPreference<ListPreferenceEx>(settings.NAUTICAL_VESSEL_TYPE.id)?.apply {
-            setIcon(OsmAndR.drawable.ic_action_settings)
+            setThemedIcon(OsmAndR.drawable.ic_action_settings)
             entries = arrayOf(
                 getString(OsmAndR.string.nautical_vessel_conventional),
                 getString(OsmAndR.string.nautical_vessel_proa)
@@ -207,7 +212,7 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
         }
 
         findPreference<SwitchPreferenceEx>(settings.NAUTICAL_MULTIHULL_SHUNTING.id)?.apply {
-            setIcon(OsmAndR.drawable.ic_action_sail_boat_dark)
+            setThemedIcon(OsmAndR.drawable.ic_action_sail_boat_dark)
             isChecked = settings.NAUTICAL_MULTIHULL_SHUNTING.get()
         }
 
@@ -216,12 +221,12 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
         setupDepthPreference(settings.NAUTICAL_KEEL_OFFSET.id, OsmAndR.string.nautical_keel_offset_title, OsmAndR.drawable.ic_action_additional_option)
 
         findPreference<EditTextPreferenceEx>(settings.NAUTICAL_WIND_ALIGNMENT.id)?.apply {
-            setIcon(OsmAndR.drawable.ic_action_wind)
+            setThemedIcon(OsmAndR.drawable.ic_action_wind)
             summary = "${settings.NAUTICAL_WIND_ALIGNMENT.get()}°"
         }
 
         findPreference<ListPreferenceEx>(settings.NAUTICAL_HEADING_REFERENCE.id)?.apply {
-            setIcon(OsmAndR.drawable.ic_action_compass)
+            setThemedIcon(OsmAndR.drawable.ic_action_compass)
             entries = arrayOf(getString(OsmAndR.string.nautical_heading_reference_true), getString(OsmAndR.string.nautical_heading_reference_mag))
             entryValues = arrayOf("TRUE", "MAGNETIC")
             val ref = settings.NAUTICAL_HEADING_REFERENCE.get()
@@ -230,7 +235,7 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
         }
 
         findPreference<ListPreferenceEx>(settings.NAUTICAL_TTW_MODE.id)?.apply {
-            setIcon(OsmAndR.drawable.ic_action_time)
+            setThemedIcon(OsmAndR.drawable.ic_action_time)
             entries = arrayOf(getString(OsmAndR.string.nautical_ttw_mode_sog), getString(OsmAndR.string.nautical_ttw_mode_vmg))
             entryValues = arrayOf("SOG", "VMG")
             val mode = settings.NAUTICAL_TTW_MODE.get()
@@ -239,7 +244,7 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
         }
 
         findPreference<EditTextPreferenceEx>(settings.NAUTICAL_ACTIVE_SAIL_PLAN.id)?.apply {
-            setIcon(OsmAndR.drawable.ic_action_sail_boat_dark)
+            setThemedIcon(OsmAndR.drawable.ic_action_sail_boat_dark)
             summary = settings.NAUTICAL_ACTIVE_SAIL_PLAN.get().ifEmpty { getString(OsmAndR.string.shared_string_none) }
             setOnPreferenceClickListener {
                 showInstance(requireActivity(), SettingsScreenType.SAIL_INVENTORY)
@@ -250,7 +255,7 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
 
     private fun setupAutopilotTuningCategory() {
         findPreference<ListPreferenceEx>(settings.NAUTICAL_PILOT_SEA_STATE.id)?.apply {
-            setIcon(OsmAndR.drawable.ic_action_settings)
+            setThemedIcon(OsmAndR.drawable.ic_action_settings)
             val options = (0..9).map { it.toString() }.toTypedArray()
             entries = options
             entryValues = options
@@ -268,7 +273,7 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
         )
         tuningPrefs.forEach { pref ->
             findPreference<EditTextPreferenceEx>(pref.id)?.apply {
-                setIcon(OsmAndR.drawable.ic_action_settings)
+                setThemedIcon(OsmAndR.drawable.ic_action_settings)
                 summary = pref.get().toString()
                 setOnBindEditTextListener { it.inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL }
             }
@@ -277,7 +282,7 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
 
     private fun setupConnectionCategory() {
         findPreference<Preference>("nautical_discovery_mdns")?.apply {
-            setIcon(OsmAndR.drawable.ic_sensors_search)
+            setThemedIcon(OsmAndR.drawable.ic_sensors_search)
             setOnPreferenceClickListener {
                 showDiscoveryDialog()
                 true
@@ -285,27 +290,27 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
         }
 
         findPreference<EditTextPreferenceEx>(settings.NAUTICAL_SERVER_IP.id)?.apply {
-            setIcon(OsmAndR.drawable.ic_action_world_globe)
+            setThemedIcon(OsmAndR.drawable.ic_action_world_globe)
             summary = settings.NAUTICAL_SERVER_IP.get().ifEmpty { getString(OsmAndR.string.nautical_server_ip_desc) }
         }
 
         findPreference<EditTextPreferenceEx>(settings.NAUTICAL_SERVER_PORT.id)?.apply {
-            setIcon(OsmAndR.drawable.ic_action_settings)
+            setThemedIcon(OsmAndR.drawable.ic_action_settings)
             summary = settings.NAUTICAL_SERVER_PORT.get().ifEmpty { getString(OsmAndR.string.nautical_server_port_desc) }
         }
 
         findPreference<SwitchPreferenceEx>(settings.NAUTICAL_USE_SECURE_CONNECTION.id)?.apply {
-            setIcon(OsmAndR.drawable.ic_action_lock)
+            setThemedIcon(OsmAndR.drawable.ic_action_lock)
             isChecked = settings.NAUTICAL_USE_SECURE_CONNECTION.get()
         }
 
         findPreference<EditTextPreferenceEx>(settings.NAUTICAL_SERVER_USERNAME.id)?.apply {
-            setIcon(OsmAndR.drawable.ic_action_user)
+            setThemedIcon(OsmAndR.drawable.ic_action_user)
             summary = settings.NAUTICAL_SERVER_USERNAME.get().ifEmpty { getString(OsmAndR.string.nautical_server_username_desc) }
         }
 
         findPreference<EditTextPreferenceEx>(settings.NAUTICAL_SERVER_PASSWORD.id)?.apply {
-            setIcon(OsmAndR.drawable.ic_action_lock)
+            setThemedIcon(OsmAndR.drawable.ic_action_lock)
             summary = if (settings.NAUTICAL_SERVER_PASSWORD.get().isEmpty()) {
                 getString(OsmAndR.string.nautical_server_password_desc)
             } else {
@@ -314,17 +319,17 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
         }
 
         findPreference<EditTextPreferenceEx>(settings.NAUTICAL_SIGNAL_K_AUTH_TOKEN.id)?.apply {
-            setIcon(OsmAndR.drawable.ic_action_lock)
+            setThemedIcon(OsmAndR.drawable.ic_action_lock)
             summary = if (settings.NAUTICAL_SIGNAL_K_AUTH_TOKEN.get().isEmpty()) getString(OsmAndR.string.shared_string_none) else getString(OsmAndR.string.nautical_password_mask)
         }
 
         findPreference<SwitchPreferenceEx>(settings.NAUTICAL_TRUST_ALL_CERTIFICATES.id)?.apply {
-            setIcon(OsmAndR.drawable.ic_action_additional_option)
+            setThemedIcon(OsmAndR.drawable.ic_action_additional_option)
             isChecked = settings.NAUTICAL_TRUST_ALL_CERTIFICATES.get()
         }
 
         findPreference<SwitchPreferenceEx>(settings.NAUTICAL_FORCE_WATCH_LAYOUT.id)?.apply {
-            setIcon(OsmAndR.drawable.ic_action_additional_option)
+            setThemedIcon(OsmAndR.drawable.ic_action_additional_option)
             isEnabled = !WearOsNauticalManager(requireContext()).isWatchMode() || settings.NAUTICAL_FORCE_WATCH_LAYOUT.get()
             if (!isEnabled) {
                 summary = getString(OsmAndR.string.nautical_force_watch_layout_desc) + " (Watch Mode Active)"
@@ -332,7 +337,7 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
         }
 
         findPreference<ListPreferenceEx>(settings.NAUTICAL_TELEMETRY_REFRESH_RATE.id)?.apply {
-            setIcon(OsmAndR.drawable.ic_action_time)
+            setThemedIcon(OsmAndR.drawable.ic_action_time)
             entries = arrayOf(getString(OsmAndR.string.nautical_refresh_rate_1s), getString(OsmAndR.string.nautical_refresh_rate_2s), getString(OsmAndR.string.nautical_refresh_rate_5s))
             entryValues = arrayOf("1", "2", "5")
             val refreshRate = settings.NAUTICAL_TELEMETRY_REFRESH_RATE.get()
@@ -346,7 +351,7 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
         }
 
         findPreference<ListPreferenceEx>(settings.NAUTICAL_NMEA_SOURCE.id)?.apply {
-            setIcon(OsmAndR.drawable.ic_action_settings)
+            setThemedIcon(OsmAndR.drawable.ic_action_settings)
             entries = arrayOf(
                 getString(OsmAndR.string.nautical_nmea_source_signalk),
                 getString(OsmAndR.string.nautical_nmea_source_bluetooth),
@@ -365,17 +370,17 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
         }
 
         findPreference<EditTextPreferenceEx>(settings.NAUTICAL_BT_DEVICE_ADDRESS.id)?.apply {
-            setIcon(OsmAndR.drawable.ic_action_bluetooth)
+            setThemedIcon(OsmAndR.drawable.ic_action_bluetooth)
             summary = settings.NAUTICAL_BT_DEVICE_ADDRESS.get().ifEmpty { getString(OsmAndR.string.shared_string_none) }
         }
 
         findPreference<EditTextPreferenceEx>(settings.NAUTICAL_USB_DEVICE_NAME.id)?.apply {
-            setIcon(OsmAndR.drawable.ic_action_settings)
+            setThemedIcon(OsmAndR.drawable.ic_action_settings)
             summary = settings.NAUTICAL_USB_DEVICE_NAME.get().ifEmpty { getString(OsmAndR.string.shared_string_none) }
         }
 
         findPreference<ListPreferenceEx>(settings.NAUTICAL_NMEA_BAUD_RATE.id)?.apply {
-            setIcon(OsmAndR.drawable.ic_action_settings)
+            setThemedIcon(OsmAndR.drawable.ic_action_settings)
             val baudRates = arrayOf("4800", "9600", "19200", "38400", "57600", "115200")
             entries = baudRates
             entryValues = baudRates
@@ -385,7 +390,7 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
         }
 
         findPreference<ListPreferenceEx>(settings.NAUTICAL_RECEIVE_IN_BACKGROUND.id)?.apply {
-            setIcon(OsmAndR.drawable.ic_action_play_dark)
+            setThemedIcon(OsmAndR.drawable.ic_action_play_dark)
             entries = arrayOf(getString(OsmAndR.string.shared_string_yes), getString(OsmAndR.string.shared_string_no))
             entryValues = arrayOf(true.toString(), false.toString())
             val isEnabled = settings.NAUTICAL_RECEIVE_IN_BACKGROUND.get()
@@ -394,7 +399,7 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
         }
 
         findPreference<Preference>("nautical_hardware_health")?.apply {
-            setIcon(OsmAndR.drawable.ic_action_additional_option)
+            setThemedIcon(OsmAndR.drawable.ic_action_additional_option)
             setOnPreferenceClickListener {
                 showInstance(requireActivity(), SettingsScreenType.NAUTICAL_HARDWARE_STATS)
                 true
@@ -444,7 +449,7 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
         setupDepthPreference(settings.NAUTICAL_SAFETY_MARGIN.id, OsmAndR.string.nautical_safety_margin_base, OsmAndR.drawable.ic_action_additional_option)
 
         findPreference<SwitchPreferenceEx>(settings.NAUTICAL_ENABLE_AUTO_DR.id)?.apply {
-            setIcon(OsmAndR.drawable.ic_action_play_dark)
+            setThemedIcon(OsmAndR.drawable.ic_action_play_dark)
         }
 
         setupDistancePreference(settings.NAUTICAL_XTE_THRESHOLD.id, OsmAndR.string.nautical_xte_threshold_desc, OsmAndR.drawable.ic_action_anchor)
@@ -453,24 +458,24 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
         setupDistancePreference(settings.NAUTICAL_SAFETY_CORRIDOR_BUFFER.id, OsmAndR.string.nautical_safety_corridor_buffer, OsmAndR.drawable.ic_action_additional_option)
 
         findPreference<EditTextPreferenceEx>(settings.NAUTICAL_OFF_COURSE_ALARM.id)?.apply {
-            setIcon(OsmAndR.drawable.ic_action_alert)
+            setThemedIcon(OsmAndR.drawable.ic_action_alert)
             summary = "${settings.NAUTICAL_OFF_COURSE_ALARM.get()}°"
         }
 
         findPreference<EditTextPreferenceEx>(settings.NAUTICAL_ACTUATOR_ALARM_THRESHOLD.id)?.apply {
-            setIcon(OsmAndR.drawable.ic_action_alert)
+            setThemedIcon(OsmAndR.drawable.ic_action_alert)
             summary = "${settings.NAUTICAL_ACTUATOR_ALARM_THRESHOLD.get()}%"
         }
 
         findPreference<SwitchPreferenceEx>(settings.NAUTICAL_MOB_AUDIO_GUIDANCE.id)?.apply {
-            setIcon(OsmAndR.drawable.ic_action_volume_up)
+            setThemedIcon(OsmAndR.drawable.ic_action_volume_up)
             val available = NauticalPlugin.getInstance()?.isAudioHardwareAvailable() == true
             isEnabled = available
             isChecked = settings.NAUTICAL_MOB_AUDIO_GUIDANCE.get() && available
         }
 
         findPreference<Preference>("nautical_test_alarm")?.apply {
-            setIcon(OsmAndR.drawable.ic_action_volume_up)
+            setThemedIcon(OsmAndR.drawable.ic_action_volume_up)
             setOnPreferenceClickListener {
                 net.osmand.plus.plugins.nautical.audio.NauticalAudioArbiter.getInstance(app).dispatchAlarm(net.osmand.plus.plugins.nautical.audio.AlarmType.MAP_HAZARD, loop = false)
                 true
@@ -478,7 +483,7 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
         }
 
         findPreference<Preference>("nautical_test_tts")?.apply {
-            setIcon(OsmAndR.drawable.ic_action_volume_up)
+            setThemedIcon(OsmAndR.drawable.ic_action_volume_up)
             setOnPreferenceClickListener {
                 net.osmand.plus.plugins.nautical.audio.NauticalAudioArbiter.getInstance(app).dispatchTts(getString(OsmAndR.string.nautical_test_tts_msg))
                 true
@@ -486,7 +491,7 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
         }
 
         findPreference<Preference>("nautical_compass_wizard")?.apply {
-            setIcon(OsmAndR.drawable.ic_action_compass)
+            setThemedIcon(OsmAndR.drawable.ic_action_compass)
             setOnPreferenceClickListener {
                 net.osmand.plus.views.mapwidgets.widgets.NauticalCompassWizardDialog.show(this@NauticalSettingsFragment)
                 true
@@ -503,19 +508,19 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
             }
         }
         findPreference<EditTextPreferenceEx>(settings.NAUTICAL_MED_MOORING_VESSEL_LENGTH.id)?.apply {
-            setIcon(OsmAndR.drawable.ic_action_length)
+            setThemedIcon(OsmAndR.drawable.ic_action_length)
             summary = "${settings.NAUTICAL_MED_MOORING_VESSEL_LENGTH.get()} m"
         }
         findPreference<EditTextPreferenceEx>(settings.NAUTICAL_MED_MOORING_SCOPE.id)?.apply {
-            setIcon(OsmAndR.drawable.ic_action_additional_option)
+            setThemedIcon(OsmAndR.drawable.ic_action_additional_option)
             summary = "${settings.NAUTICAL_MED_MOORING_SCOPE.get()}:1"
         }
         findPreference<EditTextPreferenceEx>(settings.NAUTICAL_TACKING_WIND_LIMIT.id)?.apply {
-            setIcon(OsmAndR.drawable.ic_action_wind)
+            setThemedIcon(OsmAndR.drawable.ic_action_wind)
             summary = "${settings.NAUTICAL_TACKING_WIND_LIMIT.get()} kn"
         }
         findPreference<EditTextPreferenceEx>(settings.NAUTICAL_MOB_AUDIO_INTERVAL.id)?.apply {
-            setIcon(OsmAndR.drawable.ic_action_volume_up)
+            setThemedIcon(OsmAndR.drawable.ic_action_volume_up)
             summary = "${settings.NAUTICAL_MOB_AUDIO_INTERVAL.get()} s"
         }
         setupDistancePreference(settings.NAUTICAL_ARRIVAL_RADIUS.id, OsmAndR.string.nautical_arrival_radius, OsmAndR.drawable.ic_action_anchor)
@@ -523,7 +528,7 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
 
     private fun setupAnchorAdvancedCategory() {
         findPreference<SwitchPreferenceEx>(settings.NAUTICAL_ANCHOR_LOCKED_LOCALLY.id)?.apply {
-            setIcon(OsmAndR.drawable.ic_action_lock)
+            setThemedIcon(OsmAndR.drawable.ic_action_lock)
         }
 
         setupDepthPreference(settings.NAUTICAL_ANCHOR_DEPTH.id, OsmAndR.string.nautical_anchor_label_depth, OsmAndR.drawable.ic_action_anchor)
@@ -533,19 +538,19 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
         setupDepthPreference(settings.NAUTICAL_ANCHOR_SAFETY_MARGIN.id, OsmAndR.string.nautical_anchor_label_safety_margin, OsmAndR.drawable.ic_action_additional_option)
 
         findPreference<EditTextPreferenceEx>(settings.NAUTICAL_ANCHOR_SCOPE_RATIO.id)?.apply {
-            setIcon(OsmAndR.drawable.ic_action_additional_option)
+            setThemedIcon(OsmAndR.drawable.ic_action_additional_option)
             summary = "${settings.NAUTICAL_ANCHOR_SCOPE_RATIO.get()}:1"
             setOnBindEditTextListener { it.inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL }
         }
 
         findPreference<EditTextPreferenceEx>(settings.NAUTICAL_ANCHOR_ACCURACY_THRESHOLD.id)?.apply {
-            setIcon(OsmAndR.drawable.ic_action_additional_option)
+            setThemedIcon(OsmAndR.drawable.ic_action_additional_option)
             summary = "${settings.NAUTICAL_ANCHOR_ACCURACY_THRESHOLD.get()} m"
             setOnBindEditTextListener { it.inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL }
         }
 
         findPreference<Preference>("nautical_clear_anchor")?.apply {
-            setIcon(OsmAndR.drawable.ic_action_delete_dark)
+            setThemedIcon(OsmAndR.drawable.ic_action_delete_dark)
             setOnPreferenceClickListener {
                 settings.NAUTICAL_ANCHOR_LAT.set(0.0)
                 settings.NAUTICAL_ANCHOR_LON.set(0.0)
@@ -578,7 +583,7 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
             val current = settings.NAUTICAL_TRAJECTORY_COLOR.get()
             value = current.toString()
             summary = entries.getOrNull(entryValues.indexOf(value)) ?: "Custom"
-            setIcon(OsmAndR.drawable.ic_action_appearance)
+            setThemedIcon(OsmAndR.drawable.ic_action_appearance)
         }
 
         findPreference<ListPreferenceEx>(settings.NAUTICAL_TRAJECTORY_THICKNESS.id)?.apply {
@@ -588,7 +593,7 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
             val current = settings.NAUTICAL_TRAJECTORY_THICKNESS.get()
             value = current.toInt().toString()
             summary = "$value px"
-            setIcon(OsmAndR.drawable.ic_action_additional_option)
+            setThemedIcon(OsmAndR.drawable.ic_action_additional_option)
         }
         
         val overlays = listOf(
@@ -612,7 +617,7 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
         )
         overlays.forEach { pref ->
             findPreference<SwitchPreferenceEx>(pref.id)?.apply {
-                setIcon(OsmAndR.drawable.ic_action_additional_option)
+                setThemedIcon(OsmAndR.drawable.ic_action_additional_option)
                 setOnPreferenceChangeListener { _, newValue ->
                     pref.set((newValue as? Boolean) ?: false)
                     plugin?.requestRefresh()
@@ -622,7 +627,7 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
         }
 
         findPreference<ListPreferenceEx>(settings.NAUTICAL_LOOK_AHEAD_TIME.id)?.apply {
-            setIcon(OsmAndR.drawable.ic_action_time)
+            setThemedIcon(OsmAndR.drawable.ic_action_time)
             val options = arrayOf("2", "5", "10", "20", "30", "60")
             entries = options.map { "$it ${getString(OsmAndR.string.shared_string_min)}" }.toTypedArray()
             entryValues = options
@@ -635,7 +640,7 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
     private fun setupDepthPreference(id: String, titleId: Int, iconId: Int) {
         val safetyManager = NauticalPlugin.getInstance()?.safetyManager
         findPreference<EditTextPreferenceEx>(id)?.apply {
-            setIcon(iconId)
+            setThemedIcon(iconId)
             
             val meters = when (id) {
                 settings.NAUTICAL_VESSEL_DRAFT.id -> settings.NAUTICAL_VESSEL_DRAFT.get().toDouble()
@@ -666,7 +671,7 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
 
     private fun setupDistancePreference(id: String, titleId: Int, iconId: Int) {
         findPreference<EditTextPreferenceEx>(id)?.apply {
-            setIcon(iconId)
+            setThemedIcon(iconId)
             val nm = when (id) {
                 settings.NAUTICAL_XTE_THRESHOLD.id -> settings.NAUTICAL_XTE_THRESHOLD.get().toDouble()
                 settings.NAUTICAL_LOOK_AHEAD_RADIUS_NM.id -> settings.NAUTICAL_LOOK_AHEAD_RADIUS_NM.get().toDouble()
@@ -695,7 +700,7 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
 
     private fun setupSailingCategory() {
         findPreference<Preference>("sailing_performance")?.apply {
-            setIcon(OsmAndR.drawable.ic_action_sail_boat_dark)
+            setThemedIcon(OsmAndR.drawable.ic_action_sail_boat_dark)
             setOnPreferenceClickListener {
                 showInstance(requireActivity(), SettingsScreenType.SAILING_PERFORMANCE_SETTINGS)
                 true
@@ -718,7 +723,7 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
         }
 
         findPreference<Preference>("nautical_polar_wizard")?.apply {
-            setIcon(OsmAndR.drawable.ic_action_settings)
+            setThemedIcon(OsmAndR.drawable.ic_action_settings)
             setOnPreferenceClickListener {
                 showInstance(requireActivity(), SettingsScreenType.NAUTICAL_POLAR_WIZARD)
                 true
@@ -726,22 +731,22 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
         }
 
         findPreference<EditTextPreferenceEx>(settings.NAUTICAL_LAYLINES_TACK_ANGLE.id)?.apply {
-            setIcon(OsmAndR.drawable.ic_action_additional_option)
+            setThemedIcon(OsmAndR.drawable.ic_action_additional_option)
             summary = "${settings.NAUTICAL_LAYLINES_TACK_ANGLE.get()}°"
         }
 
         findPreference<EditTextPreferenceEx>(settings.NAUTICAL_LEEWAY_COEFFICIENT.id)?.apply {
-            setIcon(OsmAndR.drawable.ic_action_additional_option)
+            setThemedIcon(OsmAndR.drawable.ic_action_additional_option)
             summary = settings.NAUTICAL_LEEWAY_COEFFICIENT.get().toString()
         }
 
         findPreference<EditTextPreferenceEx>(settings.NAUTICAL_MANUAL_LEEWAY_ANGLE.id)?.apply {
-            setIcon(OsmAndR.drawable.ic_action_additional_option)
+            setThemedIcon(OsmAndR.drawable.ic_action_additional_option)
             summary = "${settings.NAUTICAL_MANUAL_LEEWAY_ANGLE.get()}°"
         }
 
         findPreference<SwitchPreferenceEx>(settings.NAUTICAL_PREDICTIVE_STEERING.id)?.apply {
-            setIcon(OsmAndR.drawable.ic_action_wind)
+            setThemedIcon(OsmAndR.drawable.ic_action_wind)
             isChecked = settings.NAUTICAL_PREDICTIVE_STEERING.get()
             
             // Item 14 & 15: Enhance summary with status warning
@@ -754,11 +759,11 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
         }
 
         findPreference<SwitchPreferenceEx>(settings.NAUTICAL_SHADOW_DRIVE.id)?.apply {
-            setIcon(OsmAndR.drawable.ic_action_additional_option)
+            setThemedIcon(OsmAndR.drawable.ic_action_additional_option)
         }
 
         findPreference<ListPreferenceEx>(settings.NAUTICAL_WAVE_BIAS_SENSITIVITY.id)?.apply {
-            setIcon(OsmAndR.drawable.ic_action_settings)
+            setThemedIcon(OsmAndR.drawable.ic_action_settings)
             entries = arrayOf("Low (20%)", "Medium (50%)", "High (80%)")
             entryValues = arrayOf("20", "50", "80")
             val current = settings.NAUTICAL_WAVE_BIAS_SENSITIVITY.get()
@@ -773,7 +778,7 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
         val plugin = NauticalPlugin.getInstance() ?: return
 
         findPreference<ListPreferenceEx>(plugin.aisObjLostTimeout.id)?.apply {
-            setIcon(OsmAndR.drawable.ic_action_time)
+            setThemedIcon(OsmAndR.drawable.ic_action_time)
             val entryValuesArr = arrayOf(3, 5, 7, 10, 12, 15, 20)
             entries = entryValuesArr.map { "$it ${getString(OsmAndR.string.shared_string_minute_lowercase)}" }.toTypedArray()
             entryValues = entryValuesArr.map { it.toString() }.toTypedArray()
@@ -783,7 +788,7 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
         }
 
         findPreference<ListPreferenceEx>(plugin.aisShipLostTimeout.id)?.apply {
-            setIcon(OsmAndR.drawable.ic_action_time)
+            setThemedIcon(OsmAndR.drawable.ic_action_time)
             val entryValuesArr = arrayOf(2, 3, 4, 5, 7, 10, 15, 100)
             entries = entryValuesArr.mapIndexed { index, i ->
                 if (index == (entryValuesArr.size - 1)) getString(OsmAndR.string.shared_string_disabled)
@@ -796,7 +801,7 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
         }
 
         findPreference<ListPreferenceEx>(plugin.aisCpaWarningTime.id)?.apply {
-            setIcon(OsmAndR.drawable.ic_action_time)
+            setThemedIcon(OsmAndR.drawable.ic_action_time)
             val entryValuesArr = arrayOf(0, 1, 5, 10, 20, 30, 60)
             entries = entryValuesArr.map { if (it == 0) getString(OsmAndR.string.shared_string_disabled) else "$it ${getString(OsmAndR.string.shared_string_minute_lowercase)}" }.toTypedArray()
             entryValues = entryValuesArr.map { it.toString() }.toTypedArray()
@@ -807,7 +812,7 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
         }
 
         findPreference<ListPreferenceEx>(plugin.aisCpaWarningDistance.id)?.apply {
-            setIcon(OsmAndR.drawable.ic_action_anchor)
+            setThemedIcon(OsmAndR.drawable.ic_action_anchor)
             val entryValuesArr = arrayOf(0.02f, 0.05f, 0.1f, 0.2f, 0.5f, 1.0f, 2.0f)
             entries = entryValuesArr.map { "$it NM" }.toTypedArray()
             entryValues = entryValuesArr.map { it.toString() }.toTypedArray()
@@ -817,18 +822,18 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
         }
 
         findPreference<EditTextPreferenceEx>(plugin.aisOwnMmsi.id)?.apply {
-            setIcon(OsmAndR.drawable.ic_action_sail_boat_dark)
+            setThemedIcon(OsmAndR.drawable.ic_action_sail_boat_dark)
             summary = plugin.aisOwnMmsi.get().toString()
         }
 
         findPreference<SwitchPreferenceEx>(plugin.aisDisplayOwnPosition.id)?.apply {
-            setIcon(OsmAndR.drawable.ic_action_user)
+            setThemedIcon(OsmAndR.drawable.ic_action_user)
             isChecked = plugin.aisDisplayOwnPosition.get()
             isEnabled = plugin.aisOwnMmsi.get() != 0
         }
 
         findPreference<Preference>("nautical_ais_buddies")?.apply {
-            setIcon(OsmAndR.drawable.ic_action_group_list)
+            setThemedIcon(OsmAndR.drawable.ic_action_group_list)
             setOnPreferenceClickListener {
                 showInstance(requireActivity(), SettingsScreenType.NAUTICAL_AIS_BUDDIES)
                 true
@@ -838,7 +843,7 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
 
     private fun setupVhfCategory() {
         findPreference<Preference>("nautical_vhf_history_view")?.apply {
-            setIcon(OsmAndR.drawable.ic_action_group_list)
+            setThemedIcon(OsmAndR.drawable.ic_action_group_list)
             setOnPreferenceClickListener {
                 val url = settings.NAUTICAL_VHF_BACKEND_URL.get()
                 if (url.isEmpty()) {
@@ -851,7 +856,7 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
         }
 
         findPreference<Preference>("nautical_switch_panel")?.apply {
-            setIcon(OsmAndR.drawable.ic_action_settings)
+            setThemedIcon(OsmAndR.drawable.ic_action_settings)
             setOnPreferenceClickListener {
                 showInstance(requireActivity(), SettingsScreenType.NAUTICAL_SWITCH_PANEL)
                 true
@@ -859,42 +864,42 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
         }
 
         findPreference<EditTextPreferenceEx>(settings.NAUTICAL_VHF_BACKEND_URL.id)?.apply {
-            setIcon(OsmAndR.drawable.ic_action_antenna)
+            setThemedIcon(OsmAndR.drawable.ic_action_antenna)
             summary = settings.NAUTICAL_VHF_BACKEND_URL.get().ifEmpty { getString(OsmAndR.string.shared_string_none) }
         }
 
         findPreference<SwitchPreferenceEx>(settings.NAUTICAL_VHF_AUTO_REPLAY.id)?.apply {
-            setIcon(OsmAndR.drawable.ic_action_play_dark)
+            setThemedIcon(OsmAndR.drawable.ic_action_play_dark)
             isChecked = settings.NAUTICAL_VHF_AUTO_REPLAY.get()
         }
     }
 
     private fun setupNavtexCategory() {
         findPreference<SwitchPreferenceEx>(settings.NAVTEX_ONLY_URGENT.id)?.apply {
-            setIcon(OsmAndR.drawable.ic_action_alert)
+            setThemedIcon(OsmAndR.drawable.ic_action_alert)
             isChecked = settings.NAVTEX_ONLY_URGENT.get()
         }
 
         findPreference<EditTextPreferenceEx>(settings.NAVTEX_SUBJECT_FILTER.id)?.apply {
-            setIcon(OsmAndR.drawable.ic_action_filter)
+            setThemedIcon(OsmAndR.drawable.ic_action_filter)
             summary = settings.NAVTEX_SUBJECT_FILTER.get().ifEmpty { getString(OsmAndR.string.shared_string_none) }
         }
 
         findPreference<EditTextPreferenceEx>(settings.NAVTEX_MAX_DISTANCE.id)?.apply {
-            setIcon(OsmAndR.drawable.ic_action_anchor)
+            setThemedIcon(OsmAndR.drawable.ic_action_anchor)
             val dist = settings.NAVTEX_MAX_DISTANCE.get()
             summary = if (dist > 0) "$dist km" else getString(OsmAndR.string.shared_string_none)
         }
 
         findPreference<EditTextPreferenceEx>(settings.NAUTICAL_NAVTEX_EXPIRY_HOURS.id)?.apply {
-            setIcon(OsmAndR.drawable.ic_action_time)
+            setThemedIcon(OsmAndR.drawable.ic_action_time)
             summary = "${settings.NAUTICAL_NAVTEX_EXPIRY_HOURS.get()} h"
         }
     }
 
     private fun setupLogbookCategory() {
         findPreference<Preference>("nautical_passage_plan")?.apply {
-            setIcon(OsmAndR.drawable.ic_action_track_16)
+            setThemedIcon(OsmAndR.drawable.ic_action_track_16)
             setOnPreferenceClickListener {
                 showInstance(requireActivity(), SettingsScreenType.NAUTICAL_PASSAGE_PLAN)
                 true
@@ -902,7 +907,7 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
         }
 
         findPreference<ListPreferenceEx>(settings.NAUTICAL_LOGBOOK_INTERVAL.id)?.apply {
-            setIcon(OsmAndR.drawable.ic_action_time)
+            setThemedIcon(OsmAndR.drawable.ic_action_time)
             val values = arrayOf(0, 15, 30, 60, 120, 240, 360, 1440)
             entries = values.map { if (it == 0) "Immediate (Event-based)" else "$it min" }.toTypedArray()
             entryValues = values.map { it.toString() }.toTypedArray()
