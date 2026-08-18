@@ -41,11 +41,11 @@ class NauticalNotification(app: OsmandApplication) : OsmandNotification(app, GRO
             .setContentTitle(app.getString(R.string.plugin_nautical_name))
             .setCategory(NotificationCompat.CATEGORY_SERVICE)
 
-        val state = net.osmand.plus.plugins.nautical.NauticalPlugin.engine?.marineState?.value
-        val subtext = if (state != null && (state.speedOverGroundKts != null || state.courseOverGroundDeg != null || state.depthBelowTransducerMeters != null)) {
-            val speed = state.speedOverGroundKts?.let { String.format(java.util.Locale.US, "%.1f kts", it) } ?: "--"
-            val cog = state.courseOverGroundDeg?.let { String.format(java.util.Locale.US, "%03.0f°", it) } ?: "--"
-            val depth = state.depthBelowTransducerMeters?.let { String.format(java.util.Locale.US, "%.1fm", it) } ?: "--"
+        val state = net.osmand.plus.plugins.nautical.NauticalPlugin.engine?.getCurrentState()
+        val subtext = if (state != null && (state.speedOverGround != null || state.courseOverGroundTrue != null || state.depthBelowTransducer != null)) {
+            val speed = state.speedOverGround?.let { String.format(java.util.Locale.US, "%.1f kts", it * 1.943844) } ?: "--"
+            val cog = state.courseOverGroundTrue?.let { String.format(java.util.Locale.US, "%03.0f°", Math.toDegrees(it)) } ?: "--"
+            val depth = state.depthBelowTransducer?.let { String.format(java.util.Locale.US, "%.1fm", it) } ?: "--"
             "SOG: $speed | COG: $cog | Depth: $depth"
         } else {
             app.getString(R.string.nautical_receive_in_background)
