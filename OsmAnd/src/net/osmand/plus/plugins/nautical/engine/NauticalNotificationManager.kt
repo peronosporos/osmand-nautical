@@ -234,7 +234,15 @@ class NauticalNotificationManager(
     }
 
 
+    private var lastCriticalNotifyTime = 0L
+    private val NOTIFY_THROTTLE_MS = 1000L
+
     fun postCriticalNotification(id: String, title: String, message: String) {
+        val now = System.currentTimeMillis()
+        if (now - lastCriticalNotifyTime < NOTIFY_THROTTLE_MS) {
+            return
+        }
+        lastCriticalNotifyTime = now
         val builder = NotificationCompat.Builder(app, CHANNEL_CRITICAL)
             .setSmallIcon(R.drawable.ic_action_sail_boat_dark)
             .setContentTitle(title)
