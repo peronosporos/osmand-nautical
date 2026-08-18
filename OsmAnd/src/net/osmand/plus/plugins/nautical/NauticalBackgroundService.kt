@@ -64,11 +64,22 @@ class NauticalBackgroundService : NavigationService() {
         }
     }
     
+    private var lastNotificationUpdateTime = 0L
+    private val notificationUpdateIntervalMs = 2000L
+
     private val engineListener: (net.osmand.plus.plugins.nautical.engine.MarineState) -> Unit = {
-        lastDataTime = System.currentTimeMillis()
+        val now = System.currentTimeMillis()
+        lastDataTime = now
         if (wifiLock != null && !wifiLock!!.isHeld) {
             log.info("Nautical: Re-acquiring high-perf WiFi lock (data resumed).")
             wifiLock?.acquire()
+        }
+        if (now - lastNotificationUpdateTime >= notificationUpdateIntervalMs) {
+            lastNotificationUpdateTime = now
+            handler.post {
+                val app = application as? OsmandApplication
+                app?.notificationHelper?.refreshNotification(OsmandNotification.NotificationType.NAUTICAL)
+            }
         }
     }
 
@@ -90,6 +101,7 @@ class NauticalBackgroundService : NavigationService() {
         log.info("NauticalBackgroundService: Destroying...")
         isServiceRunning = false
         handler.removeCallbacks(lockMonitor)
+        handler.removeCallbacksAndMessages(null)
         net.osmand.plus.plugins.nautical.NauticalPlugin.engine?.unregisterListener(engineListener)
         try {
             // Service teardown logic

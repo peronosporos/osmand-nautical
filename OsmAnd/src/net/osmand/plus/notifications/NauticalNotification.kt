@@ -40,7 +40,19 @@ class NauticalNotification(app: OsmandApplication) : OsmandNotification(app, GRO
         val builder = createBuilder(wearable)
             .setContentTitle(app.getString(R.string.plugin_nautical_name))
             .setCategory(NotificationCompat.CATEGORY_SERVICE)
-            .setStyle(NotificationCompat.BigTextStyle().bigText(app.getString(R.string.nautical_receive_in_background)))
+
+        val state = net.osmand.plus.plugins.nautical.NauticalPlugin.engine?.marineState?.value
+        val subtext = if (state != null && (state.speedOverGroundKts != null || state.courseOverGroundDeg != null || state.depthBelowTransducerMeters != null)) {
+            val speed = state.speedOverGroundKts?.let { String.format(java.util.Locale.US, "%.1f kts", it) } ?: "--"
+            val cog = state.courseOverGroundDeg?.let { String.format(java.util.Locale.US, "%03.0f°", it) } ?: "--"
+            val depth = state.depthBelowTransducerMeters?.let { String.format(java.util.Locale.US, "%.1fm", it) } ?: "--"
+            "SOG: $speed | COG: $cog | Depth: $depth"
+        } else {
+            app.getString(R.string.nautical_receive_in_background)
+        }
+
+        builder.setStyle(NotificationCompat.BigTextStyle().bigText(subtext))
+            .setContentText(subtext)
 
         val plugin = net.osmand.plus.plugins.PluginsHelper.getEnabledPlugin(net.osmand.plus.plugins.nautical.NauticalPlugin::class.java)
         if (plugin?.isNightVisionEnabled == true) {

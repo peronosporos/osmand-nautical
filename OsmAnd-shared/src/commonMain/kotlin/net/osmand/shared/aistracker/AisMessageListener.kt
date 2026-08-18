@@ -71,7 +71,7 @@ open class AisMessageListener {
                 while (isActive) {
                     var socket: Socket? = null
                     try {
-                        LoggerFactory.getLogger("AisMessageListener").debug("TCP connection starting")
+                        LoggerFactory.getLogger("AisMessageListener").debug("TCP connection starting to $serverIp:$serverPort")
                         socket = aSocket(selectorManager).tcp().connect(serverIp, serverPort) {
                             reuseAddress = true
                             reusePort = true
@@ -86,7 +86,9 @@ open class AisMessageListener {
                     } catch (e: CancellationException) {
                         throw e
                     } catch (e: Exception) {
-                        LoggerFactory.getLogger("AisMessageListener").error("TCP exception: ${e.message}")
+                        if (isActive) {
+                            LoggerFactory.getLogger("AisMessageListener").error("TCP listener error", e)
+                        }
                     } finally {
                         try {
                             socket?.close()
@@ -97,10 +99,16 @@ open class AisMessageListener {
                     }
                     if (isActive) {
                         delay(10000) // reconnect delay
+                    } else {
+                        break
                     }
                 }
+            } catch (_: CancellationException) {
+                // Cancelled cleanly
             } finally {
-                selectorManager.close()
+                try {
+                    selectorManager.close()
+                } catch (_: Exception) {}
             }
         }
     }
@@ -148,7 +156,9 @@ open class AisMessageListener {
                     } catch (e: CancellationException) {
                         throw e
                     } catch (e: Exception) {
-                        LoggerFactory.getLogger("AisMessageListener").error("UDP exception: ${e.message}")
+                        if (isActive) {
+                            LoggerFactory.getLogger("AisMessageListener").error("UDP listener error", e)
+                        }
                     } finally {
                         try {
                             socket?.close()
@@ -159,10 +169,16 @@ open class AisMessageListener {
                     }
                     if (isActive) {
                         delay(10000) // reconnect delay
+                    } else {
+                        break
                     }
                 }
+            } catch (_: CancellationException) {
+                // Cancelled cleanly
             } finally {
-                selectorManager.close()
+                try {
+                    selectorManager.close()
+                } catch (_: Exception) {}
             }
         }
     }
