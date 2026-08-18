@@ -1143,6 +1143,10 @@ class AutopilotController(
                         return
                     }
 
+                    reconciliationJob?.cancel()
+                    reconciliationJob = null
+                    NauticalPlugin.engine?.updatePendingCommand(targetHeading = null, mode = null, path = null)
+
                     if (showToast) {
                         app.runInUIThread {
                             showPersistentError(R.string.nautical_toast_conn_failed)
@@ -1158,7 +1162,14 @@ class AutopilotController(
                     }
                     if (!response.isSuccessful) {
                         log.error("Server error: ${response.code}")
-                        
+
+                        // Cancel pending reconciliation immediately on 4xx client errors (e.g. 401 Unauthorized)
+                        if (response.code in 400..499) {
+                            reconciliationJob?.cancel()
+                            reconciliationJob = null
+                            NauticalPlugin.engine?.updatePendingCommand(targetHeading = null, mode = null, path = null)
+                        }
+
                         // ITEM 20: Retry logic for priority commands on server errors too (5xx)
                         if (priority && response.code >= 500 && retryCount < 3) {
                              response.close()
@@ -1169,13 +1180,12 @@ class AutopilotController(
                              return
                         }
 
-                        if (showToast) {
-                            app.runInUIThread {
-                                if ((response.code == 401) || (response.code == 403)) {
-                                    NauticalPlugin.engine?.triggerAuthError()
-                                } else {
-                                    showPersistentError(R.string.nautical_toast_server_error, response.code)
-                                }
+                        app.runInUIThread {
+                            if ((response.code == 401) || (response.code == 403)) {
+                                NauticalPlugin.engine?.triggerAuthError()
+                                app.showToastMessage(R.string.nautical_autopilot_unauthorized)
+                            } else if (showToast) {
+                                showPersistentError(R.string.nautical_toast_server_error, response.code)
                             }
                         }
                     } else if (successToastRes != null) {

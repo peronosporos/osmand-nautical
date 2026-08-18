@@ -68,7 +68,7 @@ public class OsmAndPreferencesDataStore extends PreferenceDataStore {
 		OsmandPreference<?> preference = osmandSettings.getPreference(key);
 		if (preference instanceof StringPreference) {
 			return ((StringPreference) preference).getModeValue(appMode);
-		} else {
+		} else if (preference != null) {
 			Object value = preference.getModeValue(appMode);
 			if (value != null) {
 				return value.toString();

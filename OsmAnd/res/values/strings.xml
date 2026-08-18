@@ -1,4 +1,5 @@
 <resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
+    <string name="nautical_autopilot_unauthorized">Autopilot: Unauthorized (Check Signal K Auth Token)</string>
     <string name="nautical_grib_sync_signalk">Download from Signal K</string>
     <string name="nautical_grib_sync_success">GRIB weather data updated from Signal K</string>
     <string name="nautical_grib_sync_fail">Failed to download GRIB from Signal K</string>
