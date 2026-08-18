@@ -1096,10 +1096,23 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
         return safetyEvaluator.isVesselOnPassage(engine)
     }
 
+    private fun getScope(): CoroutineScope {
+        return pluginScope ?: CoroutineScope(Dispatchers.Main + SupervisorJob()).also { pluginScope = it }
+    }
+
     override fun disable(app: OsmandApplication) {
         super.disable(app)
         unregisterListeners()
         refreshHandler.removeCallbacks(refreshRunnable)
+        getScope().launch(Dispatchers.IO) {
+            try {
+                engine?.historyManager?.saveBuffersToDisk(app)
+                connectionManager.connection?.disconnect()
+                nauticalConnectionManager.disconnect()
+            } catch (e: Exception) {
+                log.error("Error during plugin disable teardown", e)
+            }
+        }
     }
 
     override fun mapActivityCreate(activity: MapActivity) {
@@ -1120,6 +1133,7 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
 
     override fun mapActivityResume(activity: MapActivity) {
         super.mapActivityResume(activity)
+        isAppInBackground = false
         val isBoat = app.settings.APPLICATION_MODE.get().isDerivedRoutingFrom(ApplicationMode.BOAT)
         if (isActive && isBoat) {
             initSubsystems(activity)
@@ -1156,10 +1170,40 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
     override fun mapActivityPause(activity: MapActivity) {
         super.mapActivityPause(activity)
         refreshHandler.removeCallbacks(refreshRunnable)
+        isAppInBackground = true
+        getScope().launch(Dispatchers.IO) {
+            try {
+                engine?.historyManager?.saveBuffersToDisk(app)
+                updateNauticalBackgroundService()
+            } catch (e: Exception) {
+                log.error("Error during background pause transition", e)
+            }
+        }
+    }
+
+    override fun mapActivityScreenOff(activity: MapActivity) {
+        super.mapActivityScreenOff(activity)
+        getScope().launch(Dispatchers.IO) {
+            try {
+                if (!app.settings.NAUTICAL_RECEIVE_IN_BACKGROUND.get() && engine?.isFollowingRoute != true) {
+                    connectionManager.connection?.disconnect()
+                }
+                updateNauticalBackgroundService()
+            } catch (e: Exception) {
+                log.error("Error in mapActivityScreenOff", e)
+            }
+        }
     }
 
     override fun mapActivityDestroy(activity: MapActivity) {
         super.mapActivityDestroy(activity)
+        getScope().launch(Dispatchers.IO) {
+            try {
+                engine?.historyManager?.saveBuffersToDisk(app)
+            } catch (e: Exception) {
+                log.error("Error saving buffers in mapActivityDestroy", e)
+            }
+        }
         layerManager.destroy()
     }
 
