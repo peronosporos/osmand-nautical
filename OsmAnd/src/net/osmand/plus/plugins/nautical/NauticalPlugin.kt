@@ -765,6 +765,12 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
     private fun initPlugin() {
         if (isPluginInitialized) {
             registerListeners()
+            updateNmeaSource()
+            val currentSource = app.settings.NAUTICAL_NMEA_SOURCE.get()
+            if (currentSource == NmeaSource.SIGNALK) {
+                connectionManager.startEngine()
+                nauticalConnectionManager.connect()
+            }
             return
         }
         isPluginInitialized = true
@@ -786,6 +792,9 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
         }
 
         engine = SignalKEngine(app, scope, capabilityManager)
+        if (locationProvider == null) {
+            locationProvider = NauticalLocationProvider(app, engine)
+        }
         autopilot = AutopilotController(app, conn, client, engine?.dataBroker)
         electrical = ElectricalController(app, autopilot!!)
 
@@ -837,6 +846,13 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
         }
 
         registerListeners()
+
+        updateNmeaSource()
+        val currentSource = app.settings.NAUTICAL_NMEA_SOURCE.get()
+        if (currentSource == NmeaSource.SIGNALK) {
+            connectionManager.startEngine()
+            nauticalConnectionManager.connect()
+        }
     }
 
     private fun restoreTacticalState(scope: CoroutineScope) {
