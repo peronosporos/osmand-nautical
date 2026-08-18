@@ -33,37 +33,42 @@ class MarineRasterManagerFragment : BaseOsmAndFragment() {
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         val view = inflater.inflate(R.layout.fragment_simple_list, container, false)
         
-        view.findViewById<ImageButton>(R.id.closeButton).setOnClickListener {
+        view.findViewById<View>(R.id.closeButton)?.setOnClickListener {
             requireActivity().onBackPressedDispatcher.onBackPressed()
         }
         
-        view.findViewById<TextView>(R.id.titleTextView).text = getString(R.string.raster_manager_title)
+        view.findViewById<TextView>(R.id.titleTextView)?.text = getString(R.string.raster_manager_title)
         
-        progressBar = view.findViewById(R.id.progress)
-        progressBar.isVisible = false
+        val pb = view.findViewById<ProgressBar?>(R.id.progress)
+        if (pb != null) {
+            progressBar = pb
+            progressBar.isVisible = false
+        }
         
-        val listView = view.findViewById<ListView>(android.R.id.list)
+        val listView = view.findViewById<ListView?>(android.R.id.list)
         adapter = RasterFilesAdapter()
-        listView.adapter = adapter
+        listView?.adapter = adapter
         
         // Add footer button for import
-        val footerView = inflater.inflate(R.layout.bottom_sheet_button, listView, false)
-        val importBtn = footerView.findViewById<Button>(R.id.button)
-        importBtn.text = getString(R.string.raster_import_btn)
-        importBtn.setOnClickListener {
-            importLauncher.launch(arrayOf("application/octet-stream", "*/*"))
-        }
-        listView.addFooterView(footerView)
-
-        listView.setOnItemLongClickListener { _, _, position, _ ->
-            // Fix for Item 15: Adjust position if footer is present
-            val adjPos = position - listView.headerViewsCount
-            if (adjPos >= 0 && adjPos < adapter.count) {
-                val file = adapter.getItem(adjPos) as? File
-                file?.let { showDeleteDialog(it) }
-                return@setOnItemLongClickListener true
+        if (listView != null) {
+            val footerView = inflater.inflate(R.layout.bottom_sheet_button, listView, false)
+            val importBtn = footerView.findViewById<Button?>(R.id.button) ?: footerView.findViewById<TextView?>(R.id.button)
+            importBtn?.text = getString(R.string.raster_import_btn)
+            importBtn?.setOnClickListener {
+                importLauncher.launch(arrayOf("application/octet-stream", "*/*"))
             }
-            false
+            listView.addFooterView(footerView)
+
+            listView.setOnItemLongClickListener { _, _, position, _ ->
+                // Fix for Item 15: Adjust position if footer is present
+                val adjPos = position - listView.headerViewsCount
+                if (adjPos >= 0 && adjPos < adapter.count) {
+                    val file = adapter.getItem(adjPos) as? File
+                    file?.let { showDeleteDialog(it) }
+                    return@setOnItemLongClickListener true
+                }
+                false
+            }
         }
 
         refreshList()
@@ -145,14 +150,14 @@ class MarineRasterManagerFragment : BaseOsmAndFragment() {
                 .inflate(R.layout.list_item_with_descr, parent, false)
             
             val file = files[position]
-            view.findViewById<TextView>(R.id.title).text = file.name
+            view.findViewById<TextView>(R.id.title)?.text = file.name
             val sizeMb = file.length() / 1024 / 1024
             var desc = parent?.context?.getString(R.string.shared_string_memory_mb_desc, sizeMb.toString())
             if (file.extension.equals("kap", ignoreCase = true)) {
                 desc += " | " + parent?.context?.getString(R.string.nautical_kap_metadata_only)
             }
-            view.findViewById<TextView>(R.id.description).text = desc
-            view.findViewById<ImageView>(R.id.icon).setImageResource(R.drawable.ic_action_world_globe)
+            view.findViewById<TextView>(R.id.description)?.text = desc
+            view.findViewById<ImageView>(R.id.icon)?.setImageResource(R.drawable.ic_action_world_globe)
             
             return view
         }

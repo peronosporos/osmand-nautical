@@ -47,7 +47,7 @@ class MarineRasterSettingsControl : BaseMaterialBottomSheetDialogFragment() {
             override fun onStopTrackingTouch(seekBar: SeekBar?) {}
         })
 
-        view.findViewById<Button>(R.id.manage_btn).setOnClickListener {
+        view.findViewById<View>(R.id.manage_btn)?.setOnClickListener {
             dismiss()
             BaseSettingsFragment.showInstance(requireActivity(), SettingsScreenType.MARINE_RASTER_MANAGER)
         }

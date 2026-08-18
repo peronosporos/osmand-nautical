@@ -149,12 +149,12 @@ class NmeaPlaybackControlBottomSheet : BaseMaterialBottomSheetDialogFragment() {
         context.theme.resolveAttribute(R.attr.colorOnSurface, typedValue, true)
         val textColor = typedValue.data
         
-        view.findViewById<TextView>(R.id.txt_filename).setTextColor(textColor)
+        view.findViewById<TextView>(R.id.txt_filename)?.setTextColor(textColor)
         
         context.theme.resolveAttribute(R.attr.colorPrimary, typedValue, true)
         
-        view.findViewById<MaterialButton>(R.id.btn_stop).setIconTintResource(typedValue.resourceId)
-        view.findViewById<MaterialButton>(R.id.btn_play_pause).setIconTintResource(typedValue.resourceId)
+        view.findViewById<MaterialButton>(R.id.btn_stop)?.setIconTintResource(typedValue.resourceId)
+        view.findViewById<MaterialButton>(R.id.btn_play_pause)?.setIconTintResource(typedValue.resourceId)
     }
 
     private fun showFileSelectionDialog() {

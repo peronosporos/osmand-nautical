@@ -98,11 +98,11 @@ class NauticalSwitchPanelFragment : BaseOsmAndFragment() {
             val name = if (item is net.osmand.plus.plugins.nautical.engine.Charger) {
                 item.name ?: getString(R.string.nautical_charger_instance, instance)
             } else {
-                (item as net.osmand.plus.plugins.nautical.engine.Inverter).name ?: getString(R.string.nautical_inverter_instance, instance)
+                (item as? net.osmand.plus.plugins.nautical.engine.Inverter)?.name ?: getString(R.string.nautical_inverter_instance, instance)
             }
-            view.findViewById<TextView>(R.id.txt_device_name).text = name
+            view.findViewById<TextView>(R.id.txt_device_name)?.text = name
             
-            val spinner = view.findViewById<android.widget.Spinner>(R.id.spinner_device_mode)
+            val spinner = view.findViewById<android.widget.Spinner?>(R.id.spinner_device_mode)
             val path = if (item is net.osmand.plus.plugins.nautical.engine.Charger) "electrical.chargers.$instance" else "electrical.inverters.$instance"
             val meta = NauticalPlugin.engine?.getCurrentState()?.pathMeta?.get("$path.mode")
             
@@ -111,16 +111,16 @@ class NauticalSwitchPanelFragment : BaseOsmAndFragment() {
             
             val modes = possibleValues ?: (if (item is net.osmand.plus.plugins.nautical.engine.Charger) listOf("off", "on", "only_eco") else listOf("off", "on", "eco"))
             
-            if (spinner.tag != modes) {
+            if (spinner != null && spinner.tag != modes) {
                 val adapter = android.widget.ArrayAdapter(requireContext(), android.R.layout.simple_spinner_item, modes.map { it.replace("_", " ").uppercase() })
                 adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
                 spinner.adapter = adapter
                 spinner.tag = modes
             }
 
-            val currentMode = if (item is net.osmand.plus.plugins.nautical.engine.Charger) item.mode else (item as net.osmand.plus.plugins.nautical.engine.Inverter).mode
+            val currentMode = if (item is net.osmand.plus.plugins.nautical.engine.Charger) item.mode else (item as? net.osmand.plus.plugins.nautical.engine.Inverter)?.mode
             val targetIdx = modes.indexOf(currentMode?.lowercase())
-            if (targetIdx != -1 && spinner.selectedItemPosition != targetIdx) {
+            if (spinner != null && targetIdx != -1 && spinner.selectedItemPosition != targetIdx) {
                 spinner.setSelection(targetIdx, false)
             }
 

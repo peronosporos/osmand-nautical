@@ -65,13 +65,13 @@ class NavtexDetailsBottomSheet : BottomSheetDialogFragment() {
         
         val msg = message ?: return
         
-        view.findViewById<TextView>(R.id.navtex_detail_id).text = getString(R.string.navtex_detail_id_label, msg.id)
+        view.findViewById<TextView>(R.id.navtex_detail_id)?.text = getString(R.string.navtex_detail_id_label, msg.id)
         
         val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).apply {
             timeZone = TimeZone.getTimeZone("UTC")
         }
-        view.findViewById<TextView>(R.id.navtex_detail_time).text = sdf.format(Date(msg.timestamp))
+        view.findViewById<TextView>(R.id.navtex_detail_time)?.text = sdf.format(Date(msg.timestamp))
         
-        view.findViewById<TextView>(R.id.navtex_detail_body).text = msg.body
+        view.findViewById<TextView>(R.id.navtex_detail_body)?.text = msg.body
     }
 }

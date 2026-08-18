@@ -106,12 +106,12 @@ class SignalKOrchestratorFragment : BaseOsmAndFragment() {
             return when (viewType) {
                 TYPE_DIAGNOSTICS_HEADER -> {
                     val v = inflater.inflate(R.layout.list_item_with_descr, parent, false)
-                    val container = v.findViewById<LinearLayout>(R.id.description).parent as LinearLayout
+                    val container = (v.findViewById<View>(R.id.description)?.parent as? ViewGroup) ?: (v as? ViewGroup)
                     val actionLayout = LinearLayout(v.context).apply {
                         orientation = LinearLayout.HORIZONTAL
                         setPadding(0, 16, 0, 8)
                     }
-                    container.addView(actionLayout)
+                    container?.addView(actionLayout)
                     DiagnosticsHeaderViewHolder(v, actionLayout)
                 }
                 TYPE_CAPABILITIES_SUMMARY -> {
@@ -120,13 +120,13 @@ class SignalKOrchestratorFragment : BaseOsmAndFragment() {
                 }
                 else -> {
                     val v = inflater.inflate(R.layout.list_item_with_descr, parent, false)
-                    val container = v.findViewById<LinearLayout>(R.id.description).parent as LinearLayout
+                    val container = (v.findViewById<View>(R.id.description)?.parent as? ViewGroup) ?: (v as? ViewGroup)
                     val actionLayout = LinearLayout(v.context).apply {
                         orientation = LinearLayout.HORIZONTAL
                         isVisible = false
                         setPadding(0, 12, 0, 4)
                     }
-                    container.addView(actionLayout)
+                    container?.addView(actionLayout)
                     PluginViewHolder(v, actionLayout)
                 }
             }

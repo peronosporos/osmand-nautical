@@ -39,27 +39,27 @@ class NauticalElectricalDashboardBottomSheet : BaseNauticalBottomSheet() {
 
         val customView = LayoutInflater.from(requireContext()).inflate(R.layout.bottom_sheet_nautical_electrical, null)
         
-        customView.findViewById<RecyclerView>(R.id.rv_batteries).apply {
+        customView.findViewById<RecyclerView?>(R.id.rv_batteries)?.apply {
             layoutManager = GridLayoutManager(context, 2)
             adapter = batteryAdapter
         }
-        customView.findViewById<RecyclerView>(R.id.rv_tanks).apply {
+        customView.findViewById<RecyclerView?>(R.id.rv_tanks)?.apply {
             layoutManager = LinearLayoutManager(context)
             adapter = tankAdapter
         }
-        customView.findViewById<RecyclerView>(R.id.rv_conversion).apply {
+        customView.findViewById<RecyclerView?>(R.id.rv_conversion)?.apply {
             layoutManager = LinearLayoutManager(context)
             adapter = conversionAdapter
         }
-        customView.findViewById<RecyclerView>(R.id.rv_switches).apply {
+        customView.findViewById<RecyclerView?>(R.id.rv_switches)?.apply {
             layoutManager = LinearLayoutManager(context)
             adapter = switchAdapter
         }
-        customView.findViewById<RecyclerView>(R.id.rv_watermakers).apply {
+        customView.findViewById<RecyclerView?>(R.id.rv_watermakers)?.apply {
             layoutManager = LinearLayoutManager(context)
             adapter = watermakerAdapter
         }
-        customView.findViewById<RecyclerView>(R.id.rv_windlass).apply {
+        customView.findViewById<RecyclerView?>(R.id.rv_windlass)?.apply {
             layoutManager = LinearLayoutManager(context)
             adapter = windlassAdapter
         }
@@ -76,24 +76,24 @@ class NauticalElectricalDashboardBottomSheet : BaseNauticalBottomSheet() {
                 state.inverters.forEach { (_, inverter) -> conversionItems.add(ConversionItem.InverterItem(inverter)) }
                 conversionAdapter.submitList(conversionItems)
                 
-                customView.findViewById<View>(R.id.txt_conversion_label).visibility = if (conversionItems.isEmpty()) View.GONE else View.VISIBLE
+                customView.findViewById<View>(R.id.txt_conversion_label)?.visibility = if (conversionItems.isEmpty()) View.GONE else View.VISIBLE
 
                 val watermakerItems = state.watermakers.values.toList()
                 watermakerAdapter.submitList(watermakerItems)
-                customView.findViewById<View>(R.id.txt_watermaker_label).visibility = if (watermakerItems.isEmpty()) View.GONE else View.VISIBLE
-                customView.findViewById<RecyclerView>(R.id.rv_watermakers).visibility = if (watermakerItems.isEmpty()) View.GONE else View.VISIBLE
+                customView.findViewById<View>(R.id.txt_watermaker_label)?.visibility = if (watermakerItems.isEmpty()) View.GONE else View.VISIBLE
+                customView.findViewById<View>(R.id.rv_watermakers)?.visibility = if (watermakerItems.isEmpty()) View.GONE else View.VISIBLE
 
                 val switches = state.switches.asSequence().map { it.toPair() }.sortedBy { it.first }.toList()
                 switchAdapter.updateData(switches, state.timestamps, state.pathMeta, state.dimmers)
                 
                 val showWindlass = caps?.hasWindlassControl == true
-                customView.findViewById<View>(R.id.txt_windlass_label).visibility = if (showWindlass) View.VISIBLE else View.GONE
-                customView.findViewById<RecyclerView>(R.id.rv_windlass).visibility = if (showWindlass) View.VISIBLE else View.GONE
+                customView.findViewById<View>(R.id.txt_windlass_label)?.visibility = if (showWindlass) View.VISIBLE else View.GONE
+                customView.findViewById<View>(R.id.rv_windlass)?.visibility = if (showWindlass) View.VISIBLE else View.GONE
                 if (showWindlass) {
                     windlassAdapter.updateState(state.isEngineRunning, state.rodeDeployed)
                 }
 
-                customView.findViewById<View>(R.id.txt_empty_switches).visibility = 
+                customView.findViewById<View>(R.id.txt_empty_switches)?.visibility = 
                     if (switches.isEmpty() && state.batteries.isEmpty() && state.tanks.isEmpty() && conversionItems.isEmpty()) View.VISIBLE else View.GONE
             }
         }

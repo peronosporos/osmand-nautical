@@ -14,10 +14,10 @@ class NauticalLogbookEntryDialog : BaseMaterialBottomSheetDialogFragment() {
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         val root = inflater.inflate(R.layout.dialog_nautical_logbook_entry, container, false)
-        val input = root.findViewById<EditText>(R.id.edit_entry_text)
+        val input = root.findViewById<EditText?>(R.id.edit_entry_text)
         
-        root.findViewById<View>(R.id.btn_save).setOnClickListener {
-            val text = input.text.toString()
+        root.findViewById<View>(R.id.btn_save)?.setOnClickListener {
+            val text = input?.text?.toString() ?: ""
             if (text.isNotEmpty()) {
                 submitEntry(text)
                 dismiss()

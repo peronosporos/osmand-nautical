@@ -200,13 +200,13 @@ class MobEmergencyHeaderView @JvmOverloads constructor(
         if (state.state == net.osmand.plus.plugins.nautical.mob.engine.MobState.RESOLVED) {
             cancelMobButton.text = context.getString(R.string.nautical_ack_clear)
             silenceButton.isVisible = false
-            findViewById<android.view.View>(R.id.mob_tactical_buttons).isVisible = false
+            findViewById<android.view.View?>(R.id.mob_tactical_buttons)?.isVisible = false
         } else {
             cancelMobButton.setText(R.string.mob_btn_cancel)
             silenceButton.isVisible = true
             
-            val tacticalContainer = findViewById<android.view.View>(R.id.mob_tactical_buttons)
-            tacticalContainer.isVisible = true
+            val tacticalContainer = findViewById<android.view.View?>(R.id.mob_tactical_buttons)
+            tacticalContainer?.isVisible = true
             
             motorReturnButton.isEnabled = state.isMotoring
             heaveToButton.isEnabled = !state.isMotoring

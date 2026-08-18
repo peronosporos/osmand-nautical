@@ -58,7 +58,7 @@ class GribManagerBottomSheet : BottomSheetDialogFragment() {
         
         recyclerView.layoutManager = LinearLayoutManager(context)
 
-        view.findViewById<View>(R.id.btn_sync_signalk_grib).setOnClickListener {
+        view.findViewById<View>(R.id.btn_sync_signalk_grib)?.setOnClickListener {
             val rest = net.osmand.plus.plugins.nautical.NauticalPlugin.engine?.getRestService()
             val repo = SailingDependencyContainer.gribRepository
             if (rest != null && repo != null) {
@@ -69,7 +69,7 @@ class GribManagerBottomSheet : BottomSheetDialogFragment() {
             }
         }
 
-        view.findViewById<View>(R.id.btn_import_grib).setOnClickListener {
+        view.findViewById<View>(R.id.btn_import_grib)?.setOnClickListener {
             importLauncher.launch("*/*")
         }
 

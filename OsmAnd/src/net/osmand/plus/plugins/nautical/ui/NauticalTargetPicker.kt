@@ -63,8 +63,8 @@ class NauticalTargetPicker : BottomSheetDialogFragment() {
             isClickable = true
             setOnClickListener {
                 dismiss()
-                val activity = requireActivity() as net.osmand.plus.activities.MapActivity
-                val arbitrator = NauticalTouchArbitrator(activity)
+                val mapActivity = activity as? net.osmand.plus.activities.MapActivity ?: return@setOnClickListener
+                val arbitrator = NauticalTouchArbitrator(mapActivity)
                 arbitrator.showTargetDetails(target)
             }
         }

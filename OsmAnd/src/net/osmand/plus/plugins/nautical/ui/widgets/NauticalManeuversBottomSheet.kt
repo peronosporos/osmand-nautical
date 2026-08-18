@@ -141,64 +141,64 @@ class NauticalManeuversBottomSheet : BaseNauticalBottomSheet() {
 
         updateLabels()
 
-        view.findViewById<View>(R.id.btn_length_minus).setOnClickListener {
+        view.findViewById<View>(R.id.btn_length_minus)?.setOnClickListener {
             val current = settings.NAUTICAL_MED_MOORING_VESSEL_LENGTH.get()
             if (current > 1.0f) {
                 settings.NAUTICAL_MED_MOORING_VESSEL_LENGTH.set((current - 0.5f).coerceAtLeast(1.0f))
                 updateLabels()
             }
         }
-        view.findViewById<View>(R.id.btn_length_plus).setOnClickListener {
+        view.findViewById<View>(R.id.btn_length_plus)?.setOnClickListener {
             val current = settings.NAUTICAL_MED_MOORING_VESSEL_LENGTH.get()
             settings.NAUTICAL_MED_MOORING_VESSEL_LENGTH.set(current + 0.5f)
             updateLabels()
         }
-        view.findViewById<View>(R.id.btn_scope_minus).setOnClickListener {
+        view.findViewById<View>(R.id.btn_scope_minus)?.setOnClickListener {
             val current = settings.NAUTICAL_ANCHOR_SCOPE_RATIO.get()
             if (current > 1.0f) {
                 settings.NAUTICAL_ANCHOR_SCOPE_RATIO.set((current - 1.0f).coerceAtLeast(1.0f))
                 updateLabels()
             }
         }
-        view.findViewById<View>(R.id.btn_scope_plus).setOnClickListener {
+        view.findViewById<View>(R.id.btn_scope_plus)?.setOnClickListener {
             val current = settings.NAUTICAL_ANCHOR_SCOPE_RATIO.get()
             settings.NAUTICAL_ANCHOR_SCOPE_RATIO.set(current + 1.0f)
             updateLabels()
         }
         
-        view.findViewById<View>(R.id.btn_depth_minus).setOnClickListener {
+        view.findViewById<View>(R.id.btn_depth_minus)?.setOnClickListener {
             val current = settings.NAUTICAL_ANCHOR_DEPTH.get()
             if (current > 0.5f) {
                 settings.NAUTICAL_ANCHOR_DEPTH.set((current - 0.5f).coerceAtLeast(0.5f))
                 updateLabels()
             }
         }
-        view.findViewById<View>(R.id.btn_depth_plus).setOnClickListener {
+        view.findViewById<View>(R.id.btn_depth_plus)?.setOnClickListener {
             val current = settings.NAUTICAL_ANCHOR_DEPTH.get()
             settings.NAUTICAL_ANCHOR_DEPTH.set(current + 0.5f)
             updateLabels()
         }
         
-        view.findViewById<View>(R.id.btn_tide_minus).setOnClickListener {
+        view.findViewById<View>(R.id.btn_tide_minus)?.setOnClickListener {
             val current = settings.NAUTICAL_ANCHOR_TIDE_RISE.get()
             settings.NAUTICAL_ANCHOR_TIDE_RISE.set(current - 0.5f)
             updateLabels()
         }
-        view.findViewById<View>(R.id.btn_tide_plus).setOnClickListener {
+        view.findViewById<View>(R.id.btn_tide_plus)?.setOnClickListener {
             val current = settings.NAUTICAL_ANCHOR_TIDE_RISE.get()
             settings.NAUTICAL_ANCHOR_TIDE_RISE.set(current + 0.5f)
             updateLabels()
         }
 
         // Item 17: GPS Bow Offset logic
-        view.findViewById<View>(R.id.btn_bow_minus).setOnClickListener {
+        view.findViewById<View>(R.id.btn_bow_minus)?.setOnClickListener {
             val current = settings.NAUTICAL_ANCHOR_BOW_OFFSET.get()
             if (current > 0.0f) {
                 settings.NAUTICAL_ANCHOR_BOW_OFFSET.set((current - 0.5f).coerceAtLeast(0.0f))
                 updateLabels()
             }
         }
-        view.findViewById<View>(R.id.btn_bow_plus).setOnClickListener {
+        view.findViewById<View>(R.id.btn_bow_plus)?.setOnClickListener {
             val current = settings.NAUTICAL_ANCHOR_BOW_OFFSET.get()
             settings.NAUTICAL_ANCHOR_BOW_OFFSET.set(current + 0.5f)
             updateLabels()

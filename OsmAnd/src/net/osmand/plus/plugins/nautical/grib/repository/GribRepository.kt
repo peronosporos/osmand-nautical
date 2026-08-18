@@ -163,7 +163,7 @@ class GribRepository {
         if (isThrottled) {
             val key = getSpatialKey(lat, lon, timestamp, 1)
             synchronized(lastThrottledValueMap) {
-                lastThrottledValueMap[key]?.let { return it as WindVector }
+                lastThrottledValueMap[key]?.let { return it as? WindVector }
                 val vector = interpolationEngine?.getWindVector(lat, lon, timestamp) ?: return null
                 lastThrottledValueMap[key] = vector
                 return vector
@@ -176,7 +176,7 @@ class GribRepository {
         if (isThrottled) {
             val key = getSpatialKey(lat, lon, timestamp, 2)
             synchronized(lastThrottledValueMap) {
-                lastThrottledValueMap[key]?.let { return it as WindVector }
+                lastThrottledValueMap[key]?.let { return it as? WindVector }
                 val vector = interpolationEngine?.getCurrentVector(lat, lon, timestamp) ?: return null
                 lastThrottledValueMap[key] = vector
                 return vector
@@ -189,7 +189,7 @@ class GribRepository {
         if (isThrottled) {
             val key = getSpatialKey(lat, lon, timestamp, 3)
             synchronized(lastThrottledValueMap) {
-                lastThrottledValueMap[key]?.let { return it as Double }
+                lastThrottledValueMap[key]?.let { return it as? Double }
                 val value = interpolationEngine?.getPressure(lat, lon, timestamp) ?: return null
                 lastThrottledValueMap[key] = value
                 return value
@@ -202,7 +202,7 @@ class GribRepository {
         if (isThrottled) {
             val key = getSpatialKey(lat, lon, timestamp, 4)
             synchronized(lastThrottledValueMap) {
-                lastThrottledValueMap[key]?.let { return it as WaveVector }
+                lastThrottledValueMap[key]?.let { return it as? WaveVector }
                 val data = interpolationEngine?.getWaveData(lat, lon, timestamp) ?: return null
                 lastThrottledValueMap[key] = data
                 return data

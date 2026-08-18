@@ -166,7 +166,7 @@ class NavtexHudView @JvmOverloads constructor(
             titleView.setTextColor(0xFFFFFFFF.toInt())
         }
         
-        findViewById<android.view.View>(R.id.navtex_ticker_container).setBackgroundColor(color)
+        findViewById<android.view.View?>(R.id.navtex_ticker_container)?.setBackgroundColor(color)
     }
 
     private fun getPriority(subject: NavtexSubject): Int = when (subject) {

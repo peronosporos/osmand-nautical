@@ -340,7 +340,7 @@ class NauticalAdvancedSettingsBottomSheet : BaseNauticalBottomSheet() {
         updateChart()
 
         // Apply and Save Button
-        customView.findViewById<Button>(R.id.btn_save).setOnClickListener {
+        customView.findViewById<View>(R.id.btn_save)?.setOnClickListener {
             settings.NAUTICAL_RUDDER_GAIN.set(sliderRudderGain.value)
             settings.NAUTICAL_COUNTER_RUDDER.set(sliderCounterRudder.value)
             settings.NAUTICAL_AUTO_TRIM.set(sliderAutoTrim.value)
@@ -362,10 +362,10 @@ class NauticalAdvancedSettingsBottomSheet : BaseNauticalBottomSheet() {
         }
 
         // Cancel Button
-        customView.findViewById<Button>(R.id.btn_cancel).setOnClickListener { dismissAllowingStateLoss() }
+        customView.findViewById<View>(R.id.btn_cancel)?.setOnClickListener { dismissAllowingStateLoss() }
 
         // Reset Defaults Button
-        customView.findViewById<Button>(R.id.btn_reset_defaults).setOnClickListener {
+        customView.findViewById<View>(R.id.btn_reset_defaults)?.setOnClickListener {
             sliderRudderGain.value = (settings.NAUTICAL_RUDDER_GAIN.defaultValue as Float)
             txtValueRudderGain.text = String.format(Locale.US, "%.1f", sliderRudderGain.value)
 

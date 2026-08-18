@@ -158,11 +158,11 @@ class NauticalTechnicalStatsFragment : BaseOsmAndFragment() {
 
     private fun updateStats(root: View, state: MarineState) {
 
-        root.findViewById<TextView>(R.id.txt_vessel_title).text = state.vesselName ?: getString(R.string.nautical_vessel_details)
-        root.findViewById<TextView>(R.id.txt_vessel_uuid).text = state.vesselUuid ?: ""
+        root.findViewById<TextView>(R.id.txt_vessel_title)?.text = state.vesselName ?: getString(R.string.nautical_vessel_details)
+        root.findViewById<TextView>(R.id.txt_vessel_uuid)?.text = state.vesselUuid ?: ""
 
         // Identity & Design
-        val identity = root.findViewById<View>(R.id.grid_identity)
+        val identity = root.findViewById<View?>(R.id.grid_identity)
         fillCell(identity, 11, R.drawable.ic_action_flag, getString(R.string.nautical_vessel_flag_port), "${state.vesselFlag ?: "N/A"} / ${state.vesselPort ?: "N/A"}")
         fillCell(identity, 12, R.drawable.ic_action_user, getString(R.string.nautical_vessel_callsign), state.vesselCallSign ?: "N/A")
         val lenFmt = SignalKUnitConverter.formatValue(requireContext(), app.settings, state.vesselLength, "design.length.overall")
@@ -175,7 +175,7 @@ class NauticalTechnicalStatsFragment : BaseOsmAndFragment() {
         fillCell(identity, 23, R.drawable.ic_action_weight_limit, getString(R.string.nautical_vessel_displacement_label), "${dispFmt.first}${dispFmt.second}")
 
         // Engine & Tanks
-        val systems = root.findViewById<View>(R.id.grid_systems)
+        val systems = root.findViewById<View?>(R.id.grid_systems)
         val mainBattery = state.batteries.values.firstOrNull()
         val cellInfo = mainBattery?.cellVoltages?.takeIf { it.isNotEmpty() }?.joinToString("/") { String.format(Locale.US, "%.2f", it) } ?: ""
         

@@ -139,10 +139,11 @@ class MarineLogbookFragment : BaseOsmAndFragment() {
              }
 
              // Move FAB to center for easier access on round screens
-             val params = fab.layoutParams as FrameLayout.LayoutParams
-             params.gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
-             params.bottomMargin = net.osmand.plus.utils.AndroidUtils.dpToPx(requireContext(), 8f)
-             fab.layoutParams = params
+             (fab.layoutParams as? FrameLayout.LayoutParams)?.let { params ->
+                 params.gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
+                 params.bottomMargin = net.osmand.plus.utils.AndroidUtils.dpToPx(requireContext(), 8f)
+                 fab.layoutParams = params
+             }
         }
 
         swipeRefresh.setOnRefreshListener {

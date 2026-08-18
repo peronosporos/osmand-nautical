@@ -118,7 +118,7 @@ class S63PermitManagerFragment : BaseSettingsFragment(), OnPreferenceChanged {
     private fun setupMId() {
         findPreference<EditTextPreferenceEx>("s63_m_id")?.apply {
             setOnPreferenceChangeListener { _, newValue ->
-                viewModel.setManufacturerId(newValue as String)
+                viewModel.setManufacturerId((newValue as? String) ?: "")
                 true
             }
         }
@@ -127,7 +127,7 @@ class S63PermitManagerFragment : BaseSettingsFragment(), OnPreferenceChanged {
     private fun setupMKey() {
         findPreference<EditTextPreferenceEx>("s63_m_key")?.apply {
             setOnPreferenceChangeListener { _, newValue ->
-                viewModel.setManufacturerKey(newValue as String)
+                viewModel.setManufacturerKey((newValue as? String) ?: "")
                 true
             }
         }

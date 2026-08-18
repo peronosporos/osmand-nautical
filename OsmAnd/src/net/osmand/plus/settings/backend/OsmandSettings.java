@@ -3759,6 +3759,8 @@ public class OsmandSettings {
 	// Quick Vessel Context
 	public final CommonPreference<VesselContext> NAUTICAL_VESSEL_CONTEXT = registerEnumStringPreference("nautical_vessel_context", VesselContext.SAILING, VesselContext.values(), VesselContext.class).makeProfile();
 	public final CommonPreference<BatterySystemVoltage> NAUTICAL_BATTERY_SYSTEM_VOLTAGE = registerEnumStringPreference("nautical_battery_system_voltage", BatterySystemVoltage.VOLTS_12, BatterySystemVoltage.values(), BatterySystemVoltage.class).makeProfile();
+	public final CommonPreference<String> S63_M_ID = registerStringPreference("s63_m_id", "").makeGlobal();
+	public final CommonPreference<String> S63_M_KEY = registerStringPreference("s63_m_key", "").makeGlobal();
 
 
 	@NonNull

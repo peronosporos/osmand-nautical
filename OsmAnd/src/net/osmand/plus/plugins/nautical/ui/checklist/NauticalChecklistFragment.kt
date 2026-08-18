@@ -58,7 +58,7 @@ class NauticalChecklistFragment : BaseOsmAndFragment() {
         recyclerView.layoutManager = LinearLayoutManager(requireContext())
         recyclerView.adapter = adapter
 
-        view.findViewById<View>(R.id.fab_add_checklist).setOnClickListener {
+        view.findViewById<View>(R.id.fab_add_checklist)?.setOnClickListener {
             showAddChecklistDialog()
         }
 

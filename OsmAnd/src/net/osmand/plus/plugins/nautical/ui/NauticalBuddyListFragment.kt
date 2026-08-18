@@ -27,15 +27,15 @@ class NauticalBuddyListFragment : BaseOsmAndFragment() {
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         val view = themedInflater.inflate(R.layout.fragment_nautical_buddy_list, container, false)
-        val recyclerView: RecyclerView = view.findViewById(R.id.recycler_view)
+        val recyclerView = view.findViewById<RecyclerView?>(R.id.recycler_view)
         
         adapter = BuddyAdapter { mmsi ->
             confirmDeleteBuddy(mmsi)
         }
-        recyclerView.layoutManager = LinearLayoutManager(requireContext())
-        recyclerView.adapter = adapter
+        recyclerView?.layoutManager = LinearLayoutManager(requireContext())
+        recyclerView?.adapter = adapter
 
-        view.findViewById<FloatingActionButton>(R.id.fab_add_buddy).setOnClickListener {
+        view.findViewById<View>(R.id.fab_add_buddy)?.setOnClickListener {
             showAddBuddyDialog()
         }
 
