@@ -1,27 +1,35 @@
 package net.osmand.plus.plugins.nautical.ui
 
+import android.content.Context
+import android.graphics.Color
+import android.graphics.PorterDuff
+import android.graphics.PorterDuffColorFilter
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Button
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.lifecycleScope
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
-import com.google.android.material.switchmaterial.SwitchMaterial
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.launch
-import net.osmand.plus.OsmandApplication
 import net.osmand.plus.R
 import net.osmand.plus.plugins.nautical.NauticalPlugin
-import net.osmand.plus.utils.ColorUtilities
+import net.osmand.plus.plugins.nautical.engine.NauticalAisManager
+import net.osmand.shared.aistracker.AisObjType
 import net.osmand.shared.aistracker.AisObject
 import net.osmand.shared.aistracker.AisObjectConstants
+import net.osmand.util.MapUtils
 import java.util.Locale
 
 class AisTargetBottomSheet : BottomSheetDialogFragment() {
 
     private var aisObject: AisObject? = null
     private var buddyJob: kotlinx.coroutines.Job? = null
-    private var muteJob: kotlinx.coroutines.Job? = null
 
     companion object {
         fun newInstance(aisObject: AisObject): AisTargetBottomSheet {
@@ -31,244 +39,203 @@ class AisTargetBottomSheet : BottomSheetDialogFragment() {
         }
     }
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
-        val context = requireContext()
-        val root = LinearLayout(context).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(
-                dpToPx(context, 16f),
-                dpToPx(context, 16f),
-                dpToPx(context, 16f),
-                dpToPx(context, 24f),
-            )
-            layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
-        }
-
-        val ais = aisObject ?: return root
-        val skAis = NauticalPlugin.getAisObject(ais.mmsi)
-
-        // Title
-        root.addView(
-            TextView(context).apply {
-                text = skAis?.shipName ?: ais.shipName ?: ais.mmsi.toString()
-                textSize = 20f
-                setTypeface(null, android.graphics.Typeface.BOLD)
-                setPadding(0, 0, 0, dpToPx(context, 8f))
-            },
-        )
-
-        // Subtitle / Ship Type
-        root.addView(
-            TextView(context).apply {
-                text = skAis?.getShipTypeString() ?: ais.getShipTypeString()
-                textSize = 14f
-                setTextColor(ColorUtilities.getSecondaryTextColor(requireActivity().application as OsmandApplication, false))
-                setPadding(0, 0, 0, dpToPx(context, 16f))
-            },
-        )
-
-        // Attributes
-        val attributes = mutableListOf<Pair<String, String>>()
-        attributes.add(getString(R.string.nautical_ais_mmsi_label) to ais.mmsi.toString())
-        (skAis?.callSign ?: ais.callSign)?.let { attributes.add(getString(R.string.nautical_ais_callsign) to it) }
-        (skAis?.destination ?: ais.destination)?.let { attributes.add(getString(R.string.nautical_ais_destination) to it) }
-        
-        skAis?.getNavStatusString()?.let { attributes.add(getString(R.string.nautical_ais_status_label) to it) }
-        skAis?.getManIndString()?.let { attributes.add(getString(R.string.nautical_ais_maneuver_label) to it) }
-
-        if (ais.cpa.valid) {
-            attributes.add(getString(R.string.nautical_ais_cpa_label) to String.format(Locale.US, "%.2f nm", ais.cpa.cpa))
-            attributes.add(getString(R.string.nautical_ais_tcpa_label) to String.format(Locale.US, "%.1f min", ais.cpa.tcpa * 60))
-        }
-
-        if (ais.sog != AisObjectConstants.INVALID_SOG) {
-            attributes.add(getString(R.string.nautical_ais_sog_label) to String.format(Locale.US, "%.1f kn", ais.sog))
-        }
-        if (ais.cog != AisObjectConstants.INVALID_COG) {
-            attributes.add(getString(R.string.nautical_ais_cog_label) to String.format(Locale.US, "%.0f°", ais.cog))
-        }
-
-        attributes.forEach { (label, value) ->
-            root.addView(createAttributeRow(label, value))
-        }
-
-        // Action Buttons
-        root.addView(LinearLayout(context).apply {
-            orientation = LinearLayout.HORIZONTAL
-            setPadding(0, dpToPx(context, 16f), 0, dpToPx(context, 16f))
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
+        val view = inflater.inflate(R.layout.dialog_nautical_ais_details, container, false)
+        val ais = aisObject
+        if (ais != null) {
+            updateView(view, ais)
             
-            addView(com.google.android.material.button.MaterialButton(context, null, com.google.android.material.R.attr.materialButtonStyle).apply {
-                text = getString(R.string.shared_string_show_on_map)
-                layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply {
-                    marginEnd = dpToPx(context, 8f)
-                }
-                setOnClickListener {
-                    showOnMap(ais)
-                    dismiss()
-                }
-            })
-            
-            addView(com.google.android.material.button.MaterialButton(context, null, com.google.android.material.R.attr.materialButtonStyle).apply {
-                text = getString(R.string.nautical_follow_target)
-                layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
-                setOnClickListener {
-                    followTarget(ais)
-                    dismiss()
-                }
-            })
-        })
-
-        val caps = NauticalPlugin.getInstance()?.capabilityManager?.capabilities?.value
-        val manager = NauticalPlugin.getInstance()?.aisManager
-        val extras = manager?.getAisExtras(ais.mmsi)
-        val isBuddy = NauticalPlugin.engine?.getCurrentState()?.aisBuddies?.contains(ais.mmsi) == true
-
-        // Buddy Toggle
-        root.addView(LinearLayout(context).apply {
-            orientation = LinearLayout.HORIZONTAL
-            setPadding(0, dpToPx(context, 16f), 0, 0)
-            gravity = android.view.Gravity.CENTER_VERTICAL
-            
-            addView(TextView(context).apply {
-                text = getString(if (isBuddy) R.string.nautical_remove_from_buddies else R.string.nautical_add_to_buddies)
-                layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
-                textSize = 16f
-            })
-            
-            addView(SwitchMaterial(context).apply {
-                isChecked = isBuddy
-                setOnCheckedChangeListener { _, isChecked ->
-                    toggleBuddy(ais.mmsi, isChecked)
-                }
-            })
-        })
-
-        if (caps?.hasAisPrioritizer == true) {
-            root.addView(LinearLayout(context).apply {
-                orientation = LinearLayout.HORIZONTAL
-                setPadding(0, dpToPx(context, 16f), 0, 0)
-                gravity = android.view.Gravity.CENTER_VERTICAL
-                
-                addView(TextView(context).apply {
-                    text = getString(R.string.nautical_mute_target_alarms)
-                    layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
-                    textSize = 16f
-                })
-                
-                addView(SwitchMaterial(context).apply {
-                    isChecked = extras?.isMuted ?: false
-                    setOnCheckedChangeListener { _, isChecked ->
-                        muteTarget(ais.mmsi, isChecked)
-                    }
-                })
-            })
-        }
-
-        return root
-    }
-
-    private fun toggleBuddy(mmsi: Int, add: Boolean) {
-        val plugin = NauticalPlugin.getInstance() ?: return
-        buddyJob?.cancel()
-        buddyJob = plugin.pluginScope?.launch {
-            val engine = NauticalPlugin.engine
-            val rest = engine?.getRestService()
-            if (rest != null) {
-                try {
-                    val currentBuddies = engine.getCurrentState().aisBuddies.toMutableSet()
-                    if (add) currentBuddies.add(mmsi) else currentBuddies.remove(mmsi)
-                    
-                    val body = net.osmand.plus.plugins.nautical.network.SignalKPutBody(value = currentBuddies.toList())
-                    val response = rest.putGeneric("communication/aisBuddies", body)
-                    if (response.isSuccessful) {
-                        plugin.application.showToastMessage(R.string.shared_string_ok)
-                    }
-                } catch (e: Exception) {
-                    net.osmand.PlatformUtil.getLog(AisTargetBottomSheet::class.java).error("Failed to toggle AIS buddy: ${e.message}")
+            viewLifecycleOwner.lifecycleScope.launch {
+                NauticalPlugin.getInstance()?.aisManager?.aisEvents?.filter { 
+                    (it is NauticalAisManager.AisEvent.Updated) && it.obj.mmsi == ais.mmsi 
+                }?.collect { event ->
+                    val updated = (event as NauticalAisManager.AisEvent.Updated).obj
+                    aisObject = updated
+                    updateView(view, updated)
                 }
             }
+        } else {
+            dismiss()
         }
+        return view
     }
 
-    private fun muteTarget(mmsi: Int, mute: Boolean) {
-        val plugin = NauticalPlugin.getInstance() ?: return
-        val manager = plugin.aisManager ?: return
-        manager.muteAisTarget(mmsi, mute)
-        
-        muteJob?.cancel()
-        muteJob = plugin.pluginScope?.launch {
-            val engine = NauticalPlugin.engine
-            val rest = engine?.getRestService()
-            if (rest != null) {
-                try {
-                    // REST call to SignalK plugin
-                    val path = "plugins/signalk-ais-target-prioritizer/mute"
-                    val body = net.osmand.plus.plugins.nautical.network.SignalKPutBody(value = mapOf("mmsi" to mmsi, "mute" to mute))
-                    val response = rest.putGeneric(path, body)
-                    if (response.isSuccessful) {
-                        plugin.application.showToastMessage(R.string.shared_string_ok)
-                    }
-                } catch (e: Exception) {
-                    net.osmand.PlatformUtil.getLog(AisTargetBottomSheet::class.java).error("Failed to mute AIS target: ${e.message}")
+    private fun updateView(view: View, ais: AisObject) {
+        val ctx = requireContext()
+        val plugin = NauticalPlugin.getInstance()
+        val unknown = ctx.getString(R.string.shared_string_none)
+        val na = ctx.getString(R.string.nautical_not_available)
+
+        // Header: Icon, Name, MMSI, Call Sign, IMO
+        val imgIcon = view.findViewById<ImageView>(R.id.img_vessel_icon)
+        val iconRes = selectBitmap(ais.objectClass)
+        val iconColor = selectColor(ais.objectClass)
+        val iconDrawable = ContextCompat.getDrawable(ctx, iconRes)?.mutate()
+        if (iconColor != 0) {
+            iconDrawable?.colorFilter = PorterDuffColorFilter(iconColor, PorterDuff.Mode.SRC_IN)
+        }
+        imgIcon?.setImageDrawable(iconDrawable)
+
+        view.findViewById<TextView>(R.id.txt_ship_name).text = ais.shipName ?: "MMSI: ${ais.mmsi}"
+
+        val mmsiSb = StringBuilder("MMSI: ${ais.mmsi}")
+        if (!ais.callSign.isNullOrEmpty()) {
+            mmsiSb.append(" • Call: ").append(ais.callSign)
+        }
+        if (ais.imo != 0) {
+            mmsiSb.append(" • IMO: ").append(ais.imo)
+        }
+        view.findViewById<TextView>(R.id.txt_mmsi_callsign).text = mmsiSb.toString()
+
+        val shipType = ais.getShipTypeString()
+        view.findViewById<TextView>(R.id.txt_ship_type_badge).text = if (shipType.isNotEmpty()) shipType else "Class ${if (ais.isClassB) "B" else "A"}"
+
+        // Threat / CPA Warning
+        val cpaWarningLayout = view.findViewById<LinearLayout>(R.id.layout_cpa_warning)
+        val txtCpaWarning = view.findViewById<TextView>(R.id.txt_cpa_warning_text)
+        val isDanger = checkDanger(ais, plugin)
+        if (isDanger && ais.cpa.valid) {
+            cpaWarningLayout.visibility = View.VISIBLE
+            val tcpaMin = ais.cpa.tcpa * 60.0
+            txtCpaWarning.text = String.format(Locale.US, "COLLISION WARNING: CPA %.2f nm in %.1f min", ais.cpa.cpa, tcpaMin)
+        } else {
+            cpaWarningLayout.visibility = View.GONE
+        }
+
+        // Metrics Grid
+        val sogStr = if (ais.sog != AisObjectConstants.INVALID_SOG) String.format(Locale.US, "SOG: %.1f kn", ais.sog) else "SOG: $na"
+        view.findViewById<TextView>(R.id.txt_sog).text = sogStr
+
+        val cogStr = if (ais.cog != AisObjectConstants.INVALID_COG) String.format(Locale.US, "COG: %.0f°", ais.cog) else "COG: $na"
+        view.findViewById<TextView>(R.id.txt_cog).text = cogStr
+
+        val hdgStr = if (ais.heading != AisObjectConstants.INVALID_HEADING) String.format(Locale.US, "HDG: %d°", ais.heading) else "HDG: $na"
+        view.findViewById<TextView>(R.id.txt_heading).text = hdgStr
+
+        val rotStr = if (ais.rot != null && ais.rot != 0f) String.format(Locale.US, "ROT: %.1f°/m", ais.rot) else "ROT: $na"
+        view.findViewById<TextView>(R.id.txt_rot).text = rotStr
+
+        // Range and Bearing from own ship
+        val ownLoc = plugin?.application?.locationProvider?.lastKnownLocation
+        val pos = ais.position
+        if (ownLoc != null && pos != null) {
+            val distNm = MapUtils.getDistance(ownLoc.latitude, ownLoc.longitude, pos.latitude, pos.longitude) / 1852.0
+            val bearingDeg = (MapUtils.getBearing(ownLoc.latitude, ownLoc.longitude, pos.latitude, pos.longitude) + 360.0) % 360.0
+            view.findViewById<TextView>(R.id.txt_range_bearing).text = String.format(Locale.US, "Range: %.2f nm • %03.0f°", distNm, bearingDeg)
+        } else {
+            view.findViewById<TextView>(R.id.txt_range_bearing).text = "Range: $na"
+        }
+
+        val cpaTcpaStr = if (ais.cpa.valid) {
+            String.format(Locale.US, "CPA: %.2f nm (%.1fm)", ais.cpa.cpa, ais.cpa.tcpa * 60.0)
+        } else {
+            "CPA: $na"
+        }
+        view.findViewById<TextView>(R.id.txt_cpa_tcpa).text = cpaTcpaStr
+
+        view.findViewById<TextView>(R.id.txt_status).text = "Status: ${ais.getNavStatusString()}"
+
+        val totalLen = ais.dimensionToBow + ais.dimensionToStern
+        val totalBeam = ais.dimensionToPort + ais.dimensionToStarboard
+        val dimStr = if (totalLen > 0 && totalBeam > 0) "${totalLen}m x ${totalBeam}m" else na
+        view.findViewById<TextView>(R.id.txt_dimensions).text = "Dim: $dimStr"
+
+        val draughtStr = if (ais.draught > 0) String.format(Locale.US, "%.1f m", ais.draught) else na
+        view.findViewById<TextView>(R.id.txt_draught).text = "Draught: $draughtStr"
+
+        view.findViewById<TextView>(R.id.txt_destination).text = "Dest: ${ais.destination ?: unknown}"
+
+        val etaStr = if (ais.etaMon != 0) {
+            String.format(Locale.US, "%02d-%02d %02d:%02d", ais.etaMon, ais.etaDay, ais.etaHour, ais.etaMin)
+        } else na
+        view.findViewById<TextView>(R.id.txt_eta).text = "ETA: $etaStr"
+
+        val posStr = if (pos != null) String.format(Locale.US, "%.4f, %.4f", pos.latitude, pos.longitude) else unknown
+        view.findViewById<TextView>(R.id.txt_position).text = "Pos: $posStr"
+
+        // Actions
+        view.findViewById<Button>(R.id.btn_show_on_map).setOnClickListener {
+            if (pos != null) {
+                val activity = activity as? net.osmand.plus.activities.MapActivity
+                activity?.mapView?.setLatLon(pos.latitude, pos.longitude)
+                if ((activity?.mapView?.zoom ?: 0) < 14) {
+                    activity?.mapView?.setIntZoom(15)
+                }
+                plugin?.aisAisLayer?.setFollowedTarget(null)
+            }
+            dismiss()
+        }
+
+        view.findViewById<Button>(R.id.btn_follow_target).setOnClickListener {
+            plugin?.aisAisLayer?.setFollowedTarget(ais.mmsi)
+            if (pos != null) {
+                val activity = activity as? net.osmand.plus.activities.MapActivity
+                activity?.mapView?.setLatLon(pos.latitude, pos.longitude)
+                if ((activity?.mapView?.zoom ?: 0) < 14) {
+                    activity?.mapView?.setIntZoom(15)
                 }
             }
+            dismiss()
         }
-    }
 
-    private fun showOnMap(ais: AisObject) {
-        val pos = ais.position ?: return
-        val activity = activity as? net.osmand.plus.activities.MapActivity ?: return
-        activity.mapView.setLatLon(pos.latitude, pos.longitude)
-        if (activity.mapView.zoom < 14) {
-            activity.mapView.setIntZoom(15)
-        }
-        // Stop following when manually panning to a target
-        NauticalPlugin.getInstance()?.aisAisLayer?.setFollowedTarget(null)
-    }
-
-    private fun followTarget(ais: AisObject) {
-        val plugin = NauticalPlugin.getInstance() ?: return
-        plugin.aisAisLayer?.setFollowedTarget(ais.mmsi)
-        
-        plugin.pluginScope?.launch {
+        val btnBuddy = view.findViewById<Button>(R.id.btn_toggle_buddy)
+        val isBuddy = NauticalPlugin.engine?.getCurrentState()?.aisBuddies?.contains(ais.mmsi) ?: false
+        btnBuddy.text = if (isBuddy) ctx.getString(R.string.nautical_remove_from_buddies) else ctx.getString(R.string.nautical_add_to_buddies)
+        btnBuddy.setOnClickListener {
             val engine = NauticalPlugin.engine
-            val rest = engine?.getRestService()
-            if (rest != null) {
-                try {
-                    // Task: Set Signal K server-side tracking if supported
-                    val body = net.osmand.plus.plugins.nautical.network.SignalKPutBody(value = "vessels.${ais.mmsi}")
-                    rest.putGeneric("navigation/following", body)
-                } catch (_: Exception) {
-                    // Ignore, local follow is enough
-                }
-            }
+            val current = engine?.getCurrentState()?.aisBuddies?.toMutableSet() ?: mutableSetOf()
+            if (isBuddy) current.remove(ais.mmsi) else current.add(ais.mmsi)
+            engine?.sendDelta("navigation.aisBuddies", current.toList())
+            dismiss()
         }
-        showOnMap(ais)
     }
 
-    private fun createAttributeRow(label: String, value: String): View {
-        val context = requireContext()
-        val row = LinearLayout(context).apply {
-            orientation = LinearLayout.HORIZONTAL
-            setPadding(0, dpToPx(context, 4f), 0, dpToPx(context, 4f))
-        }
-        
-        row.addView(TextView(context).apply {
-            text = label
-            layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
-            setTextColor(ColorUtilities.getSecondaryTextColor(requireActivity().application as OsmandApplication, false))
-        })
-        
-        row.addView(TextView(context).apply {
-            text = value
-            layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT)
-            setTypeface(null, android.graphics.Typeface.BOLD)
-        })
-        
-        return row
+    private fun checkDanger(ais: AisObject, plugin: NauticalPlugin?): Boolean {
+        val extras = plugin?.aisManager?.getAisExtras(ais.mmsi)
+        if (extras?.hasCpaWarning == true) return true
+        if (!ais.cpa.valid || !ais.isMovable() || plugin == null) return false
+        val cpaDist = plugin.aisCpaWarningDistance.get().toDouble()
+        val cpaTime = plugin.aisCpaWarningTime.get().toDouble()
+        val tcpaSec = ais.cpa.tcpa * 3600.0
+        return (ais.cpa.tcpa > 0 && ais.cpa.cpa <= cpaDist && tcpaSec <= cpaTime && ais.cpa.t1 >= 0 && ais.cpa.t2 >= 0)
     }
 
-    private fun dpToPx(context: android.content.Context, dp: Float): Int {
-        return (dp * context.resources.displayMetrics.density).toInt()
+    private fun selectBitmap(type: AisObjType): Int {
+        return when (type) {
+            AisObjType.AIS_VESSEL,
+            AisObjType.AIS_VESSEL_SPORT,
+            AisObjType.AIS_VESSEL_FAST,
+            AisObjType.AIS_VESSEL_PASSENGER,
+            AisObjType.AIS_VESSEL_FREIGHT,
+            AisObjType.AIS_VESSEL_COMMERCIAL,
+            AisObjType.AIS_VESSEL_AUTHORITIES,
+            AisObjType.AIS_VESSEL_SAR,
+            AisObjType.AIS_VESSEL_OTHER,
+            AisObjType.AIS_INVALID -> R.drawable.mm_ais_vessel
+            AisObjType.AIS_LANDSTATION -> R.drawable.mm_ais_land
+            AisObjType.AIS_AIRPLANE -> R.drawable.mm_ais_plane
+            AisObjType.AIS_SART -> R.drawable.mm_ais_sar
+            AisObjType.AIS_ATON -> R.drawable.mm_ais_aton
+            AisObjType.AIS_ATON_VIRTUAL -> R.drawable.mm_ais_aton_virt
+        }
+    }
+
+    private fun selectColor(type: AisObjType): Int {
+        return when (type) {
+            AisObjType.AIS_VESSEL -> Color.GREEN
+            AisObjType.AIS_VESSEL_SPORT -> Color.YELLOW
+            AisObjType.AIS_VESSEL_FAST -> Color.BLUE
+            AisObjType.AIS_VESSEL_PASSENGER -> Color.CYAN
+            AisObjType.AIS_VESSEL_FREIGHT -> Color.GRAY
+            AisObjType.AIS_VESSEL_COMMERCIAL -> Color.LTGRAY
+            AisObjType.AIS_VESSEL_AUTHORITIES -> Color.argb(0xff, 0x55, 0x6b, 0x2f)
+            AisObjType.AIS_VESSEL_SAR -> Color.argb(0xff, 0xfa, 0x80, 0x72)
+            AisObjType.AIS_VESSEL_OTHER -> Color.argb(0xff, 0x00, 0xbf, 0xff)
+            AisObjType.AIS_LANDSTATION -> Color.argb(0xff, 0x8b, 0x45, 0x13)
+            AisObjType.AIS_AIRPLANE -> Color.argb(0xff, 0x93, 0x70, 0xdb)
+            AisObjType.AIS_SART -> Color.RED
+            AisObjType.AIS_ATON, AisObjType.AIS_ATON_VIRTUAL -> Color.argb(0xff, 0xff, 0xa5, 0x00)
+            else -> 0
+        }
     }
 }

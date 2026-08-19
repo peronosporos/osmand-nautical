@@ -1,4 +1,11 @@
 <resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
+    <string name="nautical_ais_targets_title">AIS Targets</string>
+    <string name="nautical_ais_no_targets">No AIS targets detected</string>
+    <string name="nautical_ais_danger_warning">COLLISION RISK WARNING</string>
+    <string name="nautical_ais_details_range_bearing">Range / Bearing: %1$s</string>
+    <string name="nautical_ais_details_rot">ROT: %1$s</string>
+    <string name="nautical_ais_details_hdg">HDG: %1$s</string>
+    <string name="nautical_ais_details_dimensions">Dim: %1$s</string>
     <string name="nautical_autopilot_unauthorized">Autopilot: Unauthorized (Check Signal K Auth Token)</string>
     <string name="nautical_grib_sync_signalk">Download from Signal K</string>
     <string name="nautical_grib_sync_success">GRIB weather data updated from Signal K</string>

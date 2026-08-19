@@ -1,51 +1,149 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
     android:padding="16dp"
     android:background="?attr/list_background_color">
 
-    <TextView
-        android:id="@+id/txt_ship_name"
+    <!-- Header with Icon, Name & MMSI -->
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:textAppearance="@style/TextAppearance.AppCompat.Large"
-        android:textColor="?android:attr/textColorPrimary"
-        android:textStyle="bold" />
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingBottom="12dp">
 
-    <TextView
-        android:id="@+id/txt_mmsi"
+        <ImageView
+            android:id="@+id/img_vessel_icon"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:padding="6dp"
+            android:layout_marginEnd="12dp"
+            android:src="@drawable/mm_ais_vessel"
+            android:contentDescription="AIS Vessel Icon" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/txt_ship_name"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textAppearance="@style/TextAppearance.AppCompat.Large"
+                android:textColor="?android:attr/textColorPrimary"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/txt_mmsi_callsign"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textAppearance="@style/TextAppearance.AppCompat.Small"
+                android:textColor="?android:attr/textColorSecondary" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/txt_ship_type_badge"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textAppearance="@style/TextAppearance.AppCompat.Caption"
+            android:textColor="?android:attr/textColorPrimary"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp"
+            android:paddingTop="4dp"
+            android:paddingBottom="4dp"
+            android:background="?attr/card_and_list_background" />
+    </LinearLayout>
+
+    <!-- Danger / CPA Warning Banner -->
+    <LinearLayout
+        android:id="@+id/layout_cpa_warning"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:textAppearance="@style/TextAppearance.AppCompat.Small"
-        android:textColor="?android:attr/textColorSecondary"
-        android:paddingBottom="8dp" />
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:background="#33FF0000"
+        android:padding="10dp"
+        android:layout_marginBottom="12dp"
+        android:visibility="gone">
 
+        <ImageView
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@drawable/ic_action_alert"
+            app:tint="#FFFF0000"
+            android:layout_marginEnd="8dp"
+            android:contentDescription="Collision Warning" />
+
+        <TextView
+            android:id="@+id/txt_cpa_warning_text"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/nautical_ais_danger_warning"
+            android:textColor="#FFFF4444"
+            android:textStyle="bold"
+            android:textSize="14sp" />
+    </LinearLayout>
+
+    <!-- 2-Column Metric Grid -->
     <GridLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:columnCount="2"
-        android:rowCount="5">
+        android:alignmentMode="alignMargins"
+        android:useDefaultMargins="true">
 
-        <TextView android:id="@+id/txt_callsign" android:layout_columnWeight="1" android:padding="4dp" />
-        <TextView android:id="@+id/txt_imo" android:layout_columnWeight="1" android:padding="4dp" />
-        <TextView android:id="@+id/txt_type" android:layout_columnWeight="1" android:padding="4dp" />
-        <TextView android:id="@+id/txt_status" android:layout_columnWeight="1" android:padding="4dp" />
-        <TextView android:id="@+id/txt_destination" android:layout_columnWeight="1" android:padding="4dp" />
-        <TextView android:id="@+id/txt_eta" android:layout_columnWeight="1" android:padding="4dp" />
-        <TextView android:id="@+id/txt_draught" android:layout_columnWeight="1" android:padding="4dp" />
-        <TextView android:id="@+id/txt_position" android:layout_columnWeight="1" android:padding="4dp" />
-        <TextView android:id="@+id/txt_sog_cog" android:layout_columnWeight="2" android:layout_columnSpan="2" android:padding="4dp" />
+        <TextView android:id="@+id/txt_sog" android:layout_columnWeight="1" android:padding="4dp" android:textColor="?android:attr/textColorPrimary" />
+        <TextView android:id="@+id/txt_cog" android:layout_columnWeight="1" android:padding="4dp" android:textColor="?android:attr/textColorPrimary" />
+        <TextView android:id="@+id/txt_heading" android:layout_columnWeight="1" android:padding="4dp" android:textColor="?android:attr/textColorPrimary" />
+        <TextView android:id="@+id/txt_rot" android:layout_columnWeight="1" android:padding="4dp" android:textColor="?android:attr/textColorPrimary" />
+        <TextView android:id="@+id/txt_range_bearing" android:layout_columnWeight="1" android:padding="4dp" android:textColor="?android:attr/textColorPrimary" />
+        <TextView android:id="@+id/txt_cpa_tcpa" android:layout_columnWeight="1" android:padding="4dp" android:textColor="?android:attr/textColorPrimary" />
+        <TextView android:id="@+id/txt_status" android:layout_columnWeight="1" android:padding="4dp" android:textColor="?android:attr/textColorPrimary" />
+        <TextView android:id="@+id/txt_dimensions" android:layout_columnWeight="1" android:padding="4dp" android:textColor="?android:attr/textColorPrimary" />
+        <TextView android:id="@+id/txt_draught" android:layout_columnWeight="1" android:padding="4dp" android:textColor="?android:attr/textColorPrimary" />
+        <TextView android:id="@+id/txt_destination" android:layout_columnWeight="1" android:padding="4dp" android:textColor="?android:attr/textColorPrimary" />
+        <TextView android:id="@+id/txt_eta" android:layout_columnWeight="1" android:padding="4dp" android:textColor="?android:attr/textColorPrimary" />
+        <TextView android:id="@+id/txt_position" android:layout_columnWeight="1" android:padding="4dp" android:textColor="?android:attr/textColorPrimary" />
 
     </GridLayout>
+
+    <!-- Action Buttons -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginTop="16dp">
+
+        <Button
+            android:id="@+id/btn_show_on_map"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginEnd="6dp"
+            android:text="@string/shared_string_show_on_map" />
+
+        <Button
+            android:id="@+id/btn_follow_target"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="6dp"
+            android:text="@string/nautical_follow_target" />
+    </LinearLayout>
 
     <Button
         android:id="@+id/btn_toggle_buddy"
         style="@style/Widget.MaterialComponents.Button.OutlinedButton"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
+        android:layout_marginTop="8dp"
         android:text="@string/nautical_add_to_buddies" />
 
 </LinearLayout>

@@ -163,8 +163,24 @@ class NauticalAisObjectDrawable(
             AisObjType.AIS_VESSEL_AUTHORITIES -> Color.argb(0xff, 0x55, 0x6b, 0x2f)
             AisObjType.AIS_VESSEL_SAR -> Color.argb(0xff, 0xfa, 0x80, 0x72)
             AisObjType.AIS_VESSEL_OTHER -> Color.argb(0xff, 0x00, 0xbf, 0xff)
+            AisObjType.AIS_LANDSTATION -> Color.argb(0xff, 0x8b, 0x45, 0x13)
+            AisObjType.AIS_AIRPLANE -> Color.argb(0xff, 0x93, 0x70, 0xdb)
+            AisObjType.AIS_SART -> Color.RED
+            AisObjType.AIS_ATON, AisObjType.AIS_ATON_VIRTUAL -> Color.argb(0xff, 0xff, 0xa5, 0x00)
             else -> 0
         }
+    }
+
+    fun checkCpaWarning(): Boolean {
+        if (!ais.isMovable() || (ais.objectClass == AisObjType.AIS_AIRPLANE)) return false
+        if (ais.sog <= AisObjectConstants.SPEED_CONSIDERED_IN_REST) return false
+        val cpa = ais.cpa
+        if (!cpa.valid) return false
+        val cpaWarningDistance = plugin.aisCpaWarningDistance.get().toDouble()
+        val cpaWarningTime = plugin.aisCpaWarningTime.get().toDouble()
+        val tcpa = cpa.tcpa
+        val tcpaSeconds = tcpa * 3600.0
+        return (tcpa > 0 && cpa.cpa <= cpaWarningDistance && tcpaSeconds <= cpaWarningTime && cpa.t1 >= 0 && cpa.t2 >= 0)
     }
 
     private fun getPredictorDistanceMeters(): Float {
@@ -186,7 +202,7 @@ class NauticalAisObjectDrawable(
         val vesselAtRest = ais.isVesselAtRest()
         if (ais.isLost(plugin.aisShipLostTimeout.get()) && !vesselAtRest) {
             if (ais.isMovable()) {
-                bitmap = imagesCache.getBitmap(R.drawable.ic_action_alert)
+                bitmap = imagesCache.getBitmap(R.drawable.mm_ais_vessel_cross)
                 bitmapValid = true
             }
         } else {
@@ -216,6 +232,8 @@ class NauticalAisObjectDrawable(
         val caps = plugin.capabilityManager?.capabilities?.value
         if (NauticalPlugin.isNightVision(plugin.application)) {
             bitmapColor = Color.RED
+        } else if (hasCpaWarning || checkCpaWarning()) {
+            bitmapColor = Color.RED
         } else if (ownObject) {
             bitmapColor = Color.BLACK
         } else if (isBuddy()) {
@@ -236,8 +254,8 @@ class NauticalAisObjectDrawable(
             bitmapColor = selectColor(ais.objectClass)
         }
         
-        // Task 5: Dim non-threatening targets if prioritizer is active
-        alpha = if (caps?.hasAisPrioritizer == true && threatLevel == 0 && !ownObject && !hasCpaWarning) {
+        // Dim non-threatening targets if prioritizer is active
+        alpha = if (caps?.hasAisPrioritizer == true && threatLevel == 0 && !ownObject && !hasCpaWarning && !checkCpaWarning()) {
             170 // Standardized minimum visibility (approx 65%)
         } else {
             closeQuartersAlpha ?: 255
@@ -251,7 +269,7 @@ class NauticalAisObjectDrawable(
             if (!bitmapValid) {
                 setBitmap()
             }
-            if (!ownObject && hasCpaWarning) {
+            if (!ownObject && (hasCpaWarning || checkCpaWarning())) {
                 activateCpaWarning()
             } else {
                 deactivateCpaWarning()
@@ -273,7 +291,7 @@ class NauticalAisObjectDrawable(
     ) {
         updateBitmap(paint)
 
-        val lostBitmap = imagesCache.getBitmap(R.drawable.ic_action_alert)
+        val lostBitmap = imagesCache.getBitmap(R.drawable.mm_ais_vessel_cross)
         val activeBitmap = bitmap
         if ((activeBitmap == null) || (lostBitmap == null)) {
             return
@@ -482,27 +500,60 @@ class NauticalAisObjectDrawable(
         updateBitmap(paint)
         val vesselAtRest = ais.isVesselAtRest()
         val lostTimeout = ais.isLost(plugin.aisShipLostTimeout.get()) && !vesselAtRest
-        
-        val bmp = if (lostTimeout) imagesCache.getBitmap(R.drawable.ic_action_alert) else bitmap
-        if (bmp != null) {
-            val x = tileBox.getPixXFromLatLon(pos.latitude, pos.longitude)
-            val y = tileBox.getPixYFromLatLon(pos.latitude, pos.longitude)
-            
-            canvas.withTranslation(x, y) {
-                if (vesselAtRest) {
-                    // Draw Circle fallback for stationary vessels
-                    val radius = 12f * tileBox.density
-                    val circlePaint = Paint(paint).apply {
-                        style = Paint.Style.STROKE
-                        strokeWidth = 2f * tileBox.density
-                        color = if (bitmapColor != 0) bitmapColor else Color.WHITE
+        val isDanger = hasCpaWarning || checkCpaWarning()
+
+        val bmp = if (lostTimeout) imagesCache.getBitmap(R.drawable.mm_ais_vessel_cross) else bitmap
+        val x = tileBox.getPixXFromLatLon(pos.latitude, pos.longitude)
+        val y = tileBox.getPixYFromLatLon(pos.latitude, pos.longitude)
+
+        canvas.withTranslation(x, y) {
+            if (isDanger) {
+                // High-contrast danger ring for collision warning overlay
+                val ringRadius = 22f * tileBox.density
+                val ringPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                    style = Paint.Style.STROKE
+                    strokeWidth = 3f * tileBox.density
+                    color = Color.RED
+                }
+                drawCircle(0f, 0f, ringRadius, ringPaint)
+            }
+
+            if (vesselAtRest) {
+                // Stationary / anchored / moored vessel: distinct circular base with status color
+                val outerRadius = 11f * tileBox.density
+                val innerRadius = 8f * tileBox.density
+                val outerPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                    style = Paint.Style.FILL
+                    color = Color.DKGRAY
+                }
+                val innerPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                    style = Paint.Style.FILL
+                    color = if (bitmapColor != 0) bitmapColor else Color.WHITE
+                }
+                drawCircle(0f, 0f, outerRadius, outerPaint)
+                drawCircle(0f, 0f, innerRadius, innerPaint)
+
+                val heading = ais.heading
+                if (heading != AisObjectConstants.INVALID_HEADING && heading != 0) {
+                    rotate(heading.toFloat() - tileBox.rotate)
+                }
+            } else if (bmp != null) {
+                if (needRotation()) {
+                    rotate(ais.getVesselRotation() - tileBox.rotate)
+                }
+                drawBitmap(bmp, -bmp.width / 2f, -bmp.height / 2f, paint)
+
+                // COG/SOG leader line
+                val predictorDistance = getPredictorDistanceMeters()
+                if (tileBox.zoom >= NauticalAisLayer.START_ZOOM_SHOW_DIRECTION && predictorDistance > 0f && !lostTimeout) {
+                    val lineLength = predictorDistance * tileBox.pixDensity.toFloat()
+                    val linePaint = Paint(paint).apply {
+                        strokeWidth = 3f * tileBox.density
+                        color = if (bitmapColor != 0) bitmapColor else Color.BLACK
                     }
-                    drawCircle(0f, 0f, radius, circlePaint)
-                } else {
-                    if (needRotation()) {
-                        rotate(ais.getVesselRotation() - tileBox.rotate)
-                    }
-                    drawBitmap(bmp, -bmp.width / 2f, -bmp.height / 2f, paint)
+                    val lineStartY = -bmp.height / 4f
+                    val lineEndY = lineStartY - lineLength
+                    drawLine(0f, lineStartY, 0f, lineEndY, linePaint)
                 }
             }
         }

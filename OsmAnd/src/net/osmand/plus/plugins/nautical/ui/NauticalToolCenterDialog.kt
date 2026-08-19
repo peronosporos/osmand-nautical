@@ -54,6 +54,15 @@ class NauticalToolCenterDialog : BaseMaterialBottomSheetDialogFragment() {
                 net.osmand.plus.settings.fragments.BaseSettingsFragment.showInstance(requireActivity(), SettingsScreenType.SAIL_INVENTORY)
                 dismiss()
             },
+            ToolItem(getString(R.string.nautical_ais_targets_title), R.drawable.mm_ais_vessel) {
+                val aisObjects = NauticalPlugin.getInstance()?.aisManager?.getAisObjects() ?: emptyList()
+                if (aisObjects.isNotEmpty()) {
+                    NauticalTargetPicker.newInstance(aisObjects).show(parentFragmentManager, "ais_target_picker")
+                } else {
+                    NauticalPlugin.getInstance()?.application?.showToastMessage(R.string.nautical_ais_no_targets)
+                }
+                dismiss()
+            },
             ToolItem("AIS Buddies", R.drawable.ic_action_group_list) {
                 net.osmand.plus.settings.fragments.BaseSettingsFragment.showInstance(requireActivity(), SettingsScreenType.NAUTICAL_AIS_BUDDIES)
                 dismiss()
