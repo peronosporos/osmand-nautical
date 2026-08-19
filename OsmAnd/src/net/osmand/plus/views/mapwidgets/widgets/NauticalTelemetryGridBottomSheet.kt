@@ -11,10 +11,10 @@ import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import net.osmand.plus.OsmandApplication
 import net.osmand.plus.R
+import net.osmand.plus.plugins.nautical.ui.NauticalWidgetHelper
 import net.osmand.plus.plugins.nautical.ui.widgets.NauticalMenuBottomSheetDialogFragment
 import net.osmand.plus.plugins.nautical.NauticalPlugin
 import net.osmand.plus.plugins.nautical.engine.MarineState
-import net.osmand.plus.plugins.nautical.engine.SignalKUnitConverter
 import net.osmand.plus.plugins.nautical.engine.SignalKPaths
 import net.osmand.plus.plugins.nautical.ui.NauticalColorResolver
 import net.osmand.plus.plugins.nautical.ui.NauticalMiniRoseView
@@ -126,7 +126,7 @@ class NauticalTelemetryGridBottomSheet : NauticalMenuBottomSheetDialogFragment()
             
             holder.icon.setImageResource(widget.getIconId(isNight))
             
-            val (value, unit) = formatTelemetry(widget, state)
+            val (value, unit) = NauticalWidgetHelper.formatTelemetry(requireContext(), app.settings, widget, state)
             holder.value.text = value
             holder.unit.text = unit
 
@@ -196,49 +196,6 @@ class NauticalTelemetryGridBottomSheet : NauticalMenuBottomSheetDialogFragment()
         }
 
         override fun getItemCount(): Int = widgets.size
-
-        private fun formatTelemetry(widget: WidgetType, state: MarineState?): Pair<String, String> {
-            if (state == null) return getString(R.string.n_a) to ""
-            
-            val context = requireContext()
-            val settings = app.settings
-            
-            return when (widget) {
-                WidgetType.NAUTICAL_SOG -> SignalKUnitConverter.formatValue(context, settings, state.speedOverGround, "speed")
-                WidgetType.NAUTICAL_STW -> SignalKUnitConverter.formatValue(context, settings, state.speedThroughWater, "speed")
-                WidgetType.NAUTICAL_COG -> SignalKUnitConverter.formatValue(context, settings, state.courseOverGroundTrue, "course")
-                WidgetType.NAUTICAL_HEADING_MAGNETIC -> SignalKUnitConverter.formatValue(context, settings, state.headingMagnetic, "heading")
-                WidgetType.NAUTICAL_DEPTH_KEEL -> SignalKUnitConverter.formatValue(context, settings, state.depthBelowKeel, "depth")
-                WidgetType.NAUTICAL_WIND -> SignalKUnitConverter.formatValue(context, settings, state.windSpeedTrue, "speed")
-                WidgetType.NAUTICAL_VMG -> SignalKUnitConverter.formatValue(context, settings, state.velocityMadeGood, "speed")
-                WidgetType.NAUTICAL_BATTERY_VOLT -> SignalKUnitConverter.formatValue(context, settings, state.batteries["0"]?.voltage, "voltage")
-                WidgetType.NAUTICAL_BATTERY_SOC -> SignalKUnitConverter.formatValue(context, settings, state.batteries["0"]?.stateOfCharge, "stateOfCharge")
-                WidgetType.NAUTICAL_WATER_TEMP -> SignalKUnitConverter.formatValue(context, settings, state.waterTemperature, "temperature")
-                WidgetType.NAUTICAL_OUTSIDE_TEMP -> SignalKUnitConverter.formatValue(context, settings, state.outsideTemperature, "temperature")
-                WidgetType.NAUTICAL_PRESSURE -> SignalKUnitConverter.formatValue(context, settings, state.outsidePressure, "pressure")
-                WidgetType.NAUTICAL_ROLL -> SignalKUnitConverter.formatValue(context, settings, state.roll, "roll")
-                WidgetType.NAUTICAL_PITCH -> SignalKUnitConverter.formatValue(context, settings, state.pitch, "pitch")
-                WidgetType.NAUTICAL_LOG -> SignalKUnitConverter.formatValue(context, settings, state.log, "log")
-                WidgetType.NAUTICAL_TRIP_LOG -> SignalKUnitConverter.formatValue(context, settings, state.tripLog, "log")
-                WidgetType.NAUTICAL_ENGINE_RUNTIME -> SignalKUnitConverter.formatValue(context, settings, state.engineHours?.let { it * 3600.0 } ?: state.engines["0"]?.runTime, "runTime")
-                WidgetType.NAUTICAL_XTE -> SignalKUnitConverter.formatValue(context, settings, state.crossTrackError, "distance")
-                WidgetType.NAUTICAL_DTW -> SignalKUnitConverter.formatValue(context, settings, state.distanceToWaypoint, "distance")
-                WidgetType.NAUTICAL_BOOST_PRESSURE -> SignalKUnitConverter.formatValue(context, settings, state.engines["0"]?.boostPressure, "pressure")
-                WidgetType.NAUTICAL_EXHAUST_TEMP -> SignalKUnitConverter.formatValue(context, settings, state.engines["0"]?.exhaustTemperature, "temperature")
-                WidgetType.NAUTICAL_ALTERNATOR_VOLT -> SignalKUnitConverter.formatValue(context, settings, state.engines["0"]?.alternatorVoltage, "voltage")
-                WidgetType.NAUTICAL_ALTERNATOR_CURR -> SignalKUnitConverter.formatValue(context, settings, state.engines["0"]?.alternatorCurrent, "current")
-                WidgetType.NAUTICAL_TRANS_GEAR -> (state.engines["0"]?.transmissionGear ?: getString(R.string.n_a)) to ""
-                WidgetType.NAUTICAL_TRANS_PRESS -> SignalKUnitConverter.formatValue(context, settings, state.engines["0"]?.transmissionPressure, "pressure")
-                WidgetType.NAUTICAL_TRANS_OIL_TEMP -> SignalKUnitConverter.formatValue(context, settings, state.engines["0"]?.transmissionOilTemperature, "temperature")
-                WidgetType.NAUTICAL_INV_STATE -> (state.inverters["0"]?.state ?: getString(R.string.n_a)) to ""
-                WidgetType.NAUTICAL_CHG_STATE -> (state.chargers["0"]?.state ?: getString(R.string.n_a)) to ""
-                WidgetType.NAUTICAL_WATERMAKER_RATE -> SignalKUnitConverter.formatValue(context, settings, state.watermakers["0"]?.rate, "watermakerRate")
-                WidgetType.NAUTICAL_WATERMAKER_TOTAL -> SignalKUnitConverter.formatValue(context, settings, state.watermakers["0"]?.totalProduction, "volume")
-                WidgetType.NAUTICAL_WATERMAKER_SALINITY -> SignalKUnitConverter.formatValue(context, settings, state.watermakers["0"]?.salinity, "salinity")
-                WidgetType.NAUTICAL_REEFS -> (state.reefs?.toString() ?: getString(R.string.n_a)) to ""
-                else -> getString(R.string.n_a) to ""
-            }
-        }
     }
 
     private class TelemetryViewHolder(view: View) : RecyclerView.ViewHolder(view) {

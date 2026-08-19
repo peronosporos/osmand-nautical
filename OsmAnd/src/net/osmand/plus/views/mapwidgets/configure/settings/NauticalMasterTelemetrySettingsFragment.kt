@@ -21,6 +21,7 @@ class NauticalMasterTelemetrySettingsFragment : BaseSimpleWidgetInfoFragment() {
     private lateinit var itemsContainer: LinearLayout
     private var recyclerView: RecyclerView? = null
     private var adapter: ItemsAdapter? = null
+    private var primaryDisplayText: TextView? = null
     private val selectedItems = mutableListOf<WidgetType>()
     private var currentMode = 0 // 0: Passage, 1: Docking, 2: Anchored
 
@@ -37,6 +38,17 @@ class NauticalMasterTelemetrySettingsFragment : BaseSimpleWidgetInfoFragment() {
         loadItemsForMode()
         
         val context = requireContext()
+
+        // Primary Display Picker
+        val primaryRow = inflater.inflate(R.layout.configure_screen_list_item, itemsContainer, false)
+        primaryRow.findViewById<TextView>(R.id.title).text = getString(R.string.nautical_master_telemetry_primary_display)
+        primaryDisplayText = primaryRow.findViewById(R.id.description)
+        primaryDisplayText?.visibility = View.VISIBLE
+        primaryRow.findViewById<View>(R.id.button_container).setOnClickListener {
+            showPrimaryDisplayDialog()
+        }
+        itemsContainer.addView(primaryRow)
+        updatePrimaryDisplayText()
 
         // Auto-switch Toggle
         val autoSwitchRow = inflater.inflate(R.layout.configure_screen_list_item, itemsContainer, false)
@@ -92,7 +104,8 @@ class NauticalMasterTelemetrySettingsFragment : BaseSimpleWidgetInfoFragment() {
 
     private fun showAddItemDialog() {
         val available = WidgetType.entries.filter { 
-            it.id.startsWith("nautical_") && 
+            (it.group == net.osmand.plus.views.mapwidgets.WidgetGroup.NAUTICAL_TELEMETRY || 
+             it.group == net.osmand.plus.views.mapwidgets.WidgetGroup.NAUTICAL_SYSTEMS) && 
             it != WidgetType.NAUTICAL_MASTER_TELEMETRY && 
             !selectedItems.contains(it) &&
             it.isAllowed
@@ -108,6 +121,30 @@ class NauticalMasterTelemetrySettingsFragment : BaseSimpleWidgetInfoFragment() {
             .show()
     }
 
+    private fun showPrimaryDisplayDialog() {
+        val options = mutableListOf<WidgetType?>()
+        options.add(null) // None / Workflow State
+        options.addAll(selectedItems)
+        
+        val names = options.map { it?.let { getString(it.titleId) } ?: getString(R.string.nautical_workflow_state) }.toTypedArray()
+        
+        AlertDialog.Builder(requireContext())
+            .setTitle(R.string.nautical_master_telemetry_primary_display)
+            .setItems(names) { _, which ->
+                val selected = options[which]
+                getPrimaryPrefForMode().set(selected?.id ?: "")
+                updatePrimaryDisplayText()
+            }
+            .show()
+    }
+
+    private fun updatePrimaryDisplayText() {
+        val pref = getPrimaryPrefForMode()
+        val id = pref.get()
+        val widget = WidgetType.getById(id)
+        primaryDisplayText?.text = widget?.let { getString(it.titleId) } ?: getString(R.string.nautical_workflow_state)
+    }
+
     private fun setupModeSwitcher() {
         val tabLayout = TabLayout(requireContext())
         tabLayout.addTab(tabLayout.newTab().setText(R.string.nautical_workflow_tactical))
@@ -119,6 +156,7 @@ class NauticalMasterTelemetrySettingsFragment : BaseSimpleWidgetInfoFragment() {
                 saveItemsForMode()
                 currentMode = tab?.position ?: 0
                 loadItemsForMode()
+                updatePrimaryDisplayText()
                 @Suppress("NotifyDataSetChanged")
                 adapter?.notifyDataSetChanged()
             }
@@ -130,7 +168,13 @@ class NauticalMasterTelemetrySettingsFragment : BaseSimpleWidgetInfoFragment() {
 
     private fun loadItemsForMode() {
         val pref = getPrefForMode()
-        val itemIds = pref.get().split(",").filter { it.isNotEmpty() }
+        var itemIdsString = pref.get()
+        if (itemIdsString.isEmpty()) {
+            // Fallback to OsmandSettings defaults or a sane subset if not initialized
+            itemIdsString = "nautical_sog,nautical_cog,nautical_depth_keel,nautical_wind,nautical_vmg"
+            pref.set(itemIdsString)
+        }
+        val itemIds = itemIdsString.split(",").filter { it.isNotEmpty() }
         selectedItems.clear()
         selectedItems.addAll(itemIds.mapNotNull { WidgetType.getById(it) })
     }
@@ -145,6 +189,14 @@ class NauticalMasterTelemetrySettingsFragment : BaseSimpleWidgetInfoFragment() {
             1 -> settings.NAUTICAL_MASTER_TELEMETRY_ITEMS_DOCKING
             2 -> settings.NAUTICAL_MASTER_TELEMETRY_ITEMS_ANCHORED
             else -> settings.NAUTICAL_MASTER_TELEMETRY_ITEMS_PASSAGE
+        }
+    }
+
+    private fun getPrimaryPrefForMode(): CommonPreference<String> {
+        return when (currentMode) {
+            1 -> settings.NAUTICAL_MASTER_TELEMETRY_PRIMARY_ITEM_DOCKING
+            2 -> settings.NAUTICAL_MASTER_TELEMETRY_PRIMARY_ITEM_ANCHORED
+            else -> settings.NAUTICAL_MASTER_TELEMETRY_PRIMARY_ITEM_PASSAGE
         }
     }
 

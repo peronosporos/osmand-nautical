@@ -7,9 +7,14 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import net.osmand.plus.R
 import net.osmand.plus.activities.MapActivity
+import net.osmand.plus.plugins.nautical.NauticalPlugin
+import net.osmand.plus.plugins.nautical.engine.MarineState
+import net.osmand.plus.plugins.nautical.engine.SignalKUnitConverter
+import net.osmand.plus.plugins.nautical.ui.NauticalWidgetHelper
 import net.osmand.plus.views.layers.base.OsmandMapLayer
 import net.osmand.plus.views.mapwidgets.WidgetType
 import net.osmand.plus.views.mapwidgets.WidgetsPanel
+import net.osmand.plus.settings.backend.OsmandSettings
 
 class NauticalMasterTelemetryWidget(
     mapActivity: MapActivity,
@@ -48,18 +53,54 @@ class NauticalMasterTelemetryWidget(
     }
 
     override fun updateSimpleWidgetInfo(drawSettings: OsmandMapLayer.DrawSettings?) {
-        updateIcon()
-        
         // TASK-053: Automatic Preset Switching
         val autoSwitch = mapActivity.app.settings.NAUTICAL_MASTER_TELEMETRY_AUTO_SWITCH.get()
-        val engine = net.osmand.plus.plugins.nautical.NauticalPlugin.getInstance()?.workflowEngine
-        val currentState = if (autoSwitch) engine?.currentWorkflow?.value else null
+        val workflowEngine = NauticalPlugin.getInstance()?.workflowEngine
+        val currentState = if (autoSwitch) workflowEngine?.currentWorkflow?.value else null
         if (autoSwitch && currentState != null && currentState != lastWorkflowState) {
             applyPresetForState(currentState)
             lastWorkflowState = currentState
         }
 
-        setText(mapActivity.getString(R.string.nautical_master_telemetry), "")
+        val engine = NauticalPlugin.engine
+        val state = engine?.getCurrentState()
+        val mode = workflowEngine?.currentWorkflow?.value ?: net.osmand.plus.plugins.nautical.engine.SailingWorkflowState.TACTICAL_PASSAGE
+        
+        val primaryItemId = getPrimaryItemIdForMode(mode)
+        val primaryWidget = WidgetType.getById(primaryItemId)
+
+        if (primaryWidget != null) {
+            val (main, sub) = NauticalWidgetHelper.formatTelemetry(mapActivity, mapActivity.app.settings, primaryWidget, state)
+            setText(main, sub)
+        } else {
+            val modeName = when (mode) {
+                net.osmand.plus.plugins.nautical.engine.SailingWorkflowState.TACTICAL_PASSAGE -> mapActivity.getString(R.string.nautical_workflow_tactical)
+                net.osmand.plus.plugins.nautical.engine.SailingWorkflowState.CLOSE_QUARTERS -> mapActivity.getString(R.string.nautical_workflow_close_quarters)
+                net.osmand.plus.plugins.nautical.engine.SailingWorkflowState.STATIONARY_ANCHORED -> mapActivity.getString(R.string.nautical_workflow_anchored)
+            }
+            setText(modeName, "")
+        }
+        updateIcon()
+    }
+
+    override fun updateIcon() {
+        val workflowEngine = NauticalPlugin.getInstance()?.workflowEngine
+        val mode = workflowEngine?.currentWorkflow?.value ?: net.osmand.plus.plugins.nautical.engine.SailingWorkflowState.TACTICAL_PASSAGE
+        val primaryItemId = getPrimaryItemIdForMode(mode)
+        val primaryWidget = WidgetType.getById(primaryItemId)
+
+        val iconId = primaryWidget?.getIconId(nightMode) ?: R.drawable.ic_dashboard
+        val iconColor = mapActivity.app.settings.APPLICATION_MODE.get().getProfileColor(nightMode)
+        setImageDrawable(iconsCache.getPaintedIcon(iconId, iconColor))
+    }
+
+    private fun getPrimaryItemIdForMode(mode: net.osmand.plus.plugins.nautical.engine.SailingWorkflowState): String {
+        val settings = mapActivity.app.settings
+        return when (mode) {
+            net.osmand.plus.plugins.nautical.engine.SailingWorkflowState.TACTICAL_PASSAGE -> settings.NAUTICAL_MASTER_TELEMETRY_PRIMARY_ITEM_PASSAGE.get()
+            net.osmand.plus.plugins.nautical.engine.SailingWorkflowState.CLOSE_QUARTERS -> settings.NAUTICAL_MASTER_TELEMETRY_PRIMARY_ITEM_DOCKING.get()
+            net.osmand.plus.plugins.nautical.engine.SailingWorkflowState.STATIONARY_ANCHORED -> settings.NAUTICAL_MASTER_TELEMETRY_PRIMARY_ITEM_ANCHORED.get()
+        }
     }
 
     private fun applyPresetForState(state: net.osmand.plus.plugins.nautical.engine.SailingWorkflowState) {

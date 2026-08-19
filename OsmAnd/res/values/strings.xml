@@ -571,6 +571,8 @@
     <string name="nautical_alarm_accidental_gybe">DANGER: Accidental Gybe Risk!</string>
     <string name="nautical_master_telemetry">Master Telemetry</string>
     <string name="nautical_master_telemetry_desc">Gateway to a customizable grid of real-time telemetry data</string>
+    <string name="nautical_master_telemetry_primary_display">Primary Widget Display</string>
+    <string name="nautical_workflow_state">Sailing Mode Name</string>
     <string name="nautical_telemetry_items">Telemetry Items</string>
     <string name="nautical_add_telemetry_item">Add Telemetry Item</string>
     <string name="nautical_select_telemetry_item">Select Telemetry Item</string>
@@ -762,6 +764,8 @@
     <string name="nautical_leeway_coefficient">Leeway Coefficient</string>
     <string name="nautical_nmea_source">NMEA Data Source</string>
     <string name="nautical_force_watch_layout">Force Watch Layout</string>
+    <string name="nautical_auto_switch_location_source">Auto-switch Location Source</string>
+    <string name="nautical_auto_switch_location_source_desc">Automatically use Signal K for positioning when available in Boat profile, saving battery by turning off internal GPS.</string>
     <string name="nautical_audio_hardware_unavailable">Audio Device Unavailable</string>
     <string name="nautical_control_unlocked">Control Unlocked</string>
     <string name="nautical_signalk_disconnected">Signal K Disconnected</string>
