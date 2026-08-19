@@ -21,7 +21,7 @@
         android:padding="2dp"
         android:src="@drawable/ic_action_item_move"
         app:tint="?android:attr/textColorSecondary"
-        android:contentDescription="@string/shared_string_reorder" />
+        tools:ignore="ContentDescription" />
 
     <!-- Metric Title and Category -->
     <LinearLayout
