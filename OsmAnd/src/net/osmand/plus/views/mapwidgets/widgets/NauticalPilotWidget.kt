@@ -203,6 +203,13 @@ class NauticalPilotWidget(
             mapActivity,
             object : GestureDetector.SimpleOnGestureListener() {
                 override fun onSingleTapConfirmed(e: MotionEvent): Boolean {
+                    val sheet = net.osmand.plus.plugins.nautical.ui.widgets.NauticalPilotBottomSheet.newInstance()
+                    sheet.show(mapActivity.supportFragmentManager, "pilot_control")
+                    view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                    return true
+                }
+
+                override fun onDoubleTap(e: MotionEvent): Boolean {
                     val now = System.currentTimeMillis()
                     if ((now - lastCommandTime) < COMMAND_DEBOUNCE_MS) return true
                     lastCommandTime = now
@@ -212,7 +219,7 @@ class NauticalPilotWidget(
                     val engine = NauticalPlugin.engine
                     val state = engine?.getCurrentState()
                     val mode = state?.autopilotState?.lowercase(Locale.US) ?: "standby"
-                    
+
                     if (mode == "standby") {
                         if (engine?.isFollowingRoute == true) {
                             NauticalPlugin.autopilot?.setAutopilotMode("track")
@@ -223,12 +230,6 @@ class NauticalPilotWidget(
                         NauticalPlugin.autopilot?.setAutopilotMode("standby")
                     }
                     view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
-                    return true
-                }
-
-                override fun onDoubleTap(e: MotionEvent): Boolean {
-                    val sheet = net.osmand.plus.plugins.nautical.ui.widgets.NauticalPilotBottomSheet.newInstance()
-                    sheet.show(mapActivity.supportFragmentManager, "pilot_control")
                     return true
                 }
 
