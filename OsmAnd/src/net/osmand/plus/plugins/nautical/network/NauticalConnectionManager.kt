@@ -159,9 +159,9 @@ class NauticalConnectionManager(
             Unit
         }
 
-        val authErrorCallback = {
+        val authErrorCallback: () -> Unit = {
             engine?.dataBroker?.updateState { it.copy(connectionStatus = ConnectionStatus.UNAUTHORIZED) }
-            // Auth Token popup removed as per user request
+            Unit
         }
 
         engine?.let { e ->

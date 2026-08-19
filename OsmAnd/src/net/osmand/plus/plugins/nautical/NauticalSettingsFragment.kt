@@ -1,5 +1,6 @@
 package net.osmand.plus.plugins.nautical
 
+import android.content.Context
 import android.os.Bundle
 import android.text.InputType
 import android.view.View
@@ -359,7 +360,7 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
         }
 
         findPreference<SwitchPreferenceEx>(settings.NAUTICAL_AUTO_SWITCH_LOCATION_SOURCE.id)?.apply {
-            setThemedIcon(OsmAndR.drawable.ic_action_location_navigation)
+            setThemedIcon(OsmAndR.drawable.ic_action_device_location)
             isChecked = settings.NAUTICAL_AUTO_SWITCH_LOCATION_SOURCE.get()
         }
 
