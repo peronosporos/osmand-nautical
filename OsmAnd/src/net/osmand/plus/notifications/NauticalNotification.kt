@@ -18,6 +18,17 @@ class NauticalNotification(app: OsmandApplication) : OsmandNotification(app, GRO
 
     override fun getPriority(): Int = NotificationCompat.PRIORITY_LOW
 
+    private var lastRefreshTime = 0L
+
+    override fun refreshNotification(): Boolean {
+        val now = System.currentTimeMillis()
+        if (now - lastRefreshTime < 2500L) {
+            return false
+        }
+        lastRefreshTime = now
+        return super.refreshNotification()
+    }
+
     override fun isActive(): Boolean {
         val plugin = net.osmand.plus.plugins.PluginsHelper.getEnabledPlugin(net.osmand.plus.plugins.nautical.NauticalPlugin::class.java)
         return plugin?.isActive == true && app.settings.APPLICATION_MODE.get().isDerivedRoutingFrom(net.osmand.plus.settings.backend.ApplicationMode.BOAT)

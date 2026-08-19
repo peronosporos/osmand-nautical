@@ -235,7 +235,7 @@ class NauticalNotificationManager(
 
 
     private var lastCriticalNotifyTime = 0L
-    private val NOTIFY_THROTTLE_MS = 1000L
+    private val NOTIFY_THROTTLE_MS = 2500L
 
     fun postCriticalNotification(id: String, title: String, message: String) {
         val now = System.currentTimeMillis()

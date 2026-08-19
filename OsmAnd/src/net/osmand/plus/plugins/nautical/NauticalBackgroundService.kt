@@ -67,7 +67,7 @@ class NauticalBackgroundService : NavigationService() {
     }
     
     private var lastNotificationUpdateTime = 0L
-    private val notificationUpdateIntervalMs = 2000L
+    private val notificationUpdateIntervalMs = 2500L
 
     fun updateNotification() {
         val now = System.currentTimeMillis()

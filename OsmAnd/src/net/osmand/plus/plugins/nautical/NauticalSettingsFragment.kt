@@ -4,6 +4,8 @@ import android.os.Bundle
 import android.text.InputType
 import android.view.View
 import androidx.appcompat.app.AlertDialog
+import androidx.appcompat.content.res.AppCompatResources
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.preference.Preference
 import androidx.preference.PreferenceCategory
@@ -29,6 +31,14 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
     private var discoveryManager: SignalKDiscoveryManager? = null
 
     private fun Preference.setThemedIcon(resId: Int) {
+        val ctx = context ?: activity ?: runCatching { requireContext() }.getOrNull()
+        if (ctx != null) {
+            try {
+                icon = AppCompatResources.getDrawable(ctx, resId) ?: ContextCompat.getDrawable(ctx, resId)
+                return
+            } catch (_: Exception) {
+            }
+        }
         icon = getContentIcon(resId)
     }
 

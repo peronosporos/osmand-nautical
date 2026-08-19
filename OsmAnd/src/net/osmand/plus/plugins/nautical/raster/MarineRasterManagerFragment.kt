@@ -157,7 +157,15 @@ class MarineRasterManagerFragment : BaseOsmAndFragment() {
                 desc += " | " + parent?.context?.getString(R.string.nautical_kap_metadata_only)
             }
             view.findViewById<TextView>(R.id.description)?.text = desc
-            view.findViewById<ImageView>(R.id.icon)?.setImageDrawable(getContentIcon(R.drawable.ic_action_world_globe))
+            val iconDrawable = parent?.context?.let { ctx ->
+                try {
+                    androidx.appcompat.content.res.AppCompatResources.getDrawable(ctx, R.drawable.ic_action_world_globe)
+                        ?: androidx.core.content.ContextCompat.getDrawable(ctx, R.drawable.ic_action_world_globe)
+                } catch (_: Exception) {
+                    null
+                }
+            } ?: getContentIcon(R.drawable.ic_action_world_globe)
+            view.findViewById<ImageView>(R.id.icon)?.setImageDrawable(iconDrawable)
             
             return view
         }
