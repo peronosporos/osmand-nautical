@@ -15,11 +15,8 @@ import net.osmand.plus.plugins.nautical.ui.NauticalWidgetHelper
 import net.osmand.plus.plugins.nautical.ui.widgets.NauticalMenuBottomSheetDialogFragment
 import net.osmand.plus.plugins.nautical.NauticalPlugin
 import net.osmand.plus.plugins.nautical.engine.MarineState
-import net.osmand.plus.plugins.nautical.engine.SignalKPaths
 import net.osmand.plus.plugins.nautical.ui.NauticalColorResolver
-import net.osmand.plus.plugins.nautical.ui.NauticalMiniRoseView
 import net.osmand.plus.plugins.nautical.ui.NauticalSemanticColor
-import net.osmand.plus.plugins.nautical.ui.NauticalSparklineView
 import net.osmand.plus.settings.fragments.SettingsScreenType
 import net.osmand.plus.views.mapwidgets.WidgetType
 
@@ -122,61 +119,47 @@ class NauticalTelemetryGridBottomSheet : NauticalMenuBottomSheetDialogFragment()
             val widget = widgets[position]
             val engine = NauticalPlugin.engine
             val state = engine?.getCurrentState()
-            val isNight = app.daynightHelper.isNightMode(app.settings.APPLICATION_MODE.get(), net.osmand.plus.settings.enums.ThemeUsageContext.APP)
-            
-            holder.icon.setImageResource(widget.getIconId(isNight))
-            
+
+            holder.header.text = getHeaderLabel(widget)
+
             val (value, unit) = NauticalWidgetHelper.formatTelemetry(requireContext(), app.settings, widget, state)
             holder.value.text = value
             holder.unit.text = unit
 
-            // Color Coding
             val color = getSemanticColor(widget, state)
             holder.value.setTextColor(color)
-            
-            holder.miniRose.visibility = View.GONE
-            holder.sparkline.visibility = View.GONE
-            holder.icon.visibility = View.VISIBLE
-
-            // Graphical activation
-            when (widget) {
-                WidgetType.NAUTICAL_HEADING_MAGNETIC, WidgetType.NAUTICAL_COG -> {
-                    val angle = if (widget == WidgetType.NAUTICAL_HEADING_MAGNETIC) state?.headingMagnetic else state?.courseOverGroundTrue
-                    if (angle != null) {
-                        holder.miniRose.visibility = View.VISIBLE
-                        holder.icon.visibility = View.GONE
-                        holder.miniRose.setAngle(angle, color, relative = false)
-                    }
-                }
-                WidgetType.NAUTICAL_AWA, WidgetType.NAUTICAL_TWA -> {
-                    val angle = if (widget == WidgetType.NAUTICAL_AWA) state?.windDirectionApparent else state?.trueWindAngle
-                    if (angle != null) {
-                        holder.miniRose.visibility = View.VISIBLE
-                        holder.icon.visibility = View.GONE
-                        holder.miniRose.setAngle(angle, color, relative = true)
-                    }
-                }
-                WidgetType.NAUTICAL_DEPTH_KEEL, WidgetType.NAUTICAL_SOG, WidgetType.NAUTICAL_STW, WidgetType.NAUTICAL_WIND -> {
-                    val path = when(widget) {
-                        WidgetType.NAUTICAL_DEPTH_KEEL -> SignalKPaths.ENV_DEPTH_BELOW_KEEL
-                        WidgetType.NAUTICAL_SOG -> SignalKPaths.NAV_SPEED_OVER_GROUND
-                        WidgetType.NAUTICAL_STW -> SignalKPaths.NAV_SPEED_THROUGH_WATER
-                        WidgetType.NAUTICAL_WIND -> SignalKPaths.ENV_WIND_SPEED_TRUE
-                        else -> ""
-                    }
-                    if (path.isNotEmpty()) {
-                        val history = engine?.getHistory(path)
-                        if (!history.isNullOrEmpty()) {
-                            holder.sparkline.visibility = View.VISIBLE
-                            holder.sparkline.setData(history.map { it.first }, color)
-                        }
-                    }
-                }
-                else -> {}
-            }
 
             holder.itemView.setOnClickListener {
                 NauticalDataBottomSheet.newInstance(widget).show(parentFragmentManager, "nautical_data")
+            }
+        }
+
+        private fun getHeaderLabel(widget: WidgetType): String {
+            return when (widget) {
+                WidgetType.NAUTICAL_SOG -> "SOG"
+                WidgetType.NAUTICAL_STW -> "STW"
+                WidgetType.NAUTICAL_COG -> "COG"
+                WidgetType.NAUTICAL_HEADING_MAGNETIC -> "HEADING"
+                WidgetType.NAUTICAL_DEPTH_KEEL -> "DEPTH"
+                WidgetType.NAUTICAL_WIND -> "WIND"
+                WidgetType.NAUTICAL_AWA -> "AWA"
+                WidgetType.NAUTICAL_AWS -> "AWS"
+                WidgetType.NAUTICAL_TWA -> "TWA"
+                WidgetType.NAUTICAL_TWS -> "TWS"
+                WidgetType.NAUTICAL_VMG -> "VMG"
+                WidgetType.NAUTICAL_BATTERY_VOLT -> "BATTERY"
+                WidgetType.NAUTICAL_BATTERY_SOC -> "SOC"
+                WidgetType.NAUTICAL_WATER_TEMP -> "SEA TEMP"
+                WidgetType.NAUTICAL_OUTSIDE_TEMP -> "AIR TEMP"
+                WidgetType.NAUTICAL_PRESSURE -> "BARO"
+                WidgetType.NAUTICAL_ROLL -> "ROLL"
+                WidgetType.NAUTICAL_PITCH -> "PITCH"
+                WidgetType.NAUTICAL_LOG -> "LOG"
+                WidgetType.NAUTICAL_TRIP_LOG -> "TRIP"
+                WidgetType.NAUTICAL_ENGINE_RUNTIME -> "ENGINE"
+                WidgetType.NAUTICAL_XTE -> "XTE"
+                WidgetType.NAUTICAL_DTW -> "DTW"
+                else -> runCatching { getString(widget.titleId).uppercase() }.getOrNull() ?: widget.id.uppercase()
             }
         }
 
@@ -199,10 +182,8 @@ class NauticalTelemetryGridBottomSheet : NauticalMenuBottomSheetDialogFragment()
     }
 
     private class TelemetryViewHolder(view: View) : RecyclerView.ViewHolder(view) {
-        val icon: ImageView = view.findViewById(R.id.icon)
+        val header: TextView = view.findViewById(R.id.header)
         val value: TextView = view.findViewById(R.id.value)
         val unit: TextView = view.findViewById(R.id.unit)
-        val miniRose: NauticalMiniRoseView = view.findViewById(R.id.mini_rose)
-        val sparkline: NauticalSparklineView = view.findViewById(R.id.sparkline)
     }
 }

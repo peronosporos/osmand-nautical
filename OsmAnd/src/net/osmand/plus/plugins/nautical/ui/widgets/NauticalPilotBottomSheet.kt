@@ -73,7 +73,6 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
     private lateinit var errorLinear: HeadingErrorLinearView
     private lateinit var arcView: HeadingArcView
     private lateinit var steeringCard: View
-    private lateinit var authTokenWarning: TextView
     private lateinit var modeToggleGroup: MaterialButtonToggleGroup
     private lateinit var lockBtn: MaterialButton
     private lateinit var rudderView: RudderView
@@ -109,7 +108,6 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
         errorLinear = customView.findViewById(R.id.heading_error_linear)
         arcView = customView.findViewById(R.id.heading_arc_view)
         steeringCard = customView.findViewById(R.id.steering_card)
-        authTokenWarning = customView.findViewById(R.id.auth_token_warning)
         modeToggleGroup = customView.findViewById(R.id.mode_toggle_group)
         lockBtn = customView.findViewById(R.id.btn_lock_unlock)
         rudderView = customView.findViewById(R.id.rudder_view)
@@ -447,9 +445,6 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
     private fun updateUi(state: MarineState) {
         if (!isAdded) return
         syncUiWithState()
-
-        val authenticated = NauticalPlugin.engine?.isAuthenticated() ?: true
-        authTokenWarning.isVisible = !authenticated
 
         val rawMode = state.autopilotState.uppercase(Locale.US)
         val pendingMode = state.pendingAutopilotState?.uppercase(Locale.US)

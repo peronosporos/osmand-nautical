@@ -143,12 +143,12 @@ class NauticalAisObjectDrawable(
             AisObjType.AIS_VESSEL_SAR,
             AisObjType.AIS_VESSEL_OTHER,
             AisObjType.AIS_INVALID,
-            -> R.drawable.widget_marker_triangle
-            AisObjType.AIS_LANDSTATION -> R.drawable.ic_action_anchor
-            AisObjType.AIS_AIRPLANE -> R.drawable.ic_action_aircraft
-            AisObjType.AIS_SART -> R.drawable.ic_action_alert
-            AisObjType.AIS_ATON -> R.drawable.ic_action_target
-            AisObjType.AIS_ATON_VIRTUAL -> R.drawable.ic_action_target_direction_on
+            -> R.drawable.mm_ais_vessel
+            AisObjType.AIS_LANDSTATION -> R.drawable.mm_ais_land
+            AisObjType.AIS_AIRPLANE -> R.drawable.mm_ais_plane
+            AisObjType.AIS_SART -> R.drawable.mm_ais_sar
+            AisObjType.AIS_ATON -> R.drawable.mm_ais_aton
+            AisObjType.AIS_ATON_VIRTUAL -> R.drawable.mm_ais_aton_virt
         }
     }
 
@@ -347,7 +347,7 @@ class NauticalAisObjectDrawable(
         directionLine?.setIsHidden(true)
         shapeLine?.setIsHidden(true)
 
-        val rotation = (ais.getVesselRotation() + 90f) % 360f // Adjust for widget_marker_triangle pointing right
+        val rotation = (ais.getVesselRotation() + 180f) % 360f
         if (!vesselAtRest && needRotation()) {
             activeMarker?.setOnMapSurfaceIconDirection(SwigUtilities.getOnSurfaceIconKey(1), rotation)
             lostMarker?.setOnMapSurfaceIconDirection(SwigUtilities.getOnSurfaceIconKey(1), rotation)
@@ -500,8 +500,7 @@ class NauticalAisObjectDrawable(
                     drawCircle(0f, 0f, radius, circlePaint)
                 } else {
                     if (needRotation()) {
-                        // Adjust for widget_marker_triangle pointing right (+90)
-                        rotate(ais.getVesselRotation() - tileBox.rotate + 90f)
+                        rotate(ais.getVesselRotation() - tileBox.rotate)
                     }
                     drawBitmap(bmp, -bmp.width / 2f, -bmp.height / 2f, paint)
                 }

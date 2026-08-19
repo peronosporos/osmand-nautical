@@ -95,9 +95,12 @@ class NauticalLocationProvider(
         }
         
         app.runInUIThread {
-            // Only inject if user has manually selected EXTERNAL_SIGNALK
-            if (app.settings.LOCATION_SOURCE.get() == LocationSource.EXTERNAL_SIGNALK) {
-                app.locationProvider.setLocationFromService(loc)
+            val isBoat = app.settings.APPLICATION_MODE.get().isDerivedRoutingFrom(net.osmand.plus.settings.backend.ApplicationMode.BOAT)
+            val isSignalKSource = app.settings.LOCATION_SOURCE.get() == LocationSource.EXTERNAL_SIGNALK
+            val autoSwitch = app.settings.NAUTICAL_AUTO_SWITCH_LOCATION_SOURCE.get()
+            
+            if (isSignalKSource || (isBoat && autoSwitch)) {
+                app.locationProvider.setCustomLocation(loc, 3000L)
             }
         }
     }
