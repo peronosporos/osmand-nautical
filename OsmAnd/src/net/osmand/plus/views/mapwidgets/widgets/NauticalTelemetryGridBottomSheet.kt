@@ -145,7 +145,6 @@ class NauticalTelemetryGridBottomSheet : NauticalMenuBottomSheetDialogFragment()
                 WidgetType.NAUTICAL_AWA -> "AWA"
                 WidgetType.NAUTICAL_AWS -> "AWS"
                 WidgetType.NAUTICAL_TWA -> "TWA"
-                WidgetType.NAUTICAL_TWS -> "TWS"
                 WidgetType.NAUTICAL_VMG -> "VMG"
                 WidgetType.NAUTICAL_BATTERY_VOLT -> "BATTERY"
                 WidgetType.NAUTICAL_BATTERY_SOC -> "SOC"

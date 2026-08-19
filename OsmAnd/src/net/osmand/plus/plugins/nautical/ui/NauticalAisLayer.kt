@@ -15,10 +15,6 @@ import net.osmand.plus.ChartPointsHelper
 import net.osmand.plus.plugins.nautical.NauticalPlugin
 import net.osmand.plus.plugins.nautical.engine.NauticalAisManager
 import net.osmand.plus.plugins.nautical.engine.SailingWorkflowState
-import net.osmand.plus.ChartPointsHelper
-import net.osmand.plus.plugins.nautical.NauticalPlugin
-import net.osmand.plus.plugins.nautical.engine.NauticalAisManager
-import net.osmand.plus.plugins.nautical.engine.SailingWorkflowState
 import net.osmand.plus.utils.NativeUtilities
 import net.osmand.plus.views.OsmandMapTileView
 import net.osmand.plus.views.layers.ContextMenuLayer
@@ -100,7 +96,6 @@ class NauticalAisLayer(context: Context) : OsmandMapLayer(context), ContextMenuL
             color = Color.WHITE
         }
         canvas.drawCircle(size / 2f, size / 2f, (size / 2f) - (2 * density), paint)
-        aisRestBitmap = bitma        canvas.drawCircle(size / 2f, size / 2f, (size / 2f) - (2 * density), paint)
         aisRestBitmap = bitmap
     }
 
