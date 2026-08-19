@@ -1379,6 +1379,15 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
     }
 
     override fun getSettingsScreenType(): SettingsScreenType = SettingsScreenType.NAUTICAL_SETTINGS
+
+    override fun showPluginSettings(activity: Activity) {
+        if (activity is androidx.fragment.app.FragmentActivity) {
+            net.osmand.plus.settings.fragments.BaseSettingsFragment.showInstance(
+                activity,
+                SettingsScreenType.NAUTICAL_SETTINGS
+            )
+        }
+    }
     override fun getId(): String = NAUTICAL_ID
     override fun getName(): String = app.getString(R.string.nautical_plugin_name)
     override fun getDescription(linksEnabled: Boolean): CharSequence = app.getString(R.string.nautical_plugin_description)

@@ -128,6 +128,13 @@ public abstract class OsmandPlugin {
 		return null;
 	}
 
+	public void showPluginSettings(@NonNull Activity activity) {
+		SettingsScreenType screenType = getSettingsScreenType();
+		if (screenType != null && activity instanceof FragmentActivity) {
+			BaseSettingsFragment.showInstance((FragmentActivity) activity, screenType);
+		}
+	}
+
 	public List<OsmandPreference> getPreferences() {
 		return pluginPreferences;
 	}

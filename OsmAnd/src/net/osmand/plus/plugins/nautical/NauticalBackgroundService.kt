@@ -67,7 +67,18 @@ class NauticalBackgroundService : NavigationService() {
     }
     
     private var lastNotificationUpdateTime = 0L
-    private val notificationUpdateIntervalMs = 1000L
+    private val notificationUpdateIntervalMs = 2000L
+
+    fun updateNotification() {
+        val now = System.currentTimeMillis()
+        if (now - lastNotificationUpdateTime >= notificationUpdateIntervalMs) {
+            lastNotificationUpdateTime = now
+            handler.post {
+                val app = application as? OsmandApplication
+                app?.notificationHelper?.refreshNotification(OsmandNotification.NotificationType.NAUTICAL)
+            }
+        }
+    }
 
     private val engineListener: (net.osmand.plus.plugins.nautical.engine.MarineState) -> Unit = {
         val now = System.currentTimeMillis()
@@ -76,13 +87,7 @@ class NauticalBackgroundService : NavigationService() {
             log.info("Nautical: Re-acquiring high-perf WiFi lock (data resumed).")
             wifiLock?.acquire()
         }
-        if (now - lastNotificationUpdateTime >= notificationUpdateIntervalMs) {
-            lastNotificationUpdateTime = now
-            handler.post {
-                val app = application as? OsmandApplication
-                app?.notificationHelper?.refreshNotification(OsmandNotification.NotificationType.NAUTICAL)
-            }
-        }
+        updateNotification()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
