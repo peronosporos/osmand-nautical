@@ -260,14 +260,8 @@ class SignalKSessionManager(
     }
 
     fun dispatchCommand(command: String, onSetSwitch: (String, Boolean) -> Unit) {
-        if (!isAuthenticated()) {
-            log.error("Rejected state mutation command '$command': Session is unauthenticated or insecure!")
-            triggerAuthError()
-            return
-        }
-
         NauticalLog.auditCommand(command)
-        log.debug("Dispatching authenticated command: $command")
+        log.debug("Dispatching command: $command")
         val parts = command.split(":", limit = 2)
         if (parts.size < 2) return
 

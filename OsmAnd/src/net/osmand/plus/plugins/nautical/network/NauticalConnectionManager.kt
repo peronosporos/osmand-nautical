@@ -161,20 +161,7 @@ class NauticalConnectionManager(
 
         val authErrorCallback = {
             engine?.dataBroker?.updateState { it.copy(connectionStatus = ConnectionStatus.UNAUTHORIZED) }
-            app.runInUIThread {
-                NauticalPlugin.hudManager?.get()?.showBanner(
-                    app.getString(R.string.nautical_auth_token_required),
-                    15000L,
-                    label = app.getString(R.string.shared_string_settings),
-                    isWarning = true,
-                    onConfirm = {
-                        val activity = app.osmandMap?.mapView?.mapActivity
-                        if (activity != null) {
-                            net.osmand.plus.settings.fragments.BaseSettingsFragment.showInstance(activity, SettingsScreenType.NAUTICAL_SETTINGS)
-                        }
-                    }
-                )
-            }
+            // Auth Token popup removed as per user request
         }
 
         engine?.let { e ->

@@ -1182,7 +1182,6 @@ class AutopilotController(
 
                         app.runInUIThread {
                             if ((response.code == 401) || (response.code == 403)) {
-                                NauticalPlugin.engine?.triggerAuthError()
                                 app.showToastMessage(R.string.nautical_autopilot_unauthorized)
                             } else if (showToast) {
                                 showPersistentError(R.string.nautical_toast_server_error, response.code)
