@@ -346,6 +346,12 @@
         android:layout="@layout/preference_with_descr"
         android:title="@string/nautical_force_watch_layout" />
 
+    <net.osmand.plus.settings.preferences.SwitchPreferenceEx
+        android:key="nautical_auto_switch_location_source"
+        android:layout="@layout/preference_with_descr"
+        android:title="@string/nautical_auto_switch_location_source"
+        android:summary="@string/nautical_auto_switch_location_source_desc" />
+
     <Preference
         android:key="nautical_safety_regions"
         android:layout="@layout/preference_with_descr"

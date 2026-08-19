@@ -143,7 +143,7 @@ class NauticalAisObjectDrawable(
             AisObjType.AIS_VESSEL_SAR,
             AisObjType.AIS_VESSEL_OTHER,
             AisObjType.AIS_INVALID,
-            -> R.drawable.ic_action_sail_boat_dark
+            -> R.drawable.widget_marker_triangle
             AisObjType.AIS_LANDSTATION -> R.drawable.ic_action_anchor
             AisObjType.AIS_AIRPLANE -> R.drawable.ic_action_aircraft
             AisObjType.AIS_SART -> R.drawable.ic_action_alert
@@ -238,7 +238,7 @@ class NauticalAisObjectDrawable(
         
         // Task 5: Dim non-threatening targets if prioritizer is active
         alpha = if (caps?.hasAisPrioritizer == true && threatLevel == 0 && !ownObject && !hasCpaWarning) {
-            100
+            170 // Standardized minimum visibility (approx 65%)
         } else {
             closeQuartersAlpha ?: 255
         }
@@ -347,7 +347,7 @@ class NauticalAisObjectDrawable(
         directionLine?.setIsHidden(true)
         shapeLine?.setIsHidden(true)
 
-        val rotation = (ais.getVesselRotation() + 180f) % 360f
+        val rotation = (ais.getVesselRotation() + 90f) % 360f // Adjust for widget_marker_triangle pointing right
         if (!vesselAtRest && needRotation()) {
             activeMarker?.setOnMapSurfaceIconDirection(SwigUtilities.getOnSurfaceIconKey(1), rotation)
             lostMarker?.setOnMapSurfaceIconDirection(SwigUtilities.getOnSurfaceIconKey(1), rotation)
@@ -489,10 +489,22 @@ class NauticalAisObjectDrawable(
             val y = tileBox.getPixYFromLatLon(pos.latitude, pos.longitude)
             
             canvas.withTranslation(x, y) {
-                if (!vesselAtRest && needRotation()) {
-                    rotate(ais.getVesselRotation() - tileBox.rotate)
+                if (vesselAtRest) {
+                    // Draw Circle fallback for stationary vessels
+                    val radius = 12f * tileBox.density
+                    val circlePaint = Paint(paint).apply {
+                        style = Paint.Style.STROKE
+                        strokeWidth = 2f * tileBox.density
+                        color = if (bitmapColor != 0) bitmapColor else Color.WHITE
+                    }
+                    drawCircle(0f, 0f, radius, circlePaint)
+                } else {
+                    if (needRotation()) {
+                        // Adjust for widget_marker_triangle pointing right (+90)
+                        rotate(ais.getVesselRotation() - tileBox.rotate + 90f)
+                    }
+                    drawBitmap(bmp, -bmp.width / 2f, -bmp.height / 2f, paint)
                 }
-                drawBitmap(bmp, -bmp.width / 2f, -bmp.height / 2f, paint)
             }
         }
     }

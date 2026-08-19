@@ -233,6 +233,8 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
         private set
     var skDiscovery: SignalKDiscovery? = null
         private set
+    var locationSwitcher: net.osmand.plus.plugins.nautical.engine.NauticalLocationSwitcher? = null
+        private set
 
     internal var pluginScope: CoroutineScope? = null
     var maneuverManager: ManeuverManager? = null
@@ -778,6 +780,7 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
     private fun initPlugin() {
         if (isPluginInitialized) {
             registerListeners()
+            locationSwitcher?.start()
             updateNmeaSource()
             val currentSource = app.settings.NAUTICAL_NMEA_SOURCE.get()
             if (currentSource == NmeaSource.SIGNALK) {
@@ -805,6 +808,8 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
         }
 
         engine = SignalKEngine(app, scope, capabilityManager)
+        locationSwitcher = net.osmand.plus.plugins.nautical.engine.NauticalLocationSwitcher(app, engine!!.dataBroker)
+        locationSwitcher?.start()
         if (locationProvider == null) {
             locationProvider = NauticalLocationProvider(app, engine)
         }
@@ -1106,6 +1111,7 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
     override fun disable(app: OsmandApplication) {
         super.disable(app)
         unregisterListeners()
+        locationSwitcher?.stop()
         refreshHandler.removeCallbacks(refreshRunnable)
         getScope().launch(Dispatchers.IO) {
             try {
@@ -1129,6 +1135,7 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
             initSubsystems(activity)
             uiOverlayManager.updateHudVisibility(hudManager)
             updateNmeaSource()
+            locationSwitcher?.start()
             nauticalConnectionManager.connect()
             engine?.refreshVesselState()
         }

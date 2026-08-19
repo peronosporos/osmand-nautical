@@ -7,7 +7,8 @@ enum class NmeaSource(private val titleId: Int) : EnumWithTitleId {
     SIGNALK(R.string.nautical_nmea_source_signalk),
     BLUETOOTH(R.string.nautical_nmea_source_bluetooth),
     USB(R.string.nautical_nmea_source_usb),
-    TCP(R.string.nautical_nmea_source_tcp);
+    TCP(R.string.nautical_nmea_source_tcp),
+    UDP(R.string.nautical_nmea_source_udp);
 
     override fun getTitleId(): Int = titleId
 

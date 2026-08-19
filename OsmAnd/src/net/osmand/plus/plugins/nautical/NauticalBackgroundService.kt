@@ -6,6 +6,11 @@ import android.content.pm.ServiceInfo
 import android.net.wifi.WifiManager
 import android.os.Build
 import android.os.PowerManager
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 import net.osmand.PlatformUtil
 import net.osmand.plus.NavigationService
 import net.osmand.plus.OsmandApplication
@@ -49,6 +54,7 @@ class NauticalBackgroundService : NavigationService() {
     }
 
     private val log = PlatformUtil.getLog(NauticalBackgroundService::class.java)
+    private val serviceScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private var wakeLock: PowerManager.WakeLock? = null
     private var wifiLock: WifiManager.WifiLock? = null
     private var lastDataTime = System.currentTimeMillis()
@@ -73,7 +79,7 @@ class NauticalBackgroundService : NavigationService() {
         val now = System.currentTimeMillis()
         if (now - lastNotificationUpdateTime >= notificationUpdateIntervalMs) {
             lastNotificationUpdateTime = now
-            handler.post {
+            serviceScope.launch {
                 val app = application as? OsmandApplication
                 app?.notificationHelper?.refreshNotification(OsmandNotification.NotificationType.NAUTICAL)
             }
@@ -107,6 +113,7 @@ class NauticalBackgroundService : NavigationService() {
     override fun onDestroy() {
         log.info("NauticalBackgroundService: Destroying...")
         isServiceRunning = false
+        serviceScope.cancel()
         handler.removeCallbacks(lockMonitor)
         handler.removeCallbacksAndMessages(null)
         net.osmand.plus.plugins.nautical.NauticalPlugin.engine?.unregisterListener(engineListener)

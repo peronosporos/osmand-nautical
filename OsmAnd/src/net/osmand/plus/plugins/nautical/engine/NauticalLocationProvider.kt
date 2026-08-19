@@ -48,7 +48,7 @@ class NauticalLocationProvider(
         // Position Staleness check
         val positionTimestamp = state.timestamps["navigation.position"] ?: 0L
         val positionAge = currentTime - positionTimestamp
-        if (positionAge > 30000 && positionTimestamp != 0L) {
+        if (positionAge > 10000 && positionTimestamp != 0L) {
             log.warn("Nautical: Position stale (${positionAge}ms old)")
             return
         }

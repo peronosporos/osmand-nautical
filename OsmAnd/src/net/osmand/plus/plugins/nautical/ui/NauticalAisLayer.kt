@@ -86,10 +86,17 @@ class NauticalAisLayer(context: Context) : OsmandMapLayer(context), ContextMenuL
             }
         }
 
-        val density = 5f
-        val pointColor = -0x1
-        val pointsHelper = ChartPointsHelper(context)
-        aisRestBitmap = pointsHelper.createXAxisPointBitmap(pointColor, density)
+        val density = context.resources.displayMetrics.density
+        val size = (16 * density).toInt()
+        val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bitmap)
+        val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            style = Paint.Style.STROKE
+            strokeWidth = 2 * density
+            color = Color.WHITE
+        }
+        canvas.drawCircle(size / 2f, size / 2f, (size / 2f) - (2 * density), paint)
+        aisRestBitmap = bitmap
     }
 
     override fun destroyLayer() {

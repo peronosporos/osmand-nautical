@@ -31,16 +31,27 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
 
     private var discoveryManager: SignalKDiscoveryManager? = null
 
+    private fun getSafeThemedContext(): Context {
+        val base = activity ?: runCatching { requireActivity() }.getOrNull()
+            ?: context ?: runCatching { requireContext() }.getOrNull()
+        return if (base != null) {
+            net.osmand.plus.utils.UiUtilities.getThemedContext(base, isNightMode)
+        } else {
+            app
+        }
+    }
+
     private fun Preference.setThemedIcon(resId: Int) {
-        val ctx = runCatching { getThemedContext() }.getOrNull() ?: context ?: activity
-        if (ctx != null) {
+        val themedCtx = getSafeThemedContext()
+        try {
+            icon = AppCompatResources.getDrawable(themedCtx, resId)
+                ?: ContextCompat.getDrawable(themedCtx, resId)
+        } catch (_: Exception) {
             try {
-                icon = AppCompatResources.getDrawable(ctx, resId) ?: ContextCompat.getDrawable(ctx, resId)
-                return
+                icon = getContentIcon(resId)
             } catch (_: Exception) {
             }
         }
-        icon = getContentIcon(resId)
     }
 
 
@@ -345,6 +356,11 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
             if (!isEnabled) {
                 summary = getString(OsmAndR.string.nautical_force_watch_layout_desc) + " (Watch Mode Active)"
             }
+        }
+
+        findPreference<SwitchPreferenceEx>(settings.NAUTICAL_AUTO_SWITCH_LOCATION_SOURCE.id)?.apply {
+            setThemedIcon(OsmAndR.drawable.ic_action_location_navigation)
+            isChecked = settings.NAUTICAL_AUTO_SWITCH_LOCATION_SOURCE.get()
         }
 
         findPreference<ListPreferenceEx>(settings.NAUTICAL_TELEMETRY_REFRESH_RATE.id)?.apply {

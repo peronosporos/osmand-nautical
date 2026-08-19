@@ -60,6 +60,7 @@ class NauticalLocationSwitcher(
         if (autoSwitchEnabled && isBoat && hasSignalKFix) {
             if (currentSource != LocationSource.EXTERNAL_SIGNALK) {
                 log.info("Nautical: Intelligent switch to Signal K location source (Fix healthy).")
+                app.settings.NAUTICAL_LAST_USER_LOCATION_SOURCE.set(currentSource)
                 switchSource(LocationSource.EXTERNAL_SIGNALK)
             }
         } else if (currentSource == LocationSource.EXTERNAL_SIGNALK) {
