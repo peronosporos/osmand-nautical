@@ -157,18 +157,17 @@ class MarineRasterManagerFragment : BaseOsmAndFragment() {
                 desc += " | " + parent?.context?.getString(R.string.nautical_kap_metadata_only)
             }
             view.findViewById<TextView>(R.id.description)?.text = desc
-            val iconDrawable = parent?.context?.let { baseContext ->
-                val themedCtx = androidx.appcompat.view.ContextThemeWrapper(
-                    baseContext,
-                    if (nightMode) R.style.OsmandTheme_Dark else R.style.OsmandTheme
-                )
+            val ctx = runCatching { getThemedContext() }.getOrNull() ?: parent?.context
+            val iconDrawable = if (ctx != null) {
                 try {
-                    androidx.appcompat.content.res.AppCompatResources.getDrawable(themedCtx, R.drawable.ic_action_world_globe)
-                        ?: androidx.core.content.ContextCompat.getDrawable(themedCtx, R.drawable.ic_action_world_globe)
+                    androidx.appcompat.content.res.AppCompatResources.getDrawable(ctx, R.drawable.ic_action_world_globe)
+                        ?: androidx.core.content.ContextCompat.getDrawable(ctx, R.drawable.ic_action_world_globe)
                 } catch (_: Exception) {
-                    null
+                    getContentIcon(R.drawable.ic_action_world_globe)
                 }
-            } ?: getContentIcon(R.drawable.ic_action_world_globe)
+            } else {
+                getContentIcon(R.drawable.ic_action_world_globe)
+            }
             view.findViewById<ImageView>(R.id.icon)?.setImageDrawable(iconDrawable)
             
             return view

@@ -31,24 +31,16 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
 
     private var discoveryManager: SignalKDiscoveryManager? = null
 
-    private fun getThemedContext(): Context {
-        val act = activity ?: runCatching { requireActivity() }.getOrNull()
-        val baseContext = act ?: context ?: runCatching { requireContext() }.getOrNull()
-        return if (baseContext != null) {
-            ContextThemeWrapper(baseContext, if (nightMode) OsmAndR.style.OsmandTheme_Dark else OsmAndR.style.OsmandTheme)
-        } else {
-            app
-        }
-    }
-
     private fun Preference.setThemedIcon(resId: Int) {
-        val themedContext = getThemedContext()
-        try {
-            icon = AppCompatResources.getDrawable(themedContext, resId)
-                ?: ContextCompat.getDrawable(themedContext, resId)
-        } catch (_: Exception) {
-            icon = getContentIcon(resId)
+        val ctx = runCatching { getThemedContext() }.getOrNull() ?: context ?: activity
+        if (ctx != null) {
+            try {
+                icon = AppCompatResources.getDrawable(ctx, resId) ?: ContextCompat.getDrawable(ctx, resId)
+                return
+            } catch (_: Exception) {
+            }
         }
+        icon = getContentIcon(resId)
     }
 
 
