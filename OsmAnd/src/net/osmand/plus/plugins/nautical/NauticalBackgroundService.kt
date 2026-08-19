@@ -24,7 +24,9 @@ class NauticalBackgroundService : NavigationService() {
 
         fun startService(app: OsmandApplication) {
             if (isServiceRunning) return
-            val intent = Intent(app, NauticalBackgroundService::class.java)
+            val intent = Intent(app, NauticalBackgroundService::class.java).apply {
+                putExtra(USAGE_INTENT, USED_BY_NAUTICAL)
+            }
             try {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                     app.startForegroundService(intent)
@@ -162,18 +164,18 @@ class NauticalBackgroundService : NavigationService() {
         super.onCreate()
         isServiceRunning = true
         val app = application as OsmandApplication
-        app.notificationHelper.buildTopNotification(this, OsmandNotification.NotificationType.NAUTICAL)?.let { notification ->
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-                startForeground(
-                    OsmandNotification.TOP_NOTIFICATION_SERVICE_ID,
-                    notification,
-                    ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION or
-                            ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC or
-                            ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE
-                )
-            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                startForeground(OsmandNotification.TOP_NOTIFICATION_SERVICE_ID, notification)
-            }
+        val notification = app.notificationHelper.buildTopNotification(this, OsmandNotification.NotificationType.NAUTICAL)
+            ?: app.notificationHelper.buildFallbackNotification()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            startForeground(
+                OsmandNotification.TOP_NOTIFICATION_SERVICE_ID,
+                notification,
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION or
+                        ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC or
+                        ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE
+            )
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            startForeground(OsmandNotification.TOP_NOTIFICATION_SERVICE_ID, notification)
         }
     }
 }

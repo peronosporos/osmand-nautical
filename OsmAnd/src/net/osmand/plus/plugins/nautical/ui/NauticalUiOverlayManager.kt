@@ -395,7 +395,32 @@ class NauticalUiOverlayManager(private val app: OsmandApplication) {
         app.notificationHelper.refreshNotification(NotificationType.NAUTICAL)
 
         mapActivity.app.runInUIThread {
-            mapActivity.app.osmandMap.mapLayers.mapInfoLayer.recreateAllControls(mapActivity)
+            if (!mapActivity.isFinishing && !mapActivity.isDestroyed) {
+                mapActivity.app.osmandMap?.mapLayers?.mapInfoLayer?.recreateAllControls(mapActivity)
+            }
         }
+    }
+
+    fun onPause() {
+        // Fast, non-blocking lightweight pause
+    }
+
+    fun detach() {
+        mobHeaderView = null
+        drHeaderView = null
+        navtexHudView = null
+        environmentHud = null
+        watchScheduleHudView = null
+        workflowHeaderView = null
+        tacticalHudView = null
+        healthHudView = null
+        screenTouchLockHudView = null
+        heartbeatHudView = null
+        forwardWatchHudView = null
+        startLineHudHeader = null
+        tacticsHudHeader = null
+        anchorWatchHudView = null
+        predictiveSteeringHudView = null
+        thermalWarningView = null
     }
 }

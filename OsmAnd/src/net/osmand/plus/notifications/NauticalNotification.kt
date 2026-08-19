@@ -18,9 +18,13 @@ class NauticalNotification(app: OsmandApplication) : OsmandNotification(app, GRO
 
     override fun getPriority(): Int = NotificationCompat.PRIORITY_LOW
 
-    override fun isActive(): Boolean = false
+    override fun isActive(): Boolean {
+        val plugin = net.osmand.plus.plugins.PluginsHelper.getEnabledPlugin(net.osmand.plus.plugins.nautical.NauticalPlugin::class.java)
+        return plugin?.isActive == true && app.settings.APPLICATION_MODE.get().isDerivedRoutingFrom(net.osmand.plus.settings.backend.ApplicationMode.BOAT)
+    }
 
     override fun isUsedByService(service: Service?): Boolean {
+        if (service is net.osmand.plus.plugins.nautical.NauticalBackgroundService) return true
         val navService = (service as? NavigationService) ?: app.navigationService
         return navService?.isUsedBy(NavigationService.USED_BY_NAUTICAL) == true
     }
@@ -32,7 +36,7 @@ class NauticalNotification(app: OsmandApplication) : OsmandNotification(app, GRO
     }
 
     override fun buildNotification(service: Service?, wearable: Boolean): NotificationCompat.Builder? {
-        if (!isEnabled(service)) {
+        if (!isEnabled(service) && service == null) {
             return null
         }
         icon = R.drawable.ic_notification_track

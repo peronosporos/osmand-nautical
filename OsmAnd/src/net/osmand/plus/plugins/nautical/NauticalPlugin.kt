@@ -305,6 +305,7 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
     }
 
     fun requestRefresh() {
+        if (isAppInBackground) return
         if (isRefreshScheduled) return
         val now = System.currentTimeMillis()
         val elapsed = now - lastRefreshTime
@@ -353,104 +354,107 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
                 maneuverManager?.updateState(state)
                 tacticalProcessor?.update(state)
 
-                withContext(Dispatchers.Main) {
-                    val currentStatus = state.connectionStatus
-                    if (lastConnectionStatus != currentStatus) {
-                        val now = System.currentTimeMillis()
-                        val shouldToast = (now - lastStatusToastTime) > minStatusToastInterval
+                if (!isAppInBackground) {
+                    withContext(Dispatchers.Main) {
+                        if (isAppInBackground) return@withContext
+                        val currentStatus = state.connectionStatus
+                        if (lastConnectionStatus != currentStatus) {
+                            val now = System.currentTimeMillis()
+                            val shouldToast = (now - lastStatusToastTime) > minStatusToastInterval
 
-                        when (currentStatus) {
-                            ConnectionStatus.CONNECTED -> {
-                                if (shouldToast) {
-                                    if (lastConnectionStatus == ConnectionStatus.DISCONNECTED || lastConnectionStatus == ConnectionStatus.CONNECTING) {
-                                        hudManager?.get()?.showBanner(app.getString(R.string.nautical_sk_connected), 3000L)
-                                        NauticalAudioArbiter.getInstance(app).dispatchTts(app.getString(R.string.nautical_sk_connected), AlarmType.TTS_INSTRUCTION)
-                                        lastStatusToastTime = now
-                                    } else if (lastConnectionStatus == ConnectionStatus.STALE) {
-                                        hudManager?.get()?.showBanner(app.getString(R.string.nautical_connection_restored), 3000L)
+                            when (currentStatus) {
+                                ConnectionStatus.CONNECTED -> {
+                                    if (shouldToast) {
+                                        if (lastConnectionStatus == ConnectionStatus.DISCONNECTED || lastConnectionStatus == ConnectionStatus.CONNECTING) {
+                                            hudManager?.get()?.showBanner(app.getString(R.string.nautical_sk_connected), 3000L)
+                                            NauticalAudioArbiter.getInstance(app).dispatchTts(app.getString(R.string.nautical_sk_connected), AlarmType.TTS_INSTRUCTION)
+                                            lastStatusToastTime = now
+                                        } else if (lastConnectionStatus == ConnectionStatus.STALE) {
+                                            hudManager?.get()?.showBanner(app.getString(R.string.nautical_connection_restored), 3000L)
+                                            lastStatusToastTime = now
+                                        }
+                                    }
+                                }
+                                ConnectionStatus.STALE -> {
+                                    if (shouldToast && lastConnectionStatus == ConnectionStatus.CONNECTED) {
+                                        hudManager?.get()?.showBanner(app.getString(R.string.nautical_sk_connection_stale), 5000L, isWarning = true)
                                         lastStatusToastTime = now
                                     }
                                 }
+                                ConnectionStatus.DISCONNECTED -> {
+                                    if (shouldToast && lastConnectionStatus != null && lastConnectionStatus != ConnectionStatus.DISCONNECTED) {
+                                        hudManager?.get()?.showBanner(app.getString(R.string.nautical_sk_connection_lost), 0L, isWarning = true)
+                                        lastStatusToastTime = now
+                                    }
+                                }
+                                ConnectionStatus.CONNECTING -> {
+                                    if (shouldToast) {
+                                        hudManager?.get()?.showBanner(app.getString(R.string.nautical_sk_connecting), 0L)
+                                        lastStatusToastTime = now
+                                    }
+                                }
+                                else -> {}
                             }
-                            ConnectionStatus.STALE -> {
-                                if (shouldToast && lastConnectionStatus == ConnectionStatus.CONNECTED) {
-                                    hudManager?.get()?.showBanner(app.getString(R.string.nautical_sk_connection_stale), 5000L, isWarning = true)
-                                    lastStatusToastTime = now
+                            lastConnectionStatus = currentStatus
+                        }
+
+                        notificationManager?.processNotifications(combinedNotifications)
+                        decodedNavtex?.let { navtexViewModel?.upsertMessage(it) }
+
+                        state.notifications["notifications.vhf.boundaryApproach"]?.let { notif ->
+                            app.showToastMessage(notif.message)
+                        }
+
+                        uiOverlayManager.startLineHudHeader?.update()
+                        uiOverlayManager.tacticsHudHeader?.update()
+                        uiOverlayManager.anchorWatchHudView?.update()
+                        uiOverlayManager.predictiveSteeringHudView?.update()
+
+                        uiOverlayManager.forwardWatchHudView?.updateHazards(state.forwardHazards)
+                        uiOverlayManager.environmentHud?.let { hud ->
+                            hud.updateState(state)
+                            hud.isVisible = (state.outsideHumidity != null || state.moonPhase != null)
+                        }
+                        uiOverlayManager.watchScheduleHudView?.let { hud ->
+                            hud.updateState(state)
+                            hud.isVisible = state.pathMeta.containsKey("communication.crew.watch.current")
+                        }
+                        uiOverlayManager.heartbeatHudView?.updateState(state)
+                        uiOverlayManager.tacticalHudView?.updateState(state)
+                        uiOverlayManager.healthHudView?.updateState(state, connectionManager.connection?.getLatencyMs() ?: 0L)
+
+                        hudManager?.get()?.updateLayout()
+
+                        safetyEvaluator.lastAutopilotState = state.autopilotState
+                        systemManager.checkScreenAlwaysOn()
+                        presentationManager?.updateState(state)
+
+                        state.sunlightMode?.let { sMode ->
+                            val currentMode = app.settings.NAUTICAL_DISPLAY_MODE.get()
+                            val targetMode = when (sMode.lowercase(Locale.US)) {
+                                "high", "bright", "sunlight" -> NauticalDisplayMode.SUNLIGHT
+                                "night", "dark" -> NauticalDisplayMode.DARK
+                                else -> NauticalDisplayMode.NORMAL
+                            }
+                            if (targetMode != currentMode) {
+                                app.settings.NAUTICAL_DISPLAY_MODE.set(targetMode)
+                            }
+                        }
+
+                        if (app.settings.APPLICATION_MODE.get().isDerivedRoutingFrom(ApplicationMode.BOAT) && state.headingTrue != null) {
+                            val mapView = app.osmandMap?.mapView
+                            if (mapView != null && app.settings.isCompassMode(CompassMode.COMPASS_DIRECTION)) {
+                                val hdgDeg = Math.toDegrees(state.headingTrue).toFloat()
+                                if (abs(MapUtils.degreesDiff(mapView.rotate.toDouble(), (-hdgDeg).toDouble())) > 0.1) {
+                                    mapView.setRotate(-hdgDeg, true)
                                 }
                             }
-                            ConnectionStatus.DISCONNECTED -> {
-                                if (shouldToast && lastConnectionStatus != null && lastConnectionStatus != ConnectionStatus.DISCONNECTED) {
-                                    hudManager?.get()?.showBanner(app.getString(R.string.nautical_sk_connection_lost), 0L, isWarning = true)
-                                    lastStatusToastTime = now
-                                }
-                            }
-                            ConnectionStatus.CONNECTING -> {
-                                if (shouldToast) {
-                                    hudManager?.get()?.showBanner(app.getString(R.string.nautical_sk_connecting), 0L)
-                                    lastStatusToastTime = now
-                                }
-                            }
-                            else -> {}
                         }
-                        lastConnectionStatus = currentStatus
+                        requestRefresh()
                     }
-
-                    notificationManager?.processNotifications(combinedNotifications)
-                    decodedNavtex?.let { navtexViewModel?.upsertMessage(it) }
-
-                    state.notifications["notifications.vhf.boundaryApproach"]?.let { notif ->
-                        app.showToastMessage(notif.message)
-                    }
-
-                    uiOverlayManager.startLineHudHeader?.update()
-                    uiOverlayManager.tacticsHudHeader?.update()
-                    uiOverlayManager.anchorWatchHudView?.update()
-                    uiOverlayManager.predictiveSteeringHudView?.update()
-
-                    uiOverlayManager.forwardWatchHudView?.updateHazards(state.forwardHazards)
-                    uiOverlayManager.environmentHud?.let { hud ->
-                        hud.updateState(state)
-                        hud.isVisible = (state.outsideHumidity != null || state.moonPhase != null)
-                    }
-                    uiOverlayManager.watchScheduleHudView?.let { hud ->
-                        hud.updateState(state)
-                        hud.isVisible = state.pathMeta.containsKey("communication.crew.watch.current")
-                    }
-                    uiOverlayManager.heartbeatHudView?.updateState(state)
-                    uiOverlayManager.tacticalHudView?.updateState(state)
-                    uiOverlayManager.healthHudView?.updateState(state, connectionManager.connection?.getLatencyMs() ?: 0L)
-
-                    hudManager?.get()?.updateLayout()
-
-                    safetyEvaluator.lastAutopilotState = state.autopilotState
-                    systemManager.checkScreenAlwaysOn()
-                    presentationManager?.updateState(state)
-
-                    state.sunlightMode?.let { sMode ->
-                        val currentMode = app.settings.NAUTICAL_DISPLAY_MODE.get()
-                        val targetMode = when (sMode.lowercase(Locale.US)) {
-                            "high", "bright", "sunlight" -> NauticalDisplayMode.SUNLIGHT
-                            "night", "dark" -> NauticalDisplayMode.DARK
-                            else -> NauticalDisplayMode.NORMAL
-                        }
-                        if (targetMode != currentMode) {
-                            app.settings.NAUTICAL_DISPLAY_MODE.set(targetMode)
-                        }
-                    }
-
-                    if (app.settings.APPLICATION_MODE.get().isDerivedRoutingFrom(ApplicationMode.BOAT) && state.headingTrue != null) {
-                        val mapView = app.osmandMap?.mapView
-                        if (mapView != null && app.settings.isCompassMode(CompassMode.COMPASS_DIRECTION)) {
-                            val hdgDeg = Math.toDegrees(state.headingTrue).toFloat()
-                            if (abs(MapUtils.degreesDiff(mapView.rotate.toDouble(), (-hdgDeg).toDouble())) > 0.1) {
-                                mapView.setRotate(-hdgDeg, true)
-                            }
-                        }
-                    }
-                    requestRefresh()
                 }
             } catch (e: Exception) {
-                log.error("Error in marineStateListener: ${e.message}", e)
+                log.error("Error in marine state processing", e)
             }
         }
     }
@@ -482,9 +486,6 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
         updateNauticalBackgroundService()
         if ((state != true) && (!app.settings.MAP_ACTIVITY_ENABLED)) {
             connectionManager.connection?.disconnect()
-        }
-        if (state == true) {
-            checkBatteryOptimization()
         }
     }
 
@@ -1134,6 +1135,7 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
     override fun mapActivityResume(activity: MapActivity) {
         super.mapActivityResume(activity)
         isAppInBackground = false
+        presentationManager?.onResume(activity)
         val isBoat = app.settings.APPLICATION_MODE.get().isDerivedRoutingFrom(ApplicationMode.BOAT)
         if (isActive && isBoat) {
             initSubsystems(activity)
@@ -1169,8 +1171,11 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
 
     override fun mapActivityPause(activity: MapActivity) {
         super.mapActivityPause(activity)
-        refreshHandler.removeCallbacks(refreshRunnable)
         isAppInBackground = true
+        isRefreshScheduled = false
+        refreshHandler.removeCallbacksAndMessages(null)
+        presentationManager?.onPause()
+        uiOverlayManager.onPause()
         getScope().launch(Dispatchers.IO) {
             try {
                 engine?.historyManager?.saveBuffersToDisk(app)
@@ -1197,9 +1202,17 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
 
     override fun mapActivityDestroy(activity: MapActivity) {
         super.mapActivityDestroy(activity)
+        isAppInBackground = true
+        isRefreshScheduled = false
+        refreshHandler.removeCallbacksAndMessages(null)
+        presentationManager?.onPause()
+        uiOverlayManager.detach()
+        hudManager?.get()?.onDestroy()
+        hudManager = null
         getScope().launch(Dispatchers.IO) {
             try {
                 engine?.historyManager?.saveBuffersToDisk(app)
+                updateNauticalBackgroundService()
             } catch (e: Exception) {
                 log.error("Error saving buffers in mapActivityDestroy", e)
             }

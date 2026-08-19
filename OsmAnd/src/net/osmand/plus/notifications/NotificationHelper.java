@@ -119,6 +119,9 @@ public class NotificationHelper {
 		if (aisNotification.isEnabled(service)) {
 			res.add(aisNotification);
 		}
+		if (nauticalNotification.isEnabled(service)) {
+			res.add(nauticalNotification);
+		}
 		return res;
 	}
 

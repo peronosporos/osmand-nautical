@@ -147,6 +147,9 @@ public class NavigationService extends Service {
 		NotificationType type = isUsedBy(USED_BY_NAVIGATION) ? NAVIGATION : isUsedBy(USED_BY_GPX) ? GPX : isUsedBy(USED_BY_NAUTICAL) ? NAUTICAL : AIS;
 		NotificationHelper notificationHelper = app.getNotificationHelper();
 		Notification notification = notificationHelper.buildTopNotification(this, type);
+		if (notification == null) {
+			notification = notificationHelper.buildFallbackNotification();
+		}
 
 		boolean hasNotification = notification != null;
 		if (hasNotification) {
