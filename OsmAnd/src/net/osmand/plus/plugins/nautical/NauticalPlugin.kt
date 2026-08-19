@@ -1395,7 +1395,7 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
     override fun getDescription(linksEnabled: Boolean): CharSequence = app.getString(R.string.nautical_plugin_description)
     override fun getPrefsDescription(): String = app.getString(R.string.nautical_plugin_description)
     override fun getLogoResourceId(): Int = R.drawable.ic_action_sail_boat_dark
-    override fun getAssetResourceImage(): Drawable? = ContextCompat.getDrawable(app, R.drawable.ic_plugin_nautical_map)
+    override fun getAssetResourceImage(): Drawable? = app.uiUtilities.getIcon(R.drawable.ic_plugin_nautical_map)
     override fun isMarketPlugin(): Boolean = false
 
     override fun addMyPlacesTab(myPlacesActivity: net.osmand.plus.myplaces.MyPlacesActivity, mTabs: MutableList<TabItem>, intent: Intent) {
