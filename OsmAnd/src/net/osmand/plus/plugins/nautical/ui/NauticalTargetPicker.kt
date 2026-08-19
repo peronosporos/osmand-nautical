@@ -131,8 +131,12 @@ class NauticalTargetPicker : BottomSheetDialogFragment() {
             val ownLoc = plugin?.application?.locationProvider?.lastKnownLocation
             val pos = target.position
             if (ownLoc != null && pos != null) {
-                val distNm = MapUtils.getDistance(ownLoc.latitude, ownLoc.longitude, pos.latitude, pos.longitude) / 1852.0
-                val bearingDeg = (MapUtils.getBearing(ownLoc.latitude, ownLoc.longitude, pos.latitude, pos.longitude) + 360.0) % 360.0
+                val targetLoc = net.osmand.Location("AIS").apply {
+                    latitude = pos.latitude
+                    longitude = pos.longitude
+                }
+                val distNm = ownLoc.distanceTo(targetLoc) / 1852.0
+                val bearingDeg = (ownLoc.bearingTo(targetLoc) + 360f) % 360f
                 val distView = TextView(context).apply {
                     text = String.format(Locale.US, "%.1fnm • %03.0f°", distNm, bearingDeg)
                     textSize = 13f
