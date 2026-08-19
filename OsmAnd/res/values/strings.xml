@@ -764,8 +764,6 @@
     <string name="nautical_leeway_coefficient">Leeway Coefficient</string>
     <string name="nautical_nmea_source">NMEA Data Source</string>
     <string name="nautical_force_watch_layout">Force Watch Layout</string>
-    <string name="nautical_auto_switch_location_source">Auto-switch Location Source</string>
-    <string name="nautical_auto_switch_location_source_desc">Automatically use Signal K for positioning when available in Boat profile, saving battery by turning off internal GPS.</string>
     <string name="nautical_audio_hardware_unavailable">Audio Device Unavailable</string>
     <string name="nautical_control_unlocked">Control Unlocked</string>
     <string name="nautical_signalk_disconnected">Signal K Disconnected</string>

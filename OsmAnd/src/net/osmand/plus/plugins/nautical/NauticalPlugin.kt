@@ -40,7 +40,7 @@ import net.osmand.plus.plugins.nautical.engine.ElectricalController
 import net.osmand.plus.plugins.nautical.engine.GpxStreamer
 import net.osmand.plus.plugins.nautical.engine.MarineState
 import net.osmand.plus.plugins.nautical.engine.NauticalAisManager
-import net.osmand.plus.plugins.nautical.engine.NauticalLocationProvider
+import net.osmand.plus.plugins.nautical.location.SignalKLocationManager
 import net.osmand.plus.plugins.nautical.engine.NauticalNotificationManager
 import net.osmand.plus.plugins.nautical.engine.NauticalSafetyEvaluator
 import net.osmand.plus.plugins.nautical.engine.NauticalSafetyManager
@@ -217,7 +217,7 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
     val isConnectionLostAlertActive: Boolean
         get() = safetyEvaluator.isConnectionLostAlertActive
 
-    var locationProvider: NauticalLocationProvider? = null
+    var signalKLocationManager: SignalKLocationManager? = null
         private set
     var aisManager: NauticalAisManager? = null
         private set
@@ -232,8 +232,6 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
     var vhfManager: NauticalVhfManager? = null
         private set
     var skDiscovery: SignalKDiscovery? = null
-        private set
-    var locationSwitcher: net.osmand.plus.plugins.nautical.engine.NauticalLocationSwitcher? = null
         private set
 
     internal var pluginScope: CoroutineScope? = null
@@ -780,7 +778,7 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
     private fun initPlugin() {
         if (isPluginInitialized) {
             registerListeners()
-            locationSwitcher?.start()
+            signalKLocationManager?.start()
             updateNmeaSource()
             val currentSource = app.settings.NAUTICAL_NMEA_SOURCE.get()
             if (currentSource == NmeaSource.SIGNALK) {
@@ -808,11 +806,10 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
         }
 
         engine = SignalKEngine(app, scope, capabilityManager)
-        locationSwitcher = net.osmand.plus.plugins.nautical.engine.NauticalLocationSwitcher(app, engine!!.dataBroker)
-        locationSwitcher?.start()
-        if (locationProvider == null) {
-            locationProvider = NauticalLocationProvider(app, engine)
+        if (signalKLocationManager == null) {
+            signalKLocationManager = SignalKLocationManager(app, engine!!.dataBroker)
         }
+        signalKLocationManager?.start()
         autopilot = AutopilotController(app, conn, client, engine?.dataBroker)
         electrical = ElectricalController(app, autopilot!!)
 
@@ -919,14 +916,14 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
 
         when (source) {
             NmeaSource.INTERNAL -> {
-                locationProvider?.stop()
+                signalKLocationManager?.stop()
             }
             NmeaSource.SIGNALK -> {
-                locationProvider?.start()
+                signalKLocationManager?.start()
                 connectionManager.startEngine()
             }
             NmeaSource.BLUETOOTH -> {
-                locationProvider?.start()
+                signalKLocationManager?.start()
                 val address = app.settings.NAUTICAL_BT_DEVICE_ADDRESS.get()
                 if (address.isNotEmpty()) {
                     val client = net.osmand.plus.plugins.nautical.nmea.connection.BluetoothNmeaClient(address, pluginScope!!)
@@ -934,7 +931,7 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
                 }
             }
             NmeaSource.USB -> {
-                locationProvider?.start()
+                signalKLocationManager?.start()
                 val deviceName = app.settings.NAUTICAL_USB_DEVICE_NAME.get()
                 val usbManager = app.getSystemService(Context.USB_SERVICE) as android.hardware.usb.UsbManager
                 val device = usbManager.deviceList[deviceName]
@@ -945,7 +942,7 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
                 }
             }
             NmeaSource.TCP -> {
-                locationProvider?.start()
+                signalKLocationManager?.start()
                 val ip = app.settings.NAUTICAL_SERVER_IP.get()
                 val port = app.settings.NAUTICAL_SERVER_PORT.get().toIntOrNull() ?: 3000
                 val client = net.osmand.plus.plugins.nautical.nmea.connection.TcpNmeaClient(ip, port, pluginScope!!)
@@ -1111,7 +1108,8 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
     override fun disable(app: OsmandApplication) {
         super.disable(app)
         unregisterListeners()
-        locationSwitcher?.stop()
+        signalKLocationManager?.stop()
+        signalKLocationManager = null
         refreshHandler.removeCallbacks(refreshRunnable)
         getScope().launch(Dispatchers.IO) {
             try {
@@ -1135,7 +1133,7 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
             initSubsystems(activity)
             uiOverlayManager.updateHudVisibility(hudManager)
             updateNmeaSource()
-            locationSwitcher?.start()
+            signalKLocationManager?.start()
             nauticalConnectionManager.connect()
             engine?.refreshVesselState()
         }

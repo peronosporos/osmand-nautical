@@ -359,11 +359,6 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
             }
         }
 
-        findPreference<SwitchPreferenceEx>(settings.NAUTICAL_AUTO_SWITCH_LOCATION_SOURCE.id)?.apply {
-            setThemedIcon(OsmAndR.drawable.ic_action_device_location)
-            isChecked = settings.NAUTICAL_AUTO_SWITCH_LOCATION_SOURCE.get()
-        }
-
         findPreference<ListPreferenceEx>(settings.NAUTICAL_TELEMETRY_REFRESH_RATE.id)?.apply {
             setThemedIcon(OsmAndR.drawable.ic_action_time)
             entries = arrayOf(getString(OsmAndR.string.nautical_refresh_rate_1s), getString(OsmAndR.string.nautical_refresh_rate_2s), getString(OsmAndR.string.nautical_refresh_rate_5s))

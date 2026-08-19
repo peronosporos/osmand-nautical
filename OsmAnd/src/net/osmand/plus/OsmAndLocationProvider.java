@@ -156,6 +156,7 @@ public class OsmAndLocationProvider implements SensorEventListener {
 	private final float[] mRotationM = new float[9];
 
 	private StateChangedListener<LocationSource> locationSourceListener;
+	private boolean deviceGpsSuspended = false;
 
 	public OsmAndLocationProvider(@NonNull OsmandApplication app) {
 		this.app = app;
@@ -182,7 +183,7 @@ public class OsmAndLocationProvider implements SensorEventListener {
 			}
 		}
 
-		if (isLocationPermissionAvailable(app) && app.getSettings().LOCATION_SOURCE.get() != LocationSource.EXTERNAL_SIGNALK) {
+		if (isLocationPermissionAvailable(app) && !deviceGpsSuspended && app.getSettings().LOCATION_SOURCE.get() != LocationSource.EXTERNAL_SIGNALK) {
 			LocationManager locationService = (LocationManager) app.getSystemService(LOCATION_SERVICE);
 			registerGpsStatusListener(locationService);
 			try {
@@ -550,6 +551,32 @@ public class OsmAndLocationProvider implements SensorEventListener {
 	public void pauseAllUpdates() {
 		stopLocationRequests();
 		registerOrUnregisterCompassListener(false);
+	}
+
+	public void suspendDeviceGps() {
+		if (!deviceGpsSuspended) {
+			deviceGpsSuspended = true;
+			stopLocationRequests();
+			LOG.info("OsmAndLocationProvider: Device GPS suspended (Signal K location active).");
+		}
+	}
+
+	public void resumeDeviceGps() {
+		if (deviceGpsSuspended) {
+			deviceGpsSuspended = false;
+			resumeAllUpdates();
+			LOG.info("OsmAndLocationProvider: Device GPS resumed.");
+		}
+	}
+
+	public boolean isDeviceGpsSuspended() {
+		return deviceGpsSuspended;
+	}
+
+	public void setLocationFromService(Location location) {
+		if (location != null) {
+			setLocationFromService(convertLocation(location, app));
+		}
 	}
 
 	public static net.osmand.Location convertLocation(Location l, OsmandApplication app) {

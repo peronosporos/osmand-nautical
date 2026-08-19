@@ -3670,10 +3670,6 @@ public class OsmandSettings {
 	public final CommonPreference<Boolean> NAUTICAL_AIS_ENABLED = registerBooleanPreference("nautical_ais_enabled", true).makeProfile();
 	public final CommonPreference<Boolean> NAUTICAL_TOUCH_LOCK_TOOLTIP_SHOWN = registerBooleanPreference("nautical_touch_lock_tooltip_shown", false);
 
-	public final CommonPreference<Boolean> NAUTICAL_AUTO_SWITCH_LOCATION_SOURCE = registerBooleanPreference("nautical_auto_switch_location_source", true).makeProfile();
-	public final CommonPreference<LocationSource> NAUTICAL_LAST_USER_LOCATION_SOURCE = registerEnumStringPreference("nautical_last_user_location_source",
-			Version.isGooglePlayEnabled() ? LocationSource.GOOGLE_PLAY_SERVICES : LocationSource.ANDROID_API, LocationSource.values(), LocationSource.class).makeProfile();
-
 	public final CommonPreference<Boolean> NAUTICAL_PREDICTIVE_STEERING = registerBooleanPreference("nautical_predictive_steering", false).makeProfile();
 	public final CommonPreference<Boolean> NAUTICAL_SHADOW_DRIVE = registerBooleanPreference("nautical_shadow_drive", true).makeProfile();
 	public final CommonPreference<Integer> NAUTICAL_WAVE_BIAS_SENSITIVITY = registerIntPreference("nautical_wave_bias_sensitivity", 50).makeProfile();
