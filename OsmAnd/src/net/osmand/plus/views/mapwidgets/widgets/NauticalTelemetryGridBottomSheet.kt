@@ -31,11 +31,7 @@ class NauticalTelemetryGridBottomSheet : NauticalMenuBottomSheetDialogFragment()
         const val KEY_WIDGET_ID = "widget_id"
 
         fun show(manager: FragmentManager, widgetId: String?) {
-            val fragment = NauticalTelemetryGridBottomSheet()
-            val args = Bundle()
-            args.putString(KEY_WIDGET_ID, widgetId)
-            fragment.arguments = args
-            fragment.show(manager, "nautical_telemetry_grid")
+            net.osmand.plus.plugins.nautical.ui.MasterTelemetryBottomSheet.show(manager, widgetId)
         }
     }
 

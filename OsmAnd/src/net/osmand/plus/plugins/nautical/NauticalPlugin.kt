@@ -249,6 +249,8 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
         private set
     var alarmPriorityManager: AlarmPriorityManager? = null
         private set
+    var telemetryFilterEngine: net.osmand.plus.plugins.nautical.telemetry.TelemetryFilterEngine? = null
+        private set
     internal var speechHelper: ManeuverSpeechHelper? = null
     private var ttsHelper: ManeuverTtsHelper? = null
     private var presentationManager: NauticalPresentationManager? = null
@@ -326,6 +328,7 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
     private var lastConnectionStatus: ConnectionStatus? = null
 
     private val marineStateListener: (MarineState) -> Unit = { state ->
+        telemetryFilterEngine?.processState(state)
         pluginScope?.launch(Dispatchers.Default) {
             try {
                 val combinedNotifications = state.notifications.toMutableMap()
@@ -834,6 +837,9 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
         if (tideManager == null) {
             tideManager = SignalKTideManager(app, scope)
         }
+        if (telemetryFilterEngine == null) {
+            telemetryFilterEngine = net.osmand.plus.plugins.nautical.telemetry.TelemetryFilterEngine(app, scope)
+        }
         if (vhfManager == null) {
             vhfManager = NauticalVhfManager(app)
         }
@@ -1108,6 +1114,8 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
     override fun disable(app: OsmandApplication) {
         super.disable(app)
         unregisterListeners()
+        telemetryFilterEngine?.stop()
+        telemetryFilterEngine = null
         signalKLocationManager?.stop()
         signalKLocationManager = null
         refreshHandler.removeCallbacks(refreshRunnable)

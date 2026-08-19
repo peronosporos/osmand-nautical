@@ -119,7 +119,7 @@ class NauticalMasterTelemetryWidget(
     override fun getOnClickListener(): View.OnClickListener {
         return View.OnClickListener {
             if (!mapActivity.isFinishing) {
-                NauticalTelemetryGridBottomSheet.show(mapActivity.supportFragmentManager, customId ?: widgetType.id)
+                net.osmand.plus.plugins.nautical.ui.MasterTelemetryBottomSheet.show(mapActivity.supportFragmentManager, customId ?: widgetType.id)
             }
         }
     }

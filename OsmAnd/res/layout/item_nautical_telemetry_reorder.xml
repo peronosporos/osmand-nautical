@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:paddingStart="12dp"
+    android:paddingEnd="12dp"
+    android:paddingTop="10dp"
+    android:paddingBottom="10dp"
+    android:background="?attr/selectableItemBackground">
+
+    <!-- Drag & Drop Handle -->
+    <ImageView
+        android:id="@+id/btn_drag_handle"
+        android:layout_width="28dp"
+        android:layout_height="28dp"
+        android:layout_marginEnd="12dp"
+        android:padding="2dp"
+        android:src="@drawable/ic_action_item_move"
+        app:tint="?android:attr/textColorSecondary"
+        android:contentDescription="@string/shared_string_reorder" />
+
+    <!-- Metric Title and Category -->
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/txt_metric_name"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textAppearance="@style/TextAppearance.AppCompat.Medium"
+            android:textColor="?android:attr/textColorPrimary"
+            tools:text="Speed Over Ground (SOG)" />
+
+        <TextView
+            android:id="@+id/txt_metric_category"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:textAppearance="@style/TextAppearance.AppCompat.Caption"
+            android:textColor="?android:attr/textColorSecondary"
+            tools:text="Navigation" />
+    </LinearLayout>
+
+    <!-- Visibility Eye Toggle -->
+    <ImageView
+        android:id="@+id/btn_visibility_toggle"
+        android:layout_width="36dp"
+        android:layout_height="36dp"
+        android:padding="6dp"
+        android:layout_marginEnd="4dp"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:src="@drawable/ic_show_on_map"
+        app:tint="?android:attr/textColorPrimary"
+        android:contentDescription="@string/shared_string_show" />
+
+    <!-- Delete / Remove Button -->
+    <ImageView
+        android:id="@+id/btn_delete_metric"
+        android:layout_width="36dp"
+        android:layout_height="36dp"
+        android:padding="6dp"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:src="@drawable/ic_action_delete_dark"
+        app:tint="?android:attr/textColorSecondary"
+        android:contentDescription="@string/shared_string_delete" />
+
+</LinearLayout>
