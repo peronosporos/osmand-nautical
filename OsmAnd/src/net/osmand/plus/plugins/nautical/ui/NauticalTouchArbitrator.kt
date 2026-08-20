@@ -3,9 +3,11 @@ package net.osmand.plus.plugins.nautical.ui
 import android.graphics.PointF
 import android.view.GestureDetector
 import android.view.MotionEvent
+import net.osmand.data.LatLon
 import net.osmand.plus.activities.MapActivity
 import net.osmand.plus.plugins.nautical.hazard.engine.NavtexMessage
 import net.osmand.plus.plugins.nautical.hazard.ui.NavtexDetailsBottomSheet
+import net.osmand.plus.plugins.nautical.s57.S57Geometry
 import net.osmand.plus.plugins.nautical.s57.S57Object
 import net.osmand.plus.views.layers.ContextMenuLayer
 import net.osmand.shared.aistracker.AisObject
@@ -38,6 +40,21 @@ class NauticalTouchArbitrator(private val activity: MapActivity) : GestureDetect
 
     override fun onFling(e1: MotionEvent?, e2: MotionEvent, velocityX: Float, velocityY: Float): Boolean {
         return false
+    }
+
+    private fun getTargetLocation(target: Any): LatLon? {
+        return when (target) {
+            is AisObject -> target.position?.let { LatLon(it.latitude, it.longitude) }
+            is NavtexMessage -> target.points.firstOrNull()
+            is S57Object -> when (val geom = target.geometries.firstOrNull()) {
+                is S57Geometry.Point -> geom.position
+                is S57Geometry.MultiPoint -> geom.positions.firstOrNull()
+                is S57Geometry.Line -> geom.nodes.firstOrNull()
+                is S57Geometry.Area -> geom.boundaries.firstOrNull()?.firstOrNull()
+                null -> null
+            }
+            else -> null
+        }
     }
 
     fun handleTouch(x: Float, y: Float): Boolean {
@@ -75,12 +92,7 @@ class NauticalTouchArbitrator(private val activity: MapActivity) : GestureDetect
         if (nauticalObjects.size > 1) {
             // Sort by Euclidean pixel distance
             val sorted = nauticalObjects.sortedBy { target ->
-                val loc = when (target) {
-                    is AisObject -> target.position?.let { net.osmand.data.LatLon(it.latitude, it.longitude) }
-                    is NavtexMessage -> net.osmand.data.LatLon(target.lat, target.lon)
-                    is S57Object -> target.latLon
-                    else -> null
-                }
+                val loc = getTargetLocation(target)
                 if (loc != null) {
                     val px = tileBox.getPixXFromLatLon(loc.latitude, loc.longitude)
                     val py = tileBox.getPixYFromLatLon(loc.latitude, loc.longitude)
@@ -95,12 +107,7 @@ class NauticalTouchArbitrator(private val activity: MapActivity) : GestureDetect
             val thresholdPx = 16 * density
             
             val nearObjects = sorted.filter { target ->
-                val loc = when (target) {
-                    is AisObject -> target.position?.let { net.osmand.data.LatLon(it.latitude, it.longitude) }
-                    is NavtexMessage -> net.osmand.data.LatLon(target.lat, target.lon)
-                    is S57Object -> target.latLon
-                    else -> null
-                }
+                val loc = getTargetLocation(target)
                 if (loc != null) {
                     val px = tileBox.getPixXFromLatLon(loc.latitude, loc.longitude)
                     val py = tileBox.getPixYFromLatLon(loc.latitude, loc.longitude)
