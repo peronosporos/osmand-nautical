@@ -430,8 +430,8 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
             btnManeuverSec3.contentDescription = getString(R.string.nautical_rudder_lock)
             btnManeuverSec4.visibility = View.GONE
             layoutSecondaryRow3.visibility = View.VISIBLE
-            btnManeuverSec5.text = getString(R.string.nautical_emergency_stop)
-            btnManeuverSec5.contentDescription = getString(R.string.nautical_emergency_stop)
+            btnManeuverSec5.text = getString(R.string.nautical_emergency_stop_label)
+            btnManeuverSec5.contentDescription = getString(R.string.nautical_emergency_stop_label)
             btnManeuverSec6.visibility = View.GONE
         } else {
             tackPortBtn.text = getString(R.string.nautical_tack_port_label)

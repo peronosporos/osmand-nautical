@@ -10,7 +10,7 @@
     <string name="nautical_dodge_port_label">Dodge Port (-10°)</string>
     <string name="nautical_dodge_stbd_label">Dodge Starboard (+10°)</string>
     <string name="nautical_shunt_reversal">Shunt (Reversal)</string>
-    <string name="nautical_emergency_stop">Emergency Stop</string>
+    <string name="nautical_emergency_stop_label">Emergency Stop</string>
     <string name="nautical_emergency_stop_desc">Disengage autopilot and center rudder</string>
     <string name="nautical_gybe_port_short">Gybe Port</string>
     <string name="nautical_gybe_stbd_short">Gybe Starboard</string>
