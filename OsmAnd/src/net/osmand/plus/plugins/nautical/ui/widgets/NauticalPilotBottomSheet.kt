@@ -254,7 +254,7 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
                         deg
                     }
                 }
-                actualDeg?.let { plugin.speakHeading(it.toInt()) }
+                actualDeg?.let { plugin?.speakHeading(it.toInt()) }
                 customView.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS)
             }
         }
