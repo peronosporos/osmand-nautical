@@ -8,6 +8,7 @@ import android.view.ViewGroup
 import android.widget.Button
 import android.widget.ProgressBar
 import android.widget.TextView
+import androidx.appcompat.view.ContextThemeWrapper
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import com.github.mikephil.charting.charts.LineChart
@@ -43,7 +44,8 @@ class NauticalAdvancedSettingsBottomSheet : BaseNauticalBottomSheet() {
 
         addTitleItem(getString(R.string.nautical_advanced_settings))
 
-        val customView = LayoutInflater.from(requireContext()).inflate(R.layout.bottom_sheet_nautical_advanced, null)
+        val themedContext = ContextThemeWrapper(requireContext(), R.style.OsmandTheme)
+        val customView = LayoutInflater.from(themedContext).inflate(R.layout.bottom_sheet_nautical_advanced, null)
         
         val safetyLock = customView.findViewById<SwitchMaterial>(R.id.safety_lock)
 

@@ -14,6 +14,8 @@ import com.google.android.material.tabs.TabLayout
 import net.osmand.plus.R
 import net.osmand.plus.helpers.AndroidUiHelper
 import net.osmand.plus.settings.backend.preferences.CommonPreference
+import net.osmand.plus.settings.fragments.BaseSettingsFragment
+import net.osmand.plus.settings.fragments.SettingsScreenType
 import net.osmand.plus.views.mapwidgets.WidgetType
 
 class NauticalMasterTelemetrySettingsFragment : BaseSimpleWidgetInfoFragment() {
@@ -38,6 +40,21 @@ class NauticalMasterTelemetrySettingsFragment : BaseSimpleWidgetInfoFragment() {
         loadItemsForMode()
         
         val context = requireContext()
+
+        // Configure Bottom Sheet Telemetry (prominent preference item)
+        val configBottomSheetRow = inflater.inflate(R.layout.configure_screen_list_item, itemsContainer, false)
+        configBottomSheetRow.findViewById<TextView>(R.id.title).text = getString(R.string.nautical_configure_bottom_sheet_telemetry)
+        val configDesc = configBottomSheetRow.findViewById<TextView>(R.id.description)
+        configDesc.text = getString(R.string.nautical_configure_bottom_sheet_telemetry_desc)
+        configDesc.visibility = View.VISIBLE
+        configBottomSheetRow.findViewById<ImageView>(R.id.icon).apply {
+            setImageResource(R.drawable.ic_action_settings)
+            AndroidUiHelper.updateVisibility(this, true)
+        }
+        configBottomSheetRow.findViewById<View>(R.id.button_container).setOnClickListener {
+            BaseSettingsFragment.showInstance(requireActivity(), SettingsScreenType.NAUTICAL_TELEMETRY_CONFIG)
+        }
+        itemsContainer.addView(configBottomSheetRow)
 
         // Primary Display Picker
         val primaryRow = inflater.inflate(R.layout.configure_screen_list_item, itemsContainer, false)

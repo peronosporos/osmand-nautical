@@ -3,13 +3,11 @@ package net.osmand.plus.plugins.nautical.ui.widgets
 import android.app.Dialog
 import android.graphics.Color
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
 import android.view.LayoutInflater
 import android.view.View
-import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.TextView
+import androidx.appcompat.view.ContextThemeWrapper
 import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
 import androidx.lifecycle.Lifecycle
@@ -54,15 +52,6 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
     private lateinit var tackPortBtn: MaterialButton
     private lateinit var tackStbdBtn: MaterialButton
 
-    private lateinit var txtVesselHdgLabel: TextView
-    private lateinit var txtVesselHdgValue: TextView
-    private lateinit var txtTargetHdgLabel: TextView
-    private lateinit var txtTargetHdgValue: TextView
-    private lateinit var txtRudderLabel: TextView
-    private lateinit var txtRudderValue: TextView
-    private lateinit var txtDevXteLabel: TextView
-    private lateinit var txtDevXteValue: TextView
-
     private var isCourseLocked = false
 
     companion object {
@@ -100,7 +89,8 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
             return
         }
 
-        val customView = LayoutInflater.from(requireContext()).inflate(R.layout.nautical_pilot_bottom_sheet, null)
+        val themedContext = ContextThemeWrapper(requireContext(), R.style.OsmandTheme)
+        val customView = LayoutInflater.from(themedContext).inflate(R.layout.nautical_pilot_bottom_sheet, null)
 
         badgePilotMode = customView.findViewById(R.id.badge_pilot_mode)
         errorLinear = customView.findViewById(R.id.heading_error_linear)
@@ -123,15 +113,6 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
 
         tackPortBtn = customView.findViewById(R.id.btn_tack_port)
         tackStbdBtn = customView.findViewById(R.id.btn_tack_stbd)
-
-        txtVesselHdgLabel = customView.findViewById(R.id.txt_vessel_hdg_label)
-        txtVesselHdgValue = customView.findViewById(R.id.txt_vessel_hdg_value)
-        txtTargetHdgLabel = customView.findViewById(R.id.txt_target_hdg_label)
-        txtTargetHdgValue = customView.findViewById(R.id.txt_target_hdg_value)
-        txtRudderLabel = customView.findViewById(R.id.txt_rudder_label)
-        txtRudderValue = customView.findViewById(R.id.txt_rudder_value)
-        txtDevXteLabel = customView.findViewById(R.id.txt_dev_xte_label)
-        txtDevXteValue = customView.findViewById(R.id.txt_dev_xte_value)
 
         // Settings gear button
         customView.findViewById<View>(R.id.btn_settings_gear)?.setOnClickListener {
@@ -343,30 +324,11 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
         arcView.setNightMode(nightMode)
         errorLinear.setNightMode(nightMode)
 
-        // Mode badge update
+        // Mode badge update with OsmAnd styling
         badgePilotMode.text = rawMode
-        when (rawMode) {
-            "STANDBY" -> {
-                badgePilotMode.setBackgroundResource(R.drawable.btn_active_light)
-                badgePilotMode.backgroundTintList = ContextCompat.getColorStateList(requireContext(), R.color.nautical_status_bg_emergency)
-                badgePilotMode.setTextColor(ContextCompat.getColor(requireContext(), R.color.nautical_status_text_emergency))
-            }
-            "AUTO" -> {
-                badgePilotMode.setBackgroundResource(R.drawable.btn_active_light)
-                badgePilotMode.backgroundTintList = ContextCompat.getColorStateList(requireContext(), R.color.nautical_status_bg_active)
-                badgePilotMode.setTextColor(Color.rgb(0, 180, 0))
-            }
-            "WIND" -> {
-                badgePilotMode.setBackgroundResource(R.drawable.btn_active_light)
-                badgePilotMode.backgroundTintList = ContextCompat.getColorStateList(requireContext(), R.color.nautical_status_bg_active)
-                badgePilotMode.setTextColor(Color.rgb(0, 180, 0))
-            }
-            "TRACK", "ROUTE" -> {
-                badgePilotMode.setBackgroundResource(R.drawable.btn_active_light)
-                badgePilotMode.backgroundTintList = ContextCompat.getColorStateList(requireContext(), R.color.nautical_status_bg_active)
-                badgePilotMode.setTextColor(Color.rgb(33, 150, 243))
-            }
-        }
+        badgePilotMode.setBackgroundResource(R.drawable.btn_active_light)
+        badgePilotMode.backgroundTintList = ContextCompat.getColorStateList(requireContext(), R.color.active_color_primary)
+        badgePilotMode.setTextColor(Color.WHITE)
 
         // Enable/Disable mode toggle group
         if (isLocked) {
@@ -386,6 +348,7 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
             "AUTO" -> R.id.btn_mode_compass
             "WIND" -> R.id.btn_mode_wind
             "TRACK", "ROUTE" -> R.id.btn_mode_route
+            "STANDBY" -> R.id.btn_mode_stop
             else -> View.NO_ID
         }
 
@@ -433,69 +396,6 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
             errorLinear.setBackgroundColor(ContextCompat.getColor(requireContext(), R.color.nautical_status_bg_emergency))
         } else {
             errorLinear.setBackgroundColor(Color.TRANSPARENT)
-        }
-
-        // Dedicated Steering Telemetry Cards Row
-        // 1. Vessel Heading
-        txtVesselHdgValue.text = String.format(Locale.US, "%03.0f°", actualH)
-
-        // 2. Target Heading / Commanded AWA
-        if (rawMode == "WIND") {
-            txtTargetHdgLabel.text = getString(R.string.nautical_mode_wind)
-            val tawa = state.targetWindAngleApparent?.let { Math.toDegrees(it).toInt() } ?: 0
-            val side = if (tawa < 0) "P" else if (tawa > 0) "S" else ""
-            val absVal = abs(tawa)
-            txtTargetHdgValue.text = if (side.isNotEmpty()) "$side $absVal°" else "$absVal°"
-            txtTargetHdgValue.setTextColor(if (tawa < 0) Color.rgb(220, 50, 50) else if (tawa > 0) Color.rgb(46, 125, 50) else ContextCompat.getColor(requireContext(), R.color.text_color_primary_light))
-        } else {
-            txtTargetHdgLabel.text = getString(R.string.nautical_target_heading)
-            txtTargetHdgValue.text = String.format(Locale.US, "%03.0f°", targetH)
-            txtTargetHdgValue.setTextColor(ContextCompat.getColor(requireContext(), if (nightMode) R.color.text_color_primary_dark else R.color.text_color_primary_light))
-        }
-
-        // 3. Rudder Angle
-        val rudderDeg = state.rudderAngle?.let { Math.toDegrees(it).toInt() }
-        if (rudderDeg != null) {
-            when {
-                rudderDeg < 0 -> {
-                    txtRudderValue.text = String.format(Locale.US, "P %d°", abs(rudderDeg))
-                    txtRudderValue.setTextColor(Color.rgb(220, 50, 50))
-                }
-                rudderDeg > 0 -> {
-                    txtRudderValue.text = String.format(Locale.US, "S %d°", abs(rudderDeg))
-                    txtRudderValue.setTextColor(Color.rgb(46, 125, 50))
-                }
-                else -> {
-                    txtRudderValue.text = getString(R.string.nautical_rudder_mid)
-                    txtRudderValue.setTextColor(ContextCompat.getColor(requireContext(), if (nightMode) R.color.text_color_primary_dark else R.color.text_color_primary_light))
-                }
-            }
-        } else {
-            txtRudderValue.text = "---"
-            txtRudderValue.setTextColor(ContextCompat.getColor(requireContext(), if (nightMode) R.color.text_color_secondary_dark else R.color.text_color_secondary_light))
-        }
-
-        // 4. Deviation / XTE
-        if (rawMode == "TRACK" || rawMode == "ROUTE") {
-            txtDevXteLabel.text = getString(R.string.nautical_xte)
-            val xteMeters = state.crossTrackError
-            if (xteMeters != null) {
-                val xteNm = xteMeters / 1852.0
-                txtDevXteValue.text = String.format(Locale.US, "%.2f NM", xteNm)
-            } else {
-                txtDevXteValue.text = "---"
-            }
-        } else if (rawMode == "WIND") {
-            txtDevXteLabel.text = getString(R.string.nautical_wind_err)
-            val awaDeg = state.windDirectionApparent?.let { Math.toDegrees(it).toInt() } ?: 0
-            val targetAwaDeg = state.targetWindAngleApparent?.let { Math.toDegrees(it).toInt() } ?: 0
-            var windErr = (awaDeg - targetAwaDeg).toFloat()
-            while (windErr > 180) windErr -= 360
-            while (windErr < -180) windErr += 360
-            txtDevXteValue.text = String.format(Locale.US, "%+.1f°", windErr)
-        } else {
-            txtDevXteLabel.text = getString(R.string.nautical_hdg_err)
-            txtDevXteValue.text = String.format(Locale.US, "%+.1f°", hdgErr)
         }
     }
 

@@ -23,7 +23,7 @@ class TelemetryWidgetSettingsFragment : BaseOsmAndFragment() {
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
-        val view = inflater.inflate(R.layout.fragment_nautical_telemetry_settings, container, false)
+        val view = themedInflater.inflate(R.layout.fragment_nautical_telemetry_settings, container, false)
         setupViews(view)
         return view
     }
@@ -119,7 +119,7 @@ class TelemetryWidgetSettingsFragment : BaseOsmAndFragment() {
 
     private fun showAddMetricDialog() {
         val context = requireContext()
-        val dialogView = LayoutInflater.from(context).inflate(R.layout.dialog_nautical_add_metric, null)
+        val dialogView = themedInflater.inflate(R.layout.dialog_nautical_add_metric, null)
         val recycler = dialogView.findViewById<RecyclerView>(R.id.recycler_add_metrics)
         recycler.layoutManager = LinearLayoutManager(context)
 
@@ -139,8 +139,7 @@ class TelemetryWidgetSettingsFragment : BaseOsmAndFragment() {
 
             recycler.adapter = object : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
                 override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
-                    val v = LayoutInflater.from(parent.context)
-                        .inflate(R.layout.item_nautical_telemetry_reorder, parent, false)
+                    val v = themedInflater.inflate(R.layout.item_nautical_telemetry_reorder, parent, false)
                     v.findViewById<View>(R.id.btn_drag_handle).visibility = View.GONE
                     v.findViewById<View>(R.id.btn_visibility_toggle).visibility = View.GONE
                     v.findViewById<View>(R.id.btn_delete_metric).visibility = View.GONE

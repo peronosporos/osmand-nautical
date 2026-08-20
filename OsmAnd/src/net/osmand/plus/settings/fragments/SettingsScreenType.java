@@ -66,6 +66,7 @@ public enum SettingsScreenType {
 	NAUTICAL_SWITCH_PANEL("net.osmand.plus.plugins.nautical.ui.NauticalSwitchPanelFragment", false, null, -1, R.layout.global_preference_toolbar),
 	NAUTICAL_PASSAGE_PLAN("net.osmand.plus.plugins.nautical.routing.ui.NauticalRouteSummaryFragment", false, null, -1, R.layout.global_preference_toolbar),
 	NAUTICAL_MASTER_TELEMETRY("net.osmand.plus.views.mapwidgets.configure.settings.NauticalMasterTelemetrySettingsFragment", false, null, -1, R.layout.global_preference_toolbar),
+	NAUTICAL_TELEMETRY_CONFIG("net.osmand.plus.plugins.nautical.telemetry.TelemetryWidgetSettingsFragment", false, null, -1, R.layout.global_preference_toolbar),
 	ENC_CHART_MANAGER("net.osmand.plus.plugins.nautical.s57.ui.S57ChartManagerFragment", false, null, -1, R.layout.global_preference_toolbar),
 	NAUTICAL_CHECKLISTS("net.osmand.plus.plugins.nautical.ui.checklist.NauticalChecklistFragment", false, null, -1, R.layout.global_preference_toolbar),
 	SAIL_INVENTORY("net.osmand.plus.plugins.nautical.ui.sail.SailInventoryFragment", false, null, -1, R.layout.global_preference_toolbar),

@@ -1,4 +1,6 @@
 <resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
+    <string name="nautical_configure_bottom_sheet_telemetry">Configure Bottom Sheet Telemetry</string>
+    <string name="nautical_configure_bottom_sheet_telemetry_desc">Reorder and select metrics displayed in the master telemetry bottom sheet</string>
     <string name="nautical_mode_compass_short">COMPASS</string>
     <string name="nautical_mode_wind_short">WIND</string>
     <string name="nautical_mode_track_short">TRACK</string>

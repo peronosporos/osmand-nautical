@@ -25,7 +25,7 @@
             android:background="@drawable/bg_rounded_handle"
             android:backgroundTint="#99FFFFFF" />
 
-        <!-- Header: Title & Settings -->
+        <!-- Header: Title, Mode Indicator & Settings -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -51,14 +51,14 @@
                 android:layout_height="wrap_content"
                 android:layout_marginEnd="12dp"
                 android:background="@drawable/btn_active_light"
-                android:backgroundTint="@color/nautical_status_bg_emergency"
-                android:paddingStart="8dp"
-                android:paddingTop="3dp"
-                android:paddingEnd="8dp"
-                android:paddingBottom="3dp"
+                android:backgroundTint="?attr/active_color_primary"
+                android:paddingStart="10dp"
+                android:paddingTop="4dp"
+                android:paddingEnd="10dp"
+                android:paddingBottom="4dp"
                 android:text="STANDBY"
-                android:textColor="@color/nautical_status_text_emergency"
-                android:textSize="11sp"
+                android:textColor="@android:color/white"
+                android:textSize="12sp"
                 android:textStyle="bold" />
 
             <ImageButton
@@ -71,101 +71,79 @@
                 android:contentDescription="@string/shared_string_settings" />
         </LinearLayout>
 
-        <!-- 1. Mode Switcher Row -->
+        <!-- 1. Mode Switcher Row (Clean large icon buttons matching bb393ac) -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:gravity="center_vertical"
+            android:gravity="center"
             android:paddingStart="16dp"
             android:paddingEnd="16dp"
             android:layout_marginTop="4dp">
 
             <com.google.android.material.button.MaterialButtonToggleGroup
                 android:id="@+id/mode_toggle_group"
-                android:layout_width="0dp"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:layout_marginEnd="8dp"
                 app:singleSelection="true"
                 app:selectionRequired="false">
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btn_mode_compass"
                     style="@style/Widget.Material3.Button.OutlinedButton"
-                    android:layout_width="0dp"
+                    android:layout_width="56dp"
                     android:layout_height="48dp"
-                    android:layout_weight="1"
                     android:padding="0dp"
-                    android:text="@string/nautical_mode_compass_short"
-                    android:textSize="12sp"
-                    android:textStyle="bold"
                     app:icon="@drawable/ic_action_direction_compass"
                     app:iconGravity="textStart"
-                    app:iconPadding="4dp"
-                    app:iconSize="16dp"
+                    app:iconPadding="0dp"
+                    app:iconSize="24dp"
                     app:iconTint="?attr/icon_color_primary"
-                    app:strokeColor="@color/nautical_toggle_stroke_color"
+                    app:strokeColor="?attr/active_color_primary"
                     android:contentDescription="@string/nautical_mode_compass" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btn_mode_wind"
                     style="@style/Widget.Material3.Button.OutlinedButton"
-                    android:layout_width="0dp"
+                    android:layout_width="56dp"
                     android:layout_height="48dp"
-                    android:layout_weight="1"
                     android:padding="0dp"
-                    android:text="@string/nautical_mode_wind_short"
-                    android:textSize="12sp"
-                    android:textStyle="bold"
                     app:icon="@drawable/ic_action_wind"
                     app:iconGravity="textStart"
-                    app:iconPadding="4dp"
-                    app:iconSize="16dp"
+                    app:iconPadding="0dp"
+                    app:iconSize="24dp"
                     app:iconTint="?attr/icon_color_primary"
-                    app:strokeColor="@color/nautical_toggle_stroke_color"
+                    app:strokeColor="?attr/active_color_primary"
                     android:contentDescription="@string/nautical_mode_wind" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btn_mode_route"
                     style="@style/Widget.Material3.Button.OutlinedButton"
-                    android:layout_width="0dp"
+                    android:layout_width="56dp"
                     android:layout_height="48dp"
-                    android:layout_weight="1"
                     android:padding="0dp"
-                    android:text="@string/nautical_mode_track_short"
-                    android:textSize="12sp"
-                    android:textStyle="bold"
                     app:icon="@drawable/ic_action_track_16"
                     app:iconGravity="textStart"
-                    app:iconPadding="4dp"
-                    app:iconSize="16dp"
+                    app:iconPadding="0dp"
+                    app:iconSize="24dp"
                     app:iconTint="?attr/icon_color_primary"
-                    app:strokeColor="@color/nautical_toggle_stroke_color"
+                    app:strokeColor="?attr/active_color_primary"
                     android:contentDescription="@string/nautical_mode_track" />
-            </com.google.android.material.button.MaterialButtonToggleGroup>
 
-            <!-- Standby (Stop) Button -->
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btn_mode_stop"
-                style="@style/Widget.Material3.Button.OutlinedButton"
-                android:layout_width="wrap_content"
-                android:layout_height="48dp"
-                android:minWidth="72dp"
-                android:paddingStart="8dp"
-                android:paddingEnd="8dp"
-                android:text="@string/nautical_mode_standby"
-                android:textColor="@color/nautical_status_text_emergency"
-                android:textSize="11sp"
-                android:textStyle="bold"
-                app:icon="@drawable/ic_action_stop"
-                app:iconGravity="textStart"
-                app:iconPadding="2dp"
-                app:iconSize="18dp"
-                app:iconTint="@color/nautical_status_text_emergency"
-                app:strokeColor="@color/nautical_status_text_emergency"
-                app:backgroundTint="@color/nautical_status_bg_emergency"
-                android:contentDescription="@string/nautical_mode_stop" />
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_mode_stop"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    android:layout_width="56dp"
+                    android:layout_height="48dp"
+                    android:padding="0dp"
+                    app:icon="@drawable/ic_action_stop"
+                    app:iconGravity="textStart"
+                    app:iconPadding="0dp"
+                    app:iconSize="24dp"
+                    app:iconTint="?attr/icon_color_primary"
+                    app:strokeColor="?attr/active_color_primary"
+                    android:contentDescription="@string/nautical_mode_stop" />
+            </com.google.android.material.button.MaterialButtonToggleGroup>
         </LinearLayout>
 
         <!-- 2. Tactical Actions Row (Tack Port / Lock / Tack Stbd) -->
@@ -188,10 +166,10 @@
                 android:layout_weight="1"
                 android:layout_marginEnd="6dp"
                 android:text="@string/nautical_tack_port_short"
-                android:textColor="#D32F2F"
+                android:textColor="?attr/active_color_primary"
                 android:textSize="12sp"
                 android:textStyle="bold"
-                app:strokeColor="#D32F2F"
+                app:strokeColor="?attr/active_color_primary"
                 app:strokeWidth="1.5dp"
                 app:cornerRadius="8dp"
                 android:contentDescription="@string/nautical_tack_port" />
@@ -215,10 +193,10 @@
                 android:layout_height="42dp"
                 android:layout_weight="1"
                 android:text="@string/nautical_tack_stbd_short"
-                android:textColor="#2E7D32"
+                android:textColor="?attr/active_color_primary"
                 android:textSize="12sp"
                 android:textStyle="bold"
-                app:strokeColor="#2E7D32"
+                app:strokeColor="?attr/active_color_primary"
                 app:strokeWidth="1.5dp"
                 app:cornerRadius="8dp"
                 android:contentDescription="@string/nautical_tack_stbd" />
@@ -277,11 +255,11 @@
                             android:insetRight="0dp"
                             android:insetBottom="0dp"
                             android:padding="0dp"
-                            android:text="-10°"
+                            android:text="-10"
                             android:textSize="16sp"
                             android:textStyle="bold"
-                            android:textColor="#D32F2F"
-                            app:strokeColor="#D32F2F"
+                            android:textColor="?attr/active_color_primary"
+                            app:strokeColor="?attr/active_color_primary"
                             app:strokeWidth="2dp"
                             app:cornerRadius="12dp"
                             android:contentDescription="-10 degrees" />
@@ -297,12 +275,12 @@
                             android:insetRight="0dp"
                             android:insetBottom="0dp"
                             android:padding="0dp"
-                            android:text="-1°"
-                            android:textColor="#D32F2F"
+                            android:text="-1"
+                            android:textColor="?attr/active_color_primary"
                             android:textSize="15sp"
                             android:textStyle="bold"
                             app:cornerRadius="12dp"
-                            app:strokeColor="#D32F2F"
+                            app:strokeColor="?attr/active_color_primary"
                             app:strokeWidth="1.5dp"
                             android:contentDescription="-1 degree" />
                     </LinearLayout>
@@ -330,7 +308,7 @@
                             android:layout_marginEnd="16dp"
                             android:layout_marginTop="8dp"
                             android:src="@drawable/ic_action_nautical_depth"
-                            app:tint="@color/nautical_status_green"
+                            app:tint="?attr/active_color_primary"
                             android:visibility="gone"
                             android:contentDescription="@string/nautical_predictive_steering_active" />
                     </FrameLayout>
@@ -354,11 +332,11 @@
                             android:insetRight="0dp"
                             android:insetBottom="0dp"
                             android:padding="0dp"
-                            android:text="+10°"
+                            android:text="+10"
                             android:textSize="16sp"
                             android:textStyle="bold"
-                            android:textColor="#2E7D32"
-                            app:strokeColor="#2E7D32"
+                            android:textColor="?attr/active_color_primary"
+                            app:strokeColor="?attr/active_color_primary"
                             app:strokeWidth="2dp"
                             app:cornerRadius="12dp"
                             android:contentDescription="+10 degrees" />
@@ -374,12 +352,12 @@
                             android:insetRight="0dp"
                             android:insetBottom="0dp"
                             android:padding="0dp"
-                            android:text="+1°"
-                            android:textColor="#2E7D32"
+                            android:text="+1"
+                            android:textColor="?attr/active_color_primary"
                             android:textSize="15sp"
                             android:textStyle="bold"
                             app:cornerRadius="12dp"
-                            app:strokeColor="#2E7D32"
+                            app:strokeColor="?attr/active_color_primary"
                             app:strokeWidth="1.5dp"
                             android:contentDescription="+1 degree" />
                     </LinearLayout>
@@ -397,139 +375,6 @@
                     android:focusable="true" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
-
-        <!-- 4. Dedicated Steering Telemetry Cards Row -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginStart="16dp"
-            android:layout_marginEnd="16dp"
-            android:layout_marginTop="10dp">
-
-            <!-- Vessel Heading -->
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:layout_marginEnd="4dp"
-                android:background="?attr/card_and_list_background_basic"
-                android:gravity="center"
-                android:orientation="vertical"
-                android:paddingTop="8dp"
-                android:paddingBottom="8dp">
-
-                <TextView
-                    android:id="@+id/txt_vessel_hdg_label"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/nautical_heading_true"
-                    android:textAppearance="@style/TextAppearance.AppCompat.Caption"
-                    android:textColor="?android:attr/textColorSecondary" />
-
-                <TextView
-                    android:id="@+id/txt_vessel_hdg_value"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:fontFeatureSettings="tnum"
-                    android:textColor="?android:attr/textColorPrimary"
-                    android:textSize="15sp"
-                    android:textStyle="bold"
-                    tools:text="042°" />
-            </LinearLayout>
-
-            <!-- Target Heading / AWA -->
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:layout_marginEnd="4dp"
-                android:background="?attr/card_and_list_background_basic"
-                android:gravity="center"
-                android:orientation="vertical"
-                android:paddingTop="8dp"
-                android:paddingBottom="8dp">
-
-                <TextView
-                    android:id="@+id/txt_target_hdg_label"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/nautical_target_heading"
-                    android:textAppearance="@style/TextAppearance.AppCompat.Caption"
-                    android:textColor="?android:attr/textColorSecondary" />
-
-                <TextView
-                    android:id="@+id/txt_target_hdg_value"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:fontFeatureSettings="tnum"
-                    android:textColor="?android:attr/textColorPrimary"
-                    android:textSize="15sp"
-                    android:textStyle="bold"
-                    tools:text="045°" />
-            </LinearLayout>
-
-            <!-- Rudder Angle -->
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:layout_marginEnd="4dp"
-                android:background="?attr/card_and_list_background_basic"
-                android:gravity="center"
-                android:orientation="vertical"
-                android:paddingTop="8dp"
-                android:paddingBottom="8dp">
-
-                <TextView
-                    android:id="@+id/txt_rudder_label"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/nautical_rudder_angle"
-                    android:textAppearance="@style/TextAppearance.AppCompat.Caption"
-                    android:textColor="?android:attr/textColorSecondary" />
-
-                <TextView
-                    android:id="@+id/txt_rudder_value"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:fontFeatureSettings="tnum"
-                    android:textColor="?android:attr/textColorPrimary"
-                    android:textSize="15sp"
-                    android:textStyle="bold"
-                    tools:text="MID" />
-            </LinearLayout>
-
-            <!-- Deviation / XTE -->
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:background="?attr/card_and_list_background_basic"
-                android:gravity="center"
-                android:orientation="vertical"
-                android:paddingTop="8dp"
-                android:paddingBottom="8dp">
-
-                <TextView
-                    android:id="@+id/txt_dev_xte_label"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/nautical_xte"
-                    android:textAppearance="@style/TextAppearance.AppCompat.Caption"
-                    android:textColor="?android:attr/textColorSecondary" />
-
-                <TextView
-                    android:id="@+id/txt_dev_xte_value"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:fontFeatureSettings="tnum"
-                    android:textColor="?android:attr/textColorPrimary"
-                    android:textSize="15sp"
-                    android:textStyle="bold"
-                    tools:text="0.00 NM" />
-            </LinearLayout>
-        </LinearLayout>
 
     </LinearLayout>
 </androidx.core.widget.NestedScrollView>

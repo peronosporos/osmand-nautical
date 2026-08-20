@@ -22,7 +22,8 @@ class NauticalSystemsBottomSheet : BaseNauticalBottomSheet() {
     override fun createMenuItems(savedInstanceState: Bundle?) {
         addTitleItem(getString(R.string.nautical_systems_group))
 
-        val customView = LayoutInflater.from(requireContext()).inflate(R.layout.bottom_sheet_nautical_systems, null)
+        val themedCtx = androidx.appcompat.view.ContextThemeWrapper(requireContext(), R.style.OsmandTheme)
+        val customView = LayoutInflater.from(themedCtx).inflate(R.layout.bottom_sheet_nautical_systems, null)
 
         val btnUp = customView.findViewById<Button>(R.id.btn_windlass_up)
         val btnDown = customView.findViewById<Button>(R.id.btn_windlass_down)

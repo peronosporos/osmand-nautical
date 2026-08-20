@@ -46,7 +46,8 @@ class NauticalConfirmDialog : DialogFragment() {
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
-        val view = inflater.inflate(R.layout.nautical_confirm_popup, container, false)
+        val themedCtx = androidx.appcompat.view.ContextThemeWrapper(requireContext(), R.style.OsmandTheme)
+        val view = LayoutInflater.from(themedCtx).inflate(R.layout.nautical_confirm_popup, container, false)
         
         view.findViewById<TextView>(R.id.confirm_title).text = title
         view.findViewById<TextView>(R.id.confirm_message).text = message

@@ -53,7 +53,8 @@ class TideStationBottomSheet : BaseNauticalBottomSheet() {
         addTitleItem(getString(R.string.tide_dialog_title))
 
         // Add Graph
-        val graphContainer = LayoutInflater.from(requireContext()).inflate(R.layout.bottom_sheet_nautical_data, null)
+        val themedCtx = androidx.appcompat.view.ContextThemeWrapper(requireContext(), R.style.OsmandTheme)
+        val graphContainer = LayoutInflater.from(themedCtx).inflate(R.layout.bottom_sheet_nautical_data, null)
         graphContainer.findViewById<View>(R.id.graph_title)?.visibility = View.GONE
         val oldGraph = graphContainer.findViewById<View>(R.id.graph_view)
         val container = oldGraph?.parent as? ViewGroup

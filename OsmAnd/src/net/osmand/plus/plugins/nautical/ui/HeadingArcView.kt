@@ -374,21 +374,18 @@ class HeadingArcView @JvmOverloads constructor(
             textPaint.color = NauticalColorResolver.getColor(context, NauticalSemanticColor.STATUS_ERROR)
             textPaint.textSize = cardinalSize
             canvas.drawText(offlineLabel, centerX, centerY + dp6, textPaint)
-        } else {
             textPaint.textSize = centerValueSize
+            textPaint.color = textColorPrimary
             if (currentMode == "WIND") {
                 val tawa = targetWindAngleApparent ?: 0
                 val side = if (tawa < 0) "P" else if (tawa > 0) "S" else ""
                 val absVal = abs(tawa)
-                textPaint.color = if (tawa < 0) Color.rgb(220, 50, 50) else if (tawa > 0) Color.rgb(46, 125, 50) else textColorPrimary
                 val displayText = if (side.isNotEmpty()) "$side $absVal°" else "$absVal°"
                 canvas.drawText(displayText, centerX, centerY + (centerValueSize * 0.15f), textPaint)
             } else {
-                textPaint.color = textColorPrimary
                 val centralValue = targetHeading
                 NauticalFormatter.drawDeg(canvas, centralValue.toFloat(), centerX, centerY + (centerValueSize * 0.15f), textPaint, degreeBuffer)
             }
-        }
         
         paint.textSize = labelSize
         paint.color = textColorSecondary

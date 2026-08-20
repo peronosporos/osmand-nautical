@@ -19,7 +19,8 @@ class NauticalManeuversBottomSheet : BaseNauticalBottomSheet() {
     override fun createMenuItems(savedInstanceState: Bundle?) {
         addTitleItem(getString(R.string.nautical_maneuver_menu))
 
-        val customView = LayoutInflater.from(requireContext()).inflate(R.layout.nautical_maneuvers_bottom_sheet, null)
+        val themedCtx = androidx.appcompat.view.ContextThemeWrapper(requireContext(), R.style.OsmandTheme)
+        val customView = LayoutInflater.from(themedCtx).inflate(R.layout.nautical_maneuvers_bottom_sheet, null)
         
         val recyclerView = customView.findViewById<RecyclerView>(R.id.maneuvers_list)
         recyclerView.layoutManager = LinearLayoutManager(requireContext())

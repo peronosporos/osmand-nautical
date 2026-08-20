@@ -52,7 +52,8 @@ class MasterTelemetryBottomSheet : NauticalMenuBottomSheetDialogFragment() {
 
     override fun createMenuItems(savedInstanceState: Bundle?) {
         val app = requireContext().applicationContext as OsmandApplication
-        val layout = LayoutInflater.from(requireContext())
+        val themedCtx = androidx.appcompat.view.ContextThemeWrapper(requireContext(), R.style.OsmandTheme)
+        val layout = LayoutInflater.from(themedCtx)
             .inflate(R.layout.bottom_sheet_nautical_master_telemetry, null)
 
         val btnSettings = layout.findViewById<ImageView>(R.id.btn_settings)
@@ -175,7 +176,8 @@ class MasterTelemetryBottomSheet : NauticalMenuBottomSheetDialogFragment() {
         fun getItemKey(position: Int): String? = displayedKeys.getOrNull(position)
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
-            val view = LayoutInflater.from(parent.context)
+            val themedCtx = androidx.appcompat.view.ContextThemeWrapper(parent.context, R.style.OsmandTheme)
+            val view = LayoutInflater.from(themedCtx)
                 .inflate(R.layout.item_nautical_telemetry_tile, parent, false)
             return ViewHolder(view)
         }
