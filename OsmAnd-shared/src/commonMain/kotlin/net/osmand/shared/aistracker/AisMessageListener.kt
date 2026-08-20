@@ -65,7 +65,7 @@ open class AisMessageListener {
         initListeners()
 
         networkJob?.cancel()
-        networkJob = scope.launch {
+        networkJob = scope.launch(Dispatchers.IO) {
             val selectorManager = SelectorManager(Dispatchers.IO)
             try {
                 while (isActive) {
@@ -116,7 +116,7 @@ open class AisMessageListener {
         initListeners()
 
         networkJob?.cancel()
-        networkJob = scope.launch {
+        networkJob = scope.launch(Dispatchers.IO) {
             val selectorManager = SelectorManager(Dispatchers.IO)
             val lineBuffer = StringBuilder()
             try {

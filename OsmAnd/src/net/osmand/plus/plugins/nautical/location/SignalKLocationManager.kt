@@ -57,6 +57,12 @@ class SignalKLocationManager(
 
         startWatchdog()
         onApplicationModeChanged(app.settings.APPLICATION_MODE.get())
+        if (isBoatMode()) {
+            val currentState = dataBroker.marineState.value
+            if (currentState.latitude != null && currentState.longitude != null) {
+                processMarineState(currentState)
+            }
+        }
         log.info("SignalKLocationManager: Started.")
     }
 
@@ -105,8 +111,10 @@ class SignalKLocationManager(
                 }
             }
         } else {
-            val now = System.currentTimeMillis()
-            if (!hasValidSignalKFix(TIMEOUT_MS)) {
+            val currentState = dataBroker.marineState.value
+            if (currentState.latitude != null && currentState.longitude != null) {
+                processMarineState(currentState)
+            } else if (!hasValidSignalKFix(TIMEOUT_MS)) {
                 val hadSignalK = lastSignalKPositionTimeMs.getAndSet(0L) != 0L
                 app.runInUIThread {
                     if (hadSignalK) {

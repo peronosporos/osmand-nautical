@@ -98,6 +98,33 @@ public class AisTrackerLayer extends OsmandMapLayer implements IContextMenuProvi
 		lastRenderRefreshTimeMs = 0;
 	}
 
+	private long lastMapRefreshTimeMs = 0L;
+	private boolean mapRefreshScheduled = false;
+
+	private void scheduleThrottledMapRefresh() {
+		long now = System.currentTimeMillis();
+		if (now - lastMapRefreshTimeMs >= 1000L) {
+			lastMapRefreshTimeMs = now;
+			getApplication().runInUIThread(() -> {
+				OsmandMapTileView view = getTileView();
+				if (view != null) {
+					view.refreshMap();
+				}
+			});
+		} else if (!mapRefreshScheduled) {
+			mapRefreshScheduled = true;
+			long delayMs = 1000L - (now - lastMapRefreshTimeMs);
+			getApplication().runInUIThread(() -> {
+				lastMapRefreshTimeMs = System.currentTimeMillis();
+				mapRefreshScheduled = false;
+				OsmandMapTileView view = getTileView();
+				if (view != null) {
+					view.refreshMap();
+				}
+			}, delayMs);
+		}
+	}
+
 	@Override
 	public void onAisObjectReceived(@NonNull AisObject ais) {
 		int mmsi = ais.getMmsi();
@@ -124,6 +151,7 @@ public class AisTrackerLayer extends OsmandMapLayer implements IContextMenuProvi
 			drawable.createAisRenderData(getBaseOrder(), bitmapPaint, markersCollection, vectorLinesCollection, aisRestImage);
 		}
 		drawable.updateAisRenderData(getTileView(), bitmapPaint);
+		scheduleThrottledMapRefresh();
 	}
 
 	@Override
@@ -135,6 +163,7 @@ public class AisTrackerLayer extends OsmandMapLayer implements IContextMenuProvi
 			}
 		}
 		objectDrawables.remove(ais.getMmsi());
+		scheduleThrottledMapRefresh();
 	}
 
 	private boolean isOwnObject(@NonNull AisObject ais) {

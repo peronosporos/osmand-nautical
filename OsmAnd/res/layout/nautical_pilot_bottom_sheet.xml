@@ -84,21 +84,38 @@
 
             <com.google.android.material.button.MaterialButtonToggleGroup
                 android:id="@+id/mode_toggle_group"
-                android:layout_width="wrap_content"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 app:singleSelection="true"
                 app:selectionRequired="false">
 
                 <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_mode_stop"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    android:layout_width="0dp"
+                    android:layout_height="48dp"
+                    android:layout_weight="1"
+                    android:padding="0dp"
+                    app:icon="@drawable/ic_action_stop"
+                    app:iconGravity="textStart"
+                    app:iconPadding="0dp"
+                    app:iconSize="22dp"
+                    app:iconTint="?attr/active_color_primary"
+                    app:strokeColor="?attr/active_color_primary"
+                    app:strokeWidth="1.5dp"
+                    android:contentDescription="@string/nautical_mode_stop" />
+
+                <com.google.android.material.button.MaterialButton
                     android:id="@+id/btn_mode_compass"
                     style="@style/Widget.Material3.Button.OutlinedButton"
-                    android:layout_width="56dp"
+                    android:layout_width="0dp"
                     android:layout_height="48dp"
+                    android:layout_weight="1"
                     android:padding="0dp"
                     app:icon="@drawable/ic_action_direction_compass"
                     app:iconGravity="textStart"
                     app:iconPadding="0dp"
-                    app:iconSize="24dp"
+                    app:iconSize="22dp"
                     app:iconTint="?attr/icon_color_primary"
                     app:strokeColor="?attr/active_color_primary"
                     android:contentDescription="@string/nautical_mode_compass" />
@@ -106,13 +123,14 @@
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btn_mode_wind"
                     style="@style/Widget.Material3.Button.OutlinedButton"
-                    android:layout_width="56dp"
+                    android:layout_width="0dp"
                     android:layout_height="48dp"
+                    android:layout_weight="1"
                     android:padding="0dp"
                     app:icon="@drawable/ic_action_wind"
                     app:iconGravity="textStart"
                     app:iconPadding="0dp"
-                    app:iconSize="24dp"
+                    app:iconSize="22dp"
                     app:iconTint="?attr/icon_color_primary"
                     app:strokeColor="?attr/active_color_primary"
                     android:contentDescription="@string/nautical_mode_wind" />
@@ -120,30 +138,17 @@
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btn_mode_route"
                     style="@style/Widget.Material3.Button.OutlinedButton"
-                    android:layout_width="56dp"
+                    android:layout_width="0dp"
                     android:layout_height="48dp"
+                    android:layout_weight="1"
                     android:padding="0dp"
                     app:icon="@drawable/ic_action_track_16"
                     app:iconGravity="textStart"
                     app:iconPadding="0dp"
-                    app:iconSize="24dp"
+                    app:iconSize="22dp"
                     app:iconTint="?attr/icon_color_primary"
                     app:strokeColor="?attr/active_color_primary"
                     android:contentDescription="@string/nautical_mode_track" />
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btn_mode_stop"
-                    style="@style/Widget.Material3.Button.OutlinedButton"
-                    android:layout_width="56dp"
-                    android:layout_height="48dp"
-                    android:padding="0dp"
-                    app:icon="@drawable/ic_action_stop"
-                    app:iconGravity="textStart"
-                    app:iconPadding="0dp"
-                    app:iconSize="24dp"
-                    app:iconTint="?attr/icon_color_primary"
-                    app:strokeColor="?attr/active_color_primary"
-                    android:contentDescription="@string/nautical_mode_stop" />
             </com.google.android.material.button.MaterialButtonToggleGroup>
         </LinearLayout>
 
@@ -294,6 +299,43 @@
                     android:layout_height="40dp"
                     android:layout_weight="1"
                     android:text="@string/nautical_dodge_stbd"
+                    android:textColor="?attr/active_color_primary"
+                    android:textSize="11sp"
+                    android:textStyle="bold"
+                    app:strokeColor="?attr/active_color_primary"
+                    app:strokeWidth="1.2dp"
+                    app:cornerRadius="8dp" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/layout_secondary_row_3"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:orientation="horizontal">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_maneuver_secondary_5"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    android:layout_width="0dp"
+                    android:layout_height="40dp"
+                    android:layout_weight="1"
+                    android:layout_marginEnd="6dp"
+                    android:text="@string/nautical_heave_to"
+                    android:textColor="?attr/active_color_primary"
+                    android:textSize="11sp"
+                    android:textStyle="bold"
+                    app:strokeColor="?attr/active_color_primary"
+                    app:strokeWidth="1.2dp"
+                    app:cornerRadius="8dp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_maneuver_secondary_6"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    android:layout_width="0dp"
+                    android:layout_height="40dp"
+                    android:layout_weight="1"
+                    android:text="@string/nautical_docking_hold"
                     android:textColor="?attr/active_color_primary"
                     android:textSize="11sp"
                     android:textStyle="bold"

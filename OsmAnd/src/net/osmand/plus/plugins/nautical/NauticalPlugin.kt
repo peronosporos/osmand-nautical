@@ -869,11 +869,13 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
 
         registerListeners()
 
-        updateNmeaSource()
-        val currentSource = app.settings.NAUTICAL_NMEA_SOURCE.get()
-        if (currentSource == NmeaSource.SIGNALK) {
-            connectionManager.startEngine()
-            nauticalConnectionManager.connect()
+        scope.launch(Dispatchers.IO) {
+            updateNmeaSource()
+            val currentSource = app.settings.NAUTICAL_NMEA_SOURCE.get()
+            if (currentSource == NmeaSource.SIGNALK) {
+                connectionManager.startEngine()
+                nauticalConnectionManager.connect()
+            }
         }
     }
 
@@ -1141,10 +1143,12 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
         if (isActive && isBoat) {
             initSubsystems(activity)
             uiOverlayManager.updateHudVisibility(hudManager)
-            updateNmeaSource()
             signalKLocationManager?.start()
-            nauticalConnectionManager.connect()
-            engine?.refreshVesselState()
+            getScope().launch(Dispatchers.IO) {
+                updateNmeaSource()
+                nauticalConnectionManager.connect()
+                engine?.refreshVesselState()
+            }
         }
     }
 
@@ -1156,9 +1160,11 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
         if (isActive && isBoat) {
             initSubsystems(activity)
             uiOverlayManager.updateHudVisibility(hudManager)
-            updateNmeaSource()
-            nauticalConnectionManager.connect()
-            engine?.refreshVesselState()
+            getScope().launch(Dispatchers.IO) {
+                updateNmeaSource()
+                nauticalConnectionManager.connect()
+                engine?.refreshVesselState()
+            }
         }
     }
 

@@ -123,6 +123,27 @@ class NauticalAisLayer(context: Context) : OsmandMapLayer(context), ContextMenuL
         cleanupResources()
     }
 
+    private var lastMapRefreshTimeMs: Long = 0L
+    private var mapRefreshScheduled: Boolean = false
+
+    private fun scheduleThrottledMapRefresh() {
+        val now = System.currentTimeMillis()
+        if (now - lastMapRefreshTimeMs >= 1000L) {
+            lastMapRefreshTimeMs = now
+            getApplication().runInUIThread {
+                tileView?.refreshMap()
+            }
+        } else if (!mapRefreshScheduled) {
+            mapRefreshScheduled = true
+            val delayMs = 1000L - (now - lastMapRefreshTimeMs)
+            getApplication().runInUIThread({
+                lastMapRefreshTimeMs = System.currentTimeMillis()
+                mapRefreshScheduled = false
+                tileView?.refreshMap()
+            }, delayMs)
+        }
+    }
+
     fun onAisObjectReceived(ais: AisObject) {
         val plugin = plugin ?: return
         val mmsi = ais.mmsi
@@ -139,9 +160,7 @@ class NauticalAisLayer(context: Context) : OsmandMapLayer(context), ContextMenuL
             }
         }
 
-        getApplication().runInUIThread {
-            tileView?.refreshMap()
-        }
+        scheduleThrottledMapRefresh()
 
         var drawable = objectDrawables[mmsi]
         if (drawable == null) {
@@ -191,9 +210,7 @@ class NauticalAisLayer(context: Context) : OsmandMapLayer(context), ContextMenuL
             objectDrawables[ais.mmsi]?.clearAisRenderData(markersCollection!!, vectorLinesCollection!!)
         }
         objectDrawables.remove(ais.mmsi)
-        getApplication().runInUIThread {
-            tileView?.refreshMap()
-        }
+        scheduleThrottledMapRefresh()
     }
 
     private fun isOwnObject(ais: AisObject): Boolean {

@@ -821,6 +821,36 @@ class AutopilotController(
         }
     }
 
+    fun heaveTo(port: Boolean = true) {
+        val state = NauticalPlugin.engine?.getCurrentState()
+        val awa = state?.windDirectionApparent
+        if (awa != null) {
+            val targetWindAngle = if (port) -45.0 else 45.0
+            setTargetWindAngle(targetWindAngle)
+            setAutopilotMode("wind")
+        } else {
+            val currentHeading = state?.headingTrue?.let { Math.toDegrees(it) } ?: 0.0
+            val targetHdg = if (port) (currentHeading - 45.0 + 360.0) % 360.0 else (currentHeading + 45.0) % 360.0
+            setTargetHeading(targetHdg)
+            setAutopilotMode("auto")
+        }
+    }
+
+    fun dodge(port: Boolean) {
+        val delta = if (port) -10.0 else 10.0
+        adjustHeading(delta)
+    }
+
+    fun dockingHold() {
+        stopNavigation()
+        setRudderAngle(0.0)
+    }
+
+    fun emergencyStop() {
+        stopNavigation()
+        setRudderAngle(0.0)
+    }
+
 
 
     fun williamsonTurn(port: Boolean = true) {
