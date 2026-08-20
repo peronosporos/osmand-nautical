@@ -45,7 +45,7 @@ class GribManagerBottomSheet : BottomSheetDialogFragment() {
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         val app = (activity?.application as? net.osmand.plus.OsmandApplication)
-        val night = app?.daynightHelper?.isNightMode ?: false
+        val night = app?.daynightHelper?.isNightMode(net.osmand.plus.settings.enums.ThemeUsageContext.APP) ?: false
         val themedCtx = net.osmand.plus.utils.UiUtilities.getThemedContext(requireContext(), night)
         return LayoutInflater.from(themedCtx).inflate(R.layout.bottom_sheet_grib_manager, container, false)
     }
