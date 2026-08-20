@@ -69,6 +69,7 @@ class SignalKLocationManager(
 
         // Ensure device GPS is resumed upon stopping
         app.runInUIThread {
+            app.locationProvider.setCustomLocation(null, 0)
             app.locationProvider.resumeDeviceGps()
         }
         log.info("SignalKLocationManager: Stopped.")
@@ -83,6 +84,7 @@ class SignalKLocationManager(
         if (!isBoatMode(mode)) {
             lastSignalKPositionTimeMs.set(0L)
             app.runInUIThread {
+                app.locationProvider.setCustomLocation(null, 0)
                 if (app.locationProvider.isDeviceGpsSuspended) {
                     log.info("SignalKLocationManager: Exited Boat profile, strictly resuming device GPS and ignoring Signal K location.")
                     app.locationProvider.resumeDeviceGps()
@@ -93,6 +95,7 @@ class SignalKLocationManager(
             val lastFixAge = now - lastSignalKPositionTimeMs.get()
             if (lastFixAge > TIMEOUT_MS) {
                 app.runInUIThread {
+                    app.locationProvider.setCustomLocation(null, 0)
                     if (app.locationProvider.isDeviceGpsSuspended) {
                         app.locationProvider.resumeDeviceGps()
                     }
@@ -105,6 +108,7 @@ class SignalKLocationManager(
         if (!isBoatMode()) {
             if (app.locationProvider.isDeviceGpsSuspended) {
                 app.runInUIThread {
+                    app.locationProvider.setCustomLocation(null, 0)
                     app.locationProvider.resumeDeviceGps()
                 }
             }
@@ -143,8 +147,10 @@ class SignalKLocationManager(
                     log.info("SignalKLocationManager: Valid Signal K fix received. Suspending device GPS for battery saving.")
                     app.locationProvider.suspendDeviceGps()
                 }
+                app.locationProvider.setCustomLocation(loc, TIMEOUT_MS)
                 app.locationProvider.setLocationFromService(loc)
             } else {
+                app.locationProvider.setCustomLocation(null, 0)
                 if (app.locationProvider.isDeviceGpsSuspended) {
                     app.locationProvider.resumeDeviceGps()
                 }
@@ -163,6 +169,7 @@ class SignalKLocationManager(
                 } else {
                     if (app.locationProvider.isDeviceGpsSuspended) {
                         app.runInUIThread {
+                            app.locationProvider.setCustomLocation(null, 0)
                             app.locationProvider.resumeDeviceGps()
                         }
                     }
@@ -176,6 +183,7 @@ class SignalKLocationManager(
         val elapsed = now - lastFix
         if (elapsed > TIMEOUT_MS && lastFix != 0L) {
             app.runInUIThread {
+                app.locationProvider.setCustomLocation(null, 0)
                 if (app.locationProvider.isDeviceGpsSuspended) {
                     log.warn("SignalKLocationManager: Signal K position timed out (${elapsed}ms > ${TIMEOUT_MS}ms). Falling back to device GPS.")
                     app.locationProvider.resumeDeviceGps()

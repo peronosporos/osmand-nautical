@@ -236,6 +236,9 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
         }
 
         // Continuous Heading / Wind Angle Slider Callbacks
+        arcView.onHeadingChanged = { newHeading ->
+            autopilot.setTargetHeading(newHeading.toDouble())
+        }
         arcView.onHeadingCommitted = { newHeading ->
             autopilot.setTargetHeading(newHeading.toDouble())
             syncUiWithState()

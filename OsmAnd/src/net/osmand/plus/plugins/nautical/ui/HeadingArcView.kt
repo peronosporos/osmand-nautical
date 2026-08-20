@@ -38,6 +38,7 @@ class HeadingArcView @JvmOverloads constructor(
 
     var targetHeading: Int = 0
         set(value) {
+            if (isDragging || !scroller.isFinished) return
             val v = (value + 360) % 360
             if (field != v) {
                 field = v
@@ -57,7 +58,7 @@ class HeadingArcView @JvmOverloads constructor(
         }
 
         targetAnimator = ValueAnimator.ofFloat(start, end).apply {
-            duration = 300
+            duration = 200
             interpolator = DecelerateInterpolator()
             addUpdateListener {
                 animatedTargetHeading = ((it.animatedValue as Float) + 360) % 360
@@ -445,6 +446,7 @@ class HeadingArcView @JvmOverloads constructor(
         when (event.action) {
             MotionEvent.ACTION_DOWN -> {
                 scroller.forceFinished(true)
+                parent?.requestDisallowInterceptTouchEvent(true)
                 downX = event.x
                 downY = event.y
                 lastX = event.x
@@ -476,18 +478,21 @@ class HeadingArcView @JvmOverloads constructor(
                             onWindAngleChanged?.invoke(newAwa)
                         } else {
                             val oldH = targetHeading
-                            targetHeading = (targetHeading + change + 360) % 360
-                            if (targetHeading != oldH) {
-                                if (targetHeading % 10 == 0) performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+                            val newH = (targetHeading + change + 360) % 360
+                            targetHeading = newH
+                            animatedTargetHeading = newH.toFloat()
+                            if (newH != oldH) {
+                                if (newH % 10 == 0) performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
                                 else performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
-                                onHeadingChanged?.invoke(targetHeading)
-                                onHeadingPreview?.invoke(targetHeading)
+                                onHeadingChanged?.invoke(newH)
+                                onHeadingPreview?.invoke(newH)
                             }
                         }
                     }
                 }
             }
             MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                parent?.requestDisallowInterceptTouchEvent(false)
                 if (isDragging) {
                     velocityTracker?.let { vt ->
                         vt.computeCurrentVelocity(1000)

@@ -116,6 +116,7 @@ class NauticalTouchArbitrator(private val activity: MapActivity) : GestureDetect
             }
 
             if (nearObjects.size > 1) {
+                activity.contextMenu?.hideMenus()
                 val prev = activity.supportFragmentManager.findFragmentByTag("nautical_target_picker") as? androidx.fragment.app.DialogFragment
                 prev?.dismissAllowingStateLoss()
                 NauticalTargetPicker.newInstance(nearObjects).show(activity.supportFragmentManager, "nautical_target_picker")
@@ -131,6 +132,7 @@ class NauticalTouchArbitrator(private val activity: MapActivity) : GestureDetect
     fun showTargetDetails(target: Any): Boolean {
         when (target) {
             is AisObject -> {
+                activity.contextMenu?.hideMenus()
                 val resolvedTarget = net.osmand.plus.plugins.nautical.NauticalPlugin.getInstance()?.aisManager?.getAisObject(target.mmsi) ?: target
                 val prevAis = activity.supportFragmentManager.findFragmentByTag("ais_target_details") as? androidx.fragment.app.DialogFragment
                 prevAis?.dismissAllowingStateLoss()
@@ -140,6 +142,7 @@ class NauticalTouchArbitrator(private val activity: MapActivity) : GestureDetect
                 return true
             }
             is NavtexMessage -> {
+                activity.contextMenu?.hideMenus()
                 val prev = activity.supportFragmentManager.findFragmentByTag("navtex_details") as? androidx.fragment.app.DialogFragment
                 prev?.dismissAllowingStateLoss()
                 NavtexDetailsBottomSheet.newInstance(target).show(activity.supportFragmentManager, "navtex_details")

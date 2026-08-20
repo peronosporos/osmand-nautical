@@ -134,11 +134,9 @@ class MasterTelemetryBottomSheet : NauticalMenuBottomSheetDialogFragment() {
     override fun onRightBottomButtonClick() {
         BaseSettingsFragment.showInstance(
             requireActivity(),
-            SettingsScreenType.NAUTICAL_MASTER_TELEMETRY,
+            SettingsScreenType.NAUTICAL_TELEMETRY_CONFIG,
             null,
-            Bundle().apply {
-                putString(net.osmand.plus.views.mapwidgets.configure.settings.WidgetInfoBaseFragment.KEY_WIDGET_ID, widgetId)
-            },
+            null,
             null
         )
         dismiss()

@@ -71,7 +71,7 @@
                 android:contentDescription="@string/shared_string_settings" />
         </LinearLayout>
 
-        <!-- 1. Mode Switcher Row (Clean large icon buttons matching bb393ac) -->
+        <!-- 1. Mode Switcher Row -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -79,7 +79,8 @@
             android:gravity="center"
             android:paddingStart="16dp"
             android:paddingEnd="16dp"
-            android:layout_marginTop="8dp">
+            android:layout_marginTop="12dp"
+            android:layout_marginBottom="6dp">
 
             <com.google.android.material.button.MaterialButtonToggleGroup
                 android:id="@+id/mode_toggle_group"
@@ -155,7 +156,8 @@
             android:gravity="center_vertical"
             android:paddingStart="16dp"
             android:paddingEnd="16dp"
-            android:layout_marginTop="12dp">
+            android:layout_marginTop="14dp"
+            android:layout_marginBottom="8dp">
 
             <!-- Tack Port / Shunt -->
             <com.google.android.material.button.MaterialButton
@@ -164,7 +166,7 @@
                 android:layout_width="0dp"
                 android:layout_height="44dp"
                 android:layout_weight="1"
-                android:layout_marginEnd="6dp"
+                android:layout_marginEnd="8dp"
                 android:text="@string/nautical_tack_port_short"
                 android:textColor="?attr/active_color_primary"
                 android:textSize="13sp"
@@ -178,12 +180,12 @@
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btn_lock_unlock"
                 style="@style/Widget.Material3.Button.IconButton"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
-                android:layout_marginEnd="6dp"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:layout_marginEnd="8dp"
                 android:padding="0dp"
                 app:icon="@drawable/ic_action_lock_open"
-                app:iconSize="20dp"
+                app:iconSize="18dp"
                 app:iconTint="?attr/icon_color_primary"
                 android:contentDescription="@string/nautical_lock_course" />
 

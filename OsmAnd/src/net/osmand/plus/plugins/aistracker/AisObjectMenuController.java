@@ -33,15 +33,35 @@ public class AisObjectMenuController extends MenuController {
     private final OsmandApplication app;
     public AisObjectMenuController(@NonNull MapActivity mapActivity, @NonNull PointDescription pointDescription,
                                    AisObject aisObject) {
-        //super(new MenuBuilder(mapActivity), pointDescription, mapActivity);
         super(new AisObjectMenuBuilder(mapActivity), pointDescription, mapActivity);
 
-        this.aisObject = aisObject;
+        AisObject canonical = aisObject;
+        net.osmand.plus.plugins.nautical.NauticalPlugin plugin = net.osmand.plus.plugins.nautical.NauticalPlugin.getInstance();
+        if (plugin != null && plugin.getAisManager() != null) {
+            AisObject found = plugin.getAisManager().getAisObject(aisObject.getMmsi());
+            if (found != null) {
+                canonical = found;
+            }
+        }
+        this.aisObject = canonical;
         this.app = builder.getApplication();
         builder.setShowTitleIfTruncated(false);
         builder.setShowNearestPoi(false);
         builder.setShowOnlinePhotos(false);
         builder.setShowNearestWiki(false);
+    }
+
+    @NonNull
+    @Override
+    public String getNameStr() {
+        if (aisObject != null) {
+            String name = aisObject.getShipName();
+            if (name != null && !name.trim().isEmpty()) {
+                return name.trim();
+            }
+            return "MMSI: " + aisObject.getMmsi();
+        }
+        return super.getNameStr();
     }
 
     @Override
@@ -221,7 +241,15 @@ public class AisObjectMenuController extends MenuController {
     @Override
     protected void setObject(Object object) {
         if (object instanceof AisObject) {
-            this.aisObject = (AisObject) object;
+            AisObject target = (AisObject) object;
+            net.osmand.plus.plugins.nautical.NauticalPlugin plugin = net.osmand.plus.plugins.nautical.NauticalPlugin.getInstance();
+            if (plugin != null && plugin.getAisManager() != null) {
+                AisObject found = plugin.getAisManager().getAisObject(target.getMmsi());
+                if (found != null) {
+                    target = found;
+                }
+            }
+            this.aisObject = target;
         }
     }
 
