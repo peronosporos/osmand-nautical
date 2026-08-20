@@ -74,15 +74,17 @@ class SignalKLocationManager(
         log.info("SignalKLocationManager: Stopped.")
     }
 
-    private fun isBoatMode(mode: ApplicationMode = app.settings.APPLICATION_MODE.get()): Boolean {
-        return mode.isDerivedRoutingFrom(ApplicationMode.BOAT)
+    private fun isBoatMode(mode: ApplicationMode? = null): Boolean {
+        val appMode = mode ?: app.settings.applicationMode
+        return appMode == ApplicationMode.BOAT || appMode.isDerivedRoutingFrom(ApplicationMode.BOAT)
     }
 
     private fun onApplicationModeChanged(mode: ApplicationMode) {
         if (!isBoatMode(mode)) {
+            lastSignalKPositionTimeMs.set(0L)
             app.runInUIThread {
                 if (app.locationProvider.isDeviceGpsSuspended) {
-                    log.info("SignalKLocationManager: Exited Boat profile, resuming device GPS.")
+                    log.info("SignalKLocationManager: Exited Boat profile, strictly resuming device GPS and ignoring Signal K location.")
                     app.locationProvider.resumeDeviceGps()
                 }
             }
@@ -100,7 +102,14 @@ class SignalKLocationManager(
     }
 
     private fun processMarineState(state: MarineState) {
-        if (!isBoatMode()) return
+        if (!isBoatMode()) {
+            if (app.locationProvider.isDeviceGpsSuspended) {
+                app.runInUIThread {
+                    app.locationProvider.resumeDeviceGps()
+                }
+            }
+            return
+        }
 
         val lat = state.latitude
         val lon = state.longitude
@@ -135,6 +144,10 @@ class SignalKLocationManager(
                     app.locationProvider.suspendDeviceGps()
                 }
                 app.locationProvider.setLocationFromService(loc)
+            } else {
+                if (app.locationProvider.isDeviceGpsSuspended) {
+                    app.locationProvider.resumeDeviceGps()
+                }
             }
         }
     }
@@ -147,6 +160,12 @@ class SignalKLocationManager(
                 val now = System.currentTimeMillis()
                 if (isBoatMode()) {
                     checkFallback(now)
+                } else {
+                    if (app.locationProvider.isDeviceGpsSuspended) {
+                        app.runInUIThread {
+                            app.locationProvider.resumeDeviceGps()
+                        }
+                    }
                 }
             }
         }

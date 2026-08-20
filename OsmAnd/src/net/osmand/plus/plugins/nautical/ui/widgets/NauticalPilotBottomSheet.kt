@@ -27,7 +27,11 @@ import net.osmand.plus.plugins.nautical.ui.HeadingErrorLinearView
 import net.osmand.plus.plugins.nautical.ui.NauticalTouchGuard
 import net.osmand.plus.plugins.nautical.ui.RudderView
 import net.osmand.plus.settings.enums.VesselType
+import android.widget.LinearLayout
+import net.osmand.plus.plugins.nautical.ui.SlideToConfirmView
 import net.osmand.plus.track.GpxDialogs
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import java.util.Locale
 import kotlin.math.abs
 
@@ -51,6 +55,11 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
     private lateinit var routeBtn: MaterialButton
     private lateinit var tackPortBtn: MaterialButton
     private lateinit var tackStbdBtn: MaterialButton
+    private lateinit var tacticalActionsRow: LinearLayout
+    private lateinit var layoutEmbeddedConfirmation: LinearLayout
+    private lateinit var embeddedSlideConfirm: SlideToConfirmView
+    private lateinit var btnCancelEmbeddedConfirmation: MaterialButton
+    private var confirmationJob: Job? = null
 
     private var isCourseLocked = false
 
@@ -113,6 +122,17 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
 
         tackPortBtn = customView.findViewById(R.id.btn_tack_port)
         tackStbdBtn = customView.findViewById(R.id.btn_tack_stbd)
+        tacticalActionsRow = customView.findViewById(R.id.tactical_actions_row)
+        layoutEmbeddedConfirmation = customView.findViewById(R.id.layout_embedded_confirmation)
+        embeddedSlideConfirm = customView.findViewById(R.id.embedded_slide_confirm)
+        btnCancelEmbeddedConfirmation = customView.findViewById(R.id.btn_cancel_embedded_confirmation)
+
+        btnCancelEmbeddedConfirmation.setOnClickListener {
+            hideEmbeddedConfirmation()
+            it.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
+        }
+
+        updateManeuverButtons()
 
         // Settings gear button
         customView.findViewById<View>(R.id.btn_settings_gear)?.setOnClickListener {
@@ -201,7 +221,7 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
             it.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
         }
 
-        // Tack / Jibe Quick Actions
+        // Tack / Jibe / Shunt / Reverse Quick Actions
         tackPortBtn.setOnClickListener {
             val state = NauticalPlugin.engine?.getCurrentState()
             if (state != null) {
@@ -213,6 +233,16 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
             if (state != null) {
                 executeArmedManeuver(state, port = false)
             }
+        }
+
+        // Continuous Heading / Wind Angle Slider Callbacks
+        arcView.onHeadingCommitted = { newHeading ->
+            autopilot.setTargetHeading(newHeading.toDouble())
+            syncUiWithState()
+        }
+        arcView.onWindAngleChanged = { newAngle ->
+            autopilot.setTargetWindAngle(newAngle.toDouble())
+            syncUiWithState()
         }
 
         // Center Click: Set current vessel heading as target
@@ -283,15 +313,43 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
         arcView.alpha = if (isCourseLocked) 0.5f else 1.0f
     }
 
+    private fun updateManeuverButtons() {
+        val isProa = settings.NAUTICAL_VESSEL_TYPE.get() == VesselType.PROA
+        if (isProa) {
+            tackPortBtn.text = getString(R.string.nautical_shunt)
+            tackPortBtn.contentDescription = getString(R.string.nautical_shunt)
+            tackStbdBtn.text = getString(R.string.nautical_reverse_180)
+            tackStbdBtn.contentDescription = getString(R.string.nautical_reverse_180_desc)
+        } else {
+            tackPortBtn.text = getString(R.string.nautical_tack_port_short)
+            tackPortBtn.contentDescription = getString(R.string.nautical_tack_port)
+            tackStbdBtn.text = getString(R.string.nautical_tack_stbd_short)
+            tackStbdBtn.contentDescription = getString(R.string.nautical_tack_stbd)
+        }
+    }
+
     private fun executeArmedManeuver(state: MarineState, port: Boolean) {
         val isProa = settings.NAUTICAL_VESSEL_TYPE.get() == VesselType.PROA
         if (isProa) {
-            showConfirmManeuver(tacking = true, isShunt = true) {
-                NauticalPlugin.autopilot?.shunt()
+            if (port) {
+                showEmbeddedConfirmation("SLIDE TO SHUNT") {
+                    NauticalPlugin.autopilot?.shunt()
+                    speakMode("SHUNTING")
+                }
+            } else {
+                showEmbeddedConfirmation("SLIDE TO REVERSE 180°") {
+                    NauticalPlugin.autopilot?.adjustHeading(180.0)
+                    speakMode("REVERSE")
+                }
             }
         } else {
             val upwind = state.windDirectionApparent?.let { awa -> abs(Math.toDegrees(awa)) < 90.0 } ?: true
-            showConfirmManeuver(tacking = upwind) {
+            val label = if (upwind) {
+                if (port) "SLIDE TO TACK PORT" else "SLIDE TO TACK STBD"
+            } else {
+                if (port) "SLIDE TO GYBE PORT" else "SLIDE TO GYBE STBD"
+            }
+            showEmbeddedConfirmation(label) {
                 if (upwind) {
                     NauticalPlugin.autopilot?.tack(port = port)
                 } else {
@@ -302,15 +360,28 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
         }
     }
 
-    private fun showConfirmManeuver(tacking: Boolean, isShunt: Boolean = false, onConfirm: () -> Unit) {
-        val labelResId = if (isShunt) R.string.nautical_shunt else if (tacking) R.string.nautical_tack else R.string.nautical_gybe
-        val label = getString(labelResId).uppercase(Locale.US)
+    private fun showEmbeddedConfirmation(label: String, onConfirm: () -> Unit) {
+        confirmationJob?.cancel()
+        tacticalActionsRow.visibility = View.GONE
+        layoutEmbeddedConfirmation.visibility = View.VISIBLE
+        embeddedSlideConfirm.label = label
+        embeddedSlideConfirm.reset()
+        embeddedSlideConfirm.onConfirm = {
+            onConfirm()
+            hideEmbeddedConfirmation()
+        }
+        confirmationJob = viewLifecycleOwner.lifecycleScope.launch {
+            delay(12000L)
+            hideEmbeddedConfirmation()
+        }
+    }
 
-        val isSafe = if (isShunt) true else NauticalPlugin.autopilot?.isWindSafeForManeuver(tacking) ?: false
-        val msgResId = if (isShunt) R.string.nautical_confirm_shunt else if (isSafe) R.string.nautical_confirm_maneuver else R.string.nautical_warn_unsafe_maneuver
-        val msg = getString(msgResId)
-
-        NauticalPlugin.hudManager?.get()?.showBanner(msg, 10000L, label, !isSafe, onConfirm)
+    private fun hideEmbeddedConfirmation() {
+        confirmationJob?.cancel()
+        confirmationJob = null
+        layoutEmbeddedConfirmation.visibility = View.GONE
+        tacticalActionsRow.visibility = View.VISIBLE
+        embeddedSlideConfirm.reset()
     }
 
     private fun updateUi(state: MarineState) {
@@ -397,6 +468,8 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
         } else {
             errorLinear.setBackgroundColor(Color.TRANSPARENT)
         }
+
+        updateManeuverButtons()
     }
 
     private fun speakMode(mode: String) {

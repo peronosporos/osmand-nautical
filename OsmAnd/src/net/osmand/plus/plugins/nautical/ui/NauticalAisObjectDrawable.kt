@@ -535,7 +535,17 @@ class NauticalAisObjectDrawable(
 
                 val heading = ais.heading
                 if (heading != AisObjectConstants.INVALID_HEADING && heading != 0) {
-                    rotate(heading.toFloat() - tileBox.rotate)
+                    val headingPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                        style = Paint.Style.STROKE
+                        strokeWidth = 2f * tileBox.density
+                        color = Color.DKGRAY
+                    }
+                    val rad = Math.toRadians((heading.toFloat() - tileBox.rotate).toDouble())
+                    val startX = (innerRadius * Math.sin(rad)).toFloat()
+                    val startY = (-innerRadius * Math.cos(rad)).toFloat()
+                    val endX = ((outerRadius + 5f * tileBox.density) * Math.sin(rad)).toFloat()
+                    val endY = (-(outerRadius + 5f * tileBox.density) * Math.cos(rad)).toFloat()
+                    drawLine(startX, startY, endX, endY, headingPaint)
                 }
             } else if (bmp != null) {
                 if (needRotation()) {

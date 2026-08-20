@@ -50,18 +50,37 @@ class NauticalTouchArbitrator(private val activity: MapActivity) : GestureDetect
         result.groupByOsmIdAndWikidataId()
         val processedObjects = result.processedObjects
 
-        val nauticalObjects = processedObjects.filter { obj ->
+        val aisManager = net.osmand.plus.plugins.nautical.NauticalPlugin.getInstance()?.aisManager
+
+        val nauticalObjects = processedObjects.mapNotNull { obj ->
             val o = obj.`object`()
-            o is AisObject || o is NavtexMessage || o is S57Object
+            when (o) {
+                is AisObject -> {
+                    aisManager?.getAisObject(o.mmsi) ?: o
+                }
+                is NavtexMessage, is S57Object -> o
+                else -> null
+            }
+        }.distinctBy { target ->
+            when (target) {
+                is AisObject -> "ais_${target.mmsi}"
+                is NavtexMessage -> "navtex_${target.id}"
+                is S57Object -> "s57_${target.id}"
+                else -> target.toString()
+            }
         }
 
         if (nauticalObjects.isEmpty()) return false
 
         if (nauticalObjects.size > 1) {
             // Sort by Euclidean pixel distance
-            val sorted = nauticalObjects.sortedBy { obj ->
-                val o = obj.`object`()
-                val loc = obj.provider()?.getObjectLocation(o)
+            val sorted = nauticalObjects.sortedBy { target ->
+                val loc = when (target) {
+                    is AisObject -> target.position?.let { net.osmand.data.LatLon(it.latitude, it.longitude) }
+                    is NavtexMessage -> net.osmand.data.LatLon(target.lat, target.lon)
+                    is S57Object -> target.latLon
+                    else -> null
+                }
                 if (loc != null) {
                     val px = tileBox.getPixXFromLatLon(loc.latitude, loc.longitude)
                     val py = tileBox.getPixYFromLatLon(loc.latitude, loc.longitude)
@@ -75,9 +94,13 @@ class NauticalTouchArbitrator(private val activity: MapActivity) : GestureDetect
             val density = activity.resources.displayMetrics.density
             val thresholdPx = 16 * density
             
-            val nearObjects = sorted.filter { obj ->
-                val o = obj.`object`()
-                val loc = obj.provider()?.getObjectLocation(o)
+            val nearObjects = sorted.filter { target ->
+                val loc = when (target) {
+                    is AisObject -> target.position?.let { net.osmand.data.LatLon(it.latitude, it.longitude) }
+                    is NavtexMessage -> net.osmand.data.LatLon(target.lat, target.lon)
+                    is S57Object -> target.latLon
+                    else -> null
+                }
                 if (loc != null) {
                     val px = tileBox.getPixXFromLatLon(loc.latitude, loc.longitude)
                     val py = tileBox.getPixYFromLatLon(loc.latitude, loc.longitude)
@@ -86,23 +109,32 @@ class NauticalTouchArbitrator(private val activity: MapActivity) : GestureDetect
             }
 
             if (nearObjects.size > 1) {
-                NauticalTargetPicker.newInstance(nearObjects.map { it.`object`() }).show(activity.supportFragmentManager, "nautical_target_picker")
+                val prev = activity.supportFragmentManager.findFragmentByTag("nautical_target_picker") as? androidx.fragment.app.DialogFragment
+                prev?.dismissAllowingStateLoss()
+                NauticalTargetPicker.newInstance(nearObjects).show(activity.supportFragmentManager, "nautical_target_picker")
                 return true
             }
         }
 
         // Handle single object or fallback to first
-        val target = nauticalObjects.firstOrNull()?.`object`() ?: return false
+        val target = nauticalObjects.firstOrNull() ?: return false
         return showTargetDetails(target)
     }
 
     fun showTargetDetails(target: Any): Boolean {
         when (target) {
             is AisObject -> {
-                AisTargetBottomSheet.newInstance(target).show(activity.supportFragmentManager, "ais_target_details")
+                val resolvedTarget = net.osmand.plus.plugins.nautical.NauticalPlugin.getInstance()?.aisManager?.getAisObject(target.mmsi) ?: target
+                val prevAis = activity.supportFragmentManager.findFragmentByTag("ais_target_details") as? androidx.fragment.app.DialogFragment
+                prevAis?.dismissAllowingStateLoss()
+                val prevDiag = activity.supportFragmentManager.findFragmentByTag(NauticalAisDetailsDialog.TAG) as? androidx.fragment.app.DialogFragment
+                prevDiag?.dismissAllowingStateLoss()
+                AisTargetBottomSheet.newInstance(resolvedTarget).show(activity.supportFragmentManager, "ais_target_details")
                 return true
             }
             is NavtexMessage -> {
+                val prev = activity.supportFragmentManager.findFragmentByTag("navtex_details") as? androidx.fragment.app.DialogFragment
+                prev?.dismissAllowingStateLoss()
                 NavtexDetailsBottomSheet.newInstance(target).show(activity.supportFragmentManager, "navtex_details")
                 return true
             }

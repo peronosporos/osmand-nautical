@@ -17,6 +17,10 @@ import net.osmand.plus.plugins.nautical.utils.NauticalFormatter
 import java.util.Locale
 import kotlin.math.*
 
+import android.view.VelocityTracker
+import android.view.ViewConfiguration
+import android.widget.OverScroller
+
 class HeadingArcView @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
@@ -25,6 +29,8 @@ class HeadingArcView @JvmOverloads constructor(
 
     var onCenterClicked: (() -> Unit)? = null
     var onHeadingChanged: ((Int) -> Unit)? = null
+    var onHeadingPreview: ((Int?) -> Unit)? = null
+    var onHeadingCommitted: ((Int) -> Unit)? = null
     var onWindAngleChanged: ((Int) -> Unit)? = null
     
     private var animatedTargetHeading: Float = 0f
@@ -403,22 +409,113 @@ class HeadingArcView @JvmOverloads constructor(
         info.contentDescription = context.getString(R.string.nautical_pilot_title) + ": " + targetHeading.toString() + "°"
     }
 
+    private var downX = 0f
+    private var downY = 0f
+    private var lastX = 0f
+    private var isDragging = false
+    private var accumulatedDelta = 0f
+    private var velocityTracker: VelocityTracker? = null
+    private val scroller by lazy { OverScroller(context) }
+    private val touchSlop by lazy { ViewConfiguration.get(context).scaledTouchSlop }
+
+    override fun computeScroll() {
+        if (scroller.computeScrollOffset()) {
+            val curr = (scroller.currX % 360 + 360) % 360
+            if (currentMode == "WIND") {
+                targetWindAngleApparent = curr
+                onWindAngleChanged?.invoke(curr)
+            } else {
+                targetHeading = curr
+                onHeadingChanged?.invoke(curr)
+            }
+            postInvalidateOnAnimation()
+        }
+    }
+
     override fun onTouchEvent(event: MotionEvent): Boolean {
-        val x = event.x - width / 2f
-        val y = event.y - height / 2f
-        val dist = sqrt(x.pow(2) + y.pow(2))
+        if (velocityTracker == null) {
+            velocityTracker = VelocityTracker.obtain()
+        }
+        velocityTracker?.addMovement(event)
+
+        val relX = event.x - width / 2f
+        val relY = event.y - height / 2f
+        val dist = sqrt(relX.pow(2) + relY.pow(2))
 
         when (event.action) {
-            MotionEvent.ACTION_UP -> {
-                if (dist < (min(width, height) / 4f)) {
+            MotionEvent.ACTION_DOWN -> {
+                scroller.forceFinished(true)
+                downX = event.x
+                downY = event.y
+                lastX = event.x
+                accumulatedDelta = 0f
+                isDragging = false
+                return true
+            }
+            MotionEvent.ACTION_MOVE -> {
+                val deltaX = event.x - lastX
+                lastX = event.x
+                val totalDist = sqrt((event.x - downX).pow(2) + (event.y - downY).pow(2))
+
+                if (!isDragging && totalDist > touchSlop) {
+                    isDragging = true
+                    parent?.requestDisallowInterceptTouchEvent(true)
+                }
+
+                if (isDragging) {
+                    val pixelsPerDegree = width / 90f
+                    accumulatedDelta -= deltaX / pixelsPerDegree
+                    val change = accumulatedDelta.toInt()
+                    if (change != 0) {
+                        accumulatedDelta -= change
+                        if (currentMode == "WIND") {
+                            val cur = targetWindAngleApparent ?: 0
+                            val newAwa = (cur + change).coerceIn(-180, 180)
+                            targetWindAngleApparent = newAwa
+                            performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                            onWindAngleChanged?.invoke(newAwa)
+                        } else {
+                            val oldH = targetHeading
+                            targetHeading = (targetHeading + change + 360) % 360
+                            if (targetHeading != oldH) {
+                                if (targetHeading % 10 == 0) performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+                                else performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                                onHeadingChanged?.invoke(targetHeading)
+                                onHeadingPreview?.invoke(targetHeading)
+                            }
+                        }
+                    }
+                }
+            }
+            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                if (isDragging) {
+                    velocityTracker?.let { vt ->
+                        vt.computeCurrentVelocity(1000)
+                        val velocityX = vt.xVelocity
+                        if (abs(velocityX) > 500) {
+                            val pixelsPerDegree = width / 90f
+                            val startVal = if (currentMode == "WIND") (targetWindAngleApparent ?: 0) else targetHeading
+                            scroller.fling(startVal, 0, -(velocityX / pixelsPerDegree).toInt(), 0, -10000, 10000, 0, 0)
+                            postInvalidateOnAnimation()
+                        }
+                    }
+                    onHeadingPreview?.invoke(null)
+                    if (currentMode == "WIND") {
+                        targetWindAngleApparent?.let { onWindAngleChanged?.invoke(it) }
+                    } else {
+                        onHeadingCommitted?.invoke(targetHeading)
+                    }
+                } else if (dist < (min(width, height) / 3f)) {
                     onCenterClicked?.invoke()
                     performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
                     performClick()
-                    return true
                 }
+                isDragging = false
+                velocityTracker?.recycle()
+                velocityTracker = null
             }
         }
-        return super.onTouchEvent(event)
+        return true
     }
 
     override fun performClick(): Boolean {

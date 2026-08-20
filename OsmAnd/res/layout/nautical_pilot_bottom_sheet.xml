@@ -79,7 +79,7 @@
             android:gravity="center"
             android:paddingStart="16dp"
             android:paddingEnd="16dp"
-            android:layout_marginTop="4dp">
+            android:layout_marginTop="8dp">
 
             <com.google.android.material.button.MaterialButtonToggleGroup
                 android:id="@+id/mode_toggle_group"
@@ -155,51 +155,84 @@
             android:gravity="center_vertical"
             android:paddingStart="16dp"
             android:paddingEnd="16dp"
-            android:layout_marginTop="8dp">
+            android:layout_marginTop="12dp">
 
-            <!-- Tack Port -->
+            <!-- Tack Port / Shunt -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btn_tack_port"
                 style="@style/Widget.Material3.Button.OutlinedButton"
                 android:layout_width="0dp"
-                android:layout_height="42dp"
+                android:layout_height="44dp"
                 android:layout_weight="1"
                 android:layout_marginEnd="6dp"
                 android:text="@string/nautical_tack_port_short"
                 android:textColor="?attr/active_color_primary"
-                android:textSize="12sp"
+                android:textSize="13sp"
                 android:textStyle="bold"
                 app:strokeColor="?attr/active_color_primary"
                 app:strokeWidth="1.5dp"
                 app:cornerRadius="8dp"
                 android:contentDescription="@string/nautical_tack_port" />
 
-            <!-- Lock Course Button -->
+            <!-- Lock Course Button (Minimal & Discrete) -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btn_lock_unlock"
                 style="@style/Widget.Material3.Button.IconButton"
-                android:layout_width="44dp"
-                android:layout_height="42dp"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
                 android:layout_marginEnd="6dp"
+                android:padding="0dp"
                 app:icon="@drawable/ic_action_lock_open"
+                app:iconSize="20dp"
                 app:iconTint="?attr/icon_color_primary"
                 android:contentDescription="@string/nautical_lock_course" />
 
-            <!-- Tack Starboard -->
+            <!-- Tack Starboard / Reverse -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btn_tack_stbd"
                 style="@style/Widget.Material3.Button.OutlinedButton"
                 android:layout_width="0dp"
-                android:layout_height="42dp"
+                android:layout_height="44dp"
                 android:layout_weight="1"
                 android:text="@string/nautical_tack_stbd_short"
                 android:textColor="?attr/active_color_primary"
-                android:textSize="12sp"
+                android:textSize="13sp"
                 android:textStyle="bold"
                 app:strokeColor="?attr/active_color_primary"
                 app:strokeWidth="1.5dp"
                 app:cornerRadius="8dp"
                 android:contentDescription="@string/nautical_tack_stbd" />
+        </LinearLayout>
+
+        <!-- 2b. Embedded Maneuver Confirmation (Directly in sheet) -->
+        <LinearLayout
+            android:id="@+id/layout_embedded_confirmation"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:layout_marginTop="12dp"
+            android:visibility="gone">
+
+            <net.osmand.plus.plugins.nautical.ui.SlideToConfirmView
+                android:id="@+id/embedded_slide_confirm"
+                android:layout_width="0dp"
+                android:layout_height="46dp"
+                android:layout_weight="1" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_cancel_embedded_confirmation"
+                style="@style/Widget.Material3.Button.IconButton"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_marginStart="8dp"
+                android:padding="0dp"
+                app:icon="@drawable/ic_action_cancel"
+                app:iconSize="20dp"
+                app:iconTint="?attr/icon_color_primary"
+                android:contentDescription="@string/shared_string_cancel" />
         </LinearLayout>
 
         <!-- 3. Main Steering Card -->
@@ -210,15 +243,15 @@
             android:layout_height="wrap_content"
             android:layout_marginStart="16dp"
             android:layout_marginEnd="16dp"
-            android:layout_marginTop="10dp"
+            android:layout_marginTop="14dp"
             app:cardBackgroundColor="#26FFFFFF">
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:paddingTop="12dp"
-                android:paddingBottom="12dp">
+                android:paddingTop="16dp"
+                android:paddingBottom="16dp">
 
                 <!-- Heading / Wind Error Linear Scale -->
                 <net.osmand.plus.plugins.nautical.ui.HeadingErrorLinearView

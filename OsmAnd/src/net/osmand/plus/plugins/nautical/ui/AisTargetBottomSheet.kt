@@ -44,7 +44,11 @@ class AisTargetBottomSheet : BottomSheetDialogFragment() {
         val night = app?.daynightHelper?.isNightMode(net.osmand.plus.settings.enums.ThemeUsageContext.APP) ?: false
         val themedCtx = net.osmand.plus.utils.UiUtilities.getThemedContext(requireContext(), night)
         val view = LayoutInflater.from(themedCtx).inflate(R.layout.dialog_nautical_ais_details, container, false)
-        val ais = aisObject
+        val inputAis = aisObject
+        val ais = if (inputAis != null) {
+            NauticalPlugin.getInstance()?.aisManager?.getAisObject(inputAis.mmsi) ?: inputAis
+        } else null
+        aisObject = ais
         if (ais != null) {
             updateView(view, ais)
             
@@ -79,7 +83,8 @@ class AisTargetBottomSheet : BottomSheetDialogFragment() {
         }
         imgIcon?.setImageDrawable(iconDrawable)
 
-        view.findViewById<TextView>(R.id.txt_ship_name).text = ais.shipName ?: "MMSI: ${ais.mmsi}"
+        val shipName = ais.shipName?.trim()
+        view.findViewById<TextView>(R.id.txt_ship_name).text = if (!shipName.isNullOrEmpty()) shipName else "MMSI: ${ais.mmsi}"
 
         val mmsiSb = StringBuilder("MMSI: ${ais.mmsi}")
         if (!ais.callSign.isNullOrEmpty()) {

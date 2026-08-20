@@ -41,11 +41,11 @@ class NauticalMasterTelemetrySettingsFragment : BaseSimpleWidgetInfoFragment() {
         
         val context = requireContext()
 
-        // Configure Bottom Sheet Telemetry (prominent preference item)
+        // Configure Displayed Metrics (prominent preference item at top)
         val configBottomSheetRow = inflater.inflate(R.layout.configure_screen_list_item, itemsContainer, false)
-        configBottomSheetRow.findViewById<TextView>(R.id.title).text = getString(R.string.nautical_configure_bottom_sheet_telemetry)
+        configBottomSheetRow.findViewById<TextView>(R.id.title).text = getString(R.string.nautical_configure_displayed_metrics)
         val configDesc = configBottomSheetRow.findViewById<TextView>(R.id.description)
-        configDesc.text = getString(R.string.nautical_configure_bottom_sheet_telemetry_desc)
+        configDesc.text = getString(R.string.nautical_configure_displayed_metrics_desc)
         configDesc.visibility = View.VISIBLE
         configBottomSheetRow.findViewById<ImageView>(R.id.icon).apply {
             setImageResource(R.drawable.ic_action_settings)

@@ -32,8 +32,8 @@
     <Preference
         android:key="nautical_configure_bottom_sheet_telemetry"
         android:layout="@layout/preference_with_descr"
-        android:title="@string/nautical_configure_bottom_sheet_telemetry"
-        android:summary="@string/nautical_configure_bottom_sheet_telemetry_desc" />
+        android:title="@string/nautical_configure_displayed_metrics"
+        android:summary="@string/nautical_configure_displayed_metrics_desc" />
 
     <!-- Section 2: Enabled Modules (Gatekeeping) -->
     <PreferenceCategory

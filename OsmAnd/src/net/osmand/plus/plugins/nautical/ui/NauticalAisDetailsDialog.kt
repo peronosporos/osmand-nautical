@@ -83,9 +83,8 @@ class NauticalAisDetailsDialog : BaseBottomSheetDialogFragment() {
         if (iconColor != 0) {
             iconDrawable?.colorFilter = PorterDuffColorFilter(iconColor, PorterDuff.Mode.SRC_IN)
         }
-        imgIcon?.setImageDrawable(iconDrawable)
-
-        view.findViewById<TextView>(R.id.txt_ship_name).text = ais.shipName ?: "MMSI: ${ais.mmsi}"
+        val shipName = ais.shipName?.trim()
+        view.findViewById<TextView>(R.id.txt_ship_name).text = if (!shipName.isNullOrEmpty()) shipName else "MMSI: ${ais.mmsi}"
 
         val mmsiSb = StringBuilder("MMSI: ${ais.mmsi}")
         if (!ais.callSign.isNullOrEmpty()) {

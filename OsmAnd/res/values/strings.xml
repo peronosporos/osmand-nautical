@@ -1,6 +1,10 @@
 <resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
+    <string name="nautical_configure_displayed_metrics">Configure Displayed Metrics</string>
+    <string name="nautical_configure_displayed_metrics_desc">Choose and arrange metrics shown in the dashboard grid</string>
     <string name="nautical_configure_bottom_sheet_telemetry">Configure Bottom Sheet Telemetry</string>
     <string name="nautical_configure_bottom_sheet_telemetry_desc">Reorder and select metrics displayed in the master telemetry bottom sheet</string>
+    <string name="nautical_reverse_180">180° REV</string>
+    <string name="nautical_reverse_180_desc">Reverse Heading 180°</string>
     <string name="nautical_mode_compass_short">COMPASS</string>
     <string name="nautical_mode_wind_short">WIND</string>
     <string name="nautical_mode_track_short">TRACK</string>
