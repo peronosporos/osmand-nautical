@@ -431,10 +431,10 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
         }
 
         val orangeColor = ContextCompat.getColor(requireContext(), R.color.icon_color_osmand_light)
-        val defaultIconColor = net.osmand.plus.utils.UiUtilities.getColorFromAttr(requireContext(), R.attr.icon_color_primary)
-        val defaultStrokeColor = net.osmand.plus.utils.UiUtilities.getColorFromAttr(requireContext(), R.attr.active_color_primary)
+        val defaultIconColor = net.osmand.plus.utils.AndroidUtils.getColorFromAttr(requireContext(), R.attr.icon_color_primary)
+        val defaultStrokeColor = net.osmand.plus.utils.AndroidUtils.getColorFromAttr(requireContext(), R.attr.active_color_primary)
 
-        val buttons = listOf(compassBtn, windBtn, trackBtn, stopBtn)
+        val buttons = listOf(compassBtn, windBtn, routeBtn, stopBtn)
         for (btn in buttons) {
             val isChecked = btn.id == targetCheckedId
             if (isChecked) {
