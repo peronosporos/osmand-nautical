@@ -1,4 +1,5 @@
 <resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
+    <string name="nautical_vmg">VMG</string>
     <string name="nautical_heading_true">HDG TRUE</string>
     <string name="nautical_category_navigation">Navigation</string>
     <string name="nautical_category_wind">Wind</string>
