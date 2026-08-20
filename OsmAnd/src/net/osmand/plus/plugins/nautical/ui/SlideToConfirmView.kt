@@ -38,7 +38,7 @@ class SlideToConfirmView @JvmOverloads constructor(
     }
 
     private val fillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = ContextCompat.getColor(context, R.color.color_ok)
+        color = ContextCompat.getColor(context, R.color.icon_color_osmand_light)
         style = Paint.Style.FILL
     }
 
@@ -140,6 +140,7 @@ class SlideToConfirmView @JvmOverloads constructor(
         when (event.action) {
             MotionEvent.ACTION_DOWN -> {
                 if (event.x < height * 1.5f) { 
+                    parent?.requestDisallowInterceptTouchEvent(true)
                     downX = event.x
                     downY = event.y
                     isDragging = false // Don't start dragging yet
@@ -152,7 +153,7 @@ class SlideToConfirmView @JvmOverloads constructor(
                     val dy = abs(event.y - downY)
                     if (dx > touchSlop || dy > touchSlop) {
                         isDragging = true
-                        parent.requestDisallowInterceptTouchEvent(true)
+                        parent?.requestDisallowInterceptTouchEvent(true)
                     }
                 }
 
@@ -176,6 +177,7 @@ class SlideToConfirmView @JvmOverloads constructor(
                 }
             }
             MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                parent?.requestDisallowInterceptTouchEvent(false)
                 if (isDragging && progress < 0.98f) {
                     animateReset()
                 }

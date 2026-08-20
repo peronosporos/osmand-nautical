@@ -430,6 +430,23 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
             modeToggleGroup.check(targetCheckedId)
         }
 
+        val orangeColor = ContextCompat.getColor(requireContext(), R.color.icon_color_osmand_light)
+        val defaultIconColor = net.osmand.plus.utils.UiUtilities.getColorFromAttr(requireContext(), R.attr.icon_color_primary)
+        val defaultStrokeColor = net.osmand.plus.utils.UiUtilities.getColorFromAttr(requireContext(), R.attr.active_color_primary)
+
+        val buttons = listOf(compassBtn, windBtn, trackBtn, stopBtn)
+        for (btn in buttons) {
+            val isChecked = btn.id == targetCheckedId
+            if (isChecked) {
+                btn.backgroundTintList = android.content.res.ColorStateList.valueOf(orangeColor)
+                btn.iconTint = android.content.res.ColorStateList.valueOf(Color.WHITE)
+            } else {
+                btn.backgroundTintList = android.content.res.ColorStateList.valueOf(Color.TRANSPARENT)
+                btn.iconTint = android.content.res.ColorStateList.valueOf(defaultIconColor)
+            }
+            btn.strokeColor = android.content.res.ColorStateList.valueOf(defaultStrokeColor)
+        }
+
         // Headings & Deviations
         val actualH = state.headingTrue?.let { Math.toDegrees(it) } ?: 0.0
         val targetH = (state.pendingTargetHeading ?: state.targetHeading ?: state.headingTrue)?.let { Math.toDegrees(it) } ?: 0.0

@@ -378,8 +378,10 @@ class NauticalAisLayer(context: Context) : OsmandMapLayer(context), ContextMenuL
 
     override fun getObjectName(o: Any?): PointDescription? {
         return (o as? AisObject)?.let { ais ->
-            val name = ais.shipName ?: "AIS Target"
-            PointDescription("AIS object", name + (if (isSignalLost(ais)) " (signal lost)" else ""))
+            val resolved = plugin?.aisManager?.getAisObject(ais.mmsi) ?: ais
+            val shipName = resolved.shipName?.trim()
+            val name = if (!shipName.isNullOrEmpty()) shipName else "MMSI: ${resolved.mmsi}"
+            PointDescription("AIS object", name + (if (isSignalLost(resolved)) " (signal lost)" else ""))
         }
     }
 

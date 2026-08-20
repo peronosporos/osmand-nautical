@@ -78,12 +78,13 @@ class NauticalTargetPicker : BottomSheetDialogFragment() {
         }
 
         if (target is AisObject) {
+            val resolvedAis = plugin?.aisManager?.getAisObject(target.mmsi) ?: target
             val iconView = ImageView(context).apply {
                 layoutParams = LinearLayout.LayoutParams(dpToPx(context, 36f), dpToPx(context, 36f)).apply {
                     marginEnd = dpToPx(context, 12f)
                 }
-                val iconRes = selectBitmap(target.objectClass)
-                val iconColor = selectColor(target.objectClass)
+                val iconRes = selectBitmap(resolvedAis.objectClass)
+                val iconColor = selectColor(resolvedAis.objectClass)
                 val drawable = ContextCompat.getDrawable(context, iconRes)?.mutate()
                 if (iconColor != 0) {
                     drawable?.colorFilter = PorterDuffColorFilter(iconColor, PorterDuff.Mode.SRC_IN)
@@ -98,17 +99,18 @@ class NauticalTargetPicker : BottomSheetDialogFragment() {
                 layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
             }
 
+            val shipName = resolvedAis.shipName?.trim()
             val titleView = TextView(context).apply {
-                text = target.shipName ?: "MMSI: ${target.mmsi}"
+                text = if (!shipName.isNullOrEmpty()) shipName else "MMSI: ${resolvedAis.mmsi}"
                 textSize = 16f
                 setTypeface(null, android.graphics.Typeface.BOLD)
             }
             textLayout.addView(titleView)
 
             val subtitleSb = StringBuilder()
-            val shipType = target.getShipTypeString()
+            val shipType = resolvedAis.getShipTypeString()
             if (shipType.isNotEmpty()) subtitleSb.append(shipType)
-            val status = target.getNavStatusString()
+            val status = resolvedAis.getNavStatusString()
             if (status.isNotEmpty()) {
                 if (subtitleSb.isNotEmpty()) subtitleSb.append(" • ")
                 subtitleSb.append(status)
