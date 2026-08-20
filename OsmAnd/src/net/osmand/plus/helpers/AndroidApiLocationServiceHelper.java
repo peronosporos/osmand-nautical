@@ -58,7 +58,7 @@ public class AndroidApiLocationServiceHelper extends LocationServiceHelper imple
 	protected boolean requestLocationUpdatesImpl(@NonNull LocationListener listener, @NonNull String provider) {
 		LocationManager locationManager = (LocationManager) app.getSystemService(LOCATION_SERVICE);
 		try {
-			locationManager.requestLocationUpdates(provider, 0, 0, listener);
+			locationManager.requestLocationUpdates(provider, 1000, 0, listener);
 			return true;
 		} catch (SecurityException e) {
 			LOG.debug(provider + " location service permission not granted", e);

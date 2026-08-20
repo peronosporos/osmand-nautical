@@ -67,6 +67,13 @@ class NauticalBackgroundService : NavigationService() {
                     log.info("Nautical: Releasing high-perf WiFi lock due to inactivity.")
                     wifiLock?.release()
                 }
+                val isFollowing = NauticalPlugin.engine?.isFollowingRoute == true
+                val app = application as? OsmandApplication
+                val isAnchorActive = app?.settings?.NAUTICAL_ANCHOR_LAT?.get() != 0.0
+                if (!isFollowing && !isAnchorActive && wakeLock?.isHeld == true) {
+                    log.info("Nautical: Releasing WakeLock due to inactivity.")
+                    wakeLock?.release()
+                }
             }
             handler.postDelayed(this, 30000)
         }
@@ -86,12 +93,17 @@ class NauticalBackgroundService : NavigationService() {
         }
     }
 
+    @SuppressLint("WakelockTimeout")
     private val engineListener: (net.osmand.plus.plugins.nautical.engine.MarineState) -> Unit = {
         val now = System.currentTimeMillis()
         lastDataTime = now
         if (wifiLock != null && !wifiLock!!.isHeld) {
             log.info("Nautical: Re-acquiring high-perf WiFi lock (data resumed).")
             wifiLock?.acquire()
+        }
+        if (wakeLock != null && !wakeLock!!.isHeld) {
+            log.info("Nautical: Re-acquiring WakeLock (data resumed).")
+            wakeLock?.acquire()
         }
         updateNotification()
     }
