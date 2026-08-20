@@ -654,6 +654,7 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
     )
 
     private val locationListener = net.osmand.plus.OsmAndLocationProvider.OsmAndLocationListener { location ->
+        if (location == null) return@OsmAndLocationListener
         engine?.onInternalLocationUpdate(location)
     }
 

@@ -68,10 +68,15 @@ class SignalKLocationManager(
         watchdogJob?.cancel()
         watchdogJob = null
 
+        val hadSignalK = lastSignalKPositionTimeMs.getAndSet(0L) != 0L
         // Ensure device GPS is resumed upon stopping
         app.runInUIThread {
-            app.locationProvider.setCustomLocation(null, 0)
-            app.locationProvider.resumeDeviceGps()
+            if (hadSignalK) {
+                app.locationProvider.setCustomLocation(null, 0)
+            }
+            if (app.locationProvider.isDeviceGpsSuspended) {
+                app.locationProvider.resumeDeviceGps()
+            }
         }
         log.info("SignalKLocationManager: Stopped.")
     }
@@ -83,9 +88,11 @@ class SignalKLocationManager(
 
     private fun onApplicationModeChanged(mode: ApplicationMode) {
         if (!isBoatMode(mode)) {
-            lastSignalKPositionTimeMs.set(0L)
+            val hadSignalK = lastSignalKPositionTimeMs.getAndSet(0L) != 0L
             app.runInUIThread {
-                app.locationProvider.setCustomLocation(null, 0)
+                if (hadSignalK) {
+                    app.locationProvider.setCustomLocation(null, 0)
+                }
                 if (app.locationProvider.isDeviceGpsSuspended) {
                     log.info("SignalKLocationManager: Exited Boat profile, strictly resuming device GPS and ignoring Signal K location.")
                     app.locationProvider.resumeDeviceGps()
@@ -94,7 +101,8 @@ class SignalKLocationManager(
         } else {
             val now = System.currentTimeMillis()
             val lastFixAge = now - lastSignalKPositionTimeMs.get()
-            if (lastFixAge > TIMEOUT_MS) {
+            if (lastFixAge > TIMEOUT_MS && lastSignalKPositionTimeMs.get() != 0L) {
+                lastSignalKPositionTimeMs.set(0L)
                 app.runInUIThread {
                     app.locationProvider.setCustomLocation(null, 0)
                     if (app.locationProvider.isDeviceGpsSuspended) {
@@ -107,10 +115,15 @@ class SignalKLocationManager(
 
     private fun processMarineState(state: MarineState) {
         if (!isBoatMode()) {
-            if (app.locationProvider.isDeviceGpsSuspended) {
+            val hadSignalK = lastSignalKPositionTimeMs.getAndSet(0L) != 0L
+            if (app.locationProvider.isDeviceGpsSuspended || hadSignalK) {
                 app.runInUIThread {
-                    app.locationProvider.setCustomLocation(null, 0)
-                    app.locationProvider.resumeDeviceGps()
+                    if (hadSignalK) {
+                        app.locationProvider.setCustomLocation(null, 0)
+                    }
+                    if (app.locationProvider.isDeviceGpsSuspended) {
+                        app.locationProvider.resumeDeviceGps()
+                    }
                 }
             }
             return
@@ -172,7 +185,6 @@ class SignalKLocationManager(
                 } else {
                     if (app.locationProvider.isDeviceGpsSuspended) {
                         app.runInUIThread {
-                            app.locationProvider.setCustomLocation(null, 0)
                             app.locationProvider.resumeDeviceGps()
                         }
                     }
@@ -185,6 +197,7 @@ class SignalKLocationManager(
         val lastFix = lastSignalKPositionTimeMs.get()
         val elapsed = now - lastFix
         if (elapsed > TIMEOUT_MS && lastFix != 0L) {
+            lastSignalKPositionTimeMs.set(0L)
             app.runInUIThread {
                 app.locationProvider.setCustomLocation(null, 0)
                 if (app.locationProvider.isDeviceGpsSuspended) {

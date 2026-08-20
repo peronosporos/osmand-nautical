@@ -724,7 +724,8 @@ class SignalKEngine(
         notifyListeners(dataBroker.marineState.value)
     }
 
-    fun onInternalLocationUpdate(loc: net.osmand.Location) {
+    fun onInternalLocationUpdate(loc: net.osmand.Location?) {
+        if (loc == null) return
         val state = dataBroker.marineState.value
         val currentStatus = state.connectionStatus
 
