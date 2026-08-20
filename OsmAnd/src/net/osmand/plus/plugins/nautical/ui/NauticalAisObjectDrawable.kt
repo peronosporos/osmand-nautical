@@ -65,6 +65,34 @@ class NauticalAisObjectDrawable(
         typeface = Typeface.DEFAULT_BOLD
     }
 
+    private var lastAtRestState: Boolean = false
+    private var lowSpeedSinceMs: Long = 0L
+
+    fun isVesselAtRestWithHysteresis(): Boolean {
+        val sog = ais.sog
+        val now = System.currentTimeMillis()
+        if (sog == AisObjectConstants.INVALID_SOG) {
+            return ais.isVesselAtRest()
+        }
+        if (sog < AisObjectConstants.SPEED_CONSIDERED_IN_REST) {
+            if (lowSpeedSinceMs == 0L) {
+                lowSpeedSinceMs = now
+            }
+            if (now - lowSpeedSinceMs >= 5000L || lastAtRestState) {
+                lastAtRestState = true
+                return true
+            }
+            return lastAtRestState
+        } else if (sog >= 0.8) {
+            lowSpeedSinceMs = 0L
+            lastAtRestState = false
+            return false
+        } else {
+            // In hysteresis deadband (0.5 .. 0.8 knots)
+            return lastAtRestState
+        }
+    }
+
     fun set(ais: AisObject) {
         if (this.ais !== ais) {
             this.ais.set(ais)
@@ -127,7 +155,7 @@ class NauticalAisObjectDrawable(
 
     private fun deactivateCpaWarning() {
         if (bitmapColor == Color.RED) {
-            setColor(ais.isVesselAtRest())
+            setColor(isVesselAtRestWithHysteresis())
         }
     }
 
@@ -199,7 +227,7 @@ class NauticalAisObjectDrawable(
 
     private fun setBitmap() {
         invalidateBitmap()
-        val vesselAtRest = ais.isVesselAtRest()
+        val vesselAtRest = isVesselAtRestWithHysteresis()
         if (ais.isLost(plugin.aisShipLostTimeout.get()) && !vesselAtRest) {
             if (ais.isMovable()) {
                 bitmap = imagesCache.getBitmap(R.drawable.mm_ais_vessel_cross)
@@ -352,7 +380,7 @@ class NauticalAisObjectDrawable(
             return
         }
 
-        val vesselAtRest = ais.isVesselAtRest()
+        val vesselAtRest = isVesselAtRestWithHysteresis()
         val predictorDistance = getPredictorDistanceMeters()
         val lostTimeout = ais.isLost(plugin.aisShipLostTimeout.get()) && !vesselAtRest
         val drawDirectionLine = (currentZoom >= NauticalAisLayer.START_ZOOM_SHOW_DIRECTION)
@@ -498,7 +526,7 @@ class NauticalAisObjectDrawable(
         if (!tileBox.containsLatLon(pos.latitude, pos.longitude)) return
 
         updateBitmap(paint)
-        val vesselAtRest = ais.isVesselAtRest()
+        val vesselAtRest = isVesselAtRestWithHysteresis()
         val lostTimeout = ais.isLost(plugin.aisShipLostTimeout.get()) && !vesselAtRest
         val isDanger = hasCpaWarning || checkCpaWarning()
 

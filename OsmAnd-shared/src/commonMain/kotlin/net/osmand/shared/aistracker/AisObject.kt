@@ -225,15 +225,14 @@ class AisObject {
                     29, 30 -> this.objectClass = AisObjType.AIS_ATON_VIRTUAL
                     else -> this.objectClass = AisObjType.AIS_ATON
                 }
-            } else if (msgTypes.contains(18)) {
+            } else if (msgTypes.contains(18) || msgTypes.contains(19) || msgTypes.contains(1) || msgTypes.contains(2) || msgTypes.contains(3) || msgTypes.contains(27)) {
                 this.objectClass = AisObjType.AIS_VESSEL
             } else {
                 when (navStatus) {
                     0, 1, 2, 3, 4, 5, 6, 8, 11, 12 -> this.objectClass = AisObjType.AIS_VESSEL
                     7 -> this.objectClass = AisObjType.AIS_VESSEL_COMMERCIAL
                     14 -> this.objectClass = AisObjType.AIS_SART
-                    INVALID_NAV_STATUS -> this.objectClass = AisObjType.AIS_INVALID
-                    else -> this.objectClass = AisObjType.AIS_INVALID
+                    else -> this.objectClass = AisObjType.AIS_VESSEL
                 }
             }
         }

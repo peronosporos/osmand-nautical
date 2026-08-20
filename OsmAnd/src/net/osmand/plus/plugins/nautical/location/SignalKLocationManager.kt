@@ -86,8 +86,14 @@ class SignalKLocationManager(
         return appMode == ApplicationMode.BOAT || appMode.isDerivedRoutingFrom(ApplicationMode.BOAT)
     }
 
+    fun hasValidSignalKFix(maxAgeMs: Long = TIMEOUT_MS): Boolean {
+        val fixTime = lastSignalKPositionTimeMs.get()
+        return fixTime > 0L && (System.currentTimeMillis() - fixTime) <= maxAgeMs
+    }
+
     private fun onApplicationModeChanged(mode: ApplicationMode) {
-        if (!isBoatMode(mode)) {
+        val boat = isBoatMode(mode)
+        if (!boat) {
             val hadSignalK = lastSignalKPositionTimeMs.getAndSet(0L) != 0L
             app.runInUIThread {
                 if (hadSignalK) {
@@ -100,11 +106,12 @@ class SignalKLocationManager(
             }
         } else {
             val now = System.currentTimeMillis()
-            val lastFixAge = now - lastSignalKPositionTimeMs.get()
-            if (lastFixAge > TIMEOUT_MS && lastSignalKPositionTimeMs.get() != 0L) {
-                lastSignalKPositionTimeMs.set(0L)
+            if (!hasValidSignalKFix(TIMEOUT_MS)) {
+                val hadSignalK = lastSignalKPositionTimeMs.getAndSet(0L) != 0L
                 app.runInUIThread {
-                    app.locationProvider.setCustomLocation(null, 0)
+                    if (hadSignalK) {
+                        app.locationProvider.setCustomLocation(null, 0)
+                    }
                     if (app.locationProvider.isDeviceGpsSuspended) {
                         app.locationProvider.resumeDeviceGps()
                     }
@@ -209,7 +216,7 @@ class SignalKLocationManager(
     }
 
     companion object {
-        const val TIMEOUT_MS = 5000L
+        const val TIMEOUT_MS = 4000L
         private const val WATCHDOG_INTERVAL_MS = 1000L
     }
 }

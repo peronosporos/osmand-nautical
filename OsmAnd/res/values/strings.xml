@@ -1,4 +1,13 @@
 <resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
+    <string name="nautical_gybe_port_short">GYBE P</string>
+    <string name="nautical_gybe_stbd_short">GYBE S</string>
+    <string name="nautical_dodge_port">DODGE P (-10°)</string>
+    <string name="nautical_dodge_stbd">DODGE S (+10°)</string>
+    <string name="nautical_shunt_port">SHUNT P</string>
+    <string name="nautical_shunt_stbd">SHUNT S</string>
+    <string name="nautical_center_rudder">CENTER RUDDER</string>
+    <string name="nautical_rudder_lock">RUDDER LOCK</string>
+    <string name="nautical_more_maneuvers">More Maneuvers</string>
     <string name="nautical_configure_displayed_metrics">Configure Displayed Metrics</string>
     <string name="nautical_configure_displayed_metrics_desc">Choose and arrange metrics shown in the dashboard grid</string>
     <string name="nautical_configure_bottom_sheet_telemetry">Configure Bottom Sheet Telemetry</string>
