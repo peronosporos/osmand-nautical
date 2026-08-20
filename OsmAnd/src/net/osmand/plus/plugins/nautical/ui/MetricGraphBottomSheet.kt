@@ -283,7 +283,7 @@ class MetricGraphBottomSheet : NauticalMenuBottomSheetDialogFragment() {
             selectedDurationMs = duration
             for (c in chips) {
                 if (c == selected) {
-                    c.setBackgroundResource(R.drawable.bg_button_light)
+                    c.setBackgroundResource(R.drawable.btn_active_light)
                     c.setTextColor(Color.WHITE)
                 } else {
                     c.background = null

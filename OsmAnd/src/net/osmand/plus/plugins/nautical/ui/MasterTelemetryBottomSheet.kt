@@ -97,7 +97,7 @@ class MasterTelemetryBottomSheet : NauticalMenuBottomSheetDialogFragment() {
             app.settings.NAUTICAL_MASTER_TELEMETRY_ITEMS.set(presetKeys.joinToString(","))
             for (c in chips) {
                 if (c == chip) {
-                    c.setBackgroundResource(R.drawable.bg_button_light)
+                    c.setBackgroundResource(R.drawable.btn_active_light)
                     c.setTextColor(Color.WHITE)
                 } else {
                     c.background = null
