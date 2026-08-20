@@ -85,8 +85,7 @@ class NauticalToolCenterDialog : BaseMaterialBottomSheetDialogFragment() {
 
     private inner class ToolAdapter(private val items: List<ToolItem>) : RecyclerView.Adapter<ToolViewHolder>() {
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ToolViewHolder {
-            val themedCtx = androidx.appcompat.view.ContextThemeWrapper(parent.context, R.style.OsmandTheme)
-            val view = LayoutInflater.from(themedCtx).inflate(R.layout.list_item_icon_and_menu, parent, false)
+            val view = LayoutInflater.from(parent.context).inflate(R.layout.list_item_icon_and_menu, parent, false)
             return ToolViewHolder(view)
         }
         override fun onBindViewHolder(holder: ToolViewHolder, position: Int) = holder.bind(items[position])

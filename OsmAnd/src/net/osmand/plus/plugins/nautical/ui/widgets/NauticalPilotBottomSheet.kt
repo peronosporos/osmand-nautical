@@ -89,7 +89,7 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
             return
         }
 
-        val themedContext = ContextThemeWrapper(requireContext(), R.style.OsmandTheme)
+        val themedContext = net.osmand.plus.utils.UiUtilities.getThemedContext(requireContext(), nightMode)
         val customView = LayoutInflater.from(themedContext).inflate(R.layout.nautical_pilot_bottom_sheet, null)
 
         badgePilotMode = customView.findViewById(R.id.badge_pilot_mode)
@@ -327,7 +327,7 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
         // Mode badge update with OsmAnd styling
         badgePilotMode.text = rawMode
         badgePilotMode.setBackgroundResource(R.drawable.btn_active_light)
-        badgePilotMode.backgroundTintList = ContextCompat.getColorStateList(requireContext(), R.color.active_color_primary)
+        badgePilotMode.backgroundTintList = ContextCompat.getColorStateList(requireContext(), R.color.icon_color_osmand_light)
         badgePilotMode.setTextColor(Color.WHITE)
 
         // Enable/Disable mode toggle group

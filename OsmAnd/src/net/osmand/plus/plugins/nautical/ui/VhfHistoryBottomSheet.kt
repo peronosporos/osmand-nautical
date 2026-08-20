@@ -22,7 +22,7 @@ import java.util.Date
 class VhfHistoryBottomSheet : BaseMaterialBottomSheetDialogFragment() {
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
-        val themedCtx = androidx.appcompat.view.ContextThemeWrapper(requireContext(), R.style.OsmandTheme)
+        val themedCtx = net.osmand.plus.utils.UiUtilities.getThemedContext(requireContext(), nightMode)
         val root = LayoutInflater.from(themedCtx).inflate(R.layout.bottom_sheet_vhf_history, container, false)
         
         val recycler = root.findViewById<RecyclerView>(R.id.recycler_view)
@@ -49,8 +49,7 @@ class VhfHistoryBottomSheet : BaseMaterialBottomSheetDialogFragment() {
     inner class VhfAdapter(private val onClick: (VhfTransmission) -> Unit) : ListAdapter<VhfTransmission, VhfAdapter.ViewHolder>(VhfDiffCallback()) {
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
-            val themedCtx = androidx.appcompat.view.ContextThemeWrapper(parent.context, R.style.OsmandTheme)
-            val view = LayoutInflater.from(themedCtx).inflate(R.layout.item_vhf_transmission, parent, false)
+            val view = LayoutInflater.from(parent.context).inflate(R.layout.item_vhf_transmission, parent, false)
             return ViewHolder(view)
         }
 

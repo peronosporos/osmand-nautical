@@ -37,7 +37,7 @@ class NauticalElectricalDashboardBottomSheet : BaseNauticalBottomSheet() {
     override fun createMenuItems(savedInstanceState: Bundle?) {
         addTitleItem(getString(R.string.nautical_electrical_dashboard))
 
-        val themedCtx = androidx.appcompat.view.ContextThemeWrapper(requireContext(), R.style.OsmandTheme)
+        val themedCtx = net.osmand.plus.utils.UiUtilities.getThemedContext(requireContext(), nightMode)
         val customView = LayoutInflater.from(themedCtx).inflate(R.layout.bottom_sheet_nautical_electrical, null)
         
         customView.findViewById<RecyclerView?>(R.id.rv_batteries)?.apply {

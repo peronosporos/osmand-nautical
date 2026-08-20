@@ -44,7 +44,9 @@ class GribManagerBottomSheet : BottomSheetDialogFragment() {
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
-        val themedCtx = androidx.appcompat.view.ContextThemeWrapper(requireContext(), R.style.OsmandTheme)
+        val app = (activity?.application as? net.osmand.plus.OsmandApplication)
+        val night = app?.daynightHelper?.isNightMode ?: false
+        val themedCtx = net.osmand.plus.utils.UiUtilities.getThemedContext(requireContext(), night)
         return LayoutInflater.from(themedCtx).inflate(R.layout.bottom_sheet_grib_manager, container, false)
     }
 
@@ -171,8 +173,7 @@ class GribManagerBottomSheet : BottomSheetDialogFragment() {
 
     inner class GribAdapter(private val items: List<File>) : RecyclerView.Adapter<GribViewHolder>() {
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): GribViewHolder {
-            val themedCtx = androidx.appcompat.view.ContextThemeWrapper(parent.context, R.style.OsmandTheme)
-            val v = LayoutInflater.from(themedCtx).inflate(R.layout.list_item_grib_file, parent, false)
+            val v = LayoutInflater.from(parent.context).inflate(R.layout.list_item_grib_file, parent, false)
             return GribViewHolder(v)
         }
 

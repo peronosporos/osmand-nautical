@@ -240,7 +240,7 @@ class MetricGraphBottomSheet : NauticalMenuBottomSheetDialogFragment() {
         val app = requireContext().applicationContext as OsmandApplication
         val metricDef = TelemetryRegistry.getMetric(metricKey)
 
-        val themedCtx = androidx.appcompat.view.ContextThemeWrapper(requireContext(), R.style.OsmandTheme)
+        val themedCtx = net.osmand.plus.utils.UiUtilities.getThemedContext(requireContext(), nightMode)
         val layout = LayoutInflater.from(themedCtx)
             .inflate(R.layout.bottom_sheet_nautical_metric_graph, null)
 

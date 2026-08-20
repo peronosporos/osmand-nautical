@@ -44,7 +44,7 @@ class NauticalAdvancedSettingsBottomSheet : BaseNauticalBottomSheet() {
 
         addTitleItem(getString(R.string.nautical_advanced_settings))
 
-        val themedContext = ContextThemeWrapper(requireContext(), R.style.OsmandTheme)
+        val themedContext = net.osmand.plus.utils.UiUtilities.getThemedContext(requireContext(), nightMode)
         val customView = LayoutInflater.from(themedContext).inflate(R.layout.bottom_sheet_nautical_advanced, null)
         
         val safetyLock = customView.findViewById<SwitchMaterial>(R.id.safety_lock)

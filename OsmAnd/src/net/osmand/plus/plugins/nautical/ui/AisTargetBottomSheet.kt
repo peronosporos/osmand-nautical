@@ -40,7 +40,9 @@ class AisTargetBottomSheet : BottomSheetDialogFragment() {
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
-        val themedCtx = androidx.appcompat.view.ContextThemeWrapper(requireContext(), R.style.OsmandTheme)
+        val app = (activity?.application as? net.osmand.plus.OsmandApplication)
+        val night = app?.daynightHelper?.isNightMode ?: false
+        val themedCtx = net.osmand.plus.utils.UiUtilities.getThemedContext(requireContext(), night)
         val view = LayoutInflater.from(themedCtx).inflate(R.layout.dialog_nautical_ais_details, container, false)
         val ais = aisObject
         if (ais != null) {
