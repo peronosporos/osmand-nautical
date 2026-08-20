@@ -1,4 +1,10 @@
 <resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
+    <string name="nautical_mode_compass_short">COMPASS</string>
+    <string name="nautical_mode_wind_short">WIND</string>
+    <string name="nautical_mode_track_short">TRACK</string>
+    <string name="nautical_mode_standby">STANDBY</string>
+    <string name="nautical_tack_port_short">TACK P</string>
+    <string name="nautical_tack_stbd_short">TACK S</string>
     <string name="nautical_vmg">VMG</string>
     <string name="nautical_heading_true">HDG TRUE</string>
     <string name="nautical_category_navigation">Navigation</string>
