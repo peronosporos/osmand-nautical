@@ -71,10 +71,10 @@ class NauticalConnectionManager(
 
     fun createHttpClient(trustAll: Boolean): OkHttpClient {
         val builder = OkHttpClient.Builder()
-        builder.connectTimeout(java.time.Duration.ofSeconds(5))
-        builder.readTimeout(java.time.Duration.ofSeconds(10))
-        builder.writeTimeout(java.time.Duration.ofSeconds(10))
-        builder.pingInterval(15, java.util.concurrent.TimeUnit.SECONDS)
+        builder.connectTimeout(10, java.util.concurrent.TimeUnit.SECONDS)
+        builder.readTimeout(0, java.util.concurrent.TimeUnit.MILLISECONDS)
+        builder.writeTimeout(10, java.util.concurrent.TimeUnit.SECONDS)
+        builder.pingInterval(5, java.util.concurrent.TimeUnit.SECONDS)
 
         builder.addInterceptor { chain ->
             val token = app.settings.NAUTICAL_SIGNAL_K_AUTH_TOKEN.get()
@@ -153,9 +153,16 @@ class NauticalConnectionManager(
 
         val failureCallback = {
             retryHandler.removeCallbacks(retryRunnable)
-            val delayMs = min(1000L * (2.0.pow(retryAttempt.toDouble()).toLong()), 60000L)
+            val backoffSequence = listOf(1000L, 2000L, 5000L)
+            val delayMs = if (retryAttempt < backoffSequence.size) backoffSequence[retryAttempt] else 5000L
             retryHandler.postDelayed(retryRunnable, delayMs)
             retryAttempt++
+            engine?.dataBroker?.updateState { it.copy(connectionStatus = ConnectionStatus.DISCONNECTED) }
+            app.runInUIThread {
+                if (app.locationProvider.isDeviceGpsSuspended) {
+                    app.locationProvider.resumeDeviceGps()
+                }
+            }
             Unit
         }
 
@@ -164,11 +171,16 @@ class NauticalConnectionManager(
             Unit
         }
 
+        val wrappedConnectionRestored = {
+            retryAttempt = 0
+            connectionRestoredListener()
+        }
+
         engine?.let { e ->
             e.onConnectionLost = failureCallback
             e.onConnectionError = failureCallback
             e.onAuthError = authErrorCallback
-            e.onConnectionRestored = connectionRestoredListener
+            e.onConnectionRestored = wrappedConnectionRestored
             e.vesselDraft = app.settings.NAUTICAL_VESSEL_DRAFT.get().toDouble()
             e.corridorWidthNm = app.settings.NAUTICAL_CORRIDOR_WIDTH.get().toDouble()
             e.safetyCorridorBufferNm = app.settings.NAUTICAL_SAFETY_CORRIDOR_BUFFER.get().toDouble()

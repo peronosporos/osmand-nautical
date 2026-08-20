@@ -565,7 +565,45 @@ class NauticalAisObjectDrawable(
                     val lineEndY = lineStartY - lineLength
                     drawLine(0f, lineStartY, 0f, lineEndY, linePaint)
                 }
+
+                drawShape(tileBox, paint, this)
             }
         }
+    }
+
+    private fun drawShape(tileBox: RotatedTileBox, paint: Paint, canvas: Canvas) {
+        if (!shouldDrawShape(tileBox.zoom)) return
+        val pixDensity = tileBox.pixDensity
+        val bow = ais.dimensionToBow.toDouble()
+        val stern = ais.dimensionToStern.toDouble()
+        val port = ais.dimensionToPort.toDouble()
+        val starboard = ais.dimensionToStarboard.toDouble()
+
+        val a: Float
+        val b: Float
+        val c: Float
+        val d: Float
+        if (bow == 0.0 && port == 0.0) {
+            a = (stern * pixDensity * 0.5f).toFloat()
+            b = a
+            c = (starboard * pixDensity * 0.5f).toFloat()
+            d = c
+        } else {
+            a = (bow * pixDensity).toFloat()
+            b = (stern * pixDensity).toFloat()
+            c = (port * pixDensity).toFloat()
+            d = (starboard * pixDensity).toFloat()
+        }
+        val e = 0.5f * (c + d)
+        val shapePaint = Paint(paint).apply {
+            style = Paint.Style.STROKE
+            strokeWidth = 2f * tileBox.density
+            color = if (bitmapColor != 0) bitmapColor else Color.DKGRAY
+        }
+        canvas.drawLine(-c, b, -c, -a + e, shapePaint)
+        canvas.drawLine(-c, -a + e, -c + e, -a, shapePaint)
+        canvas.drawLine(-c + e, -a, d, -a + e, shapePaint)
+        canvas.drawLine(d, -a + e, d, b, shapePaint)
+        canvas.drawLine(d, b, -c, b, shapePaint)
     }
 }
