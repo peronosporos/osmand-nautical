@@ -5,6 +5,7 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.collectLatest
 import net.osmand.PlatformUtil
 import net.osmand.StateChangedListener
+import net.osmand.plus.OsmAndLocationProvider
 import net.osmand.plus.OsmandApplication
 import net.osmand.plus.plugins.nautical.engine.MarineState
 import net.osmand.plus.plugins.nautical.engine.SignalKDataBroker
@@ -141,14 +142,16 @@ class SignalKLocationManager(
             accuracy = (hdop * 5.0).toFloat().coerceIn(1.0f, 100f)
         }
 
+        val osmandLoc = OsmAndLocationProvider.convertLocation(loc, app)
+
         app.runInUIThread {
             if (isBoatMode()) {
                 if (!app.locationProvider.isDeviceGpsSuspended) {
                     log.info("SignalKLocationManager: Valid Signal K fix received. Suspending device GPS for battery saving.")
                     app.locationProvider.suspendDeviceGps()
                 }
-                app.locationProvider.setCustomLocation(loc, TIMEOUT_MS)
-                app.locationProvider.setLocationFromService(loc)
+                app.locationProvider.setCustomLocation(osmandLoc, TIMEOUT_MS)
+                app.locationProvider.setLocationFromService(osmandLoc)
             } else {
                 app.locationProvider.setCustomLocation(null, 0)
                 if (app.locationProvider.isDeviceGpsSuspended) {

@@ -134,10 +134,7 @@ class MasterTelemetryBottomSheet : NauticalMenuBottomSheetDialogFragment() {
     override fun onRightBottomButtonClick() {
         BaseSettingsFragment.showInstance(
             requireActivity(),
-            SettingsScreenType.NAUTICAL_TELEMETRY_CONFIG,
-            null,
-            null,
-            null
+            SettingsScreenType.NAUTICAL_TELEMETRY_CONFIG
         )
         dismiss()
     }
