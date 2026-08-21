@@ -236,19 +236,14 @@ class NauticalAisLayer(
         }
     }
 
-    override fun onDraw(canvas: Canvas, tileBox: RotatedTileBox, settings: DrawSettings) {
-        if (tileBox.zoom >= 5) {
-            val aisObjects = plugin.aisManager?.getAisObjects() ?: emptyList()
-            for (ais in aisObjects) {
-                if (isOwnObjectHidden(ais)) continue
-                var drawable = objectDrawables[ais.mmsi]
-                if (drawable == null) {
-                    drawable = NauticalAisObjectDrawable(plugin, ais, imagesCache)
-                    objectDrawables[ais.mmsi] = drawable
-                }
-                drawable.draw(bitmapPaint, canvas, tileBox)
-            }
+    fun isLocationVisible(tileBox: RotatedTileBox?, lat: Double, lon: Double): Boolean {
+        if (tileBox == null) {
+            return false
         }
+        return tileBox.containsLatLon(lat, lon)
+    }
+
+    override fun onDraw(canvas: Canvas, tileBox: RotatedTileBox, settings: DrawSettings) {
     }
 
     override fun onPrepareBufferImage(canvas: Canvas, tileBox: RotatedTileBox, settings: DrawSettings) {
@@ -258,10 +253,12 @@ class NauticalAisLayer(
         val currentTextScale = textScale
         val textScaleChanged = this.textScale != currentTextScale
         this.textScale = currentTextScale
+        if (textScaleChanged) {
+            imagesCache.clearCache()
+        }
 
-        val currentPlugin = plugin
-        val aisObjects = currentPlugin.aisManager?.getAisObjects() ?: emptyList()
-        mapRenderer?.let { renderer ->
+        val aisObjects = plugin.aisManager?.getAisObjects() ?: emptyList()
+        if (mapRenderer != null) {
             if (mapActivityInvalidated || mapRendererChanged || textScaleChanged) {
                 cleanupResources()
 
@@ -270,27 +267,27 @@ class NauticalAisLayer(
                 }
                 markersCollection = MapMarkersCollection()
                 vectorLinesCollection = VectorLinesCollection()
-                renderer.addSymbolsProvider(markersCollection)
-                renderer.addSymbolsProvider(vectorLinesCollection)
+                mapRenderer.addSymbolsProvider(markersCollection)
+                mapRenderer.addSymbolsProvider(vectorLinesCollection)
 
-                val currentWorkflow = currentPlugin.workflowEngine?.currentWorkflow?.value
+                val currentWorkflow = plugin.workflowEngine?.currentWorkflow?.value
                 val isCloseQuarters = currentWorkflow == SailingWorkflowState.CLOSE_QUARTERS
 
                 for (ais in aisObjects) {
                     if (isOwnObjectHidden(ais)) continue
                     
-                    val drawable = NauticalAisObjectDrawable(currentPlugin, ais, imagesCache)
+                    val drawable = NauticalAisObjectDrawable(plugin, ais, imagesCache)
                     drawable.setOwnObject(isOwnObject(ais))
                     
-                    val extras = currentPlugin.aisManager?.getAisExtras(ais.mmsi)
+                    val extras = plugin.aisManager?.getAisExtras(ais.mmsi)
                     extras?.let { 
                         drawable.setThreatLevel(it.threatLevel)
                         drawable.setRemote(it.isRemote)
                         drawable.setCpaWarning(it.hasCpaWarning)
                     }
                     
-                    if (isCloseQuarters && !(ais.cpa.valid) && (currentPlugin.application.locationProvider.lastKnownLocation != null) && (ais.position != null)) {
-                        val ownLoc = currentPlugin.application.locationProvider.lastKnownLocation!!
+                    if (isCloseQuarters && !(ais.cpa.valid) && (plugin.application.locationProvider.lastKnownLocation != null) && (ais.position != null)) {
+                        val ownLoc = plugin.application.locationProvider.lastKnownLocation!!
                         val dist = net.osmand.util.MapUtils.getDistance(
                             ownLoc.latitude,
                             ownLoc.longitude,
@@ -303,7 +300,7 @@ class NauticalAisLayer(
                     }
 
                     objectDrawables[ais.mmsi] = drawable
-                    if (aisRestImage != null) {
+                    if (aisRestImage != null && markersCollection != null && vectorLinesCollection != null) {
                         drawable.createAisRenderData(
                             baseOrder,
                             bitmapPaint,
@@ -320,15 +317,23 @@ class NauticalAisLayer(
             }
             mapActivityInvalidated = false
             mapRendererChanged = false
-        } ?: run {
-            if (tileBox.zoom >= 5) {
-                for (ais in aisObjects) {
-                    if (isOwnObjectHidden(ais)) continue
-                    var drawable = objectDrawables[ais.mmsi]
-                    if (drawable == null) {
-                        drawable = NauticalAisObjectDrawable(plugin, ais, imagesCache)
-                        objectDrawables[ais.mmsi] = drawable
+        } else if (tileBox.zoom >= START_ZOOM) {
+            for (ais in aisObjects) {
+                if (isOwnObjectHidden(ais)) continue
+                var drawable = objectDrawables[ais.mmsi]
+                if (drawable == null) {
+                    drawable = NauticalAisObjectDrawable(plugin, ais, imagesCache)
+                    drawable.setOwnObject(isOwnObject(ais))
+                    val extras = plugin.aisManager?.getAisExtras(ais.mmsi)
+                    extras?.let {
+                        drawable.setThreatLevel(it.threatLevel)
+                        drawable.setRemote(it.isRemote)
+                        drawable.setCpaWarning(it.hasCpaWarning)
                     }
+                    objectDrawables[ais.mmsi] = drawable
+                }
+                val pos = ais.position
+                if (pos != null && isLocationVisible(tileBox, pos.latitude, pos.longitude)) {
                     drawable.draw(bitmapPaint, canvas, tileBox)
                 }
             }

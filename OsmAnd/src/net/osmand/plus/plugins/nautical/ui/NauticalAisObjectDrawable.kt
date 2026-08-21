@@ -5,10 +5,7 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.LightingColorFilter
 import android.graphics.Paint
-import android.graphics.PorterDuff
-import android.graphics.PorterDuffColorFilter
 import android.graphics.Typeface
-import androidx.core.graphics.withTranslation
 import net.osmand.core.jni.MapMarker
 import net.osmand.core.jni.MapMarkerBuilder
 import net.osmand.core.jni.MapMarkersCollection
@@ -32,6 +29,7 @@ import net.osmand.shared.aistracker.AisObjectConstants
 import net.osmand.shared.aistracker.AisTrackerMath
 import net.osmand.util.MapUtils
 import kotlin.math.abs
+import kotlin.math.roundToInt
 
 @Suppress("UsePropertyAccessSyntax")
 class NauticalAisObjectDrawable(
@@ -39,6 +37,11 @@ class NauticalAisObjectDrawable(
     private val ais: AisObject,
     private val imagesCache: AisImagesCache
 ) {
+
+    companion object {
+        const val START_ZOOM_SHOW_SHAPE = 16
+        const val START_ZOOM_SHOW_DIRECTION = 10
+    }
 
     private var bitmap: Bitmap? = null
     private var bitmapValid = false
@@ -304,7 +307,7 @@ class NauticalAisObjectDrawable(
             }
         }
         if (bitmapColor != 0) {
-            paint.colorFilter = PorterDuffColorFilter(bitmapColor, PorterDuff.Mode.SRC_IN)
+            paint.colorFilter = LightingColorFilter(bitmapColor, 0)
         } else {
             paint.colorFilter = null
         }
@@ -522,116 +525,89 @@ class NauticalAisObjectDrawable(
     }
 
     fun draw(paint: Paint, canvas: Canvas, tileBox: RotatedTileBox) {
-        val pos = ais.position ?: return
-        if (!tileBox.containsLatLon(pos.latitude, pos.longitude)) return
-
         updateBitmap(paint)
-        val vesselAtRest = isVesselAtRestWithHysteresis()
-        val lostTimeout = ais.isLost(plugin.aisShipLostTimeout.get()) && !vesselAtRest
-        val isDanger = hasCpaWarning || checkCpaWarning()
+        val position = ais.position ?: return
+        val heading = ais.heading
+        val bmp = this.bitmap ?: return
 
-        val bmp = if (lostTimeout) imagesCache.getBitmap(R.drawable.mm_ais_vessel_cross) else bitmap
-        val x = tileBox.getPixXFromLatLon(pos.latitude, pos.longitude)
-        val y = tileBox.getPixYFromLatLon(pos.latitude, pos.longitude)
+        canvas.save()
+        canvas.rotate(tileBox.rotate, tileBox.centerPixelX.toFloat(), tileBox.centerPixelY.toFloat())
+        val locationX = tileBox.getPixXFromLonNoRot(position.longitude)
+        val locationY = tileBox.getPixYFromLatNoRot(position.latitude)
 
-        canvas.withTranslation(x, y) {
-            if (isDanger) {
-                // High-contrast danger ring for collision warning overlay
-                val ringRadius = 22f * tileBox.density
-                val ringPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                    style = Paint.Style.STROKE
-                    strokeWidth = 3f * tileBox.density
-                    color = Color.RED
-                }
-                drawCircle(0f, 0f, ringRadius, ringPaint)
+        if (ais.isVesselAtRest()) {
+            drawCircle(locationX.toFloat(), locationY.toFloat(), paint, canvas)
+            if (heading != AisObjectConstants.INVALID_HEADING && heading != 0) {
+                canvas.rotate(heading.toFloat(), locationX.toFloat(), locationY.toFloat())
+                drawShape(locationX.toFloat(), locationY.toFloat(), tileBox, paint, canvas)
             }
+        } else {
+            val needRotation = this.needRotation()
+            var rotation = 0f
+            val predictorDistance = getPredictorDistanceMeters()
+            val fx = locationX - bmp.width / 2f
+            val fy = locationY - bmp.height / 2f
 
-            if (vesselAtRest) {
-                // Stationary / anchored / moored vessel: distinct circular base with status color
-                val outerRadius = 11f * tileBox.density
-                val innerRadius = 8f * tileBox.density
-                val outerPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                    style = Paint.Style.FILL
-                    color = Color.DKGRAY
-                }
-                val innerPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                    style = Paint.Style.FILL
-                    color = if (bitmapColor != 0) bitmapColor else Color.WHITE
-                }
-                drawCircle(0f, 0f, outerRadius, outerPaint)
-                drawCircle(0f, 0f, innerRadius, innerPaint)
-
-                val heading = ais.heading
-                if (heading != AisObjectConstants.INVALID_HEADING && heading != 0) {
-                    val headingPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                        style = Paint.Style.STROKE
-                        strokeWidth = 2f * tileBox.density
-                        color = Color.DKGRAY
-                    }
-                    val rad = Math.toRadians((heading.toFloat() - tileBox.rotate).toDouble())
-                    val startX = (innerRadius * Math.sin(rad)).toFloat()
-                    val startY = (-innerRadius * Math.cos(rad)).toFloat()
-                    val endX = ((outerRadius + 5f * tileBox.density) * Math.sin(rad)).toFloat()
-                    val endY = (-(outerRadius + 5f * tileBox.density) * Math.cos(rad)).toFloat()
-                    drawLine(startX, startY, endX, endY, headingPaint)
-                }
-            } else if (bmp != null) {
-                if (needRotation()) {
-                    rotate(ais.getVesselRotation() - tileBox.rotate)
-                }
-                drawBitmap(bmp, -bmp.width / 2f, -bmp.height / 2f, paint)
-
-                // COG/SOG leader line
-                val predictorDistance = getPredictorDistanceMeters()
-                if (tileBox.zoom >= NauticalAisLayer.START_ZOOM_SHOW_DIRECTION && predictorDistance > 0f && !lostTimeout) {
-                    val lineLength = predictorDistance * tileBox.pixDensity.toFloat()
-                    val linePaint = Paint(paint).apply {
-                        strokeWidth = 3f * tileBox.density
-                        color = if (bitmapColor != 0) bitmapColor else Color.BLACK
-                    }
-                    val lineStartY = -bmp.height / 4f
-                    val lineEndY = lineStartY - lineLength
-                    drawLine(0f, lineStartY, 0f, lineEndY, linePaint)
-                }
-
-                drawShape(tileBox, paint, this)
+            if (needRotation) {
+                rotation = ais.getVesselRotation()
+                canvas.rotate(rotation, locationX.toFloat(), locationY.toFloat())
             }
+            canvas.drawBitmap(bmp, fx.roundToInt().toFloat(), fy.roundToInt().toFloat(), paint)
+
+            if (tileBox.zoom >= START_ZOOM_SHOW_DIRECTION && predictorDistance > 0f && !ais.isLost(plugin.aisShipLostTimeout.get())) {
+                val lineLength = predictorDistance * tileBox.pixDensity.toFloat()
+                val lineStartY = locationY - bmp.height / 4f
+                val lineEndY = lineStartY - lineLength
+                canvas.drawLine(locationX.toFloat(), lineStartY, locationX.toFloat(), lineEndY, paint)
+            }
+            if (needRotation && heading != AisObjectConstants.INVALID_HEADING && heading != 0 && heading.toFloat() != rotation) {
+                canvas.rotate(heading.toFloat() - rotation, locationX.toFloat(), locationY.toFloat())
+            }
+            drawShape(locationX.toFloat(), locationY.toFloat(), tileBox, paint, canvas)
         }
+        canvas.restore()
     }
 
-    private fun drawShape(tileBox: RotatedTileBox, paint: Paint, canvas: Canvas) {
-        if (!shouldDrawShape(tileBox.zoom)) return
-        val pixDensity = tileBox.pixDensity
-        val bow = ais.dimensionToBow.toDouble()
-        val stern = ais.dimensionToStern.toDouble()
-        val port = ais.dimensionToPort.toDouble()
-        val starboard = ais.dimensionToStarboard.toDouble()
+    private fun drawCircle(locationX: Float, locationY: Float, paint: Paint, canvas: Canvas) {
+        val localPaint = Paint(paint).apply {
+            colorFilter = null
+            color = Color.DKGRAY
+        }
+        canvas.drawCircle(locationX, locationY, 22.0f, localPaint)
+        localPaint.color = bitmapColor
+        canvas.drawCircle(locationX, locationY, 18.0f, localPaint)
+    }
 
-        val a: Float
-        val b: Float
-        val c: Float
-        val d: Float
-        if (bow == 0.0 && port == 0.0) {
-            a = (stern * pixDensity * 0.5f).toFloat()
-            b = a
-            c = (starboard * pixDensity * 0.5f).toFloat()
-            d = c
-        } else {
-            a = (bow * pixDensity).toFloat()
-            b = (stern * pixDensity).toFloat()
-            c = (port * pixDensity).toFloat()
-            d = (starboard * pixDensity).toFloat()
+    private fun drawShape(locationX: Float, locationY: Float, tileBox: RotatedTileBox, paint: Paint, canvas: Canvas) {
+        // draw the shape of the vessel based on the received dimension data,
+        // for vessel dimension encoding see ITU-R M.1371-5 (http://www.itu.int/rec/R-REC-M/e)
+        if (tileBox.zoom >= START_ZOOM_SHOW_SHAPE &&
+            (ais.dimensionToBow + ais.dimensionToStern > 0) &&
+            (ais.dimensionToPort + ais.dimensionToStarboard > 0) &&
+            !ais.isLost(plugin.aisShipLostTimeout.get())
+        ) {
+            val pixDensity = tileBox.pixDensity
+            val a: Float
+            val b: Float
+            val c: Float
+            val d: Float
+            if (ais.dimensionToBow == 0 && ais.dimensionToPort == 0) {
+                a = (ais.dimensionToStern * pixDensity * 0.5f).toFloat()
+                b = a
+                c = (ais.dimensionToStarboard * pixDensity * 0.5f).toFloat()
+                d = c
+            } else {
+                a = (ais.dimensionToBow * pixDensity).toFloat()
+                b = (ais.dimensionToStern * pixDensity).toFloat()
+                c = (ais.dimensionToPort * pixDensity).toFloat()
+                d = (ais.dimensionToStarboard * pixDensity).toFloat()
+            }
+            val e = 0.5f * (c + d)
+            canvas.drawLine(locationX - c, locationY + b, locationX - c, locationY - a + e, paint)
+            canvas.drawLine(locationX - c, locationY - a + e, locationX - c + e, locationY - a, paint)
+            canvas.drawLine(locationX - c + e, locationY - a, locationX + d, locationY - a + e, paint)
+            canvas.drawLine(locationX + d, locationY - a + e, locationX + d, locationY + b, paint)
+            canvas.drawLine(locationX + d, locationY + b, locationX - c, locationY + b, paint)
         }
-        val e = 0.5f * (c + d)
-        val shapePaint = Paint(paint).apply {
-            style = Paint.Style.STROKE
-            strokeWidth = 2f * tileBox.density
-            color = if (bitmapColor != 0) bitmapColor else Color.DKGRAY
-        }
-        canvas.drawLine(-c, b, -c, -a + e, shapePaint)
-        canvas.drawLine(-c, -a + e, -c + e, -a, shapePaint)
-        canvas.drawLine(-c + e, -a, d, -a + e, shapePaint)
-        canvas.drawLine(d, -a + e, d, b, shapePaint)
-        canvas.drawLine(d, b, -c, b, shapePaint)
     }
 }
