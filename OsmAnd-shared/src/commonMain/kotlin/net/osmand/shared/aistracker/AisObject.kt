@@ -17,7 +17,6 @@ import net.osmand.shared.aistracker.AisObjectConstants.INVALID_ROT
 import net.osmand.shared.aistracker.AisObjectConstants.INVALID_SHIP_TYPE
 import net.osmand.shared.aistracker.AisObjectConstants.INVALID_SOG
 import net.osmand.shared.aistracker.AisObjectConstants.UNSPECIFIED_AID_TYPE
-import kotlin.math.abs
 
 class AisObject {
     var msgType: Int = 0
@@ -82,9 +81,6 @@ class AisObject {
         private set
     var lastUpdate: Long = 0
 
-    private var lastAtRestState: Boolean = false
-    private var lowSpeedSinceMs: Long = 0L
-    private var lowSpeedReportCount: Int = 0
 
     constructor(mmsi: Int, msgType: Int, lat: Double, lon: Double) {
         initObj(mmsi, msgType)
@@ -269,20 +265,11 @@ class AisObject {
         val msgListStatus = listOf(1, 2, 3, 27)
         val msgListCourse = listOf(1, 2, 3, 9, 18, 19, 27)
 
-        if ((msgListHeading.contains(ais.msgType) || msgListHeading.contains(this.msgType)) && ais.heading != INVALID_HEADING && ais.heading != 0) {
-            // Ignore heading jitter when SOG < 0.3 kn
-            val currentSog = if (ais.sog != INVALID_SOG) ais.sog else this.sog
-            if (currentSog != INVALID_SOG && currentSog < 0.3 && this.heading != INVALID_HEADING && this.heading != 0) {
-                val diff = abs((ais.heading - this.heading + 540) % 360 - 180)
-                if (diff >= 5) {
-                    this.heading = ais.heading
-                }
-            } else {
-                this.heading = ais.heading
-            }
+        if (msgListHeading.contains(ais.msgType) && ais.heading != INVALID_HEADING && ais.heading != 0) {
+            this.heading = ais.heading
         }
 
-        if (msgListStatus.contains(ais.msgType) || msgListStatus.contains(this.msgType)) {
+        if (msgListStatus.contains(ais.msgType)) {
             if (ais.navStatus != INVALID_NAV_STATUS) {
                 this.navStatus = ais.navStatus
             }
@@ -294,26 +281,12 @@ class AisObject {
             }
         }
 
-        if (msgListCourse.contains(ais.msgType) || msgListCourse.contains(this.msgType)) {
+        if (msgListCourse.contains(ais.msgType)) {
             if (ais.cog != INVALID_COG) {
                 this.cog = ais.cog
             }
             if (ais.sog != INVALID_SOG) {
                 this.sog = ais.sog
-                val now = kotlinx.datetime.Clock.System.now().toEpochMilliseconds()
-                if (ais.sog >= 0.7) {
-                    lowSpeedSinceMs = 0L
-                    lowSpeedReportCount = 0
-                    lastAtRestState = false
-                } else if (ais.sog < 0.3) {
-                    if (lowSpeedSinceMs == 0L) {
-                        lowSpeedSinceMs = now
-                    }
-                    lowSpeedReportCount++
-                    if ((now - lowSpeedSinceMs >= 10000L) || lowSpeedReportCount >= 3) {
-                        lastAtRestState = true
-                    }
-                }
             }
         }
 
@@ -463,33 +436,22 @@ class AisObject {
     }
 
     fun isVesselAtRest(): Boolean {
-        if (!isMovable() || objectClass == AisObjType.AIS_AIRPLANE) {
-            return false
-        }
-        if (sog == INVALID_SOG) {
-            return navStatus == 1 || navStatus == 5
-        }
-        val now = kotlinx.datetime.Clock.System.now().toEpochMilliseconds()
-        if (sog >= 0.7) {
-            lowSpeedSinceMs = 0L
-            lowSpeedReportCount = 0
-            lastAtRestState = false
-            return false
-        } else if (sog < 0.3) {
-            if (lowSpeedSinceMs == 0L) {
-                lowSpeedSinceMs = now
+        return when (objectClass) {
+            AisObjType.AIS_VESSEL, AisObjType.AIS_VESSEL_SPORT, AisObjType.AIS_VESSEL_FAST,
+            AisObjType.AIS_VESSEL_PASSENGER, AisObjType.AIS_VESSEL_FREIGHT, AisObjType.AIS_VESSEL_COMMERCIAL,
+            AisObjType.AIS_VESSEL_AUTHORITIES, AisObjType.AIS_VESSEL_SAR, AisObjType.AIS_VESSEL_OTHER -> {
+                when (navStatus) {
+                    1, 5 -> (cog == AisObjectConstants.INVALID_COG) || (sog < AisObjectConstants.SPEED_CONSIDERED_IN_REST)
+                    else -> {
+                        if (msgTypes.contains(18) || msgTypes.contains(24) || msgTypes.contains(1) || msgTypes.contains(3)) {
+                            sog < AisObjectConstants.SPEED_CONSIDERED_IN_REST
+                        } else {
+                            false
+                        }
+                    }
+                }
             }
-            if (navStatus == 1 || navStatus == 5 || (now - lowSpeedSinceMs >= 10000L) || lowSpeedReportCount >= 3 || lastAtRestState) {
-                lastAtRestState = true
-                return true
-            }
-            return lastAtRestState
-        } else {
-            // Deadband (0.3 .. 0.7 kn)
-            if ((navStatus == 1 || navStatus == 5) && !lastAtRestState && lowSpeedSinceMs == 0L) {
-                lastAtRestState = true
-            }
-            return lastAtRestState
+            else -> false
         }
     }
 
