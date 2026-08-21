@@ -35,11 +35,7 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
     private fun getSafeThemedContext(): Context {
         val base = activity ?: runCatching { requireActivity() }.getOrNull()
             ?: context ?: runCatching { requireContext() }.getOrNull()
-        return if (base != null) {
-            net.osmand.plus.utils.UiUtilities.getThemedContext(base, isNightMode)
-        } else {
-            androidx.appcompat.view.ContextThemeWrapper(app, R.style.OsmandTheme)
-        }
+        return net.osmand.plus.utils.UiUtilities.getThemedContext(base ?: app, isNightMode)
     }
 
     private fun Preference.setThemedIcon(resId: Int) {

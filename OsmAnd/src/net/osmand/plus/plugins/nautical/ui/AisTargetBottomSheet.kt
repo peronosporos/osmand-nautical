@@ -69,16 +69,16 @@ class AisTargetBottomSheet : BottomSheetDialogFragment() {
 
     private fun updateView(view: View, ais: AisObject) {
         val base = runCatching { requireActivity() }.getOrNull() ?: requireContext()
-        val ctx = androidx.appcompat.view.ContextThemeWrapper(base, R.style.OsmandTheme)
+        val themedCtx = androidx.appcompat.view.ContextThemeWrapper(base, R.style.OsmandLightTheme)
         val plugin = NauticalPlugin.getInstance()
-        val unknown = ctx.getString(R.string.shared_string_none)
-        val na = ctx.getString(R.string.nautical_not_available)
+        val unknown = getString(R.string.shared_string_none)
+        val na = getString(R.string.nautical_not_available)
 
         // Header: Icon, Name, MMSI, Call Sign, IMO
         val imgIcon = view.findViewById<ImageView>(R.id.img_vessel_icon)
         val iconRes = selectBitmap(ais.objectClass)
         val iconColor = selectColor(ais.objectClass)
-        val iconDrawable = ContextCompat.getDrawable(ctx, iconRes)?.mutate()
+        val iconDrawable = ContextCompat.getDrawable(themedCtx, iconRes)?.mutate()
         if (iconColor != 0) {
             iconDrawable?.colorFilter = PorterDuffColorFilter(iconColor, PorterDuff.Mode.SRC_IN)
         }
@@ -194,7 +194,7 @@ class AisTargetBottomSheet : BottomSheetDialogFragment() {
 
         val btnBuddy = view.findViewById<Button>(R.id.btn_toggle_buddy)
         val isBuddy = NauticalPlugin.engine?.getCurrentState()?.aisBuddies?.contains(ais.mmsi) ?: false
-        btnBuddy.text = if (isBuddy) ctx.getString(R.string.nautical_remove_from_buddies) else ctx.getString(R.string.nautical_add_to_buddies)
+        btnBuddy.text = if (isBuddy) getString(R.string.nautical_remove_from_buddies) else getString(R.string.nautical_add_to_buddies)
         btnBuddy.setOnClickListener {
             val engine = NauticalPlugin.engine
             val current = engine?.getCurrentState()?.aisBuddies?.toMutableSet() ?: mutableSetOf()

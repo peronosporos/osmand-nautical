@@ -79,7 +79,7 @@ class NauticalTargetPicker : BottomSheetDialogFragment() {
 
         if (target is AisObject) {
             val resolvedAis = plugin?.aisManager?.getAisObject(target.mmsi) ?: target
-            val themedCtx = androidx.appcompat.view.ContextThemeWrapper(context, R.style.OsmandTheme)
+            val themedCtx = androidx.appcompat.view.ContextThemeWrapper(context, R.style.OsmandLightTheme)
             val iconView = ImageView(themedCtx).apply {
                 layoutParams = LinearLayout.LayoutParams(dpToPx(context, 36f), dpToPx(context, 36f)).apply {
                     marginEnd = dpToPx(context, 12f)

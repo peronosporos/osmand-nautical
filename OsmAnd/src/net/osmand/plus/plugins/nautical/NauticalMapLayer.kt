@@ -39,11 +39,11 @@ class NauticalMapLayer(context: Context) : OsmandMapLayer(context), SharedPrefer
         style = Paint.Style.STROKE
         strokeCap = Paint.Cap.ROUND
     }
-    private val themedContext = androidx.appcompat.view.ContextThemeWrapper(context, R.style.OsmandTheme)
-    private val waypointIcon: Drawable? = androidx.appcompat.content.res.AppCompatResources.getDrawable(themedContext, R.drawable.ic_action_waypoint)
-    private val lockIcon: Drawable? = androidx.appcompat.content.res.AppCompatResources.getDrawable(themedContext, R.drawable.ic_action_lock)
-    private val anchorIcon: Drawable? = androidx.appcompat.content.res.AppCompatResources.getDrawable(themedContext, R.drawable.ic_action_anchor)
-    private val buildingIcon: Drawable? = androidx.appcompat.content.res.AppCompatResources.getDrawable(themedContext, R.drawable.ic_action_building)
+    private val themedContext: Context get() = androidx.appcompat.view.ContextThemeWrapper(context, R.style.OsmandLightTheme)
+    private val waypointIcon: Drawable? by lazy { androidx.appcompat.content.res.AppCompatResources.getDrawable(themedContext, R.drawable.ic_action_waypoint) }
+    private val lockIcon: Drawable? by lazy { androidx.appcompat.content.res.AppCompatResources.getDrawable(themedContext, R.drawable.ic_action_lock) }
+    private val anchorIcon: Drawable? by lazy { androidx.appcompat.content.res.AppCompatResources.getDrawable(themedContext, R.drawable.ic_action_anchor) }
+    private val buildingIcon: Drawable? by lazy { androidx.appcompat.content.res.AppCompatResources.getDrawable(themedContext, R.drawable.ic_action_building) }
 
     private val projectionPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.WHITE
