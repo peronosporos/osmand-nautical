@@ -155,12 +155,6 @@ class SignalKLocationManager(
         if (lat == null || lon == null) return
 
         val localReceiptTime = SystemClock.elapsedRealtime()
-        val timeSinceLastReceipt = localReceiptTime - lastLocalReceiptElapsedRealtime.get()
-
-        if (lastLocalReceiptElapsedRealtime.get() != 0L && timeSinceLastReceipt > TIMEOUT_MS) {
-            checkFallback(System.currentTimeMillis())
-            return
-        }
         lastLocalReceiptElapsedRealtime.set(localReceiptTime)
 
         val now = System.currentTimeMillis()
