@@ -865,7 +865,7 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
             engine?.registerAisListener { target: AisObject ->
                 aisManager?.onAisObjectReceived(target)
                 app.runInUIThread {
-                    app.mapView?.refreshMap()
+                    app.osmandMap?.refreshMap()
                 }
             }
         }
@@ -1079,7 +1079,7 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
             engine?.registerAisListener { target: AisObject ->
                 aisManager?.onAisObjectReceived(target)
                 app.runInUIThread {
-                    app.mapView?.refreshMap()
+                    app.osmandMap?.refreshMap()
                 }
             }
         } else {
@@ -1201,7 +1201,7 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
                 engine?.registerAisListener { target: AisObject ->
                     aisManager?.onAisObjectReceived(target)
                     app.runInUIThread {
-                        app.mapView?.refreshMap()
+                        app.osmandMap?.refreshMap()
                     }
                 }
             }
@@ -1238,7 +1238,7 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
                 engine?.registerAisListener { target: AisObject ->
                     aisManager?.onAisObjectReceived(target)
                     app.runInUIThread {
-                        app.mapView?.refreshMap()
+                        app.osmandMap?.refreshMap()
                     }
                 }
             }
