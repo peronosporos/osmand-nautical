@@ -99,6 +99,7 @@ import net.osmand.plus.views.mapwidgets.WidgetsPanel
 import net.osmand.plus.views.mapwidgets.widgets.MapWidget
 import net.osmand.plus.widgets.ctxmenu.ContextMenuAdapter
 import net.osmand.render.RenderingRuleProperty
+import net.osmand.shared.aistracker.AisMessageListener
 import net.osmand.shared.aistracker.AisObject
 import net.osmand.shared.util.KMapUtils
 import net.osmand.util.MapUtils
@@ -220,6 +221,8 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
     var signalKLocationManager: SignalKLocationManager? = null
         private set
     var aisManager: NauticalAisManager? = null
+        private set
+    var aisMessageListener: AisMessageListener? = null
         private set
     private var autopilotListener: AutopilotRouteListener? = null
     internal var notificationManager: NauticalNotificationManager? = null
@@ -847,6 +850,19 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
         if (app.settings.NAUTICAL_VHF_ENABLED.get()) {
             vhfManager?.start()
         }
+        if (app.settings.NAUTICAL_AIS_ENABLED.get()) {
+            if (aisManager == null) {
+                aisManager = NauticalAisManager(app)
+                aisManager?.startUpdates()
+            }
+            if (aisMessageListener == null) {
+                aisMessageListener = AisMessageListener(aisManager!!)
+                aisMessageListener?.start(port = 10110)
+            }
+            engine?.registerAisListener { target: AisObject ->
+                aisManager?.onAisObjectReceived(target)
+            }
+        }
         if (autopilotListener == null) {
             autopilotListener = AutopilotRouteListener(app.routingHelper)
         }
@@ -978,6 +994,8 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
                 if (gribDir.exists()) {
                     gribDir.deleteRecursively()
                 }
+                aisMessageListener?.stopListener()
+                aisMessageListener = null
                 aisManager?.cleanupResources()
                 aisManager = null
                 app.settings.NAUTICAL_ANCHOR_LAT.set(0.0)
@@ -1045,11 +1063,17 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
                 aisManager = NauticalAisManager(app)
                 aisManager?.startUpdates()
             }
+            if (aisMessageListener == null) {
+                aisMessageListener = AisMessageListener(aisManager!!)
+                aisMessageListener?.start(port = 10110)
+            }
             engine?.registerAisListener { target: AisObject ->
                 aisManager?.onAisObjectReceived(target)
             }
         } else {
             clearAisLayer()
+            aisMessageListener?.stopListener()
+            aisMessageListener = null
             aisManager?.stopUpdates()
             aisManager = null
         }
@@ -1089,6 +1113,8 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
     private fun stopAllFeatures() {
         stopNavtex()
         clearAisLayer()
+        aisMessageListener?.stopListener()
+        aisMessageListener = null
         aisManager?.stopUpdates()
         aisManager = null
         vhfManager?.stop()
@@ -1117,6 +1143,10 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
     override fun disable(app: OsmandApplication) {
         super.disable(app)
         unregisterListeners()
+        aisMessageListener?.stopListener()
+        aisMessageListener = null
+        aisManager?.cleanupResources()
+        aisManager = null
         telemetryFilterEngine?.stop()
         telemetryFilterEngine = null
         signalKLocationManager?.stop()
@@ -1141,6 +1171,20 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
     fun onMapActivityCreated(activity: MapActivity) {
         val isBoat = app.settings.APPLICATION_MODE.get().isDerivedRoutingFrom(ApplicationMode.BOAT)
         if (isActive && isBoat) {
+            registerLayers(activity, activity)
+            if (app.settings.NAUTICAL_AIS_ENABLED.get()) {
+                if (aisManager == null) {
+                    aisManager = NauticalAisManager(app)
+                    aisManager?.startUpdates()
+                }
+                if (aisMessageListener == null) {
+                    aisMessageListener = AisMessageListener(aisManager!!)
+                    aisMessageListener?.start(port = 10110)
+                }
+                engine?.registerAisListener { target: AisObject ->
+                    aisManager?.onAisObjectReceived(target)
+                }
+            }
             initSubsystems(activity)
             uiOverlayManager.updateHudVisibility(hudManager)
             signalKLocationManager?.start()
@@ -1158,6 +1202,20 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
         presentationManager?.onResume(activity)
         val isBoat = app.settings.APPLICATION_MODE.get().isDerivedRoutingFrom(ApplicationMode.BOAT)
         if (isActive && isBoat) {
+            registerLayers(activity, activity)
+            if (app.settings.NAUTICAL_AIS_ENABLED.get()) {
+                if (aisManager == null) {
+                    aisManager = NauticalAisManager(app)
+                    aisManager?.startUpdates()
+                }
+                if (aisMessageListener == null) {
+                    aisMessageListener = AisMessageListener(aisManager!!)
+                    aisMessageListener?.start(port = 10110)
+                }
+                engine?.registerAisListener { target: AisObject ->
+                    aisManager?.onAisObjectReceived(target)
+                }
+            }
             initSubsystems(activity)
             uiOverlayManager.updateHudVisibility(hudManager)
             getScope().launch(Dispatchers.IO) {
@@ -1259,6 +1317,11 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
         if (isActive && mapActivity != null) {
             layerManager.registerLayers(context, mapActivity, s57SpatialIndex) { _ ->
                 initSubsystems(mapActivity)
+            }
+            val mapView = mapActivity.mapView
+            val aisLayer = layerManager.aisAisLayer
+            if (aisLayer != null && !mapView.layers.contains(aisLayer)) {
+                mapView.addLayer(aisLayer, 3.5f)
             }
         }
     }

@@ -79,13 +79,14 @@ class NauticalTargetPicker : BottomSheetDialogFragment() {
 
         if (target is AisObject) {
             val resolvedAis = plugin?.aisManager?.getAisObject(target.mmsi) ?: target
-            val iconView = ImageView(context).apply {
+            val themedCtx = androidx.appcompat.view.ContextThemeWrapper(context, R.style.OsmandTheme)
+            val iconView = ImageView(themedCtx).apply {
                 layoutParams = LinearLayout.LayoutParams(dpToPx(context, 36f), dpToPx(context, 36f)).apply {
                     marginEnd = dpToPx(context, 12f)
                 }
                 val iconRes = selectBitmap(resolvedAis.objectClass)
                 val iconColor = selectColor(resolvedAis.objectClass)
-                val drawable = ContextCompat.getDrawable(context, iconRes)?.mutate()
+                val drawable = ContextCompat.getDrawable(themedCtx, iconRes)?.mutate()
                 if (iconColor != 0) {
                     drawable?.colorFilter = PorterDuffColorFilter(iconColor, PorterDuff.Mode.SRC_IN)
                 }

@@ -13,6 +13,7 @@ import net.osmand.plus.plugins.nautical.NauticalPlugin
 import net.osmand.plus.plugins.nautical.audio.AlarmType
 import net.osmand.plus.plugins.nautical.audio.NauticalAudioArbiter
 import net.osmand.plus.plugins.nautical.utils.TemporalUtils
+import net.osmand.shared.aistracker.AisDataListener
 import net.osmand.shared.aistracker.AisLocation
 import net.osmand.shared.aistracker.AisObject
 import net.osmand.shared.aistracker.AisObjectConstants
@@ -24,7 +25,7 @@ import kotlin.math.absoluteValue
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
-class NauticalAisManager(private val app: OsmandApplication) {
+class NauticalAisManager(private val app: OsmandApplication) : AisDataListener {
 
     private val log = PlatformUtil.getLog(NauticalAisManager::class.java)
     private val managerScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
@@ -404,7 +405,7 @@ class NauticalAisManager(private val app: OsmandApplication) {
         }
     }
 
-    fun onAisObjectReceived(ais: AisObject) {
+    override fun onAisObjectReceived(ais: AisObject) {
         val mmsi = ais.mmsi
         val obj = objects.getOrPut(mmsi) { AisObject(ais) }
         if (obj !== ais) {
@@ -413,6 +414,7 @@ class NauticalAisManager(private val app: OsmandApplication) {
 
         _aisEvents.tryEmit(AisEvent.Updated(obj))
         batchUpdateFlow.tryEmit(obj)
+        NauticalPlugin.getInstance()?.requestRefresh()
     }
 
     fun updateAisThreatLevel(mmsi: Int, level: Int) {

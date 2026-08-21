@@ -68,7 +68,8 @@ class AisTargetBottomSheet : BottomSheetDialogFragment() {
     }
 
     private fun updateView(view: View, ais: AisObject) {
-        val ctx = requireContext()
+        val base = runCatching { requireActivity() }.getOrNull() ?: requireContext()
+        val ctx = androidx.appcompat.view.ContextThemeWrapper(base, R.style.OsmandTheme)
         val plugin = NauticalPlugin.getInstance()
         val unknown = ctx.getString(R.string.shared_string_none)
         val na = ctx.getString(R.string.nautical_not_available)

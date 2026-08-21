@@ -417,13 +417,13 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
     private fun updateManeuverButtons() {
         val isProa = settings.NAUTICAL_VESSEL_TYPE.get() == VesselType.PROA
         if (isProa) {
-            tackPortBtn.text = getString(R.string.nautical_shunt_reversal)
-            tackPortBtn.contentDescription = getString(R.string.nautical_shunt_reversal)
-            tackStbdBtn.text = getString(R.string.nautical_reverse_180)
-            tackStbdBtn.contentDescription = getString(R.string.nautical_reverse_180_desc)
+            tackPortBtn.text = "Shunt (180° Reverse)"
+            tackPortBtn.contentDescription = "Shunt (180° Reverse)"
+            tackStbdBtn.text = getString(R.string.nautical_center_rudder)
+            tackStbdBtn.contentDescription = getString(R.string.nautical_center_rudder)
 
-            btnManeuverSec1.text = getString(R.string.nautical_shunt_reversal)
-            btnManeuverSec1.contentDescription = getString(R.string.nautical_shunt_reversal)
+            btnManeuverSec1.text = "Shunt (180° Reverse)"
+            btnManeuverSec1.contentDescription = "Shunt (180° Reverse)"
             btnManeuverSec2.text = getString(R.string.nautical_center_rudder)
             btnManeuverSec2.contentDescription = getString(R.string.nautical_center_rudder)
             btnManeuverSec3.text = getString(R.string.nautical_rudder_lock)
@@ -461,14 +461,13 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
         val isProa = settings.NAUTICAL_VESSEL_TYPE.get() == VesselType.PROA
         if (isProa) {
             if (port) {
-                showEmbeddedConfirmation("SLIDE TO SHUNT (REVERSAL)") {
+                showEmbeddedConfirmation("SLIDE TO SHUNT (180° REVERSE)") {
                     NauticalPlugin.autopilot?.shunt()
                     speakMode("SHUNTING")
                 }
             } else {
-                showEmbeddedConfirmation("SLIDE TO REVERSE 180°") {
-                    NauticalPlugin.autopilot?.adjustHeading(180.0)
-                    speakMode("REVERSE")
+                showEmbeddedConfirmation("SLIDE TO CENTER RUDDER") {
+                    NauticalPlugin.autopilot?.setRudderAngle(0.0)
                 }
             }
         } else {

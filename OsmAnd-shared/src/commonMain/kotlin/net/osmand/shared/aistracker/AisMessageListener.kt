@@ -43,8 +43,8 @@ open class AisMessageListener {
     private var activeTcpSocket: Socket? = null
     private val listeners = mutableListOf<SentenceListener>()
 
-    // For Simulation (File)
-    protected constructor(dataListener: AisDataListener) {
+    // For Simulation (File) or manual start
+    constructor(dataListener: AisDataListener) {
         this.dataListener = dataListener
         initListeners()
     }
@@ -59,6 +59,14 @@ open class AisMessageListener {
     constructor(dataListener: AisDataListener, udpPort: Int) {
         this.dataListener = dataListener
         startUdpConnection(udpPort)
+    }
+
+    fun start(port: Int = 10110) {
+        startUdpConnection(port)
+    }
+
+    fun start(serverIp: String, serverPort: Int) {
+        startTcpConnection(serverIp, serverPort)
     }
 
     private fun startTcpConnection(serverIp: String, serverPort: Int) {
@@ -204,6 +212,7 @@ open class AisMessageListener {
     }
 
     private fun initListeners() {
+        if (listeners.isNotEmpty()) return
         AisListener01()
         AisListener02()
         AisListener03()

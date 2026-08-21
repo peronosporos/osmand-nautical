@@ -42,8 +42,9 @@ class AnchorWatchMapLayer(context: Context) : OsmandMapLayer(context) {
     }
 
     private val anchorIcon: Bitmap? by lazy {
-        val drawable = androidx.appcompat.content.res.AppCompatResources.getDrawable(context, R.drawable.ic_action_anchor)
-            ?: ContextCompat.getDrawable(context, R.drawable.ic_action_anchor)
+        val themedCtx = androidx.appcompat.view.ContextThemeWrapper(context, R.style.OsmandTheme)
+        val drawable = androidx.appcompat.content.res.AppCompatResources.getDrawable(themedCtx, R.drawable.ic_action_anchor)
+            ?: ContextCompat.getDrawable(themedCtx, R.drawable.ic_action_anchor)
         drawable?.let {
             val bitmap = createBitmap(it.intrinsicWidth, it.intrinsicHeight, Bitmap.Config.ARGB_8888)
             val canvas = Canvas(bitmap)

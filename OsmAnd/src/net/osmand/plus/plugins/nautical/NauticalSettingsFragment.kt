@@ -38,7 +38,7 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
         return if (base != null) {
             net.osmand.plus.utils.UiUtilities.getThemedContext(base, isNightMode)
         } else {
-            app
+            androidx.appcompat.view.ContextThemeWrapper(app, R.style.OsmandTheme)
         }
     }
 
