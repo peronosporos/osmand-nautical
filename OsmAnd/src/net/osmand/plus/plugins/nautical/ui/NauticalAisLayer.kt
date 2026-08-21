@@ -2,9 +2,6 @@ package net.osmand.plus.plugins.nautical.ui
 
 import android.content.Context
 import android.graphics.*
-import androidx.lifecycle.lifecycleScope
-import kotlinx.coroutines.*
-import kotlin.time.Duration.Companion.milliseconds
 import net.osmand.core.jni.MapMarkersCollection
 import net.osmand.core.jni.SingleSkImage
 import net.osmand.core.jni.VectorLinesCollection
@@ -27,7 +24,7 @@ import java.util.concurrent.ConcurrentHashMap
 class NauticalAisLayer(
     context: Context,
     private val plugin: NauticalPlugin
-) : OsmandMapLayer(context), ContextMenuLayer.IContextMenuProvider {
+) : OsmandMapLayer(context), ContextMenuLayer.IContextMenuProvider, NauticalAisManager.AisObjectListener {
 
     companion object {
         const val START_ZOOM = 1
@@ -52,39 +49,15 @@ class NauticalAisLayer(
     private var textScale = 1f
     private var lastRenderZoom = -1
     private var lastRenderRefreshTimeMs: Long = 0
-    private var aisUpdateJob: Job? = null
     private var followedMmsi: Int? = null
 
     override fun initLayer(view: OsmandMapTileView) {
         super.initLayer(view)
         
-        val activity = view.mapActivity
-        if (activity != null) {
-            activity.window?.decorView?.post {
-                if (aisUpdateJob?.isActive != true && !activity.isFinishing && !activity.isDestroyed) {
-                    aisUpdateJob = activity.lifecycleScope.launch(Dispatchers.Default) {
-                        while (isActive) {
-                            val manager = plugin.aisManager
-                            if (manager != null) {
-                                manager.getAisObjects().forEach { onAisObjectReceived(it) }
-                                
-                                try {
-                                    manager.aisEvents.collect { event ->
-                                        when (event) {
-                                            is NauticalAisManager.AisEvent.Updated -> onAisObjectReceived(event.obj)
-                                            is NauticalAisManager.AisEvent.Removed -> onAisObjectRemoved(event.obj)
-                                        }
-                                    }
-                                } catch (_: Exception) {
-                                    // If collection fails, loop will retry after a short delay
-                                }
-                            }
-                            delay(500.milliseconds)
-                        }
-                    }
-                }
-            }
-        }
+        plugin.aisManager?.addListener(this)
+        mapActivityInvalidated = true
+        // Initial population of existing objects
+        plugin.aisManager?.getAisObjects()?.forEach { onAisObjectReceived(it) }
 
         val density = context.resources.displayMetrics.density
         val size = (16 * density).toInt()
@@ -100,8 +73,7 @@ class NauticalAisLayer(
     }
 
     override fun destroyLayer() {
-        aisUpdateJob?.cancel()
-        aisUpdateJob = null
+        plugin.aisManager?.removeListener(this)
         super.destroyLayer()
     }
 
@@ -144,7 +116,7 @@ class NauticalAisLayer(
         }
     }
 
-    fun onAisObjectReceived(ais: AisObject) {
+    override fun onAisObjectReceived(ais: AisObject) {
         val mmsi = ais.mmsi
         val own = isOwnObject(ais)
         val manager = plugin.aisManager
@@ -204,11 +176,12 @@ class NauticalAisLayer(
         drawable.updateAisRenderData(tileView, bitmapPaint)
     }
 
-    fun onAisObjectRemoved(ais: AisObject) {
+    override fun onAisObjectRemoved(ais: AisObject) {
         if ((markersCollection != null) && (vectorLinesCollection != null)) {
             objectDrawables[ais.mmsi]?.clearAisRenderData(markersCollection!!, vectorLinesCollection!!)
         }
         objectDrawables.remove(ais.mmsi)
+        mapActivityInvalidated = true
         scheduleThrottledMapRefresh()
     }
 
@@ -244,6 +217,21 @@ class NauticalAisLayer(
     }
 
     override fun onDraw(canvas: Canvas, tileBox: RotatedTileBox, settings: DrawSettings) {
+        if (mapRenderer == null && tileBox.zoom >= START_ZOOM) {
+            val aisObjects = plugin.aisManager?.getAisObjects() ?: return
+            for (ais in aisObjects) {
+                if (isOwnObjectHidden(ais)) continue
+                val pos = ais.position
+                if (pos != null && isLocationVisible(tileBox, pos.latitude, pos.longitude)) {
+                    val drawable = objectDrawables.getOrPut(ais.mmsi) {
+                        NauticalAisObjectDrawable(plugin, ais, imagesCache).apply {
+                            setOwnObject(isOwnObject(ais))
+                        }
+                    }
+                    drawable.draw(bitmapPaint, canvas, tileBox)
+                }
+            }
+        }
     }
 
     override fun onPrepareBufferImage(canvas: Canvas, tileBox: RotatedTileBox, settings: DrawSettings) {

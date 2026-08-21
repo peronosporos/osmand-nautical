@@ -4,7 +4,6 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
-import kotlinx.coroutines.flow.sample
 import net.osmand.Location
 import net.osmand.PlatformUtil
 import net.osmand.plus.OsmandApplication
@@ -71,21 +70,6 @@ class NauticalAisManager(private val app: OsmandApplication) : AisDataListener {
     )
     val aisEvents = _aisEvents.asSharedFlow()
 
-    private val batchUpdateFlow = MutableSharedFlow<AisObject>(
-        extraBufferCapacity = 128,
-        onBufferOverflow = BufferOverflow.DROP_OLDEST
-    )
-
-    init {
-        managerScope.launch {
-            // Task: AIS Notification Throttling (Batching updates to 2Hz)
-            batchUpdateFlow
-                .sample(500.milliseconds)
-                .collect { obj ->
-                    listeners.forEach { it.onAisObjectReceived(obj) }
-                }
-        }
-    }
 
     interface AisObjectListener {
         fun onAisObjectReceived(ais: AisObject)
@@ -221,13 +205,7 @@ class NauticalAisManager(private val app: OsmandApplication) : AisDataListener {
         val isFirstFix = (isNewTarget || !hadPosition) && hasPosition
 
         _aisEvents.tryEmit(AisEvent.Updated(target))
-
-        if (isFirstFix) {
-            // Eager First-Fix Publication: Immediately notify listeners and force immediate map refresh without waiting for metadata or batching
-            listeners.forEach { it.onAisObjectReceived(target) }
-        } else {
-            batchUpdateFlow.tryEmit(target)
-        }
+        listeners.forEach { it.onAisObjectReceived(target) }
 
         app.runInUIThread {
             app.osmandMap?.refreshMap()
@@ -489,13 +467,7 @@ class NauticalAisManager(private val app: OsmandApplication) : AisDataListener {
         val isFirstFix = (isNew || !hadPosition) && hasPosition
 
         _aisEvents.tryEmit(AisEvent.Updated(obj))
-
-        if (isFirstFix) {
-            // Eager First-Fix Publication: Immediately notify listeners and dispatch map refresh
-            listeners.forEach { it.onAisObjectReceived(obj) }
-        } else {
-            batchUpdateFlow.tryEmit(obj)
-        }
+        listeners.forEach { it.onAisObjectReceived(obj) }
 
         app.runInUIThread {
             app.osmandMap?.refreshMap()
