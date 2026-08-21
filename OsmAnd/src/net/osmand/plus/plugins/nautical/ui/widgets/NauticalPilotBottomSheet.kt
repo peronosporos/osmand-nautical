@@ -69,6 +69,7 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
     private lateinit var embeddedSlideConfirm: SlideToConfirmView
     private lateinit var btnCancelEmbeddedConfirmation: MaterialButton
     private var confirmationJob: Job? = null
+    private var maneuverHelper: AutopilotBottomSheetHelper? = null
 
     private var isCourseLocked = false
 
@@ -249,89 +250,38 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
         }
 
         // Tack / Jibe / Shunt / Reverse Quick Actions
+        val helper = AutopilotBottomSheetHelper(
+            sheet = this,
+            tackPortBtn = tackPortBtn,
+            tackStbdBtn = tackStbdBtn,
+            btnManeuverSec1 = btnManeuverSec1,
+            btnManeuverSec2 = btnManeuverSec2,
+            btnManeuverSec3 = btnManeuverSec3,
+            btnManeuverSec4 = btnManeuverSec4,
+            btnManeuverSec5 = btnManeuverSec5,
+            btnManeuverSec6 = btnManeuverSec6,
+            layoutSecondaryRow3 = layoutSecondaryRow3,
+            onConfirmManeuver = { label, action ->
+                showEmbeddedConfirmation(label, action)
+            }
+        )
+        maneuverHelper = helper
+
         tackPortBtn.setOnClickListener {
             val state = NauticalPlugin.engine?.getCurrentState()
-            if (state != null) {
-                executeArmedManeuver(state, port = true)
-            }
+            helper.handlePrimaryManeuver(settings.NAUTICAL_VESSEL_TYPE.get(), state, isPort = true)
         }
         tackStbdBtn.setOnClickListener {
             val state = NauticalPlugin.engine?.getCurrentState()
-            if (state != null) {
-                executeArmedManeuver(state, port = false)
-            }
+            helper.handlePrimaryManeuver(settings.NAUTICAL_VESSEL_TYPE.get(), state, isPort = false)
         }
 
-        btnManeuverSec1.setOnClickListener {
-            val isProa = settings.NAUTICAL_VESSEL_TYPE.get() == VesselType.PROA
-            if (isProa) {
-                showEmbeddedConfirmation("SLIDE TO SHUNT (REVERSAL)") {
-                    NauticalPlugin.autopilot?.shunt()
-                    speakMode("SHUNTING")
-                }
-            } else {
-                showEmbeddedConfirmation("SLIDE TO GYBE PORT") {
-                    NauticalPlugin.autopilot?.gybe(port = true)
-                    speakManeuver(tacking = false, port = true)
-                }
-            }
-        }
-
-        btnManeuverSec2.setOnClickListener {
-            val isProa = settings.NAUTICAL_VESSEL_TYPE.get() == VesselType.PROA
-            if (isProa) {
-                showEmbeddedConfirmation("SLIDE TO CENTER RUDDER") {
-                    NauticalPlugin.autopilot?.setRudderAngle(0.0)
-                }
-            } else {
-                showEmbeddedConfirmation("SLIDE TO GYBE STARBOARD") {
-                    NauticalPlugin.autopilot?.gybe(port = false)
-                    speakManeuver(tacking = false, port = false)
-                }
-            }
-        }
-
-        btnManeuverSec3.setOnClickListener {
-            val isProa = settings.NAUTICAL_VESSEL_TYPE.get() == VesselType.PROA
-            if (isProa) {
-                showEmbeddedConfirmation("SLIDE TO LOCK RUDDER") {
-                    isCourseLocked = true
-                    updateLockButton()
-                }
-            } else {
-                showEmbeddedConfirmation("SLIDE TO DODGE PORT (-10°)") {
-                    NauticalPlugin.autopilot?.dodge(port = true)
-                }
-            }
-        }
-
-        btnManeuverSec4.setOnClickListener {
-            showEmbeddedConfirmation("SLIDE TO DODGE STARBOARD (+10°)") {
-                NauticalPlugin.autopilot?.dodge(port = false)
-            }
-        }
-
-        btnManeuverSec5.setOnClickListener {
-            val isProa = settings.NAUTICAL_VESSEL_TYPE.get() == VesselType.PROA
-            if (isProa) {
-                showEmbeddedConfirmation("SLIDE TO EMERGENCY STOP") {
-                    NauticalPlugin.autopilot?.emergencyStop()
-                    speakMode("EMERGENCY STOP")
-                }
-            } else {
-                showEmbeddedConfirmation("SLIDE TO HEAVE-TO") {
-                    NauticalPlugin.autopilot?.heaveTo(port = true)
-                    speakMode("HEAVE-TO")
-                }
-            }
-        }
-
-        btnManeuverSec6.setOnClickListener {
-            showEmbeddedConfirmation("SLIDE TO DOCKING HOLD") {
-                NauticalPlugin.autopilot?.dockingHold()
-                speakMode("DOCKING HOLD")
-            }
-        }
+        btnManeuverSec1.setOnClickListener { helper.handleSecondaryManeuver(1, settings.NAUTICAL_VESSEL_TYPE.get()) }
+        btnManeuverSec2.setOnClickListener { helper.handleSecondaryManeuver(2, settings.NAUTICAL_VESSEL_TYPE.get()) }
+        btnManeuverSec3.setOnClickListener { helper.handleSecondaryManeuver(3, settings.NAUTICAL_VESSEL_TYPE.get()) }
+        btnManeuverSec4.setOnClickListener { helper.handleSecondaryManeuver(4, settings.NAUTICAL_VESSEL_TYPE.get()) }
+        btnManeuverSec5.setOnClickListener { helper.handleSecondaryManeuver(5, settings.NAUTICAL_VESSEL_TYPE.get()) }
+        btnManeuverSec6.setOnClickListener { helper.handleSecondaryManeuver(6, settings.NAUTICAL_VESSEL_TYPE.get()) }
 
         // Continuous Heading / Wind Angle Slider Callbacks
         arcView.onHeadingChanged = { newHeading ->
@@ -415,68 +365,7 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
     }
 
     private fun updateManeuverButtons() {
-        val isProa = settings.NAUTICAL_VESSEL_TYPE.get() == VesselType.PROA
-        if (isProa) {
-            tackPortBtn.text = "Shunt (180° Reverse)"
-            tackPortBtn.contentDescription = "Shunt (180° Reverse)"
-            tackStbdBtn.text = getString(R.string.nautical_center_rudder)
-            tackStbdBtn.contentDescription = getString(R.string.nautical_center_rudder)
-
-            btnManeuverSec1.text = "Shunt (180° Reverse)"
-            btnManeuverSec1.contentDescription = "Shunt (180° Reverse)"
-            btnManeuverSec2.text = getString(R.string.nautical_center_rudder)
-            btnManeuverSec2.contentDescription = getString(R.string.nautical_center_rudder)
-            btnManeuverSec3.text = getString(R.string.nautical_rudder_lock)
-            btnManeuverSec3.contentDescription = getString(R.string.nautical_rudder_lock)
-            btnManeuverSec4.visibility = View.GONE
-            layoutSecondaryRow3.visibility = View.VISIBLE
-            btnManeuverSec5.text = getString(R.string.nautical_emergency_stop_label)
-            btnManeuverSec5.contentDescription = getString(R.string.nautical_emergency_stop_label)
-            btnManeuverSec6.visibility = View.GONE
-        } else {
-            tackPortBtn.text = getString(R.string.nautical_tack_port_label)
-            tackPortBtn.contentDescription = getString(R.string.nautical_tack_port_label)
-            tackStbdBtn.text = getString(R.string.nautical_tack_stbd_label)
-            tackStbdBtn.contentDescription = getString(R.string.nautical_tack_stbd_label)
-
-            btnManeuverSec1.text = getString(R.string.nautical_gybe_port_label)
-            btnManeuverSec1.contentDescription = getString(R.string.nautical_gybe_port_label)
-            btnManeuverSec2.text = getString(R.string.nautical_gybe_stbd_label)
-            btnManeuverSec2.contentDescription = getString(R.string.nautical_gybe_stbd_label)
-            btnManeuverSec3.text = getString(R.string.nautical_dodge_port_label)
-            btnManeuverSec3.contentDescription = getString(R.string.nautical_dodge_port_label)
-            btnManeuverSec4.text = getString(R.string.nautical_dodge_stbd_label)
-            btnManeuverSec4.contentDescription = getString(R.string.nautical_dodge_stbd_label)
-            btnManeuverSec4.visibility = View.VISIBLE
-            layoutSecondaryRow3.visibility = View.VISIBLE
-            btnManeuverSec5.text = getString(R.string.nautical_heave_to)
-            btnManeuverSec5.contentDescription = getString(R.string.nautical_heave_to)
-            btnManeuverSec6.text = getString(R.string.nautical_docking_hold)
-            btnManeuverSec6.contentDescription = getString(R.string.nautical_docking_hold)
-            btnManeuverSec6.visibility = View.VISIBLE
-        }
-    }
-
-    private fun executeArmedManeuver(state: MarineState, port: Boolean) {
-        val isProa = settings.NAUTICAL_VESSEL_TYPE.get() == VesselType.PROA
-        if (isProa) {
-            if (port) {
-                showEmbeddedConfirmation("SLIDE TO SHUNT (180° REVERSE)") {
-                    NauticalPlugin.autopilot?.shunt()
-                    speakMode("SHUNTING")
-                }
-            } else {
-                showEmbeddedConfirmation("SLIDE TO CENTER RUDDER") {
-                    NauticalPlugin.autopilot?.setRudderAngle(0.0)
-                }
-            }
-        } else {
-            val label = if (port) "SLIDE TO TACK PORT (-100°)" else "SLIDE TO TACK STARBOARD (+100°)"
-            showEmbeddedConfirmation(label) {
-                NauticalPlugin.autopilot?.tack(port = port)
-                speakManeuver(tacking = true, port = port)
-            }
-        }
+        maneuverHelper?.updateManeuverButtons(settings.NAUTICAL_VESSEL_TYPE.get())
     }
 
     private fun showEmbeddedConfirmation(label: String, onConfirm: () -> Unit) {

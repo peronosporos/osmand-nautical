@@ -855,12 +855,18 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
                 aisManager = NauticalAisManager(app)
                 aisManager?.startUpdates()
             }
-            if (aisMessageListener == null) {
-                aisMessageListener = AisMessageListener(aisManager!!)
-                aisMessageListener?.start(port = 10110)
+            scope.launch(Dispatchers.IO) {
+                if (aisMessageListener == null && aisManager != null) {
+                    val listener = AisMessageListener(aisManager!!)
+                    aisMessageListener = listener
+                    listener.start(port = 10110)
+                }
             }
             engine?.registerAisListener { target: AisObject ->
                 aisManager?.onAisObjectReceived(target)
+                app.runInUIThread {
+                    app.mapView?.refreshMap()
+                }
             }
         }
         if (autopilotListener == null) {
@@ -1063,17 +1069,25 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
                 aisManager = NauticalAisManager(app)
                 aisManager?.startUpdates()
             }
-            if (aisMessageListener == null) {
-                aisMessageListener = AisMessageListener(aisManager!!)
-                aisMessageListener?.start(port = 10110)
+            getScope().launch(Dispatchers.IO) {
+                if (aisMessageListener == null && aisManager != null) {
+                    val listener = AisMessageListener(aisManager!!)
+                    aisMessageListener = listener
+                    listener.start(port = 10110)
+                }
             }
             engine?.registerAisListener { target: AisObject ->
                 aisManager?.onAisObjectReceived(target)
+                app.runInUIThread {
+                    app.mapView?.refreshMap()
+                }
             }
         } else {
             clearAisLayer()
-            aisMessageListener?.stopListener()
-            aisMessageListener = null
+            getScope().launch(Dispatchers.IO) {
+                aisMessageListener?.stopListener()
+                aisMessageListener = null
+            }
             aisManager?.stopUpdates()
             aisManager = null
         }
@@ -1177,12 +1191,18 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
                     aisManager = NauticalAisManager(app)
                     aisManager?.startUpdates()
                 }
-                if (aisMessageListener == null) {
-                    aisMessageListener = AisMessageListener(aisManager!!)
-                    aisMessageListener?.start(port = 10110)
+                getScope().launch(Dispatchers.IO) {
+                    if (aisMessageListener == null && aisManager != null) {
+                        val listener = AisMessageListener(aisManager!!)
+                        aisMessageListener = listener
+                        listener.start(port = 10110)
+                    }
                 }
                 engine?.registerAisListener { target: AisObject ->
                     aisManager?.onAisObjectReceived(target)
+                    app.runInUIThread {
+                        app.mapView?.refreshMap()
+                    }
                 }
             }
             initSubsystems(activity)
@@ -1208,12 +1228,18 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
                     aisManager = NauticalAisManager(app)
                     aisManager?.startUpdates()
                 }
-                if (aisMessageListener == null) {
-                    aisMessageListener = AisMessageListener(aisManager!!)
-                    aisMessageListener?.start(port = 10110)
+                getScope().launch(Dispatchers.IO) {
+                    if (aisMessageListener == null && aisManager != null) {
+                        val listener = AisMessageListener(aisManager!!)
+                        aisMessageListener = listener
+                        listener.start(port = 10110)
+                    }
                 }
                 engine?.registerAisListener { target: AisObject ->
                     aisManager?.onAisObjectReceived(target)
+                    app.runInUIThread {
+                        app.mapView?.refreshMap()
+                    }
                 }
             }
             initSubsystems(activity)

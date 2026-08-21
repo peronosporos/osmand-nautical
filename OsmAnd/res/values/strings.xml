@@ -1,4 +1,6 @@
 <resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
+    <string name="nautical_gybe">Gybe</string>
+    <string name="nautical_shunt_180_reversal">Shunt (180° Reversal)</string>
     <string name="nautical_tack_port_label">Tack Port</string>
     <string name="nautical_tack_stbd_label">Tack Starboard</string>
     <string name="nautical_gybe_port_label">Gybe Port</string>
