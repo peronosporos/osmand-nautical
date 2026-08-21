@@ -1,6 +1,7 @@
 package net.osmand.plus.plugins.nautical.location
 
 import android.location.Location
+import android.os.SystemClock
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.collectLatest
 import net.osmand.PlatformUtil
@@ -39,6 +40,7 @@ class SignalKLocationManager(
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
 
     private val lastSignalKPositionTimeMs = AtomicLong(0L)
+    private val lastLocalReceiptElapsedRealtime = AtomicLong(0L)
 
     private val modeListener = StateChangedListener<ApplicationMode> { mode ->
         onApplicationModeChanged(mode)
@@ -74,6 +76,7 @@ class SignalKLocationManager(
         watchdogJob?.cancel()
         watchdogJob = null
 
+        lastLocalReceiptElapsedRealtime.set(0L)
         val hadSignalK = lastSignalKPositionTimeMs.getAndSet(0L) != 0L
         // Ensure device GPS is resumed upon stopping
         app.runInUIThread {
@@ -93,13 +96,14 @@ class SignalKLocationManager(
     }
 
     fun hasValidSignalKFix(maxAgeMs: Long = TIMEOUT_MS): Boolean {
-        val fixTime = lastSignalKPositionTimeMs.get()
-        return fixTime > 0L && (System.currentTimeMillis() - fixTime) <= maxAgeMs
+        val lastReceipt = lastLocalReceiptElapsedRealtime.get()
+        return lastReceipt > 0L && (SystemClock.elapsedRealtime() - lastReceipt) <= maxAgeMs
     }
 
     private fun onApplicationModeChanged(mode: ApplicationMode) {
         val boat = isBoatMode(mode)
         if (!boat) {
+            lastLocalReceiptElapsedRealtime.set(0L)
             val hadSignalK = lastSignalKPositionTimeMs.getAndSet(0L) != 0L
             app.runInUIThread {
                 if (hadSignalK) {
@@ -115,6 +119,7 @@ class SignalKLocationManager(
             if (currentState.latitude != null && currentState.longitude != null) {
                 processMarineState(currentState)
             } else if (!hasValidSignalKFix(TIMEOUT_MS)) {
+                lastLocalReceiptElapsedRealtime.set(0L)
                 val hadSignalK = lastSignalKPositionTimeMs.getAndSet(0L) != 0L
                 app.runInUIThread {
                     if (hadSignalK) {
@@ -130,6 +135,7 @@ class SignalKLocationManager(
 
     private fun processMarineState(state: MarineState) {
         if (!isBoatMode()) {
+            lastLocalReceiptElapsedRealtime.set(0L)
             val hadSignalK = lastSignalKPositionTimeMs.getAndSet(0L) != 0L
             if (app.locationProvider.isDeviceGpsSuspended || hadSignalK) {
                 app.runInUIThread {
@@ -148,15 +154,17 @@ class SignalKLocationManager(
         val lon = state.longitude
         if (lat == null || lon == null) return
 
-        val now = System.currentTimeMillis()
-        val posTimestamp = state.timestamps["navigation.position"] ?: state.timeOfPositionFix
-        val posAge = if (posTimestamp > 0L) now - posTimestamp else 0L
+        val localReceiptTime = SystemClock.elapsedRealtime()
+        val timeSinceLastReceipt = localReceiptTime - lastLocalReceiptElapsedRealtime.get()
 
-        if (posAge > TIMEOUT_MS) {
-            checkFallback(now)
+        if (lastLocalReceiptElapsedRealtime.get() != 0L && timeSinceLastReceipt > TIMEOUT_MS) {
+            checkFallback(System.currentTimeMillis())
             return
         }
+        lastLocalReceiptElapsedRealtime.set(localReceiptTime)
 
+        val now = System.currentTimeMillis()
+        val posTimestamp = state.timestamps["navigation.position"] ?: state.timeOfPositionFix
         lastSignalKPositionTimeMs.set(now)
 
         val loc = Location("signalk").apply {
@@ -194,9 +202,8 @@ class SignalKLocationManager(
         watchdogJob = scope.launch(Dispatchers.Default) {
             while (isActive) {
                 delay(WATCHDOG_INTERVAL_MS)
-                val now = System.currentTimeMillis()
                 if (isBoatMode()) {
-                    checkFallback(now)
+                    checkFallback(System.currentTimeMillis())
                 } else {
                     if (app.locationProvider.isDeviceGpsSuspended) {
                         app.runInUIThread {
@@ -209,9 +216,10 @@ class SignalKLocationManager(
     }
 
     private fun checkFallback(now: Long) {
-        val lastFix = lastSignalKPositionTimeMs.get()
-        val elapsed = now - lastFix
-        if (elapsed > TIMEOUT_MS && lastFix != 0L) {
+        val lastReceipt = lastLocalReceiptElapsedRealtime.get()
+        val elapsed = if (lastReceipt != 0L) SystemClock.elapsedRealtime() - lastReceipt else 0L
+        if (elapsed > TIMEOUT_MS && lastReceipt != 0L) {
+            lastLocalReceiptElapsedRealtime.set(0L)
             lastSignalKPositionTimeMs.set(0L)
             app.runInUIThread {
                 app.locationProvider.setCustomLocation(null, 0)
@@ -224,7 +232,7 @@ class SignalKLocationManager(
     }
 
     companion object {
-        const val TIMEOUT_MS = 4000L
+        const val TIMEOUT_MS = 7000L
         private const val WATCHDOG_INTERVAL_MS = 1000L
     }
 }

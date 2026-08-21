@@ -320,20 +320,13 @@ class NauticalAisLayer(
         } else if (tileBox.zoom >= START_ZOOM) {
             for (ais in aisObjects) {
                 if (isOwnObjectHidden(ais)) continue
-                var drawable = objectDrawables[ais.mmsi]
-                if (drawable == null) {
-                    drawable = NauticalAisObjectDrawable(plugin, ais, imagesCache)
-                    drawable.setOwnObject(isOwnObject(ais))
-                    val extras = plugin.aisManager?.getAisExtras(ais.mmsi)
-                    extras?.let {
-                        drawable.setThreatLevel(it.threatLevel)
-                        drawable.setRemote(it.isRemote)
-                        drawable.setCpaWarning(it.hasCpaWarning)
-                    }
-                    objectDrawables[ais.mmsi] = drawable
-                }
                 val pos = ais.position
                 if (pos != null && isLocationVisible(tileBox, pos.latitude, pos.longitude)) {
+                    val drawable = objectDrawables.getOrPut(ais.mmsi) {
+                        NauticalAisObjectDrawable(plugin, ais, imagesCache).apply {
+                            setOwnObject(isOwnObject(ais))
+                        }
+                    }
                     drawable.draw(bitmapPaint, canvas, tileBox)
                 }
             }
