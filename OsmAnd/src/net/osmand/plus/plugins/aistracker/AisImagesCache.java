@@ -30,7 +30,11 @@ public class AisImagesCache {
 			long key = ((long) drawableId << 32L) + (int)(textScale * 1000);
 			bitmap = bitmapCache.get(key);
 			if (bitmap == null) {
-				Drawable icon = app.getUIUtilities().getIcon(drawableId);
+				android.content.Context themedCtx = net.osmand.plus.utils.UiUtilities.getThemedContext(app, false);
+				Drawable icon = AppCompatResources.getDrawable(themedCtx, drawableId);
+				if (icon == null) {
+					icon = app.getUIUtilities().getIcon(drawableId);
+				}
 				bitmap = AndroidUtils.drawableToBitmap(icon, textScale, true);
 				bitmapCache.put(key, bitmap);
 			}

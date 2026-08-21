@@ -414,6 +414,9 @@ class NauticalAisManager(private val app: OsmandApplication) : AisDataListener {
 
         _aisEvents.tryEmit(AisEvent.Updated(obj))
         batchUpdateFlow.tryEmit(obj)
+        app.runInUIThread {
+            app.osmandMap?.refreshMap()
+        }
         NauticalPlugin.getInstance()?.requestRefresh()
     }
 

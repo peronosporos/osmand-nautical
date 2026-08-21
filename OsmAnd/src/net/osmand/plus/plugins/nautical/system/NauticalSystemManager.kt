@@ -184,9 +184,9 @@ class NauticalSystemManager(
     }
 
     fun processBlackBoxCrash(scope: CoroutineScope?) {
-        val file = File(app.filesDir, "blackbox_crash.json")
-        if (file.exists()) {
-            scope?.launch(Dispatchers.IO) {
+        scope?.launch(Dispatchers.IO) {
+            val file = File(app.filesDir, "blackbox_crash.json")
+            if (file.exists()) {
                 try {
                     val json = JSONObject(file.readText())
                     val entry = LogbookEntry(

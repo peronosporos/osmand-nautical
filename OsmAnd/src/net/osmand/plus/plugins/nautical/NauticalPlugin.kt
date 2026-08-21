@@ -1344,10 +1344,12 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
             layerManager.registerLayers(context, mapActivity, s57SpatialIndex) { _ ->
                 initSubsystems(mapActivity)
             }
-            val mapView = mapActivity.mapView
-            val aisLayer = layerManager.aisAisLayer
-            if (aisLayer != null && !mapView.layers.contains(aisLayer)) {
-                mapView.addLayer(aisLayer, 3.5f)
+            if (app.settings.NAUTICAL_AIS_ENABLED.get()) {
+                val mapView = mapActivity.mapView
+                val aisLayer = layerManager.aisAisLayer ?: NauticalAisLayer(mapActivity).also { layerManager.aisAisLayer = it }
+                if (!mapView.layers.contains(aisLayer)) {
+                    mapView.addLayer(aisLayer, 4.5f)
+                }
             }
         }
     }

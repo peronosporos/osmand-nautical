@@ -53,7 +53,9 @@ class NauticalLayerManager(private val app: OsmandApplication) {
         }
         if (aisAisLayer == null) {
             aisAisLayer = NauticalAisLayer(context)
-            mapView.addLayer(aisAisLayer!!, 3.5f)
+            mapView.addLayer(aisAisLayer!!, 4.5f)
+        } else if (!mapView.layers.contains(aisAisLayer!!)) {
+            mapView.addLayer(aisAisLayer!!, 4.5f)
         }
         if (skTideLayer == null) {
             skTideLayer = SignalKTideLayer(context)
@@ -110,7 +112,8 @@ class NauticalLayerManager(private val app: OsmandApplication) {
                 nauticalMapLayer?.let { if (!mapView.layers.contains(it)) mapView.addLayer(it, 5.0f) }
 
                 if (isModuleEnabled(NauticalModule.AIS)) {
-                    aisAisLayer?.let { if (!mapView.layers.contains(it)) mapView.addLayer(it, 3.5f) }
+                    val ais = aisAisLayer ?: NauticalAisLayer(context).also { aisAisLayer = it }
+                    if (!mapView.layers.contains(ais)) mapView.addLayer(ais, 4.5f)
                 } else {
                     aisAisLayer?.let { mapView.removeLayer(it) }
                 }
