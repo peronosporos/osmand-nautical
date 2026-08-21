@@ -109,7 +109,7 @@ object AisDecoder {
             }
         }
 
-        if (message is AISPositionReport) {
+        if (message is AISPositionReportB) {
             if (message.hasSpeedOverGround()) {
                 val sogMs = message.speedOverGround * 0.514444
                 if (MarineStateConstants.isValidSpeed(sogMs)) {
@@ -125,15 +125,22 @@ object AisDecoder {
                     values.add(Value("navigation.headingTrue", Math.toRadians(hdg.toDouble())))
                 }
             }
-        } else if (message is AISPositionReportB) {
-            if (message.hasSpeedOverGround()) {
-                val sogMs = message.speedOverGround * 0.514444
-                if (MarineStateConstants.isValidSpeed(sogMs)) {
-                    values.add(Value("navigation.speedOverGround", sogMs))
+            if (message is AISPositionReport) {
+                val navStatus = message.navigationalStatus
+                if (navStatus in 0..14) {
+                    values.add(Value("navigation.state", when (navStatus) {
+                        0 -> "under way using engine"
+                        1 -> "at anchor"
+                        2 -> "not under command"
+                        3 -> "restricted manoeuverability"
+                        4 -> "constrained by her draught"
+                        5 -> "moored"
+                        6 -> "aground"
+                        7 -> "engaged in fishing"
+                        8 -> "under way sailing"
+                        else -> "unknown"
+                    }))
                 }
-            }
-            if (message.hasCourseOverGround()) {
-                values.add(Value("navigation.courseOverGroundTrue", Math.toRadians(message.courseOverGround)))
             }
         }
     }

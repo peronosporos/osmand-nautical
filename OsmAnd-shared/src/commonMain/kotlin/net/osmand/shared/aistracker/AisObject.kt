@@ -17,6 +17,7 @@ import net.osmand.shared.aistracker.AisObjectConstants.INVALID_ROT
 import net.osmand.shared.aistracker.AisObjectConstants.INVALID_SHIP_TYPE
 import net.osmand.shared.aistracker.AisObjectConstants.INVALID_SOG
 import net.osmand.shared.aistracker.AisObjectConstants.UNSPECIFIED_AID_TYPE
+import kotlin.math.abs
 
 class AisObject {
     var msgType: Int = 0
@@ -80,6 +81,10 @@ class AisObject {
     var cpa: AisCpa = AisCpa()
         private set
     var lastUpdate: Long = 0
+
+    private var lastAtRestState: Boolean = false
+    private var lowSpeedSinceMs: Long = 0L
+    private var lowSpeedReportCount: Int = 0
 
     constructor(mmsi: Int, msgType: Int, lat: Double, lon: Double) {
         initObj(mmsi, msgType)
@@ -240,7 +245,7 @@ class AisObject {
 
     fun set(ais: AisObject) {
         this.mmsi = ais.mmsi
-        this.msgType = ais.msgType
+        if (ais.msgType != 0) { this.msgType = ais.msgType }
         if (ais.timeStamp != 0) { this.timeStamp = ais.timeStamp }
         if (ais.imo != 0) { this.imo = ais.imo }
         if (ais.shipType != INVALID_SHIP_TYPE) { this.shipType = ais.shipType }
@@ -256,30 +261,67 @@ class AisObject {
         if (ais.aidType != UNSPECIFIED_AID_TYPE) { this.aidType = ais.aidType }
         if (ais.draught != INVALID_DRAUGHT) { this.draught = ais.draught }
         if (ais.position != null) { this.position = ais.position }
-        if (ais.callSign != null) { this.callSign = ais.callSign }
-        if (ais.shipName != null) { this.shipName = ais.shipName }
-        if (ais.destination != null) { this.destination = ais.destination }
+        if (!ais.callSign.isNullOrEmpty()) { this.callSign = ais.callSign }
+        if (!ais.shipName.isNullOrEmpty()) { this.shipName = ais.shipName }
+        if (!ais.destination.isNullOrEmpty()) { this.destination = ais.destination }
 
         val msgListHeading = listOf(1, 2, 3, 18, 19, 27)
         val msgListStatus = listOf(1, 2, 3, 27)
         val msgListCourse = listOf(1, 2, 3, 9, 18, 19, 27)
 
-        if (msgListHeading.contains(msgType)) {
-            this.heading = ais.heading
-        }
-        if (msgListStatus.contains(msgType)) {
-            this.navStatus = ais.navStatus
-            this.manInd = ais.manInd
-            this.rot = ais.rot
-        }
-        if (msgListCourse.contains(msgType)) {
-            this.cog = ais.cog
-            this.sog = ais.sog
+        if ((msgListHeading.contains(ais.msgType) || msgListHeading.contains(this.msgType)) && ais.heading != INVALID_HEADING && ais.heading != 0) {
+            // Ignore heading jitter when SOG < 0.3 kn
+            val currentSog = if (ais.sog != INVALID_SOG) ais.sog else this.sog
+            if (currentSog != INVALID_SOG && currentSog < 0.3 && this.heading != INVALID_HEADING && this.heading != 0) {
+                val diff = abs((ais.heading - this.heading + 540) % 360 - 180)
+                if (diff >= 5) {
+                    this.heading = ais.heading
+                }
+            } else {
+                this.heading = ais.heading
+            }
         }
 
-        this.countryCode = ais.countryCode
+        if (msgListStatus.contains(ais.msgType) || msgListStatus.contains(this.msgType)) {
+            if (ais.navStatus != INVALID_NAV_STATUS) {
+                this.navStatus = ais.navStatus
+            }
+            if (ais.manInd != INVALID_MANEUVER_INDICATOR) {
+                this.manInd = ais.manInd
+            }
+            if (ais.rot != INVALID_ROT) {
+                this.rot = ais.rot
+            }
+        }
+
+        if (msgListCourse.contains(ais.msgType) || msgListCourse.contains(this.msgType)) {
+            if (ais.cog != INVALID_COG) {
+                this.cog = ais.cog
+            }
+            if (ais.sog != INVALID_SOG) {
+                this.sog = ais.sog
+                val now = kotlinx.datetime.Clock.System.now().toEpochMilliseconds()
+                if (ais.sog >= 0.7) {
+                    lowSpeedSinceMs = 0L
+                    lowSpeedReportCount = 0
+                    lastAtRestState = false
+                } else if (ais.sog < 0.3) {
+                    if (lowSpeedSinceMs == 0L) {
+                        lowSpeedSinceMs = now
+                    }
+                    lowSpeedReportCount++
+                    if ((now - lowSpeedSinceMs >= 10000L) || lowSpeedReportCount >= 3) {
+                        lastAtRestState = true
+                    }
+                }
+            }
+        }
+
+        if (ais.countryCode.isNotEmpty()) {
+            this.countryCode = ais.countryCode
+        }
         this.lastUpdate = kotlinx.datetime.Clock.System.now().toEpochMilliseconds()
-        this.msgTypes.add(msgType)
+        this.msgTypes.addAll(ais.msgTypes)
         this.initObjectClass()
     }
 
@@ -421,22 +463,33 @@ class AisObject {
     }
 
     fun isVesselAtRest(): Boolean {
-        return when (objectClass) {
-            AisObjType.AIS_VESSEL, AisObjType.AIS_VESSEL_SPORT, AisObjType.AIS_VESSEL_FAST,
-            AisObjType.AIS_VESSEL_PASSENGER, AisObjType.AIS_VESSEL_FREIGHT, AisObjType.AIS_VESSEL_COMMERCIAL,
-            AisObjType.AIS_VESSEL_AUTHORITIES, AisObjType.AIS_VESSEL_SAR, AisObjType.AIS_VESSEL_OTHER -> {
-                when (navStatus) {
-                    1, 5 -> (cog == INVALID_COG) || (sog < AisObjectConstants.SPEED_CONSIDERED_IN_REST)
-                    else -> {
-                        if (msgTypes.contains(18) || msgTypes.contains(24) || msgTypes.contains(1) || msgTypes.contains(3)) {
-                            (sog < AisObjectConstants.SPEED_CONSIDERED_IN_REST)
-                        } else {
-                            false
-                        }
-                    }
-                }
+        if (!isMovable() || objectClass == AisObjType.AIS_AIRPLANE) {
+            return false
+        }
+        if (sog == INVALID_SOG) {
+            return navStatus == 1 || navStatus == 5
+        }
+        val now = kotlinx.datetime.Clock.System.now().toEpochMilliseconds()
+        if (sog >= 0.7) {
+            lowSpeedSinceMs = 0L
+            lowSpeedReportCount = 0
+            lastAtRestState = false
+            return false
+        } else if (sog < 0.3) {
+            if (lowSpeedSinceMs == 0L) {
+                lowSpeedSinceMs = now
             }
-            else -> false
+            if (navStatus == 1 || navStatus == 5 || (now - lowSpeedSinceMs >= 10000L) || lowSpeedReportCount >= 3 || lastAtRestState) {
+                lastAtRestState = true
+                return true
+            }
+            return lastAtRestState
+        } else {
+            // Deadband (0.3 .. 0.7 kn)
+            if ((navStatus == 1 || navStatus == 5) && !lastAtRestState && lowSpeedSinceMs == 0L) {
+                lastAtRestState = true
+            }
+            return lastAtRestState
         }
     }
 

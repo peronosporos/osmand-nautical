@@ -175,6 +175,7 @@ class NauticalAisManager(private val app: OsmandApplication) : AisDataListener {
 
     fun updateVessel(context: String, updateObj: JSONObject) {
         val numericMmsi = resolveMmsiFromContext(context) ?: return
+        val isNewTarget = !objects.containsKey(numericMmsi)
         val target = objects.getOrPut(numericMmsi) {
             val type = context.substringBefore(".")
             val msgType = when (type) {
@@ -185,6 +186,7 @@ class NauticalAisManager(private val app: OsmandApplication) : AisDataListener {
             }
             AisObject(numericMmsi, msgType, AisObjectConstants.INVALID_LAT, AisObjectConstants.INVALID_LON)
         }
+        val hadPosition = target.position != null
 
         // Source Detection (APRS / Meshtastic)
         val sourceObj = updateObj.optJSONObject("source")
@@ -215,7 +217,22 @@ class NauticalAisManager(private val app: OsmandApplication) : AisDataListener {
             }
         }
 
-        onAisObjectReceived(target)
+        val hasPosition = target.position != null
+        val isFirstFix = (isNewTarget || !hadPosition) && hasPosition
+
+        _aisEvents.tryEmit(AisEvent.Updated(target))
+
+        if (isFirstFix) {
+            // Eager First-Fix Publication: Immediately notify listeners and force immediate map refresh without waiting for metadata or batching
+            listeners.forEach { it.onAisObjectReceived(target) }
+        } else {
+            batchUpdateFlow.tryEmit(target)
+        }
+
+        app.runInUIThread {
+            app.osmandMap?.refreshMap()
+        }
+        NauticalPlugin.getInstance()?.requestRefresh()
     }
 
     internal fun resolveMmsiFromContext(context: String): Int? {
@@ -271,17 +288,19 @@ class NauticalAisManager(private val app: OsmandApplication) : AisDataListener {
             }
             "name", "vesselName" -> {
                 val shipName = valueObj?.toString()
-                val updated = AisObject(
-                    target.mmsi, effectiveMsgType,
-                    target.imo, target.callSign, shipName,
-                    target.shipType,
-                    target.dimensionToBow, target.dimensionToStern,
-                    target.dimensionToPort, target.dimensionToStarboard,
-                    target.draught, target.destination,
-                    target.etaMon, target.etaDay, target.etaHour, target.etaMin
-                )
-                target.set(updated)
-                target.lastUpdate = now
+                if (!shipName.isNullOrEmpty()) {
+                    val updated = AisObject(
+                        target.mmsi, effectiveMsgType,
+                        target.imo, target.callSign, shipName,
+                        target.shipType,
+                        target.dimensionToBow, target.dimensionToStern,
+                        target.dimensionToPort, target.dimensionToStarboard,
+                        target.draught, target.destination,
+                        target.etaMon, target.etaDay, target.etaHour, target.etaMin
+                    )
+                    target.set(updated)
+                    target.lastUpdate = now
+                }
             }
             "design.type" -> {
                 val type = when (valueObj) {
@@ -295,6 +314,54 @@ class NauticalAisManager(private val app: OsmandApplication) : AisDataListener {
                         target.mmsi, effectiveMsgType,
                         target.imo, target.callSign, target.shipName,
                         type,
+                        target.dimensionToBow, target.dimensionToStern,
+                        target.dimensionToPort, target.dimensionToStarboard,
+                        target.draught, target.destination,
+                        target.etaMon, target.etaDay, target.etaHour, target.etaMin
+                    )
+                    target.set(updated)
+                    target.lastUpdate = now
+                }
+            }
+            "design.dimensions" -> {
+                var bow = -1
+                var stern = -1
+                var port = -1
+                var starboard = -1
+                if (valueObj is JSONObject) {
+                    bow = valueObj.optInt("bow", -1)
+                    stern = valueObj.optInt("stern", -1)
+                    port = valueObj.optInt("port", -1)
+                    starboard = valueObj.optInt("starboard", -1)
+                } else if (valueObj is Map<*, *>) {
+                    bow = (valueObj["bow"] as? Number)?.toInt() ?: -1
+                    stern = (valueObj["stern"] as? Number)?.toInt() ?: -1
+                    port = (valueObj["port"] as? Number)?.toInt() ?: -1
+                    starboard = (valueObj["starboard"] as? Number)?.toInt() ?: -1
+                }
+                if (bow != -1 || stern != -1 || port != -1 || starboard != -1) {
+                    val updated = AisObject(
+                        target.mmsi, effectiveMsgType,
+                        target.imo, target.callSign, target.shipName,
+                        target.shipType,
+                        if (bow != -1) bow else target.dimensionToBow,
+                        if (stern != -1) stern else target.dimensionToStern,
+                        if (port != -1) port else target.dimensionToPort,
+                        if (starboard != -1) starboard else target.dimensionToStarboard,
+                        target.draught, target.destination,
+                        target.etaMon, target.etaDay, target.etaHour, target.etaMin
+                    )
+                    target.set(updated)
+                    target.lastUpdate = now
+                }
+            }
+            SignalKPaths.NAV_CALLSIGN, "navigation.callsign" -> {
+                val callSign = valueObj?.toString()
+                if (!callSign.isNullOrEmpty()) {
+                    val updated = AisObject(
+                        target.mmsi, effectiveMsgType,
+                        target.imo, callSign, target.shipName,
+                        target.shipType,
                         target.dimensionToBow, target.dimensionToStern,
                         target.dimensionToPort, target.dimensionToStarboard,
                         target.draught, target.destination,
@@ -367,17 +434,19 @@ class NauticalAisManager(private val app: OsmandApplication) : AisDataListener {
             }
             SignalKPaths.NAV_DESTINATION -> {
                 val dest = valueObj?.toString()
-                val updated = AisObject(
-                    target.mmsi, effectiveMsgType,
-                    target.imo, target.callSign, target.shipName,
-                    target.shipType,
-                    target.dimensionToBow, target.dimensionToStern,
-                    target.dimensionToPort, target.dimensionToStarboard,
-                    target.draught, dest,
-                    target.etaMon, target.etaDay, target.etaHour, target.etaMin
-                )
-                target.set(updated)
-                target.lastUpdate = now
+                if (!dest.isNullOrEmpty()) {
+                    val updated = AisObject(
+                        target.mmsi, effectiveMsgType,
+                        target.imo, target.callSign, target.shipName,
+                        target.shipType,
+                        target.dimensionToBow, target.dimensionToStern,
+                        target.dimensionToPort, target.dimensionToStarboard,
+                        target.draught, dest,
+                        target.etaMon, target.etaDay, target.etaHour, target.etaMin
+                    )
+                    target.set(updated)
+                    target.lastUpdate = now
+                }
             }
             SignalKPaths.NAV_STATE -> {
                 val statusStr = valueObj?.toString() ?: ""
@@ -391,29 +460,43 @@ class NauticalAisManager(private val app: OsmandApplication) : AisDataListener {
                     "aground" -> 6
                     "engaged in fishing" -> 7
                     "under way sailing", "sailing" -> 8
-                    else -> target.navStatus
+                    else -> (valueObj as? Number)?.toInt() ?: target.navStatus
                 }
-                val lat = if (MarineStateConstants.isValidLat(currentLat)) currentLat else AisObjectConstants.INVALID_LAT
-                val lon = if (MarineStateConstants.isValidLon(currentLon)) currentLon else AisObjectConstants.INVALID_LON
-                val updated = AisObject(
-                    target.mmsi, effectiveMsgType, target.timeStamp, status, target.manInd, target.heading,
-                    target.cog, target.sog, lat, lon, target.rot
-                )
-                target.set(updated)
-                target.lastUpdate = now
+                if (status != AisObjectConstants.INVALID_NAV_STATUS) {
+                    val lat = if (MarineStateConstants.isValidLat(currentLat)) currentLat else AisObjectConstants.INVALID_LAT
+                    val lon = if (MarineStateConstants.isValidLon(currentLon)) currentLon else AisObjectConstants.INVALID_LON
+                    val updated = AisObject(
+                        target.mmsi, effectiveMsgType, target.timeStamp, status, target.manInd, target.heading,
+                        target.cog, target.sog, lat, lon, target.rot
+                    )
+                    target.set(updated)
+                    target.lastUpdate = now
+                }
             }
         }
     }
 
     override fun onAisObjectReceived(ais: AisObject) {
         val mmsi = ais.mmsi
+        val hadPosition = objects[mmsi]?.position != null
+        val isNew = !objects.containsKey(mmsi)
         val obj = objects.getOrPut(mmsi) { AisObject(ais) }
         if (obj !== ais) {
             obj.set(ais)
         }
 
+        val hasPosition = obj.position != null
+        val isFirstFix = (isNew || !hadPosition) && hasPosition
+
         _aisEvents.tryEmit(AisEvent.Updated(obj))
-        batchUpdateFlow.tryEmit(obj)
+
+        if (isFirstFix) {
+            // Eager First-Fix Publication: Immediately notify listeners and dispatch map refresh
+            listeners.forEach { it.onAisObjectReceived(obj) }
+        } else {
+            batchUpdateFlow.tryEmit(obj)
+        }
+
         app.runInUIThread {
             app.osmandMap?.refreshMap()
         }

@@ -68,32 +68,8 @@ class NauticalAisObjectDrawable(
         typeface = Typeface.DEFAULT_BOLD
     }
 
-    private var lastAtRestState: Boolean = false
-    private var lowSpeedSinceMs: Long = 0L
-
     fun isVesselAtRestWithHysteresis(): Boolean {
-        val sog = ais.sog
-        val now = System.currentTimeMillis()
-        if (sog == AisObjectConstants.INVALID_SOG) {
-            return ais.isVesselAtRest()
-        }
-        if (sog < AisObjectConstants.SPEED_CONSIDERED_IN_REST) {
-            if (lowSpeedSinceMs == 0L) {
-                lowSpeedSinceMs = now
-            }
-            if (now - lowSpeedSinceMs >= 5000L || lastAtRestState) {
-                lastAtRestState = true
-                return true
-            }
-            return lastAtRestState
-        } else if (sog >= 0.8) {
-            lowSpeedSinceMs = 0L
-            lastAtRestState = false
-            return false
-        } else {
-            // In hysteresis deadband (0.5 .. 0.8 knots)
-            return lastAtRestState
-        }
+        return ais.isVesselAtRest()
     }
 
     fun set(ais: AisObject) {
