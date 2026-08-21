@@ -4,6 +4,7 @@ import android.content.Context
 import net.osmand.plus.OsmandApplication
 import net.osmand.plus.activities.MapActivity
 import net.osmand.plus.plugins.nautical.NauticalMapLayer
+import net.osmand.plus.plugins.nautical.NauticalPlugin
 import net.osmand.plus.plugins.nautical.NauticalPlugin.NauticalModule
 import net.osmand.plus.plugins.nautical.map.controller.SailingMapLayerController
 import net.osmand.plus.plugins.nautical.map.layers.OceanographicGribMapLayer
@@ -17,7 +18,10 @@ import net.osmand.plus.plugins.nautical.ui.SignalKWaypointLayer
 import net.osmand.plus.plugins.nautical.view.SignalKTideLayer
 import net.osmand.plus.settings.backend.ApplicationMode
 
-class NauticalLayerManager(private val app: OsmandApplication) {
+class NauticalLayerManager(
+    private val app: OsmandApplication,
+    private val plugin: NauticalPlugin
+) {
 
     var nauticalMapLayer: NauticalMapLayer? = null
         internal set
@@ -52,7 +56,7 @@ class NauticalLayerManager(private val app: OsmandApplication) {
             mapView.addLayer(nauticalMapLayer!!, 5.0f)
         }
         if (aisAisLayer == null) {
-            aisAisLayer = NauticalAisLayer(context)
+            aisAisLayer = NauticalAisLayer(context, plugin)
             mapView.addLayer(aisAisLayer!!, 4.5f)
         } else if (!mapView.layers.contains(aisAisLayer!!)) {
             mapView.addLayer(aisAisLayer!!, 4.5f)
@@ -112,7 +116,7 @@ class NauticalLayerManager(private val app: OsmandApplication) {
                 nauticalMapLayer?.let { if (!mapView.layers.contains(it)) mapView.addLayer(it, 5.0f) }
 
                 if (isModuleEnabled(NauticalModule.AIS)) {
-                    val ais = aisAisLayer ?: NauticalAisLayer(context).also { aisAisLayer = it }
+                    val ais = aisAisLayer ?: NauticalAisLayer(context, plugin).also { aisAisLayer = it }
                     if (!mapView.layers.contains(ais)) mapView.addLayer(ais, 4.5f)
                 } else {
                     aisAisLayer?.let { mapView.removeLayer(it) }

@@ -427,6 +427,9 @@ class NauticalAisManager(private val app: OsmandApplication) : AisDataListener {
             objects[mmsi]?.let { obj ->
                 _aisEvents.tryEmit(AisEvent.Updated(obj))
                 listeners.forEach { it.onAisObjectReceived(obj) }
+                app.runInUIThread {
+                    app.osmandMap?.refreshMap()
+                }
             }
         }
     }
@@ -473,6 +476,9 @@ class NauticalAisManager(private val app: OsmandApplication) : AisDataListener {
                     iterator.remove()
                     _aisEvents.tryEmit(AisEvent.Removed(obj))
                     listeners.forEach { it.onAisObjectRemoved(obj) }
+                    app.runInUIThread {
+                        app.osmandMap?.refreshMap()
+                    }
                 }
             }
         }

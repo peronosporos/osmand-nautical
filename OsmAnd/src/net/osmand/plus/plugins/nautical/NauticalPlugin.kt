@@ -117,7 +117,7 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
     val connectionManager = NauticalConnectionManager(app) { engine }
     val nauticalConnectionManager: NauticalConnectionManager
         get() = connectionManager
-    val layerManager = NauticalLayerManager(app)
+    val layerManager = NauticalLayerManager(app, this)
     val uiOverlayManager = NauticalUiOverlayManager(app)
     val widgetFactory = NauticalWidgetFactory()
     val contextMenuHelper = NauticalContextMenuHelper(app)
@@ -1346,7 +1346,7 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
             }
             if (app.settings.NAUTICAL_AIS_ENABLED.get()) {
                 val mapView = mapActivity.mapView
-                val aisLayer = layerManager.aisAisLayer ?: NauticalAisLayer(mapActivity).also { layerManager.aisAisLayer = it }
+                val aisLayer = layerManager.aisAisLayer ?: NauticalAisLayer(mapActivity, this).also { layerManager.aisAisLayer = it }
                 if (!mapView.layers.contains(aisLayer)) {
                     mapView.addLayer(aisLayer, 4.5f)
                 }

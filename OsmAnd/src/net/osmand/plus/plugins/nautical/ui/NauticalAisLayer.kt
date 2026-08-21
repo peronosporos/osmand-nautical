@@ -24,7 +24,10 @@ import net.osmand.plus.views.layers.base.OsmandMapLayer
 import net.osmand.shared.aistracker.AisObject
 import java.util.concurrent.ConcurrentHashMap
 
-class NauticalAisLayer(context: Context) : OsmandMapLayer(context), ContextMenuLayer.IContextMenuProvider {
+class NauticalAisLayer(
+    context: Context,
+    private val plugin: NauticalPlugin
+) : OsmandMapLayer(context), ContextMenuLayer.IContextMenuProvider {
 
     companion object {
         const val START_ZOOM = 1
@@ -33,8 +36,6 @@ class NauticalAisLayer(context: Context) : OsmandMapLayer(context), ContextMenuL
         private const val AIS_RENDER_REFRESH_INTERVAL_MS = 200L
     }
 
-    private val plugin: NauticalPlugin?
-        get() = NauticalPlugin.getInstance()
     private val imagesCache by lazy { net.osmand.plus.plugins.aistracker.AisImagesCache(application) }
     private val bitmapPaint = Paint().apply {
         isAntiAlias = true
@@ -63,8 +64,7 @@ class NauticalAisLayer(context: Context) : OsmandMapLayer(context), ContextMenuL
                 if (aisUpdateJob?.isActive != true && !activity.isFinishing && !activity.isDestroyed) {
                     aisUpdateJob = activity.lifecycleScope.launch(Dispatchers.Default) {
                         while (isActive) {
-                            val currentPlugin = NauticalPlugin.getInstance()
-                            val manager = currentPlugin?.aisManager
+                            val manager = plugin.aisManager
                             if (manager != null) {
                                 manager.getAisObjects().forEach { onAisObjectReceived(it) }
                                 
@@ -145,7 +145,6 @@ class NauticalAisLayer(context: Context) : OsmandMapLayer(context), ContextMenuL
     }
 
     fun onAisObjectReceived(ais: AisObject) {
-        val plugin = plugin ?: return
         val mmsi = ais.mmsi
         val own = isOwnObject(ais)
         val manager = plugin.aisManager
@@ -214,16 +213,16 @@ class NauticalAisLayer(context: Context) : OsmandMapLayer(context), ContextMenuL
     }
 
     private fun isOwnObject(ais: AisObject): Boolean {
-        val ownMmsi = plugin?.aisOwnMmsi?.get() ?: 0
+        val ownMmsi = plugin.aisOwnMmsi.get()
         return (ownMmsi != 0) && (ais.mmsi == ownMmsi)
     }
 
     private fun isOwnObjectHidden(ais: AisObject): Boolean {
-        return isOwnObject(ais) && (plugin?.aisDisplayOwnPosition?.get() != true)
+        return isOwnObject(ais) && (!plugin.aisDisplayOwnPosition.get())
     }
 
     fun refreshOwnObjectVisibility() {
-        val aisObjects = plugin?.aisManager?.getAisObjects() ?: return
+        val aisObjects = plugin.aisManager?.getAisObjects() ?: return
         for (ais in aisObjects) {
             val drawable = objectDrawables[ais.mmsi]
             if (isOwnObjectHidden(ais)) {
@@ -238,15 +237,13 @@ class NauticalAisLayer(context: Context) : OsmandMapLayer(context), ContextMenuL
     }
 
     override fun onDraw(canvas: Canvas, tileBox: RotatedTileBox, settings: DrawSettings) {
-        val renderer = mapRenderer
-        if (renderer == null && tileBox.zoom >= START_ZOOM) {
-            val aisObjects = plugin?.aisManager?.getAisObjects() ?: emptyList()
+        if (tileBox.zoom >= 5) {
+            val aisObjects = plugin.aisManager?.getAisObjects() ?: emptyList()
             for (ais in aisObjects) {
                 if (isOwnObjectHidden(ais)) continue
                 var drawable = objectDrawables[ais.mmsi]
                 if (drawable == null) {
-                    val p = plugin ?: continue
-                    drawable = NauticalAisObjectDrawable(p, ais, imagesCache)
+                    drawable = NauticalAisObjectDrawable(plugin, ais, imagesCache)
                     objectDrawables[ais.mmsi] = drawable
                 }
                 drawable.draw(bitmapPaint, canvas, tileBox)
@@ -261,10 +258,9 @@ class NauticalAisLayer(context: Context) : OsmandMapLayer(context), ContextMenuL
         val currentTextScale = textScale
         val textScaleChanged = this.textScale != currentTextScale
         this.textScale = currentTextScale
-        // if (textScaleChanged) plugin?.aisImagesCache?.clearCache() // If we have one
 
         val currentPlugin = plugin
-        val aisObjects = currentPlugin?.aisManager?.getAisObjects() ?: emptyList()
+        val aisObjects = currentPlugin.aisManager?.getAisObjects() ?: emptyList()
         mapRenderer?.let { renderer ->
             if (mapActivityInvalidated || mapRendererChanged || textScaleChanged) {
                 cleanupResources()
@@ -277,12 +273,11 @@ class NauticalAisLayer(context: Context) : OsmandMapLayer(context), ContextMenuL
                 renderer.addSymbolsProvider(markersCollection)
                 renderer.addSymbolsProvider(vectorLinesCollection)
 
-                val currentWorkflow = currentPlugin?.workflowEngine?.currentWorkflow?.value
+                val currentWorkflow = currentPlugin.workflowEngine?.currentWorkflow?.value
                 val isCloseQuarters = currentWorkflow == SailingWorkflowState.CLOSE_QUARTERS
 
                 for (ais in aisObjects) {
                     if (isOwnObjectHidden(ais)) continue
-                    if (currentPlugin == null) continue
                     
                     val drawable = NauticalAisObjectDrawable(currentPlugin, ais, imagesCache)
                     drawable.setOwnObject(isOwnObject(ais))
@@ -326,13 +321,12 @@ class NauticalAisLayer(context: Context) : OsmandMapLayer(context), ContextMenuL
             mapActivityInvalidated = false
             mapRendererChanged = false
         } ?: run {
-            if (tileBox.zoom >= START_ZOOM) {
+            if (tileBox.zoom >= 5) {
                 for (ais in aisObjects) {
                     if (isOwnObjectHidden(ais)) continue
                     var drawable = objectDrawables[ais.mmsi]
                     if (drawable == null) {
-                        val p = plugin ?: continue
-                        drawable = NauticalAisObjectDrawable(p, ais, imagesCache)
+                        drawable = NauticalAisObjectDrawable(plugin, ais, imagesCache)
                         objectDrawables[ais.mmsi] = drawable
                     }
                     drawable.draw(bitmapPaint, canvas, tileBox)
@@ -365,7 +359,7 @@ class NauticalAisLayer(context: Context) : OsmandMapLayer(context), ContextMenuL
     override fun collectObjectsFromPoint(result: MapSelectionResult, rules: MapSelectionRules) {
         val point = result.point
         val tileBox = result.tileBox
-        val aisObjects = plugin?.aisManager?.getAisObjects() ?: return
+        val aisObjects = plugin.aisManager?.getAisObjects() ?: return
         if ((aisObjects.isEmpty()) || (tileBox.zoom < START_ZOOM)) return
 
         val mapRenderer = mapRenderer
@@ -395,7 +389,7 @@ class NauticalAisLayer(context: Context) : OsmandMapLayer(context), ContextMenuL
 
     override fun getObjectName(o: Any?): PointDescription? {
         return (o as? AisObject)?.let { ais ->
-            val resolved = plugin?.aisManager?.getAisObject(ais.mmsi) ?: ais
+            val resolved = plugin.aisManager?.getAisObject(ais.mmsi) ?: ais
             val shipName = resolved.shipName?.trim()
             val name = if (!shipName.isNullOrEmpty()) shipName else "MMSI: ${resolved.mmsi}"
             PointDescription("AIS object", name + (if (isSignalLost(resolved)) " (signal lost)" else ""))
@@ -405,12 +399,12 @@ class NauticalAisLayer(context: Context) : OsmandMapLayer(context), ContextMenuL
     fun setFollowedTarget(mmsi: Int?) {
         this.followedMmsi = mmsi
         if (mmsi != null) {
-            plugin?.aisManager?.getAisObjects()?.find { it.mmsi == mmsi }?.let { onAisObjectReceived(it) }
+            plugin.aisManager?.getAisObjects()?.find { it.mmsi == mmsi }?.let { onAisObjectReceived(it) }
         }
     }
 
     private fun isSignalLost(ais: AisObject): Boolean {
-        val timeout = plugin?.aisShipLostTimeout?.get() ?: 4
+        val timeout = plugin.aisShipLostTimeout.get()
         // Signal is lost if timestamp is too old, regardless of movement status
         return ais.isLost(timeout)
     }
