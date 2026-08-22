@@ -124,6 +124,40 @@ class NauticalSwitchPanelFragment : BaseOsmAndFragment() {
         }
     }
 
+    private fun <T> updateEnergyControls(container: LinearLayout?, items: Map<String, T>, onModeChange: (String, String) -> Unit) {
+        if (container == null) return
+        container.removeAllViews()
+        for ((instance, obj) in items) {
+            val tv = TextView(context).apply {
+                text = "$instance: $obj"
+                textSize = 14f
+                setTextColor(net.osmand.plus.utils.AndroidUtils.getColorFromAttr(context, android.R.attr.textColorPrimary))
+                setPadding(0, 8, 0, 8)
+            }
+            container.addView(tv)
+        }
+    }
+
+    private fun setupWindlassButton(button: com.google.android.material.button.MaterialButton?, path: String) {
+        button?.setOnTouchListener { v, event ->
+            if (!button.isEnabled) return@setOnTouchListener false
+            when (event.action) {
+                android.view.MotionEvent.ACTION_DOWN -> {
+                    NauticalPlugin.engine?.setSwitch(path, true)
+                    v.isPressed = true
+                    true
+                }
+                android.view.MotionEvent.ACTION_UP, android.view.MotionEvent.ACTION_CANCEL -> {
+                    NauticalPlugin.engine?.setSwitch(path, false)
+                    v.isPressed = false
+                    v.performClick()
+                    true
+                }
+                else -> false
+            }
+        }
+    }
+
     private sealed class SwitchItem {
         data class Header(val title: String) : SwitchItem()
         data class SwitchEntry(

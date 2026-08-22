@@ -62,6 +62,7 @@ class RudderView @JvmOverloads constructor(
     private var dp3 = 0f
     private var dp4 = 0f
     private var dp6 = 0f
+    private var dp12 = 0f
     private var dp14 = 0f
     private var dp18 = 0f
     private var dp20 = 0f
@@ -83,6 +84,7 @@ class RudderView @JvmOverloads constructor(
         dp3 = 3f * density
         dp4 = 4f * density
         dp6 = 6f * density
+        dp12 = 12f * density
         dp14 = 14f * density
         dp18 = 18f * density
         dp20 = 20f * density

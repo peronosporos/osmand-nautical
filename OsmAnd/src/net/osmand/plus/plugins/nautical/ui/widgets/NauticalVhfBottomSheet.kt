@@ -21,7 +21,6 @@ import net.osmand.plus.plugins.nautical.NauticalPlugin
 import net.osmand.plus.plugins.nautical.network.NauticalVhfManager
 import net.osmand.plus.plugins.nautical.network.VhfStatus
 import net.osmand.plus.plugins.nautical.network.VhfTransmission
-import net.osmand.plus.plugins.nautical.ui.dialogs.VhfChannelPickerDialog
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -64,10 +63,27 @@ class NauticalVhfBottomSheet : BaseNauticalBottomSheet() {
         setupChannelButton(customView.findViewById(R.id.btn_ch_06), "06")
 
         btnSelectChannel.setOnClickListener {
-            val activity = activity as? net.osmand.plus.activities.MapActivity
-            if (activity != null) {
-                VhfChannelPickerDialog.show(activity.supportFragmentManager)
-            }
+            val channels = arrayOf(
+                "CH 16 - Distress, Safety & Calling",
+                "CH 09 - Alternate Calling",
+                "CH 13 - Navigation Safety / Bridge-to-Bridge",
+                "CH 06 - Inter-ship Safety",
+                "CH 72 - Non-Commercial Ship-to-Ship",
+                "CH 77 - Port Operations",
+                "CH 68 - Marina & Working",
+                "CH 69 - Non-Commercial Working",
+                "CH 71 - Port Operations",
+                "CH 74 - Port Operations"
+            )
+            val numbers = arrayOf("16", "09", "13", "06", "72", "77", "68", "69", "71", "74")
+            androidx.appcompat.app.AlertDialog.Builder(requireContext())
+                .setTitle(R.string.nautical_vhf_title)
+                .setItems(channels) { _, which ->
+                    val ch = numbers[which]
+                    NauticalPlugin.engine?.sendDelta("communication.vhf.channel", ch)
+                }
+                .setNegativeButton(R.string.shared_string_cancel, null)
+                .show()
         }
 
         btnPower.setOnClickListener {

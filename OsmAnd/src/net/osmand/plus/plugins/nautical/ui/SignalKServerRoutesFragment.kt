@@ -35,9 +35,7 @@ class SignalKServerRoutesFragment : BaseOsmAndFragment() {
         recyclerView.adapter = adapter
 
         view.findViewById<MaterialButton?>(R.id.btn_empty_secondary)?.setOnClickListener {
-            (activity as? net.osmand.plus.activities.MapActivity)?.let { mapAct ->
-                net.osmand.plus.plugins.nautical.ui.SignalKConnectionSettingsDialog.show(mapAct.supportFragmentManager)
-            }
+            showInstance(requireActivity(), net.osmand.plus.settings.fragments.SettingsScreenType.NAUTICAL_SETTINGS)
         }
 
         refreshRoutes()

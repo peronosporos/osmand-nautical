@@ -45,7 +45,7 @@ class NauticalMobWidget(
                     .setTitle(R.string.nautical_mob_label)
                     .setMessage(R.string.nautical_disarm_mob_confirm)
                     .setPositiveButton(R.string.shared_string_yes) { _, _ ->
-                        NauticalPlugin.getInstance()?.mobViewModel?.cancelMob()
+                        NauticalPlugin.getInstance()?.mobViewModel?.clearMob()
                         settings.NAUTICAL_MOB_ACTIVE.set(false)
                         updateInfo(null)
                     }
