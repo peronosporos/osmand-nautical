@@ -36,7 +36,7 @@ class SignalKServerChartsFragment : BaseOsmAndFragment() {
         recyclerView.adapter = adapter
 
         view.findViewById<MaterialButton?>(R.id.btn_empty_secondary)?.setOnClickListener {
-            showInstance(requireActivity(), net.osmand.plus.settings.fragments.SettingsScreenType.NAUTICAL_SETTINGS)
+            net.osmand.plus.settings.fragments.BaseSettingsFragment.showInstance(requireActivity(), net.osmand.plus.settings.fragments.SettingsScreenType.NAUTICAL_SETTINGS)
         }
 
         refreshCharts()
