@@ -17,12 +17,8 @@ class NauticalDisplayModeWidget(
     panel: WidgetsPanel?,
 ) : SimpleWidget(mapActivity, widgetType, customId, panel) {
 
-    override fun updateSimpleWidgetInfo(drawSettings: OsmandMapLayer.DrawSettings?) {
+    override fun updateIcon() {
         val mode = app.settings.NAUTICAL_DISPLAY_MODE.get() ?: NauticalDisplayMode.NORMAL
-        
-        val text = mapActivity.getString(mode.titleId)
-        setText(text, "")
-        
         val typedValue = TypedValue()
         mapActivity.theme.resolveAttribute(R.attr.colorOnSurface, typedValue, true)
         var iconColor = typedValue.data
@@ -35,8 +31,21 @@ class NauticalDisplayModeWidget(
                 R.drawable.ic_action_red_filter_overlay_on
             }
         }
-        
         setImageDrawable(iconsCache.getPaintedIcon(iconRes, iconColor))
+    }
+
+    override fun updateColors(textState: net.osmand.plus.views.layers.MapInfoLayer.TextState) {
+        super.updateColors(textState)
+        updateIcon()
+    }
+
+    override fun updateSimpleWidgetInfo(drawSettings: OsmandMapLayer.DrawSettings?) {
+        val mode = app.settings.NAUTICAL_DISPLAY_MODE.get() ?: NauticalDisplayMode.NORMAL
+        
+        val text = mapActivity.getString(mode.titleId)
+        setText(text, "")
+        
+        updateIcon()
 
         if (mode == NauticalDisplayMode.SUNLIGHT) {
             view.setBackgroundColor(0x44FFD700) // Semi-transparent Gold

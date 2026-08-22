@@ -31,6 +31,19 @@ class NauticalCompassWidget(
 
     override fun getWidgetName(): String = mapActivity.getString(R.string.map_widget_compass)
 
+    override fun updateIcon() {
+        val iconId = iconId
+        if (iconId != 0) {
+            val color = settings.applicationMode.getProfileColor(isNightMode)
+            setImageDrawable(iconsCache.getPaintedIcon(iconId, color))
+        }
+    }
+
+    override fun updateColors(textState: net.osmand.plus.views.layers.MapInfoLayer.TextState) {
+        super.updateColors(textState)
+        updateIcon()
+    }
+
     override fun setupView(view: View) {
         super.setupView(view)
         view.addOnAttachStateChangeListener(
@@ -64,6 +77,7 @@ class NauticalCompassWidget(
     }
 
     override fun updateSimpleWidgetInfo(drawSettings: OsmandMapLayer.DrawSettings?) {
+        updateIcon()
         val state = NauticalPlugin.engine?.getCurrentState()
         if (state == null) {
             setText("--", "")

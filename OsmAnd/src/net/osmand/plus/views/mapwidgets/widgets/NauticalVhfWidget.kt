@@ -46,6 +46,11 @@ class NauticalVhfWidget(
         setImageDrawable(iconsCache.getPaintedIcon(iconId, color))
     }
 
+    override fun updateColors(textState: net.osmand.plus.views.layers.MapInfoLayer.TextState) {
+        super.updateColors(textState)
+        updateIcon()
+    }
+
     override fun setupView(view: View) {
         super.setupView(view)
 

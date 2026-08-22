@@ -10,7 +10,8 @@
         android:fillColor="#FFFFFF"
         android:pathData="M12,11.5C12,11.5 9,14 9,15.5C9,16.9 10.3,18 12,18C13.7,18 15,16.9 15,15.5C15,14 12,11.5 12,11.5Z" />
     <path
-        android:strokeColor="#000000"
-        android:strokeWidth="0.5"
-        android:pathData="M10,14L14,17M14,14L10,17" />
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="1.5"
+        android:strokeLineCap="round"
+        android:pathData="M5,19L19,9" />
 </vector>

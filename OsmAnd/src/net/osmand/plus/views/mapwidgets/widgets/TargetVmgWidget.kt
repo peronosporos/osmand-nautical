@@ -60,13 +60,23 @@ class TargetVmgWidget(
     override fun updateIcon() {
         val iconId = getIconId()
         if (iconId != 0) {
-            val color = ContextCompat.getColor(app, R.color.map_widget_icon_color)
+            val color = settings.applicationMode.getProfileColor(isNightMode)
             setImageDrawable(iconsCache.getPaintedIcon(iconId, color))
         }
     }
 
+    override fun updateColors(textState: net.osmand.plus.views.layers.MapInfoLayer.TextState) {
+        super.updateColors(textState)
+        updateIcon()
+    }
+
     override fun updateSimpleWidgetInfo(drawSettings: OsmandMapLayer.DrawSettings?) {
-        val engine = NauticalPlugin.engine ?: return
+        updateIcon()
+        val engine = NauticalPlugin.engine
+        if (engine == null) {
+            setText("--", "N/A")
+            return
+        }
         val state = engine.getCurrentState()
 
         // Item 12: Calculate Target VMG from Polar if available

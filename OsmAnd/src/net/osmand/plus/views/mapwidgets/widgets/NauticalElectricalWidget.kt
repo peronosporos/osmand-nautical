@@ -23,7 +23,24 @@ class NauticalElectricalWidget(
     panel: WidgetsPanel?,
 ) : SimpleWidget(mapActivity, widgetType, customId, panel) {
 
+    init {
+        setIcons(widgetType)
+    }
+
     private var dataJob: kotlinx.coroutines.Job? = null
+
+    override fun updateIcon() {
+        val iconId = iconId
+        if (iconId != 0) {
+            val color = settings.applicationMode.getProfileColor(isNightMode)
+            setImageDrawable(iconsCache.getPaintedIcon(iconId, color))
+        }
+    }
+
+    override fun updateColors(textState: net.osmand.plus.views.layers.MapInfoLayer.TextState) {
+        super.updateColors(textState)
+        updateIcon()
+    }
 
     override fun setupView(view: View) {
         super.setupView(view)
@@ -62,6 +79,7 @@ class NauticalElectricalWidget(
     }
 
     override fun updateSimpleWidgetInfo(drawSettings: OsmandMapLayer.DrawSettings?) {
+        updateIcon()
         val engine = NauticalPlugin.engine
         if (engine == null) {
             setText("--", "N/A")

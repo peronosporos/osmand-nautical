@@ -23,11 +23,26 @@ class ActuatorLoadWidget(
     panel: WidgetsPanel?,
 ) : SimpleWidget(mapActivity, widgetType, customId, panel) {
 
+    init {
+        setIcons(widgetType)
+    }
+
     private var dataJob: kotlinx.coroutines.Job? = null
 
     override fun getWidgetName(): String = mapActivity.getString(R.string.nautical_actuator_load)
 
-    override fun getIconId(): Int = R.drawable.ic_action_settings // Generic hardware icon
+    override fun updateIcon() {
+        val iconId = iconId
+        if (iconId != 0) {
+            val color = settings.applicationMode.getProfileColor(isNightMode)
+            setImageDrawable(iconsCache.getPaintedIcon(iconId, color))
+        }
+    }
+
+    override fun updateColors(textState: net.osmand.plus.views.layers.MapInfoLayer.TextState) {
+        super.updateColors(textState)
+        updateIcon()
+    }
 
     override fun setupView(view: View) {
         super.setupView(view)
@@ -62,7 +77,12 @@ class ActuatorLoadWidget(
     }
 
     override fun updateSimpleWidgetInfo(drawSettings: OsmandMapLayer.DrawSettings?) {
-        val state = NauticalPlugin.engine?.getCurrentState() ?: return
+        updateIcon()
+        val state = NauticalPlugin.engine?.getCurrentState()
+        if (state == null) {
+            setText("--", "")
+            return
+        }
         
         val load = state.actuatorDutyCycle ?: 0.0
         val current = state.actuatorCurrent

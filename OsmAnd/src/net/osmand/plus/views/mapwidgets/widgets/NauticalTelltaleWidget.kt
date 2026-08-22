@@ -23,10 +23,27 @@ class NauticalTelltaleWidget(
     panel: WidgetsPanel?,
 ) : SimpleWidget(mapActivity, widgetType, customId, panel) {
 
+    init {
+        setIcons(widgetType)
+    }
+
     private var dataJob: Job? = null
     private val laminarColor = Color.GREEN
     private val stalledColor = Color.RED
     private val neutralColor = Color.GRAY
+
+    override fun updateIcon() {
+        val iconId = iconId
+        if (iconId != 0) {
+            val color = settings.applicationMode.getProfileColor(isNightMode)
+            setImageDrawable(iconsCache.getPaintedIcon(iconId, color))
+        }
+    }
+
+    override fun updateColors(textState: net.osmand.plus.views.layers.MapInfoLayer.TextState) {
+        super.updateColors(textState)
+        updateIcon()
+    }
 
     override fun setupView(view: View) {
         super.setupView(view)
@@ -55,6 +72,7 @@ class NauticalTelltaleWidget(
     }
 
     override fun updateSimpleWidgetInfo(drawSettings: OsmandMapLayer.DrawSettings?) {
+        updateIcon()
         val state = NauticalPlugin.engine?.getCurrentState()
         if (state == null) {
             setText("--", "")

@@ -3,16 +3,21 @@
     android:height="24dp"
     android:viewportWidth="24"
     android:viewportHeight="24">
-    <!-- Compass Rose -->
+    <!-- Compass Rose ring -->
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M12,2L12,5M12,19L12,22M22,12L19,12M5,12L2,12M12,7C9.2,7 7,9.2 7,12C7,14.8 9.2,17 12,17C14.8,17 17,14.8 17,12C17,9.2 14.8,7 12,7ZM12,15.5C10.1,15.5 8.5,13.9 8.5,12C8.5,10.1 10.1,8.5 12,8.5C13.9,8.5 15.5,10.1 15.5,12C15.5,13.9 13.9,15.5 12,15.5Z" />
+        android:pathData="M12,7C9.2,7 7,9.2 7,12C7,14.8 9.2,17 12,17C14.8,17 17,14.8 17,12C17,9.2 14.8,7 12,7ZM12,15.5C10.1,15.5 8.5,13.9 8.5,12C8.5,10.1 10.1,8.5 12,8.5C13.9,8.5 15.5,10.1 15.5,12C15.5,13.9 13.9,15.5 12,15.5Z" />
+    <!-- Compass Rose ticks -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="1.5"
+        android:strokeLineCap="round"
+        android:pathData="M12,2V5M12,19V22M2,12H5M19,12H22" />
     <!-- True Wind Direction Arrow (Pointing to center from NW) -->
     <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M5,5L10,10L10,7M10,10L7,10"
         android:strokeColor="#FFFFFF"
-        android:strokeWidth="1"
+        android:strokeWidth="1.5"
         android:strokeLineCap="round"
-        android:strokeLineJoin="round" />
+        android:strokeLineJoin="round"
+        android:pathData="M5,5L10,10M10,7L10,10L7,10" />
 </vector>

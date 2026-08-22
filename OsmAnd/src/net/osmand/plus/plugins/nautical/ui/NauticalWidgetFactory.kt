@@ -63,7 +63,6 @@ class NauticalWidgetFactory {
             WidgetType.NAUTICAL_FUEL_LEVEL,
             WidgetType.NAUTICAL_FRESH_WATER_LEVEL,
             WidgetType.NAUTICAL_WASTE_WATER_LEVEL,
-            WidgetType.NAUTICAL_POLAR_RATIO,
             WidgetType.NAUTICAL_ROT,
             WidgetType.NAUTICAL_XTE,
             WidgetType.NAUTICAL_TTW,
@@ -158,7 +157,7 @@ class NauticalWidgetFactory {
                     val wPanel = type.defaultPanel ?: WidgetsPanel.LEFT
                     createMapWidgetForParams(activity, type, null, wPanel, maneuverManager)?.let { widget: MapWidget ->
                         widgetInfos.add(object : MapWidgetInfo(
-                            type.id, widget, 0, 0, type.titleId, null, 0, 0, wPanel
+                            type.id, widget, type.dayIconId, type.nightIconId, type.titleId, null, 0, 0, wPanel
                         ) {
                             override fun getUpdatedPanel(appMode: ApplicationMode, layoutMode: ScreenLayoutMode?): WidgetsPanel {
                                 if (type == WidgetType.MANEUVER_OVERLAY) return WidgetsPanel.BOTTOM

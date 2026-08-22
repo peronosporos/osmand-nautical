@@ -43,13 +43,14 @@ class MarineTextWidget(
     override fun updateIcon() {
         val iconId = iconId
         if (iconId != 0) {
-            if (widgetType == WidgetType.NAUTICAL_DEPTH || widgetType == WidgetType.NAUTICAL_WIND) {
-                setImageDrawable(iconId)
-            } else {
-                val color = settings.applicationMode.getProfileColor(isNightMode)
-                setImageDrawable(iconsCache.getPaintedIcon(iconId, color))
-            }
+            val color = settings.applicationMode.getProfileColor(isNightMode)
+            setImageDrawable(iconsCache.getPaintedIcon(iconId, color))
         }
+    }
+
+    override fun updateColors(textState: net.osmand.plus.views.layers.MapInfoLayer.TextState) {
+        super.updateColors(textState)
+        updateIcon()
     }
 
     private var dataJob: kotlinx.coroutines.Job? = null
@@ -230,6 +231,7 @@ class MarineTextWidget(
     override fun updateSimpleWidgetInfo(drawSettings: OsmandMapLayer.DrawSettings?) {
         val engine = NauticalPlugin.engine
         if (engine == null) {
+            updateIcon()
             setText("--", "N/A")
             return
         }

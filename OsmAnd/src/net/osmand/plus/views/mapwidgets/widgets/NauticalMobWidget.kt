@@ -22,9 +22,14 @@ class NauticalMobWidget(
         val color = if (isActive) {
             ContextCompat.getColor(app, R.color.text_color_negative) // Emergency Red
         } else {
-            ContextCompat.getColor(app, R.color.map_widget_icon_color)
+            settings.applicationMode.getProfileColor(isNightMode)
         }
         setImageDrawable(iconsCache.getPaintedIcon(R.drawable.ic_action_alert, color))
+    }
+
+    override fun updateColors(textState: net.osmand.plus.views.layers.MapInfoLayer.TextState) {
+        super.updateColors(textState)
+        updateIcon()
     }
 
     override fun setupView(view: View) {

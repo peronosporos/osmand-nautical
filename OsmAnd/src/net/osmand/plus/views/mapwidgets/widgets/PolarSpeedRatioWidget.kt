@@ -56,12 +56,18 @@ class PolarSpeedRatioWidget(
     override fun updateIcon() {
         val iconId = getIconId()
         if (iconId != 0) {
-            val color = ContextCompat.getColor(app, R.color.map_widget_icon_color)
+            val color = settings.applicationMode.getProfileColor(isNightMode)
             setImageDrawable(iconsCache.getPaintedIcon(iconId, color))
         }
     }
 
+    override fun updateColors(textState: net.osmand.plus.views.layers.MapInfoLayer.TextState) {
+        super.updateColors(textState)
+        updateIcon()
+    }
+
     override fun updateSimpleWidgetInfo(drawSettings: OsmandMapLayer.DrawSettings?) {
+        updateIcon()
         val engine = NauticalPlugin.engine
         if (engine == null) {
             setText("--", "N/A")

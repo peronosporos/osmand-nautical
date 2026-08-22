@@ -94,6 +94,11 @@ class NauticalMasterTelemetryWidget(
         setImageDrawable(iconsCache.getPaintedIcon(iconId, iconColor))
     }
 
+    override fun updateColors(textState: net.osmand.plus.views.layers.MapInfoLayer.TextState) {
+        super.updateColors(textState)
+        updateIcon()
+    }
+
     private fun getPrimaryItemIdForMode(mode: net.osmand.plus.plugins.nautical.engine.SailingWorkflowState): String {
         val settings = mapActivity.app.settings
         return when (mode) {

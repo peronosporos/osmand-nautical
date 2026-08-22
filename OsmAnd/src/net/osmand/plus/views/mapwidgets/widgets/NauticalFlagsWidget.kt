@@ -21,7 +21,24 @@ class NauticalFlagsWidget(
     panel: WidgetsPanel?
 ) : SimpleWidget(mapActivity, widgetType, customId, panel) {
 
+    init {
+        setIcons(widgetType)
+    }
+
     private var dataJob: Job? = null
+
+    override fun updateIcon() {
+        val iconId = iconId
+        if (iconId != 0) {
+            val color = settings.applicationMode.getProfileColor(isNightMode)
+            setImageDrawable(iconsCache.getPaintedIcon(iconId, color))
+        }
+    }
+
+    override fun updateColors(textState: net.osmand.plus.views.layers.MapInfoLayer.TextState) {
+        super.updateColors(textState)
+        updateIcon()
+    }
 
     private val allFlags = mapOf(
         "A" to "Diver Down",

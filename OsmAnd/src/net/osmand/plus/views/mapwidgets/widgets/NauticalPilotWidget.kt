@@ -92,6 +92,11 @@ class NauticalPilotWidget(
         }
     }
 
+    override fun updateColors(textState: net.osmand.plus.views.layers.MapInfoLayer.TextState) {
+        super.updateColors(textState)
+        updateIcon()
+    }
+
     private fun updateAnimationState(isPending: Boolean) {
         if (isPending != lastIsPending) {
             lastIsPending = isPending
