@@ -341,17 +341,22 @@ class SignalKDeltaParser(
     }
 
     private fun isContextSelf(context: String, currentState: MarineState): Boolean {
+        if (context == "vessels.self" || context.isEmpty() || context == "self") {
+            return true
+        }
         val trueSelf = sessionManager.trueSelfContext
+        if (trueSelf.isNotEmpty() && (context == trueSelf || context == "vessels.$trueSelf")) {
+            return true
+        }
         val mmsi = currentState.vesselMmsi
+        if (mmsi != null && (context == "vessels.urn:mrn:imo:mmsi:$mmsi" || context == "vessels.$mmsi" || context == "vessels.mmsi:$mmsi")) {
+            return true
+        }
         val uuid = currentState.vesselUuid
-
-        return context == "vessels.self" ||
-                context == "" ||
-                context == trueSelf ||
-                context.startsWith("urn:mrn:signalk:uuid:") ||
-                (mmsi != null && context.contains("mmsi:$mmsi")) ||
-                (uuid != null && (context == uuid || context == "vessels.$uuid" || context.endsWith(uuid))) ||
-                (!context.contains("mmsi:") && !context.contains("imo:") && !context.startsWith("urn:mrn:imo:"))
+        if (uuid != null && (context == "vessels.urn:mrn:signalk:uuid:$uuid" || context == "vessels.$uuid" || context == uuid)) {
+            return true
+        }
+        return false
     }
 
     private fun readJsonValue(reader: JsonReader): Any? {
