@@ -134,6 +134,52 @@
         android:layout_height="1dp"
         android:background="?attr/divider_color" />
 
+    <!-- Empty State Container -->
+    <LinearLayout
+        android:id="@+id/layout_empty_plan"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:padding="24dp"
+        android:visibility="gone">
+
+        <ImageView
+            android:layout_width="64dp"
+            android:layout_height="64dp"
+            android:src="@drawable/ic_action_route"
+            app:tint="?attr/colorAccent"
+            android:contentDescription="Route Icon" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="No Active Passage Plan"
+            android:textAppearance="@style/TextAppearance.AppCompat.Large"
+            android:textColor="?android:attr/textColorPrimary"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:gravity="center"
+            android:text="Create a marine route to compute courses to steer, tidal current offsets, layline angles, and leg-by-leg passage schedules."
+            android:textAppearance="@style/TextAppearance.AppCompat.Medium"
+            android:textColor="?android:attr/textColorSecondary" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_create_passage_plan"
+            style="@style/Widget.Material3.Button.FilledButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:text="Create Passage Plan / New Marine Route"
+            app:icon="@drawable/ic_action_add_no_bg" />
+
+    </LinearLayout>
+
     <!-- Legs RecyclerView -->
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/legs_recycler_view"

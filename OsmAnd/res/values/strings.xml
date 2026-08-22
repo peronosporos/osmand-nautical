@@ -1,4 +1,7 @@
 <resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
+    <string name="nautical_slip_exit">Slip Exit</string>
+    <string name="nautical_weigh_anchor">Weigh Anchor</string>
+    <string name="nautical_holding_pattern">Holding Pattern</string>
     <string name="nautical_checklists">Marine Checklists</string>
     <string name="nautical_boat_ai_title">Boat AI Copilot</string>
     <string name="nautical_sail_inventory_title">Sail Inventory</string>

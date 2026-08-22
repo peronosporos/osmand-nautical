@@ -74,7 +74,7 @@ class NauticalElectricalWidget(
         )
         
         view.setOnClickListener {
-            NauticalElectricalDashboardBottomSheet.show(mapActivity.supportFragmentManager)
+            net.osmand.plus.plugins.nautical.ui.widgets.NauticalElectricalBottomSheet.show(mapActivity.supportFragmentManager)
         }
     }
 
@@ -88,12 +88,22 @@ class NauticalElectricalWidget(
         val state = engine.getCurrentState()
 
         val battery = state.batteries.values.firstOrNull()
-        if (battery?.voltage != null) {
-            val volt = String.format(Locale.US, "%.1f V", battery.voltage)
-            val sub = if (battery.current != null) {
+        if (battery != null) {
+            val primary = if (battery.stateOfCharge != null) {
+                String.format(Locale.US, "%.0f%%", battery.stateOfCharge * 100)
+            } else if (battery.voltage != null) {
+                String.format(Locale.US, "%.1f V", battery.voltage)
+            } else {
+                "--"
+            }
+            val sub = if (battery.stateOfCharge != null && battery.voltage != null) {
+                String.format(Locale.US, "%.1fV %+.1fA", battery.voltage, battery.current ?: 0.0)
+            } else if (battery.current != null) {
                 String.format(Locale.US, "%+.1f A", battery.current)
-            } else ""
-            setText(volt, sub)
+            } else {
+                ""
+            }
+            setText(primary, sub)
         } else {
             setText("--", "")
         }

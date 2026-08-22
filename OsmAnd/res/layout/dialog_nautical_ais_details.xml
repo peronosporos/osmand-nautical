@@ -138,6 +138,31 @@
             android:text="@string/nautical_follow_target" />
     </LinearLayout>
 
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginTop="8dp">
+
+        <Button
+            android:id="@+id/btn_vhf_callout"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginEnd="6dp"
+            android:text="VHF Callout" />
+
+        <Button
+            android:id="@+id/btn_set_cpa_alarm"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="6dp"
+            android:text="Set CPA Alarm" />
+    </LinearLayout>
+
     <Button
         android:id="@+id/btn_toggle_buddy"
         style="@style/Widget.MaterialComponents.Button.OutlinedButton"

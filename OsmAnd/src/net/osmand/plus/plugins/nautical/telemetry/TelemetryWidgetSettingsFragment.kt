@@ -165,7 +165,8 @@ class TelemetryWidgetSettingsFragment : BaseOsmAndFragment() {
         val textColorSecondary = AndroidUtils.getColorFromAttr(context, android.R.attr.textColorSecondary)
 
         var selectedCategory: MetricCategory? = null
-        val allMetrics = TelemetryRegistry.getAllMetrics()
+        val activeKeys = activeItems.map { it.key }.toSet()
+        val allMetrics = TelemetryRegistry.getAllMetrics().filter { it.key !in activeKeys }
 
         var dialog: AlertDialog? = null
 

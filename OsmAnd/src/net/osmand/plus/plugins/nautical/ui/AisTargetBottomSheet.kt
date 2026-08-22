@@ -87,9 +87,13 @@ class AisTargetBottomSheet : BottomSheetDialogFragment() {
         val shipName = ais.shipName?.trim()
         view.findViewById<TextView>(R.id.txt_ship_name).text = if (!shipName.isNullOrEmpty()) shipName else "MMSI: ${ais.mmsi}"
 
+        val country = getMidCountry(ais.mmsi)
         val mmsiSb = StringBuilder("MMSI: ${ais.mmsi}")
         if (!ais.callSign.isNullOrEmpty()) {
             mmsiSb.append(" • Call: ").append(ais.callSign)
+        }
+        if (!country.isNullOrEmpty()) {
+            mmsiSb.append(" • Flag: ").append(country)
         }
         if (ais.imo != 0) {
             mmsiSb.append(" • IMO: ").append(ais.imo)
@@ -192,6 +196,37 @@ class AisTargetBottomSheet : BottomSheetDialogFragment() {
             dismiss()
         }
 
+        view.findViewById<Button?>(R.id.btn_vhf_callout)?.setOnClickListener {
+            val activity = activity as? net.osmand.plus.activities.MapActivity
+            if (activity != null) {
+                NauticalPlugin.engine?.sendDelta("communication.vhf.channel", "16")
+                net.osmand.plus.plugins.nautical.ui.widgets.NauticalVhfBottomSheet.show(activity.supportFragmentManager)
+            }
+            dismiss()
+        }
+
+        view.findViewById<Button?>(R.id.btn_set_cpa_alarm)?.setOnClickListener {
+            val ctx = requireContext()
+            val input = android.widget.EditText(ctx).apply {
+                hint = "Distance in NM"
+                inputType = android.text.InputType.TYPE_CLASS_NUMBER or android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL
+                setText(plugin?.aisCpaWarningDistance?.get()?.toString() ?: "1.0")
+            }
+            androidx.appcompat.app.AlertDialog.Builder(ctx)
+                .setTitle("Set Custom CPA Alarm")
+                .setMessage("Enter CPA alert threshold for ${ais.shipName ?: "MMSI ${ais.mmsi}"}:")
+                .setView(input)
+                .setPositiveButton(R.string.shared_string_save) { _, _ ->
+                    val dist = input.text.toString().toDoubleOrNull()
+                    if (dist != null && plugin != null) {
+                        plugin.aisCpaWarningDistance.set(dist.toFloat())
+                        android.widget.Toast.makeText(ctx, "CPA threshold set to $dist NM", android.widget.Toast.LENGTH_SHORT).show()
+                    }
+                }
+                .setNegativeButton(R.string.shared_string_cancel, null)
+                .show()
+        }
+
         val btnBuddy = view.findViewById<Button>(R.id.btn_toggle_buddy)
         val isBuddy = NauticalPlugin.engine?.getCurrentState()?.aisBuddies?.contains(ais.mmsi) ?: false
         btnBuddy.text = if (isBuddy) getString(R.string.nautical_remove_from_buddies) else getString(R.string.nautical_add_to_buddies)
@@ -201,6 +236,35 @@ class AisTargetBottomSheet : BottomSheetDialogFragment() {
             if (isBuddy) current.remove(ais.mmsi) else current.add(ais.mmsi)
             engine?.sendDelta("navigation.aisBuddies", current.toList())
             dismiss()
+        }
+    }
+
+    private fun getMidCountry(mmsi: Int): String? {
+        val mid = mmsi.toString().take(3).toIntOrNull() ?: return null
+        return when (mid) {
+            in 201..204 -> "Albania"
+            205 -> "Belgium"
+            in 211..218 -> "Germany"
+            in 219..220 -> "Denmark"
+            in 224..225 -> "Spain"
+            in 226..228 -> "France"
+            in 230..231 -> "Finland"
+            in 232..235 -> "United Kingdom"
+            236 -> "Gibraltar"
+            in 237..241 -> "Greece"
+            in 242..243 -> "Morocco"
+            in 244..246 -> "Netherlands"
+            247 -> "Italy"
+            in 257..259 -> "Norway"
+            261 -> "Poland"
+            263 -> "Portugal"
+            in 265..266 -> "Sweden"
+            271 -> "Turkey"
+            316 -> "Canada"
+            338, in 366..369 -> "United States"
+            503 -> "Australia"
+            512 -> "New Zealand"
+            else -> null
         }
     }
 

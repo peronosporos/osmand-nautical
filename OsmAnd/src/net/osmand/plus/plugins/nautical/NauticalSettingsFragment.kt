@@ -221,7 +221,10 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
     }
 
     private fun setupVesselCategory() {
-        findPreference<ListPreferenceEx>(settings.NAUTICAL_VESSEL_TYPE.id)?.apply {
+        val vesselTypePref = findPreference<ListPreferenceEx>(settings.NAUTICAL_VESSEL_TYPE.id)
+        val shuntingPref = findPreference<SwitchPreferenceEx>(settings.NAUTICAL_MULTIHULL_SHUNTING.id)
+
+        vesselTypePref?.apply {
             setThemedIcon(OsmAndR.drawable.ic_action_sail_boat_dark)
             entries = arrayOf(
                 getString(OsmAndR.string.nautical_vessel_type_conventional_entry),
@@ -236,8 +239,12 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
             }
         }
 
-        findPreference<SwitchPreferenceEx>(settings.NAUTICAL_MULTIHULL_SHUNTING.id)?.apply {
+        shuntingPref?.apply {
             setThemedIcon(OsmAndR.drawable.ic_action_refresh_dark)
+            val isProa = settings.NAUTICAL_VESSEL_TYPE.get() == net.osmand.plus.settings.enums.VesselType.PROA
+            if (isProa) {
+                settings.NAUTICAL_MULTIHULL_SHUNTING.set(true)
+            }
             isChecked = settings.NAUTICAL_MULTIHULL_SHUNTING.get()
             summary = getString(OsmAndR.string.nautical_multihull_shunting_desc)
         }
@@ -1019,6 +1026,10 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
                 net.osmand.plus.views.mapwidgets.widgets.NauticalCompassWizardDialog.show(this)
                 return true
             }
+            "nautical_anchor_watch_dialog" -> {
+                net.osmand.plus.plugins.nautical.ui.anchor.AnchorWatchDialogFragment.show(requireActivity().supportFragmentManager)
+                return true
+            }
             "nautical_clear_anchor" -> {
                 settings.NAUTICAL_ANCHOR_LAT.set(0.0)
                 settings.NAUTICAL_ANCHOR_LON.set(0.0)
@@ -1043,7 +1054,7 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
                 showInstance(requireActivity(), SettingsScreenType.NAUTICAL_PASSAGE_PLAN)
                 return true
             }
-            settings.NAUTICAL_ACTIVE_SAIL_PLAN.id -> {
+            "sail_inventory", settings.NAUTICAL_ACTIVE_SAIL_PLAN.id -> {
                 showInstance(requireActivity(), SettingsScreenType.SAIL_INVENTORY)
                 return true
             }
@@ -1260,10 +1271,15 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
                 }
 
                 settings.NAUTICAL_VESSEL_TYPE.id -> {
-                    preference.summary = when (newString) {
-                        "PROA" -> getString(OsmAndR.string.nautical_vessel_type_summary_proa)
-                        else -> getString(OsmAndR.string.nautical_vessel_type_summary_conventional)
+                    val isProa = newString == "PROA"
+                    preference.summary = if (isProa) {
+                        settings.NAUTICAL_MULTIHULL_SHUNTING.set(true)
+                        getString(OsmAndR.string.nautical_vessel_type_summary_proa)
+                    } else {
+                        settings.NAUTICAL_MULTIHULL_SHUNTING.set(false)
+                        getString(OsmAndR.string.nautical_vessel_type_summary_conventional)
                     }
+                    findPreference<SwitchPreferenceEx>(settings.NAUTICAL_MULTIHULL_SHUNTING.id)?.isChecked = settings.NAUTICAL_MULTIHULL_SHUNTING.get()
                     onPreferenceChanged(key)
                 }
                 settings.NAUTICAL_NMEA_SOURCE.id -> {

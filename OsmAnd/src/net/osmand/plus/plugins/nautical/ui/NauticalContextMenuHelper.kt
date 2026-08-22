@@ -264,7 +264,7 @@ class NauticalContextMenuHelper(private val app: OsmandApplication) {
                 icon = R.drawable.ic_action_anchor
                 selected = app.settings.NAUTICAL_ANCHOR_LAT.get() != 0.0
                 setListener { _, _, _, _ ->
-                    NauticalAnchorQuickAction().execute(mapActivity, null)
+                    net.osmand.plus.plugins.nautical.ui.anchor.AnchorWatchDialogFragment.show(mapActivity.supportFragmentManager)
                     true
                 }
             }

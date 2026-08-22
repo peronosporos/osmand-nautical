@@ -97,7 +97,6 @@ class NauticalWidgetFactory {
             WidgetType.NAUTICAL_AC_FREQUENCY,
             WidgetType.NAUTICAL_VHF_CHANNEL,
             WidgetType.NAUTICAL_RIGGING_LOAD,
-            WidgetType.NAUTICAL_RIGGING_LOADS,
             WidgetType.NAUTICAL_WIND_SHIFT_WIDGET,
             WidgetType.NAUTICAL_RACING_TIMER,
             WidgetType.NAUTICAL_WATERMAKER,

@@ -118,10 +118,22 @@ class NauticalBuddyListFragment : BaseOsmAndFragment() {
             val mmsi = getItem(position)
             val ais = NauticalPlugin.getAisObject(mmsi)
             holder.txtName.text = ais?.shipName ?: ctx.getString(R.string.nautical_buddy_mmsi, mmsi)
-            holder.txtDesc.text = if (ais != null) {
-                ctx.getString(R.string.nautical_buddy_type_status, ais.getShipTypeString(), ais.getNavStatusString())
+            
+            val ownLoc = NauticalPlugin.getInstance()?.application?.locationProvider?.lastKnownLocation
+            val pos = ais?.position
+            if (ownLoc != null && pos != null) {
+                val targetLoc = net.osmand.Location("AIS").apply {
+                    latitude = pos.latitude
+                    longitude = pos.longitude
+                }
+                val distNm = ownLoc.distanceTo(targetLoc) / 1852.0
+                val bearingDeg = (ownLoc.bearingTo(targetLoc) + 360f) % 360f
+                val type = ais.getShipTypeString().ifEmpty { "Vessel" }
+                holder.txtDesc.text = String.format(java.util.Locale.US, "Range: %.2f nm • %03.0f° | %s", distNm, bearingDeg, type)
+            } else if (ais != null) {
+                holder.txtDesc.text = ctx.getString(R.string.nautical_buddy_type_status, ais.getShipTypeString(), ais.getNavStatusString())
             } else {
-                ctx.getString(R.string.nautical_vessel_data_unavailable)
+                holder.txtDesc.text = ctx.getString(R.string.nautical_vessel_data_unavailable)
             }
             
             holder.icon.setImageResource(R.drawable.ic_action_sail_boat_dark)

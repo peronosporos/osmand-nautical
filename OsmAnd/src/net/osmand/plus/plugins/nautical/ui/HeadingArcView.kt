@@ -113,6 +113,7 @@ class HeadingArcView @JvmOverloads constructor(
     private val textPaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val tickPaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val pointerPath = Path()
+    private val awaTrianglePath = Path()
     
     private val cardinalTypeface = Typeface.create("sans-serif-condensed", Typeface.BOLD)
     private val normalTypeface = Typeface.create("sans-serif-condensed", Typeface.NORMAL)
@@ -298,7 +299,7 @@ class HeadingArcView @JvmOverloads constructor(
                         val tx = centerX + (radius - textOffset) * cosRad
                         val ty = centerY + (radius - textOffset) * sinRad
                         
-                        withRotation(animatedTargetHeading - hDeg + 90f, tx, ty) {
+                        withRotation(animatedTargetHeading, tx, ty) {
                             drawText(cardinalLabels[cardinalIdx], tx, ty + (paint.textSize / 3f), paint)
                         }
                     }
@@ -341,12 +342,31 @@ class HeadingArcView @JvmOverloads constructor(
             windAngleApparent?.let { awa ->
                 val angleOnCircle = awa.toFloat() - 90f
                 val rad = Math.toRadians(angleOnCircle.toDouble())
-                val x = centerX + (radius + dp10) * cos(rad).toFloat()
-                val y = centerY + (radius + dp10) * sin(rad).toFloat()
+                val cosRad = cos(rad).toFloat()
+                val sinRad = sin(rad).toFloat()
+                val perpCos = -sinRad
+                val perpSin = cosRad
+
+                val tipX = centerX + radius * cosRad
+                val tipY = centerY + radius * sinRad
+                val baseX = centerX + (radius + dp10) * cosRad
+                val baseY = centerY + (radius + dp10) * sinRad
+
+                val p1X = baseX + perpCos * dp5
+                val p1Y = baseY + perpSin * dp5
+                val p2X = baseX - perpCos * dp5
+                val p2Y = baseY - perpSin * dp5
+
+                awaTrianglePath.reset()
+                awaTrianglePath.moveTo(tipX, tipY)
+                awaTrianglePath.lineTo(p1X, p1Y)
+                awaTrianglePath.lineTo(p2X, p2Y)
+                awaTrianglePath.close()
+
                 paint.style = Paint.Style.FILL
-                paint.color = if (isAmbientMode) Color.WHITE else textColorPrimary
-                paint.alpha = if (isAmbientMode) 150 else 200
-                drawCircle(x, y, dp6, paint)
+                paint.color = if (isAmbientMode) Color.WHITE else Color.parseColor("#4FC3F7")
+                paint.alpha = 255
+                canvas.drawPath(awaTrianglePath, paint)
             }
 
             targetWindAngleApparent?.let { tawa ->

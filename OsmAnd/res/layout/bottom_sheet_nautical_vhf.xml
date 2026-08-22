@@ -1,0 +1,225 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="?attr/list_background_color"
+    android:fitsSystemWindows="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="20dp">
+
+        <!-- Title -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:text="@string/nautical_vhf_title"
+            android:textAppearance="@style/TextAppearance.AppCompat.Large"
+            android:textColor="?android:attr/textColorPrimary"
+            android:textStyle="bold" />
+
+        <!-- Active Channel Card -->
+        <androidx.cardview.widget.CardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="3dp"
+            app:cardBackgroundColor="?attr/card_and_list_background_basic">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp"
+                android:gravity="center">
+
+                <TextView
+                    android:id="@+id/txt_vhf_active_channel"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="CH 16"
+                    android:textSize="36sp"
+                    android:textStyle="bold"
+                    android:textColor="?attr/colorAccent" />
+
+                <TextView
+                    android:id="@+id/txt_vhf_channel_designation"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="International Distress, Safety &amp; Calling"
+                    android:textAppearance="@style/TextAppearance.AppCompat.Medium"
+                    android:textColor="?android:attr/textColorPrimary"
+                    android:gravity="center" />
+
+                <!-- Badges Row: Power, Dual Watch, Status -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center"
+                    android:layout_marginTop="12dp">
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_vhf_power_toggle"
+                        style="@style/Widget.Material3.Button.TonalButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="36dp"
+                        android:text="25W HIGH"
+                        android:textSize="12sp"
+                        android:paddingStart="12dp"
+                        android:paddingEnd="12dp"
+                        android:layout_marginEnd="8dp" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_vhf_dual_watch_toggle"
+                        style="@style/Widget.Material3.Button.TonalButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="36dp"
+                        android:text="DUAL WATCH: OFF"
+                        android:textSize="12sp"
+                        android:paddingStart="12dp"
+                        android:paddingEnd="12dp" />
+
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/txt_vhf_reception_status"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="Status: Standby / Ready"
+                    android:textSize="12sp"
+                    android:textColor="?android:attr/textColorSecondary" />
+
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+        <!-- Quick Access Safety Channels Grid -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:text="Quick Safety &amp; Calling Channels"
+            android:textAppearance="@style/TextAppearance.AppCompat.Medium"
+            android:textColor="?attr/colorAccent"
+            android:textStyle="bold" />
+
+        <GridLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:columnCount="3"
+            android:rowCount="2"
+            android:alignmentMode="alignMargins"
+            android:useDefaultMargins="true"
+            android:layout_marginTop="8dp">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_ch_16"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_columnWeight="1"
+                android:layout_height="48dp"
+                android:text="16 (Distress)"
+                android:textColor="#FFFF4444"
+                app:strokeColor="#FFFF4444" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_ch_09"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_columnWeight="1"
+                android:layout_height="48dp"
+                android:text="09 (Calling)" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_ch_13"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_columnWeight="1"
+                android:layout_height="48dp"
+                android:text="13 (Nav Safety)" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_ch_72"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_columnWeight="1"
+                android:layout_height="48dp"
+                android:text="72 (Ship-to-Ship)" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_ch_77"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_columnWeight="1"
+                android:layout_height="48dp"
+                android:text="77 (Port Ops)" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_ch_06"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_columnWeight="1"
+                android:layout_height="48dp"
+                android:text="06 (Inter-ship)" />
+
+        </GridLayout>
+
+        <!-- Actions: Direct Channel Picker & Live Audio Streaming -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="16dp">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_select_channel"
+                style="@style/Widget.Material3.Button.FilledButton"
+                android:layout_width="0dp"
+                android:layout_height="48dp"
+                android:layout_weight="1"
+                android:text="Select Channel"
+                app:icon="@drawable/ic_action_settings"
+                android:layout_marginEnd="6dp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_toggle_live_audio"
+                style="@style/Widget.Material3.Button.FilledButton"
+                android:layout_width="0dp"
+                android:layout_height="48dp"
+                android:layout_weight="1"
+                android:text="Live Stream"
+                app:icon="@drawable/ic_action_volume_up"
+                android:layout_marginStart="6dp" />
+
+        </LinearLayout>
+
+        <!-- Recent Transmissions & Audio Log -->
+        <TextView
+            android:id="@+id/txt_vhf_history_label"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:text="Recent VHF Transmissions"
+            android:textAppearance="@style/TextAppearance.AppCompat.Medium"
+            android:textColor="?attr/colorAccent"
+            android:textStyle="bold" />
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rv_vhf_transmissions"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:nestedScrollingEnabled="false" />
+
+        <TextView
+            android:id="@+id/txt_no_vhf_transmissions"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:gravity="center"
+            android:text="No recent audio transmissions recorded"
+            android:textColor="?android:attr/textColorSecondary" />
+
+    </LinearLayout>
+</androidx.core.widget.NestedScrollView>

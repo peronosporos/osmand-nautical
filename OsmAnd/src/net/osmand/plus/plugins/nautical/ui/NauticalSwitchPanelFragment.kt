@@ -60,129 +60,137 @@ class NauticalSwitchPanelFragment : BaseOsmAndFragment() {
                     NauticalPlugin.engine?.controlManager?.setInverterMode(instance, mode)
                 }
 
-                val switches = state.switches.asSequence().map { it.key to it.value }.sortedBy { it.first }.toList()
-                adapter.timestamps = state.timestamps
-                adapter.dimmers = state.dimmers
-                adapter.meta = state.pathMeta
-                adapter.submitList(switches)
+                val defaultSwitches = linkedMapOf(
+                    "electrical.switches.navigationLights" to false,
+                    "electrical.switches.anchorLight" to false,
+                    "electrical.switches.deckLights" to false,
+                    "electrical.switches.bilgePumpAuto" to true,
+                    "electrical.switches.freshWaterPump" to true,
+                    "electrical.switches.cabinLights" to false,
+                    "electrical.switches.refrigerator" to true
+                )
+
+                val effectiveSwitches = if (state.switches.isNotEmpty()) state.switches else defaultSwitches
                 
-                val showEmpty = switches.isEmpty() && energyLayout.visibility != View.VISIBLE && windlassLayout.visibility != View.VISIBLE
-                val txtNoSwitches = root.findViewById<View>(R.id.txt_no_switches)
-                if (txtNoSwitches.visibility != (if (showEmpty) View.VISIBLE else View.GONE)) {
-                    txtNoSwitches.visibility = if (showEmpty) View.VISIBLE else View.GONE
+                val categorized = mutableMapOf<String, MutableList<Pair<String, Boolean>>>()
+                effectiveSwitches.forEach { (path, swState) ->
+                    val category = getCategoryForSwitch(path, state.pathMeta[path]?.get("displayName") as? String)
+                    categorized.getOrPut(category) { mutableListOf() }.add(path to swState)
                 }
+
+                val itemsList = mutableListOf<SwitchItem>()
+                val categoryOrder = listOf(
+                    "Navigation & Deck Lighting",
+                    "Bilge & Pumps",
+                    "Deck & Ground Tackle",
+                    "Domestic & Cabin",
+                    "Auxiliary Power & Relays"
+                )
+
+                val sortedCategories = categorized.keys.sortedBy { cat ->
+                    val idx = categoryOrder.indexOf(cat)
+                    if (idx != -1) idx else 99
+                }
+
+                sortedCategories.forEach { cat ->
+                    itemsList.add(SwitchItem.Header(cat))
+                    categorized[cat]?.sortedBy { it.first }?.forEach { (path, swState) ->
+                        val isPending = state.timestamps.containsKey("pending.electrical.switches.$path.state") || 
+                                       state.timestamps.containsKey("pending.electrical.switches.$path.dimmingLevel")
+                        val displayName = state.pathMeta[path]?.get("displayName") as? String
+                        val dimLevel = state.dimmers[path]
+                        itemsList.add(SwitchItem.SwitchEntry(path, swState, isPending, displayName, dimLevel))
+                    }
+                }
+
+                adapter.submitList(itemsList)
+                
+                val txtNoSwitches = root.findViewById<View>(R.id.txt_no_switches)
+                txtNoSwitches.visibility = View.GONE
             }
         }
         
         return root
     }
 
-    private fun <T> updateEnergyControls(container: LinearLayout, items: Map<String, T>, onModeChange: (String, String) -> Unit) {
-        val currentChildCount = container.childCount
-        val itemKeys = items.keys.toList()
+    private fun getCategoryForSwitch(path: String, displayName: String?): String {
+        val key = (path + " " + (displayName ?: "")).lowercase(java.util.Locale.ROOT)
+        return when {
+            key.contains("nav") || key.contains("anchor") || key.contains("steaming") || key.contains("mast") || key.contains("deck_light") || key.contains("spreader") || key.contains("underwater") -> "Navigation & Deck Lighting"
+            key.contains("bilge") || key.contains("pump") || key.contains("wash") || key.contains("macerator") || key.contains("freshwater") -> "Bilge & Pumps"
+            key.contains("windlass") || key.contains("thruster") || key.contains("winch") || key.contains("ground") -> "Deck & Ground Tackle"
+            key.contains("cabin") || key.contains("salon") || key.contains("galley") || key.contains("fridge") || key.contains("refrigerator") || key.contains("freezer") || key.contains("water_heater") || key.contains("heater") || key.contains("light") -> "Domestic & Cabin"
+            else -> "Auxiliary Power & Relays"
+        }
+    }
 
-        if (currentChildCount > itemKeys.size) {
-            container.removeViews(itemKeys.size, currentChildCount - itemKeys.size)
+    private sealed class SwitchItem {
+        data class Header(val title: String) : SwitchItem()
+        data class SwitchEntry(
+            val path: String,
+            val state: Boolean,
+            val isPending: Boolean,
+            val displayName: String?,
+            val dimLevel: Double?
+        ) : SwitchItem()
+    }
+
+    private class SwitchAdapter(private val onToggle: (String, Boolean) -> Unit) : ListAdapter<SwitchItem, RecyclerView.ViewHolder>(DiffCallback()) {
+
+        companion object {
+            private const val TYPE_HEADER = 0
+            private const val TYPE_SWITCH = 1
         }
 
-        itemKeys.forEachIndexed { index, instance ->
-            val item = items[instance]!!
-            val view = if (index < container.childCount) {
-                container.getChildAt(index)
-            } else {
-                val v = themedInflater.inflate(R.layout.item_nautical_charger_inverter, container, false)
-                container.addView(v)
-                v
+        override fun getItemViewType(position: Int): Int {
+            return when (getItem(position)) {
+                is SwitchItem.Header -> TYPE_HEADER
+                is SwitchItem.SwitchEntry -> TYPE_SWITCH
             }
+        }
 
-            val name = if (item is net.osmand.plus.plugins.nautical.engine.Charger) {
-                item.name ?: getString(R.string.nautical_charger_instance, instance)
-            } else {
-                (item as? net.osmand.plus.plugins.nautical.engine.Inverter)?.name ?: getString(R.string.nautical_inverter_instance, instance)
-            }
-            view.findViewById<TextView>(R.id.txt_device_name)?.text = name
-            
-            val spinner = view.findViewById<android.widget.Spinner?>(R.id.spinner_device_mode)
-            val path = if (item is net.osmand.plus.plugins.nautical.engine.Charger) "electrical.chargers.$instance" else "electrical.inverters.$instance"
-            val meta = NauticalPlugin.engine?.getCurrentState()?.pathMeta?.get("$path.mode")
-            
-            @Suppress("UNCHECKED_CAST")
-            val possibleValues = (meta?.get("possibleValues") as? List<String>)?.map { it.lowercase() }
-            
-            val modes = possibleValues ?: (if (item is net.osmand.plus.plugins.nautical.engine.Charger) listOf("off", "on", "only_eco") else listOf("off", "on", "eco"))
-            
-            if (spinner != null && spinner.tag != modes) {
-                val adapter = android.widget.ArrayAdapter(requireContext(), android.R.layout.simple_spinner_item, modes.map { it.replace("_", " ").uppercase() })
-                adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-                spinner.adapter = adapter
-                spinner.tag = modes
-            }
-
-            val currentMode = if (item is net.osmand.plus.plugins.nautical.engine.Charger) item.mode else (item as? net.osmand.plus.plugins.nautical.engine.Inverter)?.mode
-            val targetIdx = modes.indexOf(currentMode?.lowercase())
-            if (spinner != null && targetIdx != -1 && spinner.selectedItemPosition != targetIdx) {
-                spinner.setSelection(targetIdx, false)
-            }
-
-            spinner.onItemSelectedListener = object : android.widget.AdapterView.OnItemSelectedListener {
-                override fun onItemSelected(parent: android.widget.AdapterView<*>?, v: View?, position: Int, id: Long) {
-                    val newMode = modes[position]
-                    if (newMode != currentMode?.lowercase()) {
-                        onModeChange(instance, newMode)
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
+            return if (viewType == TYPE_HEADER) {
+                val tv = TextView(parent.context).apply {
+                    layoutParams = ViewGroup.MarginLayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                        setMargins(0, (16 * resources.displayMetrics.density).toInt(), 0, (6 * resources.displayMetrics.density).toInt())
                     }
+                    setTextAppearance(androidx.appcompat.R.style.TextAppearance_AppCompat_Medium)
+                    setTypeface(android.graphics.Typeface.DEFAULT_BOLD)
+                    setTextColor(androidx.core.content.ContextCompat.getColor(context, R.color.icon_color_osmand_light))
                 }
-                override fun onNothingSelected(parent: android.widget.AdapterView<*>?) {}
+                HeaderViewHolder(tv)
+            } else {
+                val view = LayoutInflater.from(parent.context).inflate(R.layout.item_nautical_switch, parent, false)
+                SwitchViewHolder(view)
             }
         }
-    }
 
-    private fun setupWindlassButton(button: View, path: String) {
-        button.setOnTouchListener { v, event ->
-            if (!button.isEnabled) return@setOnTouchListener false
-            when (event.action) {
-                MotionEvent.ACTION_DOWN -> {
-                    NauticalPlugin.engine?.setSwitch(path, true)
-                    v.isPressed = true
-                    true
-                }
-                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                    NauticalPlugin.engine?.setSwitch(path, false)
-                    v.isPressed = false
-                    v.performClick()
-                    true
-                }
-                else -> false
+        override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
+            when (val item = getItem(position)) {
+                is SwitchItem.Header -> (holder as HeaderViewHolder).bind(item.title)
+                is SwitchItem.SwitchEntry -> (holder as SwitchViewHolder).bind(item, onToggle)
             }
         }
-    }
 
-    private class SwitchAdapter(private val onToggle: (String, Boolean) -> Unit) : ListAdapter<Pair<String, Boolean>, SwitchViewHolder>(DiffCallback()) {
-        var timestamps: Map<String, Long> = emptyMap()
-        var dimmers: Map<String, Double> = emptyMap()
-        var meta: Map<String, Map<String, Any>> = emptyMap()
-
-        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): SwitchViewHolder {
-            val view = LayoutInflater.from(parent.context).inflate(R.layout.item_nautical_switch, parent, false)
-            return SwitchViewHolder(view)
-        }
-
-        override fun onBindViewHolder(holder: SwitchViewHolder, position: Int) {
-            val (path, state) = getItem(position)
-            val isPending = timestamps.containsKey("pending.electrical.switches.$path.state") || 
-                           timestamps.containsKey("pending.electrical.switches.$path.dimmingLevel")
-            val displayName = meta[path]?.get("displayName") as? String
-            val dimLevel = dimmers[path]
-            holder.bind(path, state, isPending, displayName, dimLevel, onToggle)
-        }
-
-        private class DiffCallback : DiffUtil.ItemCallback<Pair<String, Boolean>>() {
-            override fun areItemsTheSame(oldItem: Pair<String, Boolean>, newItem: Pair<String, Boolean>): Boolean {
-                return oldItem.first == newItem.first
+        private class DiffCallback : DiffUtil.ItemCallback<SwitchItem>() {
+            override fun areItemsTheSame(oldItem: SwitchItem, newItem: SwitchItem): Boolean {
+                return when {
+                    oldItem is SwitchItem.Header && newItem is SwitchItem.Header -> oldItem.title == newItem.title
+                    oldItem is SwitchItem.SwitchEntry && newItem is SwitchItem.SwitchEntry -> oldItem.path == newItem.path
+                    else -> false
+                }
             }
 
-            override fun areContentsTheSame(oldItem: Pair<String, Boolean>, newItem: Pair<String, Boolean>): Boolean {
+            override fun areContentsTheSame(oldItem: SwitchItem, newItem: SwitchItem): Boolean {
                 return oldItem == newItem
             }
+        }
+    }
+
+    private class HeaderViewHolder(view: View) : RecyclerView.ViewHolder(view) {
+        fun bind(title: String) {
+            (itemView as? TextView)?.text = title
         }
     }
 
@@ -191,7 +199,13 @@ class NauticalSwitchPanelFragment : BaseOsmAndFragment() {
         private val switchToggle: SwitchCompat = view.findViewById(R.id.switch_toggle)
         private val sliderDimmer: com.google.android.material.slider.Slider = view.findViewById(R.id.slider_dimmer)
 
-        fun bind(path: String, state: Boolean, isPending: Boolean, displayName: String?, dimLevel: Double?, onToggle: (String, Boolean) -> Unit) {
+        fun bind(entry: SwitchItem.SwitchEntry, onToggle: (String, Boolean) -> Unit) {
+            val path = entry.path
+            val state = entry.state
+            val isPending = entry.isPending
+            val displayName = entry.displayName
+            val dimLevel = entry.dimLevel
+
             txtName.text = displayName ?: path.substringAfterLast(".").replace("_", " ").replaceFirstChar { if (it.isLowerCase()) it.titlecase(java.util.Locale.getDefault()) else it.toString() }
             switchToggle.setOnCheckedChangeListener(null)
             switchToggle.isChecked = state

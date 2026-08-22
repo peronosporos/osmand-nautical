@@ -577,6 +577,12 @@
             android:inputType="numberDecimal" />
 
         <Preference
+            android:key="nautical_anchor_watch_dialog"
+            android:layout="@layout/preference_with_descr"
+            android:title="@string/nautical_anchor_label"
+            android:summary="Open Anchor Watch &amp; Drag Alarm dashboard" />
+
+        <Preference
             android:key="nautical_clear_anchor"
             android:layout="@layout/preference_with_descr"
             android:title="@string/nautical_anchor_clear_watch" />
@@ -592,6 +598,12 @@
         android:key="nautical_sailing_category"
         android:layout="@layout/preference_category_with_descr"
         android:title="@string/pref_sailing_performance_title" />
+
+    <Preference
+        android:key="sail_inventory"
+        android:layout="@layout/preference_with_descr"
+        android:title="@string/nautical_sail_inventory_title"
+        android:summary="Manage sail inventory and active sail plan" />
 
     <Preference
         android:key="sailing_performance"

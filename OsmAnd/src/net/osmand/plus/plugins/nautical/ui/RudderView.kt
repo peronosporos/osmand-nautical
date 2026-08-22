@@ -224,7 +224,6 @@ class RudderView @JvmOverloads constructor(
         updateColors()
 
         val state = NauticalPlugin.engine?.getCurrentState()
-        val isVirtual = state?.rudderAngle == null && state?.simulatedRudderAngle != null
         val effectiveAngle = state?.rudderAngle ?: state?.simulatedRudderAngle ?: Double.NaN
         setRudderAngle(effectiveAngle)
 
@@ -232,14 +231,7 @@ class RudderView @JvmOverloads constructor(
         val h = height.toFloat()
         if (w <= 0 || h <= 0) return
         
-        if (isVirtual) {
-            textPaint.textSize = dp14
-            textPaint.color = colorSecondary
-            textPaint.alpha = 180
-            canvas.drawText(context.getString(R.string.nautical_virtual_rudder_label), w - dp45, h - dp6, textPaint)
-        }
-        
-        val centerY = h * 0.65f 
+        val centerY = h * 0.62f 
         val centerX = w / 2f
         
         if (centerY.isNaN() || centerX.isNaN()) return
@@ -288,22 +280,32 @@ class RudderView @JvmOverloads constructor(
         paint.strokeWidth = dp4
         paint.strokeCap = Paint.Cap.ROUND
         if (!isOffline) {
-            canvas.drawLine(pointerX, centerY - dp14, pointerX, centerY + dp14, paint)
+            canvas.drawLine(pointerX, centerY - dp12, pointerX, centerY + dp12, paint)
         }
         
         val deg = Math.toDegrees(animatedAngle).toInt()
+        val textY = centerY - dp14
         
-        textPaint.textSize = dp24
+        textPaint.textSize = dp14
         textPaint.color = if (isOffline) colorSecondary else colorPrimary
         if (isOffline) textPaint.alpha = 120
         textPaint.typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
         
         if (isOffline) {
-            canvas.drawText(offlineLabel, pointerX, centerY - dp20, textPaint)
+            canvas.drawText(offlineLabel, centerX, textY, textPaint)
         } else {
-            val count = NauticalFormatter.formatInt(abs(deg), degreeBuffer)
+            val absDeg = abs(deg)
+            val side = if (deg < -0.5) "P" else if (deg > 0.5) "S" else ""
+            val labelX = pointerX.coerceIn(padding + dp14, w - padding - dp14)
+            val count = NauticalFormatter.formatInt(absDeg, degreeBuffer)
             degreeBuffer[count] = '°'
-            canvas.drawText(degreeBuffer, 0, count + 1, pointerX, centerY - dp20, textPaint)
+            if (side.isNotEmpty()) {
+                degreeBuffer[count + 1] = ' '
+                degreeBuffer[count + 2] = side[0]
+                canvas.drawText(degreeBuffer, 0, count + 3, labelX, textY, textPaint)
+            } else {
+                canvas.drawText(degreeBuffer, 0, count + 1, labelX, textY, textPaint)
+            }
         }
     }
 }

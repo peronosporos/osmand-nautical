@@ -25,30 +25,31 @@ class AutopilotBottomSheetHelper(
     fun updateManeuverButtons(vesselType: VesselType) {
         val isProa = vesselType == VesselType.PROA
         if (isProa) {
-            // Proa Boats: Shunt, Center Rudder, Heave-To, Docking Hold, Dodge Port, Dodge Stbd, Emergency Stop
+            // Proa Boats: Primary has Shunt & Center Rudder.
             tackPortBtn.text = sheet.getString(R.string.nautical_shunt)
             tackPortBtn.contentDescription = sheet.getString(R.string.nautical_shunt)
             tackStbdBtn.text = sheet.getString(R.string.nautical_center_rudder)
             tackStbdBtn.contentDescription = sheet.getString(R.string.nautical_center_rudder)
 
-            btnManeuverSec1.text = sheet.getString(R.string.nautical_shunt)
-            btnManeuverSec1.contentDescription = sheet.getString(R.string.nautical_shunt)
-            btnManeuverSec2.text = sheet.getString(R.string.nautical_heave_to)
-            btnManeuverSec2.contentDescription = sheet.getString(R.string.nautical_heave_to)
-            btnManeuverSec3.text = sheet.getString(R.string.nautical_docking_hold)
-            btnManeuverSec3.contentDescription = sheet.getString(R.string.nautical_docking_hold)
-            btnManeuverSec4.text = sheet.getString(R.string.nautical_dodge_port_label)
-            btnManeuverSec4.contentDescription = sheet.getString(R.string.nautical_dodge_port_label)
+            // Secondary Panel (No duplicate Shunt):
+            btnManeuverSec1.text = sheet.getString(R.string.nautical_heave_to)
+            btnManeuverSec1.contentDescription = sheet.getString(R.string.nautical_heave_to)
+            btnManeuverSec2.text = sheet.getString(R.string.nautical_docking_hold)
+            btnManeuverSec2.contentDescription = sheet.getString(R.string.nautical_docking_hold)
+            btnManeuverSec3.text = sheet.getString(R.string.nautical_slip_exit)
+            btnManeuverSec3.contentDescription = sheet.getString(R.string.nautical_slip_exit)
+            btnManeuverSec4.text = sheet.getString(R.string.nautical_weigh_anchor)
+            btnManeuverSec4.contentDescription = sheet.getString(R.string.nautical_weigh_anchor)
             btnManeuverSec4.visibility = View.VISIBLE
 
             layoutSecondaryRow3.visibility = View.VISIBLE
-            btnManeuverSec5.text = sheet.getString(R.string.nautical_dodge_stbd_label)
-            btnManeuverSec5.contentDescription = sheet.getString(R.string.nautical_dodge_stbd_label)
+            btnManeuverSec5.text = sheet.getString(R.string.nautical_dodge_port_label)
+            btnManeuverSec5.contentDescription = sheet.getString(R.string.nautical_dodge_port_label)
             btnManeuverSec6.text = sheet.getString(R.string.nautical_emergency_stop_label)
             btnManeuverSec6.contentDescription = sheet.getString(R.string.nautical_emergency_stop_label)
             btnManeuverSec6.visibility = View.VISIBLE
         } else {
-            // Conventional Boats: Tack Port, Tack Stbd, Gybe Port, Gybe Stbd, Heave-To, Docking Hold, Dodge, Emergency Stop
+            // Conventional Boats:
             tackPortBtn.text = sheet.getString(R.string.nautical_tack_port_short)
             tackPortBtn.contentDescription = sheet.getString(R.string.nautical_tack_port)
             tackStbdBtn.text = sheet.getString(R.string.nautical_tack_stbd_short)
@@ -60,13 +61,13 @@ class AutopilotBottomSheetHelper(
             btnManeuverSec2.contentDescription = sheet.getString(R.string.nautical_heave_to)
             btnManeuverSec3.text = sheet.getString(R.string.nautical_docking_hold)
             btnManeuverSec3.contentDescription = sheet.getString(R.string.nautical_docking_hold)
-            btnManeuverSec4.text = sheet.getString(R.string.nautical_dodge_port_label)
-            btnManeuverSec4.contentDescription = sheet.getString(R.string.nautical_dodge_port_label)
+            btnManeuverSec4.text = sheet.getString(R.string.nautical_slip_exit)
+            btnManeuverSec4.contentDescription = sheet.getString(R.string.nautical_slip_exit)
             btnManeuverSec4.visibility = View.VISIBLE
 
             layoutSecondaryRow3.visibility = View.VISIBLE
-            btnManeuverSec5.text = sheet.getString(R.string.nautical_dodge_stbd_label)
-            btnManeuverSec5.contentDescription = sheet.getString(R.string.nautical_dodge_stbd_label)
+            btnManeuverSec5.text = sheet.getString(R.string.nautical_weigh_anchor)
+            btnManeuverSec5.contentDescription = sheet.getString(R.string.nautical_weigh_anchor)
             btnManeuverSec6.text = sheet.getString(R.string.nautical_emergency_stop_label)
             btnManeuverSec6.contentDescription = sheet.getString(R.string.nautical_emergency_stop_label)
             btnManeuverSec6.visibility = View.VISIBLE
@@ -77,12 +78,15 @@ class AutopilotBottomSheetHelper(
         val isProa = vesselType == VesselType.PROA
         val curH = (state?.targetHeading ?: state?.headingTrue)?.let { Math.toDegrees(it) } ?: 0.0
         val awaDeg = state?.windDirectionApparent?.let { Math.toDegrees(it) } ?: 45.0
+        val mm = NauticalPlugin.getInstance()?.maneuverManager
 
         if (isProa) {
             if (isPort) {
                 val targetDeg = (((curH + 180.0) % 360.0 + 360.0) % 360.0).toInt()
                 onInitiateManeuver(sheet.getString(R.string.nautical_shunt), targetDeg) {
                     NauticalPlugin.autopilot?.shunt()
+                    mm?.setActiveManeuver("shunt")
+                    mm?.execute()
                 }
             } else {
                 onInitiateManeuver(sheet.getString(R.string.nautical_center_rudder), null) {
@@ -101,6 +105,8 @@ class AutopilotBottomSheetHelper(
             onInitiateManeuver(title, targetDeg) { confirmedDeg ->
                 confirmedDeg?.let { NauticalPlugin.autopilot?.setTargetHeading(it.toDouble()) }
                 NauticalPlugin.autopilot?.tack(port = isPort)
+                mm?.setActiveManeuver(if (isPort) "tack_port" else "tack_stbd")
+                mm?.execute()
             }
         }
     }
@@ -109,42 +115,47 @@ class AutopilotBottomSheetHelper(
         val isProa = vesselType == VesselType.PROA
         val curH = (state?.targetHeading ?: state?.headingTrue)?.let { Math.toDegrees(it) } ?: 0.0
         val awaDeg = state?.windDirectionApparent?.let { Math.toDegrees(it) } ?: 45.0
+        val mm = NauticalPlugin.getInstance()?.maneuverManager
 
         if (isProa) {
             when (index) {
                 1 -> {
-                    val targetDeg = (((curH + 180.0) % 360.0 + 360.0) % 360.0).toInt()
-                    onInitiateManeuver(sheet.getString(R.string.nautical_shunt), targetDeg) {
-                        NauticalPlugin.autopilot?.shunt()
+                    onInitiateManeuver(sheet.getString(R.string.nautical_heave_to), null) {
+                        NauticalPlugin.autopilot?.heaveTo(port = true)
+                        mm?.setActiveManeuver("heave_to")
+                        mm?.execute()
                     }
                 }
                 2 -> {
-                    onInitiateManeuver(sheet.getString(R.string.nautical_heave_to), null) {
-                        NauticalPlugin.autopilot?.heaveTo(port = true)
+                    onInitiateManeuver(sheet.getString(R.string.nautical_docking_hold), null) {
+                        NauticalPlugin.autopilot?.dockingHold()
+                        mm?.setActiveManeuver("docking")
+                        mm?.execute()
                     }
                 }
                 3 -> {
-                    onInitiateManeuver(sheet.getString(R.string.nautical_docking_hold), null) {
-                        NauticalPlugin.autopilot?.dockingHold()
+                    onInitiateManeuver(sheet.getString(R.string.nautical_slip_exit), null) {
+                        mm?.setActiveManeuver("slip_exit")
+                        mm?.execute()
                     }
                 }
                 4 -> {
+                    onInitiateManeuver(sheet.getString(R.string.nautical_weigh_anchor), null) {
+                        mm?.setActiveManeuver("weigh_anchor")
+                        mm?.execute()
+                    }
+                }
+                5 -> {
                     val targetDeg = (((curH - 10.0) % 360.0 + 360.0) % 360.0).toInt()
                     onInitiateManeuver(sheet.getString(R.string.nautical_dodge_port_label), targetDeg) { confirmedDeg ->
                         confirmedDeg?.let { NauticalPlugin.autopilot?.setTargetHeading(it.toDouble()) }
                         NauticalPlugin.autopilot?.dodge(port = true)
                     }
                 }
-                5 -> {
-                    val targetDeg = (((curH + 10.0) % 360.0 + 360.0) % 360.0).toInt()
-                    onInitiateManeuver(sheet.getString(R.string.nautical_dodge_stbd_label), targetDeg) { confirmedDeg ->
-                        confirmedDeg?.let { NauticalPlugin.autopilot?.setTargetHeading(it.toDouble()) }
-                        NauticalPlugin.autopilot?.dodge(port = false)
-                    }
-                }
                 6 -> {
                     onInitiateManeuver(sheet.getString(R.string.nautical_emergency_stop_label), null) {
                         NauticalPlugin.autopilot?.emergencyStop()
+                        mm?.abort("Emergency stop executed", isAlarm = true)
                     }
                 }
             }
@@ -162,35 +173,40 @@ class AutopilotBottomSheetHelper(
                     onInitiateManeuver(sheet.getString(R.string.nautical_gybe), targetDeg) { confirmedDeg ->
                         confirmedDeg?.let { NauticalPlugin.autopilot?.setTargetHeading(it.toDouble()) }
                         NauticalPlugin.autopilot?.gybe(port = isPort)
+                        mm?.setActiveManeuver(if (isPort) "gybe_port" else "gybe_stbd")
+                        mm?.execute()
                     }
                 }
                 2 -> {
                     onInitiateManeuver(sheet.getString(R.string.nautical_heave_to), null) {
                         NauticalPlugin.autopilot?.heaveTo(port = true)
+                        mm?.setActiveManeuver("heave_to")
+                        mm?.execute()
                     }
                 }
                 3 -> {
                     onInitiateManeuver(sheet.getString(R.string.nautical_docking_hold), null) {
                         NauticalPlugin.autopilot?.dockingHold()
+                        mm?.setActiveManeuver("docking")
+                        mm?.execute()
                     }
                 }
                 4 -> {
-                    val targetDeg = (((curH - 10.0) % 360.0 + 360.0) % 360.0).toInt()
-                    onInitiateManeuver(sheet.getString(R.string.nautical_dodge_port_label), targetDeg) { confirmedDeg ->
-                        confirmedDeg?.let { NauticalPlugin.autopilot?.setTargetHeading(it.toDouble()) }
-                        NauticalPlugin.autopilot?.dodge(port = true)
+                    onInitiateManeuver(sheet.getString(R.string.nautical_slip_exit), null) {
+                        mm?.setActiveManeuver("slip_exit")
+                        mm?.execute()
                     }
                 }
                 5 -> {
-                    val targetDeg = (((curH + 10.0) % 360.0 + 360.0) % 360.0).toInt()
-                    onInitiateManeuver(sheet.getString(R.string.nautical_dodge_stbd_label), targetDeg) { confirmedDeg ->
-                        confirmedDeg?.let { NauticalPlugin.autopilot?.setTargetHeading(it.toDouble()) }
-                        NauticalPlugin.autopilot?.dodge(port = false)
+                    onInitiateManeuver(sheet.getString(R.string.nautical_weigh_anchor), null) {
+                        mm?.setActiveManeuver("weigh_anchor")
+                        mm?.execute()
                     }
                 }
                 6 -> {
                     onInitiateManeuver(sheet.getString(R.string.nautical_emergency_stop_label), null) {
                         NauticalPlugin.autopilot?.emergencyStop()
+                        mm?.abort("Emergency stop executed", isAlarm = true)
                     }
                 }
             }

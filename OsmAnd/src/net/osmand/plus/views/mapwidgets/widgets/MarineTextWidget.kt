@@ -205,7 +205,6 @@ class MarineTextWidget(
             WidgetType.NAUTICAL_AC_FREQUENCY -> "electrical.ac.$instance.frequency"
             WidgetType.NAUTICAL_GNSS_QUALITY -> "navigation.gnss.horizontalDilution"
             WidgetType.NAUTICAL_ILLUMINANCE -> SignalKPaths.ENV_OUTSIDE_ILLUMINANCE
-            WidgetType.NAUTICAL_RIGGING_LOADS -> "rigging.loads"
             WidgetType.NAUTICAL_AC_SYSTEM -> "electrical.ac.0"
             WidgetType.NAUTICAL_NOTIFICATIONS_LIST -> "notifications"
             else -> customId ?: ""
@@ -431,9 +430,11 @@ class MarineTextWidget(
                 } else mapActivity.getString(R.string.n_a) to "lux"
             }
             WidgetType.NAUTICAL_RIGGING_LOAD -> {
-                val load = if (instance == "0") state.riggingLoads.values.maxOrNull() else state.riggingLoads[instance]
-                if (load != null) {
-                    String.format(Locale.US, "%.0f", load) to "kgf"
+                val loads = if (instance == "0") state.riggingLoads.values else state.riggingLoads.filterKeys { it.startsWith(instance) }.values
+                if (loads.isNotEmpty()) {
+                    val max = loads.max()
+                    val unit = if (loads.size > 1) "kgf (${loads.size})" else "kgf"
+                    String.format(Locale.US, "%.0f", max) to unit
                 } else mapActivity.getString(R.string.n_a) to "kgf"
             }
             WidgetType.NAUTICAL_MEDIA -> {
@@ -464,13 +465,6 @@ class MarineTextWidget(
                 } else mapActivity.getString(R.string.n_a) to ""
             }
             WidgetType.NAUTICAL_REEFS -> (state.reefs?.toString() ?: mapActivity.getString(R.string.n_a)) to ""
-            WidgetType.NAUTICAL_RIGGING_LOADS -> {
-                val loads = if (instance == "0") state.riggingLoads.values else state.riggingLoads.filterKeys { it.startsWith(instance) }.values
-                if (loads.isNotEmpty()) {
-                    val max = loads.max()
-                    String.format(Locale.US, "%.0f", max) to "kgf (${loads.size})"
-                } else mapActivity.getString(R.string.n_a) to "kgf"
-            }
             WidgetType.NAUTICAL_AC_SYSTEM -> {
                 val inv = state.inverters[instance] ?: state.inverters["0"]
                 val chg = state.chargers[instance] ?: state.chargers["0"]

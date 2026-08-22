@@ -238,7 +238,6 @@ public enum WidgetType {
 	NAUTICAL_WATERMAKER_TOTAL("nautical_watermaker_total", R.string.nautical_watermaker_total, R.string.nautical_watermaker_total, R.drawable.ic_action_nautical_water_tank, R.drawable.ic_action_nautical_water_tank, 0, WidgetGroup.NAUTICAL_SYSTEMS, RIGHT),
 	NAUTICAL_WATERMAKER_SALINITY("nautical_watermaker_salinity", R.string.nautical_watermaker_salinity, R.string.nautical_watermaker_salinity, R.drawable.ic_action_nautical_water_temp, R.drawable.ic_action_nautical_water_temp, 0, WidgetGroup.NAUTICAL_SYSTEMS, RIGHT),
 	NAUTICAL_REEFS("nautical_reefs", R.string.nautical_reefs, R.string.nautical_reefs, R.drawable.ic_action_sail_boat_dark, R.drawable.ic_action_sail_boat_dark, 0, WidgetGroup.NAUTICAL_TELEMETRY, RIGHT),
-	NAUTICAL_RIGGING_LOADS("nautical_rigging_loads_multi", R.string.nautical_rigging_load_label, R.string.nautical_rigging_load_desc, R.drawable.ic_action_settings, R.drawable.ic_action_settings, 0, WidgetGroup.NAUTICAL_TELEMETRY, RIGHT),
 	NAUTICAL_AC_SYSTEM("nautical_ac_system_summary", R.string.nautical_ac_system, R.string.nautical_ac_system_desc, R.drawable.ic_action_nautical_battery_volt, R.drawable.ic_action_nautical_battery_volt, 0, WidgetGroup.NAUTICAL_SYSTEMS, RIGHT),
 	NAUTICAL_NOTIFICATIONS_LIST("nautical_notifications_list", R.string.nautical_notifications, R.string.nautical_notifications, R.drawable.ic_action_alert, R.drawable.ic_action_alert, 0, WidgetGroup.NAUTICAL_SYSTEMS, RIGHT),
 

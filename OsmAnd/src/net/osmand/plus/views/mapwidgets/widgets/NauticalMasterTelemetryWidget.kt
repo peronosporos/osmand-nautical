@@ -83,7 +83,16 @@ class NauticalMasterTelemetryWidget(
             return
         }
 
-        val (main, sub) = NauticalWidgetHelper.formatTelemetry(mapActivity, mapActivity.app.settings, primaryWidget, state)
+        val (main, sub) = if (primaryWidget == WidgetType.NAUTICAL_POLAR_RATIO) {
+            when {
+                state.polarSpeedRatio != null -> NauticalWidgetHelper.formatTelemetry(mapActivity, mapActivity.app.settings, WidgetType.NAUTICAL_POLAR_RATIO, state)
+                state.velocityMadeGood != null -> NauticalWidgetHelper.formatTelemetry(mapActivity, mapActivity.app.settings, WidgetType.NAUTICAL_VMG, state)
+                state.speedOverGround != null -> NauticalWidgetHelper.formatTelemetry(mapActivity, mapActivity.app.settings, WidgetType.NAUTICAL_SOG, state)
+                else -> "--" to "%"
+            }
+        } else {
+            NauticalWidgetHelper.formatTelemetry(mapActivity, mapActivity.app.settings, primaryWidget, state)
+        }
         setText(main, sub)
         contentView?.alpha = if (state.connectionStatus == net.osmand.plus.plugins.nautical.engine.ConnectionStatus.STALE) 0.5f else 1.0f
     }
@@ -106,7 +115,7 @@ class NauticalMasterTelemetryWidget(
 
     private fun getDefaultPrimaryWidgetForMode(mode: net.osmand.plus.plugins.nautical.engine.SailingWorkflowState): WidgetType {
         return when (mode) {
-            net.osmand.plus.plugins.nautical.engine.SailingWorkflowState.TACTICAL_PASSAGE -> WidgetType.NAUTICAL_SOG
+            net.osmand.plus.plugins.nautical.engine.SailingWorkflowState.TACTICAL_PASSAGE -> WidgetType.NAUTICAL_POLAR_RATIO
             net.osmand.plus.plugins.nautical.engine.SailingWorkflowState.CLOSE_QUARTERS -> WidgetType.NAUTICAL_DEPTH
             net.osmand.plus.plugins.nautical.engine.SailingWorkflowState.STATIONARY_ANCHORED -> WidgetType.NAUTICAL_DEPTH
         }

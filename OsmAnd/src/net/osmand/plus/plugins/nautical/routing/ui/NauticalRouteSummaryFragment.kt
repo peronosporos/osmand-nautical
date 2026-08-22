@@ -44,14 +44,34 @@ class NauticalRouteSummaryFragment : BaseOsmAndFragment() {
 
         val totalDistText = view.findViewById<TextView>(R.id.total_distance)
         val totalTimeText = view.findViewById<TextView>(R.id.total_time)
+        val emptyLayout = view.findViewById<View>(R.id.layout_empty_plan)
+        val btnCreatePlan = view.findViewById<com.google.android.material.button.MaterialButton>(R.id.btn_create_passage_plan)
+
+        btnCreatePlan.setOnClickListener {
+            val mapActivity = activity as? net.osmand.plus.activities.MapActivity
+            if (mapActivity != null) {
+                val boatMode = net.osmand.plus.settings.backend.ApplicationMode.valueOfStringKey("boat", null)
+                    ?: net.osmand.plus.settings.backend.ApplicationMode.DEFAULT
+                app.settings.APPLICATION_MODE.set(boatMode)
+                net.osmand.plus.mapmarkers.PlanRouteFragment.showInstance(mapActivity, null)
+            }
+        }
 
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.optimalRoute.collectLatest { result ->
-                    if (result != null) {
+                    if (result != null && result.legs.isNotEmpty()) {
+                        emptyLayout.visibility = View.GONE
+                        recyclerView.visibility = View.VISIBLE
                         totalDistText.text = String.format(Locale.US, "Total Dist: %.1f NM", result.totalDistanceNm)
                         totalTimeText.text = String.format(Locale.US, "Total ETE: %.1f h", result.totalTimeHours)
                         adapter.submitList(result.legs)
+                    } else {
+                        emptyLayout.visibility = View.VISIBLE
+                        recyclerView.visibility = View.GONE
+                        totalDistText.text = "Total Dist: -- NM"
+                        totalTimeText.text = "Total ETE: -- h"
+                        adapter.submitList(emptyList())
                     }
                 }
             }

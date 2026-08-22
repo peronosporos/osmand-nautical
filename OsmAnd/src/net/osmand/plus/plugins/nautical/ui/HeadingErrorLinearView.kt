@@ -38,10 +38,30 @@ class HeadingErrorLinearView @JvmOverloads constructor(
     private var colorYellow = Color.TRANSPARENT
     private var colorRed = Color.TRANSPARENT
     private val indicatorPath = Path()
+    private val DEGREE_LABELS = arrayOf("-20°", "-10°", "0°", "+10°", "+20°")
+    private val DEGREE_VALUES = intArrayOf(-20, -10, 0, 10, 20)
+
+    private var dp1 = 0f
+    private var dp2 = 0f
+    private var dp3 = 0f
+    private var dp5 = 0f
+    private var dp6 = 0f
+    private var dp8 = 0f
+    private var dp10 = 0f
+    private var dp12 = 0f
 
     init {
         isClickable = true
         isFocusable = true
+        val density = resources.displayMetrics.density
+        dp1 = 1f * density
+        dp2 = 2f * density
+        dp3 = 3f * density
+        dp5 = 5f * density
+        dp6 = 6f * density
+        dp8 = 8f * density
+        dp10 = 10f * density
+        dp12 = 12f * density
         updateColors()
         paint.strokeCap = Paint.Cap.ROUND
         textPaint.textAlign = Paint.Align.CENTER
@@ -68,14 +88,15 @@ class HeadingErrorLinearView @JvmOverloads constructor(
         super.onDraw(canvas)
         val w = width.toFloat()
         val h = height.toFloat()
-        val centerY = h / 2f
+        if (w <= 0 || h <= 0) return
         
-        val padding = 40f
+        val centerY = h * 0.40f
+        val padding = dp12 * 2f
         val scaleWidth = w - (padding * 2)
 
         // 1. Draw Background Scale Line
         paint.style = Paint.Style.STROKE
-        paint.strokeWidth = 2f
+        paint.strokeWidth = dp2
         paint.color = colorSecondary
         paint.alpha = 60
         canvas.drawLine(padding, centerY, w - padding, centerY, paint)
@@ -85,32 +106,57 @@ class HeadingErrorLinearView @JvmOverloads constructor(
             val ratio = (i + 45) / 90f
             val x = padding + (ratio * scaleWidth)
             
-            val isMajor = i % 15 == 0
-            val tickLen = if (isMajor) 12f else 6f
+            val isMajor = i % 10 == 0
+            val tickLen = if (isMajor) dp6 else dp3
             
             paint.alpha = if (isMajor) 200 else 80
-            paint.strokeWidth = if (isMajor) 2.5f else 1.5f
+            paint.strokeWidth = if (isMajor) dp2 else dp1
             paint.color = if (i == 0) colorOrange else colorPrimary
             
             canvas.drawLine(x, centerY - tickLen, x, centerY + tickLen, paint)
         }
 
-        // 3. Draw Error Indicator (Triangle pointing up)
-        val errorRatio = (headingError + 45) / 90f
+        // 3. Draw Degree Offset Labels
+        textPaint.textSize = dp10
+        textPaint.typeface = Typeface.create("sans-serif-condensed", Typeface.BOLD)
+        val textY = centerY + dp12
+        for (idx in DEGREE_VALUES.indices) {
+            val degVal = DEGREE_VALUES[idx]
+            val ratio = (degVal + 45f) / 90f
+            val x = padding + (ratio * scaleWidth)
+            textPaint.color = if (degVal == 0) colorOrange else colorSecondary
+            textPaint.alpha = if (degVal == 0) 255 else 180
+            canvas.drawText(DEGREE_LABELS[idx], x, textY, textPaint)
+        }
+
+        // 4. Draw Dynamic Error Magnitude Highlight Bar
+        val zeroX = padding + (0.5f * scaleWidth)
+        val errorRatio = (headingError + 45f) / 90f
         val indicatorX = padding + (errorRatio * scaleWidth)
-        
-        paint.style = Paint.Style.FILL
-        paint.color = when {
-            abs(headingError) < 5 -> colorGreen
-            abs(headingError) < 15 -> colorYellow
+
+        val errorColor = when {
+            abs(headingError) < 5f -> colorGreen
+            abs(headingError) < 15f -> colorYellow
             else -> colorRed
         }
+
+        if (abs(headingError) > 0.5f) {
+            paint.style = Paint.Style.STROKE
+            paint.strokeWidth = dp3
+            paint.color = errorColor
+            paint.alpha = 180
+            canvas.drawLine(zeroX, centerY, indicatorX, centerY, paint)
+        }
+
+        // 5. Draw Error Indicator (Triangle pointing up)
+        paint.style = Paint.Style.FILL
+        paint.color = errorColor
         paint.alpha = 255
         
         indicatorPath.reset()
-        indicatorPath.moveTo(indicatorX, centerY - 2f)
-        indicatorPath.lineTo(indicatorX - 8f, centerY - 14f)
-        indicatorPath.lineTo(indicatorX + 8f, centerY - 14f)
+        indicatorPath.moveTo(indicatorX, centerY - dp2)
+        indicatorPath.lineTo(indicatorX - dp5, centerY - dp10)
+        indicatorPath.lineTo(indicatorX + dp5, centerY - dp10)
         indicatorPath.close()
         canvas.drawPath(indicatorPath, paint)
     }

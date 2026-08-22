@@ -25,7 +25,7 @@ class SignalKServerChartsFragment : BaseOsmAndFragment() {
     private lateinit var adapter: ChartsAdapter
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
-        val view = themedInflater.inflate(R.layout.recyclerview_fragment, container, false)
+        val view = themedInflater.inflate(R.layout.fragment_signalk_server_resources, container, false)
         val recyclerView: RecyclerView = view.findViewById(R.id.recycler_view)
         
         adapter = ChartsAdapter(
@@ -34,6 +34,12 @@ class SignalKServerChartsFragment : BaseOsmAndFragment() {
         )
         recyclerView.layoutManager = LinearLayoutManager(requireContext())
         recyclerView.adapter = adapter
+
+        view.findViewById<MaterialButton?>(R.id.btn_empty_secondary)?.setOnClickListener {
+            (activity as? net.osmand.plus.activities.MapActivity)?.let { mapAct ->
+                net.osmand.plus.plugins.nautical.ui.SignalKConnectionSettingsDialog.show(mapAct.supportFragmentManager)
+            }
+        }
 
         refreshCharts()
 
@@ -61,12 +67,24 @@ class SignalKServerChartsFragment : BaseOsmAndFragment() {
 
     private fun refreshCharts() {
         lifecycleScope.launch {
-            val emptyTxt = view?.findViewById<TextView>(R.id.txt_empty_list)
+            val root = view ?: return@launch
+            val emptyLayout = root.findViewById<View>(R.id.layout_empty_state)
+            val txtTitle = root.findViewById<TextView>(R.id.txt_empty_title)
+            val txtDesc = root.findViewById<TextView>(R.id.txt_empty_desc)
+            val btnPrimary = root.findViewById<MaterialButton>(R.id.btn_empty_primary)
+            val btnSecondary = root.findViewById<MaterialButton>(R.id.btn_empty_secondary)
             val rest = NauticalPlugin.engine?.getRestService()
+            val serverIp = app.settings.NAUTICAL_SERVER_IP.get() ?: ""
+            val serverPort = app.settings.NAUTICAL_SERVER_PORT.get() ?: "3000"
+
             if (rest == null) {
                 adapter.submitList(emptyList())
-                emptyTxt?.text = getString(R.string.nautical_server_no_charts_desc)
-                emptyTxt?.visibility = View.VISIBLE
+                emptyLayout?.visibility = View.VISIBLE
+                txtTitle?.text = "Signal K Server Disconnected"
+                txtDesc?.text = "Unable to connect to Signal K server at $serverIp:$serverPort. Please verify server IP and connection settings."
+                btnPrimary?.text = "Retry Connection"
+                btnPrimary?.setOnClickListener { refreshCharts() }
+                btnSecondary?.visibility = View.VISIBLE
                 return@launch
             }
             try {
@@ -74,16 +92,24 @@ class SignalKServerChartsFragment : BaseOsmAndFragment() {
                 val charts = response.body()
                 if (charts != null && charts.isNotEmpty()) {
                     adapter.submitList(charts.values.toList())
-                    emptyTxt?.visibility = View.GONE
+                    emptyLayout?.visibility = View.GONE
                 } else {
                     adapter.submitList(emptyList())
-                    emptyTxt?.text = getString(R.string.nautical_server_no_charts_desc)
-                    emptyTxt?.visibility = View.VISIBLE
+                    emptyLayout?.visibility = View.VISIBLE
+                    txtTitle?.text = getString(R.string.nautical_server_no_charts_title)
+                    txtDesc?.text = "No chart layers available on the Signal K server. Upload marine charts using the Signal K Server Resource Manager (@signalk/charts-plugin)."
+                    btnPrimary?.text = getString(R.string.nautical_server_refresh_btn)
+                    btnPrimary?.setOnClickListener { refreshCharts() }
+                    btnSecondary?.visibility = View.VISIBLE
                 }
             } catch (_: Exception) {
                 adapter.submitList(emptyList())
-                emptyTxt?.text = getString(R.string.nautical_toast_conn_failed) + "\n\n" + getString(R.string.nautical_server_no_charts_desc)
-                emptyTxt?.visibility = View.VISIBLE
+                emptyLayout?.visibility = View.VISIBLE
+                txtTitle?.text = "Connection Failed"
+                txtDesc?.text = "Could not retrieve chart layers from $serverIp:$serverPort. Check network connection."
+                btnPrimary?.text = "Retry"
+                btnPrimary?.setOnClickListener { refreshCharts() }
+                btnSecondary?.visibility = View.VISIBLE
             }
         }
     }

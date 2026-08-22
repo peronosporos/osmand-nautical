@@ -10,7 +10,7 @@ import net.osmand.plus.R
 import net.osmand.plus.activities.MapActivity
 import net.osmand.plus.plugins.nautical.NauticalPlugin
 import net.osmand.plus.plugins.nautical.network.VhfStatus
-import net.osmand.plus.plugins.nautical.ui.VhfHistoryBottomSheet
+import net.osmand.plus.plugins.nautical.ui.VhfChannelPickerDialog
 import net.osmand.plus.views.layers.base.OsmandMapLayer
 import net.osmand.plus.views.mapwidgets.WidgetType
 import net.osmand.plus.views.mapwidgets.WidgetsPanel
@@ -55,8 +55,18 @@ class NauticalVhfWidget(
         super.setupView(view)
 
         view.setOnLongClickListener {
-            VhfHistoryBottomSheet.show(mapActivity.supportFragmentManager)
-            true
+            val vhf = NauticalPlugin.getInstance()?.vhfManager
+            if (vhf != null) {
+                if (vhf.status.value == VhfStatus.LIVE) {
+                    vhf.stopAudio()
+                } else {
+                    vhf.toggleLiveStream()
+                }
+                view.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS)
+                true
+            } else {
+                false
+            }
         }
 
         view.addOnAttachStateChangeListener(
@@ -86,11 +96,8 @@ class NauticalVhfWidget(
 
     override fun getOnClickListener(): View.OnClickListener {
         return View.OnClickListener {
-            val vhf = NauticalPlugin.getInstance()?.vhfManager ?: return@OnClickListener
-            if (vhf.status.value == VhfStatus.LIVE) {
-                vhf.stopAudio()
-            } else {
-                vhf.toggleLiveStream()
+            if (!mapActivity.isFinishing) {
+                net.osmand.plus.plugins.nautical.ui.widgets.NauticalVhfBottomSheet.show(mapActivity.supportFragmentManager)
             }
         }
     }
