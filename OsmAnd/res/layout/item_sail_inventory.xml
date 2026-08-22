@@ -12,7 +12,7 @@
     app:cardElevation="0dp"
     app:strokeColor="?attr/divider_color"
     app:strokeWidth="1dp"
-    app:cardBackgroundColor="?attr/card_and_list_background_light">
+    app:cardBackgroundColor="?attr/card_and_list_background_basic">
 
     <LinearLayout
         android:layout_width="match_parent"

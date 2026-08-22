@@ -17,7 +17,7 @@
             android:id="@+id/layout_efficiency_banner"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:background="?attr/card_and_list_background_light"
+            android:background="?attr/card_and_list_background_basic"
             android:orientation="horizontal"
             android:gravity="center_vertical"
             android:paddingStart="16dp"
