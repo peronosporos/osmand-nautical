@@ -26,8 +26,29 @@ class NauticalMasterTelemetryWidget(
     private var dataJob: Job? = null
     private var lastWorkflowState: net.osmand.plus.plugins.nautical.engine.SailingWorkflowState? = null
 
+    companion object {
+        private val PRIMARY_METRICS_CYCLE = arrayOf(
+            WidgetType.NAUTICAL_POLAR_RATIO,
+            WidgetType.NAUTICAL_VMG,
+            WidgetType.NAUTICAL_TWA,
+            WidgetType.NAUTICAL_SOG,
+            WidgetType.NAUTICAL_DEPTH,
+            WidgetType.NAUTICAL_AWA,
+            WidgetType.NAUTICAL_HEADING_MAGNETIC
+        )
+    }
+
     override fun setupView(view: View) {
         super.setupView(view)
+        view.setOnLongClickListener {
+            if (!mapActivity.isFinishing && !mapActivity.isDestroyed) {
+                net.osmand.plus.plugins.nautical.ui.MasterTelemetryBottomSheet.show(
+                    mapActivity.supportFragmentManager,
+                    customId ?: widgetType.id
+                )
+            }
+            true
+        }
         view.addOnAttachStateChangeListener(
             object : View.OnAttachStateChangeListener {
                 override fun onViewAttachedToWindow(v: View) {
@@ -87,6 +108,7 @@ class NauticalMasterTelemetryWidget(
             when {
                 state.polarSpeedRatio != null -> NauticalWidgetHelper.formatTelemetry(mapActivity, mapActivity.app.settings, WidgetType.NAUTICAL_POLAR_RATIO, state)
                 state.velocityMadeGood != null -> NauticalWidgetHelper.formatTelemetry(mapActivity, mapActivity.app.settings, WidgetType.NAUTICAL_VMG, state)
+                state.trueWindAngle != null -> NauticalWidgetHelper.formatTelemetry(mapActivity, mapActivity.app.settings, WidgetType.NAUTICAL_TWA, state)
                 state.speedOverGround != null -> NauticalWidgetHelper.formatTelemetry(mapActivity, mapActivity.app.settings, WidgetType.NAUTICAL_SOG, state)
                 else -> "--" to "%"
             }
@@ -144,10 +166,30 @@ class NauticalMasterTelemetryWidget(
     }
 
     override fun getOnClickListener(): View.OnClickListener {
-        return View.OnClickListener {
-            if (!mapActivity.isFinishing) {
-                net.osmand.plus.plugins.nautical.ui.MasterTelemetryBottomSheet.show(mapActivity.supportFragmentManager, customId ?: widgetType.id)
+        return View.OnClickListener { v ->
+            if (!mapActivity.isFinishing && !mapActivity.isDestroyed) {
+                cyclePrimaryMetric()
+                v.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
             }
         }
+    }
+
+    private fun cyclePrimaryMetric() {
+        val workflowEngine = NauticalPlugin.getInstance()?.workflowEngine
+        val mode = workflowEngine?.currentWorkflow?.value ?: net.osmand.plus.plugins.nautical.engine.SailingWorkflowState.TACTICAL_PASSAGE
+        val currentId = getPrimaryItemIdForMode(mode)
+        val currentIndex = PRIMARY_METRICS_CYCLE.indexOfFirst { it.id == currentId }
+        val nextIndex = if (currentIndex >= 0) (currentIndex + 1) % PRIMARY_METRICS_CYCLE.size else 0
+        val nextMetric = PRIMARY_METRICS_CYCLE[nextIndex]
+
+        val settings = mapActivity.app.settings
+        when (mode) {
+            net.osmand.plus.plugins.nautical.engine.SailingWorkflowState.TACTICAL_PASSAGE -> settings.NAUTICAL_MASTER_TELEMETRY_PRIMARY_ITEM_PASSAGE.set(nextMetric.id)
+            net.osmand.plus.plugins.nautical.engine.SailingWorkflowState.CLOSE_QUARTERS -> settings.NAUTICAL_MASTER_TELEMETRY_PRIMARY_ITEM_DOCKING.set(nextMetric.id)
+            net.osmand.plus.plugins.nautical.engine.SailingWorkflowState.STATIONARY_ANCHORED -> settings.NAUTICAL_MASTER_TELEMETRY_PRIMARY_ITEM_ANCHORED.set(nextMetric.id)
+        }
+        updateInfo(null)
+        updateWidgetView()
+        view?.invalidate()
     }
 }

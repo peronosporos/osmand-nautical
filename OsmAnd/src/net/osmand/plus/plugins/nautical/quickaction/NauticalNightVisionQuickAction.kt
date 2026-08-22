@@ -27,6 +27,9 @@ class NauticalNightVisionQuickAction : QuickAction {
     constructor(action: QuickAction) : super(action)
 
     override fun execute(mapActivity: MapActivity, params: Bundle?) {
+        if (mapActivity.isFinishing || mapActivity.isDestroyed) {
+            return
+        }
         val plugin = NauticalPlugin.getInstance()
         plugin?.toggleNightVision(mapActivity)
     }

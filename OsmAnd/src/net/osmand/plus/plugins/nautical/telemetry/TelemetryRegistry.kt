@@ -152,7 +152,52 @@ object TelemetryRegistry {
         metricsList.add(metric)
     }
 
-    fun getMetric(key: String): TelemetryMetricDefinition? = metricsMap[key]
+    fun getMetric(key: String): TelemetryMetricDefinition? {
+        val direct = metricsMap[key]
+        if (direct != null) return direct
+        val mappedPath = when (key) {
+            "nautical_sog" -> SignalKPaths.NAV_SPEED_OVER_GROUND
+            "nautical_stw" -> SignalKPaths.NAV_SPEED_THROUGH_WATER
+            "nautical_cog" -> SignalKPaths.NAV_COURSE_OVER_GROUND
+            "nautical_heading_magnetic", "nautical_hdg_mag" -> SignalKPaths.NAV_HEADING_MAG
+            "nautical_heading_true", "nautical_hdg_true" -> SignalKPaths.NAV_HEADING_TRUE
+            "nautical_vmg" -> SignalKPaths.PERF_VMG
+            "nautical_rot" -> SignalKPaths.NAV_RATE_OF_TURN
+            "nautical_log" -> SignalKPaths.NAV_LOG
+            "nautical_trip_log" -> SignalKPaths.NAV_TRIP_LOG
+            "nautical_xte" -> SignalKPaths.NAV_XTE
+            "nautical_dtw" -> SignalKPaths.NAV_DTW
+            "nautical_ttw" -> SignalKPaths.NAV_TTW
+            "nautical_roll" -> "navigation.attitude.roll"
+            "nautical_pitch" -> "navigation.attitude.pitch"
+            "nautical_awa" -> SignalKPaths.ENV_WIND_ANGLE_APPARENT
+            "nautical_aws" -> SignalKPaths.ENV_WIND_SPEED_APPARENT
+            "nautical_twa" -> SignalKPaths.ENV_WIND_ANGLE_TRUE
+            "nautical_tws", "nautical_wind" -> SignalKPaths.ENV_WIND_SPEED_TRUE
+            "nautical_twd" -> SignalKPaths.ENV_WIND_DIRECTION_TRUE
+            "nautical_depth" -> SignalKPaths.ENV_DEPTH_BELOW_TRANSDUCER
+            "nautical_depth_keel" -> SignalKPaths.ENV_DEPTH_BELOW_KEEL
+            "nautical_water_temp" -> SignalKPaths.ENV_WATER_TEMP
+            "nautical_outside_temp" -> SignalKPaths.ENV_OUTSIDE_TEMP
+            "nautical_pressure" -> SignalKPaths.ENV_OUTSIDE_PRESSURE
+            "nautical_humidity" -> SignalKPaths.ENV_OUTSIDE_HUMIDITY
+            "nautical_dew_point" -> SignalKPaths.ENV_AIR_DEW_POINT
+            "nautical_rudder_angle_text", "nautical_rudder_angle" -> SignalKPaths.STEERING_RUDDER_ANGLE
+            "nautical_engine_rpm" -> SignalKPaths.PROPULSION_PREFIX + "0.revolutions"
+            "nautical_engine_temp" -> SignalKPaths.PROPULSION_PREFIX + "0.temperature"
+            "nautical_oil_pressure" -> SignalKPaths.PROPULSION_PREFIX + "0.oilPressure"
+            "nautical_engine_runtime" -> SignalKPaths.PROPULSION_PREFIX + "0.runTime"
+            "nautical_fuel_level" -> "tanks.fuel.0.currentLevel"
+            "nautical_fresh_water_level" -> "tanks.freshWater.0.currentLevel"
+            "nautical_waste_water_level" -> "tanks.wasteWater.0.currentLevel"
+            "nautical_battery_volt" -> "electrical.batteries.0.voltage"
+            "nautical_battery_current" -> "electrical.batteries.0.current"
+            "nautical_battery_soc" -> "electrical.batteries.0.stateOfCharge"
+            "nautical_polar_ratio" -> SignalKPaths.PERF_POLAR_RATIO
+            else -> null
+        }
+        return if (mappedPath != null) metricsMap[mappedPath] else null
+    }
 
     fun getAllMetrics(): List<TelemetryMetricDefinition> = metricsList
 

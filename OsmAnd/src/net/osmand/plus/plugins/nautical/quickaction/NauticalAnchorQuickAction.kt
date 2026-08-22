@@ -33,6 +33,9 @@ class NauticalAnchorQuickAction : QuickAction {
     constructor(type: Int) : super(TYPE)
 
     override fun execute(mapActivity: MapActivity, params: Bundle?) {
+        if (mapActivity.isFinishing || mapActivity.isDestroyed) {
+            return
+        }
         val app = mapActivity.app
         val lat = app.settings.NAUTICAL_ANCHOR_LAT.get()
         if (lat == 0.0) {
@@ -66,11 +69,11 @@ class NauticalAnchorQuickAction : QuickAction {
                     app.settings.NAUTICAL_ANCHOR_DEPTH.set(depth)
                     
                     app.showToastMessage(app.getString(R.string.nautical_anchor_set_auto, depth, scopeRatio, totalRadius.toInt()))
-                } else {
+                } else if (!mapActivity.supportFragmentManager.isStateSaved) {
                     // Fallback to manual dialog if telemetry is missing
                     AnchorWatchDialogFragment.show(mapActivity.supportFragmentManager)
                 }
-            } else {
+            } else if (!mapActivity.supportFragmentManager.isStateSaved) {
                 // Fallback to manual dialog if telemetry is missing
                 AnchorWatchDialogFragment.show(mapActivity.supportFragmentManager)
             }

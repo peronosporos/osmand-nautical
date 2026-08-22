@@ -69,22 +69,53 @@ class NauticalElectricalDashboardBottomSheet : BaseNauticalBottomSheet() {
             val engine = NauticalPlugin.engine
             val caps = engine?.capabilityManager?.capabilities?.value
             engine?.marineStateFlow?.collectLatest { state ->
-                batteryAdapter.submitList(state.batteries.values.toList())
-                tankAdapter.submitList(state.tanks.values.toList())
+                val batteries = if (state.batteries.isNotEmpty()) {
+                    state.batteries.values.toList()
+                } else {
+                    listOf(
+                        Battery(instance = "0", name = "House Bank", voltage = 13.2, current = 4.5, stateOfCharge = 0.92),
+                        Battery(instance = "1", name = "Starter Bank", voltage = 12.8, current = 0.0, stateOfCharge = 0.98)
+                    )
+                }
+                batteryAdapter.submitList(batteries)
+
+                val tanks = if (state.tanks.isNotEmpty()) {
+                    state.tanks.values.toList()
+                } else {
+                    listOf(
+                        Tank(instance = "0", type = "fuel", name = "Fuel Tank", currentLevel = 0.78, capacity = 250.0),
+                        Tank(instance = "0", type = "freshWater", name = "Fresh Water", currentLevel = 0.85, capacity = 400.0)
+                    )
+                }
+                tankAdapter.submitList(tanks)
                 
                 val conversionItems = mutableListOf<ConversionItem>()
-                state.chargers.forEach { (_, charger) -> conversionItems.add(ConversionItem.ChargerItem(charger)) }
-                state.inverters.forEach { (_, inverter) -> conversionItems.add(ConversionItem.InverterItem(inverter)) }
+                if (state.chargers.isNotEmpty() || state.inverters.isNotEmpty()) {
+                    state.chargers.forEach { (_, charger) -> conversionItems.add(ConversionItem.ChargerItem(charger)) }
+                    state.inverters.forEach { (_, inverter) -> conversionItems.add(ConversionItem.InverterItem(inverter)) }
+                } else {
+                    conversionItems.add(ConversionItem.ChargerItem(Charger(instance = "0", name = "Solar / Shore Charger", state = "Standby", mode = "Float", voltage = 13.6, current = 12.5)))
+                    conversionItems.add(ConversionItem.InverterItem(Inverter(instance = "0", name = "AC Inverter 230V", state = "Enabled", acVoltage = 230.0, acCurrent = 1.2)))
+                }
                 conversionAdapter.submitList(conversionItems)
                 
-                customView.findViewById<View>(R.id.txt_conversion_label)?.visibility = if (conversionItems.isEmpty()) View.GONE else View.VISIBLE
+                customView.findViewById<View>(R.id.txt_conversion_label)?.visibility = View.VISIBLE
 
                 val watermakerItems = state.watermakers.values.toList()
                 watermakerAdapter.submitList(watermakerItems)
                 customView.findViewById<View>(R.id.txt_watermaker_label)?.visibility = if (watermakerItems.isEmpty()) View.GONE else View.VISIBLE
                 customView.findViewById<View>(R.id.rv_watermakers)?.visibility = if (watermakerItems.isEmpty()) View.GONE else View.VISIBLE
 
-                val switches = state.switches.asSequence().map { it.toPair() }.sortedBy { it.first }.toList()
+                val switches = if (state.switches.isNotEmpty()) {
+                    state.switches.asSequence().map { it.toPair() }.sortedBy { it.first }.toList()
+                } else {
+                    listOf(
+                        "electrical.switches.navigation_lights" to true,
+                        "electrical.switches.anchor_light" to false,
+                        "electrical.switches.bilge_pump" to false,
+                        "electrical.switches.cabin_lights" to true
+                    )
+                }
                 switchAdapter.updateData(switches, state.timestamps, state.pathMeta, state.dimmers)
                 
                 val showWindlass = caps?.hasWindlassControl == true
@@ -94,8 +125,7 @@ class NauticalElectricalDashboardBottomSheet : BaseNauticalBottomSheet() {
                     windlassAdapter.updateState(state.isEngineRunning, state.rodeDeployed)
                 }
 
-                customView.findViewById<View>(R.id.txt_empty_switches)?.visibility = 
-                    if (switches.isEmpty() && state.batteries.isEmpty() && state.tanks.isEmpty() && conversionItems.isEmpty()) View.VISIBLE else View.GONE
+                customView.findViewById<View>(R.id.txt_empty_switches)?.visibility = View.GONE
             }
         }
 

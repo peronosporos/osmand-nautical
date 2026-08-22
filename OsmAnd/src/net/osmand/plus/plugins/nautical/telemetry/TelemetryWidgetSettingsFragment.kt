@@ -155,14 +155,14 @@ class TelemetryWidgetSettingsFragment : BaseOsmAndFragment() {
     }
 
     private fun showAddMetricDialog() {
-        val context = requireContext()
-        val dialogView = themedInflater.inflate(R.layout.dialog_nautical_add_metric, null)
+        val themedCtx = net.osmand.plus.utils.UiUtilities.getThemedContext(requireContext(), nightMode)
+        val dialogView = LayoutInflater.from(themedCtx).inflate(R.layout.dialog_nautical_add_metric, null)
         val recycler = dialogView.findViewById<RecyclerView>(R.id.recycler_add_metrics)
-        recycler.layoutManager = LinearLayoutManager(context)
+        recycler.layoutManager = LinearLayoutManager(themedCtx)
 
-        val activeColor = AndroidUtils.getColorFromAttr(context, R.attr.active_color_primary)
-        val cardBgColor = AndroidUtils.getColorFromAttr(context, R.attr.card_and_list_background_basic)
-        val textColorSecondary = AndroidUtils.getColorFromAttr(context, android.R.attr.textColorSecondary)
+        val activeColor = AndroidUtils.getColorFromAttr(themedCtx, R.attr.active_color_primary)
+        val cardBgColor = AndroidUtils.getColorFromAttr(themedCtx, R.attr.card_and_list_background_basic)
+        val textColorSecondary = AndroidUtils.getColorFromAttr(themedCtx, android.R.attr.textColorSecondary)
 
         var selectedCategory: MetricCategory? = null
         val activeKeys = activeItems.map { it.key }.toSet()
@@ -233,7 +233,7 @@ class TelemetryWidgetSettingsFragment : BaseOsmAndFragment() {
 
         updateList(chipAll)
 
-        dialog = AlertDialog.Builder(context)
+        dialog = AlertDialog.Builder(themedCtx)
             .setView(dialogView)
             .setNegativeButton(R.string.shared_string_cancel, null)
             .create()

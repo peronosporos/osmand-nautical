@@ -832,6 +832,21 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
         if (alarmPriorityManager == null) {
             alarmPriorityManager = AlarmPriorityManager(app, engine!!.dataBroker)
         }
+        if (maneuverManager == null) {
+            maneuverManager = ManeuverManager(app).apply {
+                registerManeuver("anchoring", net.osmand.plus.plugins.nautical.maneuvers.AnchoringManeuver(app))
+                registerManeuver("mooring", net.osmand.plus.plugins.nautical.maneuvers.MooringManeuver(app))
+                registerManeuver("docking", net.osmand.plus.plugins.nautical.maneuvers.DockingManeuver(app))
+                registerManeuver("slip_exit", net.osmand.plus.plugins.nautical.maneuvers.SlipExitManeuver(app))
+                registerManeuver("weigh_anchor", net.osmand.plus.plugins.nautical.maneuvers.WeighingAnchorManeuver(app))
+                registerManeuver("heave_to", net.osmand.plus.plugins.nautical.maneuvers.HeavingToManeuver(app))
+                registerManeuver("tack_port", net.osmand.plus.plugins.nautical.maneuvers.TackingManeuver(app))
+                registerManeuver("tack_stbd", net.osmand.plus.plugins.nautical.maneuvers.TackingManeuver(app))
+                registerManeuver("gybe_port", net.osmand.plus.plugins.nautical.maneuvers.GybingManeuver(app))
+                registerManeuver("gybe_stbd", net.osmand.plus.plugins.nautical.maneuvers.GybingManeuver(app))
+                registerManeuver("shunt", net.osmand.plus.plugins.nautical.maneuvers.ShuntingManeuver(app))
+            }
+        }
         if (ttsHelper == null) {
             ttsHelper = ManeuverTtsHelper(app)
         }

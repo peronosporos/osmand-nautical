@@ -29,6 +29,9 @@ class NauticalMobQuickAction : QuickAction {
     constructor(action: QuickAction) : super(action)
 
     override fun execute(mapActivity: MapActivity, params: Bundle?) {
+        if (mapActivity.isFinishing || mapActivity.isDestroyed) {
+            return
+        }
         val plugin = PluginsHelper.getPlugin(NauticalPlugin::class.java)
         if (plugin != null) {
             val loc = mapActivity.app.locationProvider.lastKnownLocation

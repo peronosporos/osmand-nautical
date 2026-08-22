@@ -38,17 +38,20 @@ class HeadingErrorLinearView @JvmOverloads constructor(
     private var colorYellow = Color.TRANSPARENT
     private var colorRed = Color.TRANSPARENT
     private val indicatorPath = Path()
-    private val DEGREE_LABELS = arrayOf("-20°", "-10°", "0°", "+10°", "+20°")
-    private val DEGREE_VALUES = intArrayOf(-20, -10, 0, 10, 20)
+    private val DEGREE_LABELS = arrayOf("-40°", "-20°", "0°", "+20°", "+40°")
+    private val DEGREE_VALUES = intArrayOf(-40, -20, 0, 20, 40)
 
     private var dp1 = 0f
     private var dp2 = 0f
     private var dp3 = 0f
+    private var dp4 = 0f
     private var dp5 = 0f
     private var dp6 = 0f
     private var dp8 = 0f
     private var dp10 = 0f
     private var dp12 = 0f
+    private var dp14 = 0f
+    private var dp16 = 0f
 
     init {
         isClickable = true
@@ -57,11 +60,14 @@ class HeadingErrorLinearView @JvmOverloads constructor(
         dp1 = 1f * density
         dp2 = 2f * density
         dp3 = 3f * density
+        dp4 = 4f * density
         dp5 = 5f * density
         dp6 = 6f * density
         dp8 = 8f * density
         dp10 = 10f * density
         dp12 = 12f * density
+        dp14 = 14f * density
+        dp16 = 16f * density
         updateColors()
         paint.strokeCap = Paint.Cap.ROUND
         textPaint.textAlign = Paint.Align.CENTER
@@ -90,15 +96,15 @@ class HeadingErrorLinearView @JvmOverloads constructor(
         val h = height.toFloat()
         if (w <= 0 || h <= 0) return
         
-        val centerY = h * 0.40f
-        val padding = dp12 * 2f
+        val centerY = h * 0.38f
+        val padding = dp16
         val scaleWidth = w - (padding * 2)
 
         // 1. Draw Background Scale Line
         paint.style = Paint.Style.STROKE
         paint.strokeWidth = dp2
         paint.color = colorSecondary
-        paint.alpha = 60
+        paint.alpha = 70
         canvas.drawLine(padding, centerY, w - padding, centerY, paint)
 
         // 2. Draw Ticks
@@ -107,25 +113,25 @@ class HeadingErrorLinearView @JvmOverloads constructor(
             val x = padding + (ratio * scaleWidth)
             
             val isMajor = i % 10 == 0
-            val tickLen = if (isMajor) dp6 else dp3
+            val tickLen = if (isMajor) dp8 else dp4
             
-            paint.alpha = if (isMajor) 200 else 80
+            paint.alpha = if (isMajor) 220 else 90
             paint.strokeWidth = if (isMajor) dp2 else dp1
             paint.color = if (i == 0) colorOrange else colorPrimary
             
             canvas.drawLine(x, centerY - tickLen, x, centerY + tickLen, paint)
         }
 
-        // 3. Draw Degree Offset Labels
-        textPaint.textSize = dp10
+        // 3. Draw Degree Offset Labels with High Legibility
+        textPaint.textSize = dp12
         textPaint.typeface = Typeface.create("sans-serif-condensed", Typeface.BOLD)
-        val textY = centerY + dp12
+        val textY = centerY + dp16
         for (idx in DEGREE_VALUES.indices) {
             val degVal = DEGREE_VALUES[idx]
             val ratio = (degVal + 45f) / 90f
             val x = padding + (ratio * scaleWidth)
             textPaint.color = if (degVal == 0) colorOrange else colorSecondary
-            textPaint.alpha = if (degVal == 0) 255 else 180
+            textPaint.alpha = if (degVal == 0) 255 else 200
             canvas.drawText(DEGREE_LABELS[idx], x, textY, textPaint)
         }
 
@@ -142,9 +148,9 @@ class HeadingErrorLinearView @JvmOverloads constructor(
 
         if (abs(headingError) > 0.5f) {
             paint.style = Paint.Style.STROKE
-            paint.strokeWidth = dp3
+            paint.strokeWidth = dp4
             paint.color = errorColor
-            paint.alpha = 180
+            paint.alpha = 190
             canvas.drawLine(zeroX, centerY, indicatorX, centerY, paint)
         }
 
@@ -155,8 +161,8 @@ class HeadingErrorLinearView @JvmOverloads constructor(
         
         indicatorPath.reset()
         indicatorPath.moveTo(indicatorX, centerY - dp2)
-        indicatorPath.lineTo(indicatorX - dp5, centerY - dp10)
-        indicatorPath.lineTo(indicatorX + dp5, centerY - dp10)
+        indicatorPath.lineTo(indicatorX - dp6, centerY - dp12)
+        indicatorPath.lineTo(indicatorX + dp6, centerY - dp12)
         indicatorPath.close()
         canvas.drawPath(indicatorPath, paint)
     }

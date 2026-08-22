@@ -361,7 +361,7 @@ class NauticalPilotWidget(
         if (state.isOffCourse) {
             val xteMeters = state.crossTrackError ?: 0.0
             val xteNm = kotlin.math.abs(xteMeters) / 1852.0
-            setText(String.format(Locale.US, "XTE %.2f", xteNm), mapActivity.getString(R.string.nautical_unit_nm))
+            setText(String.format(Locale.US, "XTE %.2f", xteNm), "")
             setStatusIcon(if (isStale) R.drawable.ic_action_time else R.drawable.ic_action_play_dark)
         } else if (!isEngaged) {
             setText(mapActivity.getString(R.string.nautical_mode_engaged_standby), "")
@@ -372,28 +372,27 @@ class NauticalPilotWidget(
                     val targetWind = state.targetWindAngleApparent ?: state.windDirectionApparent
                     if (targetWind != null && !isStale) {
                         val deg = Math.toDegrees(targetWind)
-                        setText(String.format(Locale.US, "%.0f°", deg), "WIND")
+                        setText(String.format(Locale.US, "%.0f°", deg), "")
                     } else {
-                        setText("--", "WIND")
+                        setText("--", "")
                     }
                 }
                 "nav", "track", "route" -> {
                     val heading = state.targetHeading ?: state.courseOverGroundTrue
                     if (heading != null && !isStale) {
                         val deg = Math.toDegrees(heading)
-                        setText(String.format(Locale.US, "%.0f°", deg), "NAV")
+                        setText(String.format(Locale.US, "%.0f°", deg), "")
                     } else {
-                        setText("--", "NAV")
+                        setText("--", "")
                     }
                 }
                 else -> { // auto, compass, heading
                     val heading = state.targetHeading ?: state.headingTrue
                     if (heading != null && !isStale) {
                         val deg = Math.toDegrees(heading)
-                        val cardinal = getCardinalDirection(deg)
-                        setText(String.format(Locale.US, "%.0f°", deg), cardinal)
+                        setText(String.format(Locale.US, "%.0f°", deg), "")
                     } else {
-                        setText("--", "AUTO")
+                        setText("--", "")
                     }
                 }
             }
