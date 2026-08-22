@@ -11,8 +11,6 @@
     <string name="nautical_sail_efficiency_label">Sail Area Efficiency: %1$d%%</string>
     <string name="nautical_no_sails_found">No sails found in inventory</string>
     <string name="nautical_calculating_weather_route">Calculating optimal weather route…</string>
-    <string name="nautical_port_pin_set">Port Pin Set</string>
-    <string name="nautical_stbd_pin_set">Starboard Pin Set</string>
     <string name="nautical_view_buddies">View Buddies</string>
     <string name="nautical_added_to_buddies">Added %1$s to AIS Buddies</string>
     <string name="nautical_removed_from_buddies">Removed %1$s from Buddies</string>
