@@ -15,6 +15,7 @@ import net.osmand.plus.views.layers.base.OsmandMapLayer
 import net.osmand.plus.views.mapwidgets.WidgetType
 import net.osmand.plus.views.mapwidgets.WidgetsPanel
 import net.osmand.plus.settings.backend.OsmandSettings
+import java.util.Locale
 
 class NauticalMasterTelemetryWidget(
     mapActivity: MapActivity,
