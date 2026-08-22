@@ -274,9 +274,7 @@ class NauticalChecklistFragment : BaseOsmAndFragment() {
         }
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
-            val context = parent.context
-            val inflater = (context as? net.osmand.plus.activities.MapActivity)?.themedInflater
-                ?: LayoutInflater.from(context)
+            val inflater = LayoutInflater.from(parent.context)
             return if (viewType == 0) {
                 HeaderViewHolder(inflater.inflate(R.layout.item_checklist_header, parent, false))
             } else {

@@ -331,11 +331,9 @@ class NauticalContextMenuHelper(private val app: OsmandApplication) {
                     app.settings.NAUTICAL_TACTICAL_TARGET_LAT.set(lat)
                     app.settings.NAUTICAL_TACTICAL_TARGET_LON.set(lon)
                     app.settings.NAUTICAL_SHOW_LAYLINES.set(true)
-                    val plugin = NauticalPlugin.getInstance()
-                    plugin?.laylineViewModel?.updateTargetWaypoint(net.osmand.plus.plugins.nautical.laylines.engine.LatLon(lat, lon))
                     app.showToastMessage(R.string.nautical_laylines_rendered)
                     onRequestRefresh()
-                    app.osmandMap.refreshMap()
+                    app.osmandMap?.refreshMap()
                     true
                 }
             }
