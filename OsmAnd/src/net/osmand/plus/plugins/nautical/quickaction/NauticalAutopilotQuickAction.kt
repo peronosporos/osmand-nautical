@@ -17,7 +17,7 @@ class NauticalAutopilotQuickAction : QuickAction {
         @JvmField
         val TYPE: QuickActionType = QuickActionType(NAUTICAL_AUTOPILOT_ACTION_ID, "nautical.autopilot.open", NauticalAutopilotQuickAction::class.java)
             .nameRes(R.string.nautical_pilot_title)
-            .iconRes(R.drawable.ic_action_navigation)
+            .iconRes(R.drawable.ic_action_compass)
             .category(QuickActionType.NAVIGATION)
     }
 
