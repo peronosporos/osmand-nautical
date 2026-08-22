@@ -147,7 +147,7 @@
         <ImageView
             android:layout_width="64dp"
             android:layout_height="64dp"
-            android:src="@drawable/ic_action_route"
+            android:src="@drawable/ic_action_gnavigation_dark"
             app:tint="?attr/colorAccent"
             android:contentDescription="Route Icon" />
 
@@ -171,7 +171,7 @@
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_create_passage_plan"
-            style="@style/Widget.Material3.Button.FilledButton"
+            style="@style/Widget.MaterialComponents.Button"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="20dp"

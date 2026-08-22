@@ -67,7 +67,7 @@
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btn_vhf_power_toggle"
-                        style="@style/Widget.Material3.Button.TonalButton"
+                        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                         android:layout_width="wrap_content"
                         android:layout_height="36dp"
                         android:text="25W HIGH"
@@ -78,7 +78,7 @@
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btn_vhf_dual_watch_toggle"
-                        style="@style/Widget.Material3.Button.TonalButton"
+                        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                         android:layout_width="wrap_content"
                         android:layout_height="36dp"
                         android:text="DUAL WATCH: OFF"
@@ -121,7 +121,7 @@
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btn_ch_16"
-                style="@style/Widget.Material3.Button.OutlinedButton"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                 android:layout_columnWeight="1"
                 android:layout_height="48dp"
                 android:text="16 (Distress)"
@@ -130,35 +130,35 @@
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btn_ch_09"
-                style="@style/Widget.Material3.Button.OutlinedButton"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                 android:layout_columnWeight="1"
                 android:layout_height="48dp"
                 android:text="09 (Calling)" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btn_ch_13"
-                style="@style/Widget.Material3.Button.OutlinedButton"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                 android:layout_columnWeight="1"
                 android:layout_height="48dp"
                 android:text="13 (Nav Safety)" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btn_ch_72"
-                style="@style/Widget.Material3.Button.OutlinedButton"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                 android:layout_columnWeight="1"
                 android:layout_height="48dp"
                 android:text="72 (Ship-to-Ship)" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btn_ch_77"
-                style="@style/Widget.Material3.Button.OutlinedButton"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                 android:layout_columnWeight="1"
                 android:layout_height="48dp"
                 android:text="77 (Port Ops)" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btn_ch_06"
-                style="@style/Widget.Material3.Button.OutlinedButton"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                 android:layout_columnWeight="1"
                 android:layout_height="48dp"
                 android:text="06 (Inter-ship)" />
@@ -174,7 +174,7 @@
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btn_select_channel"
-                style="@style/Widget.Material3.Button.FilledButton"
+                style="@style/Widget.MaterialComponents.Button"
                 android:layout_width="0dp"
                 android:layout_height="48dp"
                 android:layout_weight="1"
@@ -184,7 +184,7 @@
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btn_toggle_live_audio"
-                style="@style/Widget.Material3.Button.FilledButton"
+                style="@style/Widget.MaterialComponents.Button"
                 android:layout_width="0dp"
                 android:layout_height="48dp"
                 android:layout_weight="1"

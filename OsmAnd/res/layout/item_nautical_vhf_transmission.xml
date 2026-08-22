@@ -20,7 +20,7 @@
             android:layout_width="36dp"
             android:layout_height="36dp"
             android:padding="6dp"
-            android:src="@drawable/ic_action_play"
+            android:src="@drawable/ic_action_play_dark"
             app:tint="?attr/colorAccent"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:contentDescription="Play Transmission" />
@@ -52,7 +52,7 @@
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_replay_audio"
-            style="@style/Widget.Material3.Button.TextButton"
+            style="@style/Widget.MaterialComponents.Button.TextButton"
             android:layout_width="wrap_content"
             android:layout_height="36dp"
             android:text="Replay"

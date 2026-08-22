@@ -1,4 +1,6 @@
 <resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
+    <string name="nautical_vhf_title">VHF Marine Radio</string>
+    <string name="nautical_signalk_server">Signal K Server</string>
     <string name="nautical_slip_exit">Slip Exit</string>
     <string name="nautical_weigh_anchor">Weigh Anchor</string>
     <string name="nautical_holding_pattern">Holding Pattern</string>
