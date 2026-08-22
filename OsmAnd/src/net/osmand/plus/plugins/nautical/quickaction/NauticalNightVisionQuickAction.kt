@@ -31,6 +31,10 @@ class NauticalNightVisionQuickAction : QuickAction {
             return
         }
         val plugin = NauticalPlugin.getInstance()
-        plugin?.toggleNightVision(mapActivity)
+        if (plugin != null) {
+            plugin.toggleNightVision(mapActivity)
+        } else {
+            mapActivity.app.showToastMessage(R.string.nautical_plugin_inactive)
+        }
     }
 }

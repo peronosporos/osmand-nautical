@@ -70,8 +70,13 @@ import net.osmand.plus.plugins.nautical.network.NauticalConnectionManager
 import net.osmand.plus.plugins.nautical.network.NauticalVhfManager
 import net.osmand.plus.plugins.nautical.network.SignalKDiscovery
 import net.osmand.plus.plugins.nautical.quickaction.NauticalAnchorQuickAction
+import net.osmand.plus.plugins.nautical.quickaction.NauticalAutopilotQuickAction
+import net.osmand.plus.plugins.nautical.quickaction.NauticalMasterTelemetryQuickAction
 import net.osmand.plus.plugins.nautical.quickaction.NauticalMobQuickAction
 import net.osmand.plus.plugins.nautical.quickaction.NauticalNightVisionQuickAction
+import net.osmand.plus.plugins.nautical.quickaction.NauticalSailInventoryQuickAction
+import net.osmand.plus.plugins.nautical.quickaction.NauticalSwitchQuickAction
+import net.osmand.plus.plugins.nautical.quickaction.NauticalVhfQuickAction
 import net.osmand.plus.plugins.nautical.s57.S57SpatialIndex
 import net.osmand.plus.plugins.nautical.system.NauticalSystemManager
 import net.osmand.plus.plugins.nautical.ui.NauticalAisLayer
@@ -845,6 +850,7 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
                 registerManeuver("gybe_port", net.osmand.plus.plugins.nautical.maneuvers.GybingManeuver(app))
                 registerManeuver("gybe_stbd", net.osmand.plus.plugins.nautical.maneuvers.GybingManeuver(app))
                 registerManeuver("shunt", net.osmand.plus.plugins.nautical.maneuvers.ShuntingManeuver(app))
+                registerManeuver("holding_pattern", net.osmand.plus.plugins.nautical.maneuvers.HoldingPatternManeuver(app))
             }
         }
         if (ttsHelper == null) {
@@ -1548,7 +1554,12 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
         return listOf(
             NauticalNightVisionQuickAction.TYPE,
             NauticalAnchorQuickAction.TYPE,
-            NauticalMobQuickAction.TYPE
+            NauticalMobQuickAction.TYPE,
+            NauticalVhfQuickAction.TYPE,
+            NauticalSwitchQuickAction.TYPE,
+            NauticalMasterTelemetryQuickAction.TYPE,
+            NauticalAutopilotQuickAction.TYPE,
+            NauticalSailInventoryQuickAction.TYPE
         )
     }
 

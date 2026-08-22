@@ -38,8 +38,13 @@ class GribManagerBottomSheet : BottomSheetDialogFragment() {
     }
 
     companion object {
+        const val TAG = "GribManagerBottomSheet"
+
         fun show(fragmentManager: androidx.fragment.app.FragmentManager) {
-            GribManagerBottomSheet().show(fragmentManager, "GribManagerBottomSheet")
+            if (fragmentManager.isStateSaved) return
+            if (fragmentManager.findFragmentByTag(TAG) == null) {
+                GribManagerBottomSheet().show(fragmentManager, TAG)
+            }
         }
     }
 

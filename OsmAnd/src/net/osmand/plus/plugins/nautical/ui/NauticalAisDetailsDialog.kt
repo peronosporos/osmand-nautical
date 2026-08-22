@@ -39,9 +39,12 @@ class NauticalAisDetailsDialog : BaseBottomSheetDialogFragment() {
         private const val ARG_MMSI = "arg_mmsi"
 
         fun show(manager: androidx.fragment.app.FragmentManager, mmsi: Int) {
-            val fragment = NauticalAisDetailsDialog()
-            fragment.arguments = Bundle().apply { putInt(ARG_MMSI, mmsi) }
-            fragment.show(manager, TAG)
+            if (manager.isStateSaved) return
+            if (manager.findFragmentByTag(TAG) == null) {
+                val fragment = NauticalAisDetailsDialog()
+                fragment.arguments = Bundle().apply { putInt(ARG_MMSI, mmsi) }
+                fragment.show(manager, TAG)
+            }
         }
     }
 

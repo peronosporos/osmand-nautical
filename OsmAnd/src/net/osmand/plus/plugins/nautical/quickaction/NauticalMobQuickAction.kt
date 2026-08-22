@@ -28,6 +28,9 @@ class NauticalMobQuickAction : QuickAction {
     @Keep
     constructor(action: QuickAction) : super(action)
 
+    @Keep
+    constructor(type: Int) : super(TYPE)
+
     override fun execute(mapActivity: MapActivity, params: Bundle?) {
         if (mapActivity.isFinishing || mapActivity.isDestroyed) {
             return
@@ -40,9 +43,13 @@ class NauticalMobQuickAction : QuickAction {
                     LatLon(loc.latitude, loc.longitude),
                     net.osmand.plus.plugins.nautical.mob.viewmodel.MobTriggerSource.BUTTON,
                 )
+                mapActivity.app.showToastMessage(R.string.nautical_mob_triggered)
+                mapActivity.app.osmandMap?.refreshMap()
             } else {
                 mapActivity.app.showToastMessage(R.string.nautical_error_no_gps)
             }
+        } else {
+            mapActivity.app.showToastMessage(R.string.nautical_plugin_inactive)
         }
     }
 }

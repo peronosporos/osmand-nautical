@@ -54,33 +54,23 @@ class NauticalVhfBottomSheet : BaseNauticalBottomSheet() {
         rvTransmissions.layoutManager = LinearLayoutManager(context)
         rvTransmissions.adapter = transmissionAdapter
 
-        // Quick Access Safety Channel buttons
+        // Quick Access Safety Channel buttons (Row 1: 16, 09, 13; Row 2: 06, 72, 77)
         setupChannelButton(customView.findViewById(R.id.btn_ch_16), "16")
         setupChannelButton(customView.findViewById(R.id.btn_ch_09), "09")
         setupChannelButton(customView.findViewById(R.id.btn_ch_13), "13")
+        setupChannelButton(customView.findViewById(R.id.btn_ch_06), "06")
         setupChannelButton(customView.findViewById(R.id.btn_ch_72), "72")
         setupChannelButton(customView.findViewById(R.id.btn_ch_77), "77")
-        setupChannelButton(customView.findViewById(R.id.btn_ch_06), "06")
 
         btnSelectChannel.setOnClickListener {
-            val channels = arrayOf(
-                "CH 16 - Distress, Safety & Calling",
-                "CH 09 - Alternate Calling",
-                "CH 13 - Navigation Safety / Bridge-to-Bridge",
-                "CH 06 - Inter-ship Safety",
-                "CH 72 - Non-Commercial Ship-to-Ship",
-                "CH 77 - Port Operations",
-                "CH 68 - Marina & Working",
-                "CH 69 - Non-Commercial Working",
-                "CH 71 - Port Operations",
-                "CH 74 - Port Operations"
-            )
-            val numbers = arrayOf("16", "09", "13", "06", "72", "77", "68", "69", "71", "74")
+            val items = ALL_VHF_CHANNELS.map { "CH ${it.first} • ${it.second}" }.toTypedArray()
             androidx.appcompat.app.AlertDialog.Builder(requireContext())
                 .setTitle(R.string.nautical_vhf_title)
-                .setItems(channels) { _, which ->
-                    val ch = numbers[which]
-                    NauticalPlugin.engine?.sendDelta("communication.vhf.channel", ch)
+                .setItems(items) { _, which ->
+                    val (num, _) = ALL_VHF_CHANNELS[which]
+                    NauticalPlugin.engine?.sendDelta("communication.vhf.channel", num)
+                    txtActiveChannel.text = "CH $num"
+                    txtDesignation.text = getChannelDesignation(num)
                 }
                 .setNegativeButton(R.string.shared_string_cancel, null)
                 .show()
@@ -153,17 +143,10 @@ class NauticalVhfBottomSheet : BaseNauticalBottomSheet() {
     }
 
     private fun getChannelDesignation(channel: String): String {
-        return when (channel.trim().uppercase(Locale.US)) {
-            "16" -> "International Distress, Safety & Calling"
-            "09", "9" -> "Secondary Calling & Commercial / Non-commercial"
-            "13" -> "Inter-ship Navigation Safety & Bridge-to-Bridge"
-            "06", "6" -> "Inter-ship Safety & Search and Rescue (SAR)"
-            "70" -> "Digital Selective Calling (DSC) Alerting"
-            "72" -> "Non-Commercial Ship-to-Ship Intercom"
-            "77" -> "Port Operations & Ship-to-Ship Commercial"
-            "68" -> "Non-Commercial & Marina Operations"
-            "12", "14" -> "Port Operations & Vessel Traffic Service (VTS)"
-            "22A", "22" -> "Coast Guard Maritime Safety Broadcasts"
+        val clean = channel.trim().uppercase(Locale.US)
+        val match = ALL_VHF_CHANNELS.find { it.first == clean || it.first.trimStart('0') == clean }
+        return match?.second ?: when (clean) {
+            "22A" -> "Coast Guard Maritime Safety Broadcasts"
             else -> "Marine VHF Channel $channel"
         }
     }
@@ -171,7 +154,68 @@ class NauticalVhfBottomSheet : BaseNauticalBottomSheet() {
     companion object {
         const val TAG = "NauticalVhfBottomSheet"
 
+        private val ALL_VHF_CHANNELS = arrayOf(
+            "01" to "Port Operations & Commercial",
+            "02" to "Public Correspondence & Port Ops",
+            "03" to "Public Correspondence & Port Ops",
+            "04" to "Public Correspondence & Port Ops",
+            "05" to "Port Operations & VTS",
+            "06" to "Inter-ship Safety & SAR",
+            "07" to "Commercial Inter-ship",
+            "08" to "Commercial Inter-ship (Safety)",
+            "09" to "Secondary Calling & Commercial / Non-Commercial",
+            "10" to "Port Operations & Commercial",
+            "11" to "Port Operations & VTS",
+            "12" to "Port Operations & Traffic",
+            "13" to "Navigation Safety / Bridge-to-Bridge",
+            "14" to "Port Operations & Traffic",
+            "15" to "Environmental & On-board Comms (1W)",
+            "16" to "International Distress, Safety & Calling",
+            "17" to "State & Local Govt / On-board Comms (1W)",
+            "18" to "Commercial & Port Operations",
+            "19" to "Commercial & Coast Guard",
+            "20" to "Port Operations & Coast Guard",
+            "21" to "Coast Guard Maritime Safety",
+            "22" to "Coast Guard Safety Broadcasts",
+            "23" to "Coast Guard & Public Correspondence",
+            "24" to "Public Correspondence & Marina",
+            "25" to "Public Correspondence & Marina",
+            "26" to "Public Correspondence & Marina",
+            "27" to "Public Correspondence & Marina",
+            "28" to "Public Correspondence & Marina",
+            "60" to "Public Correspondence & Port Ops",
+            "61" to "Public Correspondence & Port Ops",
+            "62" to "Public Correspondence & Port Ops",
+            "63" to "Port Operations & Traffic",
+            "64" to "Public Correspondence & Port Ops",
+            "65" to "Port Operations & Traffic",
+            "66" to "Port Operations & Traffic",
+            "67" to "Bridge-to-Bridge & Inter-ship SAR",
+            "68" to "Non-Commercial Working & Marina",
+            "69" to "Non-Commercial Working",
+            "70" to "Digital Selective Calling (DSC Alerting)",
+            "71" to "Port Operations & Non-Commercial",
+            "72" to "Non-Commercial Ship-to-Ship Intercom",
+            "73" to "Port Operations & Inter-ship",
+            "74" to "Port Operations",
+            "75" to "Navigation Safety (Low Power 1W)",
+            "76" to "Navigation Safety (Low Power 1W)",
+            "77" to "Port Operations & Ship-to-Ship Commercial",
+            "78" to "Non-Commercial Working",
+            "79" to "Commercial Working",
+            "80" to "Commercial & Marina Operations",
+            "81" to "Environmental & Government",
+            "82" to "Public Correspondence & Marina",
+            "83" to "Coast Guard Working",
+            "84" to "Public Correspondence & Marina",
+            "85" to "Public Correspondence & Marina",
+            "86" to "Public Correspondence & Marina",
+            "87" to "Public Correspondence & Port Ops",
+            "88" to "Commercial Inter-ship"
+        )
+
         fun show(fragmentManager: FragmentManager) {
+            if (fragmentManager.isStateSaved) return
             if (fragmentManager.findFragmentByTag(TAG) == null) {
                 NauticalVhfBottomSheet().show(fragmentManager, TAG)
             }

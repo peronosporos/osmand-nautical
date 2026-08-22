@@ -1,4 +1,11 @@
 <resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
+    <string name="nautical_copy_mmsi">Copy MMSI</string>
+    <string name="nautical_mmsi_copied">MMSI %1$d copied to clipboard</string>
+    <string name="nautical_show_track">Show Track</string>
+    <string name="nautical_hide_track">Hide Track</string>
+    <string name="nautical_vhf_callout">VHF Callout</string>
+    <string name="nautical_set_cpa_alarm">Set CPA Alarm</string>
+    <string name="nautical_plugin_inactive">Nautical plugin is not active</string>
     <string name="nautical_disarm_mob_confirm">Are you sure you want to cancel the Man Overboard emergency alarm and navigation?</string>
     <string name="nautical_mob_triggered">MAN OVERBOARD: Emergency marker created and navigation initiated.</string>
     <string name="nautical_vhf_title">VHF Marine Radio</string>

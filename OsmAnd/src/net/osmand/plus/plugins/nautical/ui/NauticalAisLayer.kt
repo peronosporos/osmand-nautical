@@ -222,7 +222,41 @@ class NauticalAisLayer(
         return tileBox.containsLatLon(lat, lon)
     }
 
+    private val trackPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+        strokeWidth = 4f
+        color = Color.rgb(0, 180, 216)
+        pathEffect = DashPathEffect(floatArrayOf(12f, 8f), 0f)
+    }
+    private val trackPath = Path()
+
+    private fun drawTracks(canvas: Canvas, tileBox: RotatedTileBox) {
+        val manager = plugin.aisManager ?: return
+        val aisObjects = manager.getAisObjects()
+        for (ais in aisObjects) {
+            if (manager.isTrackEnabled(ais.mmsi)) {
+                val breadcrumbs = manager.getBreadcrumbs(ais.mmsi)
+                if (breadcrumbs.size >= 2) {
+                    trackPath.reset()
+                    var first = true
+                    for ((lat, lon) in breadcrumbs) {
+                        val x = tileBox.getPixXFromLatLon(lat, lon)
+                        val y = tileBox.getPixYFromLatLon(lat, lon)
+                        if (first) {
+                            trackPath.moveTo(x, y)
+                            first = false
+                        } else {
+                            trackPath.lineTo(x, y)
+                        }
+                    }
+                    canvas.drawPath(trackPath, trackPaint)
+                }
+            }
+        }
+    }
+
     override fun onDraw(canvas: Canvas, tileBox: RotatedTileBox, settings: DrawSettings) {
+        drawTracks(canvas, tileBox)
         if (mapRenderer == null && tileBox.zoom >= START_ZOOM) {
             val aisObjects = plugin.aisManager?.getAisObjects() ?: return
             for (ais in aisObjects) {
@@ -242,6 +276,7 @@ class NauticalAisLayer(
 
     override fun onPrepareBufferImage(canvas: Canvas, tileBox: RotatedTileBox, settings: DrawSettings) {
         super.onPrepareBufferImage(canvas, tileBox, settings)
+        drawTracks(canvas, tileBox)
         val mapRenderer = mapRenderer
 
         val currentTextScale = textScale

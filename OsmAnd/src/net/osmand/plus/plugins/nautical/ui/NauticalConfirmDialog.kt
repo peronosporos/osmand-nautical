@@ -18,6 +18,8 @@ class NauticalConfirmDialog : DialogFragment() {
     private var onCancel: (() -> Unit)? = null
 
     companion object {
+        const val TAG = "NauticalConfirmDialog"
+
         fun show(
             parent: androidx.fragment.app.FragmentManager,
             title: String,
@@ -26,13 +28,16 @@ class NauticalConfirmDialog : DialogFragment() {
             onConfirm: () -> Unit,
             onCancel: (() -> Unit)? = null
         ) {
-            val dialog = NauticalConfirmDialog()
-            dialog.title = title
-            dialog.message = message
-            dialog.confirmLabel = confirmLabel
-            dialog.onConfirm = onConfirm
-            dialog.onCancel = onCancel
-            dialog.show(parent, "NauticalConfirmDialog")
+            if (parent.isStateSaved) return
+            if (parent.findFragmentByTag(TAG) == null) {
+                val dialog = NauticalConfirmDialog()
+                dialog.title = title
+                dialog.message = message
+                dialog.confirmLabel = confirmLabel
+                dialog.onConfirm = onConfirm
+                dialog.onCancel = onCancel
+                dialog.show(parent, TAG)
+            }
         }
     }
 

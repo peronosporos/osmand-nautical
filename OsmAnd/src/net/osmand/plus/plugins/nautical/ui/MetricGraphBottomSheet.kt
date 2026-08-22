@@ -219,15 +219,19 @@ class MetricGraphBottomSheet : NauticalMenuBottomSheetDialogFragment() {
     private var txtTendencyBanner: TextView? = null
 
     companion object {
+        const val TAG = "nautical_metric_graph"
         const val KEY_METRIC = "key_metric"
 
         fun show(manager: FragmentManager, metricKey: String) {
-            val fragment = MetricGraphBottomSheet()
-            val args = Bundle().apply {
-                putString(KEY_METRIC, metricKey)
+            if (manager.isStateSaved) return
+            if (manager.findFragmentByTag(TAG) == null) {
+                val fragment = MetricGraphBottomSheet()
+                val args = Bundle().apply {
+                    putString(KEY_METRIC, metricKey)
+                }
+                fragment.arguments = args
+                fragment.show(manager, TAG)
             }
-            fragment.arguments = args
-            fragment.show(manager, "nautical_metric_graph")
         }
     }
 

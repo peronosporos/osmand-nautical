@@ -1,174 +1,273 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="vertical"
-    android:padding="16dp"
-    android:background="?attr/list_background_color">
+    android:background="?attr/list_background_color"
+    android:fitsSystemWindows="true">
 
-    <!-- Header with Icon, Name & MMSI -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_vertical"
-        android:paddingBottom="12dp">
+        android:orientation="vertical"
+        android:padding="16dp">
 
-        <ImageView
-            android:id="@+id/img_vessel_icon"
-            android:layout_width="44dp"
-            android:layout_height="44dp"
-            android:padding="6dp"
-            android:layout_marginEnd="12dp"
-            android:src="@drawable/mm_ais_vessel"
-            android:contentDescription="AIS Vessel Icon" />
-
-        <LinearLayout
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:orientation="vertical">
-
-            <TextView
-                android:id="@+id/txt_ship_name"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:textAppearance="@style/TextAppearance.AppCompat.Large"
-                android:textColor="?android:attr/textColorPrimary"
-                android:textStyle="bold" />
-
-            <TextView
-                android:id="@+id/txt_mmsi_callsign"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:textAppearance="@style/TextAppearance.AppCompat.Small"
-                android:textColor="?android:attr/textColorSecondary" />
-        </LinearLayout>
-
-        <TextView
-            android:id="@+id/txt_ship_type_badge"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:textAppearance="@style/TextAppearance.AppCompat.Caption"
-            android:textColor="?android:attr/textColorPrimary"
-            android:paddingStart="8dp"
-            android:paddingEnd="8dp"
-            android:paddingTop="4dp"
-            android:paddingBottom="4dp"
-            android:background="?attr/card_and_list_background_basic" />
-    </LinearLayout>
-
-    <!-- Danger / CPA Warning Banner -->
-    <LinearLayout
-        android:id="@+id/layout_cpa_warning"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_vertical"
-        android:background="#33FF0000"
-        android:padding="10dp"
-        android:layout_marginBottom="12dp"
-        android:visibility="gone">
-
-        <ImageView
-            android:layout_width="24dp"
-            android:layout_height="24dp"
-            android:src="@drawable/ic_action_alert"
-            app:tint="#FFFF0000"
-            android:layout_marginEnd="8dp"
-            android:contentDescription="Collision Warning" />
-
-        <TextView
-            android:id="@+id/txt_cpa_warning_text"
+        <!-- Header Card: Icon, Ship Name, MMSI, Call Sign, Ship Type Badge, Buddy Star -->
+        <androidx.cardview.widget.CardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/nautical_ais_danger_warning"
-            android:textColor="#FFFF4444"
-            android:textStyle="bold"
-            android:textSize="14sp" />
+            app:cardCornerRadius="12dp"
+            app:cardElevation="2dp"
+            app:cardBackgroundColor="?attr/card_and_list_background_basic">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="14dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <ImageView
+                        android:id="@+id/img_vessel_icon"
+                        android:layout_width="44dp"
+                        android:layout_height="44dp"
+                        android:padding="4dp"
+                        android:layout_marginEnd="12dp"
+                        android:src="@drawable/mm_ais_vessel"
+                        android:contentDescription="AIS Vessel Icon" />
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <LinearLayout
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical">
+
+                            <TextView
+                                android:id="@+id/txt_ship_name"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:textAppearance="@style/TextAppearance.AppCompat.Large"
+                                android:textColor="?android:attr/textColorPrimary"
+                                android:textStyle="bold" />
+
+                            <ImageView
+                                android:id="@+id/img_buddy_star"
+                                android:layout_width="20dp"
+                                android:layout_height="20dp"
+                                android:layout_marginStart="6dp"
+                                android:src="@drawable/ic_action_favorite"
+                                app:tint="#FFD700"
+                                android:visibility="gone"
+                                android:contentDescription="AIS Buddy" />
+                        </LinearLayout>
+
+                        <TextView
+                            android:id="@+id/txt_mmsi_callsign"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="2dp"
+                            android:textAppearance="@style/TextAppearance.AppCompat.Small"
+                            android:textColor="?android:attr/textColorSecondary" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/txt_ship_type_badge"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textAppearance="@style/TextAppearance.AppCompat.Caption"
+                        android:textColor="?android:attr/textColorPrimary"
+                        android:paddingStart="8dp"
+                        android:paddingEnd="8dp"
+                        android:paddingTop="4dp"
+                        android:paddingBottom="4dp"
+                        android:background="?attr/list_background_color" />
+                </LinearLayout>
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+        <!-- Danger / CPA Warning Banner -->
+        <LinearLayout
+            android:id="@+id/layout_cpa_warning"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:background="#33FF0000"
+            android:padding="12dp"
+            android:layout_marginTop="10dp"
+            android:visibility="gone">
+
+            <ImageView
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@drawable/ic_action_alert"
+                app:tint="#FFFF0000"
+                android:layout_marginEnd="8dp"
+                android:contentDescription="Collision Warning" />
+
+            <TextView
+                android:id="@+id/txt_cpa_warning_text"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/nautical_ais_danger_warning"
+                android:textColor="#FFFF4444"
+                android:textStyle="bold"
+                android:textSize="14sp" />
+        </LinearLayout>
+
+        <!-- Telemetry & Dynamics Card -->
+        <androidx.cardview.widget.CardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="2dp"
+            app:cardBackgroundColor="?attr/card_and_list_background_basic">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="14dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Navigation &amp; Dynamics"
+                    android:textAppearance="@style/TextAppearance.AppCompat.Caption"
+                    android:textColor="?attr/colorAccent"
+                    android:textStyle="bold"
+                    android:paddingBottom="6dp" />
+
+                <GridLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:columnCount="2"
+                    android:alignmentMode="alignMargins"
+                    android:useDefaultMargins="false">
+
+                    <TextView android:id="@+id/txt_range_bearing" android:layout_columnWeight="1" android:padding="4dp" android:textColor="?android:attr/textColorPrimary" android:textSize="13sp" />
+                    <TextView android:id="@+id/txt_cpa_tcpa" android:layout_columnWeight="1" android:padding="4dp" android:textColor="?android:attr/textColorPrimary" android:textSize="13sp" />
+                    <TextView android:id="@+id/txt_sog" android:layout_columnWeight="1" android:padding="4dp" android:textColor="?android:attr/textColorPrimary" android:textSize="13sp" />
+                    <TextView android:id="@+id/txt_cog" android:layout_columnWeight="1" android:padding="4dp" android:textColor="?android:attr/textColorPrimary" android:textSize="13sp" />
+                    <TextView android:id="@+id/txt_heading" android:layout_columnWeight="1" android:padding="4dp" android:textColor="?android:attr/textColorPrimary" android:textSize="13sp" />
+                    <TextView android:id="@+id/txt_rot" android:layout_columnWeight="1" android:padding="4dp" android:textColor="?android:attr/textColorPrimary" android:textSize="13sp" />
+                    <TextView android:id="@+id/txt_status" android:layout_columnWeight="1" android:padding="4dp" android:textColor="?android:attr/textColorPrimary" android:textSize="13sp" />
+                    <TextView android:id="@+id/txt_position" android:layout_columnWeight="1" android:padding="4dp" android:textColor="?android:attr/textColorPrimary" android:textSize="13sp" />
+                    <TextView android:id="@+id/txt_dimensions" android:layout_columnWeight="1" android:padding="4dp" android:textColor="?android:attr/textColorPrimary" android:textSize="13sp" />
+                    <TextView android:id="@+id/txt_draught" android:layout_columnWeight="1" android:padding="4dp" android:textColor="?android:attr/textColorPrimary" android:textSize="13sp" />
+                    <TextView android:id="@+id/txt_destination" android:layout_columnWeight="1" android:padding="4dp" android:textColor="?android:attr/textColorPrimary" android:textSize="13sp" />
+                    <TextView android:id="@+id/txt_eta" android:layout_columnWeight="1" android:padding="4dp" android:textColor="?android:attr/textColorPrimary" android:textSize="13sp" />
+
+                </GridLayout>
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+        <!-- Primary Actions: Show on Map & Follow -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="12dp">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_show_on_map"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="0dp"
+                android:layout_height="44dp"
+                android:layout_weight="1"
+                android:layout_marginEnd="4dp"
+                app:cornerRadius="8dp"
+                android:text="@string/shared_string_show_on_map" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_follow_target"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="0dp"
+                android:layout_height="44dp"
+                android:layout_weight="1"
+                android:layout_marginStart="4dp"
+                app:cornerRadius="8dp"
+                android:text="@string/nautical_follow_target" />
+        </LinearLayout>
+
+        <!-- Comms & Track Actions: VHF Callout, Copy MMSI, Track Trail -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="8dp">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_vhf_callout"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="0dp"
+                android:layout_height="44dp"
+                android:layout_weight="1"
+                android:layout_marginEnd="4dp"
+                app:cornerRadius="8dp"
+                android:text="@string/nautical_vhf_callout" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_copy_mmsi"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="0dp"
+                android:layout_height="44dp"
+                android:layout_weight="1"
+                android:layout_marginStart="4dp"
+                android:layout_marginEnd="4dp"
+                app:cornerRadius="8dp"
+                android:text="@string/nautical_copy_mmsi" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_toggle_track"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="0dp"
+                android:layout_height="44dp"
+                android:layout_weight="1"
+                android:layout_marginStart="4dp"
+                app:cornerRadius="8dp"
+                android:text="@string/nautical_show_track" />
+        </LinearLayout>
+
+        <!-- Buddy & CPA Alarm Row -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="8dp">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_toggle_buddy"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="0dp"
+                android:layout_height="44dp"
+                android:layout_weight="1"
+                android:layout_marginEnd="4dp"
+                app:cornerRadius="8dp"
+                android:text="@string/nautical_add_to_buddies" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_set_cpa_alarm"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="0dp"
+                android:layout_height="44dp"
+                android:layout_weight="1"
+                android:layout_marginStart="4dp"
+                app:cornerRadius="8dp"
+                android:text="@string/nautical_set_cpa_alarm" />
+        </LinearLayout>
+
     </LinearLayout>
-
-    <!-- 2-Column Metric Grid -->
-    <GridLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:columnCount="2"
-        android:alignmentMode="alignMargins"
-        android:useDefaultMargins="true">
-
-        <TextView android:id="@+id/txt_sog" android:layout_columnWeight="1" android:padding="4dp" android:textColor="?android:attr/textColorPrimary" />
-        <TextView android:id="@+id/txt_cog" android:layout_columnWeight="1" android:padding="4dp" android:textColor="?android:attr/textColorPrimary" />
-        <TextView android:id="@+id/txt_heading" android:layout_columnWeight="1" android:padding="4dp" android:textColor="?android:attr/textColorPrimary" />
-        <TextView android:id="@+id/txt_rot" android:layout_columnWeight="1" android:padding="4dp" android:textColor="?android:attr/textColorPrimary" />
-        <TextView android:id="@+id/txt_range_bearing" android:layout_columnWeight="1" android:padding="4dp" android:textColor="?android:attr/textColorPrimary" />
-        <TextView android:id="@+id/txt_cpa_tcpa" android:layout_columnWeight="1" android:padding="4dp" android:textColor="?android:attr/textColorPrimary" />
-        <TextView android:id="@+id/txt_status" android:layout_columnWeight="1" android:padding="4dp" android:textColor="?android:attr/textColorPrimary" />
-        <TextView android:id="@+id/txt_dimensions" android:layout_columnWeight="1" android:padding="4dp" android:textColor="?android:attr/textColorPrimary" />
-        <TextView android:id="@+id/txt_draught" android:layout_columnWeight="1" android:padding="4dp" android:textColor="?android:attr/textColorPrimary" />
-        <TextView android:id="@+id/txt_destination" android:layout_columnWeight="1" android:padding="4dp" android:textColor="?android:attr/textColorPrimary" />
-        <TextView android:id="@+id/txt_eta" android:layout_columnWeight="1" android:padding="4dp" android:textColor="?android:attr/textColorPrimary" />
-        <TextView android:id="@+id/txt_position" android:layout_columnWeight="1" android:padding="4dp" android:textColor="?android:attr/textColorPrimary" />
-
-    </GridLayout>
-
-    <!-- Action Buttons -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:layout_marginTop="16dp">
-
-        <Button
-            android:id="@+id/btn_show_on_map"
-            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:layout_marginEnd="6dp"
-            android:text="@string/shared_string_show_on_map" />
-
-        <Button
-            android:id="@+id/btn_follow_target"
-            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:layout_marginStart="6dp"
-            android:text="@string/nautical_follow_target" />
-    </LinearLayout>
-
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:layout_marginTop="8dp">
-
-        <Button
-            android:id="@+id/btn_vhf_callout"
-            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:layout_marginEnd="6dp"
-            android:text="VHF Callout" />
-
-        <Button
-            android:id="@+id/btn_set_cpa_alarm"
-            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:layout_marginStart="6dp"
-            android:text="Set CPA Alarm" />
-    </LinearLayout>
-
-    <Button
-        android:id="@+id/btn_toggle_buddy"
-        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:text="@string/nautical_add_to_buddies" />
-
-</LinearLayout>
+</androidx.core.widget.NestedScrollView>

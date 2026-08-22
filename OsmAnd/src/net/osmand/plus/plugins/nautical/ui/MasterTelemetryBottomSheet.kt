@@ -34,15 +34,19 @@ class MasterTelemetryBottomSheet : NauticalMenuBottomSheetDialogFragment() {
     private var widgetId: String? = null
 
     companion object {
+        const val TAG = "nautical_master_telemetry"
         const val KEY_WIDGET_ID = "widget_id"
 
         fun show(manager: FragmentManager, widgetId: String? = null) {
-            val fragment = MasterTelemetryBottomSheet()
-            val args = Bundle().apply {
-                putString(KEY_WIDGET_ID, widgetId)
+            if (manager.isStateSaved) return
+            if (manager.findFragmentByTag(TAG) == null) {
+                val fragment = MasterTelemetryBottomSheet()
+                val args = Bundle().apply {
+                    putString(KEY_WIDGET_ID, widgetId)
+                }
+                fragment.arguments = args
+                fragment.show(manager, TAG)
             }
-            fragment.arguments = args
-            fragment.show(manager, "nautical_master_telemetry")
         }
     }
 
@@ -184,6 +188,10 @@ class MasterTelemetryBottomSheet : NauticalMenuBottomSheetDialogFragment() {
             val keys = raw.split(",")
                 .map { it.trim() }
                 .filter { it.isNotEmpty() && !it.startsWith("!") }
+                .map { key ->
+                    val metric = TelemetryRegistry.getMetric(key)
+                    metric?.key ?: key
+                }
 
             displayedKeys.clear()
             displayedKeys.addAll(keys)

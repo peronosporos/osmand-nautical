@@ -228,13 +228,18 @@ class NauticalManeuversBottomSheet : BaseNauticalBottomSheet() {
     }
 
     companion object {
+        const val TAG = "maneuvers_sheet"
+
         fun show(fm: androidx.fragment.app.FragmentManager, lat: Double = 0.0, lon: Double = 0.0) {
-            val fragment = NauticalManeuversBottomSheet()
-            val args = Bundle()
-            args.putDouble("lat", lat)
-            args.putDouble("lon", lon)
-            fragment.arguments = args
-            fragment.show(fm, "maneuvers_sheet")
+            if (fm.isStateSaved) return
+            if (fm.findFragmentByTag(TAG) == null) {
+                val fragment = NauticalManeuversBottomSheet()
+                val args = Bundle()
+                args.putDouble("lat", lat)
+                args.putDouble("lon", lon)
+                fragment.arguments = args
+                fragment.show(fm, TAG)
+            }
         }
     }
 }

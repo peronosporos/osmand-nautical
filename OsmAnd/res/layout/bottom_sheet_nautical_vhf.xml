@@ -133,7 +133,8 @@
                 android:maxLines="1"
                 android:text="16 (Distress)"
                 android:textColor="#FFFF4444"
-                app:strokeColor="#FFFF4444" />
+                app:strokeColor="#FFFF4444"
+                app:cornerRadius="8dp" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btn_ch_09"
@@ -147,7 +148,8 @@
                 android:paddingEnd="4dp"
                 android:textSize="12sp"
                 android:maxLines="1"
-                android:text="09 (Calling)" />
+                android:text="09 (Calling)"
+                app:cornerRadius="8dp" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btn_ch_13"
@@ -161,35 +163,8 @@
                 android:paddingEnd="4dp"
                 android:textSize="12sp"
                 android:maxLines="1"
-                android:text="13 (Safety)" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btn_ch_72"
-                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                android:layout_width="0dp"
-                android:layout_columnWeight="1"
-                android:layout_height="44dp"
-                android:insetTop="0dp"
-                android:insetBottom="0dp"
-                android:paddingStart="4dp"
-                android:paddingEnd="4dp"
-                android:textSize="12sp"
-                android:maxLines="1"
-                android:text="72 (Ship-Ship)" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btn_ch_77"
-                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                android:layout_width="0dp"
-                android:layout_columnWeight="1"
-                android:layout_height="44dp"
-                android:insetTop="0dp"
-                android:insetBottom="0dp"
-                android:paddingStart="4dp"
-                android:paddingEnd="4dp"
-                android:textSize="12sp"
-                android:maxLines="1"
-                android:text="77 (Port Ops)" />
+                android:text="13 (Safety)"
+                app:cornerRadius="8dp" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btn_ch_06"
@@ -203,7 +178,38 @@
                 android:paddingEnd="4dp"
                 android:textSize="12sp"
                 android:maxLines="1"
-                android:text="06 (Inter-ship)" />
+                android:text="06 (Inter-ship)"
+                app:cornerRadius="8dp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_ch_72"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="0dp"
+                android:layout_columnWeight="1"
+                android:layout_height="44dp"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:paddingStart="4dp"
+                android:paddingEnd="4dp"
+                android:textSize="12sp"
+                android:maxLines="1"
+                android:text="72 (Ship-Ship)"
+                app:cornerRadius="8dp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_ch_77"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="0dp"
+                android:layout_columnWeight="1"
+                android:layout_height="44dp"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:paddingStart="4dp"
+                android:paddingEnd="4dp"
+                android:textSize="12sp"
+                android:maxLines="1"
+                android:text="77 (Port Ops)"
+                app:cornerRadius="8dp" />
 
         </GridLayout>
 

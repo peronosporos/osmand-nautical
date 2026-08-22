@@ -22,6 +22,7 @@ class TideStationBottomSheet : BaseNauticalBottomSheet() {
     private var graphView: TideGraphView? = null
 
     companion object {
+        const val TAG = "tide_station"
         private const val LAT = "lat"
         private const val LON = "lon"
 
@@ -32,6 +33,19 @@ class TideStationBottomSheet : BaseNauticalBottomSheet() {
                     putDouble(LAT, lat)
                     putDouble(LON, lon)
                 }
+            }
+        }
+
+        fun show(fm: androidx.fragment.app.FragmentManager, lat: Double, lon: Double, skStationId: String? = null) {
+            if (fm.isStateSaved) return
+            if (fm.findFragmentByTag(TAG) == null) {
+                val sheet = newInstance(lat, lon)
+                if (skStationId != null) {
+                    val args = sheet.arguments ?: Bundle()
+                    args.putString("signalk_station_id", skStationId)
+                    sheet.arguments = args
+                }
+                sheet.show(fm, TAG)
             }
         }
     }

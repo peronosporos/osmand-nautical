@@ -310,11 +310,16 @@ class AnchorWatchDialogFragment : BaseMaterialBottomSheetDialogFragment() {
     }
 
     companion object {
+        const val TAG = "AnchorWatchDialogFragment"
+
         /**
-         * Shows the anchor watch configuration dialog.
+         * Shows the anchor watch configuration dialog safely.
          */
         fun show(fragmentManager: androidx.fragment.app.FragmentManager) {
-            AnchorWatchDialogFragment().show(fragmentManager, "AnchorWatchDialogFragment")
+            if (fragmentManager.isStateSaved) return
+            if (fragmentManager.findFragmentByTag(TAG) == null) {
+                AnchorWatchDialogFragment().show(fragmentManager, TAG)
+            }
         }
     }
 }

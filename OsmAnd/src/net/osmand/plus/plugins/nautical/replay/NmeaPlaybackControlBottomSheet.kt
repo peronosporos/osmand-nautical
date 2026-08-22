@@ -179,8 +179,13 @@ class NmeaPlaybackControlBottomSheet : BaseMaterialBottomSheetDialogFragment() {
     }
 
     companion object {
+        const val TAG = "NmeaPlaybackControlBottomSheet"
+
         fun show(fragmentManager: androidx.fragment.app.FragmentManager) {
-            NmeaPlaybackControlBottomSheet().show(fragmentManager, "NmeaPlaybackControlBottomSheet")
+            if (fragmentManager.isStateSaved) return
+            if (fragmentManager.findFragmentByTag(TAG) == null) {
+                NmeaPlaybackControlBottomSheet().show(fragmentManager, TAG)
+            }
         }
     }
 }

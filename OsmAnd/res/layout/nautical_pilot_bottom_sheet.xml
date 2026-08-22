@@ -428,6 +428,116 @@
                     app:strokeWidth="1.5dp"
                     app:cornerRadius="8dp" />
             </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/layout_secondary_row_4"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:orientation="horizontal">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_maneuver_secondary_7"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    android:layout_width="0dp"
+                    android:layout_height="44dp"
+                    android:minHeight="44dp"
+                    android:layout_weight="1"
+                    android:layout_marginEnd="6dp"
+                    android:paddingStart="4dp"
+                    android:paddingEnd="4dp"
+                    android:paddingTop="0dp"
+                    android:paddingBottom="0dp"
+                    android:singleLine="true"
+                    android:ellipsize="end"
+                    app:autoSizeTextType="uniform"
+                    app:autoSizeMinTextSize="10sp"
+                    app:autoSizeMaxTextSize="12sp"
+                    android:text="@string/nautical_weigh_anchor"
+                    android:textColor="?attr/active_color_primary"
+                    android:textStyle="bold"
+                    app:strokeColor="?attr/active_color_primary"
+                    app:strokeWidth="1.5dp"
+                    app:cornerRadius="8dp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_maneuver_secondary_8"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    android:layout_width="0dp"
+                    android:layout_height="44dp"
+                    android:minHeight="44dp"
+                    android:layout_weight="1"
+                    android:paddingStart="4dp"
+                    android:paddingEnd="4dp"
+                    android:paddingTop="0dp"
+                    android:paddingBottom="0dp"
+                    android:singleLine="true"
+                    android:ellipsize="end"
+                    app:autoSizeTextType="uniform"
+                    app:autoSizeMinTextSize="10sp"
+                    app:autoSizeMaxTextSize="12sp"
+                    android:text="@string/nautical_dodge_port_label"
+                    android:textColor="?attr/active_color_primary"
+                    android:textStyle="bold"
+                    app:strokeColor="?attr/active_color_primary"
+                    app:strokeWidth="1.5dp"
+                    app:cornerRadius="8dp" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/layout_secondary_row_5"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:orientation="horizontal">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_maneuver_secondary_9"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    android:layout_width="0dp"
+                    android:layout_height="44dp"
+                    android:minHeight="44dp"
+                    android:layout_weight="1"
+                    android:layout_marginEnd="6dp"
+                    android:paddingStart="4dp"
+                    android:paddingEnd="4dp"
+                    android:paddingTop="0dp"
+                    android:paddingBottom="0dp"
+                    android:singleLine="true"
+                    android:ellipsize="end"
+                    app:autoSizeTextType="uniform"
+                    app:autoSizeMinTextSize="10sp"
+                    app:autoSizeMaxTextSize="12sp"
+                    android:text="@string/nautical_dodge_stbd_label"
+                    android:textColor="?attr/active_color_primary"
+                    android:textStyle="bold"
+                    app:strokeColor="?attr/active_color_primary"
+                    app:strokeWidth="1.5dp"
+                    app:cornerRadius="8dp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_maneuver_secondary_10"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    android:layout_width="0dp"
+                    android:layout_height="44dp"
+                    android:minHeight="44dp"
+                    android:layout_weight="1"
+                    android:paddingStart="4dp"
+                    android:paddingEnd="4dp"
+                    android:paddingTop="0dp"
+                    android:paddingBottom="0dp"
+                    android:singleLine="true"
+                    android:ellipsize="end"
+                    app:autoSizeTextType="uniform"
+                    app:autoSizeMinTextSize="10sp"
+                    app:autoSizeMaxTextSize="12sp"
+                    android:text="@string/nautical_emergency_stop_label"
+                    android:textColor="?attr/active_color_primary"
+                    android:textStyle="bold"
+                    app:strokeColor="?attr/active_color_primary"
+                    app:strokeWidth="1.5dp"
+                    app:cornerRadius="8dp" />
+            </LinearLayout>
         </LinearLayout>
 
         <!-- 2b. Embedded Maneuver Confirmation & Pre-activation Target Setup -->
@@ -547,16 +657,18 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:paddingTop="10dp"
-                android:paddingBottom="10dp">
+                android:paddingTop="12dp"
+                android:paddingBottom="12dp">
 
-                <!-- Heading / Wind Error Linear Scale (Compact) -->
+                <!-- Heading / Wind Error Linear Scale -->
                 <net.osmand.plus.plugins.nautical.ui.HeadingErrorLinearView
                     android:id="@+id/heading_error_linear"
                     android:layout_width="match_parent"
-                    android:layout_height="32dp"
-                    android:layout_marginStart="12dp"
-                    android:layout_marginEnd="12dp" />
+                    android:layout_height="44dp"
+                    android:layout_marginStart="16dp"
+                    android:layout_marginEnd="16dp"
+                    android:layout_marginTop="4dp"
+                    android:layout_marginBottom="4dp" />
 
                 <!-- Control Cluster Middle Row (Step Buttons + HeadingArcView) -->
                 <LinearLayout
@@ -564,7 +676,8 @@
                     android:layout_height="wrap_content"
                     android:orientation="horizontal"
                     android:gravity="center"
-                    android:layout_marginTop="4dp">
+                    android:layout_marginTop="8dp"
+                    android:layout_marginBottom="8dp">
 
                     <!-- Port Step Buttons Column -->
                     <LinearLayout
@@ -693,14 +806,15 @@
                     </LinearLayout>
                 </LinearLayout>
 
-                <!-- Rudder Angle Bar (Compact) -->
+                <!-- Rudder Angle Bar -->
                 <net.osmand.plus.plugins.nautical.ui.RudderView
                     android:id="@+id/rudder_view"
                     android:layout_width="match_parent"
-                    android:layout_height="40dp"
+                    android:layout_height="46dp"
                     android:layout_marginStart="16dp"
                     android:layout_marginEnd="16dp"
-                    android:layout_marginTop="4dp"
+                    android:layout_marginTop="6dp"
+                    android:layout_marginBottom="4dp"
                     android:contentDescription="@string/nautical_rudder_angle"
                     android:focusable="true" />
             </LinearLayout>

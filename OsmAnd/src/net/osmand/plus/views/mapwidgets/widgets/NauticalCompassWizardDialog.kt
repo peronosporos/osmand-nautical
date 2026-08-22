@@ -143,7 +143,11 @@ class NauticalCompassWizardDialog : BaseMaterialBottomSheetDialogFragment() {
 
         @JvmStatic
         fun show(fragment: androidx.fragment.app.Fragment) {
-            NauticalCompassWizardDialog().show(fragment.childFragmentManager, TAG)
+            val fm = fragment.childFragmentManager
+            if (fm.isStateSaved) return
+            if (fm.findFragmentByTag(TAG) == null) {
+                NauticalCompassWizardDialog().show(fm, TAG)
+            }
         }
     }
 }

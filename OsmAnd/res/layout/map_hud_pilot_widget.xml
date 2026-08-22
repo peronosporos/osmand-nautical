@@ -50,7 +50,6 @@
 				android:layout_width="wrap_content"
 				android:layout_height="wrap_content"
 				android:layout_gravity="center_vertical"
-				android:layout_marginStart="@dimen/map_widget_icon_margin"
 				android:layout_marginEnd="4dp">
 
 				<LinearLayout
@@ -62,7 +61,6 @@
 						android:id="@+id/widget_text"
 						android:layout_width="wrap_content"
 						android:layout_height="wrap_content"
-						android:layout_marginEnd="@dimen/map_widget_icon_margin"
 						android:maxLines="1"
 						android:minWidth="10dp"
 						android:textSize="@dimen/map_widget_text_size"
@@ -72,7 +70,7 @@
 						android:layout_width="wrap_content"
 						android:layout_height="wrap_content"
 						android:layout_gravity="bottom"
-						android:layout_marginStart="4dp"
+						android:layout_marginStart="2dp"
 						android:paddingBottom="2dp">
 
 						<TextView
@@ -82,7 +80,7 @@
 							android:maxLines="1"
 							android:textColor="@color/card_and_list_background_light"
 							android:textSize="@dimen/map_widget_text_size_small"
-							tools:text="AUTO" />
+							tools:text="" />
 
 						<net.osmand.plus.views.mapwidgets.OutlinedTextContainer
 							android:id="@+id/widget_text_small"
@@ -90,7 +88,7 @@
 							android:layout_height="wrap_content"
 							android:maxLines="1"
 							android:textSize="@dimen/map_widget_text_size_small"
-							tools:text="AUTO" />
+							tools:text="" />
 
 						<net.osmand.plus.views.mapwidgets.OutlinedTextContainer
 							android:id="@+id/widget_name"

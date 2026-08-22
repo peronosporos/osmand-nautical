@@ -433,8 +433,13 @@ class NauticalElectricalDashboardBottomSheet : BaseNauticalBottomSheet() {
     }
 
     companion object {
+        const val TAG = "NauticalElectricalDashboardBottomSheet"
+
         fun show(fragmentManager: androidx.fragment.app.FragmentManager) {
-            NauticalElectricalDashboardBottomSheet().show(fragmentManager, "NauticalElectricalDashboardBottomSheet")
+            if (fragmentManager.isStateSaved) return
+            if (fragmentManager.findFragmentByTag(TAG) == null) {
+                NauticalElectricalDashboardBottomSheet().show(fragmentManager, TAG)
+            }
         }
     }
 }

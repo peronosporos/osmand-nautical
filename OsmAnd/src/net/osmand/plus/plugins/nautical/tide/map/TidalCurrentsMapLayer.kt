@@ -192,16 +192,11 @@ class TidalCurrentsMapLayer(context: Context) : OsmandMapLayer(context) {
         // Tap threshold: ~5km
         if (skDist < 5000 && skDist < localDist) {
             val activity = context as? MapActivity ?: return false
-            val dialog = TideStationBottomSheet.newInstance(skNearest!!.position.coordinates[1], skNearest.position.coordinates[0])
-            val args = dialog.arguments ?: Bundle()
-            args.putString("signalk_station_id", skNearest.id)
-            dialog.arguments = args
-            dialog.show(activity.supportFragmentManager, "tide_station")
+            TideStationBottomSheet.show(activity.supportFragmentManager, skNearest!!.position.coordinates[1], skNearest.position.coordinates[0], skNearest.id)
             return true
         } else if (localDist < 5000) {
             val activity = context as? MapActivity ?: return false
-            val dialog = TideStationBottomSheet.newInstance(localNearest!!.latitude, localNearest.longitude)
-            dialog.show(activity.supportFragmentManager, "tide_station")
+            TideStationBottomSheet.show(activity.supportFragmentManager, localNearest!!.latitude, localNearest.longitude)
             return true
         }
         

@@ -56,8 +56,13 @@ class MarineRasterSettingsControl : BaseMaterialBottomSheetDialogFragment() {
     }
 
     companion object {
+        const val TAG = "MarineRasterSettingsControl"
+
         fun show(fragmentManager: androidx.fragment.app.FragmentManager) {
-            MarineRasterSettingsControl().show(fragmentManager, "MarineRasterSettingsControl")
+            if (fragmentManager.isStateSaved) return
+            if (fragmentManager.findFragmentByTag(TAG) == null) {
+                MarineRasterSettingsControl().show(fragmentManager, TAG)
+            }
         }
     }
 }

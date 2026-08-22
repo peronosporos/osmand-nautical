@@ -49,7 +49,8 @@ class TelemetryWidgetSettingsFragment : BaseOsmAndFragment() {
         recyclerView.adapter = reorderAdapter
 
         val callback = object : ItemTouchHelper.SimpleCallback(
-            ItemTouchHelper.UP or ItemTouchHelper.DOWN, 0
+            ItemTouchHelper.UP or ItemTouchHelper.DOWN,
+            ItemTouchHelper.LEFT or ItemTouchHelper.RIGHT
         ) {
             override fun onMove(
                 recyclerView: RecyclerView,
@@ -65,7 +66,12 @@ class TelemetryWidgetSettingsFragment : BaseOsmAndFragment() {
                 return false
             }
 
-            override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {}
+            override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {
+                val pos = viewHolder.bindingAdapterPosition
+                if (pos != RecyclerView.NO_POSITION) {
+                    reorderAdapter.removeItem(pos)
+                }
+            }
         }
 
         itemTouchHelper = ItemTouchHelper(callback)
@@ -136,12 +142,24 @@ class TelemetryWidgetSettingsFragment : BaseOsmAndFragment() {
         for (k in keys) {
             val isHidden = k.startsWith("!")
             val actualKey = if (isHidden) k.substring(1) else k
-            activeItems.add(TelemetryItemConfig(actualKey, isVisible = !isHidden))
+            val metric = TelemetryRegistry.getMetric(actualKey)
+            val resolvedKey = metric?.key ?: actualKey
+            if (activeItems.none { it.key == resolvedKey }) {
+                activeItems.add(TelemetryItemConfig(resolvedKey, isVisible = !isHidden))
+            }
+        }
+        if (activeItems.isEmpty()) {
+            val defaultKeys = TelemetryRegistry.getPresetKeys(TelemetryRegistry.PRESET_SAILING)
+            for (dk in defaultKeys) {
+                activeItems.add(TelemetryItemConfig(dk, isVisible = true))
+            }
+            saveSettings()
         }
     }
 
     private fun saveSettings() {
-        val serialized = activeItems.joinToString(",") { item ->
+        val current = if (::reorderAdapter.isInitialized) reorderAdapter.getItems() else activeItems
+        val serialized = current.joinToString(",") { item ->
             if (item.isVisible) item.key else "!${item.key}"
         }
         settings.NAUTICAL_MASTER_TELEMETRY_ITEMS.set(serialized)
@@ -165,7 +183,7 @@ class TelemetryWidgetSettingsFragment : BaseOsmAndFragment() {
         val textColorSecondary = AndroidUtils.getColorFromAttr(themedCtx, android.R.attr.textColorSecondary)
 
         var selectedCategory: MetricCategory? = null
-        val activeKeys = activeItems.map { it.key }.toSet()
+        val activeKeys = reorderAdapter.getItems().map { it.key }.toSet()
         val allMetrics = TelemetryRegistry.getAllMetrics().filter { it.key !in activeKeys }
 
         var dialog: AlertDialog? = null

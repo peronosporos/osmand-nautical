@@ -75,8 +75,13 @@ class VhfHistoryBottomSheet : BaseMaterialBottomSheetDialogFragment() {
     }
 
     companion object {
+        const val TAG = "VhfHistoryBottomSheet"
+
         fun show(fragmentManager: androidx.fragment.app.FragmentManager) {
-            VhfHistoryBottomSheet().show(fragmentManager, "VhfHistoryBottomSheet")
+            if (fragmentManager.isStateSaved) return
+            if (fragmentManager.findFragmentByTag(TAG) == null) {
+                VhfHistoryBottomSheet().show(fragmentManager, TAG)
+            }
         }
     }
 }

@@ -17,6 +17,7 @@ class NavtexDetailsBottomSheet : BottomSheetDialogFragment() {
     private var message: NavtexMessage? = null
 
     companion object {
+        const val TAG = "navtex_details"
         private const val KEY_MESSAGE = "key_message"
 
         fun newInstance(message: NavtexMessage): NavtexDetailsBottomSheet {
@@ -25,6 +26,13 @@ class NavtexDetailsBottomSheet : BottomSheetDialogFragment() {
             args.putSerializable(KEY_MESSAGE, message)
             fragment.arguments = args
             return fragment
+        }
+
+        fun show(manager: androidx.fragment.app.FragmentManager, message: NavtexMessage) {
+            if (manager.isStateSaved) return
+            if (manager.findFragmentByTag(TAG) == null) {
+                newInstance(message).show(manager, TAG)
+            }
         }
     }
 

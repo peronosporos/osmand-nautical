@@ -1,5 +1,7 @@
 package net.osmand.plus.plugins.nautical.ui
 
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.Context
 import android.graphics.Color
 import android.graphics.PorterDuff
@@ -8,34 +10,44 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Button
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.appcompat.app.AlertDialog
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
+import com.google.android.material.button.MaterialButton
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.launch
 import net.osmand.plus.R
+import net.osmand.plus.activities.MapActivity
 import net.osmand.plus.plugins.nautical.NauticalPlugin
 import net.osmand.plus.plugins.nautical.engine.NauticalAisManager
+import net.osmand.plus.plugins.nautical.ui.widgets.NauticalVhfBottomSheet
 import net.osmand.shared.aistracker.AisObjType
 import net.osmand.shared.aistracker.AisObject
 import net.osmand.shared.aistracker.AisObjectConstants
-import net.osmand.util.MapUtils
 import java.util.Locale
 
 class AisTargetBottomSheet : BottomSheetDialogFragment() {
 
     private var aisObject: AisObject? = null
-    private var buddyJob: kotlinx.coroutines.Job? = null
 
     companion object {
+        const val TAG = "AisTargetBottomSheet"
+
         fun newInstance(aisObject: AisObject): AisTargetBottomSheet {
             val fragment = AisTargetBottomSheet()
             fragment.aisObject = aisObject
             return fragment
+        }
+
+        fun show(manager: androidx.fragment.app.FragmentManager, aisObject: AisObject) {
+            if (manager.isStateSaved) return
+            if (manager.findFragmentByTag(TAG) == null) {
+                newInstance(aisObject).show(manager, TAG)
+            }
         }
     }
 
@@ -51,10 +63,10 @@ class AisTargetBottomSheet : BottomSheetDialogFragment() {
         aisObject = ais
         if (ais != null) {
             updateView(view, ais)
-            
+
             viewLifecycleOwner.lifecycleScope.launch {
-                NauticalPlugin.getInstance()?.aisManager?.aisEvents?.filter { 
-                    (it is NauticalAisManager.AisEvent.Updated) && it.obj.mmsi == ais.mmsi 
+                NauticalPlugin.getInstance()?.aisManager?.aisEvents?.filter {
+                    (it is NauticalAisManager.AisEvent.Updated) && it.obj.mmsi == ais.mmsi
                 }?.collect { event ->
                     val updated = (event as NauticalAisManager.AisEvent.Updated).obj
                     aisObject = updated
@@ -71,10 +83,11 @@ class AisTargetBottomSheet : BottomSheetDialogFragment() {
         val base = runCatching { requireActivity() }.getOrNull() ?: requireContext()
         val themedCtx = androidx.appcompat.view.ContextThemeWrapper(base, R.style.OsmandLightTheme)
         val plugin = NauticalPlugin.getInstance()
+        val aisManager = plugin?.aisManager
         val unknown = getString(R.string.shared_string_none)
         val na = getString(R.string.nautical_not_available)
 
-        // Header: Icon, Name, MMSI, Call Sign, IMO
+        // Header: Icon, Name, MMSI, Call Sign, Flag, IMO, Buddy Star
         val imgIcon = view.findViewById<ImageView>(R.id.img_vessel_icon)
         val iconRes = selectBitmap(ais.objectClass)
         val iconColor = selectColor(ais.objectClass)
@@ -86,6 +99,9 @@ class AisTargetBottomSheet : BottomSheetDialogFragment() {
 
         val shipName = ais.shipName?.trim()
         view.findViewById<TextView>(R.id.txt_ship_name).text = if (!shipName.isNullOrEmpty()) shipName else "MMSI: ${ais.mmsi}"
+
+        val isBuddy = aisManager?.isBuddy(ais.mmsi) ?: false
+        view.findViewById<ImageView>(R.id.img_buddy_star)?.visibility = if (isBuddy) View.VISIBLE else View.GONE
 
         val country = getMidCountry(ais.mmsi)
         val mmsiSb = StringBuilder("MMSI: ${ais.mmsi}")
@@ -104,7 +120,7 @@ class AisTargetBottomSheet : BottomSheetDialogFragment() {
         val isClassB = ais.msgTypes.any { it in setOf(18, 19, 24) }
         view.findViewById<TextView>(R.id.txt_ship_type_badge).text = if (shipType.isNotEmpty()) shipType else "Class ${if (isClassB) "B" else "A"}"
 
-        // Threat / CPA Warning
+        // Threat / CPA Warning Banner
         val cpaWarningLayout = view.findViewById<LinearLayout>(R.id.layout_cpa_warning)
         val txtCpaWarning = view.findViewById<TextView>(R.id.txt_cpa_warning_text)
         val isDanger = checkDanger(ais, plugin)
@@ -149,7 +165,13 @@ class AisTargetBottomSheet : BottomSheetDialogFragment() {
         } else {
             "CPA: $na"
         }
-        view.findViewById<TextView>(R.id.txt_cpa_tcpa).text = cpaTcpaStr
+        val txtCpa = view.findViewById<TextView>(R.id.txt_cpa_tcpa)
+        txtCpa.text = cpaTcpaStr
+        if (isDanger && ais.cpa.valid) {
+            txtCpa.setTextColor(Color.RED)
+        } else {
+            txtCpa.setTextColor(net.osmand.plus.utils.AndroidUtils.getColorFromAttr(requireContext(), android.R.attr.textColorPrimary))
+        }
 
         view.findViewById<TextView>(R.id.txt_status).text = "Status: ${ais.getNavStatusString()}"
 
@@ -172,9 +194,9 @@ class AisTargetBottomSheet : BottomSheetDialogFragment() {
         view.findViewById<TextView>(R.id.txt_position).text = "Pos: $posStr"
 
         // Actions
-        view.findViewById<Button>(R.id.btn_show_on_map).setOnClickListener {
+        view.findViewById<MaterialButton>(R.id.btn_show_on_map).setOnClickListener {
             if (pos != null) {
-                val activity = activity as? net.osmand.plus.activities.MapActivity
+                val activity = activity as? MapActivity
                 activity?.mapView?.setLatLon(pos.latitude, pos.longitude)
                 if ((activity?.mapView?.zoom ?: 0) < 14) {
                     activity?.mapView?.setIntZoom(15)
@@ -184,10 +206,10 @@ class AisTargetBottomSheet : BottomSheetDialogFragment() {
             dismiss()
         }
 
-        view.findViewById<Button>(R.id.btn_follow_target).setOnClickListener {
+        view.findViewById<MaterialButton>(R.id.btn_follow_target).setOnClickListener {
             plugin?.aisAisLayer?.setFollowedTarget(ais.mmsi)
             if (pos != null) {
-                val activity = activity as? net.osmand.plus.activities.MapActivity
+                val activity = activity as? MapActivity
                 activity?.mapView?.setLatLon(pos.latitude, pos.longitude)
                 if ((activity?.mapView?.zoom ?: 0) < 14) {
                     activity?.mapView?.setIntZoom(15)
@@ -196,24 +218,50 @@ class AisTargetBottomSheet : BottomSheetDialogFragment() {
             dismiss()
         }
 
-        view.findViewById<Button?>(R.id.btn_vhf_callout)?.setOnClickListener {
-            val activity = activity as? net.osmand.plus.activities.MapActivity
+        view.findViewById<MaterialButton>(R.id.btn_vhf_callout).setOnClickListener {
+            val activity = activity as? MapActivity
             if (activity != null) {
                 NauticalPlugin.engine?.sendDelta("communication.vhf.channel", "16")
-                net.osmand.plus.plugins.nautical.ui.widgets.NauticalVhfBottomSheet.show(activity.supportFragmentManager)
+                NauticalPlugin.engine?.sendDelta("communication.vhf.dscTarget", ais.mmsi.toString())
+                NauticalVhfBottomSheet.show(activity.supportFragmentManager)
             }
             dismiss()
         }
 
-        view.findViewById<Button?>(R.id.btn_set_cpa_alarm)?.setOnClickListener {
+        view.findViewById<MaterialButton>(R.id.btn_copy_mmsi).setOnClickListener {
+            val clipboard = requireContext().getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
+            val clip = ClipData.newPlainText("AIS MMSI", ais.mmsi.toString())
+            clipboard?.setPrimaryClip(clip)
+            plugin?.application?.showToastMessage(R.string.nautical_mmsi_copied, ais.mmsi)
+        }
+
+        val btnTrack = view.findViewById<MaterialButton>(R.id.btn_toggle_track)
+        val isTrackOn = aisManager?.isTrackEnabled(ais.mmsi) ?: false
+        btnTrack.text = if (isTrackOn) getString(R.string.nautical_hide_track) else getString(R.string.nautical_show_track)
+        btnTrack.setOnClickListener {
+            val newTrackState = aisManager?.toggleTrack(ais.mmsi) ?: false
+            btnTrack.text = if (newTrackState) getString(R.string.nautical_hide_track) else getString(R.string.nautical_show_track)
+        }
+
+        val btnBuddy = view.findViewById<MaterialButton>(R.id.btn_toggle_buddy)
+        btnBuddy.text = if (isBuddy) getString(R.string.nautical_remove_from_buddies) else getString(R.string.nautical_add_to_buddies)
+        btnBuddy.setIconResource(if (isBuddy) R.drawable.ic_action_favorite else R.drawable.ic_action_sail_boat_dark)
+        btnBuddy.setOnClickListener {
+            val newBuddyState = aisManager?.toggleBuddy(ais.mmsi) ?: false
+            btnBuddy.text = if (newBuddyState) getString(R.string.nautical_remove_from_buddies) else getString(R.string.nautical_add_to_buddies)
+            btnBuddy.setIconResource(if (newBuddyState) R.drawable.ic_action_favorite else R.drawable.ic_action_sail_boat_dark)
+            view.findViewById<ImageView>(R.id.img_buddy_star)?.visibility = if (newBuddyState) View.VISIBLE else View.GONE
+        }
+
+        view.findViewById<MaterialButton>(R.id.btn_set_cpa_alarm).setOnClickListener {
             val ctx = requireContext()
             val input = android.widget.EditText(ctx).apply {
                 hint = "Distance in NM"
                 inputType = android.text.InputType.TYPE_CLASS_NUMBER or android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL
                 setText(plugin?.aisCpaWarningDistance?.get()?.toString() ?: "1.0")
             }
-            androidx.appcompat.app.AlertDialog.Builder(ctx)
-                .setTitle("Set Custom CPA Alarm")
+            AlertDialog.Builder(ctx)
+                .setTitle(R.string.nautical_set_cpa_alarm)
                 .setMessage("Enter CPA alert threshold for ${ais.shipName ?: "MMSI ${ais.mmsi}"}:")
                 .setView(input)
                 .setPositiveButton(R.string.shared_string_save) { _, _ ->
@@ -225,17 +273,6 @@ class AisTargetBottomSheet : BottomSheetDialogFragment() {
                 }
                 .setNegativeButton(R.string.shared_string_cancel, null)
                 .show()
-        }
-
-        val btnBuddy = view.findViewById<Button>(R.id.btn_toggle_buddy)
-        val isBuddy = NauticalPlugin.engine?.getCurrentState()?.aisBuddies?.contains(ais.mmsi) ?: false
-        btnBuddy.text = if (isBuddy) getString(R.string.nautical_remove_from_buddies) else getString(R.string.nautical_add_to_buddies)
-        btnBuddy.setOnClickListener {
-            val engine = NauticalPlugin.engine
-            val current = engine?.getCurrentState()?.aisBuddies?.toMutableSet() ?: mutableSetOf()
-            if (isBuddy) current.remove(ais.mmsi) else current.add(ais.mmsi)
-            engine?.sendDelta("navigation.aisBuddies", current.toList())
-            dismiss()
         }
     }
 

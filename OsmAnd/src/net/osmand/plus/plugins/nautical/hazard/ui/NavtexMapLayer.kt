@@ -309,7 +309,7 @@ class NavtexMapLayer(private val activity: MapActivity) : OsmandMapLayer(activit
     override fun onSingleTap(point: PointF, tileBox: RotatedTileBox): Boolean = false
     override fun showMenuAction(o: Any?): Boolean {
         if (o is NavtexMessage) {
-            NavtexDetailsBottomSheet.newInstance(o).show(activity.supportFragmentManager, "navtex_details")
+            NavtexDetailsBottomSheet.show(activity.supportFragmentManager, o)
             return true
         }
         return false

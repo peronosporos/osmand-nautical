@@ -58,10 +58,8 @@ class TelemetryReorderAdapter(
 
         holder.deleteButton.setOnClickListener {
             val currentPos = holder.bindingAdapterPosition
-            if (currentPos != RecyclerView.NO_POSITION && currentPos < items.size) {
-                items.removeAt(currentPos)
-                notifyItemRemoved(currentPos)
-                onItemsChangedListener()
+            if (currentPos != RecyclerView.NO_POSITION) {
+                removeItem(currentPos)
                 it.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
             }
         }
@@ -104,6 +102,14 @@ class TelemetryReorderAdapter(
         }
         notifyItemMoved(from, to)
         onItemsChangedListener()
+    }
+
+    fun removeItem(position: Int) {
+        if (position in items.indices) {
+            items.removeAt(position)
+            notifyItemRemoved(position)
+            onItemsChangedListener()
+        }
     }
 
     fun addItem(key: String) {

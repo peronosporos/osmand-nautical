@@ -1,15 +1,14 @@
 package net.osmand.plus.plugins.nautical.ui
 
 import android.os.Bundle
+import android.text.InputType
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.TextView
 import android.widget.EditText
-import android.text.InputType
 import android.widget.ImageView
+import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
-import com.google.android.material.floatingactionbutton.FloatingActionButton
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -29,9 +28,17 @@ class NauticalBuddyListFragment : BaseOsmAndFragment() {
         val view = themedInflater.inflate(R.layout.fragment_nautical_buddy_list, container, false)
         val recyclerView = view.findViewById<RecyclerView?>(R.id.recycler_view)
         
-        adapter = BuddyAdapter { mmsi ->
-            confirmDeleteBuddy(mmsi)
-        }
+        adapter = BuddyAdapter(
+            onClick = { mmsi ->
+                val ais = NauticalPlugin.getAisObject(mmsi)
+                if (ais != null && !parentFragmentManager.isStateSaved) {
+                    AisTargetBottomSheet.show(parentFragmentManager, ais)
+                }
+            },
+            onDelete = { mmsi ->
+                confirmDeleteBuddy(mmsi)
+            }
+        )
         recyclerView?.layoutManager = LinearLayoutManager(requireContext())
         recyclerView?.adapter = adapter
 
@@ -54,10 +61,7 @@ class NauticalBuddyListFragment : BaseOsmAndFragment() {
         AlertDialog.Builder(requireContext())
             .setMessage(getString(R.string.nautical_buddy_delete_confirm, mmsi))
             .setPositiveButton(R.string.shared_string_delete) { _, _ ->
-                val current = NauticalPlugin.engine?.getCurrentState()?.aisBuddies?.toMutableSet() ?: mutableSetOf()
-                if (current.remove(mmsi)) {
-                    NauticalPlugin.engine?.sendDelta(net.osmand.plus.plugins.nautical.engine.SignalKPaths.NAV_AIS_BUDDIES, current.toList())
-                }
+                NauticalPlugin.getInstance()?.aisManager?.toggleBuddy(mmsi)
             }
             .setNegativeButton(R.string.shared_string_cancel, null)
             .show()
@@ -72,9 +76,7 @@ class NauticalBuddyListFragment : BaseOsmAndFragment() {
             .setTitle(R.string.nautical_add_to_buddies)
             .setItems(names) { _, which ->
                 val selected = aisObjects[which]
-                val current = NauticalPlugin.engine?.getCurrentState()?.aisBuddies?.toMutableSet() ?: mutableSetOf()
-                current.add(selected.mmsi)
-                NauticalPlugin.engine?.sendDelta(net.osmand.plus.plugins.nautical.engine.SignalKPaths.NAV_AIS_BUDDIES, current.toList())
+                NauticalPlugin.getInstance()?.aisManager?.toggleBuddy(selected.mmsi)
             }
             .setNeutralButton(R.string.shared_string_add_manually) { _, _ ->
                  showManualMmsiDialog()
@@ -96,17 +98,17 @@ class NauticalBuddyListFragment : BaseOsmAndFragment() {
             .setPositiveButton(R.string.shared_string_add) { _, _ ->
                 val mmsi = input.text.toString().toIntOrNull()
                 if (mmsi != null) {
-                    val current = NauticalPlugin.engine?.getCurrentState()?.aisBuddies?.toMutableSet() ?: mutableSetOf()
-                    current.add(mmsi)
-                    NauticalPlugin.engine?.sendDelta(net.osmand.plus.plugins.nautical.engine.SignalKPaths.NAV_AIS_BUDDIES, current.toList())
+                    NauticalPlugin.getInstance()?.aisManager?.toggleBuddy(mmsi)
                 }
             }
             .setNegativeButton(R.string.shared_string_cancel, null)
             .show()
     }
 
-    private class BuddyAdapter(private val onDelete: (Int) -> Unit) : ListAdapter<Int, BuddyViewHolder>(BuddyDiffCallback()) {
-
+    private class BuddyAdapter(
+        private val onClick: (Int) -> Unit,
+        private val onDelete: (Int) -> Unit
+    ) : ListAdapter<Int, BuddyViewHolder>(BuddyDiffCallback()) {
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): BuddyViewHolder {
             val view = LayoutInflater.from(parent.context).inflate(R.layout.list_item_icon_and_menu, parent, false)
@@ -136,10 +138,12 @@ class NauticalBuddyListFragment : BaseOsmAndFragment() {
                 holder.txtDesc.text = ctx.getString(R.string.nautical_vessel_data_unavailable)
             }
             
-            holder.icon.setImageResource(R.drawable.ic_action_sail_boat_dark)
+            holder.icon.setImageResource(R.drawable.ic_action_favorite)
+            holder.icon.setColorFilter(android.graphics.Color.rgb(255, 215, 0))
             holder.secondaryIcon.setImageResource(R.drawable.ic_action_delete_dark)
             holder.secondaryIcon.visibility = View.VISIBLE
             holder.secondaryIcon.setOnClickListener { onDelete(mmsi) }
+            holder.itemView.setOnClickListener { onClick(mmsi) }
             holder.toggle.visibility = View.GONE
         }
     }
@@ -157,4 +161,3 @@ class NauticalBuddyListFragment : BaseOsmAndFragment() {
         val toggle: View = view.findViewById(R.id.toggle_item)
     }
 }
-

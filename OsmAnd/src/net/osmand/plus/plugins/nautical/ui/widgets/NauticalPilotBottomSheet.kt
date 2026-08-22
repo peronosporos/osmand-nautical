@@ -59,12 +59,18 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
     private lateinit var tacticalActionsRow: LinearLayout
     private lateinit var layoutSecondaryManeuvers: LinearLayout
     private lateinit var layoutSecondaryRow3: LinearLayout
+    private lateinit var layoutSecondaryRow4: LinearLayout
+    private lateinit var layoutSecondaryRow5: LinearLayout
     private lateinit var btnManeuverSec1: MaterialButton
     private lateinit var btnManeuverSec2: MaterialButton
     private lateinit var btnManeuverSec3: MaterialButton
     private lateinit var btnManeuverSec4: MaterialButton
     private lateinit var btnManeuverSec5: MaterialButton
     private lateinit var btnManeuverSec6: MaterialButton
+    private lateinit var btnManeuverSec7: MaterialButton
+    private lateinit var btnManeuverSec8: MaterialButton
+    private lateinit var btnManeuverSec9: MaterialButton
+    private lateinit var btnManeuverSec10: MaterialButton
     private lateinit var layoutEmbeddedConfirmation: LinearLayout
     private lateinit var layoutManeuverTargetSetup: LinearLayout
     private lateinit var txtManeuverTitle: TextView
@@ -83,9 +89,18 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
     private var pendingExecuteAction: ((targetHeading: Int?) -> Unit)? = null
 
     companion object {
+        const val TAG = "NauticalPilotBottomSheet"
+
         @JvmStatic
         fun newInstance(): NauticalPilotBottomSheet {
             return NauticalPilotBottomSheet()
+        }
+
+        fun show(fragmentManager: androidx.fragment.app.FragmentManager) {
+            if (fragmentManager.isStateSaved) return
+            if (fragmentManager.findFragmentByTag(TAG) == null) {
+                NauticalPilotBottomSheet().show(fragmentManager, TAG)
+            }
         }
     }
 
@@ -152,6 +167,12 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
         layoutSecondaryRow3 = customView.findViewById(R.id.layout_secondary_row_3)
         btnManeuverSec5 = customView.findViewById(R.id.btn_maneuver_secondary_5)
         btnManeuverSec6 = customView.findViewById(R.id.btn_maneuver_secondary_6)
+        layoutSecondaryRow4 = customView.findViewById(R.id.layout_secondary_row_4)
+        btnManeuverSec7 = customView.findViewById(R.id.btn_maneuver_secondary_7)
+        btnManeuverSec8 = customView.findViewById(R.id.btn_maneuver_secondary_8)
+        layoutSecondaryRow5 = customView.findViewById(R.id.layout_secondary_row_5)
+        btnManeuverSec9 = customView.findViewById(R.id.btn_maneuver_secondary_9)
+        btnManeuverSec10 = customView.findViewById(R.id.btn_maneuver_secondary_10)
         
         layoutEmbeddedConfirmation = customView.findViewById(R.id.layout_embedded_confirmation)
         layoutManeuverTargetSetup = customView.findViewById(R.id.layout_maneuver_target_setup)
@@ -296,7 +317,13 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
             btnManeuverSec4 = btnManeuverSec4,
             btnManeuverSec5 = btnManeuverSec5,
             btnManeuverSec6 = btnManeuverSec6,
+            btnManeuverSec7 = btnManeuverSec7,
+            btnManeuverSec8 = btnManeuverSec8,
+            btnManeuverSec9 = btnManeuverSec9,
+            btnManeuverSec10 = btnManeuverSec10,
             layoutSecondaryRow3 = layoutSecondaryRow3,
+            layoutSecondaryRow4 = layoutSecondaryRow4,
+            layoutSecondaryRow5 = layoutSecondaryRow5,
             onInitiateManeuver = { title, targetHeading, onExecute ->
                 showEmbeddedConfirmation(title, targetHeading, onExecute)
             }
@@ -335,6 +362,22 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
         btnManeuverSec6.setOnClickListener {
             val state = NauticalPlugin.engine?.getCurrentState()
             helper.handleSecondaryManeuver(6, settings.NAUTICAL_VESSEL_TYPE.get(), state)
+        }
+        btnManeuverSec7.setOnClickListener {
+            val state = NauticalPlugin.engine?.getCurrentState()
+            helper.handleSecondaryManeuver(7, settings.NAUTICAL_VESSEL_TYPE.get(), state)
+        }
+        btnManeuverSec8.setOnClickListener {
+            val state = NauticalPlugin.engine?.getCurrentState()
+            helper.handleSecondaryManeuver(8, settings.NAUTICAL_VESSEL_TYPE.get(), state)
+        }
+        btnManeuverSec9.setOnClickListener {
+            val state = NauticalPlugin.engine?.getCurrentState()
+            helper.handleSecondaryManeuver(9, settings.NAUTICAL_VESSEL_TYPE.get(), state)
+        }
+        btnManeuverSec10.setOnClickListener {
+            val state = NauticalPlugin.engine?.getCurrentState()
+            helper.handleSecondaryManeuver(10, settings.NAUTICAL_VESSEL_TYPE.get(), state)
         }
 
         // Continuous Heading / Wind Angle Slider Callbacks

@@ -366,6 +366,7 @@ class NauticalAisManager(private val app: OsmandApplication) : AisDataListener {
                     )
                     target.set(updated)
                     target.lastUpdate = now
+                    recordBreadcrumb(target.mmsi, lat, lon)
                 }
             }
             SignalKPaths.NAV_SPEED_OVER_GROUND -> {
@@ -465,6 +466,9 @@ class NauticalAisManager(private val app: OsmandApplication) : AisDataListener {
 
         val hasPosition = obj.position != null
         val isFirstFix = (isNew || !hadPosition) && hasPosition
+        if (hasPosition) {
+            recordBreadcrumb(mmsi, obj.position!!.latitude, obj.position!!.longitude)
+        }
 
         _aisEvents.tryEmit(AisEvent.Updated(obj))
         listeners.forEach { it.onAisObjectReceived(obj) }
@@ -499,6 +503,77 @@ class NauticalAisManager(private val app: OsmandApplication) : AisDataListener {
         if (!current.isRemote) {
             aisExtras[mmsi] = current.copy(isRemote = true)
         }
+    }
+
+    private val targetBreadcrumbs = Collections.synchronizedMap(mutableMapOf<Int, MutableList<Pair<Double, Double>>>())
+    private val enabledTrackMmsis = Collections.synchronizedSet(mutableSetOf<Int>())
+
+    fun recordBreadcrumb(mmsi: Int, lat: Double, lon: Double) {
+        if (lat.isNaN() || lon.isNaN()) return
+        val list = targetBreadcrumbs.getOrPut(mmsi) { mutableListOf() }
+        synchronized(list) {
+            if (list.isEmpty() || list.last() != (lat to lon)) {
+                list.add(lat to lon)
+                if (list.size > 200) {
+                    list.removeAt(0)
+                }
+            }
+        }
+    }
+
+    fun getBreadcrumbs(mmsi: Int): List<Pair<Double, Double>> {
+        val list = targetBreadcrumbs[mmsi] ?: return emptyList()
+        return synchronized(list) { list.toList() }
+    }
+
+    fun isTrackEnabled(mmsi: Int): Boolean = enabledTrackMmsis.contains(mmsi)
+
+    fun setTrackEnabled(mmsi: Int, enabled: Boolean) {
+        if (enabled) {
+            enabledTrackMmsis.add(mmsi)
+        } else {
+            enabledTrackMmsis.remove(mmsi)
+        }
+        app.runInUIThread {
+            app.osmandMap?.refreshMap()
+        }
+    }
+
+    fun toggleTrack(mmsi: Int): Boolean {
+        val newState = if (enabledTrackMmsis.contains(mmsi)) {
+            enabledTrackMmsis.remove(mmsi)
+            false
+        } else {
+            enabledTrackMmsis.add(mmsi)
+            true
+        }
+        app.runInUIThread {
+            app.osmandMap?.refreshMap()
+        }
+        return newState
+    }
+
+    fun isBuddy(mmsi: Int): Boolean {
+        val engine = NauticalPlugin.engine
+        val buddies = engine?.getCurrentState()?.aisBuddies ?: emptySet()
+        return buddies.contains(mmsi)
+    }
+
+    fun toggleBuddy(mmsi: Int): Boolean {
+        val engine = NauticalPlugin.engine
+        val current = engine?.getCurrentState()?.aisBuddies?.toMutableSet() ?: mutableSetOf()
+        val isNowBuddy = if (current.contains(mmsi)) {
+            current.remove(mmsi)
+            false
+        } else {
+            current.add(mmsi)
+            true
+        }
+        engine?.sendDelta("navigation.aisBuddies", current.toList())
+        app.runInUIThread {
+            app.osmandMap?.refreshMap()
+        }
+        return isNowBuddy
     }
 
     fun getAisExtras(mmsi: Int): AisExtras = aisExtras[mmsi] ?: AisExtras()
