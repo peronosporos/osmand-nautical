@@ -369,7 +369,7 @@ class NauticalPilotWidget(
         } else {
             when (mode) {
                 "wind" -> {
-                    val targetWind = state.targetWindAngle ?: state.windDirectionApparent
+                    val targetWind = state.targetWindAngleApparent ?: state.windDirectionApparent
                     if (targetWind != null && !isStale) {
                         val deg = Math.toDegrees(targetWind)
                         setText(String.format(Locale.US, "%.0f°", deg), "WIND")

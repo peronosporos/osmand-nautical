@@ -43,6 +43,10 @@ class RudderView @JvmOverloads constructor(
     
     private val degreeBuffer = CharArray(16)
     private var offlineLabel: String
+    private var midLabel: String = "MID"
+    private var portLabel: String = "PORT"
+    private var stbdLabel: String = "STBD"
+    private var degLabel: String = "°"
 
     private val touchSlop = ViewConfiguration.get(context).scaledTouchSlop
     private var initialTouchX = 0f
@@ -87,6 +91,8 @@ class RudderView @JvmOverloads constructor(
         dp45 = 45f * density
         
         offlineLabel = context.getString(R.string.nautical_offline)
+        portLabel = context.getString(R.string.nautical_port_indicator)
+        stbdLabel = context.getString(R.string.nautical_starboard_indicator)
 
         setupAccessibility()
     }

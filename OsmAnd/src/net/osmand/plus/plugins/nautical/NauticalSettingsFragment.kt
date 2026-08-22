@@ -849,7 +849,7 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
 
     private fun setupLogbookCategory() {
         findPreference<Preference>("nautical_open_logbook")?.apply {
-            setThemedIcon(OsmAndR.drawable.ic_action_notes_dark)
+            setThemedIcon(OsmAndR.drawable.ic_action_note_dark)
             setOnPreferenceClickListener {
                 showInstance(requireActivity(), SettingsScreenType.MARINE_LOGBOOK)
                 true

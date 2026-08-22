@@ -53,7 +53,7 @@ object NauticalWidgetHelper {
             WidgetType.NAUTICAL_SOG -> SignalKUnitConverter.formatValue(context, settings, state.speedOverGround, "speed")
             WidgetType.NAUTICAL_STW -> SignalKUnitConverter.formatValue(context, settings, state.speedThroughWater, "speed")
             WidgetType.NAUTICAL_DEPTH -> {
-                val depth = state.depthBelowTransducer ?: state.depthBelowSurface ?: state.depthBelowKeel
+                val depth = state.depthBelowTransducer ?: state.depthSurfaceToTransducer ?: state.depthBelowKeel
                 SignalKUnitConverter.formatValue(context, settings, depth, "depth")
             }
             WidgetType.NAUTICAL_DEPTH_KEEL -> SignalKUnitConverter.formatValue(context, settings, state.depthBelowKeel, "depth")
@@ -61,7 +61,7 @@ object NauticalWidgetHelper {
             WidgetType.NAUTICAL_AWA -> SignalKUnitConverter.formatValue(context, settings, state.windDirectionApparent, "angle")
             WidgetType.NAUTICAL_AWS -> SignalKUnitConverter.formatValue(context, settings, state.windSpeedApparent, "speed")
             WidgetType.NAUTICAL_TWA -> SignalKUnitConverter.formatValue(context, settings, state.trueWindAngle, "angle")
-            WidgetType.NAUTICAL_TWD -> SignalKUnitConverter.formatValue(context, settings, state.trueWindDirection, "angle", state.magneticVariation)
+            WidgetType.NAUTICAL_TWD -> SignalKUnitConverter.formatValue(context, settings, state.windDirectionTrue, "angle", state.magneticVariation)
             WidgetType.NAUTICAL_VMG -> SignalKUnitConverter.formatValue(context, settings, state.velocityMadeGood, "speed")
             WidgetType.NAUTICAL_COG -> SignalKUnitConverter.formatValue(context, settings, state.courseOverGroundTrue, "course", state.magneticVariation)
             WidgetType.NAUTICAL_HEADING_MAGNETIC -> SignalKUnitConverter.formatValue(context, settings, state.headingMagnetic ?: state.headingTrue, "heading", state.magneticVariation)
@@ -94,7 +94,7 @@ object NauticalWidgetHelper {
             WidgetType.NAUTICAL_PITCH -> SignalKUnitConverter.formatValue(context, settings, state.pitch, "pitch")
             WidgetType.NAUTICAL_LOG -> SignalKUnitConverter.formatValue(context, settings, state.log, "log")
             WidgetType.NAUTICAL_TRIP_LOG -> SignalKUnitConverter.formatValue(context, settings, state.tripLog, "log")
-            WidgetType.NAUTICAL_ENGINE_RPM -> SignalKUnitConverter.formatValue(context, settings, state.engines.values.firstOrNull()?.speed, "revolutions")
+            WidgetType.NAUTICAL_ENGINE_RPM -> SignalKUnitConverter.formatValue(context, settings, state.engines.values.firstOrNull()?.revolutions, "revolutions")
             WidgetType.NAUTICAL_ENGINE_TEMP -> SignalKUnitConverter.formatValue(context, settings, state.engines.values.firstOrNull()?.temperature, "temperature")
             WidgetType.NAUTICAL_ENGINE_RUNTIME -> SignalKUnitConverter.formatValue(context, settings, state.engineHours?.let { it * 3600.0 } ?: state.engines.values.firstOrNull()?.runTime, "runTime")
             WidgetType.NAUTICAL_FUEL_LEVEL -> SignalKUnitConverter.formatValue(context, settings, state.tanks["fuel.0"]?.currentLevel ?: state.tanks.values.firstOrNull { it.type == "fuel" }?.currentLevel, "currentLevel")
@@ -124,8 +124,8 @@ object NauticalWidgetHelper {
                     "--" to ""
                 }
             }
-            WidgetType.NAUTICAL_CPA -> SignalKUnitConverter.formatValue(context, settings, state.closestPointOfApproach, "cpa")
-            WidgetType.NAUTICAL_TCPA -> SignalKUnitConverter.formatValue(context, settings, state.timeToClosestPointOfApproach, "tcpa")
+            WidgetType.NAUTICAL_CPA -> SignalKUnitConverter.formatValue(context, settings, state.cpa, "cpa")
+            WidgetType.NAUTICAL_TCPA -> SignalKUnitConverter.formatValue(context, settings, state.tcpa, "tcpa")
             else -> "--" to getDefaultUnit(context, settings, widget)
         }
     }

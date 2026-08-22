@@ -365,7 +365,7 @@ class NauticalContextMenuHelper(private val app: OsmandApplication) {
         adapter.addItem(
             ContextMenuItem("nautical_open_logbook_menu").apply {
                 setTitleId(R.string.nautical_log_entries, mapActivity)
-                icon = R.drawable.ic_action_notes_dark
+                icon = R.drawable.ic_action_note_dark
                 setListener { _, _, _, _ ->
                     showSettings(mapActivity, SettingsScreenType.MARINE_LOGBOOK)
                     true
@@ -387,7 +387,7 @@ class NauticalContextMenuHelper(private val app: OsmandApplication) {
         adapter.addItem(
             ContextMenuItem("nautical_checklists_menu").apply {
                 setTitleId(R.string.nautical_checklists, mapActivity)
-                icon = R.drawable.ic_action_list
+                icon = R.drawable.ic_action_list_bullet
                 setListener { _, _, _, _ ->
                     showSettings(mapActivity, SettingsScreenType.NAUTICAL_CHECKLISTS)
                     true

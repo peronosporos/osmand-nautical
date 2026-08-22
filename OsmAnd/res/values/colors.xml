@@ -640,6 +640,7 @@
 	<!-- Nautical plugin -->
 	<color name="nautical_status_green">#2ECC71</color>
 	<color name="nautical_status_yellow">#F1C40F</color>
+	<color name="nautical_status_orange">#E67E22</color>
 	<color name="nautical_status_red">#E74C3C</color>
 	<color name="nautical_status_blue">#3498DB</color>
 	<color name="nautical_status_bg_active">#E3F2FD</color>
