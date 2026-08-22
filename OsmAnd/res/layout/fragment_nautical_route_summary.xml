@@ -4,189 +4,208 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:fitsSystemWindows="true"
     android:orientation="vertical"
-    android:padding="12dp"
-    android:background="?attr/list_background_color">
+    android:background="?attr/activity_background_color">
 
-    <!-- Summary Stats Card -->
-    <com.google.android.material.card.MaterialCardView
+    <include layout="@layout/simple_toolbar" />
+
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="12dp"
-        app:cardCornerRadius="10dp"
-        app:cardElevation="0dp"
-        app:strokeWidth="1dp"
-        app:strokeColor="?attr/divider_color"
-        app:cardBackgroundColor="?attr/card_and_list_background_basic">
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:padding="12dp">
 
-        <LinearLayout
+        <!-- Summary Stats Card -->
+        <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:padding="14dp">
-
-            <TextView
-                android:id="@+id/summary_title"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Passage Plan Summary"
-                android:textAppearance="@style/TextAppearance.AppCompat.Medium"
-                android:textColor="?android:attr/textColorPrimary"
-                android:textStyle="bold" />
+            android:layout_marginBottom="12dp"
+            app:cardCornerRadius="10dp"
+            app:cardElevation="0dp"
+            app:strokeWidth="1dp"
+            app:strokeColor="?attr/divider_color"
+            app:cardBackgroundColor="?attr/card_and_list_background_basic">
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:layout_marginTop="8dp">
+                android:orientation="vertical"
+                android:padding="14dp">
 
                 <TextView
-                    android:id="@+id/total_distance"
-                    android:layout_width="0dp"
-                    android:layout_weight="1"
+                    android:id="@+id/summary_title"
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:textAppearance="@style/TextAppearance.AppCompat.Subhead"
+                    android:text="@string/nautical_route_summary_title"
+                    android:textAppearance="@style/TextAppearance.AppCompat.Medium"
                     android:textColor="?android:attr/textColorPrimary"
-                    android:fontFeatureSettings="tnum"
-                    tools:text="Total Dist: 14.2 NM" />
+                    android:textStyle="bold" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginTop="8dp">
+
+                    <TextView
+                        android:id="@+id/total_distance"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:textAppearance="@style/TextAppearance.AppCompat.Subhead"
+                        android:textColor="?android:attr/textColorPrimary"
+                        android:fontFeatureSettings="tnum"
+                        tools:text="Total Dist: 14.2 NM" />
+
+                    <TextView
+                        android:id="@+id/total_time"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:textAppearance="@style/TextAppearance.AppCompat.Subhead"
+                        android:textColor="?attr/active_color_primary"
+                        android:fontFeatureSettings="tnum"
+                        android:textStyle="bold"
+                        tools:text="Total ETE: 2.1 h" />
+                </LinearLayout>
 
                 <TextView
-                    android:id="@+id/total_time"
-                    android:layout_width="0dp"
-                    android:layout_weight="1"
+                    android:id="@+id/txt_tacks_gybes"
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:textAppearance="@style/TextAppearance.AppCompat.Subhead"
-                    android:textColor="?attr/active_color_primary"
-                    android:fontFeatureSettings="tnum"
-                    android:textStyle="bold"
-                    tools:text="Total ETE: 2.1 h" />
+                    android:layout_marginTop="4dp"
+                    android:textAppearance="@style/TextAppearance.AppCompat.Caption"
+                    android:textColor="?android:attr/textColorSecondary"
+                    tools:text="Tacks: 3 • Gybes: 1" />
             </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Table Header Row -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp"
+            android:paddingTop="6dp"
+            android:paddingBottom="6dp"
+            android:background="?attr/card_and_list_background_basic">
+
+            <TextView
+                android:layout_width="28dp"
+                android:layout_height="wrap_content"
+                android:text="#"
+                android:textAppearance="@style/TextAppearance.AppCompat.Caption"
+                android:textColor="?android:attr/textColorSecondary"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_height="wrap_content"
+                android:text="Dist"
+                android:textAppearance="@style/TextAppearance.AppCompat.Caption"
+                android:textColor="?android:attr/textColorSecondary"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_height="wrap_content"
+                android:text="CTS"
+                android:textAppearance="@style/TextAppearance.AppCompat.Caption"
+                android:textColor="?android:attr/textColorSecondary"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_height="wrap_content"
+                android:text="SOG"
+                android:textAppearance="@style/TextAppearance.AppCompat.Caption"
+                android:textColor="?android:attr/textColorSecondary"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_height="wrap_content"
+                android:text="ETE"
+                android:textAppearance="@style/TextAppearance.AppCompat.Caption"
+                android:textColor="?android:attr/textColorSecondary"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_weight="1.1"
+                android:layout_height="wrap_content"
+                android:text="Wind"
+                android:textAppearance="@style/TextAppearance.AppCompat.Caption"
+                android:textColor="?android:attr/textColorSecondary"
+                android:textStyle="bold" />
         </LinearLayout>
-    </com.google.android.material.card.MaterialCardView>
 
-    <!-- Table Header Row -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:paddingStart="8dp"
-        android:paddingEnd="8dp"
-        android:paddingTop="6dp"
-        android:paddingBottom="6dp"
-        android:background="?attr/card_and_list_background_basic">
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="?attr/divider_color" />
 
-        <TextView
-            android:layout_width="28dp"
-            android:layout_height="wrap_content"
-            android:text="#"
-            android:textAppearance="@style/TextAppearance.AppCompat.Caption"
-            android:textColor="?android:attr/textColorSecondary"
-            android:textStyle="bold" />
-
-        <TextView
-            android:layout_width="0dp"
-            android:layout_weight="1"
-            android:layout_height="wrap_content"
-            android:text="Dist"
-            android:textAppearance="@style/TextAppearance.AppCompat.Caption"
-            android:textColor="?android:attr/textColorSecondary"
-            android:textStyle="bold" />
-
-        <TextView
-            android:layout_width="0dp"
-            android:layout_weight="1"
-            android:layout_height="wrap_content"
-            android:text="CTS"
-            android:textAppearance="@style/TextAppearance.AppCompat.Caption"
-            android:textColor="?android:attr/textColorSecondary"
-            android:textStyle="bold" />
-
-        <TextView
-            android:layout_width="0dp"
-            android:layout_weight="1"
-            android:layout_height="wrap_content"
-            android:text="SOG"
-            android:textAppearance="@style/TextAppearance.AppCompat.Caption"
-            android:textColor="?android:attr/textColorSecondary"
-            android:textStyle="bold" />
-
-        <TextView
-            android:layout_width="0dp"
-            android:layout_weight="1"
-            android:layout_height="wrap_content"
-            android:text="ETE"
-            android:textAppearance="@style/TextAppearance.AppCompat.Caption"
-            android:textColor="?android:attr/textColorSecondary"
-            android:textStyle="bold" />
-
-        <TextView
-            android:layout_width="0dp"
-            android:layout_weight="1.1"
-            android:layout_height="wrap_content"
-            android:text="Wind"
-            android:textAppearance="@style/TextAppearance.AppCompat.Caption"
-            android:textColor="?android:attr/textColorSecondary"
-            android:textStyle="bold" />
-    </LinearLayout>
-
-    <View
-        android:layout_width="match_parent"
-        android:layout_height="1dp"
-        android:background="?attr/divider_color" />
-
-    <!-- Empty State Container -->
-    <LinearLayout
-        android:id="@+id/layout_empty_plan"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:orientation="vertical"
-        android:gravity="center"
-        android:padding="24dp"
-        android:visibility="gone">
-
-        <ImageView
-            android:layout_width="64dp"
-            android:layout_height="64dp"
-            android:src="@drawable/ic_action_sail_boat_dark"
-            app:tint="?attr/colorAccent"
-            android:contentDescription="Route Icon" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:text="No Active Passage Plan"
-            android:textAppearance="@style/TextAppearance.AppCompat.Large"
-            android:textColor="?android:attr/textColorPrimary"
-            android:textStyle="bold" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
+        <!-- Empty State Container -->
+        <LinearLayout
+            android:id="@+id/layout_empty_plan"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
             android:gravity="center"
-            android:text="Create a marine route to compute courses to steer, tidal current offsets, layline angles, and leg-by-leg passage schedules."
-            android:textAppearance="@style/TextAppearance.AppCompat.Medium"
-            android:textColor="?android:attr/textColorSecondary" />
+            android:padding="24dp"
+            android:visibility="gone">
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btn_create_passage_plan"
-            style="@style/Widget.MaterialComponents.Button"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="20dp"
-            android:text="Create Passage Plan / New Marine Route"
-            app:icon="@drawable/ic_action_add_no_bg" />
+            <ImageView
+                android:layout_width="64dp"
+                android:layout_height="64dp"
+                android:src="@drawable/ic_action_sail_boat_dark"
+                app:tint="?attr/active_color_primary"
+                android:contentDescription="Route Icon" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="No Active Passage Plan"
+                android:textAppearance="@style/TextAppearance.AppCompat.Large"
+                android:textColor="?android:attr/textColorPrimary"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:gravity="center"
+                android:text="Create a marine route to compute courses to steer, tidal current offsets, layline angles, and leg-by-leg passage schedules."
+                android:textAppearance="@style/TextAppearance.AppCompat.Medium"
+                android:textColor="?android:attr/textColorSecondary" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_create_passage_plan"
+                style="@style/Widget.MaterialComponents.Button"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="20dp"
+                android:text="Create Passage Plan / New Marine Route"
+                app:icon="@drawable/ic_action_add_no_bg" />
+
+        </LinearLayout>
+
+        <!-- Legs RecyclerView -->
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/legs_recycler_view"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:clipToPadding="false"
+            android:paddingBottom="16dp" />
 
     </LinearLayout>
-
-    <!-- Legs RecyclerView -->
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/legs_recycler_view"
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:clipToPadding="false"
-        android:paddingBottom="16dp" />
 
 </LinearLayout>

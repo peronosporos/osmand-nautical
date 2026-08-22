@@ -1,5 +1,6 @@
 package net.osmand.plus.plugins.nautical.engine
 
+import android.content.Context
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -556,19 +557,29 @@ class NauticalAisManager(private val app: OsmandApplication) : AisDataListener {
     fun isBuddy(mmsi: Int): Boolean {
         val engine = NauticalPlugin.engine
         val buddies = engine?.getCurrentState()?.aisBuddies ?: emptySet()
-        return buddies.contains(mmsi)
+        if (buddies.contains(mmsi)) return true
+        val sp = app.getSharedPreferences("nautical_buddies_pref", Context.MODE_PRIVATE)
+        val local = sp.getStringSet("ais_buddies", emptySet()) ?: emptySet()
+        return local.contains(mmsi.toString())
     }
 
     fun toggleBuddy(mmsi: Int): Boolean {
         val engine = NauticalPlugin.engine
-        val current = engine?.getCurrentState()?.aisBuddies?.toMutableSet() ?: mutableSetOf()
+        val sp = app.getSharedPreferences("nautical_buddies_pref", Context.MODE_PRIVATE)
+        val local = (sp.getStringSet("ais_buddies", emptySet()) ?: emptySet()).toMutableSet()
+        val current = (engine?.getCurrentState()?.aisBuddies ?: emptySet()).toMutableSet()
+        current.addAll(local.mapNotNull { it.toIntOrNull() })
+
         val isNowBuddy = if (current.contains(mmsi)) {
             current.remove(mmsi)
+            local.remove(mmsi.toString())
             false
         } else {
             current.add(mmsi)
+            local.add(mmsi.toString())
             true
         }
+        sp.edit().putStringSet("ais_buddies", local).apply()
         engine?.sendDelta("navigation.aisBuddies", current.toList())
         app.runInUIThread {
             app.osmandMap?.refreshMap()

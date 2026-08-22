@@ -48,9 +48,7 @@ class NauticalManeuversBottomSheet : BaseNauticalBottomSheet() {
         }
         
         options.add(ManeuverOption("anchoring", getString(R.string.nautical_maneuver_anchoring), R.drawable.ic_action_anchor))
-        if (settings.NAUTICAL_ANCHOR_LAT.get() != 0.0) {
-            options.add(ManeuverOption("weighing_anchor", getString(R.string.nautical_maneuver_weighing_anchor), R.drawable.ic_action_anchor))
-        }
+        options.add(ManeuverOption("weighing_anchor", getString(R.string.nautical_maneuver_weighing_anchor), R.drawable.ic_action_anchor))
         options.add(ManeuverOption("docking", getString(R.string.nautical_maneuver_docking), R.drawable.ic_action_building))
         options.add(ManeuverOption("mooring", getString(R.string.nautical_maneuver_mooring), R.drawable.ic_action_anchor))
         options.add(ManeuverOption("med_mooring", getString(R.string.nautical_maneuver_med_mooring), R.drawable.ic_action_anchor))
@@ -66,8 +64,13 @@ class NauticalManeuversBottomSheet : BaseNauticalBottomSheet() {
             // Item 12 Fix: Transition to Armed state within the sheet instead of immediate dismissal
             when (item.id) {
                 "weighing_anchor" -> {
-                    val aLat = settings.NAUTICAL_ANCHOR_LAT.get()
-                    val aLon = settings.NAUTICAL_ANCHOR_LON.get()
+                    var aLat = settings.NAUTICAL_ANCHOR_LAT.get()
+                    var aLon = settings.NAUTICAL_ANCHOR_LON.get()
+                    if (aLat == 0.0) {
+                        val state = NauticalPlugin.engine?.getCurrentState()
+                        aLat = state?.latitude ?: lat
+                        aLon = state?.longitude ?: lon
+                    }
                     (instance?.maneuverManager?.getManeuverById("weighing_anchor") as? net.osmand.plus.plugins.nautical.maneuvers.WeighingAnchorManeuver)?.setDropPoint(aLat, aLon)
                 }
                 "mooring" -> (instance?.maneuverManager?.getManeuverById("mooring") as? net.osmand.plus.plugins.nautical.maneuvers.MooringManeuver)?.setTarget(lat, lon)

@@ -33,6 +33,52 @@ class ManeuverManager(private val app: OsmandApplication) : ManeuverEngine.Maneu
 
     private val listeners = mutableListOf<ManeuverStateListener>()
 
+    init {
+        registerDefaultManeuvers()
+    }
+
+    private fun registerDefaultManeuvers() {
+        val tacking = TackingManeuver(app)
+        registerManeuver("tack_port", tacking)
+        registerManeuver("tack_stbd", tacking)
+        registerManeuver("tacking", tacking)
+
+        val gybing = GybingManeuver(app)
+        registerManeuver("gybe_port", gybing)
+        registerManeuver("gybe_stbd", gybing)
+        registerManeuver("gybing", gybing)
+
+        val shunting = ShuntingManeuver(app)
+        registerManeuver("shunt", shunting)
+        registerManeuver("shunting", shunting)
+
+        val heaveTo = HeavingToManeuver(app)
+        registerManeuver("heave_to", heaveTo)
+        registerManeuver("heaving_to", heaveTo)
+
+        val anchoring = AnchoringManeuver(app)
+        registerManeuver("anchoring", anchoring)
+
+        val weighAnchor = WeighingAnchorManeuver(app)
+        registerManeuver("weigh_anchor", weighAnchor)
+        registerManeuver("weighing_anchor", weighAnchor)
+
+        val mooring = MooringManeuver(app)
+        registerManeuver("mooring", mooring)
+
+        val medMooring = MedMooringManeuver(app)
+        registerManeuver("med_mooring", medMooring)
+
+        val docking = DockingManeuver(app)
+        registerManeuver("docking", docking)
+
+        val slipExit = SlipExitManeuver(app)
+        registerManeuver("slip_exit", slipExit)
+
+        val holdingPattern = HoldingPatternManeuver(app)
+        registerManeuver("holding_pattern", holdingPattern)
+    }
+
     interface ManeuverStateListener {
         fun onStateChanged(newState: ManeuverState)
     }

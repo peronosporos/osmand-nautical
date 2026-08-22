@@ -1,9 +1,26 @@
 <resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
+    <string name="nautical_routing_using_live_wind">Calculating route using live wind telemetry — no GRIB forecast loaded</string>
+    <string name="nautical_routing_no_wind_data">Weather routing requires GRIB wind data or live wind telemetry</string>
+    <string name="nautical_route_summary_title">Passage Plan Summary</string>
+    <string name="nautical_route_summary_tacks">Tacks: %1$d • Gybes: %2$d</string>
+    <string name="nautical_sail_category_main">Mainsail</string>
+    <string name="nautical_sail_category_headsail">Headsails</string>
+    <string name="nautical_sail_category_downwind">Downwind / Reaching</string>
+    <string name="nautical_sail_hoisted">Hoisted</string>
+    <string name="nautical_sail_furled">Furled</string>
+    <string name="nautical_sail_efficiency_label">Sail Area Efficiency: %1$d%%</string>
+    <string name="nautical_no_sails_found">No sails found in inventory</string>
+    <string name="nautical_calculating_weather_route">Calculating optimal weather route…</string>
+    <string name="nautical_port_pin_set">Port Pin Set</string>
+    <string name="nautical_stbd_pin_set">Starboard Pin Set</string>
+    <string name="nautical_view_buddies">View Buddies</string>
+    <string name="nautical_added_to_buddies">Added %1$s to AIS Buddies</string>
+    <string name="nautical_removed_from_buddies">Removed %1$s from Buddies</string>
     <string name="nautical_clear_port_pin">Clear Port Pin</string>
     <string name="nautical_clear_stbd_pin">Clear Starboard Pin</string>
     <string name="nautical_pin_marked_start_line">Start pin marked for tactical race line</string>
     <string name="nautical_pin_cleared">Start pin cleared</string>
-    <string name="nautical_laylines_rendered">Layline vectors calculated to target</string>
+    <string name="nautical_laylines_rendered">Laylines overlay enabled for target</string>
     <string name="nautical_checklist_pre_departure">Pre-Departure</string>
     <string name="nautical_checklist_heavy_weather">Heavy Weather</string>
     <string name="nautical_checklist_night_watch">Night Watch</string>

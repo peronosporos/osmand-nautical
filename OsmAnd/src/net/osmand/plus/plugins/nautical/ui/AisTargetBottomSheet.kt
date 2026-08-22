@@ -251,6 +251,21 @@ class AisTargetBottomSheet : BottomSheetDialogFragment() {
             btnBuddy.text = if (newBuddyState) getString(R.string.nautical_remove_from_buddies) else getString(R.string.nautical_add_to_buddies)
             btnBuddy.setIconResource(if (newBuddyState) R.drawable.ic_action_favorite else R.drawable.ic_action_sail_boat_dark)
             view.findViewById<ImageView>(R.id.img_buddy_star)?.visibility = if (newBuddyState) View.VISIBLE else View.GONE
+
+            val vesselName = ais.shipName?.trim().takeIf { !it.isNullOrEmpty() } ?: "MMSI ${ais.mmsi}"
+            if (newBuddyState) {
+                plugin?.application?.showToastMessage(getString(R.string.nautical_added_to_buddies, vesselName))
+            } else {
+                plugin?.application?.showToastMessage(getString(R.string.nautical_removed_from_buddies, vesselName))
+            }
+        }
+
+        view.findViewById<MaterialButton>(R.id.btn_view_buddies)?.setOnClickListener {
+            val activity = activity as? MapActivity
+            if (activity != null) {
+                NauticalBuddyListFragment.show(activity.supportFragmentManager)
+            }
+            dismiss()
         }
 
         view.findViewById<MaterialButton>(R.id.btn_set_cpa_alarm).setOnClickListener {

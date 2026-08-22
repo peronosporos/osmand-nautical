@@ -125,6 +125,26 @@ class SignalKControlManager(
         sendCommand(path, value)
     }
 
+    fun setSailActive(sailId: String, active: Boolean) {
+        sendCommand("sails.inventory.$sailId.active", active)
+        sendCommand("steering.sails.inventory.$sailId.active", active)
+        sendCommand("steering.sails.active.$sailId", active)
+    }
+
+    fun setSailReefs(sailId: String?, reefs: Int) {
+        if (sailId != null) {
+            sendCommand("sails.inventory.$sailId.reefs", reefs)
+            sendCommand("steering.sails.inventory.$sailId.reefs", reefs)
+        }
+        sendCommand("sails.reefs", reefs)
+        sendCommand("steering.sails.reefs", reefs)
+    }
+
+    fun setSailPlan(planName: String) {
+        sendCommand("sails.activeSailPlan", planName)
+        sendCommand("steering.sails.activeSailPlan", planName)
+    }
+
     private fun sendCommand(path: String, value: Any) {
         val useSecure = app.settings.NAUTICAL_USE_SECURE_CONNECTION.get()
         val ip = app.settings.NAUTICAL_SERVER_IP.get()

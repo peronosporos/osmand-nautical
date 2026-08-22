@@ -35,10 +35,14 @@ class NauticalElectricalWidget(
 
     override fun setContentTitle(messageId: Int) {
         super.setContentTitle("")
+        widgetName?.visibility = View.GONE
+        widgetName?.text = ""
     }
 
     override fun setContentTitle(text: String?) {
         super.setContentTitle("")
+        widgetName?.visibility = View.GONE
+        widgetName?.text = ""
     }
 
     override fun updateIcon() {
@@ -56,9 +60,13 @@ class NauticalElectricalWidget(
 
     override fun updateWidgetView() {
         super.updateWidgetView()
+        setText("", "")
+        textView?.text = ""
+        smallTextView?.text = ""
         textView?.visibility = View.GONE
         smallTextView?.visibility = View.GONE
         widgetName?.visibility = View.GONE
+        widgetName?.text = ""
     }
 
     override fun updateVisibility(visible: Boolean): Boolean {
@@ -69,9 +77,12 @@ class NauticalElectricalWidget(
 
     override fun setupView(view: View) {
         super.setupView(view)
+        textView?.text = ""
+        smallTextView?.text = ""
         textView?.visibility = View.GONE
         smallTextView?.visibility = View.GONE
         widgetName?.visibility = View.GONE
+        widgetName?.text = ""
 
         view.addOnAttachStateChangeListener(
             object : View.OnAttachStateChangeListener {
@@ -115,9 +126,12 @@ class NauticalElectricalWidget(
 
     override fun updateSimpleWidgetInfo(drawSettings: OsmandMapLayer.DrawSettings?) {
         updateIcon()
-        setText("\u200B", "")
+        setText("", "")
+        textView?.text = ""
+        smallTextView?.text = ""
         textView?.visibility = View.GONE
         smallTextView?.visibility = View.GONE
         widgetName?.visibility = View.GONE
+        widgetName?.text = ""
     }
 }

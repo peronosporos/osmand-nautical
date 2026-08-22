@@ -210,28 +210,34 @@ class PolarDiagram {
         }
     }
 
+    var activeSailEfficiency: Double = 1.0
+        set(value) {
+            lock.write { field = value.coerceIn(0.1, 2.0) }
+        }
+
     /**
      * Get target boat speed in m/s for a given TWS (m/s) and TWA (Radians).
      */
-    fun getTargetSpeedRad(twsMs: Double, twaRad: Double): Double {
-        return getTargetSpeedDeg(twsMs, abs(Math.toDegrees(twaRad)))
+    fun getTargetSpeedRad(twsMs: Double, twaRad: Double, sailEfficiency: Double? = null): Double {
+        return getTargetSpeedDeg(twsMs, abs(Math.toDegrees(twaRad)), sailEfficiency)
     }
 
     /**
      * Get target boat speed in m/s for a given TWS (m/s) and TWA (Degrees).
      */
-    fun getTargetSpeedDeg(twsMs: Double, twaDeg: Double): Double {
+    fun getTargetSpeedDeg(twsMs: Double, twaDeg: Double, sailEfficiency: Double? = null): Double {
         val absTwa = abs(twaDeg)
+        val eff = (sailEfficiency ?: lock.read { activeSailEfficiency }).coerceIn(0.1, 2.0)
         
         lock.read {
-            val data = polars[activePolarId] ?: return defaultTargetSpeed(absTwa)
+            val data = polars[activePolarId] ?: return defaultTargetSpeed(absTwa) * eff
             
             val twsValues = data.twsValues
             val twaValues = data.twaValues
             val speedTable = data.speedTable
 
             if (twsValues.isEmpty() || twaValues.isEmpty() || speedTable.isEmpty()) {
-                return defaultTargetSpeed(absTwa)
+                return defaultTargetSpeed(absTwa) * eff
             }
 
             val clampedTws = twsMs.coerceIn(twsValues.first(), twsValues.last())
@@ -260,25 +266,26 @@ class PolarDiagram {
             val r1 = ((x2 - clampedTws) / denomX) * q11 + ((clampedTws - x1) / denomX) * q21
             val r2 = ((x2 - clampedTws) / denomX) * q12 + ((clampedTws - x1) / denomX) * q22
 
-            return ((y2 - clampedTwa) / denomY) * r1 + ((clampedTwa - y1) / denomY) * r2
+            val baseSpeed = ((y2 - clampedTwa) / denomY) * r1 + ((clampedTwa - y1) / denomY) * r2
+            return baseSpeed * eff
         }
     }
 
     /**
      * Finds optimal upwind True Wind Angle (Radians) that maximizes VMG.
      */
-    fun getOptimalUpwindTwaRad(twsMs: Double): Double {
-        return Math.toRadians(findOptimalTwaDeg(twsMs, 20.0, 85.0))
+    fun getOptimalUpwindTwaRad(twsMs: Double, sailEfficiency: Double? = null): Double {
+        return Math.toRadians(findOptimalTwaDeg(twsMs, 20.0, 85.0, sailEfficiency))
     }
 
     /**
      * Finds optimal downwind True Wind Angle (Radians) that maximizes VMG.
      */
-    fun getOptimalDownwindTwaRad(twsMs: Double): Double {
-        return Math.toRadians(findOptimalTwaDeg(twsMs, 100.0, 175.0))
+    fun getOptimalDownwindTwaRad(twsMs: Double, sailEfficiency: Double? = null): Double {
+        return Math.toRadians(findOptimalTwaDeg(twsMs, 100.0, 175.0, sailEfficiency))
     }
 
-    private fun findOptimalTwaDeg(twsMs: Double, minTwa: Double, maxTwa: Double): Double {
+    private fun findOptimalTwaDeg(twsMs: Double, minTwa: Double, maxTwa: Double, sailEfficiency: Double? = null): Double {
         val loaded = lock.read { isLoaded }
         if (!loaded) {
             return if (minTwa < 90.0) 42.0 else 135.0
@@ -291,7 +298,7 @@ class PolarDiagram {
         val steps = 15
         for (i in 0..steps) {
             val sampleTwa = minTwa + (maxTwa - minTwa) * (i.toDouble() / steps)
-            val sampleVmg = getVmg(twsMs, sampleTwa)
+            val sampleVmg = getVmg(twsMs, sampleTwa, sailEfficiency)
             if (sampleVmg > maxSampleVmg) {
                 maxSampleVmg = sampleVmg
                 bestSampleTwa = sampleTwa
@@ -307,8 +314,8 @@ class PolarDiagram {
         var x1 = b - phi * (b - a)
         var x2 = a + phi * (b - a)
         
-        var f1 = getVmg(twsMs, x1)
-        var f2 = getVmg(twsMs, x2)
+        var f1 = getVmg(twsMs, x1, sailEfficiency)
+        var f2 = getVmg(twsMs, x2, sailEfficiency)
 
         repeat(15) { // Fixed iterations for stable precision
             if (f1 < f2) {
@@ -316,20 +323,20 @@ class PolarDiagram {
                 x1 = x2
                 x2 = a + phi * (b - a)
                 f1 = f2
-                f2 = getVmg(twsMs, x2)
+                f2 = getVmg(twsMs, x2, sailEfficiency)
             } else {
                 b = x2
                 x2 = x1
                 x1 = b - phi * (b - a)
                 f2 = f1
-                f1 = getVmg(twsMs, x1)
+                f1 = getVmg(twsMs, x1, sailEfficiency)
             }
         }
         return (a + b) / 2.0
     }
 
-    private fun getVmg(twsMs: Double, twaDeg: Double): Double {
-        val speed = getTargetSpeedDeg(twsMs, twaDeg)
+    private fun getVmg(twsMs: Double, twaDeg: Double, sailEfficiency: Double? = null): Double {
+        val speed = getTargetSpeedDeg(twsMs, twaDeg, sailEfficiency)
         // VMG is the component of boat speed along the wind axis.
         // We use abs(cos) to maximize speed either directly upwind or directly downwind.
         return speed * abs(cos(Math.toRadians(twaDeg)))

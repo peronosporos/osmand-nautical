@@ -27,8 +27,26 @@ class NauticalMasterTelemetryWidget(
     private var dataJob: Job? = null
     private var lastWorkflowState: net.osmand.plus.plugins.nautical.engine.SailingWorkflowState? = null
 
+    override fun getWidgetName(): String? = null
+
+    override fun getAdditionalWidgetName(): String? = null
+
+    override fun setContentTitle(messageId: Int) {
+        super.setContentTitle("")
+        widgetName?.visibility = View.GONE
+        widgetName?.text = ""
+    }
+
+    override fun setContentTitle(text: String?) {
+        super.setContentTitle("")
+        widgetName?.visibility = View.GONE
+        widgetName?.text = ""
+    }
+
     override fun setupView(view: View) {
         super.setupView(view)
+        widgetName?.visibility = View.GONE
+        widgetName?.text = ""
         view.addOnAttachStateChangeListener(
             object : View.OnAttachStateChangeListener {
                 override fun onViewAttachedToWindow(v: View) {
@@ -57,9 +75,12 @@ class NauticalMasterTelemetryWidget(
     override fun updateWidgetView() {
         super.updateWidgetView()
         widgetName?.visibility = View.GONE
+        widgetName?.text = ""
     }
 
     override fun updateSimpleWidgetInfo(drawSettings: OsmandMapLayer.DrawSettings?) {
+        widgetName?.visibility = View.GONE
+        widgetName?.text = ""
         // TASK-053: Automatic Preset Switching
         val autoSwitch = mapActivity.app.settings.NAUTICAL_MASTER_TELEMETRY_AUTO_SWITCH.get()
         val workflowEngine = NauticalPlugin.getInstance()?.workflowEngine
@@ -79,8 +100,7 @@ class NauticalMasterTelemetryWidget(
         updateIcon()
 
         if (state == null || state.connectionStatus == net.osmand.plus.plugins.nautical.engine.ConnectionStatus.DISCONNECTED) {
-            val unit = NauticalWidgetHelper.getDefaultUnit(mapActivity, mapActivity.app.settings, primaryWidget)
-            setText("--", unit)
+            setText("--", "")
             contentView?.alpha = 0.5f
             return
         }
@@ -113,7 +133,12 @@ class NauticalMasterTelemetryWidget(
                 NauticalWidgetHelper.formatTelemetry(mapActivity, mapActivity.app.settings, primaryWidget, state)
             }
         }
-        setText(main, sub)
+
+        if (main.isEmpty() || main == "--") {
+            setText("--", "")
+        } else {
+            setText(main, sub)
+        }
         contentView?.alpha = if (state.connectionStatus == net.osmand.plus.plugins.nautical.engine.ConnectionStatus.STALE) 0.5f else 1.0f
     }
 

@@ -99,6 +99,13 @@ class NauticalMapLayer(context: Context) : OsmandMapLayer(context), SharedPrefer
         typeface = android.graphics.Typeface.DEFAULT_BOLD
     }
 
+    private val startLinePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.rgb(255, 215, 0)
+        style = Paint.Style.STROKE
+        strokeWidth = 5f
+        pathEffect = DashPathEffect(floatArrayOf(15f, 10f), 0f)
+    }
+
     private val anchorZonePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.RED
         style = Paint.Style.STROKE
@@ -765,6 +772,11 @@ class NauticalMapLayer(context: Context) : OsmandMapLayer(context), SharedPrefer
             start.starboardPin?.let { s ->
                 drawPin(canvas, tileBox, s.first, s.second, "S", Color.GREEN, isSunlight)
             }
+            val p = start.portPin
+            val s = start.starboardPin
+            if (p != null && s != null) {
+                drawStartLine(canvas, tileBox, p.first, p.second, s.first, s.second, isSunlight)
+            }
         }
 
         val anchorLat = settings.NAUTICAL_ANCHOR_LAT.get()
@@ -856,6 +868,15 @@ class NauticalMapLayer(context: Context) : OsmandMapLayer(context), SharedPrefer
         canvas.drawCircle(px, py, 15f, pinPaint)
         pinPaint.color = if (isSunlight) Color.BLACK else Color.WHITE
         canvas.drawText(label, px, py - 25f, pinPaint)
+    }
+
+    private fun drawStartLine(canvas: Canvas, tileBox: RotatedTileBox, pLat: Double, pLon: Double, sLat: Double, sLon: Double, isSunlight: Boolean) {
+        val px = tileBox.getPixXFromLatLon(pLat, pLon)
+        val py = tileBox.getPixYFromLatLon(pLat, pLon)
+        val sx = tileBox.getPixXFromLatLon(sLat, sLon)
+        val sy = tileBox.getPixYFromLatLon(sLat, sLon)
+        startLinePaint.color = if (isSunlight) Color.BLACK else Color.rgb(255, 215, 0)
+        canvas.drawLine(px, py, sx, sy, startLinePaint)
     }
 
     private fun getPixelsPerMeter(tileBox: RotatedTileBox, lat: Double, lon: Double): Float {

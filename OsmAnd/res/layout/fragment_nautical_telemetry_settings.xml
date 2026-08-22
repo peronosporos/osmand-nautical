@@ -4,8 +4,11 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:fitsSystemWindows="true"
     android:orientation="vertical"
-    android:background="?attr/list_background_color">
+    android:background="?attr/activity_background_color">
+
+    <include layout="@layout/simple_toolbar" />
 
     <!-- Preset Selector Bar -->
     <LinearLayout

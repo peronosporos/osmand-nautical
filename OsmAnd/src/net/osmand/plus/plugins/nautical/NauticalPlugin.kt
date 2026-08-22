@@ -839,18 +839,45 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
         }
         if (maneuverManager == null) {
             maneuverManager = ManeuverManager(app).apply {
-                registerManeuver("anchoring", net.osmand.plus.plugins.nautical.maneuvers.AnchoringManeuver(app))
-                registerManeuver("mooring", net.osmand.plus.plugins.nautical.maneuvers.MooringManeuver(app))
-                registerManeuver("docking", net.osmand.plus.plugins.nautical.maneuvers.DockingManeuver(app))
-                registerManeuver("slip_exit", net.osmand.plus.plugins.nautical.maneuvers.SlipExitManeuver(app))
-                registerManeuver("weigh_anchor", net.osmand.plus.plugins.nautical.maneuvers.WeighingAnchorManeuver(app))
-                registerManeuver("heave_to", net.osmand.plus.plugins.nautical.maneuvers.HeavingToManeuver(app))
-                registerManeuver("tack_port", net.osmand.plus.plugins.nautical.maneuvers.TackingManeuver(app))
-                registerManeuver("tack_stbd", net.osmand.plus.plugins.nautical.maneuvers.TackingManeuver(app))
-                registerManeuver("gybe_port", net.osmand.plus.plugins.nautical.maneuvers.GybingManeuver(app))
-                registerManeuver("gybe_stbd", net.osmand.plus.plugins.nautical.maneuvers.GybingManeuver(app))
-                registerManeuver("shunt", net.osmand.plus.plugins.nautical.maneuvers.ShuntingManeuver(app))
-                registerManeuver("holding_pattern", net.osmand.plus.plugins.nautical.maneuvers.HoldingPatternManeuver(app))
+                val anchoring = net.osmand.plus.plugins.nautical.maneuvers.AnchoringManeuver(app)
+                registerManeuver("anchoring", anchoring)
+
+                val mooring = net.osmand.plus.plugins.nautical.maneuvers.MooringManeuver(app)
+                registerManeuver("mooring", mooring)
+
+                val medMooring = net.osmand.plus.plugins.nautical.maneuvers.MedMooringManeuver(app)
+                registerManeuver("med_mooring", medMooring)
+
+                val docking = net.osmand.plus.plugins.nautical.maneuvers.DockingManeuver(app)
+                registerManeuver("docking", docking)
+
+                val slipExit = net.osmand.plus.plugins.nautical.maneuvers.SlipExitManeuver(app)
+                registerManeuver("slip_exit", slipExit)
+
+                val weighAnchor = net.osmand.plus.plugins.nautical.maneuvers.WeighingAnchorManeuver(app)
+                registerManeuver("weigh_anchor", weighAnchor)
+                registerManeuver("weighing_anchor", weighAnchor)
+
+                val heaveTo = net.osmand.plus.plugins.nautical.maneuvers.HeavingToManeuver(app)
+                registerManeuver("heave_to", heaveTo)
+                registerManeuver("heaving_to", heaveTo)
+
+                val tacking = net.osmand.plus.plugins.nautical.maneuvers.TackingManeuver(app)
+                registerManeuver("tack_port", tacking)
+                registerManeuver("tack_stbd", tacking)
+                registerManeuver("tacking", tacking)
+
+                val gybing = net.osmand.plus.plugins.nautical.maneuvers.GybingManeuver(app)
+                registerManeuver("gybe_port", gybing)
+                registerManeuver("gybe_stbd", gybing)
+                registerManeuver("gybing", gybing)
+
+                val shunting = net.osmand.plus.plugins.nautical.maneuvers.ShuntingManeuver(app)
+                registerManeuver("shunt", shunting)
+                registerManeuver("shunting", shunting)
+
+                val holdingPattern = net.osmand.plus.plugins.nautical.maneuvers.HoldingPatternManeuver(app)
+                registerManeuver("holding_pattern", holdingPattern)
             }
         }
         if (ttsHelper == null) {

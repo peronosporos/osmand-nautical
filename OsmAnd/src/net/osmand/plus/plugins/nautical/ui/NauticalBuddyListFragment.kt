@@ -22,6 +22,19 @@ import net.osmand.plus.plugins.nautical.NauticalPlugin
 
 class NauticalBuddyListFragment : BaseOsmAndFragment() {
 
+    companion object {
+        const val TAG = "nautical_buddy_list"
+
+        fun show(fragmentManager: androidx.fragment.app.FragmentManager) {
+            if (fragmentManager.isStateSaved) return
+            val fragment = NauticalBuddyListFragment()
+            fragmentManager.beginTransaction()
+                .add(R.id.fragmentContainer, fragment, TAG)
+                .addToBackStack(TAG)
+                .commit()
+        }
+    }
+
     private lateinit var adapter: BuddyAdapter
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {

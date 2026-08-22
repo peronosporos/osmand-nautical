@@ -31,8 +31,27 @@ class TelemetryWidgetSettingsFragment : BaseOsmAndFragment() {
         return view
     }
 
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        loadSettings()
+        if (::reorderAdapter.isInitialized) {
+            reorderAdapter.notifyDataSetChanged()
+        }
+    }
+
     private fun setupViews(rootView: View) {
         loadSettings()
+
+        val toolbar = rootView.findViewById<androidx.appcompat.widget.Toolbar>(R.id.toolbar)
+        toolbar?.title = getString(R.string.nautical_telemetry_widget_config)
+        toolbar?.setNavigationIcon(R.drawable.ic_arrow_back)
+        toolbar?.setNavigationOnClickListener {
+            requireActivity().onBackPressedDispatcher.onBackPressed()
+        }
+        rootView.findViewById<View>(R.id.close_button)?.setOnClickListener {
+            requireActivity().onBackPressedDispatcher.onBackPressed()
+        }
+        rootView.findViewById<TextView>(R.id.toolbar_title)?.text = getString(R.string.nautical_telemetry_widget_config)
 
         val recyclerView: RecyclerView = rootView.findViewById(R.id.recycler_reorder)
         recyclerView.layoutManager = LinearLayoutManager(requireContext())
@@ -47,6 +66,7 @@ class TelemetryWidgetSettingsFragment : BaseOsmAndFragment() {
             }
         )
         recyclerView.adapter = reorderAdapter
+        reorderAdapter.notifyDataSetChanged()
 
         val callback = object : ItemTouchHelper.SimpleCallback(
             ItemTouchHelper.UP or ItemTouchHelper.DOWN,

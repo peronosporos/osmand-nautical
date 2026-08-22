@@ -498,6 +498,61 @@ val MarineState.hasValidFix: Boolean
         return (lat != 0.0 || lon != 0.0) && age < 30000
     }
 
+val MarineState.activeSailEfficiency: Double
+    get() {
+        if (sailInventory.isEmpty()) {
+            val mainReef = reefs ?: 0
+            val mainFactor = when (mainReef) {
+                0 -> 0.50
+                1 -> 0.40
+                2 -> 0.30
+                else -> 0.20
+            }
+            return (mainFactor + 0.50).coerceIn(0.1, 2.0)
+        }
+        var mainFactor = 0.0
+        var headsailFactor = 0.0
+        var downwindFactor = 0.0
+        for (sail in sailInventory) {
+            if (!sail.active) continue
+            val type = sail.type.lowercase(java.util.Locale.US)
+            val name = sail.name.lowercase(java.util.Locale.US)
+            val baseAreaFactor = (sail.area ?: 1.0).coerceIn(0.2, 2.5)
+            when {
+                type.contains("main") || name.contains("main") -> {
+                    val reef = sail.reefs ?: reefs ?: 0
+                    val reefMultiplier = when (reef) {
+                        0 -> 1.0
+                        1 -> 0.80
+                        2 -> 0.60
+                        3 -> 0.40
+                        else -> 0.30
+                    }
+                    mainFactor = 0.50 * (baseAreaFactor.coerceAtMost(1.0)) * reefMultiplier
+                }
+                type.contains("genoa") || name.contains("genoa") -> {
+                    headsailFactor = maxOf(headsailFactor, 0.50 * 1.40)
+                }
+                type.contains("jib") || name.contains("jib") || type.contains("solent") || type.contains("staysail") -> {
+                    val factor = if (name.contains("storm") || type.contains("storm")) 0.30
+                        else if (name.contains("solent") || type.contains("solent") || name.contains("staysail") || type.contains("staysail")) 0.75
+                        else 1.00
+                    headsailFactor = maxOf(headsailFactor, 0.50 * factor)
+                }
+                type.contains("spin") || name.contains("spin") || type.contains("code") || name.contains("code") || type.contains("gennaker") -> {
+                    val factor = if (name.contains("code") || type.contains("code")) 1.50 else 1.80
+                    downwindFactor = maxOf(downwindFactor, 0.50 * factor)
+                }
+                else -> {
+                    headsailFactor = maxOf(headsailFactor, 0.50 * baseAreaFactor)
+                }
+            }
+        }
+        val headOrDown = maxOf(headsailFactor, downwindFactor)
+        val total = mainFactor + headOrDown
+        return if (total <= 0.0) 0.1 else total.coerceIn(0.1, 2.0)
+    }
+
 @kotlinx.serialization.Serializable
 enum class ConnectionStatus {
     CONNECTED,

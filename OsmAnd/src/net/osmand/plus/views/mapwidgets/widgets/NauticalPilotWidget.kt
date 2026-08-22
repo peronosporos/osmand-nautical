@@ -61,10 +61,14 @@ class NauticalPilotWidget(
 
     override fun setContentTitle(messageId: Int) {
         super.setContentTitle("")
+        widgetName?.visibility = View.GONE
+        widgetName?.text = ""
     }
 
     override fun setContentTitle(text: String?) {
         super.setContentTitle("")
+        widgetName?.visibility = View.GONE
+        widgetName?.text = ""
     }
 
     override fun updateWidgetView() {
@@ -146,6 +150,8 @@ class NauticalPilotWidget(
     @SuppressLint("ClickableViewAccessibility")
     override fun setupView(view: View) {
         super.setupView(view)
+        widgetName?.visibility = View.GONE
+        widgetName?.text = ""
 
         statusIconView = view.findViewById(R.id.pilot_status_icon)
         statusIconView?.setOnClickListener {
@@ -354,6 +360,8 @@ class NauticalPilotWidget(
     }
 
     override fun updateSimpleWidgetInfo(drawSettings: OsmandMapLayer.DrawSettings?) {
+        widgetName?.visibility = View.GONE
+        widgetName?.text = ""
         val state = NauticalPlugin.engine?.getCurrentState()
         if (state == null) {
             setText("STANDBY", "")

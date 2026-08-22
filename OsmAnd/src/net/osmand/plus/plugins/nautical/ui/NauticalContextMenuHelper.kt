@@ -27,6 +27,10 @@ import net.osmand.plus.plugins.nautical.engine.GpxStreamer
 import net.osmand.plus.plugins.nautical.engine.NauticalSafetyManager
 import net.osmand.plus.plugins.nautical.engine.SignalKEngine
 import net.osmand.plus.plugins.nautical.engine.TrajectoryPoint
+import net.osmand.plus.plugins.nautical.grib.parser.GribGridData
+import net.osmand.plus.plugins.nautical.grib.parser.GribHeader
+import net.osmand.plus.plugins.nautical.grib.parser.TimeStepGrid
+import net.osmand.plus.plugins.nautical.network.PolarProfile
 import net.osmand.plus.plugins.nautical.grib.ui.GribManagerBottomSheet
 import net.osmand.plus.plugins.nautical.maneuvers.TacticalStartManager
 import net.osmand.plus.plugins.nautical.map.controller.SailingMapLayerController
@@ -245,9 +249,10 @@ class NauticalContextMenuHelper(private val app: OsmandApplication) {
                         app.showToastMessage(R.string.nautical_pin_cleared)
                     } else {
                         tacticalStartManager?.setPortPin(lat, lon)
-                        app.showToastMessage(R.string.nautical_pin_marked_start_line)
+                        app.showToastMessage(R.string.nautical_port_pin_set)
                     }
                     onRequestRefresh()
+                    app.osmandMap?.refreshMap()
                     true
                 }
             }
@@ -264,9 +269,10 @@ class NauticalContextMenuHelper(private val app: OsmandApplication) {
                         app.showToastMessage(R.string.nautical_pin_cleared)
                     } else {
                         tacticalStartManager?.setStarboardPin(lat, lon)
-                        app.showToastMessage(R.string.nautical_pin_marked_start_line)
+                        app.showToastMessage(R.string.nautical_stbd_pin_set)
                     }
                     onRequestRefresh()
+                    app.osmandMap?.refreshMap()
                     true
                 }
             }
@@ -636,21 +642,7 @@ class NauticalContextMenuHelper(private val app: OsmandApplication) {
                     setTitleId(R.string.nautical_vessel_details, mapActivity)
                     icon = R.drawable.ic_action_info
                     setListener { _, _, _, _ ->
-                        NauticalAisDetailsDialog.show(mapActivity.supportFragmentManager, obj.mmsi)
-                        true
-                    }
-                }
-            )
-
-            val isBuddy = engine?.getCurrentState()?.aisBuddies?.contains(obj.mmsi) ?: false
-            adapter.addItem(
-                ContextMenuItem("nautical_toggle_buddy").apply {
-                    title = if (isBuddy) mapActivity.getString(R.string.nautical_remove_from_buddies) else mapActivity.getString(R.string.nautical_add_to_buddies)
-                    icon = if (isBuddy) R.drawable.ic_action_remove else R.drawable.ic_action_add
-                    setListener { _, _, _, _ ->
-                        val current = engine?.getCurrentState()?.aisBuddies?.toMutableSet() ?: mutableSetOf()
-                        if (isBuddy) current.remove(obj.mmsi) else current.add(obj.mmsi)
-                        engine?.sendDelta("navigation.aisBuddies", current.toList())
+                        AisTargetBottomSheet.show(mapActivity.supportFragmentManager, obj)
                         true
                     }
                 }
@@ -668,50 +660,17 @@ class NauticalContextMenuHelper(private val app: OsmandApplication) {
         layerController: SailingMapLayerController?,
         pluginScope: CoroutineScope
     ) {
-        val vm = routingViewModel ?: return
-        val gribRepo = SailingDependencyContainer.gribRepository
-        val gridData = gribRepo?.gridData
-        if (gridData == null) {
-            app.showToastMessage(R.string.grib_parse_error)
-            return
-        }
-
-        val lastLoc = app.locationProvider.lastKnownLocation
-        if (lastLoc == null) {
-            app.showToastMessage(R.string.nautical_error_no_gps)
-            return
-        }
-
-        val polarProfile = SailingDependencyContainer.performanceRepository?.activePolarProfile?.value
-        if (polarProfile == null) {
-            app.showToastMessage(R.string.nautical_error_no_polar)
-            return
-        }
-
-        val request = RoutingRequest(
-            start = Waypoint(lastLoc.latitude, lastLoc.longitude),
-            destination = Waypoint(lat, lon),
-            departureTime = System.currentTimeMillis(),
-            polarProfile = polarProfile
+        val routingEngine = net.osmand.plus.plugins.nautical.routing.NauticalWeatherRoutingEngine(app)
+        routingEngine.calculateAndRenderWeatherRoute(
+            destLat = lat,
+            destLon = lon,
+            mapActivity = activity,
+            routingViewModel = routingViewModel,
+            safetyManager = safetyManager,
+            s57SpatialIndex = s57SpatialIndex,
+            layerController = layerController,
+            scope = pluginScope
         )
-
-        val index = s57SpatialIndex ?: S57SpatialIndex(app)
-        val sm = safetyManager ?: NauticalSafetyManager.getInstance(app)
-        vm.calculateWeatherRoute(request, gridData, index, sm)
-
-        vm.routingStatus.onEach { status ->
-            app.runInUIThread {
-                if (status != "Idle") {
-                    app.showToastMessage(status)
-                }
-            }
-        }.launchIn(pluginScope)
-
-        vm.optimalRoute.onEach { result ->
-            app.runInUIThread {
-                layerController?.setWeatherRoute(result)
-            }
-        }.launchIn(pluginScope)
     }
 
     fun handleGpxSelection(mapActivity: MapActivity, engine: SignalKEngine?) {

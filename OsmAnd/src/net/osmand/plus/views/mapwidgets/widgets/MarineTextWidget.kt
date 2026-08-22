@@ -36,9 +36,26 @@ class MarineTextWidget(
         setIcons(widgetType)
     }
 
+    override fun getWidgetName(): String? = null
+
+    override fun getAdditionalWidgetName(): String? = null
+
+    override fun setContentTitle(messageId: Int) {
+        super.setContentTitle("")
+        widgetName?.visibility = View.GONE
+        widgetName?.text = ""
+    }
+
+    override fun setContentTitle(text: String?) {
+        super.setContentTitle("")
+        widgetName?.visibility = View.GONE
+        widgetName?.text = ""
+    }
+
     override fun updateWidgetView() {
         super.updateWidgetView()
         widgetName?.visibility = View.GONE
+        widgetName?.text = ""
     }
 
     override fun updateIcon() {
@@ -58,6 +75,8 @@ class MarineTextWidget(
 
     override fun setupView(view: View) {
         super.setupView(view)
+        widgetName?.visibility = View.GONE
+        widgetName?.text = ""
 
         view.addOnAttachStateChangeListener(
             object : View.OnAttachStateChangeListener {
@@ -229,6 +248,8 @@ class MarineTextWidget(
 
     @SuppressLint("DefaultLocale")
     override fun updateSimpleWidgetInfo(drawSettings: OsmandMapLayer.DrawSettings?) {
+        widgetName?.visibility = View.GONE
+        widgetName?.text = ""
         val engine = NauticalPlugin.engine
         if (engine == null) {
             updateIcon()

@@ -98,6 +98,21 @@ class SignalKMetricsCalculator(
             val rangeMeters = secondsToEmpty * sog
             s = s.copy(estimatedRange = rangeMeters)
         }
+
+        val polarDiagram = NauticalPlugin.getInstance()?.tacticalProcessor?.polarDiagram
+        val tws = s.windSpeedTrue
+        val twa = s.trueWindAngle ?: s.windDirectionApparent
+        val stw = if (s.isStwUnreliable) s.speedOverGround else s.speedThroughWater
+        if (polarDiagram != null && tws != null && twa != null) {
+            val eff = s.activeSailEfficiency
+            polarDiagram.activeSailEfficiency = eff
+            val targetSpeed = polarDiagram.getTargetSpeedRad(tws, twa, eff)
+            if (targetSpeed > 0.05) {
+                val ratio = if (stw != null) (stw / targetSpeed).coerceIn(0.0, 2.5) else s.polarSpeedRatio
+                s = s.copy(polarTargetSpeed = targetSpeed, polarSpeedRatio = ratio)
+            }
+        }
+
         return s
     }
 

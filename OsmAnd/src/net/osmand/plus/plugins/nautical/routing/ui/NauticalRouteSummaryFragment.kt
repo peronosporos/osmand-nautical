@@ -36,6 +36,17 @@ class NauticalRouteSummaryFragment : BaseOsmAndFragment() {
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         val view = themedInflater.inflate(R.layout.fragment_nautical_route_summary, container, false)
+
+        val toolbar = view.findViewById<androidx.appcompat.widget.Toolbar>(R.id.toolbar)
+        toolbar?.title = getString(R.string.nautical_route_summary_title)
+        toolbar?.setNavigationIcon(R.drawable.ic_arrow_back)
+        toolbar?.setNavigationOnClickListener {
+            activity?.onBackPressedDispatcher?.onBackPressed()
+        }
+        view.findViewById<View>(R.id.close_button)?.setOnClickListener {
+            activity?.onBackPressedDispatcher?.onBackPressed()
+        }
+        view.findViewById<TextView>(R.id.toolbar_title)?.text = getString(R.string.nautical_route_summary_title)
         
         val recyclerView = view.findViewById<RecyclerView>(R.id.legs_recycler_view)
         recyclerView.layoutManager = LinearLayoutManager(context)
@@ -44,6 +55,7 @@ class NauticalRouteSummaryFragment : BaseOsmAndFragment() {
 
         val totalDistText = view.findViewById<TextView>(R.id.total_distance)
         val totalTimeText = view.findViewById<TextView>(R.id.total_time)
+        val txtTacksGybes = view.findViewById<TextView>(R.id.txt_tacks_gybes)
         val emptyLayout = view.findViewById<View>(R.id.layout_empty_plan)
         val btnCreatePlan = view.findViewById<com.google.android.material.button.MaterialButton>(R.id.btn_create_passage_plan)
 
@@ -65,12 +77,18 @@ class NauticalRouteSummaryFragment : BaseOsmAndFragment() {
                         recyclerView.visibility = View.VISIBLE
                         totalDistText.text = String.format(Locale.US, "Total Dist: %.1f NM", result.totalDistanceNm)
                         totalTimeText.text = String.format(Locale.US, "Total ETE: %.1f h", result.totalTimeHours)
+                        val liveState = net.osmand.plus.plugins.nautical.NauticalPlugin.engine?.getCurrentState()
+                        val twd = liveState?.windDirectionTrue ?: liveState?.windDirectionApparent ?: 0.0
+                        val (tacks, gybes) = net.osmand.plus.plugins.nautical.routing.NauticalWeatherRoutingEngine.countTacksAndGybes(result.legs, Math.toDegrees(twd))
+                        txtTacksGybes?.visibility = View.VISIBLE
+                        txtTacksGybes?.text = getString(R.string.nautical_route_summary_tacks, tacks, gybes)
                         adapter.submitList(result.legs)
                     } else {
                         emptyLayout.visibility = View.VISIBLE
                         recyclerView.visibility = View.GONE
                         totalDistText.text = "Total Dist: -- NM"
                         totalTimeText.text = "Total ETE: -- h"
+                        txtTacksGybes?.visibility = View.GONE
                         adapter.submitList(emptyList())
                     }
                 }

@@ -110,10 +110,11 @@
             android:textColor="?attr/colorAccent"
             android:textStyle="bold" />
 
-        <LinearLayout
+        <GridLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
+            android:columnCount="3"
+            android:rowCount="2"
             android:layout_marginTop="8dp">
 
             <com.google.android.material.button.MaterialButton
@@ -121,8 +122,8 @@
                 style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                 android:layout_width="0dp"
                 android:layout_height="44dp"
-                android:layout_weight="1"
-                android:layout_marginEnd="4dp"
+                android:layout_columnWeight="1"
+                android:layout_margin="4dp"
                 android:insetTop="0dp"
                 android:insetBottom="0dp"
                 android:paddingStart="4dp"
@@ -139,9 +140,8 @@
                 style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                 android:layout_width="0dp"
                 android:layout_height="44dp"
-                android:layout_weight="1"
-                android:layout_marginStart="4dp"
-                android:layout_marginEnd="4dp"
+                android:layout_columnWeight="1"
+                android:layout_margin="4dp"
                 android:insetTop="0dp"
                 android:insetBottom="0dp"
                 android:paddingStart="4dp"
@@ -156,8 +156,8 @@
                 style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                 android:layout_width="0dp"
                 android:layout_height="44dp"
-                android:layout_weight="1"
-                android:layout_marginStart="4dp"
+                android:layout_columnWeight="1"
+                android:layout_margin="4dp"
                 android:insetTop="0dp"
                 android:insetBottom="0dp"
                 android:paddingStart="4dp"
@@ -167,21 +167,13 @@
                 android:text="13 (Safety)"
                 app:cornerRadius="8dp" />
 
-        </LinearLayout>
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginTop="8dp">
-
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btn_ch_06"
                 style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                 android:layout_width="0dp"
                 android:layout_height="44dp"
-                android:layout_weight="1"
-                android:layout_marginEnd="4dp"
+                android:layout_columnWeight="1"
+                android:layout_margin="4dp"
                 android:insetTop="0dp"
                 android:insetBottom="0dp"
                 android:paddingStart="4dp"
@@ -196,9 +188,8 @@
                 style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                 android:layout_width="0dp"
                 android:layout_height="44dp"
-                android:layout_weight="1"
-                android:layout_marginStart="4dp"
-                android:layout_marginEnd="4dp"
+                android:layout_columnWeight="1"
+                android:layout_margin="4dp"
                 android:insetTop="0dp"
                 android:insetBottom="0dp"
                 android:paddingStart="4dp"
@@ -213,8 +204,8 @@
                 style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                 android:layout_width="0dp"
                 android:layout_height="44dp"
-                android:layout_weight="1"
-                android:layout_marginStart="4dp"
+                android:layout_columnWeight="1"
+                android:layout_margin="4dp"
                 android:insetTop="0dp"
                 android:insetBottom="0dp"
                 android:paddingStart="4dp"
@@ -224,7 +215,7 @@
                 android:text="77 (Port Ops)"
                 app:cornerRadius="8dp" />
 
-        </LinearLayout>
+        </GridLayout>
 
         <!-- Actions: Direct Channel Picker & Live Audio Streaming -->
         <LinearLayout

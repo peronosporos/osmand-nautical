@@ -483,6 +483,7 @@ class SignalKDeltaParser(
                         parseSystemValue(stateWithTs, path, valueObj, now)
                     path.startsWith("navigation.") -> parseNavigationValue(stateWithTs, path, valueObj, now)
                     path.startsWith("performance.") -> parsePerformanceValue(stateWithTs, path, valueObj, now)
+                    path.startsWith("steering.sails.") || path.startsWith("sails.") -> parseSailsValue(stateWithTs, path, valueObj, now)
                     path.startsWith("steering.") -> parseAutopilotValue(stateWithTs, path, valueObj, now)
                     path.startsWith("environment.") -> parseEnvironmentValue(stateWithTs, path, valueObj, now)
                     path.startsWith("resources.") -> {
@@ -901,6 +902,93 @@ class SignalKDeltaParser(
                     state = state.copy(racingTimer = value)
                     updated = true
                 }
+            }
+        }
+        return Pair(state, updated)
+    }
+
+    private fun parseSailsValue(s: MarineState, path: String, valueObj: Any?, now: Long): Pair<MarineState, Boolean> {
+        var state = s
+        var updated = false
+        val normalizedPath = if (path.startsWith("steering.sails.")) path.removePrefix("steering.") else path
+        
+        when {
+            normalizedPath == "sails.reefs" -> {
+                val r = (valueObj as? Number)?.toInt()
+                if (r != null) {
+                    state = state.copy(reefs = r)
+                    updated = true
+                }
+            }
+            normalizedPath == "sails.activeSailPlan" -> {
+                if (valueObj != null) {
+                    state = state.copy(activeSailPlan = valueObj.toString())
+                    updated = true
+                }
+            }
+            normalizedPath == "sails.inventory" && valueObj is Map<*, *> -> {
+                val sails = mutableListOf<Sail>()
+                valueObj.forEach { (key, value) ->
+                    if (value is Map<*, *>) {
+                        val obj = value["value"] as? Map<*, *> ?: value
+                        sails.add(Sail(
+                            id = key.toString(),
+                            name = obj["name"]?.toString() ?: "Unknown",
+                            type = obj["type"]?.toString() ?: "Unknown",
+                            area = (obj["area"] as? Number)?.toDouble(),
+                            active = obj["active"] as? Boolean ?: false,
+                            reefs = (obj["reefs"] as? Number)?.toInt(),
+                            maxReefs = (value["meta"] as? Map<*, *>)?.get("max") as? Int
+                        ))
+                    }
+                }
+                state = state.copy(sailInventory = sails)
+                updated = true
+            }
+            normalizedPath.startsWith("sails.inventory.") -> {
+                val parts = normalizedPath.removePrefix("sails.inventory.").split(".")
+                if (parts.isNotEmpty()) {
+                    val sailId = parts[0]
+                    val attr = parts.getOrNull(1)
+                    val currentList = state.sailInventory.toMutableList()
+                    val idx = currentList.indexOfFirst { it.id == sailId }
+                    if (idx != -1) {
+                        val existing = currentList[idx]
+                        val modified = when (attr) {
+                            "active" -> existing.copy(active = valueObj as? Boolean ?: (valueObj?.toString() == "true"))
+                            "reefs" -> existing.copy(reefs = (valueObj as? Number)?.toInt())
+                            "area" -> existing.copy(area = (valueObj as? Number)?.toDouble())
+                            "name" -> existing.copy(name = valueObj?.toString() ?: existing.name)
+                            "type" -> existing.copy(type = valueObj?.toString() ?: existing.type)
+                            else -> existing
+                        }
+                        currentList[idx] = modified
+                        state = state.copy(sailInventory = currentList)
+                        updated = true
+                    } else if (valueObj is Map<*, *>) {
+                        val obj = valueObj["value"] as? Map<*, *> ?: valueObj
+                        currentList.add(Sail(
+                            id = sailId,
+                            name = obj["name"]?.toString() ?: "Unknown",
+                            type = obj["type"]?.toString() ?: "Unknown",
+                            area = (obj["area"] as? Number)?.toDouble(),
+                            active = obj["active"] as? Boolean ?: false,
+                            reefs = (obj["reefs"] as? Number)?.toInt(),
+                            maxReefs = (valueObj["meta"] as? Map<*, *>)?.get("max") as? Int
+                        ))
+                        state = state.copy(sailInventory = currentList)
+                        updated = true
+                    }
+                }
+            }
+            normalizedPath.startsWith("sails.active.") -> {
+                val sailId = normalizedPath.removePrefix("sails.active.")
+                val isActive = valueObj as? Boolean ?: (valueObj?.toString() == "true")
+                val currentList = state.sailInventory.map { sail ->
+                    if (sail.id == sailId) sail.copy(active = isActive) else sail
+                }
+                state = state.copy(sailInventory = currentList)
+                updated = true
             }
         }
         return Pair(state, updated)
