@@ -51,13 +51,19 @@ class NauticalAisLayer(
     private var lastRenderRefreshTimeMs: Long = 0
     private var followedMmsi: Int? = null
 
+    fun onManagerBound(manager: NauticalAisManager) {
+        manager.addListener(this)
+        mapActivityInvalidated = true
+        manager.getAisObjects().forEach { onAisObjectReceived(it) }
+        getApplication().runInUIThread {
+            tileView?.refreshMap()
+        }
+    }
+
     override fun initLayer(view: OsmandMapTileView) {
         super.initLayer(view)
         
-        plugin.aisManager?.addListener(this)
-        mapActivityInvalidated = true
-        // Initial population of existing objects
-        plugin.aisManager?.getAisObjects()?.forEach { onAisObjectReceived(it) }
+        plugin.aisManager?.let { onManagerBound(it) }
 
         val density = context.resources.displayMetrics.density
         val size = (16 * density).toInt()

@@ -852,8 +852,13 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
         }
         if (app.settings.NAUTICAL_AIS_ENABLED.get()) {
             if (aisManager == null) {
-                aisManager = NauticalAisManager(app)
-                aisManager?.startUpdates()
+                val manager = NauticalAisManager(app)
+                aisManager = manager
+                layerManager.aisAisLayer?.let { layer ->
+                    manager.addListener(layer)
+                    layer.onManagerBound(manager)
+                }
+                manager.startUpdates()
             }
             scope.launch(Dispatchers.IO) {
                 if (aisMessageListener == null && aisManager != null) {
@@ -1347,6 +1352,10 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
             if (app.settings.NAUTICAL_AIS_ENABLED.get()) {
                 val mapView = mapActivity.mapView
                 val aisLayer = layerManager.aisAisLayer ?: NauticalAisLayer(mapActivity, this).also { layerManager.aisAisLayer = it }
+                aisManager?.let { manager ->
+                    manager.addListener(aisLayer)
+                    aisLayer.onManagerBound(manager)
+                }
                 if (!mapView.layers.contains(aisLayer)) {
                     mapView.addLayer(aisLayer, 4.5f)
                 }
