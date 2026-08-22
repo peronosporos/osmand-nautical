@@ -147,7 +147,7 @@
         <ImageView
             android:layout_width="64dp"
             android:layout_height="64dp"
-            android:src="@drawable/ic_action_gnavigation_dark"
+            android:src="@drawable/ic_action_sail_boat_dark"
             app:tint="?attr/colorAccent"
             android:contentDescription="Route Icon" />
 
