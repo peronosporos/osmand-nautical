@@ -362,29 +362,49 @@ class NauticalContextMenuHelper(private val app: OsmandApplication) {
             }
         )
 
-        if (recorder != null) {
-            adapter.addItem(
-                ContextMenuItem("nautical_toggle_recording").apply {
-                    val recording = recorder.isRecording.value
-                    title = if (recording) app.getString(R.string.nautical_replay_btn_stop) else app.getString(R.string.nautical_replay_btn_record)
-                    icon = if (recording) R.drawable.ic_action_stop else R.drawable.ic_action_track_recordable
-                    setListener { _, _, _, _ ->
-                        if (recording) {
-                            val lastFile = recorder.currentFile.value
-                            recorder.stopRecording()
-                            app.showToastMessage(R.string.nautical_replay_recording_stopped, lastFile ?: "")
-                        } else {
-                            val sdf = java.text.SimpleDateFormat("yyyyMMdd_HHmm", Locale.US)
-                            val dateStr = sdf.format(Date())
-                            val name = "trip_$dateStr"
-                            recorder.startRecording(name)
-                            app.showToastMessage(R.string.nautical_replay_recording_started)
-                        }
-                        true
-                    }
+        adapter.addItem(
+            ContextMenuItem("nautical_open_logbook_menu").apply {
+                setTitleId(R.string.nautical_log_entries, mapActivity)
+                icon = R.drawable.ic_action_notes_dark
+                setListener { _, _, _, _ ->
+                    showSettings(mapActivity, SettingsScreenType.MARINE_LOGBOOK)
+                    true
                 }
-            )
-        }
+            }
+        )
+
+        adapter.addItem(
+            ContextMenuItem("nautical_boat_ai").apply {
+                setTitleId(R.string.nautical_boat_ai_title, mapActivity)
+                icon = R.drawable.ic_action_message
+                setListener { _, _, _, _ ->
+                    showSettings(mapActivity, SettingsScreenType.BOAT_AI)
+                    true
+                }
+            }
+        )
+
+        adapter.addItem(
+            ContextMenuItem("nautical_checklists_menu").apply {
+                setTitleId(R.string.nautical_checklists, mapActivity)
+                icon = R.drawable.ic_action_list
+                setListener { _, _, _, _ ->
+                    showSettings(mapActivity, SettingsScreenType.NAUTICAL_CHECKLISTS)
+                    true
+                }
+            }
+        )
+
+        adapter.addItem(
+            ContextMenuItem("nautical_sail_inventory_menu").apply {
+                setTitleId(R.string.nautical_sail_inventory_title, mapActivity)
+                icon = R.drawable.ic_action_sail_boat_dark
+                setListener { _, _, _, _ ->
+                    showSettings(mapActivity, SettingsScreenType.SAIL_INVENTORY)
+                    true
+                }
+            }
+        )
 
         adapter.addItem(
             ContextMenuItem("nautical_follow_gpx").apply {

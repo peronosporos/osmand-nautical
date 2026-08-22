@@ -253,6 +253,12 @@
         android:layout="@layout/preference_category_with_descr"
         android:title="@string/logbook_details_group">
 
+        <Preference
+            android:key="nautical_open_logbook"
+            android:layout="@layout/preference_with_descr"
+            android:title="@string/nautical_log_entries"
+            android:summary="View, filter, and export logbook entries" />
+
         <net.osmand.plus.settings.preferences.ListPreferenceEx
             android:key="nautical_logbook_interval"
             android:layout="@layout/preference_with_descr"
@@ -581,117 +587,7 @@
         android:layout="@layout/preference_with_descr"
         android:title="@string/nautical_compass_wizard" />
 
-    <!-- Section 6: Map Overlays & Indicators -->
-    <PreferenceCategory
-        android:key="nautical_map_overlays_category"
-        android:layout="@layout/preference_category_with_descr"
-        android:title="Map Overlays &amp; Indicators" />
-
-    <net.osmand.plus.settings.preferences.SwitchPreferenceEx
-        android:key="nautical_show_laylines"
-        android:layout="@layout/preference_with_descr"
-        android:title="@string/nautical_show_laylines" />
-
-    <net.osmand.plus.settings.preferences.SwitchPreferenceEx
-        android:key="nautical_show_infinite_laylines"
-        android:layout="@layout/preference_with_descr"
-        android:title="@string/nautical_show_infinite_laylines"
-        android:summary="@string/nautical_show_infinite_laylines_desc" />
-
-    <net.osmand.plus.settings.preferences.SwitchPreferenceEx
-        android:key="nautical_show_wind_shifts"
-        android:layout="@layout/preference_with_descr"
-        android:title="@string/nautical_show_wind_shifts" />
-
-    <net.osmand.plus.settings.preferences.SwitchPreferenceEx
-        android:key="nautical_show_trajectory"
-        android:layout="@layout/preference_with_descr"
-        android:title="@string/nautical_show_trajectory" />
-
-    <net.osmand.plus.settings.preferences.ListPreferenceEx
-        android:key="nautical_trajectory_color"
-        android:layout="@layout/preference_with_descr"
-        android:title="Trajectory Color"
-        android:dependency="nautical_show_trajectory" />
-
-    <net.osmand.plus.settings.preferences.ListPreferenceEx
-        android:key="nautical_trajectory_thickness"
-        android:layout="@layout/preference_with_descr"
-        android:title="Trajectory Thickness"
-        android:dependency="nautical_show_trajectory" />
-
-    <net.osmand.plus.settings.preferences.SwitchPreferenceEx
-        android:key="nautical_show_tides"
-        android:layout="@layout/preference_with_descr"
-        android:title="@string/layer_tides_title" />
-
-    <net.osmand.plus.settings.preferences.SwitchPreferenceEx
-        android:key="nautical_show_heading_line"
-        android:layout="@layout/preference_with_descr"
-        android:title="@string/nautical_show_heading_line" />
-
-    <net.osmand.plus.settings.preferences.SwitchPreferenceEx
-        android:key="nautical_show_cog_line"
-        android:layout="@layout/preference_with_descr"
-        android:title="@string/nautical_show_cog_line" />
-
-    <net.osmand.plus.settings.preferences.SwitchPreferenceEx
-        android:key="nautical_show_cmg_line"
-        android:layout="@layout/preference_with_descr"
-        android:title="Show CMG Line" />
-
-    <net.osmand.plus.settings.preferences.SwitchPreferenceEx
-        android:key="nautical_show_current_vector"
-        android:layout="@layout/preference_with_descr"
-        android:title="@string/nautical_show_current_vector" />
-
-    <net.osmand.plus.settings.preferences.SwitchPreferenceEx
-        android:key="nautical_restricted_areas_enabled"
-        android:layout="@layout/preference_with_descr"
-        android:title="@string/nautical_restricted_area" />
-
-    <net.osmand.plus.settings.preferences.SwitchPreferenceEx
-        android:key="nautical_show_rain_radar"
-        android:layout="@layout/preference_with_descr"
-        android:title="@string/nautical_rainviewer_radar"
-        android:summary="@string/nautical_rainviewer_radar_desc" />
-
-    <net.osmand.plus.settings.preferences.SwitchPreferenceEx
-        android:key="nautical_show_windy_tiles"
-        android:layout="@layout/preference_with_descr"
-        android:title="Windy.com Forecast" />
-
-    <net.osmand.plus.settings.preferences.SwitchPreferenceEx
-        android:key="nautical_show_openmeteo_tiles"
-        android:layout="@layout/preference_with_descr"
-        android:title="OpenMeteo Weather" />
-
-    <net.osmand.plus.settings.preferences.SwitchPreferenceEx
-        android:key="nautical_show_smhi_tiles"
-        android:layout="@layout/preference_with_descr"
-        android:title="SMHI Weather Forecast" />
-
-    <net.osmand.plus.settings.preferences.SwitchPreferenceEx
-        android:key="nautical_show_noaa_tiles"
-        android:layout="@layout/preference_with_descr"
-        android:title="NOAA Weather Alerts" />
-
-    <net.osmand.plus.settings.preferences.SwitchPreferenceEx
-        android:key="nautical_show_pmtiles"
-        android:layout="@layout/preference_with_descr"
-        android:title="PMTiles Vector Charts" />
-
-    <net.osmand.plus.settings.preferences.SwitchPreferenceEx
-        android:key="nautical_show_logbook_layer"
-        android:layout="@layout/preference_with_descr"
-        android:title="Trip Logbook Layer" />
-
-    <net.osmand.plus.settings.preferences.ListPreferenceEx
-        android:key="nautical_look_ahead_time"
-        android:layout="@layout/preference_with_descr"
-        android:title="@string/nautical_look_ahead_time" />
-
-    <!-- Section 7: Sailing Performance -->
+    <!-- Section 6: Sailing Performance -->
     <PreferenceCategory
         android:key="nautical_sailing_category"
         android:layout="@layout/preference_category_with_descr"
@@ -743,12 +639,6 @@
         android:dependency="nautical_predictive_steering" />
 
     <!-- Section 8: Maintenance & Tools -->
-    <Preference
-        android:key="nautical_master_telemetry_setup"
-        android:layout="@layout/preference_with_descr"
-        android:title="Master Telemetry Items"
-        android:summary="Choose which items appear in the master telemetry widget" />
-
     <PreferenceCategory
         android:key="telemetry_widgets_group"
         android:layout="@layout/preference_category_with_descr"

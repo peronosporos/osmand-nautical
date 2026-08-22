@@ -232,7 +232,9 @@ class MarineTextWidget(
         val engine = NauticalPlugin.engine
         if (engine == null) {
             updateIcon()
-            setText("--", "N/A")
+            val unit = NauticalWidgetHelper.getDefaultUnit(mapActivity, settings, widgetType)
+            setText("--", unit)
+            contentView?.alpha = 0.5f
             return
         }
         if (dataJob == null && view?.isAttachedToWindow == true) {
@@ -251,14 +253,12 @@ class MarineTextWidget(
         updateIcon()
 
         if (integrity == IntegrityState.DISCONNECTED) {
-            setText(mapActivity.getString(R.string.nautical_status_off), mapActivity.getString(R.string.n_a))
+            val unit = NauticalWidgetHelper.getDefaultUnit(mapActivity, settings, widgetType)
+            setText("--", unit)
             contentView?.alpha = 0.5f
             return
         }
 
-        // Gold Standard Visuals: Strict match to 3b6ba78 style
-        val color = settings.applicationMode.getProfileColor(isNightMode)
-        textView?.textColor = color
         contentView?.alpha = if (integrity == IntegrityState.STALE) 0.5f else 1.0f
 
         val instance = customId?.substringAfterLast("#") ?: "0"
@@ -333,13 +333,13 @@ class MarineTextWidget(
                 state.distanceToWaypoint, SignalKPaths.NAV_DTW)
             WidgetType.NAUTICAL_ETA -> {
                 val ttw = state.timeToWaypoint
-                if (ttw != null) {
+                if (ttw != null && ttw > 0) {
                     val etaMs = System.currentTimeMillis() + (ttw * 1000).toLong()
-                    val is24 = android.text.format.DateFormat.is24HourFormat(mapActivity)
-                    val pattern = if (is24) "HH:mm" else "h:mm a"
-                    val sdf = java.text.SimpleDateFormat(pattern, Locale.US)
-                    sdf.format(Date(etaMs)) to ""
-                } else mapActivity.getString(R.string.n_a) to ""
+                    val timeFormat = android.text.format.DateFormat.getTimeFormat(mapActivity)
+                    timeFormat.format(Date(etaMs)) to ""
+                } else {
+                    "--:--" to ""
+                }
             }
             WidgetType.NAUTICAL_AWA -> SignalKUnitConverter.formatValue(mapActivity, settings,
                 state.windDirectionApparent, SignalKPaths.ENV_WIND_ANGLE_APPARENT)

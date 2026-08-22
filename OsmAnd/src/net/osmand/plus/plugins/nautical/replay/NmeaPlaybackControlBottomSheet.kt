@@ -102,6 +102,7 @@ class NmeaPlaybackControlBottomSheet : BaseMaterialBottomSheetDialogFragment() {
         val btnPlayPause = view.findViewById<MaterialButton>(R.id.btn_play_pause)
         val seekPlayback = view.findViewById<SeekBar>(R.id.seek_playback)
         val txtFilename = view.findViewById<TextView>(R.id.txt_filename)
+        val txtProgressPct = view.findViewById<TextView>(R.id.txt_progress_pct)
 
         viewLifecycleOwner.lifecycleScope.launch {
             viewModel.engineState.collectLatest { state ->
@@ -111,7 +112,10 @@ class NmeaPlaybackControlBottomSheet : BaseMaterialBottomSheetDialogFragment() {
 
         viewLifecycleOwner.lifecycleScope.launch {
             viewModel.progress.collectLatest { progress ->
-                seekPlayback.progress = (progress * 1000).toInt()
+                val progressInt = (progress * 1000).toInt()
+                seekPlayback.progress = progressInt
+                val pct = (progress * 100).toInt()
+                txtProgressPct?.text = "$pct%"
             }
         }
         
@@ -128,11 +132,11 @@ class NmeaPlaybackControlBottomSheet : BaseMaterialBottomSheetDialogFragment() {
 
     private fun updatePlayPauseButton(btn: MaterialButton, state: NmeaPlaybackEngine.PlaybackState) {
         if (state == NmeaPlaybackEngine.PlaybackState.PLAYING) {
-            btn.setText(R.string.nautical_replay_btn_pause)
             btn.setIconResource(R.drawable.ic_pause)
+            btn.contentDescription = getString(R.string.nautical_replay_btn_pause)
         } else {
-            btn.setText(R.string.nautical_replay_btn_play)
             btn.setIconResource(R.drawable.ic_action_play_dark)
+            btn.contentDescription = getString(R.string.nautical_replay_btn_play)
         }
     }
 

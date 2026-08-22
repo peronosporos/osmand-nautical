@@ -12,7 +12,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:paddingBottom="32dp">
+        android:paddingBottom="16dp">
 
         <!-- Drag Handle -->
         <View
@@ -20,8 +20,8 @@
             android:layout_width="36dp"
             android:layout_height="4dp"
             android:layout_gravity="center_horizontal"
-            android:layout_marginTop="12dp"
-            android:layout_marginBottom="8dp"
+            android:layout_marginTop="10dp"
+            android:layout_marginBottom="6dp"
             android:background="@drawable/bg_rounded_handle"
             android:backgroundTint="#99FFFFFF" />
 
@@ -33,7 +33,8 @@
             android:gravity="center_vertical"
             android:paddingStart="16dp"
             android:paddingEnd="16dp"
-            android:paddingBottom="8dp">
+            android:paddingTop="2dp"
+            android:paddingBottom="4dp">
 
             <TextView
                 android:id="@+id/txt_pilot_title"
@@ -49,7 +50,7 @@
                 android:id="@+id/badge_pilot_mode"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginEnd="12dp"
+                android:layout_marginEnd="10dp"
                 android:background="@drawable/btn_active_light"
                 android:backgroundTint="?attr/active_color_primary"
                 android:paddingStart="10dp"
@@ -63,8 +64,8 @@
 
             <ImageButton
                 android:id="@+id/btn_settings_gear"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:src="@drawable/ic_action_settings"
                 app:tint="?attr/icon_color_primary"
@@ -79,8 +80,8 @@
             android:gravity="center"
             android:paddingStart="16dp"
             android:paddingEnd="16dp"
-            android:layout_marginTop="12dp"
-            android:layout_marginBottom="6dp">
+            android:layout_marginTop="8dp"
+            android:layout_marginBottom="4dp">
 
             <com.google.android.material.button.MaterialButtonToggleGroup
                 android:id="@+id/mode_toggle_group"
@@ -93,13 +94,13 @@
                     android:id="@+id/btn_mode_stop"
                     style="@style/Widget.Material3.Button.OutlinedButton"
                     android:layout_width="0dp"
-                    android:layout_height="48dp"
+                    android:layout_height="44dp"
                     android:layout_weight="1"
                     android:padding="0dp"
                     app:icon="@drawable/ic_action_stop"
                     app:iconGravity="textStart"
                     app:iconPadding="0dp"
-                    app:iconSize="22dp"
+                    app:iconSize="20dp"
                     app:iconTint="?attr/active_color_primary"
                     app:strokeColor="?attr/active_color_primary"
                     app:strokeWidth="1.5dp"
@@ -109,13 +110,13 @@
                     android:id="@+id/btn_mode_compass"
                     style="@style/Widget.Material3.Button.OutlinedButton"
                     android:layout_width="0dp"
-                    android:layout_height="48dp"
+                    android:layout_height="44dp"
                     android:layout_weight="1"
                     android:padding="0dp"
                     app:icon="@drawable/ic_action_direction_compass"
                     app:iconGravity="textStart"
                     app:iconPadding="0dp"
-                    app:iconSize="22dp"
+                    app:iconSize="20dp"
                     app:iconTint="?attr/icon_color_primary"
                     app:strokeColor="?attr/active_color_primary"
                     android:contentDescription="@string/nautical_mode_compass" />
@@ -124,13 +125,13 @@
                     android:id="@+id/btn_mode_wind"
                     style="@style/Widget.Material3.Button.OutlinedButton"
                     android:layout_width="0dp"
-                    android:layout_height="48dp"
+                    android:layout_height="44dp"
                     android:layout_weight="1"
                     android:padding="0dp"
                     app:icon="@drawable/ic_action_wind"
                     app:iconGravity="textStart"
                     app:iconPadding="0dp"
-                    app:iconSize="22dp"
+                    app:iconSize="20dp"
                     app:iconTint="?attr/icon_color_primary"
                     app:strokeColor="?attr/active_color_primary"
                     android:contentDescription="@string/nautical_mode_wind" />
@@ -139,13 +140,13 @@
                     android:id="@+id/btn_mode_route"
                     style="@style/Widget.Material3.Button.OutlinedButton"
                     android:layout_width="0dp"
-                    android:layout_height="48dp"
+                    android:layout_height="44dp"
                     android:layout_weight="1"
                     android:padding="0dp"
                     app:icon="@drawable/ic_action_track_16"
                     app:iconGravity="textStart"
                     app:iconPadding="0dp"
-                    app:iconSize="22dp"
+                    app:iconSize="20dp"
                     app:iconTint="?attr/icon_color_primary"
                     app:strokeColor="?attr/active_color_primary"
                     android:contentDescription="@string/nautical_mode_track" />
@@ -161,7 +162,7 @@
             android:gravity="center_vertical"
             android:paddingStart="16dp"
             android:paddingEnd="16dp"
-            android:layout_marginTop="14dp"
+            android:layout_marginTop="8dp"
             android:layout_marginBottom="4dp">
 
             <!-- Tack Port / Shunt -->
@@ -169,25 +170,33 @@
                 android:id="@+id/btn_tack_port"
                 style="@style/Widget.Material3.Button.OutlinedButton"
                 android:layout_width="0dp"
-                android:layout_height="48dp"
-                android:minHeight="48dp"
+                android:layout_height="44dp"
+                android:minHeight="44dp"
                 android:layout_weight="1"
                 android:layout_marginEnd="6dp"
+                android:paddingStart="4dp"
+                android:paddingEnd="4dp"
+                android:paddingTop="0dp"
+                android:paddingBottom="0dp"
+                android:singleLine="true"
+                android:ellipsize="end"
+                app:autoSizeTextType="uniform"
+                app:autoSizeMinTextSize="10sp"
+                app:autoSizeMaxTextSize="13sp"
                 android:text="@string/nautical_tack_port_short"
                 android:textColor="?attr/active_color_primary"
-                android:textSize="13sp"
                 android:textStyle="bold"
                 app:strokeColor="?attr/active_color_primary"
                 app:strokeWidth="1.5dp"
                 app:cornerRadius="8dp"
                 android:contentDescription="@string/nautical_tack_port" />
 
-            <!-- Lock Course Button (Minimal & Discrete) -->
+            <!-- Touch Guard Lock Button (Minimal & Discrete) -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btn_lock_unlock"
                 style="@style/Widget.Material3.Button.IconButton"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
                 android:layout_marginEnd="4dp"
                 android:padding="0dp"
                 app:icon="@drawable/ic_action_lock_open"
@@ -199,8 +208,8 @@
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btn_expand_maneuvers"
                 style="@style/Widget.Material3.Button.IconButton"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
                 android:layout_marginEnd="6dp"
                 android:padding="0dp"
                 app:icon="@drawable/ic_action_arrow_drop_down"
@@ -208,17 +217,25 @@
                 app:iconTint="?attr/active_color_primary"
                 android:contentDescription="@string/nautical_more_maneuvers" />
 
-            <!-- Tack Starboard / Reverse -->
+            <!-- Tack Starboard / Center Rudder -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btn_tack_stbd"
                 style="@style/Widget.Material3.Button.OutlinedButton"
                 android:layout_width="0dp"
-                android:layout_height="48dp"
-                android:minHeight="48dp"
+                android:layout_height="44dp"
+                android:minHeight="44dp"
                 android:layout_weight="1"
+                android:paddingStart="4dp"
+                android:paddingEnd="4dp"
+                android:paddingTop="0dp"
+                android:paddingBottom="0dp"
+                android:singleLine="true"
+                android:ellipsize="end"
+                app:autoSizeTextType="uniform"
+                app:autoSizeMinTextSize="10sp"
+                app:autoSizeMaxTextSize="13sp"
                 android:text="@string/nautical_tack_stbd_short"
                 android:textColor="?attr/active_color_primary"
-                android:textSize="13sp"
                 android:textStyle="bold"
                 app:strokeColor="?attr/active_color_primary"
                 app:strokeWidth="1.5dp"
@@ -234,7 +251,7 @@
             android:orientation="vertical"
             android:paddingStart="16dp"
             android:paddingEnd="16dp"
-            android:layout_marginTop="6dp"
+            android:layout_marginTop="4dp"
             android:layout_marginBottom="4dp"
             android:visibility="gone">
 
@@ -247,13 +264,21 @@
                     android:id="@+id/btn_maneuver_secondary_1"
                     style="@style/Widget.Material3.Button.OutlinedButton"
                     android:layout_width="0dp"
-                    android:layout_height="48dp"
-                    android:minHeight="48dp"
+                    android:layout_height="44dp"
+                    android:minHeight="44dp"
                     android:layout_weight="1"
                     android:layout_marginEnd="6dp"
+                    android:paddingStart="4dp"
+                    android:paddingEnd="4dp"
+                    android:paddingTop="0dp"
+                    android:paddingBottom="0dp"
+                    android:singleLine="true"
+                    android:ellipsize="end"
+                    app:autoSizeTextType="uniform"
+                    app:autoSizeMinTextSize="10sp"
+                    app:autoSizeMaxTextSize="12sp"
                     android:text="@string/nautical_gybe"
                     android:textColor="?attr/active_color_primary"
-                    android:textSize="12sp"
                     android:textStyle="bold"
                     app:strokeColor="?attr/active_color_primary"
                     app:strokeWidth="1.5dp"
@@ -263,12 +288,20 @@
                     android:id="@+id/btn_maneuver_secondary_2"
                     style="@style/Widget.Material3.Button.OutlinedButton"
                     android:layout_width="0dp"
-                    android:layout_height="48dp"
-                    android:minHeight="48dp"
+                    android:layout_height="44dp"
+                    android:minHeight="44dp"
                     android:layout_weight="1"
+                    android:paddingStart="4dp"
+                    android:paddingEnd="4dp"
+                    android:paddingTop="0dp"
+                    android:paddingBottom="0dp"
+                    android:singleLine="true"
+                    android:ellipsize="end"
+                    app:autoSizeTextType="uniform"
+                    app:autoSizeMinTextSize="10sp"
+                    app:autoSizeMaxTextSize="12sp"
                     android:text="@string/nautical_heave_to"
                     android:textColor="?attr/active_color_primary"
-                    android:textSize="12sp"
                     android:textStyle="bold"
                     app:strokeColor="?attr/active_color_primary"
                     app:strokeWidth="1.5dp"
@@ -278,20 +311,28 @@
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="6dp"
+                android:layout_marginTop="4dp"
                 android:orientation="horizontal">
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btn_maneuver_secondary_3"
                     style="@style/Widget.Material3.Button.OutlinedButton"
                     android:layout_width="0dp"
-                    android:layout_height="48dp"
-                    android:minHeight="48dp"
+                    android:layout_height="44dp"
+                    android:minHeight="44dp"
                     android:layout_weight="1"
                     android:layout_marginEnd="6dp"
+                    android:paddingStart="4dp"
+                    android:paddingEnd="4dp"
+                    android:paddingTop="0dp"
+                    android:paddingBottom="0dp"
+                    android:singleLine="true"
+                    android:ellipsize="end"
+                    app:autoSizeTextType="uniform"
+                    app:autoSizeMinTextSize="10sp"
+                    app:autoSizeMaxTextSize="12sp"
                     android:text="@string/nautical_docking_hold"
                     android:textColor="?attr/active_color_primary"
-                    android:textSize="12sp"
                     android:textStyle="bold"
                     app:strokeColor="?attr/active_color_primary"
                     app:strokeWidth="1.5dp"
@@ -301,12 +342,20 @@
                     android:id="@+id/btn_maneuver_secondary_4"
                     style="@style/Widget.Material3.Button.OutlinedButton"
                     android:layout_width="0dp"
-                    android:layout_height="48dp"
-                    android:minHeight="48dp"
+                    android:layout_height="44dp"
+                    android:minHeight="44dp"
                     android:layout_weight="1"
+                    android:paddingStart="4dp"
+                    android:paddingEnd="4dp"
+                    android:paddingTop="0dp"
+                    android:paddingBottom="0dp"
+                    android:singleLine="true"
+                    android:ellipsize="end"
+                    app:autoSizeTextType="uniform"
+                    app:autoSizeMinTextSize="10sp"
+                    app:autoSizeMaxTextSize="12sp"
                     android:text="@string/nautical_dodge_port_label"
                     android:textColor="?attr/active_color_primary"
-                    android:textSize="11sp"
                     android:textStyle="bold"
                     app:strokeColor="?attr/active_color_primary"
                     app:strokeWidth="1.5dp"
@@ -317,20 +366,28 @@
                 android:id="@+id/layout_secondary_row_3"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="6dp"
+                android:layout_marginTop="4dp"
                 android:orientation="horizontal">
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btn_maneuver_secondary_5"
                     style="@style/Widget.Material3.Button.OutlinedButton"
                     android:layout_width="0dp"
-                    android:layout_height="48dp"
-                    android:minHeight="48dp"
+                    android:layout_height="44dp"
+                    android:minHeight="44dp"
                     android:layout_weight="1"
                     android:layout_marginEnd="6dp"
+                    android:paddingStart="4dp"
+                    android:paddingEnd="4dp"
+                    android:paddingTop="0dp"
+                    android:paddingBottom="0dp"
+                    android:singleLine="true"
+                    android:ellipsize="end"
+                    app:autoSizeTextType="uniform"
+                    app:autoSizeMinTextSize="10sp"
+                    app:autoSizeMaxTextSize="12sp"
                     android:text="@string/nautical_dodge_stbd_label"
                     android:textColor="?attr/active_color_primary"
-                    android:textSize="11sp"
                     android:textStyle="bold"
                     app:strokeColor="?attr/active_color_primary"
                     app:strokeWidth="1.5dp"
@@ -340,12 +397,20 @@
                     android:id="@+id/btn_maneuver_secondary_6"
                     style="@style/Widget.Material3.Button.OutlinedButton"
                     android:layout_width="0dp"
-                    android:layout_height="48dp"
-                    android:minHeight="48dp"
+                    android:layout_height="44dp"
+                    android:minHeight="44dp"
                     android:layout_weight="1"
+                    android:paddingStart="4dp"
+                    android:paddingEnd="4dp"
+                    android:paddingTop="0dp"
+                    android:paddingBottom="0dp"
+                    android:singleLine="true"
+                    android:ellipsize="end"
+                    app:autoSizeTextType="uniform"
+                    app:autoSizeMinTextSize="10sp"
+                    app:autoSizeMaxTextSize="12sp"
                     android:text="@string/nautical_emergency_stop_label"
                     android:textColor="?attr/active_color_primary"
-                    android:textSize="11sp"
                     android:textStyle="bold"
                     app:strokeColor="?attr/active_color_primary"
                     app:strokeWidth="1.5dp"
@@ -353,35 +418,106 @@
             </LinearLayout>
         </LinearLayout>
 
-        <!-- 2b. Embedded Maneuver Confirmation (Directly in sheet) -->
+        <!-- 2b. Embedded Maneuver Confirmation & Pre-activation Target Setup -->
         <LinearLayout
             android:id="@+id/layout_embedded_confirmation"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
+            android:orientation="vertical"
             android:paddingStart="16dp"
             android:paddingEnd="16dp"
-            android:layout_marginTop="12dp"
+            android:layout_marginTop="8dp"
+            android:layout_marginBottom="4dp"
             android:visibility="gone">
+
+            <!-- Target Heading Pre-activation Selector Row -->
+            <LinearLayout
+                android:id="@+id/layout_maneuver_target_setup"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="8dp">
+
+                <TextView
+                    android:id="@+id/txt_maneuver_title"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Tack Port"
+                    android:textSize="14sp"
+                    android:textStyle="bold"
+                    android:textColor="?android:attr/textColorPrimary" />
+
+                <!-- Target Heading Adjusters -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_maneuver_deg_minus"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    android:layout_width="38dp"
+                    android:layout_height="38dp"
+                    android:minHeight="38dp"
+                    android:minWidth="38dp"
+                    android:padding="0dp"
+                    android:insetLeft="0dp"
+                    android:insetTop="0dp"
+                    android:insetRight="0dp"
+                    android:insetBottom="0dp"
+                    android:text="-5°"
+                    android:textSize="11sp"
+                    android:textStyle="bold"
+                    android:textColor="?attr/active_color_primary"
+                    app:strokeColor="?attr/active_color_primary"
+                    app:strokeWidth="1dp"
+                    app:cornerRadius="6dp" />
+
+                <TextView
+                    android:id="@+id/txt_maneuver_target_deg"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:layout_marginEnd="8dp"
+                    android:text="Target: 315°"
+                    android:textSize="14sp"
+                    android:textStyle="bold"
+                    android:textColor="?attr/active_color_primary" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_maneuver_deg_plus"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    android:layout_width="38dp"
+                    android:layout_height="38dp"
+                    android:minHeight="38dp"
+                    android:minWidth="38dp"
+                    android:padding="0dp"
+                    android:insetLeft="0dp"
+                    android:insetTop="0dp"
+                    android:insetRight="0dp"
+                    android:insetBottom="0dp"
+                    android:text="+5°"
+                    android:textSize="11sp"
+                    android:textStyle="bold"
+                    android:textColor="?attr/active_color_primary"
+                    app:strokeColor="?attr/active_color_primary"
+                    app:strokeWidth="1dp"
+                    app:cornerRadius="6dp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_cancel_embedded_confirmation"
+                    style="@style/Widget.Material3.Button.IconButton"
+                    android:layout_width="38dp"
+                    android:layout_height="38dp"
+                    android:layout_marginStart="8dp"
+                    android:padding="0dp"
+                    app:icon="@drawable/ic_action_cancel"
+                    app:iconSize="20dp"
+                    app:iconTint="?attr/icon_color_primary"
+                    android:contentDescription="@string/shared_string_cancel" />
+            </LinearLayout>
 
             <net.osmand.plus.plugins.nautical.ui.SlideToConfirmView
                 android:id="@+id/embedded_slide_confirm"
-                android:layout_width="0dp"
-                android:layout_height="46dp"
-                android:layout_weight="1" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btn_cancel_embedded_confirmation"
-                style="@style/Widget.Material3.Button.IconButton"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
-                android:layout_marginStart="8dp"
-                android:padding="0dp"
-                app:icon="@drawable/ic_action_cancel"
-                app:iconSize="20dp"
-                app:iconTint="?attr/icon_color_primary"
-                android:contentDescription="@string/shared_string_cancel" />
+                android:layout_width="match_parent"
+                android:layout_height="46dp" />
         </LinearLayout>
 
         <!-- 3. Main Steering Card -->
@@ -392,21 +528,21 @@
             android:layout_height="wrap_content"
             android:layout_marginStart="16dp"
             android:layout_marginEnd="16dp"
-            android:layout_marginTop="14dp"
+            android:layout_marginTop="8dp"
             app:cardBackgroundColor="#26FFFFFF">
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:paddingTop="16dp"
-                android:paddingBottom="16dp">
+                android:paddingTop="10dp"
+                android:paddingBottom="10dp">
 
-                <!-- Heading / Wind Error Linear Scale -->
+                <!-- Heading / Wind Error Linear Scale (Compact) -->
                 <net.osmand.plus.plugins.nautical.ui.HeadingErrorLinearView
                     android:id="@+id/heading_error_linear"
                     android:layout_width="match_parent"
-                    android:layout_height="56dp"
+                    android:layout_height="32dp"
                     android:layout_marginStart="12dp"
                     android:layout_marginEnd="12dp" />
 
@@ -416,7 +552,7 @@
                     android:layout_height="wrap_content"
                     android:orientation="horizontal"
                     android:gravity="center"
-                    android:layout_marginTop="6dp">
+                    android:layout_marginTop="4dp">
 
                     <!-- Port Step Buttons Column -->
                     <LinearLayout
@@ -430,28 +566,28 @@
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/btn_minus_10"
                             style="@style/Widget.Material3.Button.OutlinedButton"
-                            android:layout_width="64dp"
-                            android:layout_height="56dp"
+                            android:layout_width="56dp"
+                            android:layout_height="48dp"
                             android:insetLeft="0dp"
                             android:insetTop="0dp"
                             android:insetRight="0dp"
                             android:insetBottom="0dp"
                             android:padding="0dp"
                             android:text="-10°"
-                            android:textSize="16sp"
+                            android:textSize="15sp"
                             android:textStyle="bold"
                             android:textColor="?attr/active_color_primary"
                             app:strokeColor="?attr/active_color_primary"
                             app:strokeWidth="2dp"
-                            app:cornerRadius="12dp"
+                            app:cornerRadius="10dp"
                             android:contentDescription="-10 degrees" />
 
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/btn_minus_1"
                             style="@style/Widget.Material3.Button.OutlinedButton"
-                            android:layout_width="56dp"
-                            android:layout_height="48dp"
-                            android:layout_marginTop="12dp"
+                            android:layout_width="50dp"
+                            android:layout_height="42dp"
+                            android:layout_marginTop="10dp"
                             android:insetLeft="0dp"
                             android:insetTop="0dp"
                             android:insetRight="0dp"
@@ -459,9 +595,9 @@
                             android:padding="0dp"
                             android:text="-1°"
                             android:textColor="?attr/active_color_primary"
-                            android:textSize="15sp"
+                            android:textSize="14sp"
                             android:textStyle="bold"
-                            app:cornerRadius="12dp"
+                            app:cornerRadius="10dp"
                             app:strokeColor="?attr/active_color_primary"
                             app:strokeWidth="1.5dp"
                             android:contentDescription="-1 degree" />
@@ -476,19 +612,19 @@
 
                         <net.osmand.plus.plugins.nautical.ui.HeadingArcView
                             android:id="@+id/heading_arc_view"
-                            android:layout_width="180dp"
-                            android:layout_height="180dp"
+                            android:layout_width="170dp"
+                            android:layout_height="170dp"
                             android:layout_gravity="center"
                             android:contentDescription="@string/nautical_pilot_title"
                             android:focusable="true" />
 
                         <ImageView
                             android:id="@+id/img_predictive_active"
-                            android:layout_width="24dp"
-                            android:layout_height="24dp"
+                            android:layout_width="22dp"
+                            android:layout_height="22dp"
                             android:layout_gravity="top|end"
-                            android:layout_marginEnd="16dp"
-                            android:layout_marginTop="8dp"
+                            android:layout_marginEnd="14dp"
+                            android:layout_marginTop="6dp"
                             android:src="@drawable/ic_action_nautical_depth"
                             app:tint="?attr/active_color_primary"
                             android:visibility="gone"
@@ -507,28 +643,28 @@
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/btn_plus_10"
                             style="@style/Widget.Material3.Button.OutlinedButton"
-                            android:layout_width="64dp"
-                            android:layout_height="56dp"
+                            android:layout_width="56dp"
+                            android:layout_height="48dp"
                             android:insetLeft="0dp"
                             android:insetTop="0dp"
                             android:insetRight="0dp"
                             android:insetBottom="0dp"
                             android:padding="0dp"
                             android:text="+10°"
-                            android:textSize="16sp"
+                            android:textSize="15sp"
                             android:textStyle="bold"
                             android:textColor="?attr/active_color_primary"
                             app:strokeColor="?attr/active_color_primary"
                             app:strokeWidth="2dp"
-                            app:cornerRadius="12dp"
+                            app:cornerRadius="10dp"
                             android:contentDescription="+10 degrees" />
 
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/btn_plus_1"
                             style="@style/Widget.Material3.Button.OutlinedButton"
-                            android:layout_width="56dp"
-                            android:layout_height="48dp"
-                            android:layout_marginTop="12dp"
+                            android:layout_width="50dp"
+                            android:layout_height="42dp"
+                            android:layout_marginTop="10dp"
                             android:insetLeft="0dp"
                             android:insetTop="0dp"
                             android:insetRight="0dp"
@@ -536,23 +672,23 @@
                             android:padding="0dp"
                             android:text="+1°"
                             android:textColor="?attr/active_color_primary"
-                            android:textSize="15sp"
+                            android:textSize="14sp"
                             android:textStyle="bold"
-                            app:cornerRadius="12dp"
+                            app:cornerRadius="10dp"
                             app:strokeColor="?attr/active_color_primary"
                             app:strokeWidth="1.5dp"
                             android:contentDescription="+1 degree" />
                     </LinearLayout>
                 </LinearLayout>
 
-                <!-- Rudder Angle Bar -->
+                <!-- Rudder Angle Bar (Compact) -->
                 <net.osmand.plus.plugins.nautical.ui.RudderView
                     android:id="@+id/rudder_view"
                     android:layout_width="match_parent"
-                    android:layout_height="56dp"
+                    android:layout_height="40dp"
                     android:layout_marginStart="16dp"
                     android:layout_marginEnd="16dp"
-                    android:layout_marginTop="8dp"
+                    android:layout_marginTop="4dp"
                     android:contentDescription="@string/nautical_rudder_angle"
                     android:focusable="true" />
             </LinearLayout>

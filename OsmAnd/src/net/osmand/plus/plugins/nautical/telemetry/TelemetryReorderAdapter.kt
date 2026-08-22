@@ -53,6 +53,7 @@ class TelemetryReorderAdapter(
             item.isVisible = !item.isVisible
             updateVisibilityUi(holder, item.isVisible)
             onItemsChangedListener()
+            it.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
         }
 
         holder.deleteButton.setOnClickListener {
@@ -61,6 +62,7 @@ class TelemetryReorderAdapter(
                 items.removeAt(currentPos)
                 notifyItemRemoved(currentPos)
                 onItemsChangedListener()
+                it.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
             }
         }
 
@@ -73,9 +75,19 @@ class TelemetryReorderAdapter(
     }
 
     private fun updateVisibilityUi(holder: ViewHolder, isVisible: Boolean) {
-        holder.visibilityToggle.alpha = if (isVisible) 1.0f else 0.35f
-        holder.metricName.alpha = if (isVisible) 1.0f else 0.5f
-        holder.metricCategory.alpha = if (isVisible) 1.0f else 0.5f
+        if (isVisible) {
+            holder.visibilityToggle.setImageResource(R.drawable.ic_show_on_map)
+            holder.visibilityToggle.alpha = 1.0f
+            holder.metricName.alpha = 1.0f
+            holder.metricCategory.alpha = 1.0f
+            holder.visibilityToggle.contentDescription = holder.view.context.getString(R.string.shared_string_hide)
+        } else {
+            holder.visibilityToggle.setImageResource(R.drawable.ic_action_hide)
+            holder.visibilityToggle.alpha = 0.4f
+            holder.metricName.alpha = 0.45f
+            holder.metricCategory.alpha = 0.45f
+            holder.visibilityToggle.contentDescription = holder.view.context.getString(R.string.shared_string_show)
+        }
     }
 
     override fun getItemCount(): Int = items.size

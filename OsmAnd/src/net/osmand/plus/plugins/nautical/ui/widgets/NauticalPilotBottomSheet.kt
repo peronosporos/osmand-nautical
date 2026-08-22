@@ -66,12 +66,21 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
     private lateinit var btnManeuverSec5: MaterialButton
     private lateinit var btnManeuverSec6: MaterialButton
     private lateinit var layoutEmbeddedConfirmation: LinearLayout
+    private lateinit var layoutManeuverTargetSetup: LinearLayout
+    private lateinit var txtManeuverTitle: TextView
+    private lateinit var txtManeuverTargetDeg: TextView
+    private lateinit var btnManeuverDegMinus: MaterialButton
+    private lateinit var btnManeuverDegPlus: MaterialButton
     private lateinit var embeddedSlideConfirm: SlideToConfirmView
     private lateinit var btnCancelEmbeddedConfirmation: MaterialButton
+    private lateinit var modeButtons: Array<MaterialButton>
     private var confirmationJob: Job? = null
     private var maneuverHelper: AutopilotBottomSheetHelper? = null
 
     private var isCourseLocked = false
+    private var pendingTargetHeading: Int? = null
+    private var pendingManeuverTitle: String = ""
+    private var pendingExecuteAction: ((targetHeading: Int?) -> Unit)? = null
 
     companion object {
         @JvmStatic
@@ -130,6 +139,7 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
         compassBtn = customView.findViewById(R.id.btn_mode_compass)
         windBtn = customView.findViewById(R.id.btn_mode_wind)
         routeBtn = customView.findViewById(R.id.btn_mode_route)
+        modeButtons = arrayOf(compassBtn, windBtn, routeBtn, stopBtn)
 
         tackPortBtn = customView.findViewById(R.id.btn_tack_port)
         tackStbdBtn = customView.findViewById(R.id.btn_tack_stbd)
@@ -142,13 +152,37 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
         layoutSecondaryRow3 = customView.findViewById(R.id.layout_secondary_row_3)
         btnManeuverSec5 = customView.findViewById(R.id.btn_maneuver_secondary_5)
         btnManeuverSec6 = customView.findViewById(R.id.btn_maneuver_secondary_6)
+        
         layoutEmbeddedConfirmation = customView.findViewById(R.id.layout_embedded_confirmation)
+        layoutManeuverTargetSetup = customView.findViewById(R.id.layout_maneuver_target_setup)
+        txtManeuverTitle = customView.findViewById(R.id.txt_maneuver_title)
+        txtManeuverTargetDeg = customView.findViewById(R.id.txt_maneuver_target_deg)
+        btnManeuverDegMinus = customView.findViewById(R.id.btn_maneuver_deg_minus)
+        btnManeuverDegPlus = customView.findViewById(R.id.btn_maneuver_deg_plus)
         embeddedSlideConfirm = customView.findViewById(R.id.embedded_slide_confirm)
         btnCancelEmbeddedConfirmation = customView.findViewById(R.id.btn_cancel_embedded_confirmation)
 
         btnCancelEmbeddedConfirmation.setOnClickListener {
             hideEmbeddedConfirmation()
             it.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
+        }
+
+        btnManeuverDegMinus.setOnClickListener {
+            pendingTargetHeading?.let { cur ->
+                val newH = (((cur - 5) % 360) + 360) % 360
+                pendingTargetHeading = newH
+                updateEmbeddedTargetDisplay()
+                it.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
+            }
+        }
+
+        btnManeuverDegPlus.setOnClickListener {
+            pendingTargetHeading?.let { cur ->
+                val newH = (((cur + 5) % 360) + 360) % 360
+                pendingTargetHeading = newH
+                updateEmbeddedTargetDisplay()
+                it.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
+            }
         }
 
         btnExpandManeuvers.setOnClickListener {
@@ -174,6 +208,8 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
         lockBtn.setOnClickListener {
             isCourseLocked = !isCourseLocked
             updateLockButton()
+            val msgRes = if (isCourseLocked) R.string.nautical_touch_lock_active else R.string.nautical_lock_course
+            app.showToastMessage(msgRes)
             customView.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
         }
 
@@ -208,11 +244,11 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
                                         val gpx = result[0]
                                         val points = mutableListOf<Pair<Double, Double>>()
                                         gpx.tracks.forEach { track ->
-                                            track.segments.forEach { segment ->
-                                                segment.points.forEach { pt ->
-                                                    points.add(Pair(pt.lat, pt.lon))
-                                                }
-                                            }
+                                             track.segments.forEach { segment ->
+                                                 segment.points.forEach { pt ->
+                                                     points.add(Pair(pt.lat, pt.lon))
+                                                 }
+                                             }
                                         }
                                         if (points.isNotEmpty()) {
                                             engine.loadRoute(points)
@@ -249,7 +285,7 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
             it.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
         }
 
-        // Tack / Jibe / Shunt / Reverse Quick Actions
+        // Tactical Maneuver Actions with Pre-activation Target Heading Setup
         val helper = AutopilotBottomSheetHelper(
             sheet = this,
             tackPortBtn = tackPortBtn,
@@ -261,8 +297,8 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
             btnManeuverSec5 = btnManeuverSec5,
             btnManeuverSec6 = btnManeuverSec6,
             layoutSecondaryRow3 = layoutSecondaryRow3,
-            onConfirmManeuver = { label, action ->
-                showEmbeddedConfirmation(label, action)
+            onInitiateManeuver = { title, targetHeading, onExecute ->
+                showEmbeddedConfirmation(title, targetHeading, onExecute)
             }
         )
         maneuverHelper = helper
@@ -276,12 +312,30 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
             helper.handlePrimaryManeuver(settings.NAUTICAL_VESSEL_TYPE.get(), state, isPort = false)
         }
 
-        btnManeuverSec1.setOnClickListener { helper.handleSecondaryManeuver(1, settings.NAUTICAL_VESSEL_TYPE.get()) }
-        btnManeuverSec2.setOnClickListener { helper.handleSecondaryManeuver(2, settings.NAUTICAL_VESSEL_TYPE.get()) }
-        btnManeuverSec3.setOnClickListener { helper.handleSecondaryManeuver(3, settings.NAUTICAL_VESSEL_TYPE.get()) }
-        btnManeuverSec4.setOnClickListener { helper.handleSecondaryManeuver(4, settings.NAUTICAL_VESSEL_TYPE.get()) }
-        btnManeuverSec5.setOnClickListener { helper.handleSecondaryManeuver(5, settings.NAUTICAL_VESSEL_TYPE.get()) }
-        btnManeuverSec6.setOnClickListener { helper.handleSecondaryManeuver(6, settings.NAUTICAL_VESSEL_TYPE.get()) }
+        btnManeuverSec1.setOnClickListener {
+            val state = NauticalPlugin.engine?.getCurrentState()
+            helper.handleSecondaryManeuver(1, settings.NAUTICAL_VESSEL_TYPE.get(), state)
+        }
+        btnManeuverSec2.setOnClickListener {
+            val state = NauticalPlugin.engine?.getCurrentState()
+            helper.handleSecondaryManeuver(2, settings.NAUTICAL_VESSEL_TYPE.get(), state)
+        }
+        btnManeuverSec3.setOnClickListener {
+            val state = NauticalPlugin.engine?.getCurrentState()
+            helper.handleSecondaryManeuver(3, settings.NAUTICAL_VESSEL_TYPE.get(), state)
+        }
+        btnManeuverSec4.setOnClickListener {
+            val state = NauticalPlugin.engine?.getCurrentState()
+            helper.handleSecondaryManeuver(4, settings.NAUTICAL_VESSEL_TYPE.get(), state)
+        }
+        btnManeuverSec5.setOnClickListener {
+            val state = NauticalPlugin.engine?.getCurrentState()
+            helper.handleSecondaryManeuver(5, settings.NAUTICAL_VESSEL_TYPE.get(), state)
+        }
+        btnManeuverSec6.setOnClickListener {
+            val state = NauticalPlugin.engine?.getCurrentState()
+            helper.handleSecondaryManeuver(6, settings.NAUTICAL_VESSEL_TYPE.get(), state)
+        }
 
         // Continuous Heading / Wind Angle Slider Callbacks
         arcView.onHeadingChanged = { newHeading ->
@@ -356,31 +410,74 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
     private fun updateLockButton() {
         if (isCourseLocked) {
             lockBtn.setIconResource(R.drawable.ic_action_lock)
-            lockBtn.alpha = 1.0f
+            val activeColor = net.osmand.plus.utils.AndroidUtils.getColorFromAttr(requireContext(), R.attr.active_color_primary)
+            lockBtn.backgroundTintList = android.content.res.ColorStateList.valueOf(activeColor)
+            lockBtn.iconTint = android.content.res.ColorStateList.valueOf(Color.WHITE)
+            lockBtn.contentDescription = getString(R.string.nautical_touch_lock_active)
         } else {
             lockBtn.setIconResource(R.drawable.ic_action_lock_open)
-            lockBtn.alpha = 0.6f
+            lockBtn.backgroundTintList = android.content.res.ColorStateList.valueOf(Color.TRANSPARENT)
+            val defaultIconColor = net.osmand.plus.utils.AndroidUtils.getColorFromAttr(requireContext(), R.attr.icon_color_primary)
+            lockBtn.iconTint = android.content.res.ColorStateList.valueOf(defaultIconColor)
+            lockBtn.contentDescription = getString(R.string.nautical_lock_course)
         }
         arcView.alpha = if (isCourseLocked) 0.5f else 1.0f
+        minus10Btn.isEnabled = !isCourseLocked
+        minus1Btn.isEnabled = !isCourseLocked
+        plus1Btn.isEnabled = !isCourseLocked
+        plus10Btn.isEnabled = !isCourseLocked
+        minus10Btn.alpha = if (isCourseLocked) 0.4f else 1.0f
+        minus1Btn.alpha = if (isCourseLocked) 0.4f else 1.0f
+        plus1Btn.alpha = if (isCourseLocked) 0.4f else 1.0f
+        plus10Btn.alpha = if (isCourseLocked) 0.4f else 1.0f
     }
 
     private fun updateManeuverButtons() {
         maneuverHelper?.updateManeuverButtons(settings.NAUTICAL_VESSEL_TYPE.get())
     }
 
-    private fun showEmbeddedConfirmation(label: String, onConfirm: () -> Unit) {
+    private fun updateEmbeddedTargetDisplay() {
+        val target = pendingTargetHeading
+        if (target != null) {
+            txtManeuverTargetDeg.text = String.format(Locale.US, "Target: %d°", target)
+            embeddedSlideConfirm.label = String.format(Locale.US, "SLIDE TO %s (%d°)", pendingManeuverTitle.uppercase(Locale.US), target)
+        } else {
+            embeddedSlideConfirm.label = String.format(Locale.US, "SLIDE TO %s", pendingManeuverTitle.uppercase(Locale.US))
+        }
+    }
+
+    private fun showEmbeddedConfirmation(title: String, targetHeading: Int?, onExecute: (targetHeading: Int?) -> Unit) {
         confirmationJob?.cancel()
+        pendingManeuverTitle = title
+        pendingTargetHeading = targetHeading
+        pendingExecuteAction = onExecute
+
         tacticalActionsRow.visibility = View.GONE
         layoutSecondaryManeuvers.visibility = View.GONE
         layoutEmbeddedConfirmation.visibility = View.VISIBLE
-        embeddedSlideConfirm.label = label
+
+        txtManeuverTitle.text = title
+        if (targetHeading != null) {
+            layoutManeuverTargetSetup.visibility = View.VISIBLE
+            btnManeuverDegMinus.visibility = View.VISIBLE
+            btnManeuverDegPlus.visibility = View.VISIBLE
+            txtManeuverTargetDeg.visibility = View.VISIBLE
+            updateEmbeddedTargetDisplay()
+        } else {
+            btnManeuverDegMinus.visibility = View.GONE
+            btnManeuverDegPlus.visibility = View.GONE
+            txtManeuverTargetDeg.visibility = View.GONE
+            updateEmbeddedTargetDisplay()
+        }
+
         embeddedSlideConfirm.reset()
         embeddedSlideConfirm.onConfirm = {
-            onConfirm()
+            pendingExecuteAction?.invoke(pendingTargetHeading)
             hideEmbeddedConfirmation()
         }
+
         confirmationJob = viewLifecycleOwner.lifecycleScope.launch {
-            delay(12000L)
+            delay(15000L)
             hideEmbeddedConfirmation()
         }
     }
@@ -388,6 +485,8 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
     private fun hideEmbeddedConfirmation() {
         confirmationJob?.cancel()
         confirmationJob = null
+        pendingExecuteAction = null
+        pendingTargetHeading = null
         layoutEmbeddedConfirmation.visibility = View.GONE
         tacticalActionsRow.visibility = View.VISIBLE
         embeddedSlideConfirm.reset()
@@ -419,8 +518,8 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
         } else {
             modeToggleGroup.isEnabled = true
             modeToggleGroup.alpha = 1.0f
-            arcView.isEnabled = true
-            arcView.alpha = 1.0f
+            arcView.isEnabled = !isCourseLocked
+            arcView.alpha = if (isCourseLocked) 0.5f else 1.0f
         }
 
         // Toggle Group Checked State
@@ -440,8 +539,7 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
         val defaultIconColor = net.osmand.plus.utils.AndroidUtils.getColorFromAttr(requireContext(), R.attr.icon_color_primary)
         val defaultStrokeColor = net.osmand.plus.utils.AndroidUtils.getColorFromAttr(requireContext(), R.attr.active_color_primary)
 
-        val buttons = listOf(compassBtn, windBtn, routeBtn, stopBtn)
-        for (btn in buttons) {
+        for (btn in modeButtons) {
             val isChecked = btn.id == targetCheckedId
             if (isChecked) {
                 btn.backgroundTintList = android.content.res.ColorStateList.valueOf(orangeColor)
@@ -466,10 +564,8 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
             var windErr = (awaDeg - targetAwaDeg).toFloat()
             while (windErr > 180) windErr -= 360
             while (windErr < -180) windErr += 360
-            errorLinear.label = getString(R.string.nautical_wind_err)
             errorLinear.headingError = windErr
         } else {
-            errorLinear.label = getString(R.string.nautical_hdg_err)
             errorLinear.headingError = hdgErr
         }
 

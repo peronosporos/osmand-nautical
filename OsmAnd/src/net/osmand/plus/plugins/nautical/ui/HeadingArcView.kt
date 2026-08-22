@@ -133,8 +133,6 @@ class HeadingArcView @JvmOverloads constructor(
     
     private val degreeBuffer = CharArray(16)
     private var offlineLabel: String
-    private var awaLabel: String
-    private var setHeadingLabel: String
 
     // DP cache
     private var dp1 = 0f
@@ -189,8 +187,6 @@ class HeadingArcView @JvmOverloads constructor(
             cardinalLabels[i] = context.getString(cardinalRes[i])
         }
         offlineLabel = context.getString(R.string.nautical_offline)
-        awaLabel = context.getString(R.string.nautical_awa)
-        setHeadingLabel = context.getString(R.string.nautical_set_heading_label)
     }
 
     fun setNightMode(night: Boolean) {
@@ -389,19 +385,12 @@ class HeadingArcView @JvmOverloads constructor(
                 val side = if (tawa < 0) "P" else if (tawa > 0) "S" else ""
                 val absVal = abs(tawa)
                 val displayText = if (side.isNotEmpty()) "$side $absVal°" else "$absVal°"
-                canvas.drawText(displayText, centerX, centerY + (centerValueSize * 0.15f), textPaint)
+                canvas.drawText(displayText, centerX, centerY + (centerValueSize * 0.35f), textPaint)
             } else {
                 val centralValue = targetHeading
-                NauticalFormatter.drawDeg(canvas, centralValue.toFloat(), centerX, centerY + (centerValueSize * 0.15f), textPaint, degreeBuffer)
+                NauticalFormatter.drawDeg(canvas, centralValue.toFloat(), centerX, centerY + (centerValueSize * 0.35f), textPaint, degreeBuffer)
             }
         }
-        
-        paint.textSize = labelSize
-        paint.color = textColorSecondary
-        paint.alpha = 180
-        paint.typeface = mediumTypeface
-        val label = if (currentMode == "WIND") awaLabel else setHeadingLabel
-        canvas.drawText(label, centerX, centerY + (centerValueSize * 0.65f), paint)
     }
 
     override fun onInitializeAccessibilityNodeInfo(info: AccessibilityNodeInfo) {

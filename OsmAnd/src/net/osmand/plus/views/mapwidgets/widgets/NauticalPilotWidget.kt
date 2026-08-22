@@ -57,16 +57,22 @@ class NauticalPilotWidget(
 
     override fun getWidgetName(): String? = null
 
+    override fun updateWidgetView() {
+        super.updateWidgetView()
+        widgetName?.visibility = View.GONE
+    }
+
     override fun getIconId(): Int {
-        val engine = NauticalPlugin.engine ?: return R.drawable.ic_plugin_nautical_map
+        val engine = NauticalPlugin.engine ?: return R.drawable.ic_action_power_standby
         val state = engine.getCurrentState()
         val mode = state.autopilotState.lowercase(Locale.US)
         return when (mode) {
-            "compass", "heading", "auto" -> R.drawable.ic_action_compass
+            "standby", "" -> R.drawable.ic_action_power_standby
+            "compass", "heading", "auto" -> R.drawable.ic_action_direction_compass
             "wind" -> R.drawable.ic_action_wind
             "nav", "track", "route" -> R.drawable.ic_action_track_16
             "emergency", "stop" -> R.drawable.ic_action_stop
-            else -> R.drawable.ic_plugin_nautical_map
+            else -> R.drawable.ic_action_power_standby
         }
     }
 
@@ -76,6 +82,7 @@ class NauticalPilotWidget(
             val engine = NauticalPlugin.engine
             val state = engine?.getCurrentState()
             val mode = state?.autopilotState?.lowercase(Locale.US) ?: "standby"
+            val isEngaged = mode != "standby" && mode.isNotEmpty()
             val isStale = (state?.connectionStatus != ConnectionStatus.CONNECTED)
             val isLocked = NauticalHelmArbitrator.getInstance(app).isLockedByEmergency()
             val isPending = (state?.pendingAutopilotState != null) || (state?.pendingTargetHeading != null)
@@ -85,7 +92,7 @@ class NauticalPilotWidget(
             val color = when {
                 isLocked -> ContextCompat.getColor(app, R.color.text_color_negative)
                 state?.isOffCourse == true -> ContextCompat.getColor(app, R.color.text_color_negative)
-                mode != "standby" && !isStale -> ContextCompat.getColor(app, R.color.color_ok)
+                isEngaged && !isStale -> ContextCompat.getColor(app, R.color.color_ok)
                 else -> ContextCompat.getColor(app, R.color.map_widget_icon_color)
             }
             setImageDrawable(iconsCache.getPaintedIcon(iconId, color))
@@ -117,31 +124,6 @@ class NauticalPilotWidget(
                 pendingAnimator?.cancel()
                 pendingAnimator = null
                 contentView?.alpha = 1.0f
-            }
-        }
-    }
-
-    private val marineStateListener: (MarineState) -> Unit = { state ->
-        val now = System.currentTimeMillis()
-        if ((now - lastUpdateTime) > 200) {
-            lastUpdateTime = now
-            mapActivity.runOnUiThread { updateInfo(null) }
-        }
-
-        if ((now - lastRudderUpdateTime) > 50) { // Throttle rudder to 20Hz
-            lastRudderUpdateTime = now
-            mapActivity.runOnUiThread {
-                state.rudderAngle?.let { angle ->
-                    val maxAngle = Math.toRadians(app.settings.NAUTICAL_RUDDER_LIMIT.get().toDouble())
-                    val ratio = (angle.coerceIn(-maxAngle, maxAngle) / maxAngle).toFloat()
-                    rudderMarker?.let { marker ->
-                        val parent = marker.parent as? View
-                        if (parent != null) {
-                            val translationX = ratio * (parent.width / 2f - marker.width / 2f)
-                            marker.translationX = translationX
-                        }
-                    }
-                }
             }
         }
     }
@@ -235,6 +217,8 @@ class NauticalPilotWidget(
                         NauticalPlugin.autopilot?.setAutopilotMode("standby")
                     }
                     view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                    updateInfo(null)
+                    updateWidgetView()
                     return true
                 }
 
@@ -286,6 +270,8 @@ class NauticalPilotWidget(
                 view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
                 autopilot.stopNavigation()
                 mapActivity.app.showToastMessage(R.string.nautical_emergency_stop_executed)
+                updateInfo(null)
+                updateWidgetView()
             }
         }
     }
@@ -332,6 +318,8 @@ class NauticalPilotWidget(
                 if (upwind) autopilot?.tack(port = turnToPort) else autopilot?.gybe(port = turnToPort)
             }
             popup.dismiss()
+            updateInfo(null)
+            updateWidgetView()
         }
 
         popupView.findViewById<View>(R.id.btn_cancel).setOnClickListener {
@@ -357,60 +345,79 @@ class NauticalPilotWidget(
     override fun updateSimpleWidgetInfo(drawSettings: OsmandMapLayer.DrawSettings?) {
         val state = NauticalPlugin.engine?.getCurrentState()
         if (state == null) {
-            setText(mapActivity.getString(R.string.nautical_status_off), "")
+            setText(mapActivity.getString(R.string.nautical_mode_engaged_standby), "")
             updateIcon()
             setStatusIcon(0)
+            contentView?.alpha = 0.5f
             return
         }
+
+        val mode = state.autopilotState.lowercase(Locale.US)
+        val isEngaged = mode != "standby" && mode.isNotEmpty()
+        val isStale = (state.connectionStatus != ConnectionStatus.CONNECTED)
+
+        updateIcon()
 
         if (state.isOffCourse) {
             val xteMeters = state.crossTrackError ?: 0.0
             val xteNm = kotlin.math.abs(xteMeters) / 1852.0
-            setText(String.format(Locale.US, "%s: %.2f %s", mapActivity.getString(R.string.nautical_off_course), xteNm, mapActivity.getString(R.string.nautical_unit_nm)), "")
-            updateIcon()
+            setText(String.format(Locale.US, "XTE %.2f", xteNm), mapActivity.getString(R.string.nautical_unit_nm))
+            setStatusIcon(if (isStale) R.drawable.ic_action_time else R.drawable.ic_action_play_dark)
+        } else if (!isEngaged) {
+            setText(mapActivity.getString(R.string.nautical_mode_engaged_standby), "")
             setStatusIcon(0)
         } else {
-            val mode = state.autopilotState.lowercase(Locale.US)
-            val isStale = (state.connectionStatus != ConnectionStatus.CONNECTED)
-            val heading = state.targetHeading ?: state.headingTrue
-            
-            val headingStr = if (mode == "standby") {
-                mapActivity.getString(R.string.nautical_mode_engaged_standby)
-            } else if (heading == null || isStale) {
-                "--"
-            } else {
-                val headingDeg = Math.toDegrees(heading)
-                val cardinal = getCardinalDirection(headingDeg)
-                String.format(Locale.US, "%d° %s", headingDeg.toInt(), cardinal)
+            when (mode) {
+                "wind" -> {
+                    val targetWind = state.targetWindAngle ?: state.windDirectionApparent
+                    if (targetWind != null && !isStale) {
+                        val deg = Math.toDegrees(targetWind)
+                        setText(String.format(Locale.US, "%.0f°", deg), "WIND")
+                    } else {
+                        setText("--", "WIND")
+                    }
+                }
+                "nav", "track", "route" -> {
+                    val heading = state.targetHeading ?: state.courseOverGroundTrue
+                    if (heading != null && !isStale) {
+                        val deg = Math.toDegrees(heading)
+                        setText(String.format(Locale.US, "%.0f°", deg), "NAV")
+                    } else {
+                        setText("--", "NAV")
+                    }
+                }
+                else -> { // auto, compass, heading
+                    val heading = state.targetHeading ?: state.headingTrue
+                    if (heading != null && !isStale) {
+                        val deg = Math.toDegrees(heading)
+                        val cardinal = getCardinalDirection(deg)
+                        setText(String.format(Locale.US, "%.0f°", deg), cardinal)
+                    } else {
+                        setText("--", "AUTO")
+                    }
+                }
             }
+            setStatusIcon(if (isStale) R.drawable.ic_action_time else R.drawable.ic_action_play_dark)
+        }
 
-            updateIcon()
-            setText(headingStr, "")
-
-            val statusIcon = when (mode) {
-                "auto", "wind", "track" -> if (isStale) R.drawable.ic_action_time else R.drawable.ic_action_play_dark
-                else -> 0
-            }
-            setStatusIcon(statusIcon)
-            
-            if (isStale) {
-                statusIconView?.alpha = 0.5f
-                contentView?.alpha = 0.5f
-            } else {
-                statusIconView?.alpha = 1.0f
-                contentView?.alpha = 1.0f
-            }
+        if (isStale) {
+            statusIconView?.alpha = 0.5f
+            contentView?.alpha = 0.5f
+        } else {
+            statusIconView?.alpha = 1.0f
+            contentView?.alpha = 1.0f
         }
     }
 
+    private val CARDINAL_DIRECTIONS = intArrayOf(
+        R.string.nautical_cardinal_n, R.string.nautical_cardinal_ne,
+        R.string.nautical_cardinal_e, R.string.nautical_cardinal_se,
+        R.string.nautical_cardinal_s, R.string.nautical_cardinal_sw,
+        R.string.nautical_cardinal_w, R.string.nautical_cardinal_nw
+    )
+
     private fun getCardinalDirection(course: Double): String {
-        val directions = arrayOf(
-            R.string.nautical_cardinal_n, R.string.nautical_cardinal_ne,
-            R.string.nautical_cardinal_e, R.string.nautical_cardinal_se,
-            R.string.nautical_cardinal_s, R.string.nautical_cardinal_sw,
-            R.string.nautical_cardinal_w, R.string.nautical_cardinal_nw
-        )
         val index = (((course % 360.0 + 360.0) % 360.0 + 22.5) / 45.0).toInt() % 8
-        return mapActivity.getString(directions[index])
+        return mapActivity.getString(CARDINAL_DIRECTIONS[index])
     }
 }

@@ -42,13 +42,7 @@ class RudderView @JvmOverloads constructor(
     private var colorSecondary = Color.TRANSPARENT
     
     private val degreeBuffer = CharArray(16)
-    private var midLabel: String
-    private var portLabel: String
-    private var stbdLabel: String
     private var offlineLabel: String
-    private var degLabel: String
-    private var pShortLabel: String
-    private var sShortLabel: String
 
     private val touchSlop = ViewConfiguration.get(context).scaledTouchSlop
     private var initialTouchX = 0f
@@ -92,13 +86,7 @@ class RudderView @JvmOverloads constructor(
         dp24 = 24f * density
         dp45 = 45f * density
         
-        midLabel = context.getString(R.string.nautical_rudder_mid)
-        portLabel = context.getString(R.string.nautical_rudder_port)
-        stbdLabel = context.getString(R.string.nautical_rudder_stbd)
         offlineLabel = context.getString(R.string.nautical_offline)
-        degLabel = context.getString(R.string.nautical_unit_deg)
-        pShortLabel = context.getString(R.string.nautical_rudder_p_short)
-        sShortLabel = context.getString(R.string.nautical_rudder_s_short)
 
         setupAccessibility()
     }
@@ -305,28 +293,11 @@ class RudderView @JvmOverloads constructor(
         textPaint.typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
         
         if (isOffline) {
-            canvas.drawText(offlineLabel, pointerX, centerY - dp22, textPaint)
-        } else if (deg == 0) {
-            canvas.drawText(midLabel, pointerX, centerY - dp22, textPaint)
+            canvas.drawText(offlineLabel, pointerX, centerY - dp20, textPaint)
         } else {
             val count = NauticalFormatter.formatInt(abs(deg), degreeBuffer)
-            val sideLabel = if (deg < 0) portLabel else stbdLabel
-            // We need to combine count, degLabel, and sideLabel. 
-            // Since we want zero-allocation, we should draw them separately if needed, but here a simple combination might be okay if it's not too frequent.
-            // Wait, the instruction said ZERO allocations.
-            
-            val xOffset = textPaint.measureText(sideLabel) / 2f + 5f
-            canvas.drawText(sideLabel, pointerX + xOffset, centerY - dp22, textPaint)
-            
-            // Draw value and deg symbol
             degreeBuffer[count] = '°'
-            canvas.drawText(degreeBuffer, 0, count + 1, pointerX - xOffset, centerY - dp22, textPaint)
+            canvas.drawText(degreeBuffer, 0, count + 1, pointerX, centerY - dp20, textPaint)
         }
-        
-        textPaint.textSize = dp18
-        textPaint.color = colorSecondary
-        textPaint.alpha = 150
-        canvas.drawText(pShortLabel, padding - dp20, centerY + dp6, textPaint)
-        canvas.drawText(sShortLabel, w - padding + dp20, centerY + dp6, textPaint)
     }
 }

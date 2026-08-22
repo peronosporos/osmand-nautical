@@ -106,19 +106,22 @@ class S57ChartManagerFragment : BaseOsmAndFragment() {
     }
 
     private inner class ChartAdapter(private val files: List<File>, private val bounds: Map<String, DoubleArray>) : RecyclerView.Adapter<ChartViewHolder>() {
+        private val colorGreen = androidx.core.content.ContextCompat.getColor(requireContext(), R.color.nautical_status_green)
+        private val colorOrange = androidx.core.content.ContextCompat.getColor(requireContext(), R.color.nautical_status_orange)
+
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ChartViewHolder {
             val v = LayoutInflater.from(parent.context).inflate(R.layout.item_s57_chart, parent, false)
             return ChartViewHolder(v)
         }
         override fun onBindViewHolder(holder: ChartViewHolder, position: Int) {
             val file = files[position]
-            val isS63 = file.name.uppercase().endsWith(".031") || file.name.uppercase().endsWith(".ENC")
+            val isS63 = file.name.uppercase(Locale.US).endsWith(".031") || file.name.uppercase(Locale.US).endsWith(".ENC")
             val hasIndex = bounds.containsKey(file.absolutePath)
             
             holder.title.text = file.name
             holder.info.text = String.format(Locale.US, "Size: %.1f KB | Type: %s", file.length() / 1024.0, if (isS63) "S-63 (Encrypted)" else "S-57")
             holder.status.text = if (hasIndex) "INDEXED" else "PENDING"
-            holder.status.setTextColor(if (hasIndex) 0xFF4CAF50.toInt() else 0xFFFF9800.toInt())
+            holder.status.setTextColor(if (hasIndex) colorGreen else colorOrange)
             
             holder.itemView.setOnClickListener {
                 if (hasIndex) {

@@ -4,46 +4,78 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:padding="16dp"
-    android:background="?attr/bg_color">
+    android:background="?attr/list_background_color">
+
+    <!-- Status and Import Card -->
+    <com.google.android.material.card.MaterialCardView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="12dp"
+        android:layout_marginEnd="12dp"
+        android:layout_marginTop="12dp"
+        android:layout_marginBottom="8dp"
+        app:cardCornerRadius="10dp"
+        app:cardElevation="0dp"
+        app:strokeWidth="1dp"
+        app:strokeColor="?attr/divider_color"
+        app:cardBackgroundColor="?attr/card_and_list_background_basic">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <TextView
+                android:id="@+id/tide_status_text"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/tide_import_checking"
+                android:textAppearance="@style/TextAppearance.AppCompat.Subhead"
+                android:textColor="?android:attr/textColorPrimary" />
+
+            <ProgressBar
+                android:id="@+id/tide_progress_bar"
+                style="?android:attr/progressBarStyleHorizontal"
+                android:layout_width="match_parent"
+                android:layout_height="4dp"
+                android:layout_marginTop="8dp"
+                android:indeterminate="true"
+                android:visibility="gone" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/tide_import_button"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:text="@string/tide_import_button_title"
+                app:icon="@drawable/ic_action_import"
+                app:iconTint="#FFFFFF"
+                android:textColor="#FFFFFF"
+                app:backgroundTint="?attr/active_color_primary"
+                app:cornerRadius="8dp" />
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
 
     <TextView
-        android:id="@+id/tide_status_text"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="@string/tide_import_checking"
-        android:textAppearance="?attr/textAppearanceSubtitle2"
-        android:layout_marginBottom="16dp"/>
-
-    <Button
-        android:id="@+id/tide_import_button"
-        style="@style/Widget.Material3.Button.TonalButton"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Import Harmonic File (XTide)"
-        app:icon="@drawable/ic_action_import"
-        android:layout_marginBottom="16dp" />
-
-    <ProgressBar
-        android:id="@+id/tide_progress_bar"
-        android:layout_width="32dp"
-        android:layout_height="32dp"
-        android:layout_gravity="center"
-        android:visibility="gone"
-        android:layout_marginBottom="16dp"/>
-
-    <TextView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Available Stations (Signal K)"
-        android:textAppearance="?attr/textAppearanceCaption"
-        android:textColor="?attr/colorAccent"
-        android:layout_marginBottom="8dp" />
+        android:layout_marginStart="16dp"
+        android:layout_marginEnd="16dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginBottom="4dp"
+        android:text="@string/tide_stations_header"
+        android:textAppearance="@style/TextAppearance.AppCompat.Caption"
+        android:textColor="?attr/active_color_primary"
+        android:textStyle="bold"
+        android:textAllCaps="true" />
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/recycler_view"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="1" />
+        android:layout_weight="1"
+        android:clipToPadding="false"
+        android:paddingBottom="16dp" />
 
 </LinearLayout>

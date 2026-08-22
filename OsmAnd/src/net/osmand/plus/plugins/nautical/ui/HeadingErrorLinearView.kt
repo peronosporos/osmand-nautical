@@ -38,16 +38,6 @@ class HeadingErrorLinearView @JvmOverloads constructor(
     private var colorYellow = Color.TRANSPARENT
     private var colorRed = Color.TRANSPARENT
     private val indicatorPath = Path()
-    private val degreeBuffer = CharArray(16)
-    private var defaultHdgErrLabel: String
-
-    private fun spToPx(sp: Float): Float {
-        return android.util.TypedValue.applyDimension(
-            android.util.TypedValue.COMPLEX_UNIT_SP,
-            sp,
-            context.resources.displayMetrics
-        )
-    }
 
     init {
         isClickable = true
@@ -55,7 +45,6 @@ class HeadingErrorLinearView @JvmOverloads constructor(
         updateColors()
         paint.strokeCap = Paint.Cap.ROUND
         textPaint.textAlign = Paint.Align.CENTER
-        defaultHdgErrLabel = context.getString(R.string.nautical_hdg_err_label)
     }
 
     private fun updateColors() {
@@ -79,7 +68,6 @@ class HeadingErrorLinearView @JvmOverloads constructor(
         super.onDraw(canvas)
         val w = width.toFloat()
         val h = height.toFloat()
-        val centerX = w / 2f
         val centerY = h / 2f
         
         val padding = 40f
@@ -98,22 +86,13 @@ class HeadingErrorLinearView @JvmOverloads constructor(
             val x = padding + (ratio * scaleWidth)
             
             val isMajor = i % 15 == 0
-            val tickLen = if (isMajor) 15f else 8f
+            val tickLen = if (isMajor) 12f else 6f
             
             paint.alpha = if (isMajor) 200 else 80
-            paint.strokeWidth = if (isMajor) 3f else 1.5f
+            paint.strokeWidth = if (isMajor) 2.5f else 1.5f
             paint.color = if (i == 0) colorOrange else colorPrimary
             
             canvas.drawLine(x, centerY - tickLen, x, centerY + tickLen, paint)
-            
-            if (isMajor) {
-                textPaint.textSize = spToPx(14f) 
-                textPaint.color = colorSecondary
-                textPaint.alpha = 200
-                textPaint.typeface = Typeface.create("sans-serif-condensed", Typeface.NORMAL)
-                val count = NauticalFormatter.formatInt(abs(i), degreeBuffer)
-                canvas.drawText(degreeBuffer, 0, count, x, centerY - tickLen - 4f, textPaint) // Moved ABOVE the line
-            }
         }
 
         // 3. Draw Error Indicator (Triangle pointing up)
@@ -129,25 +108,11 @@ class HeadingErrorLinearView @JvmOverloads constructor(
         paint.alpha = 255
         
         indicatorPath.reset()
-        indicatorPath.moveTo(indicatorX, centerY - 4f)
-        indicatorPath.lineTo(indicatorX - 10f, centerY - 20f)
-        indicatorX.let { ix ->
-            indicatorPath.lineTo(ix + 10f, centerY - 20f)
-        }
+        indicatorPath.moveTo(indicatorX, centerY - 2f)
+        indicatorPath.lineTo(indicatorX - 8f, centerY - 14f)
+        indicatorPath.lineTo(indicatorX + 8f, centerY - 14f)
         indicatorPath.close()
         canvas.drawPath(indicatorPath, paint)
-
-        // Digital Readout
-        textPaint.textSize = spToPx(28f) 
-        textPaint.color = colorPrimary
-        textPaint.typeface = Typeface.create("sans-serif-condensed", Typeface.BOLD)
-        NauticalFormatter.drawDeg(canvas, headingError, centerX, h - 4f, textPaint, degreeBuffer)
-        
-        textPaint.textSize = spToPx(12f) 
-        textPaint.color = colorSecondary
-        textPaint.alpha = 150
-        textPaint.typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
-        canvas.drawText(label ?: defaultHdgErrLabel, padding + 20f, 24f, textPaint)
     }
 
     override fun onInitializeAccessibilityNodeInfo(info: AccessibilityNodeInfo) {

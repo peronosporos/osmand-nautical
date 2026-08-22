@@ -62,7 +62,6 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
         setupSafetyCategory()
         setupManeuverCategory()
         setupAnchorAdvancedCategory()
-        setupMapOverlaysCategory()
         setupSailingCategory()
         setupAisCategory()
         setupVhfCategory()
@@ -200,7 +199,6 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
         findPreference<Preference>("nautical_safety_regions")?.setThemedIcon(OsmAndR.drawable.ic_action_additional_option)
         findPreference<Preference>("nautical_replay_manager")?.setThemedIcon(OsmAndR.drawable.ic_action_play_dark)
         findPreference<Preference>("nautical_hardware_health")?.setThemedIcon(OsmAndR.drawable.ic_action_info)
-        findPreference<Preference>("nautical_master_telemetry_setup")?.setThemedIcon(OsmAndR.drawable.ic_action_settings)
         findPreference<Preference>("nautical_clear_data")?.setThemedIcon(OsmAndR.drawable.ic_action_delete_dark)
 
         findPreference<Preference>("nautical_enc_manager")?.apply {
@@ -224,23 +222,24 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
 
     private fun setupVesselCategory() {
         findPreference<ListPreferenceEx>(settings.NAUTICAL_VESSEL_TYPE.id)?.apply {
-            setThemedIcon(OsmAndR.drawable.ic_action_settings)
+            setThemedIcon(OsmAndR.drawable.ic_action_sail_boat_dark)
             entries = arrayOf(
-                getString(OsmAndR.string.nautical_vessel_conventional),
-                getString(OsmAndR.string.nautical_vessel_proa)
+                getString(OsmAndR.string.nautical_vessel_type_conventional_entry),
+                getString(OsmAndR.string.nautical_vessel_type_proa_entry)
             )
             entryValues = arrayOf("CONVENTIONAL", "PROA")
             val type = settings.NAUTICAL_VESSEL_TYPE.get()
             value = type.name
             summary = when (type) {
-                net.osmand.plus.settings.enums.VesselType.PROA -> getString(OsmAndR.string.nautical_vessel_proa)
-                else -> getString(OsmAndR.string.nautical_vessel_conventional)
+                net.osmand.plus.settings.enums.VesselType.PROA -> getString(OsmAndR.string.nautical_vessel_type_summary_proa)
+                else -> getString(OsmAndR.string.nautical_vessel_type_summary_conventional)
             }
         }
 
         findPreference<SwitchPreferenceEx>(settings.NAUTICAL_MULTIHULL_SHUNTING.id)?.apply {
-            setThemedIcon(OsmAndR.drawable.ic_action_sail_boat_dark)
+            setThemedIcon(OsmAndR.drawable.ic_action_refresh_dark)
             isChecked = settings.NAUTICAL_MULTIHULL_SHUNTING.get()
+            summary = getString(OsmAndR.string.nautical_multihull_shunting_desc)
         }
 
         setupDepthPreference(settings.NAUTICAL_VESSEL_DRAFT.id, OsmAndR.string.nautical_vessel_draft_base, OsmAndR.drawable.ic_action_sail_boat_dark)
@@ -588,82 +587,6 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
         }
     }
 
-    private fun setupMapOverlaysCategory() {
-        val plugin = NauticalPlugin.getInstance()
-        // Group Telemetry Widgets
-        findPreference<PreferenceCategory>("telemetry_widgets_group")?.apply {
-            title = "Telemetry (Text Widgets)"
-        }
-
-        findPreference<ListPreferenceEx>(settings.NAUTICAL_TRAJECTORY_COLOR.id)?.apply {
-            entries = arrayOf("Magenta", "Red", "Green", "Blue", "Yellow", "Cyan", "White", "Black")
-            entryValues = arrayOf(
-                0xFFFF00FF.toInt().toString(),
-                0xFFFF0000.toInt().toString(),
-                0xFF00FF00.toInt().toString(),
-                0xFF0000FF.toInt().toString(),
-                0xFFFFFF00.toInt().toString(),
-                0xFF00FFFF.toInt().toString(),
-                0xFFFFFFFF.toInt().toString(),
-                0xFF000000.toInt().toString()
-            )
-            val current = settings.NAUTICAL_TRAJECTORY_COLOR.get()
-            value = current.toString()
-            summary = entries.getOrNull(entryValues.indexOf(value)) ?: "Custom"
-            setThemedIcon(OsmAndR.drawable.ic_action_appearance)
-        }
-
-        findPreference<ListPreferenceEx>(settings.NAUTICAL_TRAJECTORY_THICKNESS.id)?.apply {
-            val values = arrayOf("4", "6", "8", "10", "12", "16", "20")
-            entries = values.map { "$it px" }.toTypedArray()
-            entryValues = values
-            val current = settings.NAUTICAL_TRAJECTORY_THICKNESS.get()
-            value = current.toInt().toString()
-            summary = "$value px"
-            setThemedIcon(OsmAndR.drawable.ic_action_additional_option)
-        }
-        
-        val overlays = listOf(
-            settings.NAUTICAL_SHOW_LAYLINES,
-            settings.NAUTICAL_SHOW_INFINITE_LAYLINES,
-            settings.NAUTICAL_SHOW_WIND_SHIFTS,
-            settings.NAUTICAL_SHOW_TRAJECTORY,
-            settings.NAUTICAL_SHOW_TIDES,
-            settings.NAUTICAL_SHOW_HEADING_LINE,
-            settings.NAUTICAL_SHOW_COG_LINE,
-            settings.NAUTICAL_SHOW_CMG_LINE,
-            settings.NAUTICAL_SHOW_CURRENT_VECTOR,
-            settings.NAUTICAL_RESTRICTED_AREAS_ENABLED,
-            settings.NAUTICAL_SHOW_WINDY_TILES,
-            settings.NAUTICAL_SHOW_RAIN_RADAR,
-            settings.NAUTICAL_SHOW_OPENMETEO_TILES,
-            settings.NAUTICAL_SHOW_SMHI_TILES,
-            settings.NAUTICAL_SHOW_NOAA_TILES,
-            settings.NAUTICAL_SHOW_LOGBOOK_LAYER,
-            settings.NAUTICAL_SHOW_PMTILES
-        )
-        overlays.forEach { pref ->
-            findPreference<SwitchPreferenceEx>(pref.id)?.apply {
-                setThemedIcon(OsmAndR.drawable.ic_action_additional_option)
-                setOnPreferenceChangeListener { _, newValue ->
-                    pref.set((newValue as? Boolean) ?: false)
-                    plugin?.requestRefresh()
-                    true
-                }
-            }
-        }
-
-        findPreference<ListPreferenceEx>(settings.NAUTICAL_LOOK_AHEAD_TIME.id)?.apply {
-            setThemedIcon(OsmAndR.drawable.ic_action_time)
-            val options = arrayOf("2", "5", "10", "20", "30", "60")
-            entries = options.map { "$it ${getString(OsmAndR.string.shared_string_min)}" }.toTypedArray()
-            entryValues = options
-            val current = settings.NAUTICAL_LOOK_AHEAD_TIME.get()
-            value = current.toString()
-            summary = "$current ${getString(OsmAndR.string.shared_string_min)}"
-        }
-    }
-
     private fun setupDepthPreference(id: String, titleId: Int, iconId: Int) {
         val safetyManager = NauticalPlugin.getInstance()?.safetyManager
         findPreference<EditTextPreferenceEx>(id)?.apply {
@@ -925,6 +848,14 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
     }
 
     private fun setupLogbookCategory() {
+        findPreference<Preference>("nautical_open_logbook")?.apply {
+            setThemedIcon(OsmAndR.drawable.ic_action_notes_dark)
+            setOnPreferenceClickListener {
+                showInstance(requireActivity(), SettingsScreenType.MARINE_LOGBOOK)
+                true
+            }
+        }
+
         findPreference<Preference>("nautical_passage_plan")?.apply {
             setThemedIcon(OsmAndR.drawable.ic_action_track_16)
             setOnPreferenceClickListener {
@@ -978,7 +909,6 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
         // Hide advanced maintenance on watch
         findPreference<Preference>("nautical_advanced_tuning")?.isVisible = !isWatch
         findPreference<Preference>("nautical_diagnostics")?.isVisible = !isWatch
-        findPreference<Preference>("nautical_master_telemetry_setup")?.isVisible = !isWatch
         findPreference<Preference>("nautical_discovery_mdns")?.isVisible = !isWatch
     }
 
@@ -1030,8 +960,8 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
                 showInstance(requireActivity(), SettingsScreenType.NAUTICAL_HARDWARE_STATS)
                 return true
             }
-            "nautical_master_telemetry_setup" -> {
-                showInstance(requireActivity(), SettingsScreenType.NAUTICAL_MASTER_TELEMETRY)
+            "nautical_open_logbook" -> {
+                showInstance(requireActivity(), SettingsScreenType.MARINE_LOGBOOK)
                 return true
             }
             "nautical_clear_data" -> {
@@ -1331,8 +1261,8 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
 
                 settings.NAUTICAL_VESSEL_TYPE.id -> {
                     preference.summary = when (newString) {
-                        "PROA" -> getString(OsmAndR.string.nautical_vessel_proa)
-                        else -> getString(OsmAndR.string.nautical_vessel_conventional)
+                        "PROA" -> getString(OsmAndR.string.nautical_vessel_type_summary_proa)
+                        else -> getString(OsmAndR.string.nautical_vessel_type_summary_conventional)
                     }
                     onPreferenceChanged(key)
                 }

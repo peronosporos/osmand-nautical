@@ -6,20 +6,31 @@ import android.provider.OpenableColumns
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.*
+import android.widget.ImageView
+import android.widget.ProgressBar
+import android.widget.TextView
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AlertDialog
 import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import net.osmand.plus.R
 import net.osmand.plus.base.BaseOsmAndFragment
 import java.io.File
+import java.util.Locale
 
 class MarineRasterManagerFragment : BaseOsmAndFragment() {
 
     private lateinit var importer: MarineRasterImporter
     private lateinit var adapter: RasterFilesAdapter
     private lateinit var progressBar: ProgressBar
+    private lateinit var emptyView: View
+    private lateinit var recyclerView: RecyclerView
+    private lateinit var txtChartCount: TextView
 
     private val importLauncher = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         uri?.let { startImport(it) }
@@ -31,44 +42,26 @@ class MarineRasterManagerFragment : BaseOsmAndFragment() {
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
-        val tInflater = themedInflater
-        val view = tInflater.inflate(R.layout.fragment_simple_list, container, false)
-        
-        view.findViewById<View>(R.id.closeButton)?.setOnClickListener {
-            requireActivity().onBackPressedDispatcher.onBackPressed()
-        }
-        
-        view.findViewById<TextView>(R.id.titleTextView)?.text = getString(R.string.raster_manager_title)
-        
-        val pb = view.findViewById<ProgressBar?>(R.id.progress)
-        if (pb != null) {
-            progressBar = pb
-            progressBar.isVisible = false
-        }
-        
-        val listView = view.findViewById<ListView?>(android.R.id.list)
-        adapter = RasterFilesAdapter()
-        listView?.adapter = adapter
-        
-        // Add footer button for import
-        if (listView != null) {
-            val footerView = tInflater.inflate(R.layout.bottom_sheet_button, listView, false)
-            footerView.findViewById<TextView>(R.id.button_text)?.text = getString(R.string.raster_import_btn)
-            footerView.setOnClickListener {
-                importLauncher.launch(arrayOf("application/octet-stream", "*/*"))
-            }
-            listView.addFooterView(footerView)
+        val view = themedInflater.inflate(R.layout.fragment_marine_raster_manager, container, false)
 
-            listView.setOnItemLongClickListener { _, _, position, _ ->
-                // Fix for Item 15: Adjust position if footer is present
-                val adjPos = position - listView.headerViewsCount
-                if (adjPos >= 0 && adjPos < adapter.count) {
-                    val file = adapter.getItem(adjPos) as? File
-                    file?.let { showDeleteDialog(it) }
-                    return@setOnItemLongClickListener true
-                }
-                false
+        progressBar = view.findViewById(R.id.progress)
+        emptyView = view.findViewById(R.id.empty_view)
+        recyclerView = view.findViewById(R.id.recycler_view)
+        txtChartCount = view.findViewById(R.id.txt_chart_count)
+
+        recyclerView.layoutManager = LinearLayoutManager(requireContext())
+        adapter = RasterFilesAdapter(
+            onItemClicked = { file ->
+                app.showToastMessage(file.name)
+            },
+            onItemLongClicked = { file ->
+                showDeleteDialog(file)
             }
+        )
+        recyclerView.adapter = adapter
+
+        view.findViewById<View>(R.id.btn_import_raster)?.setOnClickListener {
+            importLauncher.launch(arrayOf("application/octet-stream", "*/*"))
         }
 
         refreshList()
@@ -78,12 +71,15 @@ class MarineRasterManagerFragment : BaseOsmAndFragment() {
     private fun refreshList() {
         val files = importer.getImportedCharts()
         adapter.setFiles(files)
+        emptyView.isVisible = files.isEmpty()
+        recyclerView.isVisible = files.isNotEmpty()
+        txtChartCount.text = getString(R.string.raster_manager_title) + if (files.isNotEmpty()) " (${files.size})" else ""
     }
 
     private fun startImport(uri: Uri) {
         val fileName = getFileName(uri) ?: "chart_${System.currentTimeMillis()}.mbtiles"
         progressBar.isVisible = true
-        
+
         lifecycleScope.launch {
             val result = importer.importRaster(uri, fileName)
             progressBar.isVisible = false
@@ -112,13 +108,13 @@ class MarineRasterManagerFragment : BaseOsmAndFragment() {
     }
 
     private fun showDeleteDialog(file: File) {
-        androidx.appcompat.app.AlertDialog.Builder(requireContext())
+        AlertDialog.Builder(requireContext())
             .setTitle(R.string.raster_manager_title)
             .setMessage(R.string.raster_delete_confirm)
             .setPositiveButton(R.string.shared_string_delete) { _, _ ->
                 progressBar.isVisible = true
                 lifecycleScope.launch {
-                    val deleted = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    val deleted = withContext(Dispatchers.IO) {
                         importer.deleteChart(file)
                     }
                     progressBar.isVisible = false
@@ -133,7 +129,11 @@ class MarineRasterManagerFragment : BaseOsmAndFragment() {
             .show()
     }
 
-    private inner class RasterFilesAdapter : BaseAdapter() {
+    private inner class RasterFilesAdapter(
+        private val onItemClicked: (File) -> Unit,
+        private val onItemLongClicked: (File) -> Unit
+    ) : RecyclerView.Adapter<RasterFilesAdapter.ViewHolder>() {
+
         private var files = emptyList<File>()
 
         fun setFiles(newFiles: List<File>) {
@@ -141,33 +141,38 @@ class MarineRasterManagerFragment : BaseOsmAndFragment() {
             notifyDataSetChanged()
         }
 
-        override fun getCount(): Int = files.size
-        override fun getItem(position: Int): Any = files[position]
-        override fun getItemId(position: Int): Long = position.toLong()
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
+            val view = LayoutInflater.from(parent.context)
+                .inflate(R.layout.item_marine_raster_chart, parent, false)
+            return ViewHolder(view)
+        }
 
-        override fun getView(position: Int, convertView: View?, parent: ViewGroup?): View {
-            val view = convertView ?: themedInflater
-                .inflate(R.layout.list_item_with_descr, parent, false)
-            
+        override fun onBindViewHolder(holder: ViewHolder, position: Int) {
             val file = files[position]
-            view.findViewById<TextView>(R.id.title)?.text = file.name
-            val sizeMb = file.length() / 1024 / 1024
-            var desc = parent?.context?.getString(R.string.shared_string_memory_mb_desc, sizeMb.toString())
-            if (file.extension.equals("kap", ignoreCase = true)) {
-                desc += " | " + parent?.context?.getString(R.string.nautical_kap_metadata_only)
+            holder.title.text = file.name
+
+            val sizeMb = file.length() / (1024.0 * 1024.0)
+            val ext = file.extension.uppercase(Locale.US)
+            val sizeFormatted = String.format(Locale.US, "%.1f MB", sizeMb)
+            holder.description.text = "$sizeFormatted • $ext"
+            holder.badgeChartType.text = ext
+
+            holder.itemView.setOnClickListener {
+                onItemClicked(file)
             }
-            view.findViewById<TextView>(R.id.description)?.text = desc
-            val base = runCatching { requireActivity() }.getOrNull() ?: parent?.context ?: requireContext()
-            val themedCtx = net.osmand.plus.utils.UiUtilities.getThemedContext(base, isNightMode)
-            val iconDrawable = try {
-                androidx.appcompat.content.res.AppCompatResources.getDrawable(themedCtx, R.drawable.ic_action_world_globe)
-                    ?: androidx.core.content.ContextCompat.getDrawable(themedCtx, R.drawable.ic_action_world_globe)
-            } catch (_: Exception) {
-                getContentIcon(R.drawable.ic_action_world_globe)
+            holder.itemView.setOnLongClickListener {
+                onItemLongClicked(file)
+                true
             }
-            view.findViewById<ImageView>(R.id.icon)?.setImageDrawable(iconDrawable)
-            
-            return view
+        }
+
+        override fun getItemCount(): Int = files.size
+
+        inner class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
+            val title: TextView = view.findViewById(R.id.title)
+            val description: TextView = view.findViewById(R.id.description)
+            val badgeChartType: TextView = view.findViewById(R.id.badge_chart_type)
+            val icon: ImageView = view.findViewById(R.id.icon)
         }
     }
 }

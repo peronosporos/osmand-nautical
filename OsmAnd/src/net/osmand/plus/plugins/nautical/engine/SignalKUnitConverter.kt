@@ -56,6 +56,38 @@ object SignalKUnitConverter {
         return (result % (2 * Math.PI) + (2 * Math.PI)) % (2 * Math.PI)
     }
 
+    fun getUnitForPath(context: Context, settings: OsmandSettings, path: String): String {
+        val app = context.applicationContext as OsmandApplication
+        val isAngle = path.contains("angle", ignoreCase = true) || path.contains("heading", ignoreCase = true) ||
+                      path.contains("course", ignoreCase = true) || path.contains("direction", ignoreCase = true) ||
+                      path.contains("roll") || path.contains("pitch") || path.contains("yaw")
+        return when {
+            path.contains("speed", ignoreCase = true) || path.endsWith("STW") || path.endsWith("SOG") -> {
+                OsmAndFormatter.getFormattedSpeedValue(0f, app).unit
+            }
+            path.contains("temperature", ignoreCase = true) -> context.getString(R.string.nautical_unit_celsius)
+            path.contains("pressure", ignoreCase = true) -> {
+                if (path.contains("oil", ignoreCase = true)) context.getString(R.string.nautical_unit_bar) else context.getString(R.string.nautical_unit_hpa)
+            }
+            path.contains("depth", ignoreCase = true) -> {
+                OsmAndFormatter.getFormattedAltitudeValue(0.0, app, settings.ALTITUDE_METRIC.get()).unit
+            }
+            path.contains("log", ignoreCase = true) || path.contains("distance", ignoreCase = true) || 
+            path.contains("cpa", ignoreCase = true) || path.contains("Radius", ignoreCase = true) -> {
+                OsmAndFormatter.getFormattedDistanceValue(0f, app).unit
+            }
+            isAngle -> context.getString(R.string.nautical_unit_deg)
+            path.contains("currentLevel", ignoreCase = true) || path.contains("stateOfCharge", ignoreCase = true) ||
+            path.contains("polarSpeedRatio", ignoreCase = true) || path.contains("engineLoad", ignoreCase = true) ||
+            path.contains("humidity", ignoreCase = true) -> context.getString(R.string.nautical_unit_percent)
+            path.contains("voltage", ignoreCase = true) -> context.getString(R.string.nautical_unit_volt)
+            path.contains("current", ignoreCase = true) -> context.getString(R.string.nautical_unit_ampere)
+            path.endsWith("revolutions") -> context.getString(R.string.nautical_unit_rpm)
+            path.contains("runTime", ignoreCase = true) || path.contains("engineHours", ignoreCase = true) -> context.getString(R.string.nautical_unit_hours)
+            else -> ""
+        }
+    }
+
     fun formatValue(
         context: Context,
         settings: OsmandSettings,
@@ -63,7 +95,9 @@ object SignalKUnitConverter {
         path: String,
         variation: Double? = null,
     ): Pair<String, String> {
-        if ((value == null) || value.isNaN() || value.isInfinite()) return context.getString(R.string.n_a) to ""
+        if ((value == null) || value.isNaN() || value.isInfinite()) {
+            return "--" to getUnitForPath(context, settings, path)
+        }
 
         val app = context.applicationContext as OsmandApplication
 
@@ -95,7 +129,7 @@ object SignalKUnitConverter {
             path.contains("voltage", ignoreCase = true) -> (effectiveValue < 0.0) || (effectiveValue > 1000.0)
             else -> false
         }
-        if (isOutlier) return "---" to ""
+        if (isOutlier) return "--" to getUnitForPath(context, settings, path)
 
         return when {
             path.contains("speed", ignoreCase = true) || path.endsWith("STW") || path.endsWith("SOG") -> {

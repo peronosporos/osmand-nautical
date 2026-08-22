@@ -41,10 +41,28 @@ class SignalKServerRoutesFragment : BaseOsmAndFragment() {
 
     private fun refreshRoutes() {
         lifecycleScope.launch {
-            val routes = NauticalPlugin.engine?.fetchRoutesFromServer()
-            if (routes != null) {
-                adapter.submitList(routes.entries.toList())
-                view?.findViewById<View>(R.id.txt_empty_list)?.visibility = if (routes.isEmpty()) View.VISIBLE else View.GONE
+            val emptyTxt = view?.findViewById<TextView>(R.id.txt_empty_list)
+            val engine = NauticalPlugin.engine
+            if (engine == null) {
+                adapter.submitList(emptyList())
+                emptyTxt?.text = getString(R.string.nautical_server_no_routes_desc)
+                emptyTxt?.visibility = View.VISIBLE
+                return@launch
+            }
+            try {
+                val routes = engine.fetchRoutesFromServer()
+                if (routes != null && routes.isNotEmpty()) {
+                    adapter.submitList(routes.entries.toList())
+                    emptyTxt?.visibility = View.GONE
+                } else {
+                    adapter.submitList(emptyList())
+                    emptyTxt?.text = getString(R.string.nautical_server_no_routes_desc)
+                    emptyTxt?.visibility = View.VISIBLE
+                }
+            } catch (_: Exception) {
+                adapter.submitList(emptyList())
+                emptyTxt?.text = getString(R.string.nautical_toast_conn_failed) + "\n\n" + getString(R.string.nautical_server_no_routes_desc)
+                emptyTxt?.visibility = View.VISIBLE
             }
         }
     }

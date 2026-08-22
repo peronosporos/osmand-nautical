@@ -1,0 +1,12 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- Standby / Power icon (IEC 5009) -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:pathData="M12,3V11M17.66,6.34C19.11,7.79 20,9.79 20,12C20,16.42 16.42,20 12,20C7.58,20 4,16.42 4,12C4,9.79 4.89,7.79 6.34,6.34" />
+</vector>

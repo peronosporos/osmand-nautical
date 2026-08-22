@@ -1,98 +1,184 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:padding="24dp">
+    android:background="?attr/card_and_list_background_basic"
+    android:paddingStart="16dp"
+    android:paddingEnd="16dp"
+    android:paddingTop="12dp"
+    android:paddingBottom="16dp">
 
-    <TextView
-        android:id="@+id/txt_title"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/nautical_replay_title"
-        android:textAppearance="?attr/textAppearanceHeadline6"
-        android:layout_marginBottom="16dp" />
-
-    <TextView
-        android:id="@+id/txt_filename"
+    <!-- Top Header -->
+    <RelativeLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="@string/nautical_replay_select_file"
-        android:textAppearance="?attr/textAppearanceSubtitle1"
-        android:layout_marginBottom="8dp" />
+        android:layout_marginBottom="4dp">
 
-    <SeekBar
-        android:id="@+id/seek_playback"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:paddingTop="12dp"
-        android:paddingBottom="12dp"
-        android:layout_marginBottom="16dp" />
+        <TextView
+            android:id="@+id/txt_title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentStart="true"
+            android:layout_centerVertical="true"
+            android:text="@string/nautical_replay_title"
+            android:textAppearance="@style/TextAppearance.AppCompat.Subhead"
+            android:textColor="?android:attr/textColorPrimary"
+            android:textStyle="bold" />
 
+        <TextView
+            android:id="@+id/txt_filename"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentEnd="true"
+            android:layout_centerVertical="true"
+            android:layout_toEndOf="@id/txt_title"
+            android:layout_marginStart="12dp"
+            android:gravity="end"
+            android:ellipsize="middle"
+            android:singleLine="true"
+            android:text="@string/nautical_replay_select_file"
+            android:textAppearance="@style/TextAppearance.AppCompat.Caption"
+            android:textColor="?android:attr/textColorSecondary"
+            tools:text="log_2026_08_22.nmea" />
+    </RelativeLayout>
+
+    <!-- Scrubber Timeline -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:gravity="center_vertical"
-        android:layout_marginBottom="24dp">
+        android:layout_marginTop="4dp"
+        android:layout_marginBottom="4dp">
+
+        <SeekBar
+            android:id="@+id/seek_playback"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:paddingStart="6dp"
+            android:paddingEnd="6dp"
+            android:paddingTop="6dp"
+            android:paddingBottom="6dp" />
+
+        <TextView
+            android:id="@+id/txt_progress_pct"
+            android:layout_width="40dp"
+            android:layout_height="wrap_content"
+            android:gravity="end"
+            android:textAppearance="@style/TextAppearance.AppCompat.Caption"
+            android:textColor="?android:attr/textColorSecondary"
+            android:fontFeatureSettings="tnum"
+            tools:text="45%" />
+    </LinearLayout>
+
+    <!-- Controls Row -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginTop="4dp"
+        android:layout_marginBottom="8dp">
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_play_pause"
-            style="@style/Widget.MaterialComponents.Button.TextButton.Icon"
-            android:layout_width="wrap_content"
-            android:layout_height="56dp"
-            android:paddingStart="16dp"
-            android:paddingEnd="16dp"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            android:insetLeft="0dp"
+            android:insetRight="0dp"
+            android:padding="0dp"
             app:icon="@drawable/ic_action_play_dark"
-            android:text="@string/nautical_replay_btn_play" />
+            app:iconGravity="textStart"
+            app:iconPadding="0dp"
+            app:iconTint="#FFFFFF"
+            app:backgroundTint="?attr/active_color_primary"
+            app:cornerRadius="22dp"
+            android:contentDescription="@string/nautical_replay_btn_play" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_stop"
-            style="@style/Widget.MaterialComponents.Button.TextButton.Icon"
-            android:layout_width="wrap_content"
-            android:layout_height="56dp"
-            android:paddingStart="16dp"
-            android:paddingEnd="16dp"
+            style="?attr/borderlessButtonStyle"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:layout_marginStart="4dp"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            android:insetLeft="0dp"
+            android:insetRight="0dp"
+            android:padding="0dp"
             app:icon="@drawable/ic_action_stop"
-            android:text="@string/shared_string_control_stop" />
+            app:iconGravity="textStart"
+            app:iconPadding="0dp"
+            app:iconTint="?android:attr/textColorPrimary"
+            android:contentDescription="@string/shared_string_control_stop" />
 
         <View
             android:layout_width="0dp"
-            android:layout_height="0dp"
+            android:layout_height="1dp"
             android:layout_weight="1" />
 
+        <!-- Speed Toggle Group -->
         <com.google.android.material.button.MaterialButtonToggleGroup
             android:id="@+id/toggle_speed"
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_height="36dp"
             app:singleSelection="true">
+
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btn_speed_1x"
                 style="?attr/materialButtonOutlinedStyle"
-                android:layout_width="wrap_content"
-                android:layout_height="56dp"
+                android:layout_width="46dp"
+                android:layout_height="36dp"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:padding="0dp"
+                android:textSize="12sp"
                 android:text="@string/nautical_replay_speed_1x" />
+
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btn_speed_2x"
                 style="?attr/materialButtonOutlinedStyle"
-                android:layout_width="wrap_content"
-                android:layout_height="56dp"
+                android:layout_width="46dp"
+                android:layout_height="36dp"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:padding="0dp"
+                android:textSize="12sp"
                 android:text="@string/nautical_replay_speed_2x" />
+
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btn_speed_5x"
                 style="?attr/materialButtonOutlinedStyle"
-                android:layout_width="wrap_content"
-                android:layout_height="56dp"
+                android:layout_width="46dp"
+                android:layout_height="36dp"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:padding="0dp"
+                android:textSize="12sp"
                 android:text="@string/nautical_replay_speed_5x" />
         </com.google.android.material.button.MaterialButtonToggleGroup>
-
     </LinearLayout>
 
+    <!-- File Picker Button -->
     <com.google.android.material.button.MaterialButton
         android:id="@+id/btn_select_file"
         android:layout_width="match_parent"
-        android:layout_height="56dp"
-        android:text="@string/nautical_replay_select_file" />
+        android:layout_height="42dp"
+        android:insetTop="0dp"
+        android:insetBottom="0dp"
+        android:text="@string/nautical_replay_select_file"
+        app:icon="@drawable/ic_action_folder"
+        app:iconTint="?attr/active_color_primary"
+        android:textColor="?android:attr/textColorPrimary"
+        app:backgroundTint="?attr/list_background_color"
+        app:strokeWidth="1dp"
+        app:strokeColor="?attr/divider_color"
+        app:cornerRadius="8dp" />
 
 </LinearLayout>

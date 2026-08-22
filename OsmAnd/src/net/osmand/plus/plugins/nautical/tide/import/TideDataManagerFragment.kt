@@ -125,13 +125,15 @@ class TideDataManagerFragment : BaseOsmAndFragment() {
 
     private inner class StationAdapter(private val stations: List<SignalKTideStation>) : RecyclerView.Adapter<StationViewHolder>() {
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): StationViewHolder {
-            val v = LayoutInflater.from(parent.context).inflate(android.R.layout.simple_list_item_2, parent, false)
+            val v = LayoutInflater.from(parent.context).inflate(R.layout.list_item_with_descr, parent, false)
             return StationViewHolder(v)
         }
         override fun onBindViewHolder(holder: StationViewHolder, position: Int) {
             val station = stations[position]
             holder.title.text = station.name
             holder.info.text = String.format(Locale.US, "Lat: %.4f, Lon: %.4f", station.position.coordinates[1], station.position.coordinates[0])
+            holder.icon.setImageResource(R.drawable.ic_action_marker_dark)
+            holder.icon.visibility = View.VISIBLE
             
             holder.itemView.setOnClickListener {
                 app.settings.setMapLocationToShow(station.position.coordinates[1], station.position.coordinates[0], 13)
@@ -142,7 +144,8 @@ class TideDataManagerFragment : BaseOsmAndFragment() {
     }
 
     private class StationViewHolder(v: View) : RecyclerView.ViewHolder(v) {
-        val title: TextView = v.findViewById(android.R.id.text1)
-        val info: TextView = v.findViewById(android.R.id.text2)
+        val title: TextView = v.findViewById(R.id.title)
+        val info: TextView = v.findViewById(R.id.description)
+        val icon: android.widget.ImageView = v.findViewById(R.id.icon)
     }
 }

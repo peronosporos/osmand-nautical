@@ -8,7 +8,6 @@ import android.view.View
 import androidx.core.content.ContextCompat
 import net.osmand.plus.R
 import kotlin.math.*
-import androidx.core.graphics.toColorInt
 
 class PolarCurveCanvasView @JvmOverloads constructor(
     context: Context,
@@ -33,12 +32,22 @@ class PolarCurveCanvasView @JvmOverloads constructor(
     var onPointDragged: ((Int, Double, Double) -> Unit)? = null
 
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val textPaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val path = Path()
     private var draggedPointIndex: Int = -1
     private var maxSpeedScale = 10.0
 
+    // Cached semantic colors
+    private val colorGrid = 0x40888888
+    private val colorLabel = 0xBB888888.toInt()
+    private val colorRawPoint = 0x5029B6F6
+    private val colorCurve = ContextCompat.getColor(context, R.color.active_color_primary_light)
+    private val colorControlPoint = ContextCompat.getColor(context, R.color.nautical_status_green)
+
     init {
         isClickable = true
+        textPaint.textSize = 10f * resources.displayMetrics.density
+        textPaint.color = colorLabel
     }
 
     private fun updateScale() {
@@ -58,15 +67,17 @@ class PolarCurveCanvasView @JvmOverloads constructor(
         val h = height.toFloat()
         val density = resources.displayMetrics.density
 
-        // TASK-012: Bow-Up Vertical Orientation (Industry Standard)
-        val originX = 50f * density // Anchor to the left to show 0..180 semi-circle
+        // Bow-Up Vertical Semi-Circle (0° top to 180° bottom on right side)
+        val originX = 40f * density
         val originY = h / 2f
-        val maxRadius = min(w - 100f * density, h * 0.45f)
+        val maxRadius = min(w - 70f * density, h * 0.46f)
 
-        // Draw radial coordinate grid
+        if (maxRadius <= 0f) return
+
+        // Draw radial concentric speed arcs
         paint.style = Paint.Style.STROKE
         paint.strokeWidth = 1f * density
-        paint.color = Color.LTGRAY
+        paint.color = colorGrid
 
         val step = if (maxSpeedScale > 20) 5 else 2
         for (speed in step..maxSpeedScale.toInt() step step) {
@@ -77,80 +88,93 @@ class PolarCurveCanvasView @JvmOverloads constructor(
                 -90f, 180f, false, paint
             )
             // Speed labels
-            paint.style = Paint.Style.FILL
-            paint.textSize = 10f * density
-            canvas.drawText(speed.toString(), (originX + r).toFloat(), originY + 15f * density, paint)
-            paint.style = Paint.Style.STROKE
+            canvas.drawText("${speed}kn", (originX + r).toFloat() + 2f * density, originY + 12f * density, textPaint)
         }
 
-        // Draw TWA angle radials (0, 30, 60, 90, 120, 150, 180)
+        // Draw TWA angle radial lines (0°, 30°, 60°, 90°, 120°, 150°, 180°)
+        paint.style = Paint.Style.STROKE
+        paint.color = colorGrid
         for (angle in 0..180 step 30) {
             val rad = Math.toRadians(angle.toDouble())
-            // Bow at 0 (Top)
             val x = originX + maxRadius * sin(rad).toFloat()
             val y = originY - maxRadius * cos(rad).toFloat()
             canvas.drawLine(originX, originY, x, y, paint)
-            
-            // Angle labels
-            paint.style = Paint.Style.FILL
-            canvas.drawText("$angle°", x + 5f * density, y, paint)
-            paint.style = Paint.Style.STROKE
+
+            // Angle text
+            val labelX = x + 4f * density
+            val labelY = y + 4f * density
+            canvas.drawText("$angle°", labelX, labelY, textPaint)
         }
 
-        // Draw raw scatter points
+        // Draw raw scatter points (Zero Allocations)
         paint.style = Paint.Style.FILL
-        paint.color = "#40BBDEFB".toColorInt() // More transparent
-        for (pt in rawPoints) {
-            val coords = getPointCoords(pt, originX, originY, maxRadius)
-            canvas.drawCircle(coords.x, coords.y, 6f * density, paint)
+        paint.color = colorRawPoint
+        val rawRadius = 5f * density
+        for (i in rawPoints.indices) {
+            val pt = rawPoints[i]
+            val rad = Math.toRadians(pt.first)
+            val r = (pt.second / maxSpeedScale) * maxRadius
+            val x = originX + r.toFloat() * sin(rad).toFloat()
+            val y = originY - r.toFloat() * cos(rad).toFloat()
+            canvas.drawCircle(x, y, rawRadius, paint)
         }
 
-        // Draw prominent smoothed curve path
+        // Draw smoothed curve path and draggable control points (Zero Allocations)
         if (smoothedPoints.isNotEmpty()) {
             path.reset()
             paint.style = Paint.Style.STROKE
             paint.strokeWidth = 3f * density
-            paint.color = ContextCompat.getColor(context, R.color.icon_color_osmand_light)
+            paint.color = colorCurve
 
             for (i in smoothedPoints.indices) {
-                val coords = getPointCoords(smoothedPoints[i], originX, originY, maxRadius)
-                if (i == 0) path.moveTo(coords.x, coords.y) else path.lineTo(coords.x, coords.y)
+                val pt = smoothedPoints[i]
+                val rad = Math.toRadians(pt.first)
+                val r = (pt.second / maxSpeedScale) * maxRadius
+                val x = originX + r.toFloat() * sin(rad).toFloat()
+                val y = originY - r.toFloat() * cos(rad).toFloat()
+
+                if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
             }
             canvas.drawPath(path, paint)
 
             // Draw draggable control points
             paint.style = Paint.Style.FILL
-            paint.color = ContextCompat.getColor(context, R.color.nautical_status_green)
-            for (pt in smoothedPoints) {
-                val coords = getPointCoords(pt, originX, originY, maxRadius)
-                canvas.drawCircle(coords.x, coords.y, 8f * density, paint)
+            paint.color = colorControlPoint
+            val ctrlRadius = 7f * density
+            for (i in smoothedPoints.indices) {
+                val pt = smoothedPoints[i]
+                val rad = Math.toRadians(pt.first)
+                val r = (pt.second / maxSpeedScale) * maxRadius
+                val x = originX + r.toFloat() * sin(rad).toFloat()
+                val y = originY - r.toFloat() * cos(rad).toFloat()
+                canvas.drawCircle(x, y, ctrlRadius, paint)
             }
         }
-    }
-
-    private fun getPointCoords(pt: Pair<Double, Double>, originX: Float, originY: Float, maxRadius: Float): PointF {
-        val rad = Math.toRadians(pt.first)
-        val r = (pt.second / maxSpeedScale) * maxRadius
-        val x = originX + r.toFloat() * sin(rad).toFloat()
-        val y = originY - r.toFloat() * cos(rad).toFloat()
-        return PointF(x, y)
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
         val w = width.toFloat()
         val h = height.toFloat()
         val density = resources.displayMetrics.density
-        val originX = 50f * density
+        val originX = 40f * density
         val originY = h / 2f
-        val maxRadius = min(w - 100f * density, h * 0.45f)
+        val maxRadius = min(w - 70f * density, h * 0.46f)
+
+        if (maxRadius <= 0f) return super.onTouchEvent(event)
 
         when (event.action) {
             MotionEvent.ACTION_DOWN -> {
                 for (i in smoothedPoints.indices) {
-                    val coords = getPointCoords(smoothedPoints[i], originX, originY, maxRadius)
-                    val dist = hypot(event.x - coords.x, event.y - coords.y)
-                    if (dist < 30f * density) {
+                    val pt = smoothedPoints[i]
+                    val rad = Math.toRadians(pt.first)
+                    val r = (pt.second / maxSpeedScale) * maxRadius
+                    val px = originX + r.toFloat() * sin(rad).toFloat()
+                    val py = originY - r.toFloat() * cos(rad).toFloat()
+
+                    val dist = hypot(event.x - px, event.y - py)
+                    if (dist < 32f * density) {
                         draggedPointIndex = i
+                        performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
                         return true
                     }
                 }
@@ -158,13 +182,13 @@ class PolarCurveCanvasView @JvmOverloads constructor(
             MotionEvent.ACTION_MOVE -> {
                 if (draggedPointIndex != -1) {
                     val dx = event.x - originX
-                    val dy = originY - event.y // Reverse Y
+                    val dy = originY - event.y // Invert Y
                     val distance = sqrt(dx * dx + dy * dy)
                     val speed = (distance / maxRadius) * maxSpeedScale
-                    
+
                     val angleRad = atan2(dx.toDouble(), dy.toDouble())
                     var angleDeg = Math.toDegrees(angleRad)
-                    if (angleDeg < 0) angleDeg = 0.0
+                    if (angleDeg < 0.0) angleDeg = 0.0
                     if (angleDeg > 180.0) angleDeg = 180.0
 
                     onPointDragged?.invoke(draggedPointIndex, angleDeg, speed.coerceIn(0.0, maxSpeedScale * 1.2))

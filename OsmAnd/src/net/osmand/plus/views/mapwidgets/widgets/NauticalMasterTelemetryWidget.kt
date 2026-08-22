@@ -52,6 +52,11 @@ class NauticalMasterTelemetryWidget(
         )
     }
 
+    override fun updateWidgetView() {
+        super.updateWidgetView()
+        widgetName?.visibility = View.GONE
+    }
+
     override fun updateSimpleWidgetInfo(drawSettings: OsmandMapLayer.DrawSettings?) {
         // TASK-053: Automatic Preset Switching
         val autoSwitch = mapActivity.app.settings.NAUTICAL_MASTER_TELEMETRY_AUTO_SWITCH.get()
@@ -67,36 +72,44 @@ class NauticalMasterTelemetryWidget(
         val mode = workflowEngine?.currentWorkflow?.value ?: net.osmand.plus.plugins.nautical.engine.SailingWorkflowState.TACTICAL_PASSAGE
         
         val primaryItemId = getPrimaryItemIdForMode(mode)
-        val primaryWidget = WidgetType.getById(primaryItemId)
+        val primaryWidget = WidgetType.getById(primaryItemId) ?: getDefaultPrimaryWidgetForMode(mode)
 
-        if (primaryWidget != null) {
-            val (main, sub) = NauticalWidgetHelper.formatTelemetry(mapActivity, mapActivity.app.settings, primaryWidget, state)
-            setText(main, sub)
-        } else {
-            val modeName = when (mode) {
-                net.osmand.plus.plugins.nautical.engine.SailingWorkflowState.TACTICAL_PASSAGE -> mapActivity.getString(R.string.nautical_workflow_tactical)
-                net.osmand.plus.plugins.nautical.engine.SailingWorkflowState.CLOSE_QUARTERS -> mapActivity.getString(R.string.nautical_workflow_close_quarters)
-                net.osmand.plus.plugins.nautical.engine.SailingWorkflowState.STATIONARY_ANCHORED -> mapActivity.getString(R.string.nautical_workflow_anchored)
-            }
-            setText(modeName, "")
-        }
         updateIcon()
+
+        if (state == null || state.connectionStatus == net.osmand.plus.plugins.nautical.engine.ConnectionStatus.DISCONNECTED) {
+            val unit = NauticalWidgetHelper.getDefaultUnit(mapActivity, mapActivity.app.settings, primaryWidget)
+            setText("--", unit)
+            contentView?.alpha = 0.5f
+            return
+        }
+
+        val (main, sub) = NauticalWidgetHelper.formatTelemetry(mapActivity, mapActivity.app.settings, primaryWidget, state)
+        setText(main, sub)
+        contentView?.alpha = if (state.connectionStatus == net.osmand.plus.plugins.nautical.engine.ConnectionStatus.STALE) 0.5f else 1.0f
     }
 
     override fun updateIcon() {
         val workflowEngine = NauticalPlugin.getInstance()?.workflowEngine
         val mode = workflowEngine?.currentWorkflow?.value ?: net.osmand.plus.plugins.nautical.engine.SailingWorkflowState.TACTICAL_PASSAGE
         val primaryItemId = getPrimaryItemIdForMode(mode)
-        val primaryWidget = WidgetType.getById(primaryItemId)
+        val primaryWidget = WidgetType.getById(primaryItemId) ?: getDefaultPrimaryWidgetForMode(mode)
 
-        val iconId = primaryWidget?.getIconId(nightMode) ?: R.drawable.ic_dashboard
+        val iconId = primaryWidget.getIconId(nightMode)
         val iconColor = mapActivity.app.settings.APPLICATION_MODE.get().getProfileColor(nightMode)
-        setImageDrawable(iconsCache.getPaintedIcon(iconId, iconColor))
+        setImageDrawable(iconsCache.getPaintedIcon(if (iconId != 0) iconId else R.drawable.ic_action_nautical_perf, iconColor))
     }
 
     override fun updateColors(textState: net.osmand.plus.views.layers.MapInfoLayer.TextState) {
         super.updateColors(textState)
         updateIcon()
+    }
+
+    private fun getDefaultPrimaryWidgetForMode(mode: net.osmand.plus.plugins.nautical.engine.SailingWorkflowState): WidgetType {
+        return when (mode) {
+            net.osmand.plus.plugins.nautical.engine.SailingWorkflowState.TACTICAL_PASSAGE -> WidgetType.NAUTICAL_SOG
+            net.osmand.plus.plugins.nautical.engine.SailingWorkflowState.CLOSE_QUARTERS -> WidgetType.NAUTICAL_DEPTH
+            net.osmand.plus.plugins.nautical.engine.SailingWorkflowState.STATIONARY_ANCHORED -> WidgetType.NAUTICAL_DEPTH
+        }
     }
 
     private fun getPrimaryItemIdForMode(mode: net.osmand.plus.plugins.nautical.engine.SailingWorkflowState): String {

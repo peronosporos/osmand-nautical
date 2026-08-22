@@ -1,71 +1,112 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:padding="16dp"
-    android:background="?attr/bg_color">
+    android:padding="12dp"
+    android:background="?attr/list_background_color">
 
-    <TextView
-        android:id="@+id/polar_editor_title"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:textSize="18sp"
-        android:textStyle="bold"
-        android:gravity="center"
-        android:paddingBottom="12dp" />
-
+    <!-- Top Action Bar -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:layout_marginBottom="12dp">
-        <Button
-            android:id="@+id/btn_switch_polar"
-            style="@style/Widget.Material3.Button.TonalButton"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="8dp">
+
+        <TextView
+            android:id="@+id/polar_editor_title"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
+            android:textAppearance="@style/TextAppearance.AppCompat.Medium"
+            android:textColor="?android:attr/textColorPrimary"
+            android:textStyle="bold"
+            android:background="?attr/selectableItemBackground"
+            android:padding="4dp"
+            tools:text="Polar Editor: TWS 12.0 kn ▾" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_switch_polar"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
             android:text="Library"
             app:icon="@drawable/ic_action_folder"
-            android:layout_marginEnd="4dp" />
-        <Button
+            app:iconTint="?attr/active_color_primary"
+            android:textColor="?android:attr/textColorPrimary"
+            app:backgroundTint="?attr/card_and_list_background_basic"
+            app:strokeWidth="1dp"
+            app:strokeColor="?attr/divider_color"
+            app:cornerRadius="8dp"
+            android:layout_marginEnd="6dp" />
+
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_import_polar"
-            style="@style/Widget.Material3.Button.TonalButton"
-            android:layout_width="0dp"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
             android:text="Import"
             app:icon="@drawable/ic_action_import"
-            android:layout_marginStart="4dp" />
+            app:iconTint="?attr/active_color_primary"
+            android:textColor="?android:attr/textColorPrimary"
+            app:backgroundTint="?attr/card_and_list_background_basic"
+            app:strokeWidth="1dp"
+            app:strokeColor="?attr/divider_color"
+            app:cornerRadius="8dp" />
     </LinearLayout>
 
-    <net.osmand.plus.plugins.nautical.ui.editor.PolarCurveCanvasView
-        android:id="@+id/polar_canvas_view"
+    <!-- Canvas Card -->
+    <com.google.android.material.card.MaterialCardView
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="1" />
+        android:layout_weight="1"
+        app:cardCornerRadius="12dp"
+        app:cardElevation="0dp"
+        app:strokeWidth="1dp"
+        app:strokeColor="?attr/divider_color"
+        app:cardBackgroundColor="?attr/card_and_list_background_basic">
 
-    <TextView
+        <net.osmand.plus.plugins.nautical.ui.editor.PolarCurveCanvasView
+            android:id="@+id/polar_canvas_view"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+    </com.google.android.material.card.MaterialCardView>
+
+    <!-- Controls -->
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="@string/editor_smooth_slider"
-        android:paddingTop="12dp"
-        android:paddingBottom="4dp" />
+        android:orientation="vertical"
+        android:layout_marginTop="8dp">
 
-    <SeekBar
-        android:id="@+id/polar_smooth_seekbar"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:max="100"
-        android:progress="50"
-        android:paddingBottom="16dp" />
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/editor_smooth_slider"
+            android:textAppearance="@style/TextAppearance.AppCompat.Caption"
+            android:textColor="?android:attr/textColorSecondary"
+            android:textStyle="bold"
+            android:paddingTop="4dp"
+            android:paddingBottom="2dp" />
 
-    <Button
-        android:id="@+id/polar_save_button"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="@string/editor_save_server" />
+        <SeekBar
+            android:id="@+id/polar_smooth_seekbar"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:max="100"
+            android:progress="50"
+            android:paddingTop="4dp"
+            android:paddingBottom="8dp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/polar_save_button"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/editor_save_server"
+            android:textColor="#FFFFFF"
+            app:backgroundTint="?attr/active_color_primary"
+            app:cornerRadius="8dp" />
+    </LinearLayout>
 
 </LinearLayout>

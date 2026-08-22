@@ -11,15 +11,15 @@
 	<View
 		android:id="@+id/hud_rudder_indicator"
 		android:layout_width="match_parent"
-		android:layout_height="4dp"
+		android:layout_height="2dp"
 		android:layout_gravity="top"
 		android:background="?android:attr/textColorSecondary"
 		android:alpha="0.3" />
 
 	<View
 		android:id="@+id/hud_rudder_marker"
-		android:layout_width="6dp"
-		android:layout_height="6dp"
+		android:layout_width="4dp"
+		android:layout_height="4dp"
 		android:layout_gravity="top|center_horizontal"
 		android:background="?attr/active_color_primary" />
 
@@ -31,7 +31,7 @@
 
 		<LinearLayout
 			android:id="@+id/widget_bottom_layout"
-			android:layout_width="match_parent"
+			android:layout_width="wrap_content"
 			android:layout_height="wrap_content"
 			android:minHeight="@dimen/map_widget_height"
 			android:orientation="horizontal">
@@ -44,7 +44,7 @@
 				android:layout_marginStart="@dimen/map_widget_icon_margin"
 				android:layout_marginEnd="@dimen/map_widget_icon_margin"
 				android:gravity="center"
-				app:srcCompat="@drawable/ic_plugin_nautical_map" />
+				app:srcCompat="@drawable/ic_action_power_standby" />
 
 			<FrameLayout
 				android:layout_width="wrap_content"
@@ -66,7 +66,7 @@
 						android:maxLines="1"
 						android:minWidth="10dp"
 						android:textSize="@dimen/map_widget_text_size"
-						tools:text="AUTO" />
+						tools:text="185°" />
 
 					<FrameLayout
 						android:layout_width="wrap_content"
@@ -82,7 +82,7 @@
 							android:maxLines="1"
 							android:textColor="@color/card_and_list_background_light"
 							android:textSize="@dimen/map_widget_text_size_small"
-							tools:text="AP" />
+							tools:text="AUTO" />
 
 						<net.osmand.plus.views.mapwidgets.OutlinedTextContainer
 							android:id="@+id/widget_text_small"
@@ -90,18 +90,12 @@
 							android:layout_height="wrap_content"
 							android:maxLines="1"
 							android:textSize="@dimen/map_widget_text_size_small"
-							tools:text="AP" />
+							tools:text="AUTO" />
 
 						<net.osmand.plus.views.mapwidgets.OutlinedTextContainer
 							android:id="@+id/widget_name"
 							android:layout_width="wrap_content"
 							android:layout_height="wrap_content"
-							android:visibility="gone" />
-
-						<View
-							android:id="@+id/empty_banner"
-							android:layout_width="0dp"
-							android:layout_height="0dp"
 							android:visibility="gone" />
 
 					</FrameLayout>
@@ -116,6 +110,12 @@
 			android:visibility="gone" />
 	</LinearLayout>
 
+	<View
+		android:id="@+id/empty_banner"
+		android:layout_width="@dimen/map_minwidth_widget"
+		android:layout_height="@dimen/map_widget_height"
+		android:visibility="gone" />
+
 	<ProgressBar
 		android:id="@+id/pilot_progress_bar"
 		style="@style/Widget.AppCompat.ProgressBar.Horizontal"
@@ -129,8 +129,8 @@
 
 	<androidx.appcompat.widget.AppCompatImageView
 		android:id="@+id/pilot_status_icon"
-		android:layout_width="14dp"
-		android:layout_height="14dp"
+		android:layout_width="12dp"
+		android:layout_height="12dp"
 		android:layout_gravity="top|end"
 		android:layout_marginTop="2dp"
 		android:layout_marginEnd="2dp"

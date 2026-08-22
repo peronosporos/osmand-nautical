@@ -1,44 +1,74 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="horizontal"
-    android:paddingVertical="4dp">
+    android:gravity="center_vertical"
+    android:paddingStart="8dp"
+    android:paddingEnd="8dp"
+    android:paddingTop="8dp"
+    android:paddingBottom="8dp"
+    android:background="?attr/selectableItemBackground">
 
     <TextView
         android:id="@+id/leg_number"
-        android:layout_width="30dp"
-        android:layout_height="wrap_content" />
+        android:layout_width="28dp"
+        android:layout_height="wrap_content"
+        android:textAppearance="@style/TextAppearance.AppCompat.Body2"
+        android:textColor="?android:attr/textColorSecondary"
+        android:textStyle="bold"
+        tools:text="1" />
 
     <TextView
         android:id="@+id/distance"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_weight="1" />
+        android:layout_weight="1"
+        android:textAppearance="@style/TextAppearance.AppCompat.Body2"
+        android:textColor="?android:attr/textColorPrimary"
+        android:fontFeatureSettings="tnum"
+        tools:text="2.4" />
 
     <TextView
         android:id="@+id/cts"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_weight="1" />
+        android:layout_weight="1"
+        android:textAppearance="@style/TextAppearance.AppCompat.Body2"
+        android:textColor="?android:attr/textColorPrimary"
+        android:fontFeatureSettings="tnum"
+        tools:text="045°" />
 
     <TextView
         android:id="@+id/sog"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_weight="1" />
+        android:layout_weight="1"
+        android:textAppearance="@style/TextAppearance.AppCompat.Body2"
+        android:textColor="?android:attr/textColorPrimary"
+        android:fontFeatureSettings="tnum"
+        tools:text="6.8" />
 
     <TextView
         android:id="@+id/ete"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_weight="1" />
+        android:layout_weight="1"
+        android:textAppearance="@style/TextAppearance.AppCompat.Body2"
+        android:textColor="?android:attr/textColorPrimary"
+        android:fontFeatureSettings="tnum"
+        tools:text="0.4" />
 
     <TextView
         android:id="@+id/wind"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_weight="1"
-        android:textColor="@color/nautical_status_blue" />
+        android:layout_weight="1.1"
+        android:textAppearance="@style/TextAppearance.AppCompat.Body2"
+        android:textColor="@color/nautical_status_blue"
+        android:fontFeatureSettings="tnum"
+        android:textStyle="bold"
+        tools:text="W:14" />
 
 </LinearLayout>
