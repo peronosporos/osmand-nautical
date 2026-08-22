@@ -51,6 +51,7 @@ class NauticalMasterTelemetryWidget(
                 }
             },
         )
+        view.setOnClickListener(getOnClickListener())
     }
 
     override fun updateWidgetView() {
@@ -105,20 +106,7 @@ class NauticalMasterTelemetryWidget(
                         }
                         vmg to subText
                     }
-                    state.trueWindAngle != null && state.windSpeedTrue != null -> {
-                        val (ws, wu) = SignalKUnitConverter.formatValue(mapActivity, mapActivity.app.settings, state.windSpeedTrue, "speed")
-                        val twaDeg = Math.toDegrees(state.trueWindAngle)
-                        String.format(Locale.US, "%.0f°", twaDeg) to "$ws $wu"
-                    }
-                    state.speedOverGround != null && state.courseOverGroundTrue != null -> {
-                        val (sog, _) = SignalKUnitConverter.formatValue(mapActivity, mapActivity.app.settings, state.speedOverGround, "speed")
-                        val cogDeg = Math.toDegrees(state.courseOverGroundTrue)
-                        sog to String.format(Locale.US, "%.0f°", cogDeg)
-                    }
-                    state.speedOverGround != null -> {
-                        NauticalWidgetHelper.formatTelemetry(mapActivity, mapActivity.app.settings, WidgetType.NAUTICAL_SOG, state)
-                    }
-                    else -> "--" to "%"
+                    else -> "--" to ""
                 }
             }
             else -> {

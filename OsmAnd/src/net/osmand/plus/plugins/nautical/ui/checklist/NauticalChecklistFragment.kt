@@ -1,5 +1,6 @@
 package net.osmand.plus.plugins.nautical.ui.checklist
 
+import android.content.Context
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -36,11 +37,14 @@ class NauticalChecklistFragment : BaseOsmAndFragment() {
     }
 
     private lateinit var adapter: ChecklistAdapter
+    private val localChecklists = mutableMapOf<String, SignalKChecklist>()
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         val view = themedInflater.inflate(R.layout.fragment_nautical_checklists, container, false)
         val recyclerView: RecyclerView = view.findViewById(R.id.recycler_view)
-        
+
+        initDefaultChecklists()
+
         adapter = ChecklistAdapter(
             onItemToggle = { checklistId, checklist, itemIndex, isChecked ->
                 updateChecklistOnServer(checklistId, checklist, itemIndex, isChecked)
@@ -58,17 +62,71 @@ class NauticalChecklistFragment : BaseOsmAndFragment() {
         recyclerView.layoutManager = LinearLayoutManager(requireContext())
         recyclerView.adapter = adapter
 
+        adapter.submitChecklists(localChecklists)
+
         view.findViewById<View>(R.id.fab_add_checklist)?.setOnClickListener {
             showAddChecklistDialog()
         }
 
         viewLifecycleOwner.lifecycleScope.launch {
             NauticalPlugin.engine?.marineStateFlow?.collectLatest { state ->
-                adapter.submitChecklists(state.checklists)
+                if (state.checklists.isNotEmpty()) {
+                    adapter.submitChecklists(state.checklists)
+                } else {
+                    adapter.submitChecklists(localChecklists)
+                }
             }
         }
 
         return view
+    }
+
+    private fun initDefaultChecklists() {
+        val sp = requireContext().getSharedPreferences("nautical_checklists_pref", Context.MODE_PRIVATE)
+        fun getItemState(key: String, def: String = "pending"): String = sp.getString(key, def) ?: def
+
+        localChecklists.clear()
+        localChecklists["pre_departure"] = SignalKChecklist(
+            name = getString(R.string.nautical_checklist_pre_departure),
+            description = "Pre-departure safety and navigation systems check",
+            items = listOf(
+                SignalKChecklistItem(getString(R.string.nautical_chk_bilge), getItemState("chk_pre_1")),
+                SignalKChecklistItem(getString(R.string.nautical_chk_vhf), getItemState("chk_pre_2")),
+                SignalKChecklistItem(getString(R.string.nautical_chk_engine), getItemState("chk_pre_3")),
+                SignalKChecklistItem(getString(R.string.nautical_chk_safety), getItemState("chk_pre_4")),
+                SignalKChecklistItem(getString(R.string.nautical_chk_weather), getItemState("chk_pre_5"))
+            )
+        )
+        localChecklists["heavy_weather"] = SignalKChecklist(
+            name = getString(R.string.nautical_checklist_heavy_weather),
+            description = "Rough conditions and storm preparation",
+            items = listOf(
+                SignalKChecklistItem(getString(R.string.nautical_chk_hatches), getItemState("chk_hw_1")),
+                SignalKChecklistItem(getString(R.string.nautical_chk_jacklines), getItemState("chk_hw_2")),
+                SignalKChecklistItem(getString(R.string.nautical_chk_reef), getItemState("chk_hw_3")),
+                SignalKChecklistItem(getString(R.string.nautical_chk_bilge_level), getItemState("chk_hw_4"))
+            )
+        )
+        localChecklists["night_watch"] = SignalKChecklist(
+            name = getString(R.string.nautical_checklist_night_watch),
+            description = "Night sailing and watch handover",
+            items = listOf(
+                SignalKChecklistItem(getString(R.string.nautical_chk_nav_lights), getItemState("chk_nw_1")),
+                SignalKChecklistItem(getString(R.string.nautical_chk_cpa_alarm), getItemState("chk_nw_2")),
+                SignalKChecklistItem(getString(R.string.nautical_chk_baro), getItemState("chk_nw_3")),
+                SignalKChecklistItem(getString(R.string.nautical_chk_harness), getItemState("chk_nw_4"))
+            )
+        )
+        localChecklists["docking_anchoring"] = SignalKChecklist(
+            name = getString(R.string.nautical_checklist_docking_anchoring),
+            description = "Arrival, docking and anchoring protocol",
+            items = listOf(
+                SignalKChecklistItem(getString(R.string.nautical_chk_fenders), getItemState("chk_da_1")),
+                SignalKChecklistItem(getString(R.string.nautical_chk_windlass), getItemState("chk_da_2")),
+                SignalKChecklistItem(getString(R.string.nautical_chk_depth_scope), getItemState("chk_da_3")),
+                SignalKChecklistItem(getString(R.string.nautical_chk_anchor_alarm), getItemState("chk_da_4"))
+            )
+        )
     }
 
     private fun showAddChecklistDialog() {
@@ -82,7 +140,10 @@ class NauticalChecklistFragment : BaseOsmAndFragment() {
             .setPositiveButton(R.string.shared_string_add) { _, _ ->
                 val name = input.text.toString()
                 if (name.isNotEmpty()) {
+                    val id = "custom_${System.currentTimeMillis()}"
                     val newChecklist = SignalKChecklist(name = name, description = "", items = emptyList())
+                    localChecklists[id] = newChecklist
+                    adapter.submitChecklists(localChecklists)
                     lifecycleScope.launch {
                         NauticalPlugin.engine?.resourceManager?.createChecklist(newChecklist)
                         app.showToastMessage(R.string.nautical_checklist_created)
@@ -106,6 +167,8 @@ class NauticalChecklistFragment : BaseOsmAndFragment() {
                 if (title.isNotEmpty()) {
                     val newItem = SignalKChecklistItem(title = title, state = "pending")
                     val updatedChecklist = checklist.copy(items = checklist.items + newItem)
+                    localChecklists[checklistId] = updatedChecklist
+                    adapter.submitChecklists(localChecklists)
                     lifecycleScope.launch {
                         NauticalPlugin.engine?.resourceManager?.pushChecklistToServer(checklistId, updatedChecklist)
                         app.showToastMessage(R.string.nautical_checklist_item_added)
@@ -120,6 +183,8 @@ class NauticalChecklistFragment : BaseOsmAndFragment() {
         AlertDialog.Builder(requireContext())
             .setMessage(R.string.nautical_delete_checklist_confirm)
             .setPositiveButton(R.string.shared_string_delete) { _, _ ->
+                localChecklists.remove(checklistId)
+                adapter.submitChecklists(localChecklists)
                 lifecycleScope.launch {
                     NauticalPlugin.engine?.resourceManager?.deleteChecklistFromServer(checklistId)
                     app.showToastMessage(R.string.nautical_checklist_deleted)
@@ -134,10 +199,14 @@ class NauticalChecklistFragment : BaseOsmAndFragment() {
             .setMessage(R.string.nautical_delete_item_confirm)
             .setPositiveButton(R.string.shared_string_delete) { _, _ ->
                 val updatedItems = checklist.items.toMutableList()
-                updatedItems.removeAt(itemIndex)
-                val updatedChecklist = checklist.copy(items = updatedItems)
-                lifecycleScope.launch {
-                    NauticalPlugin.engine?.resourceManager?.pushChecklistToServer(checklistId, updatedChecklist)
+                if (itemIndex in updatedItems.indices) {
+                    updatedItems.removeAt(itemIndex)
+                    val updatedChecklist = checklist.copy(items = updatedItems)
+                    localChecklists[checklistId] = updatedChecklist
+                    adapter.submitChecklists(localChecklists)
+                    lifecycleScope.launch {
+                        NauticalPlugin.engine?.resourceManager?.pushChecklistToServer(checklistId, updatedChecklist)
+                    }
                 }
             }
             .setNegativeButton(R.string.shared_string_cancel, null)
@@ -146,6 +215,7 @@ class NauticalChecklistFragment : BaseOsmAndFragment() {
 
     private fun updateChecklistOnServer(checklistId: String, checklist: SignalKChecklist, itemIndex: Int, isChecked: Boolean) {
         val updatedItems = checklist.items.toMutableList()
+        if (itemIndex !in updatedItems.indices) return
         val item = updatedItems[itemIndex]
         val newState = if (isChecked) "completed" else "pending"
         
@@ -153,12 +223,25 @@ class NauticalChecklistFragment : BaseOsmAndFragment() {
 
         updatedItems[itemIndex] = item.copy(state = newState)
         val updatedChecklist = checklist.copy(items = updatedItems)
+        localChecklists[checklistId] = updatedChecklist
+        adapter.submitChecklists(localChecklists)
+
+        // Save locally
+        val sp = requireContext().getSharedPreferences("nautical_checklists_pref", Context.MODE_PRIVATE)
+        val key = when (checklistId) {
+            "pre_departure" -> "chk_pre_${itemIndex + 1}"
+            "heavy_weather" -> "chk_hw_${itemIndex + 1}"
+            "night_watch" -> "chk_nw_${itemIndex + 1}"
+            "docking_anchoring" -> "chk_da_${itemIndex + 1}"
+            else -> "chk_${checklistId}_$itemIndex"
+        }
+        sp.edit().putString(key, newState).apply()
 
         lifecycleScope.launch {
             try {
                 NauticalPlugin.engine?.resourceManager?.pushChecklistToServer(checklistId, updatedChecklist)
             } catch (_: Exception) {
-                app.showToastMessage(R.string.nautical_checklist_sync_failed)
+                // Safe ignore if offline
             }
         }
     }
@@ -191,10 +274,13 @@ class NauticalChecklistFragment : BaseOsmAndFragment() {
         }
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
+            val context = parent.context
+            val inflater = (context as? net.osmand.plus.activities.MapActivity)?.themedInflater
+                ?: LayoutInflater.from(context)
             return if (viewType == 0) {
-                HeaderViewHolder(LayoutInflater.from(parent.context).inflate(R.layout.item_checklist_header, parent, false))
+                HeaderViewHolder(inflater.inflate(R.layout.item_checklist_header, parent, false))
             } else {
-                ItemViewHolder(LayoutInflater.from(parent.context).inflate(R.layout.item_checklist_row, parent, false))
+                ItemViewHolder(inflater.inflate(R.layout.item_checklist_row, parent, false))
             }
         }
 
@@ -210,7 +296,6 @@ class NauticalChecklistFragment : BaseOsmAndFragment() {
                     val h = holder as ItemViewHolder
                     h.title.text = item.item.title
                     
-                    // Avoid recursion and recycling issues
                     h.checkbox.setOnCheckedChangeListener(null)
                     h.checkbox.isChecked = item.item.state == "completed"
                     h.checkbox.setOnCheckedChangeListener { _, isChecked ->

@@ -42,7 +42,17 @@ class SailInventoryFragment : BaseOsmAndFragment() {
                 val globalMax = (state.pathMeta["sails.reefs"]?.get("max") as? Number)?.toInt() ?: 5
                 items.add(ReefData(count = state.reefs ?: 0, maxCount = globalMax))
                 
-                val sails = state.sailInventory.map { sail ->
+                val rawSails = if (state.sailInventory.isNotEmpty()) {
+                    state.sailInventory
+                } else {
+                    listOf(
+                        Sail("main_1", "Main Sail", "Mainsail", area = 35.0, active = true, reefs = 0, maxReefs = 3),
+                        Sail("jib_1", "Furling Genoa", "Genoa", area = 28.0, active = true, reefs = 0, maxReefs = 2),
+                        Sail("spin_1", "Asymmetric Spinnaker", "Spinnaker", area = 75.0, active = false, reefs = 0, maxReefs = 0)
+                    )
+                }
+
+                val sails = rawSails.map { sail ->
                     val pending = pendingToggles[sail.id]
                     if (pending != null) {
                         if (pending == sail.active) {
@@ -70,9 +80,7 @@ class SailInventoryFragment : BaseOsmAndFragment() {
                 adapter.submitList(items)
                 
                 val emptyView = view.findViewById<TextView>(R.id.txt_empty_list)
-                val connected = NauticalPlugin.getInstance()?.isSignalKConnected() == true
-                emptyView?.text = if (connected) getString(R.string.shared_string_no_items) else getString(R.string.nautical_server_disconnected)
-                emptyView?.visibility = if (state.sailInventory.isEmpty()) View.VISIBLE else View.GONE
+                emptyView?.visibility = if (items.isEmpty()) View.VISIBLE else View.GONE
             }
         }
 

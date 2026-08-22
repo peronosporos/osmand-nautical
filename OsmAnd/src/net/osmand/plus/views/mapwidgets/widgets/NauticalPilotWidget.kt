@@ -57,9 +57,20 @@ class NauticalPilotWidget(
 
     override fun getWidgetName(): String? = null
 
+    override fun getAdditionalWidgetName(): String? = null
+
+    override fun setContentTitle(messageId: Int) {
+        super.setContentTitle("")
+    }
+
+    override fun setContentTitle(text: String?) {
+        super.setContentTitle("")
+    }
+
     override fun updateWidgetView() {
         super.updateWidgetView()
         widgetName?.visibility = View.GONE
+        widgetName?.text = ""
     }
 
     override fun getIconId(): Int {
@@ -345,7 +356,7 @@ class NauticalPilotWidget(
     override fun updateSimpleWidgetInfo(drawSettings: OsmandMapLayer.DrawSettings?) {
         val state = NauticalPlugin.engine?.getCurrentState()
         if (state == null) {
-            setText(mapActivity.getString(R.string.nautical_mode_engaged_standby), "")
+            setText("STANDBY", "")
             updateIcon()
             setStatusIcon(0)
             contentView?.alpha = 0.5f
@@ -364,7 +375,7 @@ class NauticalPilotWidget(
             setText(String.format(Locale.US, "XTE %.2f", xteNm), "")
             setStatusIcon(if (isStale) R.drawable.ic_action_time else R.drawable.ic_action_play_dark)
         } else if (!isEngaged) {
-            setText(mapActivity.getString(R.string.nautical_mode_engaged_standby), "")
+            setText("STANDBY", "")
             setStatusIcon(0)
         } else {
             when (mode) {

@@ -9,12 +9,10 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import net.osmand.plus.activities.MapActivity
 import net.osmand.plus.plugins.nautical.NauticalPlugin
-import net.osmand.plus.plugins.nautical.engine.MarineState
 import net.osmand.plus.plugins.nautical.ui.widgets.NauticalElectricalDashboardBottomSheet
 import net.osmand.plus.views.layers.base.OsmandMapLayer
 import net.osmand.plus.views.mapwidgets.WidgetType
 import net.osmand.plus.views.mapwidgets.WidgetsPanel
-import java.util.Locale
 
 class NauticalElectricalWidget(
     mapActivity: MapActivity,
@@ -27,7 +25,21 @@ class NauticalElectricalWidget(
         setIcons(widgetType)
     }
 
-    private var dataJob: kotlinx.coroutines.Job? = null
+    private var dataJob: Job? = null
+
+    override fun shouldShowIcon(): Boolean = true
+
+    override fun getWidgetName(): String? = null
+
+    override fun getAdditionalWidgetName(): String? = null
+
+    override fun setContentTitle(messageId: Int) {
+        super.setContentTitle("")
+    }
+
+    override fun setContentTitle(text: String?) {
+        super.setContentTitle("")
+    }
 
     override fun updateIcon() {
         val iconId = iconId
@@ -42,8 +54,25 @@ class NauticalElectricalWidget(
         updateIcon()
     }
 
+    override fun updateWidgetView() {
+        super.updateWidgetView()
+        textView?.visibility = View.GONE
+        smallTextView?.visibility = View.GONE
+        widgetName?.visibility = View.GONE
+    }
+
+    override fun updateVisibility(visible: Boolean): Boolean {
+        val shouldHide = shouldHide()
+        val typeAllowed = widgetType != null && widgetType.isAllowed
+        return super.updateVisibility(typeAllowed && !shouldHide)
+    }
+
     override fun setupView(view: View) {
         super.setupView(view)
+        textView?.visibility = View.GONE
+        smallTextView?.visibility = View.GONE
+        widgetName?.visibility = View.GONE
+
         view.addOnAttachStateChangeListener(
             object : View.OnAttachStateChangeListener {
                 override fun onViewAttachedToWindow(v: View) {
@@ -73,39 +102,22 @@ class NauticalElectricalWidget(
             },
         )
         
-        view.setOnClickListener {
-            net.osmand.plus.plugins.nautical.ui.widgets.NauticalElectricalBottomSheet.show(mapActivity.supportFragmentManager)
+        view.setOnClickListener(getOnClickListener())
+    }
+
+    override fun getOnClickListener(): View.OnClickListener {
+        return View.OnClickListener {
+            if (!mapActivity.isFinishing && !mapActivity.isDestroyed) {
+                NauticalElectricalDashboardBottomSheet.show(mapActivity.supportFragmentManager)
+            }
         }
     }
 
     override fun updateSimpleWidgetInfo(drawSettings: OsmandMapLayer.DrawSettings?) {
         updateIcon()
-        val engine = NauticalPlugin.engine
-        if (engine == null) {
-            setText("--", "N/A")
-            return
-        }
-        val state = engine.getCurrentState()
-
-        val battery = state.batteries.values.firstOrNull()
-        if (battery != null) {
-            val primary = if (battery.stateOfCharge != null) {
-                String.format(Locale.US, "%.0f%%", battery.stateOfCharge * 100)
-            } else if (battery.voltage != null) {
-                String.format(Locale.US, "%.1f V", battery.voltage)
-            } else {
-                "--"
-            }
-            val sub = if (battery.stateOfCharge != null && battery.voltage != null) {
-                String.format(Locale.US, "%.1fV %+.1fA", battery.voltage, battery.current ?: 0.0)
-            } else if (battery.current != null) {
-                String.format(Locale.US, "%+.1f A", battery.current)
-            } else {
-                ""
-            }
-            setText(primary, sub)
-        } else {
-            setText("--", "")
-        }
+        setText("\u200B", "")
+        textView?.visibility = View.GONE
+        smallTextView?.visibility = View.GONE
+        widgetName?.visibility = View.GONE
     }
 }

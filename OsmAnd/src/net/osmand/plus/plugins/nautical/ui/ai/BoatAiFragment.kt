@@ -197,7 +197,10 @@ class BoatAiFragment : BaseOsmAndFragment(), RecognitionListener {
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ChatViewHolder {
             val layout = if (viewType == 0) R.layout.nautical_chat_item_bot else R.layout.nautical_chat_item_user
-            val view = LayoutInflater.from(parent.context).inflate(layout, parent, false)
+            val context = parent.context
+            val inflater = (context as? net.osmand.plus.activities.MapActivity)?.themedInflater
+                ?: LayoutInflater.from(context)
+            val view = inflater.inflate(layout, parent, false)
             return ChatViewHolder(view)
         }
 

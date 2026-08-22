@@ -234,25 +234,39 @@ class NauticalContextMenuHelper(private val app: OsmandApplication) {
             }
         )
 
+        val isPortSet = tacticalStartManager?.isPortPinSet() == true
         adapter.addItem(
             ContextMenuItem("nautical_ping_port").apply {
-                setTitleId(R.string.nautical_ping_port_pin, mapActivity)
-                icon = R.drawable.ic_action_flag
+                title = if (isPortSet) mapActivity.getString(R.string.nautical_clear_port_pin) else mapActivity.getString(R.string.nautical_ping_port_pin)
+                icon = if (isPortSet) R.drawable.ic_action_remove else R.drawable.ic_action_flag
                 setListener { _, _, _, _ ->
-                    tacticalStartManager?.setPortPin(lat, lon)
-                    app.showToastMessage(R.string.nautical_port_pin_set)
+                    if (isPortSet) {
+                        tacticalStartManager?.clearPortPin()
+                        app.showToastMessage(R.string.nautical_pin_cleared)
+                    } else {
+                        tacticalStartManager?.setPortPin(lat, lon)
+                        app.showToastMessage(R.string.nautical_pin_marked_start_line)
+                    }
+                    onRequestRefresh()
                     true
                 }
             }
         )
 
+        val isStbdSet = tacticalStartManager?.isStarboardPinSet() == true
         adapter.addItem(
             ContextMenuItem("nautical_ping_stbd").apply {
-                setTitleId(R.string.nautical_ping_stbd_pin, mapActivity)
-                icon = R.drawable.ic_action_flag
+                title = if (isStbdSet) mapActivity.getString(R.string.nautical_clear_stbd_pin) else mapActivity.getString(R.string.nautical_ping_stbd_pin)
+                icon = if (isStbdSet) R.drawable.ic_action_remove else R.drawable.ic_action_flag
                 setListener { _, _, _, _ ->
-                    tacticalStartManager?.setStarboardPin(lat, lon)
-                    app.showToastMessage(R.string.nautical_stbd_pin_set)
+                    if (isStbdSet) {
+                        tacticalStartManager?.clearStarboardPin()
+                        app.showToastMessage(R.string.nautical_pin_cleared)
+                    } else {
+                        tacticalStartManager?.setStarboardPin(lat, lon)
+                        app.showToastMessage(R.string.nautical_pin_marked_start_line)
+                    }
+                    onRequestRefresh()
                     true
                 }
             }
@@ -317,8 +331,11 @@ class NauticalContextMenuHelper(private val app: OsmandApplication) {
                     app.settings.NAUTICAL_TACTICAL_TARGET_LAT.set(lat)
                     app.settings.NAUTICAL_TACTICAL_TARGET_LON.set(lon)
                     app.settings.NAUTICAL_SHOW_LAYLINES.set(true)
-                    app.showToastMessage(R.string.nautical_laylines_set_to_tap)
+                    val plugin = NauticalPlugin.getInstance()
+                    plugin?.laylineViewModel?.updateTargetWaypoint(net.osmand.plus.plugins.nautical.laylines.engine.LatLon(lat, lon))
+                    app.showToastMessage(R.string.nautical_laylines_rendered)
                     onRequestRefresh()
+                    app.osmandMap.refreshMap()
                     true
                 }
             }
@@ -680,24 +697,23 @@ class NauticalContextMenuHelper(private val app: OsmandApplication) {
             polarProfile = polarProfile
         )
 
-        s57SpatialIndex?.let { index ->
-            val sm = safetyManager ?: NauticalSafetyManager.getInstance(app)
-            vm.calculateWeatherRoute(request, gridData, index, sm)
+        val index = s57SpatialIndex ?: S57SpatialIndex(app)
+        val sm = safetyManager ?: NauticalSafetyManager.getInstance(app)
+        vm.calculateWeatherRoute(request, gridData, index, sm)
 
-            vm.routingStatus.onEach { status ->
-                app.runInUIThread {
-                    if (status != "Idle") {
-                        app.showToastMessage(status)
-                    }
+        vm.routingStatus.onEach { status ->
+            app.runInUIThread {
+                if (status != "Idle") {
+                    app.showToastMessage(status)
                 }
-            }.launchIn(pluginScope)
+            }
+        }.launchIn(pluginScope)
 
-            vm.optimalRoute.onEach { result ->
-                app.runInUIThread {
-                    layerController?.setWeatherRoute(result)
-                }
-            }.launchIn(pluginScope)
-        }
+        vm.optimalRoute.onEach { result ->
+            app.runInUIThread {
+                layerController?.setWeatherRoute(result)
+            }
+        }.launchIn(pluginScope)
     }
 
     fun handleGpxSelection(mapActivity: MapActivity, engine: SignalKEngine?) {

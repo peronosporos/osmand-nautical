@@ -23,6 +23,18 @@ class TacticalStartManager(private val app: OsmandApplication) {
         starboardPin = Pair(lat, lon)
     }
 
+    fun clearPortPin() {
+        portPin = null
+    }
+
+    fun clearStarboardPin() {
+        starboardPin = null
+    }
+
+    fun isPortPinSet(): Boolean = portPin != null
+
+    fun isStarboardPinSet(): Boolean = starboardPin != null
+
     fun clear() {
         portPin = null
         starboardPin = null

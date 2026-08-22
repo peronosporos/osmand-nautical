@@ -56,6 +56,7 @@ class NauticalManeuversBottomSheet : BaseNauticalBottomSheet() {
         options.add(ManeuverOption("med_mooring", getString(R.string.nautical_maneuver_med_mooring), R.drawable.ic_action_anchor))
         options.add(ManeuverOption("slip_exit", getString(R.string.nautical_maneuver_slip_exit), R.drawable.ic_action_building))
         options.add(ManeuverOption("heaving_to", getString(R.string.nautical_maneuver_heaving_to), R.drawable.ic_action_sail_boat_dark))
+        options.add(ManeuverOption("holding_pattern", getString(R.string.nautical_holding_pattern), R.drawable.ic_action_sail_boat_dark))
 
         recyclerView.adapter = ManeuverAdapter(options) { item ->
             val instance = NauticalPlugin.getInstance()
