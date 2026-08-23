@@ -97,8 +97,6 @@ class NauticalAisDetailsDialog : BaseBottomSheetDialogFragment() {
         val shipName = ais.shipName?.trim()
         view.findViewById<TextView>(R.id.txt_ship_name).text = if (!shipName.isNullOrEmpty()) shipName else "MMSI: ${ais.mmsi}"
 
-        val isBuddy = aisManager?.isBuddy(ais.mmsi) ?: false
-
         val country = getMidCountry(ais.mmsi)
         val mmsiSb = StringBuilder("MMSI: ${ais.mmsi}")
         if (!ais.callSign.isNullOrEmpty()) {

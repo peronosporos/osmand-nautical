@@ -299,7 +299,7 @@ class NmeaSentenceParser(private val app: OsmandApplication) {
             }
             return values
         } else {
-            val depthMeters = if (parts.size >= 4) parts[3].toDoubleOrNull() else parts[1].toDoubleOrNull() ?: return emptyList()
+            val depthMeters = (if (parts.size >= 4) parts[3].toDoubleOrNull() else parts[1].toDoubleOrNull()) ?: return emptyList()
             if (!MarineStateConstants.isValidDepth(depthMeters)) return emptyList()
             val path = if (type == "DBS") SignalKPaths.ENV_DEPTH_SURFACE_TO_TRANSDUCER else LivePerformanceData.PATH_DEPTH
             return listOf(Value(path, depthMeters))

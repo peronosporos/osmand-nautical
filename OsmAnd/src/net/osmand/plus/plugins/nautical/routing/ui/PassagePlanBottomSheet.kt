@@ -114,16 +114,16 @@ class PassagePlanBottomSheet : BaseNauticalBottomSheet() {
 
         btnExportGpx.setOnClickListener {
             if (currentLegs.isNotEmpty()) {
-                val gpx = net.osmand.shared.gpx.GpxFile()
-                val track = net.osmand.shared.gpx.Track()
-                val segment = net.osmand.shared.gpx.TrkSegment()
+                val gpx = net.osmand.shared.gpx.GpxFile("OsmAnd Nautical")
+                val track = net.osmand.shared.gpx.primitives.Track()
+                val segment = net.osmand.shared.gpx.primitives.TrkSegment()
                 currentLegs.forEach { leg ->
-                    val pt = net.osmand.shared.gpx.WptPt()
+                    val pt = net.osmand.shared.gpx.primitives.WptPt()
                     pt.lat = leg.from.latitude
                     pt.lon = leg.from.longitude
                     segment.points.add(pt)
                 }
-                val lastPt = net.osmand.shared.gpx.WptPt()
+                val lastPt = net.osmand.shared.gpx.primitives.WptPt()
                 lastPt.lat = currentLegs.last().to.latitude
                 lastPt.lon = currentLegs.last().to.longitude
                 segment.points.add(lastPt)
