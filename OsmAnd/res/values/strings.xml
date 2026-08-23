@@ -1261,7 +1261,6 @@
 	<string name="nautical_warn_unsafe_maneuver">WARNING: Vessel heading or wind angle may be unsafe for this maneuver. Proceed with caution?</string>
 	<string name="nautical_confirm_mode_change">Engage autopilot in %1$s mode?</string>
 	<string name="nautical_autopilot">Autopilot</string>
-	<string name="nautical_waypoint_reached">Waypoint reached</string>
 	<string name="nautical_autopilot_data_lost">Warning: Autopilot data connection lost</string>
 	<string name="nautical_new_course">New course: %1$d°</string>
 	<string name="nautical_laylines_tack_angle">Laylines tack angle</string>
