@@ -6,6 +6,15 @@ import net.osmand.plus.plugins.nautical.utils.TemporalUtils
 import net.osmand.shared.util.KMapUtils
 import java.util.concurrent.ConcurrentLinkedQueue
 
+sealed class WaypointAdvanceEvent {
+    data class WaypointReached(
+        val reachedPoint: Pair<Double, Double>,
+        val nextPoint: Pair<Double, Double>?,
+        val remainingCount: Int
+    ) : WaypointAdvanceEvent()
+    object RouteCompleted : WaypointAdvanceEvent()
+}
+
 class SignalKRouteTracker {
 
     val routeQueue = ConcurrentLinkedQueue<Pair<Double, Double>>()
@@ -55,7 +64,7 @@ class SignalKRouteTracker {
         currentLat: Double,
         currentLon: Double,
         capabilityManager: CapabilityManager?,
-        onStepReached: () -> Unit
+        onAdvance: (WaypointAdvanceEvent) -> Unit
     ) {
         val caps = capabilityManager?.capabilities?.value ?: CapabilityManager.ServerCapabilityMap()
         if (caps.hasCourseAutoAdvance) return // Offload to server
@@ -68,12 +77,16 @@ class SignalKRouteTracker {
         val distance = KMapUtils.getDistance(currentLat, currentLon, target.first, target.second)
         if (distance < arrivalRadiusMeters) {
             val reached = routeQueue.poll()
-            lastWaypointLat = reached?.first
-            lastWaypointLon = reached?.second
-            onStepReached()
-        }
-        if (routeQueue.isEmpty()) {
-            isFollowingRoute = false
+            if (reached != null) {
+                lastWaypointLat = reached.first
+                lastWaypointLon = reached.second
+                if (routeQueue.isNotEmpty()) {
+                    onAdvance(WaypointAdvanceEvent.WaypointReached(reached, routeQueue.peek(), routeQueue.size))
+                } else {
+                    isFollowingRoute = false
+                    onAdvance(WaypointAdvanceEvent.RouteCompleted)
+                }
+            }
         }
     }
 

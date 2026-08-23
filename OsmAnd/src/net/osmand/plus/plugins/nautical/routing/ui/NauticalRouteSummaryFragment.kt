@@ -38,11 +38,7 @@ class NauticalRouteSummaryFragment : BaseOsmAndFragment() {
         val view = themedInflater.inflate(R.layout.fragment_nautical_route_summary, container, false)
 
         val toolbar = view.findViewById<androidx.appcompat.widget.Toolbar>(R.id.toolbar)
-        toolbar?.title = getString(R.string.nautical_route_summary_title)
-        toolbar?.setNavigationIcon(R.drawable.ic_arrow_back)
-        toolbar?.setNavigationOnClickListener {
-            activity?.onBackPressedDispatcher?.onBackPressed()
-        }
+        toolbar?.title = ""
         view.findViewById<View>(R.id.close_button)?.setOnClickListener {
             activity?.onBackPressedDispatcher?.onBackPressed()
         }
@@ -60,14 +56,45 @@ class NauticalRouteSummaryFragment : BaseOsmAndFragment() {
         val btnCreatePlan = view.findViewById<com.google.android.material.button.MaterialButton>(R.id.btn_create_passage_plan)
 
         btnCreatePlan.setOnClickListener {
-            val fm = activity?.supportFragmentManager ?: parentFragmentManager
-            PassagePlanBottomSheet.show(fm)
-            activity?.onBackPressedDispatcher?.onBackPressed()
+            val currentRoute = viewModel.optimalRoute.value
+            if (currentRoute != null && currentRoute.legs.isNotEmpty()) {
+                val fm = activity?.supportFragmentManager ?: parentFragmentManager
+                PassagePlanBottomSheet.show(fm)
+                activity?.onBackPressedDispatcher?.onBackPressed()
+            } else {
+                val mapActivity = activity as? net.osmand.plus.activities.MapActivity
+                val targetPoints = app.targetPointsHelper
+                val dest = targetPoints.pointToNavigate
+                if (dest != null && mapActivity != null) {
+                    btnCreatePlan.isEnabled = false
+                    btnCreatePlan.text = getString(R.string.nautical_calculating_weather_route)
+                    val routingEngine = net.osmand.plus.plugins.nautical.routing.NauticalWeatherRoutingEngine(app)
+                    val s57 = net.osmand.plus.plugins.nautical.NauticalPlugin.getInstance()?.s57Index
+                    val sm = net.osmand.plus.plugins.nautical.NauticalPlugin.getInstance()?.safetyManager
+                    val layerController = net.osmand.plus.plugins.nautical.NauticalPlugin.getInstance()?.sailingMapLayerController
+                    routingEngine.calculateAndRenderWeatherRoute(
+                        destLat = dest.latitude,
+                        destLon = dest.longitude,
+                        mapActivity = mapActivity,
+                        routingViewModel = viewModel,
+                        safetyManager = sm,
+                        s57SpatialIndex = s57,
+                        layerController = layerController,
+                        scope = viewLifecycleOwner.lifecycleScope
+                    )
+                } else {
+                    val fm = activity?.supportFragmentManager ?: parentFragmentManager
+                    PassagePlanBottomSheet.show(fm)
+                    activity?.onBackPressedDispatcher?.onBackPressed()
+                }
+            }
         }
 
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.optimalRoute.collectLatest { result ->
+                    btnCreatePlan.isEnabled = true
+                    btnCreatePlan.text = "Create Passage Plan / New Marine Route"
                     if (result != null && result.legs.isNotEmpty()) {
                         emptyLayout.visibility = View.GONE
                         recyclerView.visibility = View.VISIBLE

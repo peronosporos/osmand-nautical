@@ -272,17 +272,58 @@ class PolarDiagram {
     }
 
     /**
+     * Data class representing optimal target angle and performance metrics.
+     */
+    data class OptimalVmgTarget(
+        val targetTwaDeg: Double,
+        val targetSpeedMs: Double,
+        val vmgMs: Double
+    )
+
+    /**
+     * Resolves the optimum Upwind Target (TWA in [30°, 65°] maximizing STW * cos(TWA)).
+     */
+    fun getOptimalUpwindTarget(twsMs: Double, polarId: String = activePolarId): OptimalVmgTarget {
+        val twaDeg = findOptimalTwaDeg(twsMs, 30.0, 65.0)
+        val speedMs = getTargetSpeedDeg(twsMs, twaDeg)
+        val vmgMs = speedMs * cos(Math.toRadians(twaDeg))
+        return OptimalVmgTarget(targetTwaDeg = twaDeg, targetSpeedMs = speedMs, vmgMs = vmgMs)
+    }
+
+    /**
+     * Resolves the optimum Downwind Gybe Target (TWA in [120°, 175°] maximizing STW * cos(180° - TWA)).
+     */
+    fun getOptimalDownwindTarget(twsMs: Double, polarId: String = activePolarId): OptimalVmgTarget {
+        val twaDeg = findOptimalTwaDeg(twsMs, 120.0, 175.0)
+        val speedMs = getTargetSpeedDeg(twsMs, twaDeg)
+        val vmgMs = speedMs * cos(Math.toRadians(180.0 - twaDeg))
+        return OptimalVmgTarget(targetTwaDeg = twaDeg, targetSpeedMs = speedMs, vmgMs = vmgMs)
+    }
+
+    /**
+     * Calculates polar efficiency comparing live Speed Through Water against theoretical polar target speed.
+     * @return Efficiency percentage (0.0 to 200.0%).
+     */
+    fun calculatePolarEfficiency(stwMs: Double, twsMs: Double, twaRad: Double, polarId: String = activePolarId): Double {
+        if (stwMs <= 0.0 || twsMs <= 0.0) return 0.0
+        val targetSpeed = getTargetSpeedRad(twsMs, twaRad)
+        if (targetSpeed <= 0.001) return 0.0
+        val efficiency = (stwMs / targetSpeed) * 100.0
+        return efficiency.coerceIn(0.0, 200.0)
+    }
+
+    /**
      * Finds optimal upwind True Wind Angle (Radians) that maximizes VMG.
      */
     fun getOptimalUpwindTwaRad(twsMs: Double, sailEfficiency: Double? = null): Double {
-        return Math.toRadians(findOptimalTwaDeg(twsMs, 20.0, 85.0, sailEfficiency))
+        return Math.toRadians(findOptimalTwaDeg(twsMs, 30.0, 65.0, sailEfficiency))
     }
 
     /**
      * Finds optimal downwind True Wind Angle (Radians) that maximizes VMG.
      */
     fun getOptimalDownwindTwaRad(twsMs: Double, sailEfficiency: Double? = null): Double {
-        return Math.toRadians(findOptimalTwaDeg(twsMs, 100.0, 175.0, sailEfficiency))
+        return Math.toRadians(findOptimalTwaDeg(twsMs, 120.0, 175.0, sailEfficiency))
     }
 
     private fun findOptimalTwaDeg(twsMs: Double, minTwa: Double, maxTwa: Double, sailEfficiency: Double? = null): Double {

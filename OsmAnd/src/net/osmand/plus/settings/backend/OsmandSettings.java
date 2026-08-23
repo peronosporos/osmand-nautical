@@ -3611,6 +3611,7 @@ public class OsmandSettings {
 	public final CommonPreference<Float> NAUTICAL_PYPILOT_PR = registerFloatPreference("nautical_pypilot_pr", 1.0f).makeProfile();
 	public final CommonPreference<Float> NAUTICAL_PYPILOT_FF = registerFloatPreference("nautical_pypilot_ff", 0.0f).makeProfile();
 	public final CommonPreference<Float> NAUTICAL_OFF_COURSE_ALARM = registerFloatPreference("nautical_off_course_alarm", 15.0f).makeProfile();
+	public final CommonPreference<Boolean> NAUTICAL_AUTOPILOT_AUTO_RECONNECT = registerBooleanPreference("nautical_autopilot_auto_reconnect", true).makeProfile();
 	public final CommonPreference<Float> NAUTICAL_VESSEL_DRAFT = registerFloatPreference("nautical_vessel_draft", 2.0f).makeProfile();
 	public final CommonPreference<Float> NAUTICAL_AIR_DRAFT = registerFloatPreference("nautical_air_draft", 15.0f).makeProfile();
 	public final CommonPreference<Boolean> NAUTICAL_MULTIHULL_SHUNTING = registerBooleanPreference("nautical_multihull_shunting", false).makeProfile();
@@ -3647,8 +3648,10 @@ public class OsmandSettings {
 	public final CommonPreference<Boolean> NAUTICAL_ANCHOR_LOCKED_LOCALLY = registerBooleanPreference("nautical_anchor_locked_locally", false);
 	public final CommonPreference<Boolean> NAUTICAL_SETUP_WIZARD_COMPLETED = registerBooleanPreference("nautical_setup_wizard_completed", false);
 	public final CommonPreference<Boolean> NAUTICAL_SHOW_CMG_LINE = registerBooleanPreference("nautical_show_cmg_line", true).makeProfile();
+	public final CommonPreference<Boolean> NAUTICAL_SHOW_GRIB_OVERLAY = registerBooleanPreference("nautical_show_grib_overlay", true).makeProfile();
 	public final CommonPreference<Boolean> NAUTICAL_SHOW_GRIB_WAVES = registerBooleanPreference("nautical_show_grib_waves", true).makeProfile();
 	public final CommonPreference<Boolean> NAUTICAL_SHOW_GRIB_PRESSURE = registerBooleanPreference("nautical_show_grib_pressure", true).makeProfile();
+	public final CommonPreference<Boolean> NAUTICAL_SHOW_GRIB_CURRENTS = registerBooleanPreference("nautical_show_grib_currents", true).makeProfile();
 	public final CommonPreference<Integer> NAUTICAL_GRIB_ISOBAR_STEP = registerIntPreference("nautical_grib_isobar_step", 4).makeProfile();
 	public final CommonPreference<Boolean> NAUTICAL_GRIB_WAVE_DIRECTION_TO = registerBooleanPreference("nautical_grib_wave_direction_to", true).makeProfile();
 	public final CommonPreference<Boolean> NAUTICAL_GRIB_SOURCE_SIGNALK = registerBooleanPreference("nautical_grib_source_signalk", false).makeProfile();

@@ -44,8 +44,20 @@ class NavtexMapLayer(private val activity: MapActivity) : OsmandMapLayer(activit
         typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
     }
 
+    private val polygonFillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = 0x30FF5252.toInt() // #30FF5252
+        style = Paint.Style.FILL
+    }
+
+    private val polygonStrokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = 0xFFFF5252.toInt() // #FFFF5252
+        style = Paint.Style.STROKE
+        strokeWidth = 3f
+    }
+
     private val markerPath = Path()
     private val polygonPath = Path()
+    private val hatchingBounds = RectF()
     private var cachedScaleFactor = 1.0f
     private var lastZoom = -1
     private var lastDensity = -1f
@@ -130,6 +142,7 @@ class NavtexMapLayer(private val activity: MapActivity) : OsmandMapLayer(activit
     }
 
     private fun drawPolygon(canvas: Canvas, tileBox: RotatedTileBox, msg: NavtexMessage, isNight: Boolean, scale: Float) {
+        if (msg.points.size < 3) return
         polygonPath.reset()
         msg.points.forEachIndexed { index, latLon ->
             val x = tileBox.getPixXFromLatLon(latLon.latitude, latLon.longitude)
@@ -137,37 +150,22 @@ class NavtexMapLayer(private val activity: MapActivity) : OsmandMapLayer(activit
             if (index == 0) polygonPath.moveTo(x, y) else polygonPath.lineTo(x, y)
         }
         polygonPath.close()
-        
-        val baseColor = if (msg.isUrgent) {
-            if (isNight) 0xFFB71C1C.toInt() else Color.RED
-        } else {
-            if (isNight) 0xFFE65100.toInt() else 0xFFFF8F00.toInt()
-        }
 
-        markerPaint.style = Paint.Style.FILL
-        markerPaint.color = baseColor
-        markerPaint.alpha = 40
-        canvas.drawPath(polygonPath, markerPaint)
+        canvas.drawPath(polygonPath, polygonFillPaint)
 
         // Colorblind Accessibility: Hatching for urgent areas
         if (msg.isUrgent) {
+            val baseColor = if (isNight) 0xFFB71C1C.toInt() else 0xFFFF5252.toInt()
             drawHatching(canvas, polygonPath, baseColor, scale)
         }
-        
-        strokePaint.color = baseColor
-        strokePaint.alpha = 200
-        strokePaint.strokeWidth = 3f * scale
-        canvas.drawPath(polygonPath, strokePaint)
-        
-        markerPaint.alpha = 255
-        strokePaint.alpha = 255
-        strokePaint.strokeWidth = 2f
+
+        polygonStrokePaint.strokeWidth = 3f * scale
+        canvas.drawPath(polygonPath, polygonStrokePaint)
     }
 
     private fun drawHatching(canvas: Canvas, path: Path, color: Int, scale: Float) {
-        val bounds = RectF()
         @Suppress("DEPRECATION")
-        path.computeBounds(bounds, true)
+        path.computeBounds(hatchingBounds, true)
         
         hatchPaint.color = color
         hatchPaint.alpha = 80
@@ -176,12 +174,11 @@ class NavtexMapLayer(private val activity: MapActivity) : OsmandMapLayer(activit
         val step = 15f * scale
         canvas.withClip(path) {
             // Diagonal hatching
-            var i = bounds.left - bounds.height()
-            while (i < bounds.right) {
-                drawLine(i, bounds.top, i + bounds.height(), bounds.bottom, hatchPaint)
+            var i = hatchingBounds.left - hatchingBounds.height()
+            while (i < hatchingBounds.right) {
+                drawLine(i, hatchingBounds.top, i + hatchingBounds.height(), hatchingBounds.bottom, hatchPaint)
                 i += step
             }
-
         }
     }
 

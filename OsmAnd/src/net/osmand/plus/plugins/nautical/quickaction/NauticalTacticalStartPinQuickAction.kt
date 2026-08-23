@@ -2,7 +2,6 @@ package net.osmand.plus.plugins.nautical.quickaction
 
 import android.os.Bundle
 import androidx.annotation.Keep
-import androidx.appcompat.app.AlertDialog
 import net.osmand.plus.R
 import net.osmand.plus.activities.MapActivity
 import net.osmand.plus.plugins.nautical.NauticalPlugin
@@ -73,18 +72,19 @@ class NauticalTacticalStartPinQuickAction : QuickAction {
         if (!isPinSet) {
             if (isPort) {
                 startManager.setPortPin(loc.latitude, loc.longitude)
-                app.showToastMessage(R.string.nautical_port_pin_set)
+                app.showToastMessage(R.string.nautical_port_pin_dropped)
             } else {
                 startManager.setStarboardPin(loc.latitude, loc.longitude)
-                app.showToastMessage(R.string.nautical_stbd_pin_set)
+                app.showToastMessage(R.string.nautical_stbd_pin_dropped)
             }
         } else {
             if (isPort) {
                 startManager.clearPortPin()
+                app.showToastMessage(R.string.nautical_port_pin_cleared)
             } else {
                 startManager.clearStarboardPin()
+                app.showToastMessage(R.string.nautical_stbd_pin_cleared)
             }
-            app.showToastMessage(R.string.nautical_pin_cleared)
         }
         app.osmandMap?.refreshMap()
     }

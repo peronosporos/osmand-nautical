@@ -62,18 +62,43 @@ object LaylineMathEngine {
         val stbdCogHeading = vectorToHeading(stbdCogVector)
         val portCogHeading = vectorToHeading(portCogVector)
 
+        // Wind shift boundary calculations (±10° oscillating headers and lifts)
+        val windShiftRad = Math.toRadians(10.0)
+
+        val twdShift1 = normalizeRadians(twdTrue - windShiftRad)
+        val stbdHeading1 = normalizeRadians(twdShift1 - targetTwa)
+        val portHeading1 = normalizeRadians(twdShift1 + targetTwa)
+        val stbdCtw1 = normalizeRadians(stbdHeading1 - leewayRadians)
+        val portCtw1 = normalizeRadians(portHeading1 + leewayRadians)
+        val stbdCog1 = vectorToHeading(headingToVector(stbdCtw1, boatSpeed) + currentVector)
+        val portCog1 = vectorToHeading(headingToVector(portCtw1, boatSpeed) + currentVector)
+
+        val twdShift2 = normalizeRadians(twdTrue + windShiftRad)
+        val stbdHeading2 = normalizeRadians(twdShift2 - targetTwa)
+        val portHeading2 = normalizeRadians(twdShift2 + targetTwa)
+        val stbdCtw2 = normalizeRadians(stbdHeading2 - leewayRadians)
+        val portCtw2 = normalizeRadians(portHeading2 + leewayRadians)
+        val stbdCog2 = vectorToHeading(headingToVector(stbdCtw2, boatSpeed) + currentVector)
+        val portCog2 = vectorToHeading(headingToVector(portCtw2, boatSpeed) + currentVector)
+
         if (isInfinite) {
              // Project laylines far out from boat position if infinite mode requested
              // Using rhumb line destination for simplicity in UI projection
              val distMeters = 1852.0 * 100.0 // 100 NM
              val pStbd = projectPoint(boatPosition, stbdCogHeading, distMeters)
              val pPort = projectPoint(boatPosition, portCogHeading, distMeters)
+             val pPort1 = projectPoint(boatPosition, portCog1, distMeters)
+             val pPort2 = projectPoint(boatPosition, portCog2, distMeters)
+             val pStbd1 = projectPoint(boatPosition, stbdCog1, distMeters)
+             val pStbd2 = projectPoint(boatPosition, stbdCog2, distMeters)
              
              return LaylineData(
                  portTackPoint = pPort,
                  starboardTackPoint = pStbd,
                  isFetchable = true, // Infinite lines are always "active"
-                 targetWaypoint = targetWaypoint
+                 targetWaypoint = targetWaypoint,
+                 portShiftCone = Pair(pPort1, pPort2),
+                 stbdShiftCone = Pair(pStbd1, pStbd2)
              )
         }
 
@@ -90,6 +115,26 @@ object LaylineMathEngine {
             targetWaypoint, normalizeRadians(portCogHeading + PI)
         )
 
+        val pPort1 = calculateIntersection(
+            boatPosition, portCog1,
+            targetWaypoint, normalizeRadians(stbdCog1 + PI)
+        )
+        val pPort2 = calculateIntersection(
+            boatPosition, portCog2,
+            targetWaypoint, normalizeRadians(stbdCog2 + PI)
+        )
+        val portShiftCone = if (pPort1 != null && pPort2 != null) Pair(pPort1, pPort2) else null
+
+        val pStbd1 = calculateIntersection(
+            boatPosition, stbdCog1,
+            targetWaypoint, normalizeRadians(portCog1 + PI)
+        )
+        val pStbd2 = calculateIntersection(
+            boatPosition, stbdCog2,
+            targetWaypoint, normalizeRadians(portCog2 + PI)
+        )
+        val stbdShiftCone = if (pStbd1 != null && pStbd2 != null) Pair(pStbd1, pStbd2) else null
+
         // 7. Determine fetchability
         val isFetchable = !isWithinArc(bearingToTarget, stbdCogHeading, portCogHeading)
 
@@ -97,7 +142,9 @@ object LaylineMathEngine {
             portTackPoint = portTackPoint,
             starboardTackPoint = stbdTackPoint,
             isFetchable = isFetchable,
-            targetWaypoint = targetWaypoint
+            targetWaypoint = targetWaypoint,
+            portShiftCone = portShiftCone,
+            stbdShiftCone = stbdShiftCone
         )
     }
 

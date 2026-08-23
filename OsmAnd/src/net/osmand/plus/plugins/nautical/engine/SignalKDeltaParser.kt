@@ -34,7 +34,8 @@ class SignalKDeltaParser(
     private val resourceManager: SignalKResourceManager,
     private val engineScope: CoroutineScope,
     private val routeStepListeners: CopyOnWriteArraySet<() -> Unit>,
-    private val aisListenerProvider: () -> (((AisObject) -> Unit)?)
+    private val aisListenerProvider: () -> (((AisObject) -> Unit)?),
+    private val waypointAdvanceListener: ((WaypointAdvanceEvent) -> Unit)? = null
 ) {
     private val log = PlatformUtil.getLog(SignalKDeltaParser::class.java)
 
@@ -435,7 +436,8 @@ class SignalKDeltaParser(
                     lon = valueObj.optDouble("longitude", Double.NaN).takeIf { !it.isNaN() }
                 }
                 if (lat != null && lon != null && MarineStateConstants.isValidLat(lat) && MarineStateConstants.isValidLon(lon)) {
-                    routeTracker.updateFollowingState(lat, lon, null) {
+                    routeTracker.updateFollowingState(lat, lon, null) { event ->
+                        waypointAdvanceListener?.invoke(event)
                         routeStepListeners.forEach { it.invoke() }
                     }
                     historyManager.addTrajectoryPoint(lat, lon)

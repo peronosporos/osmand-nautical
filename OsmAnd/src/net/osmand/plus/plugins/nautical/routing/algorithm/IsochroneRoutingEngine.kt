@@ -155,10 +155,15 @@ class IsochroneRoutingEngine(
 
                     if (isLandCollision(newCoords.first, newCoords.second)) continue
 
+                    val parentTwa = ((node.heading - wind.direction + 540.0) % 360.0) - 180.0
+                    val newTwa = ((hdgDeg - wind.direction + 540.0) % 360.0) - 180.0
+                    val isTackTransition = node.parent != null && (parentTwa * newTwa < 0.0)
+                    val tackPenaltyHours = if (isTackTransition) 0.0083 else 0.0
+
                     candidateNodes.add(IsochroneNode(
                         latitude = newCoords.first,
                         longitude = newCoords.second,
-                        cumulativeTimeHours = node.cumulativeTimeHours + timeStepHours,
+                        cumulativeTimeHours = node.cumulativeTimeHours + timeStepHours + tackPenaltyHours,
                         heading = hdgDeg,
                         parent = node,
                         speedThroughWater = bsp,
@@ -178,18 +183,23 @@ class IsochroneRoutingEngine(
                 }
             }.toList()
 
-            val nextFrontier = mutableMapOf<Int, IsochroneNode>()
+            val sectorCount = 180
+            val frontierNodes = arrayOfNulls<IsochroneNode>(sectorCount)
+            val frontierDists = DoubleArray(sectorCount) { Double.MAX_VALUE }
+
             for (newNode in validNodes) {
-                val parent = newNode.parent ?: continue
-                val sectorIdx = (atan2(newNode.latitude - parent.latitude, newNode.longitude - parent.longitude) * 180 / PI).toInt() / 5
-                val existing = nextFrontier[sectorIdx]
-                if (existing == null || newNode.cumulativeTimeHours < existing.cumulativeTimeHours) {
-                    nextFrontier[sectorIdx] = newNode
+                val sectorAngle = (atan2(newNode.latitude - request.start.latitude, newNode.longitude - request.start.longitude) * 180.0 / PI + 360.0) % 360.0
+                val sectorIdx = ((sectorAngle / 2.0).toInt()).coerceIn(0, sectorCount - 1)
+                val distToDest = distanceNm(newNode.latitude, newNode.longitude, request.destination.latitude, request.destination.longitude)
+                if (distToDest < frontierDists[sectorIdx]) {
+                    frontierDists[sectorIdx] = distToDest
+                    frontierNodes[sectorIdx] = newNode
                 }
             }
 
+            val nextFrontier = frontierNodes.filterNotNull()
             if (nextFrontier.isEmpty()) break
-            currentFrontier = nextFrontier.values.toList()
+            currentFrontier = nextFrontier
             step++
         }
 

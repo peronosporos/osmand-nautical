@@ -147,14 +147,6 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
         findPreference<SwitchPreferenceEx>(settings.NAUTICAL_HEAVY_WEATHER_MODE.id)?.apply {
             setThemedIcon(OsmAndR.drawable.ic_action_alert)
         }
-
-        findPreference<androidx.preference.Preference>("nautical_configure_bottom_sheet_telemetry")?.apply {
-            setThemedIcon(OsmAndR.drawable.ic_action_settings)
-            setOnPreferenceClickListener {
-                BaseSettingsFragment.showInstance(requireActivity(), SettingsScreenType.NAUTICAL_TELEMETRY_CONFIG)
-                true
-            }
-        }
     }
 
     private fun setupVesselContext() {

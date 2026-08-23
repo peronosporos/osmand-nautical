@@ -55,6 +55,10 @@ class NmeaSentenceParser(private val app: OsmandApplication) {
             "RSA" -> parseRSA(parts)
             "MTW" -> parseMTW(parts)
             "XTE" -> parseXTE(parts)
+            "APB" -> parseAPB(parts)
+            "RMB" -> parseRMB(parts)
+            "BWC" -> parseBWC(parts)
+            "MWD" -> parseMWD(parts)
             else -> emptyList()
         }
         
@@ -413,8 +417,180 @@ class NmeaSentenceParser(private val app: OsmandApplication) {
         val xteNm = parts[3].toDoubleOrNull() ?: return emptyList()
         val dir = parts[4]
         val xteMeters = xteNm * 1852.0
-        val signedXte = if (dir.equals("L", ignoreCase = true)) xteMeters else -xteMeters
+        val signedXte = if (dir.equals("L", ignoreCase = true)) -xteMeters else xteMeters
         return listOf(Value(SignalKPaths.NAV_XTE, signedXte))
+    }
+
+    private fun parseAPB(parts: List<String>): List<Value> {
+        // $--APB,A,A,x.x,a,N,A,A,x.x,a,c--c,x.x,a,x.x,a*hh
+        // 0:ID, 1:Status1, 2:Status2, 3:XTE, 4:Steer(L/R), 5:XTE_Units(N), 6:ArrivalCircle(A/V), 7:Perpendicular(A/V),
+        // 8:BearingOriginToDest, 9:M/T, 10:DestWaypointId, 11:BearingPosToDest, 12:M/T, 13:HeadingToSteer, 14:M/T
+        if (parts.size < 5) return emptyList()
+        val values = mutableListOf<Value>()
+
+        // Status checks: 'V' means invalid
+        val status1 = parts[1]
+        val status2 = parts[2]
+        if (status1.equals("V", ignoreCase = true) || status2.equals("V", ignoreCase = true)) {
+            return emptyList()
+        }
+
+        // XTE magnitude & Direction to steer
+        parts[3].toDoubleOrNull()?.let { xteNm ->
+            val dir = parts[4]
+            val xteMeters = xteNm * 1852.0
+            val signedXte = if (dir.equals("L", ignoreCase = true)) -xteMeters else xteMeters
+            values.add(Value(SignalKPaths.NAV_XTE, signedXte))
+        }
+
+        // Destination Waypoint ID
+        if (parts.size >= 11 && parts[10].isNotEmpty()) {
+            values.add(Value(SignalKPaths.NAV_DESTINATION, parts[10]))
+        }
+
+        // Bearing present position to destination
+        if (parts.size >= 13) {
+            parts[11].toDoubleOrNull()?.let { bearingDeg ->
+                val rad = Math.toRadians(bearingDeg)
+                values.add(Value(SignalKPaths.NAV_COURSE_RHUMB_LINE_NEXT_POINT_BEARING, rad))
+                values.add(Value("navigation.courseGreatCircle.nextPoint.bearingTrue", rad))
+            }
+        }
+
+        // Heading to steer
+        if (parts.size >= 15) {
+            parts[13].toDoubleOrNull()?.let { steerDeg ->
+                val rad = Math.toRadians(steerDeg)
+                values.add(Value(SignalKPaths.STEERING_AUTOPILOT_TARGET_HDG_TRUE, rad))
+                values.add(Value(LivePerformanceData.PATH_HEADING_TRUE, rad))
+            }
+        }
+
+        return values
+    }
+
+    private fun parseRMB(parts: List<String>): List<Value> {
+        // $--RMB,A,x.x,a,c--c,c--c,llll.ll,a,yyyyy.yy,a,x.x,x.x,x.x,A*hh
+        // 0:ID, 1:Status(A/V), 2:XTE(NM), 3:Steer(L/R), 4:OriginWp, 5:DestWp, 6:DestLat, 7:N/S, 8:DestLon, 9:E/W,
+        // 10:RangeToDest(NM), 11:BearingToDest(deg True), 12:DestClosingVelocity(Knots), 13:ArrivalStatus(A/V)
+        if (parts.size < 12) return emptyList()
+        if (parts[1] != "A") return emptyList()
+
+        val values = mutableListOf<Value>()
+
+        // XTE magnitude & Direction to steer
+        parts[2].toDoubleOrNull()?.let { xteNm ->
+            val dir = parts[3]
+            val xteMeters = xteNm * 1852.0
+            val signedXte = if (dir.equals("L", ignoreCase = true)) -xteMeters else xteMeters
+            values.add(Value(SignalKPaths.NAV_XTE, signedXte))
+        }
+
+        // Destination Waypoint ID
+        if (parts[5].isNotEmpty()) {
+            values.add(Value(SignalKPaths.NAV_DESTINATION, parts[5]))
+        }
+
+        // Destination Lat/Lon
+        val destLat = parseNmeaLatitude(parts[6], parts[7])
+        val destLon = parseNmeaLongitude(parts[8], parts[9])
+        if (MarineStateConstants.isValidLat(destLat) && MarineStateConstants.isValidLon(destLon)) {
+            values.add(Value(SignalKPaths.NAV_COURSE_NEXT_POINT, mapOf("latitude" to destLat, "longitude" to destLon)))
+        }
+
+        // Range to Destination (NM to meters)
+        parts[10].toDoubleOrNull()?.let { rangeNm ->
+            val distMeters = rangeNm * 1852.0
+            values.add(Value(SignalKPaths.NAV_DTW, distMeters))
+            values.add(Value(SignalKPaths.NAV_COURSE_RHUMB_LINE_NEXT_POINT_DISTANCE, distMeters))
+        }
+
+        // Bearing to Destination (Degrees to Radians)
+        parts[11].toDoubleOrNull()?.let { bearingDeg ->
+            val rad = Math.toRadians(bearingDeg)
+            values.add(Value(SignalKPaths.NAV_COURSE_RHUMB_LINE_NEXT_POINT_BEARING, rad))
+            values.add(Value("navigation.courseGreatCircle.nextPoint.bearingTrue", rad))
+        }
+
+        // Closing velocity (Knots to m/s)
+        if (parts.size >= 13) {
+            parts[12].toDoubleOrNull()?.let { closingKnots ->
+                val closingMs = closingKnots * 0.514444
+                values.add(Value("navigation.courseGreatCircle.nextPoint.velocityMadeGood", closingMs))
+            }
+        }
+
+        return values
+    }
+
+    private fun parseBWC(parts: List<String>): List<Value> {
+        // $--BWC,hhmmss.ss,llll.ll,a,yyyyy.yy,a,x.x,T,x.x,M,x.x,N,c--c*hh
+        // 0:ID, 1:UTC, 2:DestLat, 3:N/S, 4:DestLon, 5:E/W, 6:BearingTrue, 7:T, 8:BearingMag, 9:M, 10:DistNM, 11:N, 12:DestWpId
+        if (parts.size < 11) return emptyList()
+        val values = mutableListOf<Value>()
+
+        // Destination Lat/Lon
+        val destLat = parseNmeaLatitude(parts[2], parts[3])
+        val destLon = parseNmeaLongitude(parts[4], parts[5])
+        if (MarineStateConstants.isValidLat(destLat) && MarineStateConstants.isValidLon(destLon)) {
+            values.add(Value(SignalKPaths.NAV_COURSE_NEXT_POINT, mapOf("latitude" to destLat, "longitude" to destLon)))
+        }
+
+        // Bearing to Destination True
+        parts[6].toDoubleOrNull()?.let { bearingDeg ->
+            val rad = Math.toRadians(bearingDeg)
+            values.add(Value(SignalKPaths.NAV_COURSE_RHUMB_LINE_NEXT_POINT_BEARING, rad))
+            values.add(Value("navigation.courseGreatCircle.nextPoint.bearingTrue", rad))
+        }
+
+        // Distance in NM to meters
+        parts[10].toDoubleOrNull()?.let { distNm ->
+            val distMeters = distNm * 1852.0
+            values.add(Value(SignalKPaths.NAV_DTW, distMeters))
+            values.add(Value(SignalKPaths.NAV_COURSE_RHUMB_LINE_NEXT_POINT_DISTANCE, distMeters))
+        }
+
+        // Destination Waypoint ID
+        if (parts.size >= 13 && parts[12].isNotEmpty()) {
+            values.add(Value(SignalKPaths.NAV_DESTINATION, parts[12]))
+        }
+
+        return values
+    }
+
+    private fun parseMWD(parts: List<String>): List<Value> {
+        // $--MWD,x.x,T,x.x,M,x.x,N,x.x,M*hh
+        // 0:ID, 1:WindDirTrue, 2:T, 3:WindDirMag, 4:M, 5:WindSpeedKnots, 6:N, 7:WindSpeedMs, 8:M
+        if (parts.size < 6) return emptyList()
+        val values = mutableListOf<Value>()
+
+        // Wind Direction True (Degrees to Radians)
+        parts[1].toDoubleOrNull()?.let { dirDeg ->
+            val rad = Math.toRadians(dirDeg)
+            values.add(Value(SignalKPaths.ENV_WIND_DIRECTION_TRUE, rad))
+            values.add(Value(SignalKPaths.NAV_TWD, rad))
+        }
+
+        // Wind Direction Magnetic
+        if (parts.size >= 4) {
+            parts[3].toDoubleOrNull()?.let { magDirDeg ->
+                values.add(Value("environment.wind.directionMagnetic", Math.toRadians(magDirDeg)))
+            }
+        }
+
+        // Wind Speed (m/s)
+        val speedMs = if (parts.size >= 8 && parts[7].isNotEmpty()) {
+            parts[7].toDoubleOrNull() ?: (parts[5].toDoubleOrNull()?.times(0.514444))
+        } else {
+            parts[5].toDoubleOrNull()?.times(0.514444)
+        }
+
+        if (speedMs != null && MarineStateConstants.isValidWindSpeed(speedMs)) {
+            values.add(Value(SignalKPaths.ENV_WIND_SPEED_TRUE, speedMs))
+            values.add(Value(LivePerformanceData.PATH_TWS, speedMs))
+        }
+
+        return values
     }
 
     private fun validateChecksum(content: String, providedChecksum: String): Boolean {

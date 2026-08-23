@@ -31,6 +31,7 @@ class SailingPerformanceRepository(
     }
 
     private val restService: SignalKRestService? = SignalKRestService.create(serverBaseUrl, authenticatedClient)
+    private val polarDiagram = net.osmand.plus.plugins.nautical.maneuvers.PolarDiagram()
 
     private val _activePolarProfile = MutableStateFlow<PolarProfile?>(null)
     val activePolarProfile: StateFlow<PolarProfile?> = _activePolarProfile.asStateFlow()
@@ -46,9 +47,45 @@ class SailingPerformanceRepository(
     }
 
     private fun startListening() {
+        _activePolarProfile
+            .filterNotNull()
+            .onEach { profile ->
+                polarDiagram.loadFromProfile(profile)
+            }
+            .launchIn(scope)
+
         dataBroker.livePerformanceData
             .onEach { data ->
-                _livePerformanceData.value = data
+                val tws = data.windSpeedTrue
+                val twa = data.windAngleTrueWater ?: data.windAngleApparent
+                val stw = data.speedThroughWater ?: data.speedOverGround
+
+                if (tws != null && tws > 0.1 && polarDiagram.isLoaded) {
+                    val isUpwind = twa == null || kotlin.math.abs(twa) < Math.toRadians(90.0)
+                    val target = if (isUpwind) {
+                        polarDiagram.getOptimalUpwindTarget(tws)
+                    } else {
+                        polarDiagram.getOptimalDownwindTarget(tws)
+                    }
+
+                    val targetAngleRad = Math.toRadians(target.targetTwaDeg)
+                    val targetSpeedMs = target.targetSpeedMs
+
+                    val efficiencyRatio = if (stw != null && twa != null && stw > 0.0) {
+                        val effPct = polarDiagram.calculatePolarEfficiency(stw, tws, twa)
+                        effPct / 100.0
+                    } else {
+                        data.polarSpeedRatio
+                    }
+
+                    _livePerformanceData.value = data.copy(
+                        targetAngle = data.targetAngle ?: targetAngleRad,
+                        polarSpeed = data.polarSpeed ?: targetSpeedMs,
+                        polarSpeedRatio = data.polarSpeedRatio ?: efficiencyRatio
+                    )
+                } else {
+                    _livePerformanceData.value = data
+                }
             }
             .launchIn(scope)
 

@@ -27,7 +27,9 @@ data class LaylineUiState(
     val starboardTackPoint: LatLon? = null,
     val isFetchable: Boolean = false,
     val fetchableStatusResId: Int = R.string.layline_status_tack_required,
-    val targetWaypoint: LatLon? = null
+    val targetWaypoint: LatLon? = null,
+    val portShiftCone: Pair<LatLon, LatLon>? = null,
+    val stbdShiftCone: Pair<LatLon, LatLon>? = null
 )
 
 @OptIn(kotlinx.coroutines.FlowPreview::class)
@@ -97,7 +99,9 @@ class LaylineViewModel(
                             R.string.layline_status_fetchable 
                         else 
                             R.string.layline_status_tack_required,
-                        targetWaypoint = serverLaylines.targetWaypoint
+                        targetWaypoint = serverLaylines.targetWaypoint,
+                        portShiftCone = serverLaylines.portShiftCone,
+                        stbdShiftCone = serverLaylines.stbdShiftCone
                     )
                     return@withContext
                 }
@@ -179,7 +183,9 @@ class LaylineViewModel(
                         R.string.layline_status_fetchable 
                     else 
                         R.string.layline_status_tack_required,
-                    targetWaypoint = result.targetWaypoint
+                    targetWaypoint = result.targetWaypoint,
+                    portShiftCone = result.portShiftCone,
+                    stbdShiftCone = result.stbdShiftCone
                 )
                 }
             }

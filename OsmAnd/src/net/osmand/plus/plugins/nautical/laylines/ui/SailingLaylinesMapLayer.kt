@@ -33,6 +33,19 @@ class SailingLaylinesMapLayer(context: Context) : OsmandMapLayer(context), Share
         style = Paint.Style.FILL
     }
 
+    private val portConePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = 0x30FF1744.toInt() // Subtle red port header sector (#30FF1744)
+        style = Paint.Style.FILL
+    }
+
+    private val stbdConePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = 0x3000E676.toInt() // Subtle green starboard lift sector (#3000E676)
+        style = Paint.Style.FILL
+    }
+
+    private val portConePath = Path()
+    private val stbdConePath = Path()
+
     private val dashedEffect = DashPathEffect(floatArrayOf(20f, 10f), 0f)
     private val windShiftRect = RectF()
 
@@ -209,6 +222,56 @@ class SailingLaylinesMapLayer(context: Context) : OsmandMapLayer(context), Share
             state.isFetchable
         }
         setupPaints(isFetchable, isNight)
+
+        val boatX = tileBox.getPixXFromLatLon(boatLat, boatLon)
+        val boatY = tileBox.getPixYFromLatLon(boatLat, boatLon)
+        val targetX = tileBox.getPixXFromLatLon(target.latitude, target.longitude)
+        val targetY = tileBox.getPixYFromLatLon(target.latitude, target.longitude)
+
+        // 0. Render Wind Shift Uncertainty Cones along Port and Starboard Laylines
+        val portShiftCone = if (caps?.hasWindshift == true && marineState?.serverLaylines != null) {
+            marineState.serverLaylines.portShiftCone
+        } else {
+            state.portShiftCone
+        }
+
+        val stbdShiftCone = if (caps?.hasWindshift == true && marineState?.serverLaylines != null) {
+            marineState.serverLaylines.stbdShiftCone
+        } else {
+            state.stbdShiftCone
+        }
+
+        // Draw Port Tack Wind Shift Cone (Header Sector)
+        portShiftCone?.let { (p1, p2) ->
+            val p1X = tileBox.getPixXFromLatLon(p1.latitude, p1.longitude)
+            val p1Y = tileBox.getPixYFromLatLon(p1.latitude, p1.longitude)
+            val p2X = tileBox.getPixXFromLatLon(p2.latitude, p2.longitude)
+            val p2Y = tileBox.getPixYFromLatLon(p2.latitude, p2.longitude)
+
+            portConePath.reset()
+            portConePath.moveTo(boatX, boatY)
+            portConePath.lineTo(p1X, p1Y)
+            portConePath.lineTo(targetX, targetY)
+            portConePath.lineTo(p2X, p2Y)
+            portConePath.close()
+            canvas.drawPath(portConePath, portConePaint)
+        }
+
+        // Draw Starboard Tack Wind Shift Cone (Lift Sector)
+        stbdShiftCone?.let { (s1, s2) ->
+            val s1X = tileBox.getPixXFromLatLon(s1.latitude, s1.longitude)
+            val s1Y = tileBox.getPixYFromLatLon(s1.latitude, s1.longitude)
+            val s2X = tileBox.getPixXFromLatLon(s2.latitude, s2.longitude)
+            val s2Y = tileBox.getPixYFromLatLon(s2.latitude, s2.longitude)
+
+            stbdConePath.reset()
+            stbdConePath.moveTo(boatX, boatY)
+            stbdConePath.lineTo(s1X, s1Y)
+            stbdConePath.lineTo(targetX, targetY)
+            stbdConePath.lineTo(s2X, s2Y)
+            stbdConePath.close()
+            canvas.drawPath(stbdConePath, stbdConePaint)
+        }
 
         val portTackPoint = if (caps?.hasWindshift == true && marineState?.serverLaylines != null) {
             marineState.serverLaylines.portTackPoint

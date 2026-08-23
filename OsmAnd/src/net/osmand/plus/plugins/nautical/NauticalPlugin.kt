@@ -69,6 +69,7 @@ import net.osmand.plus.plugins.nautical.mob.viewmodel.MobViewModel
 import net.osmand.plus.plugins.nautical.network.NauticalConnectionManager
 import net.osmand.plus.plugins.nautical.network.NauticalVhfManager
 import net.osmand.plus.plugins.nautical.network.SignalKDiscovery
+import net.osmand.plus.plugins.nautical.quickaction.NauticalAisQuickAction
 import net.osmand.plus.plugins.nautical.quickaction.NauticalAnchorQuickAction
 import net.osmand.plus.plugins.nautical.quickaction.NauticalAutopilotQuickAction
 import net.osmand.plus.plugins.nautical.quickaction.NauticalLaylinesQuickAction
@@ -1591,7 +1592,8 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
             NauticalSailInventoryQuickAction.TYPE,
             NauticalTacticalStartPinQuickAction.TYPE_PORT,
             NauticalTacticalStartPinQuickAction.TYPE_STBD,
-            NauticalLaylinesQuickAction.TYPE
+            NauticalLaylinesQuickAction.TYPE,
+            NauticalAisQuickAction.TYPE
         )
     }
 

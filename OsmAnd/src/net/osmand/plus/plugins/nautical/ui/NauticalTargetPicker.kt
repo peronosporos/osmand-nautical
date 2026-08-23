@@ -12,17 +12,20 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.core.content.ContextCompat
+import androidx.core.widget.NestedScrollView
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
+import com.google.android.material.button.MaterialButton
 import net.osmand.plus.OsmandApplication
 import net.osmand.plus.R
 import net.osmand.plus.plugins.nautical.NauticalPlugin
 import net.osmand.plus.plugins.nautical.hazard.engine.NavtexMessage
 import net.osmand.plus.plugins.nautical.s57.S57Object
+import net.osmand.plus.settings.fragments.BaseSettingsFragment
+import net.osmand.plus.settings.fragments.SettingsScreenType
 import net.osmand.plus.utils.ColorUtilities
 import net.osmand.shared.aistracker.AisObjType
 import net.osmand.shared.aistracker.AisObject
 import net.osmand.shared.aistracker.AisObjectConstants
-import net.osmand.util.MapUtils
 import java.util.Locale
 
 class NauticalTargetPicker : BottomSheetDialogFragment() {
@@ -41,21 +44,119 @@ class NauticalTargetPicker : BottomSheetDialogFragment() {
         val context = requireContext()
         val root = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dpToPx(context, 16f), dpToPx(context, 16f), 
-                       dpToPx(context, 16f), dpToPx(context, 24f))
+            val p = dpToPx(context, 16f)
+            setPadding(p, p, p, dpToPx(context, 20f))
             layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
         }
 
-        root.addView(TextView(context).apply {
-            text = getString(R.string.nautical_target_picker_title)
-            textSize = 20f
-            setTypeface(null, android.graphics.Typeface.BOLD)
-            setPadding(0, 0, 0, dpToPx(context, 16f))
-        })
-
-        targets.forEach { target ->
-            root.addView(createTargetRow(target))
+        // Header Title Row
+        val headerLayout = LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = android.view.Gravity.CENTER_VERTICAL
+            layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+            setPadding(0, 0, 0, dpToPx(context, 12f))
         }
+
+        val titleView = TextView(context).apply {
+            text = getString(R.string.nautical_ais_targets_title) + " (${targets.size})"
+            textSize = 18f
+            setTypeface(null, android.graphics.Typeface.BOLD)
+            layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+        }
+        headerLayout.addView(titleView)
+
+        val btnHeaderBuddies = MaterialButton(context, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
+            layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dpToPx(context, 36f))
+            text = getString(R.string.nautical_ais_buddies_title)
+            textSize = 12f
+            setIconResource(R.drawable.ic_action_group_list)
+            iconSize = dpToPx(context, 16f)
+            setOnClickListener {
+                dismiss()
+                val mapActivity = activity as? net.osmand.plus.activities.MapActivity
+                if (mapActivity != null) {
+                    NauticalBuddyListFragment.show(mapActivity.supportFragmentManager)
+                } else {
+                    NauticalBuddyListFragment.show(parentFragmentManager)
+                }
+            }
+        }
+        headerLayout.addView(btnHeaderBuddies)
+        root.addView(headerLayout)
+
+        // Shortcut Action Buttons (Manage Buddies & Own Vessel Profile)
+        val actionsLayout = LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+            setPadding(0, 0, 0, dpToPx(context, 12f))
+        }
+
+        val btnBuddies = MaterialButton(context, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
+            layoutParams = LinearLayout.LayoutParams(0, dpToPx(context, 44f), 1f).apply {
+                marginEnd = dpToPx(context, 8f)
+            }
+            text = getString(R.string.nautical_manage_buddies)
+            textSize = 12f
+            setIconResource(R.drawable.ic_action_favorite)
+            iconSize = dpToPx(context, 18f)
+            setOnClickListener {
+                dismiss()
+                val mapActivity = activity as? net.osmand.plus.activities.MapActivity
+                if (mapActivity != null) {
+                    NauticalBuddyListFragment.show(mapActivity.supportFragmentManager)
+                } else {
+                    NauticalBuddyListFragment.show(parentFragmentManager)
+                }
+            }
+        }
+        actionsLayout.addView(btnBuddies)
+
+        val btnOwnVessel = MaterialButton(context, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
+            layoutParams = LinearLayout.LayoutParams(0, dpToPx(context, 44f), 1f)
+            text = getString(R.string.nautical_own_vessel_profile)
+            textSize = 12f
+            setIconResource(R.drawable.ic_action_sail_boat_dark)
+            iconSize = dpToPx(context, 18f)
+            setOnClickListener {
+                dismiss()
+                val mapActivity = activity as? net.osmand.plus.activities.MapActivity
+                if (mapActivity != null) {
+                    BaseSettingsFragment.showInstance(mapActivity, SettingsScreenType.AIS_SETTINGS)
+                }
+            }
+        }
+        actionsLayout.addView(btnOwnVessel)
+        root.addView(actionsLayout)
+
+        // Sort targets by Range / Distance ascending
+        val ownLoc = NauticalPlugin.getInstance()?.application?.locationProvider?.lastKnownLocation
+        val sortedTargets = targets.sortedBy { target ->
+            if (target is AisObject && ownLoc != null && target.position != null) {
+                val loc = net.osmand.Location("AIS").apply {
+                    latitude = target.position.latitude
+                    longitude = target.position.longitude
+                }
+                ownLoc.distanceTo(loc)
+            } else {
+                Float.MAX_VALUE.toDouble()
+            }
+        }
+
+        // Scrollable Target List Container
+        val scrollView = NestedScrollView(context).apply {
+            layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dpToPx(context, 320f))
+        }
+
+        val listLayout = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+        }
+
+        sortedTargets.forEach { target ->
+            listLayout.addView(createTargetRow(target))
+        }
+        scrollView.addView(listLayout)
+        root.addView(scrollView)
 
         return root
     }
@@ -103,7 +204,7 @@ class NauticalTargetPicker : BottomSheetDialogFragment() {
             val shipName = resolvedAis.shipName?.trim()
             val titleView = TextView(context).apply {
                 text = if (!shipName.isNullOrEmpty()) shipName else "MMSI: ${resolvedAis.mmsi}"
-                textSize = 16f
+                textSize = 15f
                 setTypeface(null, android.graphics.Typeface.BOLD)
             }
             textLayout.addView(titleView)
@@ -118,7 +219,7 @@ class NauticalTargetPicker : BottomSheetDialogFragment() {
             }
             val subtitleView = TextView(context).apply {
                 text = subtitleSb.toString()
-                textSize = 13f
+                textSize = 12f
                 setTextColor(ColorUtilities.getSecondaryTextColor(requireActivity().application as OsmandApplication, false))
             }
             textLayout.addView(subtitleView)
@@ -181,7 +282,7 @@ class NauticalTargetPicker : BottomSheetDialogFragment() {
                     else -> target.toString()
                 }
                 text = name
-                textSize = 16f
+                textSize = 15f
                 layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
             }
             row.addView(textView)

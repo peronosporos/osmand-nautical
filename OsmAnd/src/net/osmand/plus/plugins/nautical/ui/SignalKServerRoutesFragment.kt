@@ -13,13 +13,16 @@ import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.button.MaterialButton
 import kotlinx.coroutines.launch
+import net.osmand.PlatformUtil
 import net.osmand.plus.R
 import net.osmand.plus.base.BaseOsmAndFragment
 import net.osmand.plus.plugins.nautical.NauticalPlugin
 import net.osmand.plus.plugins.nautical.network.SignalKRoute
+import org.apache.commons.logging.Log
 
 class SignalKServerRoutesFragment : BaseOsmAndFragment() {
 
+    private val log: Log = PlatformUtil.getLog(SignalKServerRoutesFragment::class.java)
     private lateinit var adapter: RoutesAdapter
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
@@ -99,7 +102,10 @@ class SignalKServerRoutesFragment : BaseOsmAndFragment() {
                     try {
                         NauticalPlugin.engine?.deleteRouteFromServer(id)
                         refreshRoutes()
-                    } catch (_: Exception) {}
+                    } catch (e: Exception) {
+                        log.error("Failed to delete route $id from Signal K server: ${e.message}", e)
+                        app.showToastMessage("Failed to delete route: ${e.message}")
+                    }
                 }
             }
             .setNegativeButton(R.string.shared_string_cancel, null)
@@ -108,20 +114,30 @@ class SignalKServerRoutesFragment : BaseOsmAndFragment() {
 
     private fun navigateWithOsmAnd(id: String, route: SignalKRoute) {
         lifecycleScope.launch {
-            val fullRoute = NauticalPlugin.engine?.getRestService()?.getRouteById(id)?.body() ?: route
-            val points = fullRoute.feature.geometry.coordinates.map { Pair(it[1], it[0]) }
-            if (points.isNotEmpty()) {
-                NauticalPlugin.engine?.loadRoute(points)
-                try {
-                    val targetPointsHelper = app.targetPointsHelper
-                    targetPointsHelper.removeAllWayPoints(false, true)
-                    val lastPoint = points.last()
-                    points.drop(1).dropLast(1).forEach { (lat, lon) ->
-                        targetPointsHelper.navigateToPoint(net.osmand.data.LatLon(lat, lon), false, -1)
+            try {
+                val fullRoute = NauticalPlugin.engine?.getRestService()?.getRouteById(id)?.body() ?: route
+                val points = fullRoute.feature.geometry.coordinates.map { Pair(it[1], it[0]) }
+                if (points.isNotEmpty()) {
+                    NauticalPlugin.engine?.loadRoute(points)
+                    try {
+                        val targetPointsHelper = app.targetPointsHelper
+                        targetPointsHelper.removeAllWayPoints(false, true)
+                        val lastPoint = points.last()
+                        points.drop(1).dropLast(1).forEach { (lat, lon) ->
+                            targetPointsHelper.navigateToPoint(net.osmand.data.LatLon(lat, lon), false, -1)
+                        }
+                        targetPointsHelper.navigateToPoint(net.osmand.data.LatLon(lastPoint.first, lastPoint.second), true, -1)
+                        app.showToastMessage(R.string.nautical_navigate_with_osmand)
+                    } catch (e: Exception) {
+                        log.error("Failed to set navigation waypoints for route $id: ${e.message}", e)
+                        app.showToastMessage("Failed to set route waypoints: ${e.message}")
                     }
-                    targetPointsHelper.navigateToPoint(net.osmand.data.LatLon(lastPoint.first, lastPoint.second), true, -1)
-                } catch (_: Exception) {}
-                app.showToastMessage(R.string.nautical_navigate_with_osmand)
+                } else {
+                    app.showToastMessage("Route contains no valid waypoints")
+                }
+            } catch (e: Exception) {
+                log.error("Failed to load route $id for navigation: ${e.message}", e)
+                app.showToastMessage("Failed to load route: ${e.message}")
             }
         }
     }

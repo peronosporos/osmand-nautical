@@ -4,7 +4,7 @@ import net.osmand.plus.activities.MapActivity
 import net.osmand.plus.plugins.nautical.dr.ui.DeadReckoningMapLayer
 import net.osmand.plus.plugins.nautical.hazard.ui.DynamicHazardLayer
 import net.osmand.plus.plugins.nautical.hazard.ui.NavtexMapLayer
-import net.osmand.plus.plugins.nautical.laylines.ui.SailingLaylinesMapLayer
+import net.osmand.plus.plugins.nautical.map.layers.OceanographicGribMapLayer
 import net.osmand.plus.plugins.nautical.map.layers.WeatherRoutingMapLayer
 import net.osmand.plus.plugins.nautical.mob.ui.MobMapLayer
 import net.osmand.plus.plugins.nautical.raster.MarineRasterMapLayer
@@ -15,6 +15,7 @@ import net.osmand.plus.plugins.nautical.ui.anchor.AnchorWatchMapLayer
 class SailingMapLayerController(private val mapActivity: MapActivity, s57SpatialIndex: S57SpatialIndex? = null) {
 
     val laylinesLayer = SailingLaylinesMapLayer(mapActivity)
+    val gribLayer = OceanographicGribMapLayer(mapActivity)
     private val weatherRoutingLayer = WeatherRoutingMapLayer(mapActivity)
     val mobLayer = MobMapLayer(mapActivity)
     val drLayer = DeadReckoningMapLayer(mapActivity)
@@ -54,6 +55,13 @@ class SailingMapLayerController(private val mapActivity: MapActivity, s57Spatial
             } else {
                 mapView.removeLayer(it)
             }
+        }
+
+        // Oceanographic GRIB Overlay
+        if (settings.NAUTICAL_SHOW_GRIB_OVERLAY.get()) {
+            if (!mapView.layers.contains(gribLayer)) mapView.addLayer(gribLayer, 0.65f)
+        } else {
+            mapView.removeLayer(gribLayer)
         }
 
         // Laylines
@@ -107,6 +115,7 @@ class SailingMapLayerController(private val mapActivity: MapActivity, s57Spatial
         mapView.removeLayer(rasterLayer)
         mapView.removeLayer(skPmtilesLayer)
         s57Layer?.let { mapView.removeLayer(it) }
+        mapView.removeLayer(gribLayer)
         mapView.removeLayer(laylinesLayer)
         mapView.removeLayer(weatherRoutingLayer)
         mapView.removeLayer(mobLayer)

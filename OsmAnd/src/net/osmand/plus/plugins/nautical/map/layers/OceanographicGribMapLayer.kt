@@ -10,6 +10,7 @@ import net.osmand.plus.plugins.nautical.di.SailingDependencyContainer
 import net.osmand.plus.plugins.nautical.grib.repository.GribRepository
 import net.osmand.plus.plugins.nautical.grib.repository.GribStatus
 import net.osmand.shared.settings.enums.MetricsConstants
+import net.osmand.plus.plugins.nautical.grib.parser.GribInterpolationEngine
 import net.osmand.plus.views.layers.base.OsmandMapLayer
 import java.util.*
 import kotlin.math.*
@@ -17,7 +18,7 @@ import androidx.core.graphics.withTranslation
 
 /**
  * Custom OsmAnd map layer for oceanographic GRIB data: 
- * Surface Pressure Isobars and Wave Height/Direction vectors.
+ * Surface Pressure Isobars, Wave Height/Direction vectors, and Tidal/Ocean Current vectors.
  */
 class OceanographicGribMapLayer(context: Context) : OsmandMapLayer(context) {
 
@@ -32,6 +33,25 @@ class OceanographicGribMapLayer(context: Context) : OsmandMapLayer(context) {
         style = Paint.Style.STROKE
         strokeWidth = 3f
     }
+
+    private val currentVectorPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+        strokeCap = Paint.Cap.ROUND
+        strokeJoin = Paint.Join.ROUND
+    }
+    private val currentArrowHeadPath = Path()
+    private val currentLabelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        textSize = 20f
+        textAlign = Paint.Align.CENTER
+        typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+        style = Paint.Style.FILL
+    }
+    private val currentLabelBgPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.WHITE
+        alpha = 200
+        style = Paint.Style.FILL
+    }
+    private val currentLabelRect = RectF()
 
     private val labelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.DKGRAY
@@ -99,7 +119,13 @@ class OceanographicGribMapLayer(context: Context) : OsmandMapLayer(context) {
         if (tileBox.zoom < 3) return // Lowered zoom limit for overview
 
         val repository = SailingDependencyContainer.gribRepository
-        if (repository?.status?.value != GribStatus.READY) return
+        if (repository?.status?.value != GribStatus.READY) {
+            val app = context.applicationContext as OsmandApplication
+            if (app.settings.NAUTICAL_SHOW_GRIB_CURRENTS.get()) {
+                drawCurrentVectors(canvas, tileBox, null)
+            }
+            return
+        }
 
         val timestamp = System.currentTimeMillis()
         val center = tileBox.centerLatLon
@@ -150,9 +176,128 @@ class OceanographicGribMapLayer(context: Context) : OsmandMapLayer(context) {
         // 2. Render Wave Vectors (Batched)
         drawWaveVectorsBatched(canvas, cache.waveVectors, tileBox)
 
-        // 3. Render "EXPIRED FORECAST" Banner (Adjusted position)
+        // 3. Render Ocean/Tidal Current Vectors
+        drawCurrentVectors(canvas, tileBox, repository.engine)
+
+        // 4. Render "EXPIRED FORECAST" Banner (Adjusted position)
         if (cache.isExpired) {
             drawExpiredBanner(canvas)
+        }
+    }
+
+    fun drawCurrentVectors(canvas: Canvas, tileBox: RotatedTileBox, gribEngine: GribInterpolationEngine?) {
+        val app = context.applicationContext as OsmandApplication
+        if (!app.settings.NAUTICAL_SHOW_GRIB_CURRENTS.get()) return
+
+        val stepPx = (64f * tileBox.density).coerceAtLeast(32f)
+        val pixWidth = tileBox.pixWidth.toFloat()
+        val pixHeight = tileBox.pixHeight.toFloat()
+        val timestamp = System.currentTimeMillis()
+        val mapRotate = tileBox.rotate
+
+        val plugin = NauticalPlugin.getInstance()
+        val liveState = plugin?.engine?.dataBroker?.marineState?.value
+        val hasLiveDrift = liveState?.latitude != null && liveState.longitude != null &&
+                liveState.drift != null && liveState.setTrue != null
+
+        var py = stepPx / 2f
+        while (py < pixHeight) {
+            var px = stepPx / 2f
+            while (px < pixWidth) {
+                val lat = tileBox.getLatFromPixel(px, py)
+                val lon = tileBox.getLonFromPixel(px, py)
+
+                var u: Double? = null
+                var v: Double? = null
+
+                val gribVector = gribEngine?.getCurrentVector(lat, lon, timestamp)
+                if (gribVector != null) {
+                    u = gribVector.u
+                    v = gribVector.v
+                } else if (hasLiveDrift) {
+                    val vesselLat = liveState.latitude ?: 0.0
+                    val vesselLon = liveState.longitude ?: 0.0
+                    val vesselPx = tileBox.getPixXFromLatLon(vesselLat, vesselLon)
+                    val vesselPy = tileBox.getPixYFromLatLon(vesselLat, vesselLon)
+                    val distPix = hypot((px - vesselPx).toDouble(), (py - vesselPy).toDouble())
+                    if (distPix <= stepPx * 1.5) {
+                        val driftMps = liveState.drift ?: 0.0
+                        val setRad = liveState.setTrue ?: 0.0
+                        u = driftMps * sin(setRad)
+                        v = driftMps * cos(setRad)
+                    }
+                }
+
+                if (u != null && v != null) {
+                    val speedMps = sqrt(u * u + v * v)
+                    val speedKn = speedMps * 1.943844
+
+                    if (speedKn >= 0.15) {
+                        val thetaRad = atan2(u, v)
+                        val screenAngle = thetaRad - Math.toRadians(mapRotate.toDouble())
+
+                        val color = when {
+                            speedKn < 1.0 -> 0xFF0288D1.toInt() // Cyan/Blue
+                            speedKn <= 2.5 -> 0xFFF57C00.toInt() // Amber
+                            else -> 0xFFD32F2F.toInt() // Red
+                        }
+
+                        currentVectorPaint.color = color
+                        currentVectorPaint.strokeWidth = (if (speedKn > 2.5) 3.5f else 2.5f) * tileBox.density
+                        currentVectorPaint.alpha = 230
+
+                        val arrowLength = (speedKn * 16f * tileBox.density).toFloat().coerceIn(16f * tileBox.density, 54f * tileBox.density)
+                        val dx = (sin(screenAngle) * arrowLength / 2f).toFloat()
+                        val dy = (-cos(screenAngle) * arrowLength / 2f).toFloat()
+
+                        val startX = px - dx
+                        val startY = py - dy
+                        val endX = px + dx
+                        val endY = py + dy
+
+                        // Shaft
+                        canvas.drawLine(startX, startY, endX, endY, currentVectorPaint)
+
+                        // Arrowhead
+                        val headSize = (arrowLength * 0.35f).coerceIn(6f * tileBox.density, 16f * tileBox.density)
+                        val leftHeadAngle = screenAngle + Math.toRadians(150.0)
+                        val rightHeadAngle = screenAngle - Math.toRadians(150.0)
+
+                        val leftHeadX = endX + (sin(leftHeadAngle) * headSize).toFloat()
+                        val leftHeadY = endY - (cos(leftHeadAngle) * headSize).toFloat()
+                        val rightHeadX = endX + (sin(rightHeadAngle) * headSize).toFloat()
+                        val rightHeadY = endY - (cos(rightHeadAngle) * headSize).toFloat()
+
+                        currentArrowHeadPath.reset()
+                        currentArrowHeadPath.moveTo(endX, endY)
+                        currentArrowHeadPath.lineTo(leftHeadX, leftHeadY)
+                        currentArrowHeadPath.moveTo(endX, endY)
+                        currentArrowHeadPath.lineTo(rightHeadX, rightHeadY)
+                        canvas.drawPath(currentArrowHeadPath, currentVectorPaint)
+
+                        // Speed label when zoom >= 13
+                        if (tileBox.zoom >= 13) {
+                            val labelText = String.format(Locale.US, "%.1f kn", speedKn)
+                            val textWidth = currentLabelPaint.measureText(labelText)
+                            val textHeight = currentLabelPaint.textSize
+                            val labelX = endX + (sin(screenAngle) * 14f * tileBox.density).toFloat()
+                            val labelY = endY - (cos(screenAngle) * 14f * tileBox.density).toFloat()
+
+                            currentLabelRect.set(
+                                labelX - textWidth / 2f - 4f,
+                                labelY - textHeight / 2f - 2f,
+                                labelX + textWidth / 2f + 4f,
+                                labelY + textHeight / 2f + 2f
+                            )
+                            canvas.drawRoundRect(currentLabelRect, 4f, 4f, currentLabelBgPaint)
+                            currentLabelPaint.color = color
+                            canvas.drawText(labelText, labelX, labelY + textHeight * 0.35f, currentLabelPaint)
+                        }
+                    }
+                }
+                px += stepPx
+            }
+            py += stepPx
         }
     }
 

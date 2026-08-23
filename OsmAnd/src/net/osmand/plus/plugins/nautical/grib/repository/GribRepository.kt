@@ -57,6 +57,8 @@ class GribRepository {
     val status: StateFlow<GribStatus> = _status.asStateFlow()
 
     private var interpolationEngine: GribInterpolationEngine? = null
+    val engine: GribInterpolationEngine?
+        get() = interpolationEngine
     var gridData: GribGridData? = null
         private set
 

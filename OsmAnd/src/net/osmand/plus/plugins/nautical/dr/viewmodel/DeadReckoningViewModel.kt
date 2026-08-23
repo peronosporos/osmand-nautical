@@ -9,6 +9,19 @@ import net.osmand.plus.R
 import net.osmand.plus.plugins.nautical.dr.engine.*
 import net.osmand.plus.plugins.nautical.repository.SailingPerformanceRepository
 
+import kotlin.math.*
+import net.osmand.plus.plugins.nautical.network.LivePerformanceData
+
+/**
+ * Projected waypoint milestone for forward dead reckoning with uncertainty radius.
+ */
+data class DrProjectionPoint(
+    val lat: Double,
+    val lon: Double,
+    val minuteOffset: Int,
+    val uncertaintyMeters: Double
+)
+
 /**
  * UI State for the Dead Reckoning system.
  */
@@ -20,6 +33,7 @@ data class DrUiState(
     val statusResId: Int = R.string.dr_status_gps,
     val lastValidGpsLat: Double? = null,
     val lastValidGpsLon: Double? = null,
+    val projectionPoints: List<DrProjectionPoint> = emptyList()
 )
 
 /**
@@ -114,6 +128,68 @@ class DeadReckoningViewModel(
         }
     }
 
+    private fun calculateDrVector(telemetry: LivePerformanceData): Pair<DrVector, Double> {
+        val headingRad = telemetry.headingTrue
+            ?: telemetry.headingMagnetic?.let { it + (telemetry.magneticVariation ?: 0.0) }
+            ?: 0.0
+
+        val stw = telemetry.speedThroughWater ?: telemetry.polarSpeed ?: 0.0
+
+        val leewayRad = telemetry.leeway ?: if (telemetry.roll != null) {
+            net.osmand.plus.plugins.nautical.utils.LeewayCalculator.calculateLeewayRadians(
+                telemetry.roll,
+                stw,
+                settings.NAUTICAL_LEEWAY_COEFFICIENT.get()
+            )
+        } else if (telemetry.windAngleApparent != null && stw > 0.0) {
+            val k = settings.NAUTICAL_LEEWAY_COEFFICIENT.get().toDouble()
+            val awaDeg = Math.toDegrees(telemetry.windAngleApparent)
+            val stwKnots = stw * 1.94384
+            val leewayDeg = (k * (awaDeg / stwKnots.coerceAtLeast(0.5).pow(2.0))).coerceIn(-30.0, 30.0)
+            Math.toRadians(leewayDeg)
+        } else {
+            0.0
+        }
+
+        val driftMps = telemetry.drift ?: 0.0
+        val driftSetRad = telemetry.setTrue ?: 0.0
+
+        val vector = DrVector(
+            speedThroughWater = stw,
+            headingDegrees = Math.toDegrees(headingRad),
+            leewayDegrees = Math.toDegrees(leewayRad),
+            driftSpeedMps = driftMps,
+            driftSetDegrees = Math.toDegrees(driftSetRad)
+        )
+
+        val waterHeading = headingRad + leewayRad
+        val uWater = stw * sin(waterHeading)
+        val vWater = stw * cos(waterHeading)
+        val uTide = driftMps * sin(driftSetRad)
+        val vTide = driftMps * cos(driftSetRad)
+        val uGround = uWater + uTide
+        val vGround = vWater + vTide
+        val groundSpeedMps = sqrt(uGround * uGround + vGround * vGround)
+
+        return Pair(vector, groundSpeedMps)
+    }
+
+    private fun generateProjections(currentFix: DrFix, vector: DrVector, groundSpeedMps: Double): List<DrProjectionPoint> {
+        val baseGpsAccuracy = 10.0
+        val intervals = listOf(15, 30, 45, 60)
+        return intervals.map { minOffset ->
+            val tSeconds = minOffset * 60L
+            val projFix = DrProjectionEngine.projectPosition(currentFix, vector, tSeconds)
+            val uncertainty = baseGpsAccuracy + (groundSpeedMps * tSeconds * 0.05)
+            DrProjectionPoint(
+                lat = projFix.latitude,
+                lon = projFix.longitude,
+                minuteOffset = minOffset,
+                uncertaintyMeters = uncertainty
+            )
+        }
+    }
+
     private fun startDeadReckoning(resuming: Boolean = false) {
         if (projectionJob?.isActive == true && !resuming) return
         
@@ -129,19 +205,7 @@ class DeadReckoningViewModel(
                 val lastFix = lastValidGpsFix ?: break
                 val telemetry = repository.livePerformanceData.value
                 
-                val leewayRad = net.osmand.plus.plugins.nautical.utils.LeewayCalculator.calculateLeewayRadians(
-                    telemetry.roll ?: 0.0,
-                    telemetry.speedThroughWater ?: 0.0,
-                    settings.NAUTICAL_LEEWAY_COEFFICIENT.get()
-                )
-
-                val vector = DrVector(
-                    speedThroughWater = telemetry.speedThroughWater ?: 0.0,
-                    headingDegrees = telemetry.headingTrue ?: 0.0,
-                    leewayDegrees = Math.toDegrees(leewayRad),
-                    driftSpeedMps = telemetry.drift ?: 0.0,
-                    driftSetDegrees = Math.toDegrees(telemetry.setTrue ?: 0.0)
-                )
+                val (vector, groundSpeedMps) = calculateDrVector(telemetry)
                 
                 val now = System.currentTimeMillis()
                 
@@ -157,6 +221,8 @@ class DeadReckoningViewModel(
                 // Persist latest estimated position
                 settings.NAUTICAL_DR_LAST_LAT.set(estimatedFix.latitude)
                 settings.NAUTICAL_DR_LAST_LON.set(estimatedFix.longitude)
+
+                val projections = generateProjections(estimatedFix, vector, groundSpeedMps)
                 
                 _uiState.update { 
                     it.copy(
@@ -166,7 +232,8 @@ class DeadReckoningViewModel(
                         drDurationSeconds = (now - drStartTime) / 1000,
                         statusResId = R.string.dr_status_fallback,
                         lastValidGpsLat = initialFix?.latitude,
-                        lastValidGpsLon = initialFix?.longitude
+                        lastValidGpsLon = initialFix?.longitude,
+                        projectionPoints = projections
                     )
                 }
                 
@@ -187,6 +254,7 @@ class DeadReckoningViewModel(
         if (settings.NAUTICAL_DR_LAST_LON.get() != 0.0) {
             settings.NAUTICAL_DR_LAST_LON.set(0.0)
         }
+        _uiState.update { it.copy(projectionPoints = emptyList()) }
     }
 
     fun clear() {

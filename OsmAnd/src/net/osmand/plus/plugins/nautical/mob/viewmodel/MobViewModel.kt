@@ -34,12 +34,15 @@ data class MobUiState(
     val bearingDegrees: Double? = null,
     val etaSeconds: Double? = null,
     val mobLocation: LatLon? = null,
+    val estimatedCasualtyLocation: LatLon? = null,
+    val uncertaintyRadiusMeters: Double = 0.0,
     val state: MobState = MobState.INACTIVE,
     val isMotoring: Boolean = false,
     val isUpwind: Boolean = true,
     val isSearching: Boolean = false,
     val muteUntil: Long = 0L,
     val activeMobCount: Int = 0,
+    val sarPatternWaypoints: List<LatLon> = emptyList()
 )
 
 enum class MobTriggerSource {
@@ -101,13 +104,47 @@ class MobViewModel(
         stateMachine.mobStatus
             .onEach { status ->
                 val active = status.state == MobState.ACTIVE_EMERGENCY
+                val event = status.event
+                val dropLoc = event?.dropLocation
+                val state = NauticalPlugin.engine?.getCurrentState()
+                val driftMps = state?.drift ?: 0.0
+                val setTrueRad = state?.setTrue ?: 0.0
+                val twsMps = state?.windSpeedTrue
+                val twdDeg = state?.windAngleTrueWater?.let { Math.toDegrees(it) }
+
+                val (estimatedLoc, uncertainty) = if (active && event != null && dropLoc != null) {
+                    val timeElapsedSec = (System.currentTimeMillis() - event.dropTimestamp) / 1000.0
+                    val tideDx = driftMps * kotlin.math.sin(setTrueRad)
+                    val tideDy = driftMps * kotlin.math.cos(setTrueRad)
+                    val effectiveTws = twsMps ?: (10.0 * 0.514444)
+                    val leewaySpeedMps = 0.03 * effectiveTws
+                    val downwindDeg = twdDeg?.let { (it + 180.0) % 360.0 } ?: Math.toDegrees(setTrueRad)
+                    val leewayDx = leewaySpeedMps * kotlin.math.sin(Math.toRadians(downwindDeg))
+                    val leewayDy = leewaySpeedMps * kotlin.math.cos(Math.toRadians(downwindDeg))
+                    val totalVx = tideDx + leewayDx
+                    val totalVy = tideDy + leewayDy
+                    val totalSpeed = kotlin.math.sqrt(totalVx * totalVx + totalVy * totalVy)
+                    val totalBearing = (Math.toDegrees(kotlin.math.atan2(totalVx, totalVy)) + 360.0) % 360.0
+                    val totalDist = totalSpeed * timeElapsedSec
+                    val est = if (totalDist > 0.5) {
+                        val p = KMapUtils.rhumbDestinationPoint(dropLoc.latitude, dropLoc.longitude, totalDist, totalBearing)
+                        LatLon(p.latitude, p.longitude)
+                    } else dropLoc
+                    val unc = 15.0 + (totalSpeed * timeElapsedSec * 0.05)
+                    Pair(est, unc)
+                } else {
+                    Pair(dropLoc, 0.0)
+                }
+
                 _uiState.update { current ->
                     current.copy(
                         isMobActive = active,
                         distanceMeters = status.returnVector?.distanceMeters,
                         bearingDegrees = status.returnVector?.bearingDegrees,
                         etaSeconds = status.returnVector?.estimatedTimeToMarkerSeconds,
-                        mobLocation = status.event?.dropLocation,
+                        mobLocation = dropLoc,
+                        estimatedCasualtyLocation = estimatedLoc,
+                        uncertaintyRadiusMeters = uncertainty,
                         state = status.state,
                         muteUntil = status.muteUntil,
                         activeMobCount = status.activeEvents.size
@@ -356,10 +393,36 @@ class MobViewModel(
             stateMachine.cancelMob()
         }
         audioManager.stopAlarm()
+        _uiState.update { it.copy(sarPatternWaypoints = emptyList(), isSearching = false) }
         
         // Abort the maneuver engine to reset autopilot state
         val mm = PluginsHelper.getPlugin(NauticalPlugin::class.java)?.maneuverManager
         mm?.abort("MOB Emergency Cancelled")
+    }
+
+    /**
+     * Generates an IAMSAR Expanding Square Search pattern around the estimated casualty datum.
+     */
+    fun generateExpandingSquare(trackSpacingMeters: Double = 100.0, legs: Int = 8) {
+        val datum = _uiState.value.estimatedCasualtyLocation ?: _uiState.value.mobLocation ?: return
+        val waypoints = MobVectorEngine.generateExpandingSquarePattern(datum, trackSpacingMeters, legs)
+        _uiState.update { it.copy(sarPatternWaypoints = waypoints, isSearching = true) }
+    }
+
+    /**
+     * Generates an IAMSAR Sector Search pattern around the estimated casualty datum.
+     */
+    fun generateSectorSearch(radiusMeters: Double = 300.0) {
+        val datum = _uiState.value.estimatedCasualtyLocation ?: _uiState.value.mobLocation ?: return
+        val waypoints = MobVectorEngine.generateSectorSearchPattern(datum, radiusMeters)
+        _uiState.update { it.copy(sarPatternWaypoints = waypoints, isSearching = true) }
+    }
+
+    /**
+     * Clears active SAR pattern.
+     */
+    fun clearSarPattern() {
+        _uiState.update { it.copy(sarPatternWaypoints = emptyList(), isSearching = false) }
     }
 
     fun requestHeaveTo() {

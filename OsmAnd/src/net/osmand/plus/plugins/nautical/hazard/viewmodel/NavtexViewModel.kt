@@ -62,7 +62,13 @@ class NavtexViewModel(
         _filters,
         locationFlow
     ) { messages, filters, location ->
+        val now = System.currentTimeMillis()
+        val ttl48h = 48 * 3600 * 1000L
+
         val filtered = messages.filter { msg ->
+            // Filter out expired bulletins (> 48h) or messages with timestamp in the future / invalid
+            if (now - msg.timestamp > ttl48h) return@filter false
+
             // Subject 'A' (NAVTEX_WARNING) and 'D' (SEARCH_AND_RESCUE) always bypass filters per safety audit
             if ((msg.subject == NavtexSubject.NAVTEX_WARNING) || (msg.subject == NavtexSubject.SEARCH_AND_RESCUE)) {
                 return@filter true

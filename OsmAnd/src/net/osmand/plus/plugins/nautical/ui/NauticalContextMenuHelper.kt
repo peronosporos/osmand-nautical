@@ -331,6 +331,51 @@ class NauticalContextMenuHelper(private val app: OsmandApplication) {
             }
         )
 
+        adapter.addItem(
+            ContextMenuItem("nautical_set_anchor_here").apply {
+                setTitleId(R.string.nautical_set_anchor_here, mapActivity)
+                icon = R.drawable.ic_action_anchor
+                setListener { _, _, _, _ ->
+                    app.settings.NAUTICAL_ANCHOR_LAT.set(lat)
+                    app.settings.NAUTICAL_ANCHOR_LON.set(lon)
+                    net.osmand.plus.plugins.nautical.ui.anchor.AnchorWatchDialogFragment.show(mapActivity.supportFragmentManager)
+                    onRequestRefresh()
+                    app.osmandMap?.refreshMap()
+                    true
+                }
+            }
+        )
+
+        adapter.addItem(
+            ContextMenuItem("nautical_navigate_weather_route_here").apply {
+                setTitleId(R.string.nautical_navigate_weather_route_here, mapActivity)
+                icon = R.drawable.ic_action_plan_route
+                setListener { _, _, _, _ ->
+                    app.settings.NAUTICAL_TACTICAL_TARGET_LAT.set(lat)
+                    app.settings.NAUTICAL_TACTICAL_TARGET_LON.set(lon)
+                    net.osmand.plus.plugins.nautical.routing.ui.WeatherRoutingConfigBottomSheet.show(mapActivity.supportFragmentManager, lat, lon)
+                    true
+                }
+            }
+        )
+
+        adapter.addItem(
+            ContextMenuItem("nautical_mob_here").apply {
+                setTitleId(R.string.nautical_mob_here, mapActivity)
+                icon = R.drawable.ic_action_alert
+                setListener { _, _, _, _ ->
+                    mobViewModel?.triggerMob(
+                        LatLon(lat, lon),
+                        MobTriggerSource.BUTTON
+                    )
+                    app.showToastMessage(R.string.nautical_mob_triggered)
+                    onRequestRefresh()
+                    app.osmandMap?.refreshMap()
+                    true
+                }
+            }
+        )
+
         if (app.settings.NAUTICAL_ANCHOR_PREVIEW_LAT.get() != 0.0) {
             adapter.addItem(
                 ContextMenuItem("nautical_anchor_set_preview").apply {

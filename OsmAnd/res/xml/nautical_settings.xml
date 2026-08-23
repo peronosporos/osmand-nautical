@@ -29,12 +29,6 @@
         android:title="@string/nautical_heavy_weather_mode"
         android:summary="@string/nautical_heavy_weather_mode_desc" />
 
-    <Preference
-        android:key="nautical_configure_bottom_sheet_telemetry"
-        android:layout="@layout/preference_with_descr"
-        android:title="@string/nautical_configure_displayed_metrics"
-        android:summary="@string/nautical_configure_displayed_metrics_desc" />
-
     <!-- Section 2: Enabled Modules (Gatekeeping) -->
     <PreferenceCategory
         android:key="nautical_modules_category"

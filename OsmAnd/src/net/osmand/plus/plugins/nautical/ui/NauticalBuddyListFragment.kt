@@ -19,6 +19,8 @@ import kotlinx.coroutines.launch
 import net.osmand.plus.R
 import net.osmand.plus.base.BaseOsmAndFragment
 import net.osmand.plus.plugins.nautical.NauticalPlugin
+import net.osmand.plus.settings.fragments.BaseSettingsFragment
+import net.osmand.plus.settings.fragments.SettingsScreenType
 
 class NauticalBuddyListFragment : BaseOsmAndFragment() {
 
@@ -39,7 +41,20 @@ class NauticalBuddyListFragment : BaseOsmAndFragment() {
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         val view = themedInflater.inflate(R.layout.fragment_nautical_buddy_list, container, false)
+        
+        view.findViewById<View>(R.id.close_button)?.setOnClickListener {
+            activity?.onBackPressedDispatcher?.onBackPressed()
+        }
+
+        view.findViewById<View>(R.id.btn_own_vessel_profile)?.setOnClickListener {
+            val mapActivity = activity as? net.osmand.plus.activities.MapActivity
+            if (mapActivity != null) {
+                BaseSettingsFragment.showInstance(mapActivity, SettingsScreenType.AIS_SETTINGS)
+            }
+        }
+
         val recyclerView = view.findViewById<RecyclerView?>(R.id.recycler_view)
+        val emptyLayout = view.findViewById<View>(R.id.layout_empty_list)
         
         adapter = BuddyAdapter(
             onClick = { mmsi ->
@@ -58,11 +73,16 @@ class NauticalBuddyListFragment : BaseOsmAndFragment() {
             showAddBuddyDialog()
         }
 
+        view.findViewById<View>(R.id.btn_empty_add_buddy)?.setOnClickListener {
+            showAddBuddyDialog()
+        }
+
         viewLifecycleOwner.lifecycleScope.launch {
             NauticalPlugin.engine?.marineStateFlow?.collectLatest { state ->
                 val buddies = state.aisBuddies.toList()
                 adapter.submitList(buddies)
-                view.findViewById<View>(R.id.txt_empty_list)?.visibility = if (buddies.isEmpty()) View.VISIBLE else View.GONE
+                emptyLayout?.visibility = if (buddies.isEmpty()) View.VISIBLE else View.GONE
+                recyclerView?.visibility = if (buddies.isEmpty()) View.GONE else View.VISIBLE
             }
         }
 
@@ -73,7 +93,8 @@ class NauticalBuddyListFragment : BaseOsmAndFragment() {
         AlertDialog.Builder(requireContext())
             .setMessage(getString(R.string.nautical_buddy_delete_confirm, mmsi))
             .setPositiveButton(R.string.shared_string_delete) { _, _ ->
-                NauticalPlugin.getInstance()?.aisManager?.toggleBuddy(mmsi)
+                NauticalPlugin.getInstance()?.aisManager?.removeBuddy(mmsi)
+                app.showToastMessage(getString(R.string.nautical_removed_from_buddies, mmsi.toString()))
             }
             .setNegativeButton(R.string.shared_string_cancel, null)
             .show()
@@ -82,13 +103,19 @@ class NauticalBuddyListFragment : BaseOsmAndFragment() {
     private fun showAddBuddyDialog() {
         val context = context ?: return
         val aisObjects = NauticalPlugin.getInstance()?.aisManager?.getAisObjects() ?: emptyList()
+        if (aisObjects.isEmpty()) {
+            showManualMmsiDialog()
+            return
+        }
         val names = aisObjects.map { it.shipName ?: "MMSI: ${it.mmsi}" }.toTypedArray()
         
         AlertDialog.Builder(context)
             .setTitle(R.string.nautical_add_to_buddies)
             .setItems(names) { _, which ->
                 val selected = aisObjects[which]
-                NauticalPlugin.getInstance()?.aisManager?.toggleBuddy(selected.mmsi)
+                NauticalPlugin.getInstance()?.aisManager?.addBuddy(selected.mmsi)
+                val label = selected.shipName ?: selected.mmsi.toString()
+                app.showToastMessage(getString(R.string.nautical_added_to_buddies, label))
             }
             .setNeutralButton(R.string.shared_string_add_manually) { _, _ ->
                  showManualMmsiDialog()
@@ -100,7 +127,7 @@ class NauticalBuddyListFragment : BaseOsmAndFragment() {
     private fun showManualMmsiDialog() {
         val context = context ?: return
         val input = EditText(context).apply {
-            hint = "Enter MMSI"
+            hint = "Enter 9-digit MMSI"
             inputType = InputType.TYPE_CLASS_NUMBER
         }
         
@@ -108,9 +135,13 @@ class NauticalBuddyListFragment : BaseOsmAndFragment() {
             .setTitle(R.string.nautical_add_to_buddies)
             .setView(input)
             .setPositiveButton(R.string.shared_string_add) { _, _ ->
-                val mmsi = input.text.toString().toIntOrNull()
-                if (mmsi != null) {
-                    NauticalPlugin.getInstance()?.aisManager?.toggleBuddy(mmsi)
+                val text = input.text.toString().trim()
+                val mmsi = text.toIntOrNull()
+                if (mmsi != null && text.length == 9) {
+                    NauticalPlugin.getInstance()?.aisManager?.addBuddy(mmsi)
+                    app.showToastMessage(getString(R.string.nautical_added_to_buddies, mmsi.toString()))
+                } else {
+                    app.showToastMessage("Invalid MMSI. Please enter a valid 9-digit MMSI.")
                 }
             }
             .setNegativeButton(R.string.shared_string_cancel, null)

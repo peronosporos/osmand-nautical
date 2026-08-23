@@ -87,6 +87,13 @@ class TelemetryChartView @JvmOverloads constructor(
         pathEffect = DashPathEffect(floatArrayOf(10f, 10f), 0f)
     }
 
+    private val path = Path()
+    private val fillPath = Path()
+    private var lastPlotH = 0f
+    private var lastTop = 0f
+    private var depthShader: LinearGradient? = null
+    private var normalShader: LinearGradient? = null
+
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
         val w = width.toFloat()
@@ -143,8 +150,8 @@ class TelemetryChartView @JvmOverloads constructor(
         canvas.drawText(topLabel, 10f, paddingTop + 20f, textPaint)
         canvas.drawText(bottomLabel, 10f, h - paddingBottom - 5f, textPaint)
 
-        val path = Path()
-        val fillPath = Path()
+        path.reset()
+        fillPath.reset()
 
         var firstX = 0f
         var firstY = 0f
@@ -173,6 +180,23 @@ class TelemetryChartView @JvmOverloads constructor(
             lastX = x
         }
 
+        if (plotH != lastPlotH || paddingTop != lastTop) {
+            lastPlotH = plotH
+            lastTop = paddingTop
+            depthShader = LinearGradient(
+                0f, paddingTop, 0f, paddingTop + plotH,
+                Color.argb(140, 139, 69, 19),
+                Color.argb(40, 139, 69, 19),
+                Shader.TileMode.CLAMP
+            )
+            normalShader = LinearGradient(
+                0f, paddingTop, 0f, paddingTop + plotH,
+                Color.argb(120, 33, 150, 243),
+                Color.argb(20, 33, 150, 243),
+                Shader.TileMode.CLAMP
+            )
+        }
+
         // Complete fill path
         if (isDepth) {
             // Fill below seabed curve (acoustic bottom profile)
@@ -180,24 +204,14 @@ class TelemetryChartView @JvmOverloads constructor(
             fillPath.lineTo(firstX, paddingTop + plotH)
             fillPath.close()
 
-            fillPaint.shader = LinearGradient(
-                0f, paddingTop, 0f, paddingTop + plotH,
-                Color.argb(140, 139, 69, 19),
-                Color.argb(40, 139, 69, 19),
-                Shader.TileMode.CLAMP
-            )
+            fillPaint.shader = depthShader
             linePaint.color = Color.rgb(205, 133, 63)
         } else {
             fillPath.lineTo(lastX, paddingTop + plotH)
             fillPath.lineTo(firstX, paddingTop + plotH)
             fillPath.close()
 
-            fillPaint.shader = LinearGradient(
-                0f, paddingTop, 0f, paddingTop + plotH,
-                Color.argb(120, 33, 150, 243),
-                Color.argb(20, 33, 150, 243),
-                Shader.TileMode.CLAMP
-            )
+            fillPaint.shader = normalShader
             linePaint.color = Color.rgb(33, 150, 243)
         }
 

@@ -6,6 +6,16 @@ import javax.crypto.Cipher
 import javax.crypto.spec.SecretKeySpec
 
 /**
+ * Status of individual cell permits parsed from PERMIT.TXT.
+ */
+sealed class CellPermitStatus {
+    data class Valid(val cellName: String, val expiryDate: String, val keyHex: String) : CellPermitStatus()
+    data class Expired(val cellName: String, val expiryDate: String) : CellPermitStatus()
+    data class ChecksumError(val rawLine: String) : CellPermitStatus()
+    data class Malformed(val rawLine: String) : CellPermitStatus()
+}
+
+/**
  * Utility for S-63 hashing, HWID generation, and User Permit calculation.
  * Follows the IHO S-63 Data Protection Scheme.
  */
@@ -92,10 +102,30 @@ object S63PermitGenerator {
      * @return Map of Cell Name to PermitInfo (decrypted key + expiry).
      */
     fun extractPermits(permitTxt: String, hwid: ByteArray): Map<String, PermitInfo> {
+        val statuses = parseAndValidatePermits(permitTxt, hwid)
         val permits = mutableMapOf<String, PermitInfo>()
+        for (status in statuses) {
+            when (status) {
+                is CellPermitStatus.Valid -> permits[status.cellName] = PermitInfo(status.keyHex, status.expiryDate)
+                is CellPermitStatus.Expired -> permits[status.cellName] = PermitInfo("", status.expiryDate)
+                else -> {}
+            }
+        }
+        return permits
+    }
+
+    /**
+     * Parses PERMIT.TXT and validates CRC-32 checksums, formatting, and expiration.
+     */
+    fun parseAndValidatePermits(
+        permitTxt: String,
+        hwid: ByteArray,
+        todayYYYYMMDD: String = getTodayYYYYMMDD()
+    ): List<CellPermitStatus> {
+        val results = mutableListOf<CellPermitStatus>()
         val paddedHwid = ByteArray(BLOWFISH_BLOCK_SIZE)
         System.arraycopy(hwid, 0, paddedHwid, 0, HWID_SIZE.coerceAtMost(BLOWFISH_BLOCK_SIZE))
-        
+
         val keySpec = SecretKeySpec(paddedHwid, "Blowfish")
         val cipher = Cipher.getInstance(BLOWFISH_ALGORITHM)
         cipher.init(Cipher.DECRYPT_MODE, keySpec)
@@ -104,44 +134,98 @@ object S63PermitGenerator {
             val line = rawLine.trim()
             if (line.isEmpty() || line.startsWith("#") || line.startsWith("//")) return@forEach
 
-            // Format A: CSV format (e.g. "PERMIT,GB4X0000,20261231,B1C8E9D0A1B2C3D4,..." or "GB4X0000,20261231,B1C8E9D0A1B2C3D4,...")
+            var cellName = ""
+            var expiryDate = ""
+            var encKey1 = ""
+            var providedCrcHex: String? = null
+
             if (line.contains(",")) {
                 val parts = line.split(",").map { it.trim() }
-                val (cellName, expiryDate, encKey1) = when {
-                    parts[0].equals("PERMIT", ignoreCase = true) && parts.size >= 4 -> {
-                        Triple(parts[1].uppercase(), parts[2], parts[3])
+                if (parts[0].equals("PERMIT", ignoreCase = true) && parts.size >= 4) {
+                    cellName = parts[1].uppercase()
+                    expiryDate = parts[2]
+                    encKey1 = parts[3]
+                    if (parts.size >= 5 && parts.last().length == 8) {
+                        providedCrcHex = parts.last()
                     }
-                    parts.size >= 3 && parts[0].length == 8 -> {
-                        Triple(parts[0].uppercase(), parts[1], parts[2])
+                } else if (parts.size >= 3 && parts[0].length == 8) {
+                    cellName = parts[0].uppercase()
+                    expiryDate = parts[1]
+                    encKey1 = parts[2]
+                    if (parts.size >= 4 && parts.last().length == 8) {
+                        providedCrcHex = parts.last()
                     }
-                    else -> Triple("", "", "")
-                }
-                if (cellName.isNotEmpty() && encKey1.length == 16) {
-                    try {
-                        val encryptedBytes = fromHexString(encKey1)
-                        val decryptedBytes = cipher.doFinal(encryptedBytes)
-                        val cellKey = toHexString(decryptedBytes).uppercase()
-                        permits[cellName] = PermitInfo(cellKey, expiryDate)
-                    } catch (_: Exception) {}
                 }
             } else if (line.length >= 32) {
-                // Format B: Standard raw S-63 permit string
-                // 8 chars CellName + 8 chars ExpiryDate + 16 chars EncKey1 (+ optional 16 chars EncKey2 + CRC)
-                val cellName = line.substring(0, 8).trim().uppercase()
-                val expiryDate = line.substring(8, 16).trim()
-                val encKey1 = line.substring(16, 32).trim()
-
-                if (encKey1.length == 16 && (cellName.matches(Regex("^[A-Z0-9]{8}$")) || cellName.length == 8)) {
-                    try {
-                        val encryptedBytes = fromHexString(encKey1)
-                        val decryptedBytes = cipher.doFinal(encryptedBytes)
-                        val cellKey = toHexString(decryptedBytes).uppercase()
-                        permits[cellName] = PermitInfo(cellKey, expiryDate)
-                    } catch (_: Exception) {}
+                cellName = line.substring(0, 8).trim().uppercase()
+                expiryDate = line.substring(8, 16).trim()
+                encKey1 = line.substring(16, 32).trim()
+                if (line.length >= 40) {
+                    val remaining = line.substring(32).trim()
+                    if (remaining.length == 8) {
+                        providedCrcHex = remaining
+                    } else if (remaining.length >= 24) {
+                        providedCrcHex = remaining.substring(remaining.length - 8)
+                    }
                 }
             }
+
+            if (cellName.isEmpty() || encKey1.length != 16 || expiryDate.length != 8) {
+                results.add(CellPermitStatus.Malformed(line))
+                return@forEach
+            }
+
+            // Check CRC32 if present
+            if (providedCrcHex != null) {
+                try {
+                    val keyBytes = fromHexString(encKey1)
+                    val crc = CRC32()
+                    crc.update(keyBytes)
+                    val calcCrc = String.format("%08X", crc.value.toInt())
+                    if (!providedCrcHex.equals(calcCrc, ignoreCase = true)) {
+                        val fullLineBeforeCrc = line.substring(0, line.length - providedCrcHex.length).trimEnd(',', ' ')
+                        val crcFull = CRC32()
+                        crcFull.update(fullLineBeforeCrc.toByteArray(Charsets.US_ASCII))
+                        val calcFullCrc = String.format("%08X", crcFull.value.toInt())
+                        if (!providedCrcHex.equals(calcFullCrc, ignoreCase = true)) {
+                            results.add(CellPermitStatus.ChecksumError(line))
+                            return@forEach
+                        }
+                    }
+                } catch (_: Exception) {
+                    results.add(CellPermitStatus.ChecksumError(line))
+                    return@forEach
+                }
+            }
+
+            // Decrypt key and check expiry
+            try {
+                val encryptedBytes = fromHexString(encKey1)
+                val decryptedBytes = cipher.doFinal(encryptedBytes)
+                val cellKey = toHexString(decryptedBytes).uppercase()
+
+                if (isExpired(expiryDate, todayYYYYMMDD)) {
+                    results.add(CellPermitStatus.Expired(cellName, expiryDate))
+                } else {
+                    results.add(CellPermitStatus.Valid(cellName, expiryDate, cellKey))
+                }
+            } catch (_: Exception) {
+                results.add(CellPermitStatus.Malformed(line))
+            }
         }
-        return permits
+
+        return results
+    }
+
+    private fun getTodayYYYYMMDD(): String {
+        return java.text.SimpleDateFormat("yyyyMMdd", java.util.Locale.US).format(java.util.Date())
+    }
+
+    fun isExpired(expiryDate: String, todayYYYYMMDD: String = getTodayYYYYMMDD()): Boolean {
+        if (expiryDate.length != 8) return false
+        val expiryNum = expiryDate.toLongOrNull() ?: return false
+        val todayNum = todayYYYYMMDD.toLongOrNull() ?: return false
+        return expiryNum < todayNum
     }
 
     data class PermitInfo(val cellKey: String, val expiryDate: String)

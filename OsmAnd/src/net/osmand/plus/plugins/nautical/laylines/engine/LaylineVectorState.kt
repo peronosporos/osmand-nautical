@@ -24,5 +24,7 @@ data class LaylineData(
     val portTackPoint: LatLon?,
     val starboardTackPoint: LatLon?,
     val isFetchable: Boolean,
-    val targetWaypoint: LatLon
+    val targetWaypoint: LatLon,
+    val portShiftCone: Pair<LatLon, LatLon>? = null,
+    val stbdShiftCone: Pair<LatLon, LatLon>? = null
 )

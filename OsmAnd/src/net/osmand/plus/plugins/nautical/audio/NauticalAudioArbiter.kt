@@ -31,6 +31,8 @@ enum class AlarmType(var priority: Int) {
     TACTICAL_GYBE(7),
     TACTICAL_TACK(7),
     AUTOPILOT_COMMAND_REJECTED(8),
+    WAYPOINT_ARRIVAL(8),
+    ROUTE_COMPLETED(8),
     VHF_TRAFFIC(10),
     TTS_INSTRUCTION(12)
 }

@@ -4,6 +4,7 @@ import com.google.gson.Gson
 import com.google.gson.annotations.SerializedName
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import net.osmand.PlatformUtil
 import net.osmand.plus.OsmandApplication
 import net.osmand.plus.plugins.nautical.NauticalPlugin
 import net.osmand.plus.plugins.nautical.engine.MarineState
@@ -21,6 +22,7 @@ data class BoatAiResult(
 
 class BoatAiRepository(private val app: OsmandApplication) {
 
+    private val log = PlatformUtil.getLog(BoatAiRepository::class.java)
     private val gson = Gson()
 
     suspend fun sendQuery(query: String, state: MarineState): Result<BoatAiResult> = withContext(Dispatchers.IO) {
@@ -58,7 +60,9 @@ class BoatAiRepository(private val app: OsmandApplication) {
                                 if (action != null) {
                                     actions.add(action)
                                 }
-                            } catch (_: Exception) {}
+                            } catch (e: Exception) {
+                                log.warn("Failed to parse BoatAI action: ${e.message}", e)
+                            }
                         }
 
                         return@withContext Result.success(BoatAiResult(cleanReply, actions))

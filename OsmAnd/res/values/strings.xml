@@ -1,4 +1,13 @@
 <resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
+    <string name="nautical_route_completed">Passage completed. Final waypoint reached.</string>
+    <string name="nautical_waypoint_reached">Waypoint reached. Steer to next waypoint.</string>
+    <string name="nautical_set_anchor_here">Set Anchor Point Here</string>
+    <string name="nautical_navigate_weather_route_here">Navigate Weather Route Here</string>
+    <string name="nautical_mob_here">Emergency MOB Here</string>
+    <string name="nautical_vessel_manager_title">Vessel &amp; AIS Manager</string>
+    <string name="nautical_own_vessel_profile">Own Vessel Profile</string>
+    <string name="nautical_manage_buddies">Manage Buddies</string>
+    <string name="nautical_ais_buddies_title">AIS Buddies</string>
     <string name="nautical_ais_range_bearing">%1$s • %2$s</string>
     <string name="nautical_signalk_diagnostics_title">Signal K Server Diagnostics</string>
     <string name="nautical_signalk_diagnostics_desc">Inspect active capabilities, services, and server health</string>
@@ -13,8 +22,10 @@
     <string name="nautical_tank_ballast">Ballast</string>
     <string name="nautical_tank_raw_water">Raw Water</string>
     <string name="nautical_autopilot_route_engaged">Autopilot route engaged</string>
-    <string name="nautical_port_pin_dropped">Port pin dropped at GPS location</string>
-    <string name="nautical_stbd_pin_dropped">Starboard pin dropped at GPS location</string>
+    <string name="nautical_port_pin_dropped">Port pin set at current position</string>
+    <string name="nautical_stbd_pin_dropped">Starboard pin set at current position</string>
+    <string name="nautical_port_pin_cleared">Port pin cleared</string>
+    <string name="nautical_stbd_pin_cleared">Starboard pin cleared</string>
     <string name="nautical_laylines_enabled">Laylines enabled</string>
     <string name="nautical_laylines_disabled">Laylines disabled</string>
     <string name="nautical_laylines_enabled_target">Laylines enabled for target</string>

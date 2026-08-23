@@ -32,7 +32,9 @@ import net.osmand.plus.plugins.nautical.network.SignalKLineString
 import net.osmand.plus.plugins.nautical.network.SignalKRestService
 import net.osmand.plus.plugins.nautical.network.SignalKRoute
 import net.osmand.plus.plugins.nautical.network.SignalKRouteFeature
+import net.osmand.plus.plugins.nautical.utils.KMapUtils
 import net.osmand.plus.plugins.nautical.utils.TemporalUtils
+import net.osmand.plus.settings.enums.XteDirection
 import net.osmand.shared.aistracker.AisObject
 import java.util.Locale
 import java.util.concurrent.CopyOnWriteArraySet
@@ -57,6 +59,7 @@ class SignalKEngine(
     val routeTracker = SignalKRouteTracker()
     val metricsCalculator = SignalKMetricsCalculator(app)
     val sessionManager = SignalKSessionManager(app, engineScope, dataBroker, resourceManager, historyManager)
+    val nmeaBroadcaster = net.osmand.plus.plugins.nautical.nmea.connection.NmeaBroadcaster()
 
     private val engineExceptionHandler = CoroutineExceptionHandler { _, throwable ->
         log.error("SignalKEngine Global Error: ${throwable.message}", throwable)
@@ -101,7 +104,8 @@ class SignalKEngine(
         resourceManager = resourceManager,
         engineScope = engineScope,
         routeStepListeners = routeStepListeners,
-        aisListenerProvider = { aisListener }
+        aisListenerProvider = { aisListener },
+        waypointAdvanceListener = { event -> handleWaypointAdvance(event) }
     )
 
     var onConnectionLost: (() -> Unit)?
@@ -159,6 +163,8 @@ class SignalKEngine(
         corridorWidthNm = settings.NAUTICAL_CORRIDOR_WIDTH.get().toDouble()
         safetyCorridorBufferNm = settings.NAUTICAL_SAFETY_CORRIDOR_BUFFER.get().toDouble()
         arrivalRadiusMeters = settings.NAUTICAL_ARRIVAL_RADIUS.get().toDouble()
+
+        nmeaBroadcaster.start(engineScope)
 
         engineScope.launch {
             capabilityManager?.capabilities?.collect { caps ->
@@ -499,6 +505,7 @@ class SignalKEngine(
 
     @Synchronized
     fun stop() {
+        nmeaBroadcaster.stop()
         autoSaveJob?.cancel()
         autoSaveJob = null
         messageProcessingJob?.cancel()
@@ -689,10 +696,109 @@ class SignalKEngine(
         SailingDependencyContainer.nmeaMultiplexer?.aggregator?.handleLivePerformanceData(perfData)
         dataBroker.updateState { finalState }
 
+        val nextWpt = getNextWaypoint()
+        val targetPoint = nextWpt?.let { LatLon(it.first, it.second) } ?: app.targetPointsHelper.pointToNavigate?.latLon
+        val lat = finalState.latitude
+        val lon = finalState.longitude
+
+        if (targetPoint != null && lat != null && lon != null) {
+            val dtwMeters = finalState.distanceToWaypoint ?: KMapUtils.getDistance(lat, lon, targetPoint.latitude, targetPoint.longitude)
+            val dtwNm = SignalKUnitConverter.metersToNm(dtwMeters)
+            val bearingDeg = KMapUtils.getBearing(lat, lon, targetPoint.latitude, targetPoint.longitude)
+            val xteMeters = finalState.xteMeters ?: abs(finalState.crossTrackError ?: 0.0)
+            val xteNm = SignalKUnitConverter.metersToNm(xteMeters)
+            val isSteerLeft = finalState.xteDirection == XteDirection.STARBOARD
+            val vmgKnots = SignalKUnitConverter.msToKnots(finalState.velocityMadeGood ?: finalState.speedOverGround ?: 0.0)
+            val wptName = routeTracker.activeWaypointName ?: "WPT"
+
+            nmeaBroadcaster.updateNavigation(
+                hasActiveWaypoint = true,
+                xteNm = xteNm,
+                steerLeft = isSteerLeft,
+                bearingTrue = bearingDeg,
+                waypointId = wptName,
+                targetLat = targetPoint.latitude,
+                targetLon = targetPoint.longitude,
+                distanceNm = dtwNm,
+                vmgKnots = vmgKnots
+            )
+        } else {
+            nmeaBroadcaster.updateNavigation(
+                hasActiveWaypoint = false,
+                xteNm = 0.0,
+                steerLeft = false,
+                bearingTrue = 0.0,
+                waypointId = "",
+                targetLat = 0.0,
+                targetLon = 0.0,
+                distanceNm = 0.0,
+                vmgKnots = 0.0
+            )
+        }
+
         scheduleUiNotification(finalState)
 
         metricsCalculator.checkActuatorLoad(finalState, dataBroker, historyManager) {
             acknowledgeActuatorAlarm()
+        }
+    }
+
+    private fun handleWaypointAdvance(event: WaypointAdvanceEvent) {
+        when (event) {
+            is WaypointAdvanceEvent.WaypointReached -> {
+                log.info("SignalKEngine: Waypoint reached at ${event.reachedPoint}, next: ${event.nextPoint}, remaining: ${event.remainingCount}")
+                NauticalAudioArbiter.getInstance(app).dispatchAlarm(
+                    AlarmType.WAYPOINT_ARRIVAL,
+                    voiceText = app.getString(net.osmand.plus.R.string.nautical_waypoint_reached),
+                    loop = false
+                )
+                val current = dataBroker.marineState.value
+                val lat = current.latitude
+                val lon = current.longitude
+                val next = event.nextPoint
+                if (next != null && lat != null && lon != null) {
+                    val distMeters = KMapUtils.getDistance(lat, lon, next.first, next.second)
+                    val distNm = SignalKUnitConverter.metersToNm(distMeters)
+                    val bearing = KMapUtils.getBearing(lat, lon, next.first, next.second)
+                    nmeaBroadcaster.updateNavigation(
+                        hasActiveWaypoint = true,
+                        xteNm = 0.0,
+                        steerLeft = false,
+                        bearingTrue = bearing,
+                        waypointId = "WPT-${routeTracker.routeQueue.size}",
+                        targetLat = next.first,
+                        targetLon = next.second,
+                        distanceNm = distNm,
+                        vmgKnots = SignalKUnitConverter.msToKnots(current.velocityMadeGood ?: current.speedOverGround ?: 0.0)
+                    )
+                }
+                app.runInUIThread {
+                    app.osmandMap?.refreshMap()
+                }
+            }
+            is WaypointAdvanceEvent.RouteCompleted -> {
+                log.info("SignalKEngine: Route completed! All waypoints reached.")
+                NauticalAudioArbiter.getInstance(app).dispatchAlarm(
+                    AlarmType.ROUTE_COMPLETED,
+                    voiceText = app.getString(net.osmand.plus.R.string.nautical_route_completed),
+                    loop = false
+                )
+                nmeaBroadcaster.updateNavigation(
+                    hasActiveWaypoint = false,
+                    xteNm = 0.0,
+                    steerLeft = false,
+                    bearingTrue = 0.0,
+                    waypointId = "",
+                    targetLat = 0.0,
+                    targetLon = 0.0,
+                    distanceNm = 0.0,
+                    vmgKnots = 0.0
+                )
+                app.runInUIThread {
+                    app.showToastMessage(net.osmand.plus.R.string.nautical_route_completed)
+                    app.osmandMap?.refreshMap()
+                }
+            }
         }
     }
 

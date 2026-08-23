@@ -225,6 +225,10 @@ data class LivePerformanceData(
     val sources: Map<String, String> = emptyMap(),
     val history: Map<String, List<Pair<Double, Long>>> = emptyMap()
 ) {
+    val targetTwa: Double? get() = targetAngle
+    val targetSpeed: Double? get() = polarSpeed
+    val polarEfficiencyPercentage: Double? get() = polarSpeedRatio?.let { it * 100.0 }
+
     companion object {
         const val PATH_STW = "navigation.speedThroughWater"
         const val PATH_TWS = "environment.wind.speedTrue"

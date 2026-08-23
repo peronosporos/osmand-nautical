@@ -25,6 +25,7 @@ class SignalKPmtilesLayer(private val mapActivity: MapActivity) : OsmandMapLayer
     }
     
     private val drawRect = RectF()
+    private val parentSrcRect = Rect()
     private var lastNightVision = false
 
     override fun destroyLayer() {
@@ -81,6 +82,22 @@ class SignalKPmtilesLayer(private val mapActivity: MapActivity) : OsmandMapLayer
             canvas.drawBitmap(bitmap, null, drawRect, paint)
         } else {
             fetchTile(zoom, x, y)
+            // Fallback to parent tile (zoom - 1, x / 2, y / 2) to eliminate zoom flicker
+            if (zoom > 0) {
+                val parentZoom = zoom - 1
+                val parentX = x shr 1
+                val parentY = y shr 1
+                val parentKey = "pmtiles/$parentZoom/$parentX/$parentY"
+                val parentBitmap = tileCache[parentKey]
+                if (parentBitmap != null) {
+                    val halfW = parentBitmap.width / 2
+                    val halfH = parentBitmap.height / 2
+                    val srcLeft = if ((x and 1) != 0) halfW else 0
+                    val srcTop = if ((y and 1) != 0) halfH else 0
+                    parentSrcRect.set(srcLeft, srcTop, srcLeft + halfW, srcTop + halfH)
+                    canvas.drawBitmap(parentBitmap, parentSrcRect, drawRect, paint)
+                }
+            }
         }
     }
 

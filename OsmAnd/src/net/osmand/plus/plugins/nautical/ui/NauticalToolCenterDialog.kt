@@ -12,6 +12,10 @@ import androidx.recyclerview.widget.RecyclerView
 import net.osmand.plus.R
 import net.osmand.plus.base.BaseMaterialBottomSheetDialogFragment
 import net.osmand.plus.plugins.nautical.NauticalPlugin
+import net.osmand.plus.plugins.nautical.quickaction.NauticalMobQuickAction
+import net.osmand.plus.plugins.nautical.ui.anchor.AnchorWatchDialogFragment
+import net.osmand.plus.plugins.nautical.ui.widgets.NauticalElectricalDashboardBottomSheet
+import net.osmand.plus.settings.fragments.BaseSettingsFragment
 import net.osmand.plus.settings.fragments.SettingsScreenType
 
 class NauticalToolCenterDialog : BaseMaterialBottomSheetDialogFragment() {
@@ -27,7 +31,7 @@ class NauticalToolCenterDialog : BaseMaterialBottomSheetDialogFragment() {
         val root = LinearLayout(requireContext()).apply {
             orientation = LinearLayout.VERTICAL
             val p = (16 * resources.displayMetrics.density).toInt()
-            setPadding(p, p, p, p)
+            setPadding(p, p, p, (20 * resources.displayMetrics.density).toInt())
         }
         
         val titleView = TextView(requireContext()).apply {
@@ -36,7 +40,7 @@ class NauticalToolCenterDialog : BaseMaterialBottomSheetDialogFragment() {
             setTypeface(null, android.graphics.Typeface.BOLD)
             val p = (8 * resources.displayMetrics.density).toInt()
             setPadding(0, 0, 0, p)
-            setTextColor(if (nightMode) 0xFFFFFFFF.toInt() else 0xFF000000.toInt())
+            setTextColor(net.osmand.plus.utils.AndroidUtils.getColorFromAttr(context, android.R.attr.textColorPrimary))
         }
         root.addView(titleView)
 
@@ -47,11 +51,23 @@ class NauticalToolCenterDialog : BaseMaterialBottomSheetDialogFragment() {
         
         val items = listOf(
             ToolItem(getString(R.string.logbook_title), R.drawable.ic_action_track_16) {
-                net.osmand.plus.settings.fragments.BaseSettingsFragment.showInstance(requireActivity(), SettingsScreenType.MARINE_LOGBOOK)
+                BaseSettingsFragment.showInstance(requireActivity(), SettingsScreenType.MARINE_LOGBOOK)
                 dismiss()
             },
-            ToolItem("Sail Inventory", R.drawable.ic_action_sail_boat_dark) {
-                net.osmand.plus.settings.fragments.BaseSettingsFragment.showInstance(requireActivity(), SettingsScreenType.SAIL_INVENTORY)
+            ToolItem(getString(R.string.nautical_mob_label), R.drawable.ic_action_alert) {
+                val plugin = NauticalPlugin.getInstance()
+                val act = activity as? net.osmand.plus.activities.MapActivity
+                if (act != null && plugin != null) {
+                    NauticalMobQuickAction().execute(act)
+                }
+                dismiss()
+            },
+            ToolItem(getString(R.string.nautical_anchor_label), R.drawable.ic_action_anchor) {
+                AnchorWatchDialogFragment.show(parentFragmentManager)
+                dismiss()
+            },
+            ToolItem(getString(R.string.nautical_electrical_dashboard), R.drawable.ic_action_nautical_battery_volt) {
+                NauticalElectricalDashboardBottomSheet.show(parentFragmentManager)
                 dismiss()
             },
             ToolItem(getString(R.string.nautical_ais_targets_title), R.drawable.mm_ais_vessel) {
@@ -59,12 +75,20 @@ class NauticalToolCenterDialog : BaseMaterialBottomSheetDialogFragment() {
                 if (aisObjects.isNotEmpty()) {
                     NauticalTargetPicker.newInstance(aisObjects).show(parentFragmentManager, "ais_target_picker")
                 } else {
-                    NauticalPlugin.getInstance()?.application?.showToastMessage(R.string.nautical_ais_no_targets)
+                    BaseSettingsFragment.showInstance(requireActivity(), SettingsScreenType.NAUTICAL_AIS_BUDDIES)
                 }
                 dismiss()
             },
-            ToolItem("AIS Buddies", R.drawable.ic_action_group_list) {
-                net.osmand.plus.settings.fragments.BaseSettingsFragment.showInstance(requireActivity(), SettingsScreenType.NAUTICAL_AIS_BUDDIES)
+            ToolItem(getString(R.string.nautical_ais_buddies_title), R.drawable.ic_action_group_list) {
+                BaseSettingsFragment.showInstance(requireActivity(), SettingsScreenType.NAUTICAL_AIS_BUDDIES)
+                dismiss()
+            },
+            ToolItem(getString(R.string.nautical_own_vessel_profile), R.drawable.ic_action_sail_boat_dark) {
+                BaseSettingsFragment.showInstance(requireActivity(), SettingsScreenType.AIS_SETTINGS)
+                dismiss()
+            },
+            ToolItem("Sail Inventory", R.drawable.ic_action_sail_boat_dark) {
+                BaseSettingsFragment.showInstance(requireActivity(), SettingsScreenType.SAIL_INVENTORY)
                 dismiss()
             },
             ToolItem(getString(R.string.nautical_compass_wizard), R.drawable.ic_action_compass) {
@@ -72,7 +96,7 @@ class NauticalToolCenterDialog : BaseMaterialBottomSheetDialogFragment() {
                 dismiss()
             },
             ToolItem("Polar Manager", R.drawable.ic_action_settings) {
-                net.osmand.plus.settings.fragments.BaseSettingsFragment.showInstance(requireActivity(), SettingsScreenType.SAILING_PERFORMANCE_SETTINGS)
+                BaseSettingsFragment.showInstance(requireActivity(), SettingsScreenType.SAILING_PERFORMANCE_SETTINGS)
                 dismiss()
             },
             ToolItem(getString(R.string.nautical_polar_recorder_title), R.drawable.ic_action_rec_start) {
@@ -88,7 +112,7 @@ class NauticalToolCenterDialog : BaseMaterialBottomSheetDialogFragment() {
                 dismiss()
             },
             ToolItem(getString(R.string.nautical_signalk_diagnostics_title), R.drawable.ic_action_info_dark) {
-                net.osmand.plus.settings.fragments.BaseSettingsFragment.showInstance(requireActivity(), SettingsScreenType.NAUTICAL_SIGNALK_DIAGNOSTICS)
+                BaseSettingsFragment.showInstance(requireActivity(), SettingsScreenType.NAUTICAL_SIGNALK_DIAGNOSTICS)
                 dismiss()
             }
         )

@@ -23,6 +23,7 @@ import net.osmand.plus.views.layers.MapSelectionRules
 import net.osmand.plus.views.layers.base.OsmandMapLayer
 import kotlinx.coroutines.*
 import kotlin.math.pow
+import kotlin.math.roundToInt
 
 class S57MapLayer(context: Context, private val indexManager: S57SpatialIndex) : OsmandMapLayer(context), IContextMenuProvider {
 
@@ -38,6 +39,25 @@ class S57MapLayer(context: Context, private val indexManager: S57SpatialIndex) :
         color = Color.BLACK
         textAlign = Paint.Align.CENTER
         typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+    }
+
+    private val soundingMainPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        textAlign = Paint.Align.LEFT
+    }
+    private val soundingSubscriptPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        textAlign = Paint.Align.LEFT
+    }
+    private val soundingHaloPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+        strokeJoin = Paint.Join.ROUND
+        strokeCap = Paint.Cap.ROUND
+        textAlign = Paint.Align.LEFT
+    }
+    private val soundingSubscriptHaloPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+        strokeJoin = Paint.Join.ROUND
+        strokeCap = Paint.Cap.ROUND
+        textAlign = Paint.Align.LEFT
     }
 
     override fun initLayer(view: OsmandMapTileView) {
@@ -62,8 +82,9 @@ class S57MapLayer(context: Context, private val indexManager: S57SpatialIndex) :
         val geometry: S57Geometry,
         val jtsGeometry: com.vividsolutions.jts.geom.Geometry? = null,
         val path: Path? = null,
-        val soundingText: String? = null,
-        val isSoundingDeep: Boolean = false
+        val soundingDepth: Double? = null,
+        val soundingIntPart: String? = null,
+        val soundingFracDigit: String? = null
     )
 
     private data class PreparedFeature(
@@ -183,11 +204,71 @@ class S57MapLayer(context: Context, private val indexManager: S57SpatialIndex) :
                         val y = tileBox.getPixYFromLatLon(geometry.position.latitude, geometry.position.longitude)
                         
                         if (pf.acronym == "SOUNDG") {
-                            val text = pg.soundingText ?: ""
-                            textPaint.color = if (isNight) Color.RED else Color.BLACK
-                            textPaint.textSize = (if (isSunlight) 36f else 28f) * scale
-                            textPaint.typeface = if (!pg.isSoundingDeep || isSunlight) Typeface.create(Typeface.DEFAULT, Typeface.BOLD) else Typeface.DEFAULT
-                            canvas.drawText(text, x, y, textPaint)
+                            val depth = pg.soundingDepth ?: 0.0
+                            if (depth > safetyDepth * 2.0 && tileBox.zoom < 14) {
+                                continue
+                            }
+
+                            val intPart = pg.soundingIntPart
+                            val fracPart = pg.soundingFracDigit
+                            if (intPart == null || fracPart == null) continue
+
+                            val baseTextSize = (if (isSunlight) 30f else 22f) * scale
+                            val subTextSize = baseTextSize * 0.75f
+
+                            val (textColor, alphaVal, isBold) = when {
+                                depth <= safetyDepth -> {
+                                    val c = if (isNight) 0xFFFF5252.toInt() else 0xFFD32F2F.toInt()
+                                    Triple(c, 255, true)
+                                }
+                                depth <= safetyDepth * 2.0 -> {
+                                    val c = if (isNight) 0xFFB0BEC5.toInt() else 0xFF37474F.toInt()
+                                    Triple(c, 230, isSunlight)
+                                }
+                                else -> {
+                                    val c = if (isNight) 0xFF78909C.toInt() else 0xFF607D8B.toInt()
+                                    Triple(c, 153, false)
+                                }
+                            }
+
+                            soundingMainPaint.color = textColor
+                            soundingMainPaint.alpha = alphaVal
+                            soundingMainPaint.textSize = baseTextSize
+                            soundingMainPaint.typeface = if (isBold) Typeface.create(Typeface.DEFAULT, Typeface.BOLD) else Typeface.DEFAULT
+
+                            soundingSubscriptPaint.color = textColor
+                            soundingSubscriptPaint.alpha = alphaVal
+                            soundingSubscriptPaint.textSize = subTextSize
+                            soundingSubscriptPaint.typeface = if (isBold) Typeface.create(Typeface.DEFAULT, Typeface.BOLD) else Typeface.DEFAULT
+
+                            val haloColor = if (isNight) Color.BLACK else Color.WHITE
+                            val haloAlpha = (alphaVal * 0.85f).toInt()
+
+                            soundingHaloPaint.color = haloColor
+                            soundingHaloPaint.alpha = haloAlpha
+                            soundingHaloPaint.textSize = baseTextSize
+                            soundingHaloPaint.strokeWidth = 3f * scale
+                            soundingHaloPaint.typeface = soundingMainPaint.typeface
+
+                            soundingSubscriptHaloPaint.color = haloColor
+                            soundingSubscriptHaloPaint.alpha = haloAlpha
+                            soundingSubscriptHaloPaint.textSize = subTextSize
+                            soundingSubscriptHaloPaint.strokeWidth = 2.5f * scale
+                            soundingSubscriptHaloPaint.typeface = soundingSubscriptPaint.typeface
+
+                            val intWidth = soundingMainPaint.measureText(intPart)
+                            val fracWidth = soundingSubscriptPaint.measureText(fracPart)
+                            val totalWidth = intWidth + fracWidth
+                            val startX = x - (totalWidth / 2f)
+                            val startY = y + (baseTextSize * 0.35f)
+                            val fracX = startX + intWidth
+                            val fracY = startY + (baseTextSize * 0.25f)
+
+                            canvas.drawText(intPart, startX, startY, soundingHaloPaint)
+                            canvas.drawText(fracPart, fracX, fracY, soundingSubscriptHaloPaint)
+
+                            canvas.drawText(intPart, startX, startY, soundingMainPaint)
+                            canvas.drawText(fracPart, fracX, fracY, soundingSubscriptPaint)
                         } else if (style.symbolId != null) {
                             S52SymbolManager.drawSymbol(canvas, style.symbolId, x, y, isNight, scale, isSunlight)
                         } else if (style.strokeColor != null) {
@@ -263,18 +344,21 @@ class S57MapLayer(context: Context, private val indexManager: S57SpatialIndex) :
             val preparedGeoms = feature.geometries.map { geo ->
                 val optimized = S57GeometryOptimizer.optimize(geo, tolerance, feature.acronym)
                 var path: Path? = null
-                var soundingText: String? = null
-                var isSoundingDeep = false
+                var soundingDepth: Double? = null
+                var soundingIntPart: String? = null
+                var soundingFracDigit: String? = null
                 
                 if (tileBox.zoom >= 12 && feature.acronym == "SOUNDG" && optimized is S57Geometry.Point) {
                     val depth = optimized.depth ?: feature.attributes["VALCO"]?.toDoubleOrNull() ?: 0.0
-                    soundingText = "%.1f".format(Locale.US, depth)
-                    isSoundingDeep = depth > safetyDepth
+                    soundingDepth = depth
+                    val intVal = depth.toInt()
+                    soundingIntPart = intVal.toString()
+                    soundingFracDigit = ((depth - intVal) * 10.0).roundToInt().coerceIn(0, 9).toString()
                 } else if (optimized is S57Geometry.Line || optimized is S57Geometry.Area) {
                     path = getPathFromGeometry(optimized, tileBox)
                 }
                 
-                PreparedGeometry(optimized, optimized.toJtsGeometry(factory), path, soundingText, isSoundingDeep)
+                PreparedGeometry(optimized, optimized.toJtsGeometry(factory), path, soundingDepth, soundingIntPart, soundingFracDigit)
             }
             PreparedFeature(feature, feature.id, feature.acronym, style, preparedGeoms, feature.attributes)
         }.sortedBy { it.style.priority }

@@ -32,6 +32,14 @@ class NauticalMobQuickAction : QuickAction {
     constructor(type: Int) : super(TYPE)
 
     override fun execute(mapActivity: MapActivity, params: Bundle?) {
+        executeMob(mapActivity, params)
+    }
+
+    fun execute(mapActivity: MapActivity) {
+        executeMob(mapActivity, null)
+    }
+
+    private fun executeMob(mapActivity: MapActivity, params: Bundle?) {
         if (mapActivity.isFinishing || mapActivity.isDestroyed) {
             return
         }

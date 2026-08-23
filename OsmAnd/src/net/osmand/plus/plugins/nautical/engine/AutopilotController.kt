@@ -36,9 +36,12 @@ class AutopilotController(
     private val activeCalls = java.util.concurrent.CopyOnWriteArrayList<Call>()
     private var lastCommandTime = 0L
     private val commandLockMs = 1500L
+    private var lastServoCommandTime = 0L
+    private val servoRateLimitMs = 300L
     private val controllerScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     private var reconciliationJob: Job? = null
     private var overrideJob: Job? = null
+    private var reconnectJob: Job? = null
 
     private var serverIp: String = ""
     private var serverPort: String = "3000"
@@ -56,6 +59,8 @@ class AutopilotController(
         serverPort = app.settings.NAUTICAL_SERVER_PORT.get() ?: "3000"
         app.getSharedPreferences(SHARED_PREFERENCES_NAME, Context.MODE_PRIVATE)
             .registerOnSharedPreferenceChangeListener(prefChangeListener)
+
+        startAutoReconnectWatchdog()
 
         broker?.let { b ->
             overrideJob = controllerScope.launch {
@@ -98,7 +103,37 @@ class AutopilotController(
                         // All commands reconciled, cancel the timeout job.
                         // The lock release is handled in the reconciliation job's finally block.
                         if (reconciliationJob?.isActive == true) {
-                             reconciliationJob?.cancel()
+                            reconciliationJob?.cancel()
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private fun startAutoReconnectWatchdog() {
+        broker?.let { b ->
+            controllerScope.launch {
+                b.marineState.collect { state ->
+                    val isConnected = state.connectionStatus == ConnectionStatus.CONNECTED
+                    if (isConnected) {
+                        reconnectJob?.cancel()
+                        reconnectJob = null
+                    } else if (app.settings.NAUTICAL_AUTOPILOT_AUTO_RECONNECT.get()) {
+                        if (reconnectJob?.isActive != true) {
+                            reconnectJob = controllerScope.launch {
+                                var backoffMs = 1000L
+                                while (!connection.isConnected() && isActive) {
+                                    log.info("Autopilot Watchdog: Reconnecting Signal K in ${backoffMs}ms...")
+                                    delay(backoffMs)
+                                    try {
+                                        NauticalPlugin.getInstance()?.nauticalConnectionManager?.connect()
+                                    } catch (e: Exception) {
+                                        log.error("Autopilot Watchdog reconnect attempt failed: ${e.message}")
+                                    }
+                                    backoffMs = min(backoffMs * 2, 30000L)
+                                }
+                            }
                         }
                     }
                 }
@@ -235,6 +270,14 @@ class AutopilotController(
         val arbitrator = NauticalHelmArbitrator.getInstance(app)
         try {
             arbitrator.acquireLock(NauticalHelmArbitrator.PRIORITY_STANDBY_MANUAL, app.getString(R.string.nautical_ap_priority_manual))
+
+            val now = System.currentTimeMillis()
+            if ((now - lastServoCommandTime) < servoRateLimitMs) {
+                log.warn("Autopilot servo target heading command throttled (< 300ms)")
+                arbitrator.releaseLock(NauticalHelmArbitrator.PRIORITY_STANDBY_MANUAL)
+                return
+            }
+            lastServoCommandTime = now
             
             val reference = app.settings.NAUTICAL_HEADING_REFERENCE.get()
             val state = NauticalPlugin.engine?.getCurrentState()
@@ -329,18 +372,34 @@ class AutopilotController(
         }
     }
 
-    fun setTargetWindAngle(degrees: Double) {
-        val rad = Math.toRadians(degrees)
-        val url = buildAutopilotUrl("target/windAngleApparent")
+    fun setTargetWindAngle(angleRad: Double) {
+        val now = System.currentTimeMillis()
+        if ((now - lastServoCommandTime) < servoRateLimitMs) {
+            log.warn("Autopilot servo target wind angle command throttled (< 300ms)")
+            return
+        }
+        lastServoCommandTime = now
+
+        val rad = if (abs(angleRad) > 2 * PI) Math.toRadians(angleRad) else angleRad
+        val url = buildAutopilotUrl("target/windAngleApparent") ?: buildAutopilotUrl("target")
         if (url == null) {
             showPersistentError(R.string.nautical_autopilot_not_connected)
             return
         }
+        val engine = NauticalPlugin.engine
+        engine?.updatePendingCommand(targetHeading = null, mode = "wind", path = "steering.autopilot.targetWindAngleApparent")
         val payload = """{ "value": $rad }"""
         executePut(url, payload, null, showToast = false)
     }
 
     fun setRudderAngle(radians: Double) {
+        val now = System.currentTimeMillis()
+        if ((now - lastServoCommandTime) < servoRateLimitMs) {
+            log.warn("Autopilot servo rudder angle command throttled (< 300ms)")
+            return
+        }
+        lastServoCommandTime = now
+
         val url = buildAutopilotUrl("target/rudderAngle")
         if (url == null) {
             showPersistentError(R.string.nautical_autopilot_not_connected)
@@ -351,6 +410,13 @@ class AutopilotController(
     }
 
     fun setTargetTrueWindAngle(degrees: Double) {
+        val now = System.currentTimeMillis()
+        if ((now - lastServoCommandTime) < servoRateLimitMs) {
+            log.warn("Autopilot servo true wind angle command throttled (< 300ms)")
+            return
+        }
+        lastServoCommandTime = now
+
         val rad = Math.toRadians(degrees)
         val url = buildAutopilotUrl("target/windAngleTrue")
         if (url == null) {
@@ -405,12 +471,23 @@ class AutopilotController(
 
     val targetHeadingMag: kotlinx.coroutines.flow.StateFlow<Double?> = broker?.autopilotTargetHeadingMag ?: kotlinx.coroutines.flow.MutableStateFlow(null)
 
-    fun engage() = setAutopilotMode("auto")
+    fun engage() = setAutopilotMode("compass")
     fun disengage() = setAutopilotMode("standby")
+
+    fun setSteeringMode(mode: String) {
+        val normalized = when (mode.lowercase(Locale.US)) {
+            "compass", "heading" -> "compass"
+            "gps", "nav", "track", "route" -> "gps"
+            "wind", "vane", "twa", "awa" -> "wind"
+            "auto" -> "compass"
+            else -> mode.lowercase(Locale.US)
+        }
+        setAutopilotMode(normalized)
+    }
 
     fun setAutopilotMode(mode: String) {
         val modeLower = mode.lowercase(Locale.US)
-        val priority = if (modeLower == "standby") 
+        val priority = if (modeLower == "standby" || modeLower == "off") 
             NauticalHelmArbitrator.PRIORITY_EMERGENCY_MOB 
         else NauticalHelmArbitrator.PRIORITY_STANDBY_MANUAL
         
@@ -430,7 +507,7 @@ class AutopilotController(
             val state = engine?.getCurrentState()
             
             when (modeLower) {
-                "wind", "twa" -> {
+                "wind", "twa", "vane", "awa" -> {
                     if ((state?.windDirectionApparent == null) && (state?.trueWindAngle == null)) {
                         val twa = calculateTwaFallback(state)
                         if (twa == null) {
@@ -439,25 +516,25 @@ class AutopilotController(
                         }
                     }
                 }
-                "track", "route" -> {
+                "track", "route", "gps", "nav" -> {
                     if (engine?.isFollowingRoute != true) {
                         showPersistentError(R.string.nautical_error_no_route)
                         return
                     }
                 }
-                "standby" -> {
+                "standby", "off" -> {
                     engine?.updatePendingCommand(targetHeading = null, mode = "standby")
                 }
             }
 
-            val url = buildAutopilotUrl("state")
+            val url = buildAutopilotUrl("state") ?: buildAutopilotUrl("mode")
             if (url == null) {
                 showPersistentError(R.string.nautical_autopilot_not_connected)
                 return
             }
             engine?.updatePendingCommand(mode = mode, path = "steering.autopilot.state")
             val payload = """{ "value": "$mode" }"""
-            executePut(url, payload, R.string.nautical_toast_mode_changed, showToast = true, priority = (modeLower == "standby"))
+            executePut(url, payload, R.string.nautical_toast_mode_changed, showToast = true, priority = (modeLower == "standby" || modeLower == "off"))
 
             startReconciliation("steering.autopilot.state", priority)
         } catch (e: HelmLockedException) {
@@ -732,6 +809,36 @@ class AutopilotController(
                 log.error("Autopilot reconciliation failed: ${e.message}")
             }
         }
+    }
+
+    fun commandTack(direction: String) {
+        val isPort = direction.lowercase(Locale.US) == "port"
+        val currentMode = state.value.lowercase(Locale.US)
+
+        when (currentMode) {
+            "wind", "twa", "vane", "awa" -> {
+                val marineState = broker?.marineState?.value
+                val currentTargetAwa = marineState?.targetWindAngleApparent 
+                    ?: NauticalPlugin.engine?.getCurrentState()?.windDirectionApparent 
+                    ?: Math.toRadians(45.0)
+                val newTargetAwa = if (isPort) -abs(currentTargetAwa) else abs(currentTargetAwa)
+                setTargetWindAngle(newTargetAwa)
+            }
+            "compass", "auto", "heading" -> {
+                val stateObj = NauticalPlugin.engine?.getCurrentState()
+                val currentHdg = targetHeadingMag.value 
+                    ?: stateObj?.headingMagnetic?.let { Math.toDegrees(it) } 
+                    ?: stateObj?.headingTrue?.let { Math.toDegrees(it) } 
+                    ?: 0.0
+                val tackAngle = app.settings.NAUTICAL_LAYLINES_TACK_ANGLE.get().toDouble().coerceIn(60.0, 120.0)
+                val delta = if (isPort) -tackAngle else tackAngle
+                val newTargetHdg = (currentHdg + delta + 360.0) % 360.0
+                setTargetHeading(newTargetHdg)
+            }
+        }
+
+        // Issue PUT to Pypilot tack endpoint
+        tack(port = isPort, manageLock = true)
     }
 
     fun tack(direction: String, manageLock: Boolean = true) = tack(direction.lowercase(Locale.US) == "port", manageLock)

@@ -99,6 +99,12 @@ class NauticalAisManager(private val app: OsmandApplication) : AisDataListener {
     fun removeListener(listener: AisObjectListener) = listeners.remove(listener)
 
     fun startUpdates() {
+        val sp = app.getSharedPreferences("nautical_buddies_pref", Context.MODE_PRIVATE)
+        val local = sp.getStringSet("ais_buddies", emptySet()) ?: emptySet()
+        val intBuddies = local.mapNotNull { it.toIntOrNull() }.toSet()
+        if (intBuddies.isNotEmpty()) {
+            NauticalPlugin.engine?.dataBroker?.updateState { it.copy(aisBuddies = intBuddies) }
+        }
         startLoops()
         observeCapabilities()
     }
@@ -586,8 +592,9 @@ class NauticalAisManager(private val app: OsmandApplication) : AisDataListener {
             true
         }
         sp.edit().putStringSet("ais_buddies", local).apply()
-        engine?.sendDelta("navigation.aisBuddies", current.toList())
-        requestThrottledMapRefresh()
+        engine?.dataBroker?.updateState { it.copy(aisBuddies = current) }
+        engine?.sendDelta(SignalKPaths.NAV_AIS_BUDDIES, current.toList())
+        refreshAisAndMapLayers()
         return isNowBuddy
     }
 
@@ -600,8 +607,9 @@ class NauticalAisManager(private val app: OsmandApplication) : AisDataListener {
         current.add(mmsi)
         local.add(mmsi.toString())
         sp.edit().putStringSet("ais_buddies", local).apply()
-        engine?.sendDelta("navigation.aisBuddies", current.toList())
-        requestThrottledMapRefresh()
+        engine?.dataBroker?.updateState { it.copy(aisBuddies = current) }
+        engine?.sendDelta(SignalKPaths.NAV_AIS_BUDDIES, current.toList())
+        refreshAisAndMapLayers()
         return true
     }
 
@@ -614,9 +622,17 @@ class NauticalAisManager(private val app: OsmandApplication) : AisDataListener {
         current.remove(mmsi)
         local.remove(mmsi.toString())
         sp.edit().putStringSet("ais_buddies", local).apply()
-        engine?.sendDelta("navigation.aisBuddies", current.toList())
-        requestThrottledMapRefresh()
+        engine?.dataBroker?.updateState { it.copy(aisBuddies = current) }
+        engine?.sendDelta(SignalKPaths.NAV_AIS_BUDDIES, current.toList())
+        refreshAisAndMapLayers()
         return false
+    }
+
+    fun refreshAisAndMapLayers() {
+        app.runInUIThread {
+            app.osmandMap?.refreshMap()
+            NauticalPlugin.getInstance()?.requestRefresh()
+        }
     }
 
     fun getAisExtras(mmsi: Int): AisExtras = aisExtras[mmsi] ?: AisExtras()

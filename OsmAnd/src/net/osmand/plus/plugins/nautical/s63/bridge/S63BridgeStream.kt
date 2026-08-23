@@ -37,10 +37,19 @@ object S63BridgeStream {
             val cellName = file.nameWithoutExtension.uppercase()
             val store = S63CredentialStore(app)
             val cellKey = store.getCellKey(cellName)
+            val expiry = store.getExpiryDate(cellName)
 
-            if (cellKey == null) {
-                log.warn("S-63: Missing Cell Key for $cellName. Skipping file.")
+            if (cellKey == null || cellKey.isEmpty()) {
+                if (expiry != null && net.osmand.plus.plugins.nautical.s63.crypto.S63PermitGenerator.isExpired(expiry)) {
+                    log.warn("S-63: Cell $cellName has EXPIRED on $expiry. Please renew subscription in S-63 Permit Manager.")
+                } else {
+                    log.warn("S-63: Missing Cell Key for $cellName. Please import valid PERMIT.TXT in S-63 Permit Manager.")
+                }
                 return null
+            }
+
+            if (expiry != null && net.osmand.plus.plugins.nautical.s63.crypto.S63PermitGenerator.isExpired(expiry)) {
+                log.warn("S-63: Cell $cellName has EXPIRED on $expiry. Decryption might fail or chart is out-of-date. Check S-63 Permit Manager.")
             }
 
             return try {

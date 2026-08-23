@@ -14,6 +14,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import net.osmand.plus.OsmandApplication
 import net.osmand.plus.R
+import net.osmand.plus.plugins.nautical.s63.crypto.CellPermitStatus
 import net.osmand.plus.plugins.nautical.s63.crypto.S63PermitGenerator
 import org.json.JSONObject
 
@@ -124,29 +125,53 @@ class S63PermitViewModel(
         importJob?.cancel()
         importJob = viewModelScope.launch {
             try {
-                val keys = withContext(Dispatchers.IO) {
+                val (validPermits, expiredPermits, errorCount) = withContext(Dispatchers.IO) {
                     val hwid = store.getHwid()
-                    val resultKeys = mutableMapOf<String, String>()
+                    var content = ""
                     app.contentResolver.openInputStream(uri)?.use { input ->
-                        val content = input.bufferedReader().use { it.readText() }
-                        resultKeys.putAll(S63PermitGenerator.extractCellKeys(content, hwid))
+                        content = input.bufferedReader().use { it.readText() }
                     }
-                    resultKeys
+                    val results = S63PermitGenerator.parseAndValidatePermits(content, hwid)
+                    val valid = results.filterIsInstance<CellPermitStatus.Valid>()
+                    val expired = results.filterIsInstance<CellPermitStatus.Expired>()
+                    val errors = results.count { it is CellPermitStatus.ChecksumError || it is CellPermitStatus.Malformed }
+                    Triple(valid, expired, errors)
                 }
 
-                if (keys.isNotEmpty()) {
-                    store.saveCellKeys(keys)
+                if (validPermits.isNotEmpty()) {
+                    val permitsMap = mutableMapOf<String, S63PermitGenerator.PermitInfo>()
+                    validPermits.forEach {
+                        permitsMap[it.cellName] = S63PermitGenerator.PermitInfo(it.keyHex, it.expiryDate)
+                    }
+                    expiredPermits.forEach {
+                        permitsMap[it.cellName] = S63PermitGenerator.PermitInfo("", it.expiryDate)
+                    }
+                    store.savePermits(permitsMap)
+
+                    val summary = "Imported ${validPermits.size} valid permits, ${expiredPermits.size} expired, $errorCount errors"
                     _uiState.value = _uiState.value.copy(
                         loadedCellCount = store.getLoadedCellCount(),
-                        toastMessage = app.getString(R.string.s63_keys_loaded, keys.size)
+                        toastMessage = summary,
+                        errorMessage = if (errorCount > 0) "$errorCount permit lines failed checksum/formatting" else null
                     )
                 } else {
+                    val detail = if (expiredPermits.isNotEmpty()) {
+                        "All ${expiredPermits.size} cell permits in file are expired"
+                    } else if (errorCount > 0) {
+                        "$errorCount permits failed CRC-32 checksum / formatting"
+                    } else {
+                        app.getString(R.string.s63_invalid_permit)
+                    }
                     _uiState.value = _uiState.value.copy(
-                        toastMessage = app.getString(R.string.s63_invalid_permit)
+                        toastMessage = detail,
+                        errorMessage = detail
                     )
                 }
             } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(toastMessage = app.getString(R.string.nautical_s63_error_prefix, e.message ?: ""))
+                _uiState.value = _uiState.value.copy(
+                    toastMessage = app.getString(R.string.nautical_s63_error_prefix, e.message ?: ""),
+                    errorMessage = e.message
+                )
             }
         }
     }
