@@ -270,16 +270,17 @@ class NauticalAisDetailsDialog : BaseBottomSheetDialogFragment() {
             val input = android.widget.EditText(ctx).apply {
                 hint = "Distance in NM"
                 inputType = android.text.InputType.TYPE_CLASS_NUMBER or android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL
+                setText(plugin?.aisCpaWarningDistance?.get()?.toString() ?: "1.0")
             }
-            AlertDialog.Builder(ctx)
+            androidx.appcompat.app.AlertDialog.Builder(ctx)
                 .setTitle(R.string.nautical_set_cpa_alarm)
-                .setMessage(R.string.nautical_cpa_alarm_prompt)
+                .setMessage("Enter CPA alert threshold for ${ais.shipName ?: "MMSI ${ais.mmsi}"}:")
                 .setView(input)
                 .setPositiveButton(R.string.shared_string_save) { _, _ ->
                     val dist = input.text.toString().toDoubleOrNull()
-                    if (dist != null && dist > 0.0) {
-                        plugin?.aisManager?.setCustomCpaThreshold(ais.mmsi, dist)
-                        plugin?.application?.showToastMessage(getString(R.string.nautical_cpa_alarm_set, dist))
+                    if (dist != null && plugin != null) {
+                        plugin.aisCpaWarningDistance.set(dist.toFloat())
+                        plugin.application.showToastMessage("CPA threshold set to $dist NM")
                     }
                 }
                 .setNegativeButton(R.string.shared_string_cancel, null)
@@ -290,12 +291,28 @@ class NauticalAisDetailsDialog : BaseBottomSheetDialogFragment() {
     private fun getMidCountry(mmsi: Int): String? {
         val mid = mmsi.toString().take(3).toIntOrNull() ?: return null
         return when (mid) {
-            in 201..279 -> "Europe"
-            in 301..379 -> "North/Central America"
-            in 401..479 -> "Asia"
-            in 501..579 -> "Oceania"
-            in 601..679 -> "Africa"
-            in 701..779 -> "South America"
+            in 201..204 -> "Albania"
+            205 -> "Belgium"
+            in 211..218 -> "Germany"
+            in 219..220 -> "Denmark"
+            in 224..225 -> "Spain"
+            in 226..228 -> "France"
+            in 230..231 -> "Finland"
+            in 232..235 -> "United Kingdom"
+            236 -> "Gibraltar"
+            in 237..241 -> "Greece"
+            in 242..243 -> "Morocco"
+            in 244..246 -> "Netherlands"
+            247 -> "Italy"
+            in 257..259 -> "Norway"
+            261 -> "Poland"
+            263 -> "Portugal"
+            in 265..266 -> "Sweden"
+            271 -> "Turkey"
+            316 -> "Canada"
+            338, in 366..369 -> "United States"
+            503 -> "Australia"
+            512 -> "New Zealand"
             else -> null
         }
     }
