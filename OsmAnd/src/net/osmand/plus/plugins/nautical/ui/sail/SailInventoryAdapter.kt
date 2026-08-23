@@ -117,7 +117,7 @@ class SailInventoryAdapter(
             } else {
                 btnToggle.text = context.getString(R.string.nautical_sail_furled)
                 btnToggle.setBackgroundColor(android.graphics.Color.TRANSPARENT)
-                btnToggle.setTextColor(ContextCompat.getColor(context, R.color.text_color_secondary))
+                btnToggle.setTextColor(net.osmand.plus.utils.AndroidUtils.getColorFromAttr(context, android.R.attr.textColorSecondary))
                 btnToggle.strokeWidth = 2
             }
 

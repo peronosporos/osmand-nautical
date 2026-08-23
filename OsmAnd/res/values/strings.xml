@@ -1,4 +1,6 @@
 <resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
+    <string name="nautical_routing_failed">Weather routing calculation failed</string>
+    <string name="nautical_telemetry_widget_config">Configure Displayed Metrics</string>
     <string name="nautical_routing_using_live_wind">Calculating route using live wind telemetry — no GRIB forecast loaded</string>
     <string name="nautical_routing_no_wind_data">Weather routing requires GRIB wind data or live wind telemetry</string>
     <string name="nautical_route_summary_title">Passage Plan Summary</string>
