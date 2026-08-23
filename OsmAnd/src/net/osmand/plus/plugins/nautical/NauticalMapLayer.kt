@@ -290,7 +290,7 @@ class NauticalMapLayer(context: Context) : OsmandMapLayer(context), SharedPrefer
         val pm = context.getSystemService(Context.POWER_SERVICE) as? android.os.PowerManager
         if (pm?.isInteractive == false) return // Suppress if screen is off
         val mapActivity = view.mapActivity
-        if (mapActivity == null || mapActivity.isActivityPaused) return // Suppress if map view is paused or hidden
+        if (mapActivity == null || mapActivity.isActivityDestroyed || mapActivity.isFinishing) return // Suppress if map activity is not active
         val now = System.currentTimeMillis()
         if (now - lastRefreshTime >= minRefreshIntervalMs) {
             lastRefreshTime = now
