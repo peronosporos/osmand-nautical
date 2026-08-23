@@ -29,7 +29,7 @@
                 android:textSize="11sp"
                 android:textStyle="bold"
                 android:textColor="@color/color_warning"
-                android:background="@drawable/bg_badge_rounded"
+                android:background="@drawable/bg_status_badge"
                 android:paddingStart="6dp"
                 android:paddingEnd="6dp"
                 android:paddingTop="2dp"
