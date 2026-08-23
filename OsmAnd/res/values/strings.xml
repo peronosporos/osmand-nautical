@@ -1,11 +1,5 @@
 <resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
     <string name="nautical_ais_range_bearing">%1$s • %2$s</string>
-    <string name="nautical_ais_status">Status: %1$s</string>
-    <string name="nautical_ais_dimensions">Dim: %1$s</string>
-    <string name="nautical_ais_draught">Draught: %1$s</string>
-    <string name="nautical_ais_destination">Dest: %1$s</string>
-    <string name="nautical_ais_eta">ETA: %1$s</string>
-    <string name="nautical_ais_position">Pos: %1$s</string>
     <string name="nautical_signalk_diagnostics_title">Signal K Server Diagnostics</string>
     <string name="nautical_signalk_diagnostics_desc">Inspect active capabilities, services, and server health</string>
     <string name="nautical_tank_fuel">Fuel</string>

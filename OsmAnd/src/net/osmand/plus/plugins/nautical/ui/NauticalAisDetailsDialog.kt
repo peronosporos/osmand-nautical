@@ -171,25 +171,25 @@ class NauticalAisDetailsDialog : BaseBottomSheetDialogFragment() {
             txtCpa.setTextColor(net.osmand.plus.utils.AndroidUtils.getColorFromAttr(requireContext(), android.R.attr.textColorPrimary))
         }
 
-        view.findViewById<TextView>(R.id.txt_status).text = getString(R.string.nautical_ais_status, ais.getNavStatusString())
+        view.findViewById<TextView>(R.id.txt_status).text = getString(R.string.nautical_ais_details_status, ais.getNavStatusString())
 
         val totalLen = ais.dimensionToBow + ais.dimensionToStern
         val totalBeam = ais.dimensionToPort + ais.dimensionToStarboard
         val dimStr = if (totalLen > 0 && totalBeam > 0) "${totalLen}m x ${totalBeam}m" else na
-        view.findViewById<TextView>(R.id.txt_dimensions).text = getString(R.string.nautical_ais_dimensions, dimStr)
+        view.findViewById<TextView>(R.id.txt_dimensions).text = getString(R.string.nautical_ais_details_dimensions, dimStr)
 
         val draughtStr = if (ais.draught > 0) String.format(Locale.US, "%.1f m", ais.draught) else na
-        view.findViewById<TextView>(R.id.txt_draught).text = getString(R.string.nautical_ais_draught, draughtStr)
+        view.findViewById<TextView>(R.id.txt_draught).text = getString(R.string.nautical_ais_details_draught, draughtStr)
 
-        view.findViewById<TextView>(R.id.txt_destination).text = getString(R.string.nautical_ais_destination, ais.destination ?: unknown)
+        view.findViewById<TextView>(R.id.txt_destination).text = getString(R.string.nautical_ais_details_destination, ais.destination ?: unknown)
 
         val etaStr = if (ais.etaMon != 0) {
             String.format(Locale.US, "%02d-%02d %02d:%02d", ais.etaMon, ais.etaDay, ais.etaHour, ais.etaMin)
         } else na
-        view.findViewById<TextView>(R.id.txt_eta).text = getString(R.string.nautical_ais_eta, etaStr)
+        view.findViewById<TextView>(R.id.txt_eta).text = getString(R.string.nautical_ais_details_eta, etaStr)
 
         val posStr = if (pos != null) String.format(Locale.US, "%.4f, %.4f", pos.latitude, pos.longitude) else unknown
-        view.findViewById<TextView>(R.id.txt_position).text = getString(R.string.nautical_ais_position, posStr)
+        view.findViewById<TextView>(R.id.txt_position).text = getString(R.string.nautical_ais_details_position, posStr)
 
         // Actions
         view.findViewById<MaterialButton>(R.id.btn_show_on_map).setOnClickListener {
