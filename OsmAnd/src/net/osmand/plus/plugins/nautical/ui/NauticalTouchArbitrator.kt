@@ -133,12 +133,11 @@ class NauticalTouchArbitrator(private val activity: MapActivity) : GestureDetect
         when (target) {
             is AisObject -> {
                 activity.contextMenu?.hideMenus()
-                val resolvedTarget = net.osmand.plus.plugins.nautical.NauticalPlugin.getInstance()?.aisManager?.getAisObject(target.mmsi) ?: target
-                val prevAis = activity.supportFragmentManager.findFragmentByTag("ais_target_details") as? androidx.fragment.app.DialogFragment
-                prevAis?.dismissAllowingStateLoss()
                 val prevDiag = activity.supportFragmentManager.findFragmentByTag(NauticalAisDetailsDialog.TAG) as? androidx.fragment.app.DialogFragment
                 prevDiag?.dismissAllowingStateLoss()
-                AisTargetBottomSheet.newInstance(resolvedTarget).show(activity.supportFragmentManager, "ais_target_details")
+                val prevAis = activity.supportFragmentManager.findFragmentByTag("ais_target_details") as? androidx.fragment.app.DialogFragment
+                prevAis?.dismissAllowingStateLoss()
+                NauticalAisDetailsDialog.show(activity.supportFragmentManager, target.mmsi)
                 return true
             }
             is NavtexMessage -> {

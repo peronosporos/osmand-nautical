@@ -8,7 +8,9 @@ import kotlinx.coroutines.launch
 import net.osmand.plus.R
 import net.osmand.plus.activities.MapActivity
 import net.osmand.plus.plugins.nautical.NauticalPlugin
+import net.osmand.plus.plugins.nautical.engine.ConnectionStatus
 import net.osmand.plus.plugins.nautical.engine.MarineState
+import net.osmand.plus.plugins.nautical.engine.SailingWorkflowState
 import net.osmand.plus.plugins.nautical.engine.SignalKUnitConverter
 import net.osmand.plus.plugins.nautical.ui.NauticalWidgetHelper
 import net.osmand.plus.views.layers.base.OsmandMapLayer
@@ -90,56 +92,22 @@ class NauticalMasterTelemetryWidget(
             lastWorkflowState = currentState
         }
 
-        val engine = NauticalPlugin.engine
-        val state = engine?.getCurrentState()
-        val mode = workflowEngine?.currentWorkflow?.value ?: net.osmand.plus.plugins.nautical.engine.SailingWorkflowState.TACTICAL_PASSAGE
-        
-        val primaryItemId = getPrimaryItemIdForMode(mode)
-        val primaryWidget = WidgetType.getById(primaryItemId) ?: getDefaultPrimaryWidgetForMode(mode)
-
         updateIcon()
 
-        if (state == null || state.connectionStatus == net.osmand.plus.plugins.nautical.engine.ConnectionStatus.DISCONNECTED) {
-            setText("--", "")
-            contentView?.alpha = 0.5f
-            return
+        val mode = workflowEngine?.currentWorkflow?.value ?: SailingWorkflowState.TACTICAL_PASSAGE
+        val mainText = when (mode) {
+            SailingWorkflowState.TACTICAL_PASSAGE -> "PASSAGE"
+            SailingWorkflowState.CLOSE_QUARTERS -> "DOCKING"
+            SailingWorkflowState.STATIONARY_ANCHORED -> "ANCHORED"
         }
 
-        val (main, sub) = when {
-            primaryWidget == WidgetType.NAUTICAL_POLAR_RATIO || primaryWidget == WidgetType.NAUTICAL_VMG -> {
-                when {
-                    state.polarSpeedRatio != null -> {
-                        val pct = String.format(Locale.US, "%.0f%%", state.polarSpeedRatio * 100.0)
-                        val subText = if (state.trueWindAngle != null) {
-                            String.format(Locale.US, "TWA %.0f°", Math.toDegrees(state.trueWindAngle))
-                        } else {
-                            "%"
-                        }
-                        pct to subText
-                    }
-                    state.velocityMadeGood != null -> {
-                        val (vmg, u) = SignalKUnitConverter.formatValue(mapActivity, mapActivity.app.settings, state.velocityMadeGood, "speed")
-                        val subText = if (state.trueWindAngle != null) {
-                            String.format(Locale.US, "TWA %.0f°", Math.toDegrees(state.trueWindAngle))
-                        } else {
-                            u
-                        }
-                        vmg to subText
-                    }
-                    else -> "--" to ""
-                }
-            }
-            else -> {
-                NauticalWidgetHelper.formatTelemetry(mapActivity, mapActivity.app.settings, primaryWidget, state)
-            }
-        }
+        val engine = NauticalPlugin.engine
+        val state = engine?.getCurrentState()
+        val isConnected = state != null && state.connectionStatus != ConnectionStatus.DISCONNECTED
 
-        if (main.isEmpty() || main == "--") {
-            setText("--", "")
-        } else {
-            setText(main, sub)
-        }
-        contentView?.alpha = if (state.connectionStatus == net.osmand.plus.plugins.nautical.engine.ConnectionStatus.STALE) 0.5f else 1.0f
+        val subText = if (isConnected) "ACTIVE" else "STANDBY"
+        setText(mainText, subText)
+        contentView?.alpha = if (isConnected) 1.0f else 0.5f
     }
 
     override fun updateIcon() {

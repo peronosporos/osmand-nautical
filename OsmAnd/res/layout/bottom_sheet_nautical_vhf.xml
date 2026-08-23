@@ -130,7 +130,7 @@
                 android:paddingEnd="4dp"
                 android:textSize="12sp"
                 android:maxLines="1"
-                android:text="16 (Distress)"
+                android:text="16 DISTRESS"
                 android:textColor="#FFFF4444"
                 app:strokeColor="#FFFF4444"
                 app:cornerRadius="8dp" />
@@ -148,7 +148,7 @@
                 android:paddingEnd="4dp"
                 android:textSize="12sp"
                 android:maxLines="1"
-                android:text="09 (Calling)"
+                android:text="09 CALL"
                 app:cornerRadius="8dp" />
 
             <com.google.android.material.button.MaterialButton
@@ -164,7 +164,7 @@
                 android:paddingEnd="4dp"
                 android:textSize="12sp"
                 android:maxLines="1"
-                android:text="13 (Safety)"
+                android:text="13 SAFETY"
                 app:cornerRadius="8dp" />
 
             <com.google.android.material.button.MaterialButton
@@ -180,7 +180,7 @@
                 android:paddingEnd="4dp"
                 android:textSize="12sp"
                 android:maxLines="1"
-                android:text="06 (Inter-ship)"
+                android:text="06 INTER"
                 app:cornerRadius="8dp" />
 
             <com.google.android.material.button.MaterialButton
@@ -196,7 +196,7 @@
                 android:paddingEnd="4dp"
                 android:textSize="12sp"
                 android:maxLines="1"
-                android:text="72 (Ship-Ship)"
+                android:text="72 SHIP-SHIP"
                 app:cornerRadius="8dp" />
 
             <com.google.android.material.button.MaterialButton
@@ -212,7 +212,7 @@
                 android:paddingEnd="4dp"
                 android:textSize="12sp"
                 android:maxLines="1"
-                android:text="77 (Port Ops)"
+                android:text="77 PORT"
                 app:cornerRadius="8dp" />
 
         </GridLayout>

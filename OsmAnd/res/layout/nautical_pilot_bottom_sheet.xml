@@ -767,8 +767,8 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:paddingTop="20dp"
-                android:paddingBottom="20dp">
+                android:paddingTop="16dp"
+                android:paddingBottom="16dp">
 
                 <!-- Heading / Wind Error Linear Scale -->
                 <net.osmand.plus.plugins.nautical.ui.HeadingErrorLinearView
@@ -923,7 +923,7 @@
                     android:layout_height="46dp"
                     android:layout_marginStart="16dp"
                     android:layout_marginEnd="16dp"
-                    android:layout_marginTop="16dp"
+                    android:layout_marginTop="12dp"
                     android:layout_marginBottom="12dp"
                     android:contentDescription="@string/nautical_rudder_angle"
                     android:focusable="true" />

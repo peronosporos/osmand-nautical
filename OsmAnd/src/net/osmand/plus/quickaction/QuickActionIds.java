@@ -88,4 +88,7 @@ public class QuickActionIds {
 	public static final int NAUTICAL_MASTER_TELEMETRY_ACTION_ID = 95;
 	public static final int NAUTICAL_AUTOPILOT_ACTION_ID = 96;
 	public static final int NAUTICAL_SAIL_INVENTORY_ACTION_ID = 97;
+	public static final int NAUTICAL_TACTICAL_PORT_PIN_ACTION_ID = 98;
+	public static final int NAUTICAL_TACTICAL_STBD_PIN_ACTION_ID = 99;
+	public static final int NAUTICAL_LAYLINES_ACTION_ID = 100;
 }

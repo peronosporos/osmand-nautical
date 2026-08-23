@@ -1,4 +1,10 @@
 <resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
+    <string name="nautical_pin_update_location">Re-ping to Current Position</string>
+    <string name="nautical_pin_clear_action">Clear Pin</string>
+    <string name="nautical_port_pin_title">Port Start Pin</string>
+    <string name="nautical_stbd_pin_title">Starboard Start Pin</string>
+    <string name="nautical_laylines_title">Sailing Laylines</string>
+    <string name="nautical_pin_options_title">Start Pin Options</string>
     <string name="nautical_routing_failed">Weather routing calculation failed</string>
     <string name="nautical_telemetry_widget_config">Configure Displayed Metrics</string>
     <string name="nautical_routing_using_live_wind">Calculating route using live wind telemetry — no GRIB forecast loaded</string>

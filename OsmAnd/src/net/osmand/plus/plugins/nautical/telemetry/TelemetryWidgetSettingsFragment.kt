@@ -26,17 +26,12 @@ class TelemetryWidgetSettingsFragment : BaseOsmAndFragment() {
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
-        val view = themedInflater.inflate(R.layout.fragment_nautical_telemetry_settings, container, false)
-        setupViews(view)
-        return view
+        return themedInflater.inflate(R.layout.fragment_nautical_telemetry_settings, container, false)
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        loadSettings()
-        if (::reorderAdapter.isInitialized) {
-            reorderAdapter.notifyDataSetChanged()
-        }
+        setupViews(view)
     }
 
     private fun setupViews(rootView: View) {
@@ -66,6 +61,7 @@ class TelemetryWidgetSettingsFragment : BaseOsmAndFragment() {
             }
         )
         recyclerView.adapter = reorderAdapter
+        reorderAdapter.setItems(activeItems)
         reorderAdapter.notifyDataSetChanged()
 
         val callback = object : ItemTouchHelper.SimpleCallback(
@@ -188,7 +184,10 @@ class TelemetryWidgetSettingsFragment : BaseOsmAndFragment() {
     private fun applyPreset(presetId: String) {
         val presetKeys = TelemetryRegistry.getPresetKeys(presetId)
         val newConfigs = presetKeys.map { TelemetryItemConfig(it, isVisible = true) }
+        activeItems.clear()
+        activeItems.addAll(newConfigs)
         reorderAdapter.setItems(newConfigs)
+        reorderAdapter.notifyDataSetChanged()
         saveSettings()
     }
 
@@ -210,6 +209,9 @@ class TelemetryWidgetSettingsFragment : BaseOsmAndFragment() {
 
         val addMetricAdapter = AddMetricAdapter(
             onItemClicked = { metricKey ->
+                if (activeItems.none { it.key == metricKey }) {
+                    activeItems.add(TelemetryItemConfig(metricKey, isVisible = true))
+                }
                 reorderAdapter.addItem(metricKey)
                 saveSettings()
                 dialog?.dismiss()

@@ -71,11 +71,13 @@ import net.osmand.plus.plugins.nautical.network.NauticalVhfManager
 import net.osmand.plus.plugins.nautical.network.SignalKDiscovery
 import net.osmand.plus.plugins.nautical.quickaction.NauticalAnchorQuickAction
 import net.osmand.plus.plugins.nautical.quickaction.NauticalAutopilotQuickAction
+import net.osmand.plus.plugins.nautical.quickaction.NauticalLaylinesQuickAction
 import net.osmand.plus.plugins.nautical.quickaction.NauticalMasterTelemetryQuickAction
 import net.osmand.plus.plugins.nautical.quickaction.NauticalMobQuickAction
 import net.osmand.plus.plugins.nautical.quickaction.NauticalNightVisionQuickAction
 import net.osmand.plus.plugins.nautical.quickaction.NauticalSailInventoryQuickAction
 import net.osmand.plus.plugins.nautical.quickaction.NauticalSwitchQuickAction
+import net.osmand.plus.plugins.nautical.quickaction.NauticalTacticalStartPinQuickAction
 import net.osmand.plus.plugins.nautical.quickaction.NauticalVhfQuickAction
 import net.osmand.plus.plugins.nautical.s57.S57SpatialIndex
 import net.osmand.plus.plugins.nautical.system.NauticalSystemManager
@@ -1586,7 +1588,10 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
             NauticalSwitchQuickAction.TYPE,
             NauticalMasterTelemetryQuickAction.TYPE,
             NauticalAutopilotQuickAction.TYPE,
-            NauticalSailInventoryQuickAction.TYPE
+            NauticalSailInventoryQuickAction.TYPE,
+            NauticalTacticalStartPinQuickAction.TYPE_PORT,
+            NauticalTacticalStartPinQuickAction.TYPE_STBD,
+            NauticalLaylinesQuickAction.TYPE
         )
     }
 

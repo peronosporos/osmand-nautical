@@ -42,6 +42,7 @@ import net.osmand.plus.plugins.nautical.raster.MarineRasterSettingsControl
 import net.osmand.plus.plugins.nautical.routing.model.RoutingRequest
 import net.osmand.plus.plugins.nautical.routing.model.Waypoint
 import net.osmand.plus.plugins.nautical.s57.S57SpatialIndex
+import net.osmand.plus.plugins.nautical.ui.NauticalAisDetailsDialog
 import net.osmand.plus.plugins.nautical.ui.widgets.NauticalElectricalDashboardBottomSheet
 import net.osmand.plus.plugins.nautical.ui.widgets.NauticalManeuversBottomSheet
 import net.osmand.plus.plugins.nautical.viewmodel.RoutingViewModel
@@ -244,15 +245,35 @@ class NauticalContextMenuHelper(private val app: OsmandApplication) {
                 title = if (isPortSet) mapActivity.getString(R.string.nautical_clear_port_pin) else mapActivity.getString(R.string.nautical_ping_port_pin)
                 icon = if (isPortSet) R.drawable.ic_action_remove else R.drawable.ic_action_flag
                 setListener { _, _, _, _ ->
+                    val loc = app.locationProvider.lastKnownLocation
+                    val pinLat = loc?.latitude ?: lat
+                    val pinLon = loc?.longitude ?: lon
                     if (isPortSet) {
-                        tacticalStartManager?.clearPortPin()
-                        app.showToastMessage(R.string.nautical_pin_cleared)
+                        val options = arrayOf(
+                            mapActivity.getString(R.string.nautical_pin_update_location),
+                            mapActivity.getString(R.string.nautical_pin_clear_action)
+                        )
+                        androidx.appcompat.app.AlertDialog.Builder(mapActivity)
+                            .setTitle(R.string.nautical_pin_options_title)
+                            .setItems(options) { _, which ->
+                                if (which == 0) {
+                                    tacticalStartManager?.setPortPin(pinLat, pinLon)
+                                    app.showToastMessage(R.string.nautical_port_pin_set)
+                                } else {
+                                    tacticalStartManager?.clearPortPin()
+                                    app.showToastMessage(R.string.nautical_pin_cleared)
+                                }
+                                onRequestRefresh()
+                                app.osmandMap?.refreshMap()
+                            }
+                            .setNegativeButton(R.string.shared_string_cancel, null)
+                            .show()
                     } else {
-                        tacticalStartManager?.setPortPin(lat, lon)
+                        tacticalStartManager?.setPortPin(pinLat, pinLon)
                         app.showToastMessage(R.string.nautical_port_pin_set)
+                        onRequestRefresh()
+                        app.osmandMap?.refreshMap()
                     }
-                    onRequestRefresh()
-                    app.osmandMap?.refreshMap()
                     true
                 }
             }
@@ -264,15 +285,35 @@ class NauticalContextMenuHelper(private val app: OsmandApplication) {
                 title = if (isStbdSet) mapActivity.getString(R.string.nautical_clear_stbd_pin) else mapActivity.getString(R.string.nautical_ping_stbd_pin)
                 icon = if (isStbdSet) R.drawable.ic_action_remove else R.drawable.ic_action_flag
                 setListener { _, _, _, _ ->
+                    val loc = app.locationProvider.lastKnownLocation
+                    val pinLat = loc?.latitude ?: lat
+                    val pinLon = loc?.longitude ?: lon
                     if (isStbdSet) {
-                        tacticalStartManager?.clearStarboardPin()
-                        app.showToastMessage(R.string.nautical_pin_cleared)
+                        val options = arrayOf(
+                            mapActivity.getString(R.string.nautical_pin_update_location),
+                            mapActivity.getString(R.string.nautical_pin_clear_action)
+                        )
+                        androidx.appcompat.app.AlertDialog.Builder(mapActivity)
+                            .setTitle(R.string.nautical_pin_options_title)
+                            .setItems(options) { _, which ->
+                                if (which == 0) {
+                                    tacticalStartManager?.setStarboardPin(pinLat, pinLon)
+                                    app.showToastMessage(R.string.nautical_stbd_pin_set)
+                                } else {
+                                    tacticalStartManager?.clearStarboardPin()
+                                    app.showToastMessage(R.string.nautical_pin_cleared)
+                                }
+                                onRequestRefresh()
+                                app.osmandMap?.refreshMap()
+                            }
+                            .setNegativeButton(R.string.shared_string_cancel, null)
+                            .show()
                     } else {
-                        tacticalStartManager?.setStarboardPin(lat, lon)
+                        tacticalStartManager?.setStarboardPin(pinLat, pinLon)
                         app.showToastMessage(R.string.nautical_stbd_pin_set)
+                        onRequestRefresh()
+                        app.osmandMap?.refreshMap()
                     }
-                    onRequestRefresh()
-                    app.osmandMap?.refreshMap()
                     true
                 }
             }
@@ -642,7 +683,7 @@ class NauticalContextMenuHelper(private val app: OsmandApplication) {
                     setTitleId(R.string.nautical_vessel_details, mapActivity)
                     icon = R.drawable.ic_action_info
                     setListener { _, _, _, _ ->
-                        AisTargetBottomSheet.show(mapActivity.supportFragmentManager, obj)
+                        NauticalAisDetailsDialog.show(mapActivity.supportFragmentManager, obj.mmsi)
                         true
                     }
                 }
