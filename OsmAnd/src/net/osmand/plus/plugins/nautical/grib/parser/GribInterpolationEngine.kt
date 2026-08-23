@@ -41,14 +41,17 @@ class GribInterpolationEngine(private val gridData: GribGridData) {
         val dAtUpper = interpolateAngle(lat, lon, upper.waveDirectionGrid) ?: return null
 
         val h = hAtLower + ratio * (hAtUpper - hAtLower)
-        
-        // Wrap-around aware interpolation for degrees (time)
-        var diff = dAtUpper - dAtLower
-        while (diff > 180.0) diff -= 360.0
-        while (diff < -180.0) diff += 360.0
-        val d = (dAtLower + ratio * diff + 360.0) % 360.0
-        
+        val d = interpolateShortestArc(dAtLower, dAtUpper, ratio)
+
         return WaveVector(h, d)
+    }
+
+    fun interpolateShortestArc(aDeg: Double, bDeg: Double, ratio: Double): Double {
+        var diff = (bDeg - aDeg) % 360.0
+        if (diff > 180.0) diff -= 360.0
+        if (diff < -180.0) diff += 360.0
+        val result = aDeg + ratio * diff
+        return (result % 360.0 + 360.0) % 360.0
     }
 
     private fun getTimeSteps(timestamp: Long): Triple<TimeStepGrid, TimeStepGrid, Double>? {

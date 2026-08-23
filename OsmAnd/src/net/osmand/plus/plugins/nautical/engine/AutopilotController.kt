@@ -71,7 +71,9 @@ class AutopilotController(
                     try {
                         net.osmand.plus.plugins.nautical.audio.NauticalAudioArbiter.getInstance(app)
                             .dispatchAlarm(net.osmand.plus.plugins.nautical.audio.AlarmType.AUTOPILOT_COMMAND_REJECTED, loop = false)
-                    } catch (_: Exception) {}
+                    } catch (e: Exception) {
+                        log.error("Failed to dispatch autopilot command rejected alarm: ${e.message}", e)
+                    }
                 }
             }
 
@@ -1161,7 +1163,7 @@ class AutopilotController(
                 override fun onFailure(call: Call, e: IOException) {
                     activeCalls.remove(call)
                     if (call.isCanceled()) return
-                    log.error("Request failed: ${e.message}")
+                    log.error("Autopilot command failed: ${e.message}", e)
 
                     // ITEM 20: Retry logic for priority commands
                     if (priority && retryCount < 3) {
@@ -1177,9 +1179,10 @@ class AutopilotController(
                     reconciliationJob = null
                     NauticalPlugin.engine?.updatePendingCommand(targetHeading = null, mode = null, path = null)
 
-                    if (showToast) {
-                        app.runInUIThread {
-                            showPersistentError(R.string.nautical_toast_conn_failed)
+                    app.runInUIThread {
+                        showPersistentError(R.string.nautical_toast_conn_failed)
+                        if (showToast) {
+                            app.showToastMessage(R.string.nautical_toast_conn_failed)
                         }
                     }
                 }

@@ -85,12 +85,20 @@ class PassagePlanBottomSheet : BaseNauticalBottomSheet() {
         }
 
         btnActivateAutopilot.setOnClickListener {
-            val firstLeg = currentLegs.firstOrNull()
-            if (firstLeg != null) {
-                val cts = firstLeg.courseToSteerDeg
-                NauticalPlugin.autopilot?.setTargetHeading(cts)
-                NauticalPlugin.engine?.sendDelta("steering.autopilot.target.headingTrue", cts)
-                NauticalPlugin.getInstance()?.application?.showToastMessage(R.string.nautical_route_activated_autopilot)
+            if (currentLegs.isNotEmpty()) {
+                val routePoints = mutableListOf<Pair<Double, Double>>()
+                currentLegs.forEach { leg ->
+                    routePoints.add(Pair(leg.from.latitude, leg.from.longitude))
+                }
+                routePoints.add(Pair(currentLegs.last().to.latitude, currentLegs.last().to.longitude))
+
+                NauticalPlugin.engine?.loadRoute(routePoints)
+                NauticalPlugin.autopilot?.setAutopilotMode("track")
+                val firstLeg = currentLegs.first()
+                NauticalPlugin.autopilot?.setTargetHeading(firstLeg.courseToSteerDeg)
+                NauticalPlugin.engine?.sendDelta("steering.autopilot.target.headingTrue", firstLeg.courseToSteerDeg)
+                NauticalPlugin.getInstance()?.application?.showToastMessage(R.string.nautical_autopilot_route_engaged)
+                dismiss()
             }
         }
 
@@ -105,7 +113,29 @@ class PassagePlanBottomSheet : BaseNauticalBottomSheet() {
         }
 
         btnExportGpx.setOnClickListener {
-            NauticalPlugin.getInstance()?.application?.showToastMessage(R.string.nautical_gpx_exported)
+            if (currentLegs.isNotEmpty()) {
+                val gpx = net.osmand.shared.gpx.GpxFile()
+                val track = net.osmand.shared.gpx.Track()
+                val segment = net.osmand.shared.gpx.TrkSegment()
+                currentLegs.forEach { leg ->
+                    val pt = net.osmand.shared.gpx.WptPt()
+                    pt.lat = leg.from.latitude
+                    pt.lon = leg.from.longitude
+                    segment.points.add(pt)
+                }
+                val lastPt = net.osmand.shared.gpx.WptPt()
+                lastPt.lat = currentLegs.last().to.latitude
+                lastPt.lon = currentLegs.last().to.longitude
+                segment.points.add(lastPt)
+                track.segments.add(segment)
+                gpx.tracks.add(track)
+
+                val dir = NauticalPlugin.getInstance()?.application?.getAppPath(net.osmand.IndexConstants.GPX_INDEX_DIR)
+                val fileName = "PassagePlan_${System.currentTimeMillis()}.gpx"
+                val file = java.io.File(dir, fileName)
+                net.osmand.plus.shared.SharedUtil.writeGpxFile(file, gpx)
+                NauticalPlugin.getInstance()?.application?.showToastMessage(R.string.nautical_gpx_exported)
+            }
         }
 
         items.add(BaseBottomSheetItem.Builder().setCustomView(customView).create())

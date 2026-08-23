@@ -53,24 +53,13 @@
                             android:orientation="horizontal"
                             android:gravity="center_vertical">
 
-                            <TextView
-                                android:id="@+id/txt_ship_name"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:textAppearance="@style/TextAppearance.AppCompat.Large"
-                                android:textColor="?android:attr/textColorPrimary"
-                                android:textStyle="bold" />
-
-                            <ImageView
-                                android:id="@+id/img_buddy_star"
-                                android:layout_width="20dp"
-                                android:layout_height="20dp"
-                                android:layout_marginStart="6dp"
-                                android:src="@drawable/ic_action_favorite"
-                                app:tint="#FFD700"
-                                android:visibility="gone"
-                                android:contentDescription="AIS Buddy" />
-                        </LinearLayout>
+                        <TextView
+                            android:id="@+id/txt_ship_name"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:textAppearance="@style/TextAppearance.AppCompat.Large"
+                            android:textColor="?android:attr/textColorPrimary"
+                            android:textStyle="bold" />
 
                         <TextView
                             android:id="@+id/txt_mmsi_callsign"
@@ -92,6 +81,16 @@
                         android:paddingTop="4dp"
                         android:paddingBottom="4dp"
                         android:background="?attr/list_background_color" />
+
+                    <ImageView
+                        android:id="@+id/img_buddy_star"
+                        android:layout_width="36dp"
+                        android:layout_height="36dp"
+                        android:layout_marginStart="6dp"
+                        android:padding="6dp"
+                        android:src="@drawable/ic_action_favorite_stroke"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:contentDescription="Toggle AIS Buddy" />
                 </LinearLayout>
             </LinearLayout>
         </androidx.cardview.widget.CardView>
@@ -103,7 +102,7 @@
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:gravity="center_vertical"
-            android:background="#33FF0000"
+            android:background="?attr/status_bad"
             android:padding="12dp"
             android:layout_marginTop="10dp"
             android:visibility="gone">
@@ -112,7 +111,7 @@
                 android:layout_width="24dp"
                 android:layout_height="24dp"
                 android:src="@drawable/ic_action_alert"
-                app:tint="#FFFF0000"
+                app:tint="?attr/color_warning"
                 android:layout_marginEnd="8dp"
                 android:contentDescription="Collision Warning" />
 
@@ -121,7 +120,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="@string/nautical_ais_danger_warning"
-                android:textColor="#FFFF4444"
+                android:textColor="?attr/color_warning"
                 android:textStyle="bold"
                 android:textSize="14sp" />
         </LinearLayout>

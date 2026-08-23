@@ -2,6 +2,7 @@ package net.osmand.plus.plugins.nautical.nmea.parser
 
 import net.osmand.plus.OsmandApplication
 import net.osmand.plus.plugins.nautical.engine.MarineStateConstants
+import net.osmand.plus.plugins.nautical.engine.SignalKPaths
 import net.osmand.plus.plugins.nautical.network.DeltaMessage
 import net.osmand.plus.plugins.nautical.network.LivePerformanceData
 import net.osmand.plus.plugins.nautical.network.Update
@@ -52,6 +53,8 @@ class NmeaSentenceParser(private val app: OsmandApplication) {
             "VTG" -> parseVTG(parts, talker)
             "VDR" -> parseVDR(parts)
             "RSA" -> parseRSA(parts)
+            "MTW" -> parseMTW(parts)
+            "XTE" -> parseXTE(parts)
             else -> emptyList()
         }
         
@@ -273,18 +276,34 @@ class NmeaSentenceParser(private val app: OsmandApplication) {
         // $--DBS,x.x,f,x.x,M,x.x,F*hh (Depth Below Surface)
         // $--DPT,x.x,x.x,x.x*hh (Depth, offset, scale)
         if (parts.size < 2) return emptyList()
-        
-        val type = parts[0].takeLast(3)
-        val depthMeters = if (type == "DPT") {
-            parts[1].toDoubleOrNull()
-        } else {
-            if (parts.size >= 4) parts[3].toDoubleOrNull() else null
-        } ?: return emptyList()
-        
-        if (!MarineStateConstants.isValidDepth(depthMeters)) return emptyList()
 
-        val path = if (type == "DBS") "environment.depth.surfaceToTransducer" else LivePerformanceData.PATH_DEPTH
-        return listOf(Value(path, depthMeters))
+        val type = parts[0].takeLast(3)
+        if (type == "DPT") {
+            val depthMeters = parts[1].toDoubleOrNull() ?: return emptyList()
+            if (!MarineStateConstants.isValidDepth(depthMeters)) return emptyList()
+            val values = mutableListOf(Value(LivePerformanceData.PATH_DEPTH, depthMeters))
+            val offsetMeters = if (parts.size >= 3) parts[2].toDoubleOrNull() else null
+            if (offsetMeters != null) {
+                if (offsetMeters > 0.0) {
+                    val surfaceDepth = depthMeters + offsetMeters
+                    if (MarineStateConstants.isValidDepth(surfaceDepth)) {
+                        values.add(Value(SignalKPaths.ENV_DEPTH_SURFACE_TO_TRANSDUCER, offsetMeters))
+                        values.add(Value("environment.depth.belowSurface", surfaceDepth))
+                    }
+                } else if (offsetMeters < 0.0) {
+                    val keelDepth = depthMeters + offsetMeters
+                    if (MarineStateConstants.isValidDepth(keelDepth)) {
+                        values.add(Value(SignalKPaths.ENV_DEPTH_BELOW_KEEL, keelDepth))
+                    }
+                }
+            }
+            return values
+        } else {
+            val depthMeters = if (parts.size >= 4) parts[3].toDoubleOrNull() else parts[1].toDoubleOrNull() ?: return emptyList()
+            if (!MarineStateConstants.isValidDepth(depthMeters)) return emptyList()
+            val path = if (type == "DBS") SignalKPaths.ENV_DEPTH_SURFACE_TO_TRANSDUCER else LivePerformanceData.PATH_DEPTH
+            return listOf(Value(path, depthMeters))
+        }
     }
 
     private fun parseVWT(parts: List<String>): List<Value> {
@@ -376,6 +395,26 @@ class NmeaSentenceParser(private val app: OsmandApplication) {
         val angleDeg = parts[1].toDoubleOrNull() ?: return emptyList()
         val angleRad = Math.toRadians(angleDeg)
         return listOf(Value("steering.rudderAngle", angleRad))
+    }
+
+    private fun parseMTW(parts: List<String>): List<Value> {
+        // $--MTW,x.x,C*hh
+        if (parts.size < 2) return emptyList()
+        val tempC = parts[1].toDoubleOrNull() ?: return emptyList()
+        val tempK = tempC + 273.15
+        if (tempK < 200.0 || tempK > 350.0) return emptyList()
+        return listOf(Value(SignalKPaths.ENV_WATER_TEMP, tempK))
+    }
+
+    private fun parseXTE(parts: List<String>): List<Value> {
+        // $--XTE,A,A,x.x,a,N*hh
+        if (parts.size < 5) return emptyList()
+        if (parts[1].equals("V", ignoreCase = true) || parts[2].equals("V", ignoreCase = true)) return emptyList()
+        val xteNm = parts[3].toDoubleOrNull() ?: return emptyList()
+        val dir = parts[4]
+        val xteMeters = xteNm * 1852.0
+        val signedXte = if (dir.equals("L", ignoreCase = true)) xteMeters else -xteMeters
+        return listOf(Value(SignalKPaths.NAV_XTE, signedXte))
     }
 
     private fun validateChecksum(content: String, providedChecksum: String): Boolean {

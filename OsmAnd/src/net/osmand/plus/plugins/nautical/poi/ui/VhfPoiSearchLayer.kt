@@ -29,6 +29,7 @@ class VhfPoiSearchLayer(private val mapActivity: MapActivity) : OsmandMapLayer(m
 
     private var vhfObjects = listOf<BinaryMapDataObject>()
     private var vhfObjectsCached = listOf<BinaryMapDataObject>()
+    private val reusableRect = Rect()
     private var lastSearchRect: Rect? = null
     private var searchJob: Job? = null
     private val layerScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
@@ -51,14 +52,14 @@ class VhfPoiSearchLayer(private val mapActivity: MapActivity) : OsmandMapLayer(m
         }
 
         val bounds = tileBox.latLonBounds
-        val currentRect = Rect(
+        reusableRect.set(
             MapUtils.get31TileNumberX(bounds.left),
             MapUtils.get31TileNumberY(bounds.top),
             MapUtils.get31TileNumberX(bounds.right),
             MapUtils.get31TileNumberY(bounds.bottom),
         )
 
-        if (((lastSearchRect == null) || (!lastSearchRect!!.contains(currentRect))) || vhfObjectsCached.isEmpty()) {
+        if (((lastSearchRect == null) || (!lastSearchRect!!.contains(reusableRect))) || vhfObjectsCached.isEmpty()) {
             triggerSearch(tileBox)
         }
 

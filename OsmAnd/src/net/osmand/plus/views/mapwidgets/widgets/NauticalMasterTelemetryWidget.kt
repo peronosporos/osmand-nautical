@@ -45,6 +45,46 @@ class NauticalMasterTelemetryWidget(
         super.setupView(view)
         widgetName?.visibility = View.GONE
         widgetName?.text = ""
+
+        view.layoutParams = view.layoutParams?.apply {
+            width = android.view.ViewGroup.LayoutParams.WRAP_CONTENT
+            if (this is android.widget.LinearLayout.LayoutParams) {
+                weight = 0f
+            }
+        } ?: android.view.ViewGroup.LayoutParams(
+            android.view.ViewGroup.LayoutParams.WRAP_CONTENT,
+            android.view.ViewGroup.LayoutParams.WRAP_CONTENT
+        )
+
+        view.setPadding(0, view.paddingTop, 0, view.paddingBottom)
+        view.minimumWidth = 0
+
+        container?.layoutParams = container?.layoutParams?.apply {
+            width = android.view.ViewGroup.LayoutParams.WRAP_CONTENT
+            if (this is android.widget.LinearLayout.LayoutParams) {
+                weight = 0f
+            }
+        }
+        container?.setPadding(0, container?.paddingTop ?: 0, 0, container?.paddingBottom ?: 0)
+        container?.minimumWidth = 0
+
+        val textContainer = textView
+        if (textContainer != null) {
+            for (i in 0 until textContainer.childCount) {
+                val tv = textContainer.getChildAt(i) as? android.widget.TextView
+                tv?.isSingleLine = true
+                tv?.ellipsize = android.text.TextUtils.TruncateAt.END
+            }
+        }
+        val unitsContainer = smallTextView
+        if (unitsContainer != null) {
+            for (i in 0 until unitsContainer.childCount) {
+                val tv = unitsContainer.getChildAt(i) as? android.widget.TextView
+                tv?.isSingleLine = true
+                tv?.ellipsize = android.text.TextUtils.TruncateAt.END
+            }
+        }
+
         view.addOnAttachStateChangeListener(
             object : View.OnAttachStateChangeListener {
                 override fun onViewAttachedToWindow(v: View) {

@@ -65,7 +65,14 @@ class TacticalProcessor(private val app: OsmandApplication) {
         val target = targetWaypoint ?: return
         
         // TASK-001: Unified Layline Logic using LaylineMathEngine
-        val optimalTwa = polarDiagram.getOptimalUpwindTwaRad(tws)
+        val fallbackTwa = Math.toRadians(app.settings.NAUTICAL_LAYLINES_TACK_ANGLE.get().toDouble() / 2.0)
+        val polarTwa = polarDiagram.getOptimalUpwindTwaRad(tws)
+        val optimalTwa = if (polarTwa > 0.0) polarTwa else fallbackTwa
+
+        val manualLeeway = Math.toRadians(app.settings.NAUTICAL_MANUAL_LEEWAY_ANGLE.get().toDouble())
+        val leeway = state.leeway ?: if (manualLeeway > 0.0) manualLeeway else 0.0
+        val isInfinite = app.settings.NAUTICAL_SHOW_INFINITE_LAYLINES.get()
+
         val current = TidalCurrentVector(
             (state.drift ?: 0.0) * sin(state.setTrue ?: 0.0),
             (state.drift ?: 0.0) * cos(state.setTrue ?: 0.0)
@@ -78,7 +85,8 @@ class TacticalProcessor(private val app: OsmandApplication) {
             trueWindDirection = twd,
             boatSpeed = state.speedThroughWater ?: state.speedOverGround ?: 5.0,
             current = current,
-            leewayRadians = state.leeway ?: 0.0
+            leewayRadians = leeway,
+            isInfinite = isInfinite
         )
 
         portLaylineEnd = result.portTackPoint?.let { it.latitude to it.longitude }

@@ -98,7 +98,6 @@ class NauticalAisDetailsDialog : BaseBottomSheetDialogFragment() {
         view.findViewById<TextView>(R.id.txt_ship_name).text = if (!shipName.isNullOrEmpty()) shipName else "MMSI: ${ais.mmsi}"
 
         val isBuddy = aisManager?.isBuddy(ais.mmsi) ?: false
-        view.findViewById<ImageView>(R.id.img_buddy_star)?.visibility = if (isBuddy) View.VISIBLE else View.GONE
 
         val country = getMidCountry(ais.mmsi)
         val mmsiSb = StringBuilder("MMSI: ${ais.mmsi}")
@@ -152,9 +151,11 @@ class NauticalAisDetailsDialog : BaseBottomSheetDialogFragment() {
             }
             val distNm = ownLoc.distanceTo(targetLoc) / 1852.0
             val bearingDeg = (ownLoc.bearingTo(targetLoc) + 360f) % 360f
-            view.findViewById<TextView>(R.id.txt_range_bearing).text = String.format(Locale.US, "Range: %.2f nm • %03.0f°", distNm, bearingDeg)
+            val rangeStr = String.format(Locale.US, "%.2f nm", distNm)
+            val bearingStr = String.format(Locale.US, "%03.0f°", bearingDeg)
+            view.findViewById<TextView>(R.id.txt_range_bearing).text = getString(R.string.nautical_ais_range_bearing, rangeStr, bearingStr)
         } else {
-            view.findViewById<TextView>(R.id.txt_range_bearing).text = "Range: $na"
+            view.findViewById<TextView>(R.id.txt_range_bearing).text = getString(R.string.nautical_ais_range_bearing, na, na)
         }
 
         val cpaTcpaStr = if (ais.cpa.valid) {
@@ -170,25 +171,25 @@ class NauticalAisDetailsDialog : BaseBottomSheetDialogFragment() {
             txtCpa.setTextColor(net.osmand.plus.utils.AndroidUtils.getColorFromAttr(requireContext(), android.R.attr.textColorPrimary))
         }
 
-        view.findViewById<TextView>(R.id.txt_status).text = "Status: ${ais.getNavStatusString()}"
+        view.findViewById<TextView>(R.id.txt_status).text = getString(R.string.nautical_ais_status, ais.getNavStatusString())
 
         val totalLen = ais.dimensionToBow + ais.dimensionToStern
         val totalBeam = ais.dimensionToPort + ais.dimensionToStarboard
         val dimStr = if (totalLen > 0 && totalBeam > 0) "${totalLen}m x ${totalBeam}m" else na
-        view.findViewById<TextView>(R.id.txt_dimensions).text = "Dim: $dimStr"
+        view.findViewById<TextView>(R.id.txt_dimensions).text = getString(R.string.nautical_ais_dimensions, dimStr)
 
         val draughtStr = if (ais.draught > 0) String.format(Locale.US, "%.1f m", ais.draught) else na
-        view.findViewById<TextView>(R.id.txt_draught).text = "Draught: $draughtStr"
+        view.findViewById<TextView>(R.id.txt_draught).text = getString(R.string.nautical_ais_draught, draughtStr)
 
-        view.findViewById<TextView>(R.id.txt_destination).text = "Dest: ${ais.destination ?: unknown}"
+        view.findViewById<TextView>(R.id.txt_destination).text = getString(R.string.nautical_ais_destination, ais.destination ?: unknown)
 
         val etaStr = if (ais.etaMon != 0) {
             String.format(Locale.US, "%02d-%02d %02d:%02d", ais.etaMon, ais.etaDay, ais.etaHour, ais.etaMin)
         } else na
-        view.findViewById<TextView>(R.id.txt_eta).text = "ETA: $etaStr"
+        view.findViewById<TextView>(R.id.txt_eta).text = getString(R.string.nautical_ais_eta, etaStr)
 
         val posStr = if (pos != null) String.format(Locale.US, "%.4f, %.4f", pos.latitude, pos.longitude) else unknown
-        view.findViewById<TextView>(R.id.txt_position).text = "Pos: $posStr"
+        view.findViewById<TextView>(R.id.txt_position).text = getString(R.string.nautical_ais_position, posStr)
 
         // Actions
         view.findViewById<MaterialButton>(R.id.btn_show_on_map).setOnClickListener {
@@ -232,6 +233,50 @@ class NauticalAisDetailsDialog : BaseBottomSheetDialogFragment() {
             plugin?.application?.showToastMessage(R.string.nautical_mmsi_copied, ais.mmsi)
         }
 
+        val imgBuddyStar = view.findViewById<ImageView>(R.id.img_buddy_star)
+        val btnBuddy = view.findViewById<MaterialButton>(R.id.btn_toggle_buddy)
+
+        fun updateBuddyUi(buddy: Boolean) {
+            if (buddy) {
+                imgBuddyStar?.setImageResource(R.drawable.ic_action_favorite)
+                imgBuddyStar?.setColorFilter(Color.parseColor("#FFD700"), PorterDuff.Mode.SRC_IN)
+                btnBuddy?.setText(R.string.nautical_remove_from_buddies)
+                btnBuddy?.setIconResource(R.drawable.ic_action_favorite)
+            } else {
+                imgBuddyStar?.setImageResource(R.drawable.ic_action_favorite_stroke)
+                val iconSecondary = net.osmand.plus.utils.AndroidUtils.getColorFromAttr(requireContext(), R.attr.icon_color_secondary)
+                imgBuddyStar?.setColorFilter(iconSecondary, PorterDuff.Mode.SRC_IN)
+                btnBuddy?.setText(R.string.nautical_add_to_buddies)
+                btnBuddy?.setIconResource(R.drawable.ic_action_favorite_stroke)
+            }
+        }
+
+        val isBuddy = (NauticalPlugin.engine?.getCurrentState()?.aisBuddies?.contains(ais.mmsi) == true) ||
+                (aisManager?.isBuddy(ais.mmsi) == true)
+        updateBuddyUi(isBuddy)
+
+        fun performBuddyToggle() {
+            val isCurrentBuddy = (NauticalPlugin.engine?.getCurrentState()?.aisBuddies?.contains(ais.mmsi) == true) ||
+                    (aisManager?.isBuddy(ais.mmsi) == true)
+            val newBuddyState = if (isCurrentBuddy) {
+                aisManager?.removeBuddy(ais.mmsi) ?: false
+            } else {
+                aisManager?.addBuddy(ais.mmsi) ?: true
+            }
+            updateBuddyUi(newBuddyState)
+            val vesselName = ais.shipName?.trim().takeIf { !it.isNullOrEmpty() } ?: "MMSI ${ais.mmsi}"
+            if (newBuddyState) {
+                plugin?.application?.showToastMessage(getString(R.string.nautical_added_to_buddies, vesselName))
+            } else {
+                plugin?.application?.showToastMessage(getString(R.string.nautical_removed_from_buddies, vesselName))
+            }
+            plugin?.application?.osmandMap?.refreshMap()
+        }
+
+        imgBuddyStar?.setOnClickListener {
+            performBuddyToggle()
+        }
+
         val btnTrack = view.findViewById<MaterialButton>(R.id.btn_toggle_track)
         val isTrackOn = aisManager?.isTrackEnabled(ais.mmsi) ?: false
         btnTrack.text = if (isTrackOn) getString(R.string.nautical_hide_track) else getString(R.string.nautical_show_track)
@@ -240,21 +285,8 @@ class NauticalAisDetailsDialog : BaseBottomSheetDialogFragment() {
             btnTrack.text = if (newTrackState) getString(R.string.nautical_hide_track) else getString(R.string.nautical_show_track)
         }
 
-        val btnBuddy = view.findViewById<MaterialButton>(R.id.btn_toggle_buddy)
-        btnBuddy.text = if (isBuddy) getString(R.string.nautical_remove_from_buddies) else getString(R.string.nautical_add_to_buddies)
-        btnBuddy.setIconResource(R.drawable.ic_action_favorite)
         btnBuddy.setOnClickListener {
-            val newBuddyState = aisManager?.toggleBuddy(ais.mmsi) ?: false
-            btnBuddy.text = if (newBuddyState) getString(R.string.nautical_remove_from_buddies) else getString(R.string.nautical_add_to_buddies)
-            btnBuddy.setIconResource(R.drawable.ic_action_favorite)
-            view.findViewById<ImageView>(R.id.img_buddy_star)?.visibility = if (newBuddyState) View.VISIBLE else View.GONE
-
-            val vesselName = ais.shipName?.trim().takeIf { !it.isNullOrEmpty() } ?: "MMSI ${ais.mmsi}"
-            if (newBuddyState) {
-                plugin?.application?.showToastMessage(getString(R.string.nautical_added_to_buddies, vesselName))
-            } else {
-                plugin?.application?.showToastMessage(getString(R.string.nautical_removed_from_buddies, vesselName))
-            }
+            performBuddyToggle()
         }
 
         view.findViewById<MaterialButton>(R.id.btn_view_buddies)?.setOnClickListener {

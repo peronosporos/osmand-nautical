@@ -591,6 +591,34 @@ class NauticalAisManager(private val app: OsmandApplication) : AisDataListener {
         return isNowBuddy
     }
 
+    fun addBuddy(mmsi: Int): Boolean {
+        val engine = NauticalPlugin.engine
+        val sp = app.getSharedPreferences("nautical_buddies_pref", Context.MODE_PRIVATE)
+        val local = (sp.getStringSet("ais_buddies", emptySet()) ?: emptySet()).toMutableSet()
+        val current = (engine?.getCurrentState()?.aisBuddies ?: emptySet()).toMutableSet()
+        current.addAll(local.mapNotNull { it.toIntOrNull() })
+        current.add(mmsi)
+        local.add(mmsi.toString())
+        sp.edit().putStringSet("ais_buddies", local).apply()
+        engine?.sendDelta("navigation.aisBuddies", current.toList())
+        requestThrottledMapRefresh()
+        return true
+    }
+
+    fun removeBuddy(mmsi: Int): Boolean {
+        val engine = NauticalPlugin.engine
+        val sp = app.getSharedPreferences("nautical_buddies_pref", Context.MODE_PRIVATE)
+        val local = (sp.getStringSet("ais_buddies", emptySet()) ?: emptySet()).toMutableSet()
+        val current = (engine?.getCurrentState()?.aisBuddies ?: emptySet()).toMutableSet()
+        current.addAll(local.mapNotNull { it.toIntOrNull() })
+        current.remove(mmsi)
+        local.remove(mmsi.toString())
+        sp.edit().putStringSet("ais_buddies", local).apply()
+        engine?.sendDelta("navigation.aisBuddies", current.toList())
+        requestThrottledMapRefresh()
+        return false
+    }
+
     fun getAisExtras(mmsi: Int): AisExtras = aisExtras[mmsi] ?: AisExtras()
 
     fun getAisObjects(): List<AisObject> = objects.values.toList()

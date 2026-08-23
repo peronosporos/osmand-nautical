@@ -94,8 +94,8 @@
     <Preference
         android:key="nautical_diagnostics"
         android:layout="@layout/preference_with_descr"
-        android:title="Signal K Orchestrator"
-        android:summary="Control and manage server-side plugins and routing" />
+        android:title="@string/nautical_signalk_diagnostics_title"
+        android:summary="@string/nautical_signalk_diagnostics_desc" />
 
     <Preference
         android:key="nautical_advanced_tuning"

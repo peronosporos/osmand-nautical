@@ -203,7 +203,10 @@ class AnchorDriftWatchdog(private val app: OsmandApplication) {
 
         val anchorLat = app.settings.NAUTICAL_ANCHOR_LAT.get()
         val anchorLon = app.settings.NAUTICAL_ANCHOR_LON.get()
-        val radius = app.settings.NAUTICAL_ANCHOR_RADIUS.get()
+        var radius = app.settings.NAUTICAL_ANCHOR_RADIUS.get()
+        if (radius <= 0f) {
+            radius = computeFallbackSwingRadius()
+        }
 
         if ((anchorLat == 0.0) || (anchorLon == 0.0) || (radius <= 0f)) {
             reset()
@@ -319,10 +322,23 @@ class AnchorDriftWatchdog(private val app: OsmandApplication) {
         requestThrottledMapRefresh()
     }
 
-    fun setAnchor(latitude: Double, longitude: Double, radius: Float) {
+    fun computeFallbackSwingRadius(): Float {
+        val depth = app.settings.NAUTICAL_ANCHOR_DEPTH.get().toDouble()
+        val scopeRatio = app.settings.NAUTICAL_ANCHOR_SCOPE_RATIO.get().toDouble().coerceAtLeast(1.0)
+        val safetyMargin = app.settings.NAUTICAL_ANCHOR_SAFETY_MARGIN.get().toDouble()
+        val bowOffset = app.settings.NAUTICAL_ANCHOR_BOW_OFFSET.get().toDouble()
+        val computed = (depth * scopeRatio) + safetyMargin + bowOffset
+        return computed.toFloat().coerceAtLeast(15.0f)
+    }
+
+    fun setAnchor(latitude: Double, longitude: Double, radius: Float = 0f) {
+        val finalRadius = if (radius > 0f) radius else {
+            val current = app.settings.NAUTICAL_ANCHOR_RADIUS.get()
+            if (current > 0f) current else computeFallbackSwingRadius()
+        }
         app.settings.NAUTICAL_ANCHOR_LAT.set(latitude)
         app.settings.NAUTICAL_ANCHOR_LON.set(longitude)
-        app.settings.NAUTICAL_ANCHOR_RADIUS.set(radius)
+        app.settings.NAUTICAL_ANCHOR_RADIUS.set(finalRadius)
         resetCounter()
         
         // Task: Write-Back to Signal K

@@ -86,6 +86,10 @@ class NauticalToolCenterDialog : BaseMaterialBottomSheetDialogFragment() {
             ToolItem(getString(R.string.nautical_passage_plan_inspector), R.drawable.ic_action_map_routes) {
                 net.osmand.plus.plugins.nautical.routing.ui.PassagePlanBottomSheet.show(parentFragmentManager)
                 dismiss()
+            },
+            ToolItem(getString(R.string.nautical_signalk_diagnostics_title), R.drawable.ic_action_info_dark) {
+                net.osmand.plus.settings.fragments.BaseSettingsFragment.showInstance(requireActivity(), SettingsScreenType.NAUTICAL_SIGNALK_DIAGNOSTICS)
+                dismiss()
             }
         )
 

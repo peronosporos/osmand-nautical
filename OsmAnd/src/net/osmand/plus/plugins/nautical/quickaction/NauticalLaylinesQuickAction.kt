@@ -37,35 +37,29 @@ class NauticalLaylinesQuickAction : QuickAction {
             return
         }
 
-        val targetLat = params?.getDouble("latitude", 0.0) ?: 0.0
-        val targetLon = params?.getDouble("longitude", 0.0) ?: 0.0
-
-        if (targetLat != 0.0 && targetLon != 0.0) {
-            val isCurrentTarget = app.settings.NAUTICAL_SHOW_LAYLINES.get() &&
-                app.settings.NAUTICAL_TACTICAL_TARGET_LAT.get() == targetLat &&
-                app.settings.NAUTICAL_TACTICAL_TARGET_LON.get() == targetLon
-            if (isCurrentTarget) {
-                app.settings.NAUTICAL_SHOW_LAYLINES.set(false)
-                app.settings.NAUTICAL_TACTICAL_TARGET_LAT.set(0.0)
-                app.settings.NAUTICAL_TACTICAL_TARGET_LON.set(0.0)
-                app.showToastMessage(R.string.nautical_laylines_disabled)
-            } else {
+        val isEnabled = app.settings.NAUTICAL_SHOW_LAYLINES.get()
+        if (isEnabled) {
+            app.settings.NAUTICAL_SHOW_LAYLINES.set(false)
+            app.settings.NAUTICAL_TACTICAL_TARGET_LAT.set(0.0)
+            app.settings.NAUTICAL_TACTICAL_TARGET_LON.set(0.0)
+            app.showToastMessage(R.string.nautical_laylines_disabled)
+        } else {
+            val targetLat = params?.getDouble("latitude", 0.0) ?: 0.0
+            val targetLon = params?.getDouble("longitude", 0.0) ?: 0.0
+            if (targetLat != 0.0 && targetLon != 0.0) {
                 app.settings.NAUTICAL_TACTICAL_TARGET_LAT.set(targetLat)
                 app.settings.NAUTICAL_TACTICAL_TARGET_LON.set(targetLon)
-                app.settings.NAUTICAL_SHOW_LAYLINES.set(true)
-                app.showToastMessage(R.string.nautical_laylines_enabled_target)
-            }
-        } else {
-            val isEnabled = app.settings.NAUTICAL_SHOW_LAYLINES.get()
-            if (isEnabled) {
-                app.settings.NAUTICAL_SHOW_LAYLINES.set(false)
-                app.settings.NAUTICAL_TACTICAL_TARGET_LAT.set(0.0)
-                app.settings.NAUTICAL_TACTICAL_TARGET_LON.set(0.0)
-                app.showToastMessage(R.string.nautical_laylines_disabled)
             } else {
-                app.settings.NAUTICAL_SHOW_LAYLINES.set(true)
-                app.showToastMessage(R.string.nautical_laylines_enabled_target)
+                val navPoint = app.targetPointsHelper.pointToNavigate?.latLon
+                val lat = navPoint?.latitude ?: mapActivity.mapView?.latitude ?: 0.0
+                val lon = navPoint?.longitude ?: mapActivity.mapView?.longitude ?: 0.0
+                if (lat != 0.0 && lon != 0.0) {
+                    app.settings.NAUTICAL_TACTICAL_TARGET_LAT.set(lat)
+                    app.settings.NAUTICAL_TACTICAL_TARGET_LON.set(lon)
+                }
             }
+            app.settings.NAUTICAL_SHOW_LAYLINES.set(true)
+            app.showToastMessage(R.string.nautical_laylines_enabled)
         }
         app.osmandMap?.refreshMap()
     }

@@ -131,8 +131,8 @@
                 android:textSize="12sp"
                 android:maxLines="1"
                 android:text="16 DISTRESS"
-                android:textColor="#FFFF4444"
-                app:strokeColor="#FFFF4444"
+                android:textColor="?attr/color_warning"
+                app:strokeColor="?attr/color_warning"
                 app:cornerRadius="8dp" />
 
             <com.google.android.material.button.MaterialButton

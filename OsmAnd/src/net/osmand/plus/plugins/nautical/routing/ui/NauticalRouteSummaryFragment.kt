@@ -60,13 +60,9 @@ class NauticalRouteSummaryFragment : BaseOsmAndFragment() {
         val btnCreatePlan = view.findViewById<com.google.android.material.button.MaterialButton>(R.id.btn_create_passage_plan)
 
         btnCreatePlan.setOnClickListener {
-            val mapActivity = activity as? net.osmand.plus.activities.MapActivity
-            if (mapActivity != null) {
-                val boatMode = net.osmand.plus.settings.backend.ApplicationMode.valueOfStringKey("boat", null)
-                    ?: net.osmand.plus.settings.backend.ApplicationMode.DEFAULT
-                app.settings.APPLICATION_MODE.set(boatMode)
-                net.osmand.plus.mapmarkers.PlanRouteFragment.showInstance(mapActivity, null)
-            }
+            val fm = activity?.supportFragmentManager ?: parentFragmentManager
+            PassagePlanBottomSheet.show(fm)
+            activity?.onBackPressedDispatcher?.onBackPressed()
         }
 
         viewLifecycleOwner.lifecycleScope.launch {

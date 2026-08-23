@@ -796,9 +796,18 @@ class NauticalMapLayer(context: Context) : OsmandMapLayer(context), SharedPrefer
 
         val anchorLat = settings.NAUTICAL_ANCHOR_LAT.get()
         val anchorLon = settings.NAUTICAL_ANCHOR_LON.get()
-        val anchorRadius = settings.NAUTICAL_ANCHOR_RADIUS.get()
-        if (anchorLat != 0.0 && anchorRadius > 0) {
-            drawAnchorZone(canvas, tileBox, anchorLat, anchorLon, anchorRadius.toDouble(), isSunlight)
+        var anchorRadius = settings.NAUTICAL_ANCHOR_RADIUS.get()
+        if (anchorLat != 0.0) {
+            if (anchorRadius <= 0f) {
+                val depth = settings.NAUTICAL_ANCHOR_DEPTH.get().toDouble()
+                val scopeRatio = settings.NAUTICAL_ANCHOR_SCOPE_RATIO.get().toDouble().coerceAtLeast(1.0)
+                val safetyMargin = settings.NAUTICAL_ANCHOR_SAFETY_MARGIN.get().toDouble()
+                val bowOffset = settings.NAUTICAL_ANCHOR_BOW_OFFSET.get().toDouble()
+                anchorRadius = ((depth * scopeRatio) + safetyMargin + bowOffset).toFloat().coerceAtLeast(15.0f)
+            }
+            if (anchorRadius > 0f) {
+                drawAnchorZone(canvas, tileBox, anchorLat, anchorLon, anchorRadius.toDouble(), isSunlight)
+            }
         }
 
         val previewLat = settings.NAUTICAL_ANCHOR_PREVIEW_LAT.get()

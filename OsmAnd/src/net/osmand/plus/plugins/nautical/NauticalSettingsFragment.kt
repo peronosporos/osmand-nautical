@@ -944,7 +944,7 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
         val key = preference.key
         when (key) {
             "nautical_diagnostics" -> {
-                showInstance(requireActivity(), SettingsScreenType.SIGNALK_DIAGNOSTICS)
+                showInstance(requireActivity(), SettingsScreenType.NAUTICAL_SIGNALK_DIAGNOSTICS)
                 return true
             }
             "nautical_advanced_tuning" -> {

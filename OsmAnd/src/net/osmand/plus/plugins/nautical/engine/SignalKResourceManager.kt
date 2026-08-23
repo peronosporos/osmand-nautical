@@ -39,6 +39,9 @@ class SignalKResourceManager(
     private val log = PlatformUtil.getLog(SignalKResourceManager::class.java)
     private var syncJob: Job? = null
 
+    private val _syncError = kotlinx.coroutines.flow.MutableStateFlow<String?>(null)
+    val syncError: kotlinx.coroutines.flow.StateFlow<String?> = _syncError
+
     private val targetPointListener = TargetPointsHelper.TargetPointChangedListener {
         checkAndSyncActiveRoute()
     }
@@ -82,6 +85,7 @@ class SignalKResourceManager(
         syncJob = scope.launch {
             while (isActive) {
                 try {
+                    _syncError.value = null
                     syncWaypoints()
                     syncNotes()
                     syncRegions()
@@ -91,7 +95,8 @@ class SignalKResourceManager(
                     syncChecklists()
                     syncRoutes()
                 } catch (e: Exception) {
-                    log.error("Resource sync error: ${e.message}")
+                    _syncError.value = e.message ?: "Resource sync failed"
+                    log.error("Resource sync failed: ${e.message}", e)
                 }
                 delay(60000.milliseconds) // Sync every 60 seconds
             }
@@ -172,7 +177,9 @@ class SignalKResourceManager(
                              }
                              if (!mismatch) shouldUpdate = false
                         }
-                    } catch (_: Exception) {}
+                    } catch (e: Exception) {
+                        log.warn("Failed to parse existing GPX route: ${e.message}", e)
+                    }
                 }
 
                 if (shouldUpdate) {

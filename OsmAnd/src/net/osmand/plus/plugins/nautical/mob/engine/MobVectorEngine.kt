@@ -74,4 +74,27 @@ object MobVectorEngine {
         val bearingRadians = atan2(y, x)
         return (bearingRadians * 180.0 / PI + 360.0) % 360.0
     }
+
+    private var lastAudioGuidanceTimeMs = 0L
+
+    fun checkAndTriggerAudioGuidance(
+        app: net.osmand.plus.OsmandApplication,
+        returnVector: MobReturnVector
+    ) {
+        if (!app.settings.NAUTICAL_MOB_AUDIO_GUIDANCE.get()) return
+        val intervalSec = app.settings.NAUTICAL_MOB_AUDIO_INTERVAL.get().coerceAtLeast(5)
+        val now = System.currentTimeMillis()
+        if (now - lastAudioGuidanceTimeMs < intervalSec * 1000L) return
+
+        lastAudioGuidanceTimeMs = now
+        val dist = returnVector.distanceMeters
+        val bearing = returnVector.bearingDegrees
+        val msg = app.getString(net.osmand.plus.R.string.nautical_mob_target_bearing, dist.toInt(), bearing.toInt())
+        net.osmand.plus.plugins.nautical.audio.NauticalAudioArbiter.getInstance(app)
+            .dispatchTts(msg, net.osmand.plus.plugins.nautical.audio.AlarmType.TTS_INSTRUCTION)
+    }
+
+    fun resetAudioGuidance() {
+        lastAudioGuidanceTimeMs = 0L
+    }
 }

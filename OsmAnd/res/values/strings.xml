@@ -1,4 +1,13 @@
 <resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
+    <string name="nautical_ais_range_bearing">%1$s • %2$s</string>
+    <string name="nautical_ais_status">Status: %1$s</string>
+    <string name="nautical_ais_dimensions">Dim: %1$s</string>
+    <string name="nautical_ais_draught">Draught: %1$s</string>
+    <string name="nautical_ais_destination">Dest: %1$s</string>
+    <string name="nautical_ais_eta">ETA: %1$s</string>
+    <string name="nautical_ais_position">Pos: %1$s</string>
+    <string name="nautical_signalk_diagnostics_title">Signal K Server Diagnostics</string>
+    <string name="nautical_signalk_diagnostics_desc">Inspect active capabilities, services, and server health</string>
     <string name="nautical_tank_fuel">Fuel</string>
     <string name="nautical_tank_fresh_water">Fresh Water</string>
     <string name="nautical_tank_black_water">Black Water</string>
@@ -9,6 +18,10 @@
     <string name="nautical_tank_live_well">Live Well</string>
     <string name="nautical_tank_ballast">Ballast</string>
     <string name="nautical_tank_raw_water">Raw Water</string>
+    <string name="nautical_autopilot_route_engaged">Autopilot route engaged</string>
+    <string name="nautical_port_pin_dropped">Port pin dropped at GPS location</string>
+    <string name="nautical_stbd_pin_dropped">Starboard pin dropped at GPS location</string>
+    <string name="nautical_laylines_enabled">Laylines enabled</string>
     <string name="nautical_laylines_disabled">Laylines disabled</string>
     <string name="nautical_laylines_enabled_target">Laylines enabled for target</string>
     <string name="nautical_polar_recorder_title">Polar Performance Recorder</string>

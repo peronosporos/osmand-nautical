@@ -78,35 +78,14 @@ class NauticalTacticalStartPinQuickAction : QuickAction {
                 startManager.setStarboardPin(loc.latitude, loc.longitude)
                 app.showToastMessage(R.string.nautical_stbd_pin_set)
             }
-            app.osmandMap?.refreshMap()
         } else {
-            val options = arrayOf(
-                mapActivity.getString(R.string.nautical_pin_update_location),
-                mapActivity.getString(R.string.nautical_pin_clear_action)
-            )
-            AlertDialog.Builder(mapActivity)
-                .setTitle(R.string.nautical_pin_options_title)
-                .setItems(options) { _, which ->
-                    if (which == 0) {
-                        if (isPort) {
-                            startManager.setPortPin(loc.latitude, loc.longitude)
-                            app.showToastMessage(R.string.nautical_port_pin_set)
-                        } else {
-                            startManager.setStarboardPin(loc.latitude, loc.longitude)
-                            app.showToastMessage(R.string.nautical_stbd_pin_set)
-                        }
-                    } else {
-                        if (isPort) {
-                            startManager.clearPortPin()
-                        } else {
-                            startManager.clearStarboardPin()
-                        }
-                        app.showToastMessage(R.string.nautical_pin_cleared)
-                    }
-                    app.osmandMap?.refreshMap()
-                }
-                .setNegativeButton(R.string.shared_string_cancel, null)
-                .show()
+            if (isPort) {
+                startManager.clearPortPin()
+            } else {
+                startManager.clearStarboardPin()
+            }
+            app.showToastMessage(R.string.nautical_pin_cleared)
         }
+        app.osmandMap?.refreshMap()
     }
 }
