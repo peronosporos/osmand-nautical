@@ -247,7 +247,6 @@ class NauticalVhfBottomSheet : BaseNauticalBottomSheet() {
         private val txtDuration: TextView? = view.findViewById(R.id.txt_transmission_duration)
         private val txtTranscription: TextView? = view.findViewById(R.id.txt_transmission_transcription)
         private val progressReplay: View? = view.findViewById(R.id.progress_audio_replay)
-        private val btnReplay: MaterialButton? = view.findViewById(R.id.btn_replay_audio)
         private val imgPlay: ImageView = view.findViewById(R.id.img_play_icon)
         private val timeFmt = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
 
@@ -278,7 +277,6 @@ class NauticalVhfBottomSheet : BaseNauticalBottomSheet() {
                 txtTranscription?.visibility = View.GONE
             }
 
-            btnReplay?.setOnClickListener { onPlay(item) }
             imgPlay.setOnClickListener {
                 progressReplay?.visibility = View.VISIBLE
                 onPlay(item)

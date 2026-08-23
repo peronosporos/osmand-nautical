@@ -251,7 +251,7 @@ class WeatherRoutingConfigBottomSheet : BaseNauticalBottomSheet() {
             }
 
             val app = plugin?.application ?: (requireActivity().application as net.osmand.plus.OsmandApplication)
-            val index = plugin?.s57Manager?.spatialIndex ?: S57SpatialIndex(app)
+            val index = plugin?.s57SpatialIndex ?: S57SpatialIndex(app)
             val safety = plugin?.safetyManager ?: NauticalSafetyManager.getInstance(app)
 
             viewModel.calculateWeatherRoute(request, resolvedGrid, index, safety)

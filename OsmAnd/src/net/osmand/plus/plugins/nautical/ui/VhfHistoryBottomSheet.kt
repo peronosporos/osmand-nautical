@@ -63,9 +63,9 @@ class VhfHistoryBottomSheet : BaseMaterialBottomSheetDialogFragment() {
         }
 
         inner class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
-            val name: TextView = view.findViewById(R.id.vessel_name)
-            val meta: TextView = view.findViewById(R.id.meta_info)
-            val playIcon: ImageView = view.findViewById(R.id.play_icon)
+            val name: TextView = view.findViewById(R.id.txt_transmission_title)
+            val meta: TextView = view.findViewById(R.id.txt_transmission_time)
+            val playIcon: ImageView = view.findViewById(R.id.img_play_icon)
         }
     }
 

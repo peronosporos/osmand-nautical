@@ -79,11 +79,11 @@ class NauticalToolCenterDialog : BaseMaterialBottomSheetDialogFragment() {
                 net.osmand.plus.plugins.nautical.ui.polar.PolarRecorderBottomSheet.show(parentFragmentManager)
                 dismiss()
             },
-            ToolItem(getString(R.string.nautical_weather_routing_title), R.drawable.ic_action_route_weather) {
+            ToolItem(getString(R.string.nautical_weather_routing_title), R.drawable.ic_action_plan_route) {
                 net.osmand.plus.plugins.nautical.routing.ui.WeatherRoutingConfigBottomSheet.show(parentFragmentManager)
                 dismiss()
             },
-            ToolItem(getString(R.string.nautical_passage_plan_inspector), R.drawable.ic_action_gpx_navigation) {
+            ToolItem(getString(R.string.nautical_passage_plan_inspector), R.drawable.ic_action_map_routes) {
                 net.osmand.plus.plugins.nautical.routing.ui.PassagePlanBottomSheet.show(parentFragmentManager)
                 dismiss()
             }

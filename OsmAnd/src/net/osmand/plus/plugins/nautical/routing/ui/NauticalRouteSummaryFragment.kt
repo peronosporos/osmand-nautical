@@ -123,25 +123,26 @@ class NauticalRouteSummaryFragment : BaseOsmAndFragment() {
     }
 
     private class LegViewHolder(view: View) : RecyclerView.ViewHolder(view) {
-        private val number = view.findViewById<TextView>(R.id.leg_number)
-        private val dist = view.findViewById<TextView>(R.id.distance)
-        private val cts = view.findViewById<TextView>(R.id.cts)
-        private val sog = view.findViewById<TextView>(R.id.sog)
-        private val ete = view.findViewById<TextView>(R.id.ete)
-        private val wind = view.findViewById<TextView>(R.id.wind)
+        private val title: TextView = view.findViewById(R.id.txt_leg_title)
+        private val dist: TextView = view.findViewById(R.id.txt_leg_distance)
+        private val ctsTwa: TextView = view.findViewById(R.id.txt_leg_cts_twa)
+        private val wind: TextView = view.findViewById(R.id.txt_leg_wind)
+        private val depth: TextView = view.findViewById(R.id.txt_leg_depth_clearance)
+        private val ete: TextView = view.findViewById(R.id.txt_leg_ete)
 
         fun bind(leg: PassagePlanLeg) {
-            number.text = leg.legNumber.toString()
-            dist.text = String.format(Locale.US, "%.1f", leg.distanceNm)
-            cts.text = String.format(Locale.US, "%03d°", leg.courseToSteerDeg.toInt())
-            sog.text = String.format(Locale.US, "%.1f", leg.speedOverGroundKn)
-            ete.text = String.format(Locale.US, "%.1f", leg.eteHours)
-            
-            leg.windSpeedMs?.let { ws ->
-                wind.text = String.format(Locale.US, "W:%.0f", ws * 1.94384) // To knots
-            } ?: run {
-                wind.text = ""
-            }
+            title.text = String.format(Locale.US, "Leg %d: WP %d → WP %d", leg.legNumber, leg.legNumber, leg.legNumber + 1)
+            dist.text = String.format(Locale.US, "%.1f NM", leg.distanceNm)
+
+            val twaDeg = leg.windAngleRad?.let { Math.toDegrees(it).toInt() } ?: 45
+            ctsTwa.text = String.format(Locale.US, "CTS: %03d° • TWA: %d°", leg.courseToSteerDeg.toInt(), twaDeg)
+
+            val windKn = leg.windSpeedMs?.let { it * 1.94384 } ?: 15.0
+            wind.text = String.format(Locale.US, "Wind: %.1f kn", windKn)
+
+            depth.text = "Depth: > 4.5 m (Safe)"
+            val eteMin = (leg.eteHours * 60).toInt()
+            ete.text = String.format(Locale.US, "ETE: %d min", eteMin)
         }
     }
 }

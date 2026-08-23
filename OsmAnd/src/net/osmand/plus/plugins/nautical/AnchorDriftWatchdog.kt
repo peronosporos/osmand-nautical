@@ -43,8 +43,8 @@ class AnchorDriftWatchdog(private val app: OsmandApplication) {
     private fun requestThrottledMapRefresh() {
         val pm = app.getSystemService(android.content.Context.POWER_SERVICE) as? android.os.PowerManager
         if (pm?.isInteractive == false) return // Suppress if screen is off
-        val mapView = app.osmandMap?.mapView
-        if (mapView == null || !mapView.isShown) return // Suppress if map view is paused or hidden
+        val mapActivity = app.osmandMap?.mapView?.mapActivity
+        if (mapActivity == null || mapActivity.isActivityPaused) return // Suppress if map view is paused or hidden
         val now = System.currentTimeMillis()
         if (now - lastMapRefreshTime >= minMapRefreshIntervalMs) {
             lastMapRefreshTime = now

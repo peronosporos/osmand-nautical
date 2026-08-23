@@ -65,8 +65,8 @@ class NauticalAisManager(private val app: OsmandApplication) : AisDataListener {
     private fun requestThrottledMapRefresh() {
         val pm = app.getSystemService(Context.POWER_SERVICE) as? android.os.PowerManager
         if (pm?.isInteractive == false) return // Suppress if screen is off
-        val mapView = app.osmandMap?.mapView
-        if (mapView == null || !mapView.isShown) return // Suppress if map view is paused or hidden
+        val mapActivity = app.osmandMap?.mapView?.mapActivity
+        if (mapActivity == null || mapActivity.isActivityPaused) return // Suppress if map view is paused or hidden
         val now = System.currentTimeMillis()
         if (now - lastMapRefreshTime >= minMapRefreshIntervalMs) {
             lastMapRefreshTime = now

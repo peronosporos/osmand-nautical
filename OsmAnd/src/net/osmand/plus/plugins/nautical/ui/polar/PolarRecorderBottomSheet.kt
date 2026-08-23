@@ -97,11 +97,19 @@ class PolarRecorderBottomSheet : BaseNauticalBottomSheet() {
                 repo.activePolarProfile.collectLatest { profile ->
                     if (profile != null) {
                         txtActiveProfile.text = getString(R.string.nautical_polar_active_profile_label, profile.name)
-                        // Convert profile speeds to smoothed polar points (TWA vs Speed at nominal 16kn TWS)
                         val curvePoints = mutableListOf<Pair<Double, Double>>()
-                        for (angle in 0..180 step 5) {
-                            val spd = profile.getTargetSpeed(angle.toDouble(), 16.0)
-                            curvePoints.add(Pair(angle.toDouble(), spd))
+                        val twsList = profile.tws
+                        val twaList = profile.twa
+                        val speeds = profile.speeds
+                        if (twsList != null && twaList != null && speeds != null && speeds.isNotEmpty()) {
+                            val nominalTws = 16.0
+                            val twsIdx = twsList.indexOfFirst { it >= nominalTws }.let { if (it <= 0) 0 else it.coerceAtMost(speeds.size - 1) }
+                            val speedRow = speeds[twsIdx]
+                            twaList.forEachIndexed { i, angleDeg ->
+                                if (i < speedRow.size) {
+                                    curvePoints.add(Pair(angleDeg, speedRow[i]))
+                                }
+                            }
                         }
                         polarCanvas.smoothedPoints = curvePoints
                     } else {

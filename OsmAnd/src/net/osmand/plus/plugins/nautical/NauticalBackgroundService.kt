@@ -85,7 +85,7 @@ class NauticalBackgroundService : NavigationService() {
         val app = application as? OsmandApplication ?: return false
         val isAnchorArmed = app.settings.NAUTICAL_ANCHOR_LAT.get() != 0.0
         val isMobActive = app.settings.NAUTICAL_MOB_ACTIVE.get() ||
-                (NauticalPlugin.getInstance()?.mobViewModel?.activeMobPoint?.value != null)
+                (NauticalPlugin.getInstance()?.mobViewModel?.uiState?.value?.isMobActive == true)
         val autopilotState = NauticalPlugin.engine?.getCurrentState()?.autopilotState?.lowercase()
         val isAutopilotNavigating = (NauticalPlugin.engine?.isFollowingRoute == true) ||
                 (autopilotState in listOf("auto", "track", "wind", "route", "nav"))

@@ -289,7 +289,8 @@ class NauticalMapLayer(context: Context) : OsmandMapLayer(context), SharedPrefer
     private fun requestThrottledMapRefresh() {
         val pm = context.getSystemService(Context.POWER_SERVICE) as? android.os.PowerManager
         if (pm?.isInteractive == false) return // Suppress if screen is off
-        if (!view.isShown) return // Suppress if map view is paused or hidden
+        val mapActivity = view.mapActivity
+        if (mapActivity == null || mapActivity.isActivityPaused) return // Suppress if map view is paused or hidden
         val now = System.currentTimeMillis()
         if (now - lastRefreshTime >= minRefreshIntervalMs) {
             lastRefreshTime = now
