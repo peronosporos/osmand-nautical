@@ -96,7 +96,7 @@
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:gravity="center_vertical"
-            android:background="?attr/status_bad"
+            android:background="@color/color_warning_alpha_high"
             android:padding="12dp"
             android:layout_marginTop="10dp"
             android:visibility="gone">
@@ -105,7 +105,7 @@
                 android:layout_width="24dp"
                 android:layout_height="24dp"
                 android:src="@drawable/ic_action_alert"
-                app:tint="?attr/color_warning"
+                app:tint="@color/color_warning"
                 android:layout_marginEnd="8dp"
                 android:contentDescription="Collision Warning" />
 
@@ -114,7 +114,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="@string/nautical_ais_danger_warning"
-                android:textColor="?attr/color_warning"
+                android:textColor="@color/color_warning"
                 android:textStyle="bold"
                 android:textSize="14sp" />
         </LinearLayout>
