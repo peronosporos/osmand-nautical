@@ -2,10 +2,12 @@ package net.osmand.plus.plugins.nautical.ui
 
 import android.content.Context
 import net.osmand.plus.R
+import net.osmand.plus.plugins.nautical.engine.Engine
 import net.osmand.plus.plugins.nautical.engine.MarineState
 import net.osmand.plus.plugins.nautical.engine.SignalKUnitConverter
 import net.osmand.plus.settings.backend.OsmandSettings
 import net.osmand.plus.views.mapwidgets.WidgetType
+import java.util.Locale
 
 object NauticalWidgetHelper {
 
@@ -44,7 +46,36 @@ object NauticalWidgetHelper {
         }
     }
 
-    fun formatTelemetry(context: Context, settings: OsmandSettings, widget: WidgetType, state: MarineState?): Pair<String, String> {
+    private fun resolveEngine(state: MarineState, customId: String?): Engine? {
+        if (customId != null && customId.isNotEmpty()) {
+            val hashIdx = customId.lastIndexOf('#')
+            val raw = if (hashIdx >= 0 && hashIdx + 1 < customId.length) customId.substring(hashIdx + 1) else customId
+            val instance = when {
+                raw.startsWith("engine.") -> raw.substring(7)
+                raw.startsWith("propulsion.") -> raw.substring(11)
+                else -> raw
+            }
+            state.engines[instance]?.let { return it }
+            state.engines[raw]?.let { return it }
+            state.engines[customId]?.let { return it }
+            if (instance.equals("port", ignoreCase = true) || instance == "0") {
+                state.engines["0"]?.let { return it }
+                state.engines["port"]?.let { return it }
+            } else if (instance.equals("starboard", ignoreCase = true) || instance == "1") {
+                state.engines["1"]?.let { return it }
+                state.engines["starboard"]?.let { return it }
+            }
+        }
+        return state.engines.values.firstOrNull()
+    }
+
+    fun formatTelemetry(
+        context: Context,
+        settings: OsmandSettings,
+        widget: WidgetType,
+        state: MarineState?,
+        customId: String? = null
+    ): Pair<String, String> {
         if (state == null) {
             return "--" to getDefaultUnit(context, settings, widget)
         }
@@ -94,21 +125,83 @@ object NauticalWidgetHelper {
             WidgetType.NAUTICAL_PITCH -> SignalKUnitConverter.formatValue(context, settings, state.pitch, "pitch")
             WidgetType.NAUTICAL_LOG -> SignalKUnitConverter.formatValue(context, settings, state.log, "log")
             WidgetType.NAUTICAL_TRIP_LOG -> SignalKUnitConverter.formatValue(context, settings, state.tripLog, "log")
-            WidgetType.NAUTICAL_ENGINE_RPM -> SignalKUnitConverter.formatValue(context, settings, state.engines.values.firstOrNull()?.revolutions, "revolutions")
-            WidgetType.NAUTICAL_ENGINE_TEMP -> SignalKUnitConverter.formatValue(context, settings, state.engines.values.firstOrNull()?.temperature, "temperature")
-            WidgetType.NAUTICAL_ENGINE_RUNTIME -> SignalKUnitConverter.formatValue(context, settings, state.engineHours?.let { it * 3600.0 } ?: state.engines.values.firstOrNull()?.runTime, "runTime")
-            WidgetType.NAUTICAL_FUEL_LEVEL -> SignalKUnitConverter.formatValue(context, settings, state.tanks["fuel.0"]?.currentLevel ?: state.tanks.values.firstOrNull { it.type == "fuel" }?.currentLevel, "currentLevel")
-            WidgetType.NAUTICAL_FRESH_WATER_LEVEL -> SignalKUnitConverter.formatValue(context, settings, state.tanks["freshWater.0"]?.currentLevel ?: state.tanks.values.firstOrNull { it.type == "freshWater" }?.currentLevel, "currentLevel")
-            WidgetType.NAUTICAL_WASTE_WATER_LEVEL -> SignalKUnitConverter.formatValue(context, settings, state.tanks["wasteWater.0"]?.currentLevel ?: state.tanks.values.firstOrNull { it.type == "wasteWater" || it.type == "blackWater" }?.currentLevel, "currentLevel")
-            WidgetType.NAUTICAL_OIL_PRESSURE -> SignalKUnitConverter.formatValue(context, settings, state.engines.values.firstOrNull()?.oilPressure, "oilPressure")
-            WidgetType.NAUTICAL_ENGINE_LOAD -> SignalKUnitConverter.formatValue(context, settings, state.engines.values.firstOrNull()?.load, "engineLoad")
-            WidgetType.NAUTICAL_BOOST_PRESSURE -> SignalKUnitConverter.formatValue(context, settings, state.engines.values.firstOrNull()?.boostPressure, "pressure")
-            WidgetType.NAUTICAL_EXHAUST_TEMP -> SignalKUnitConverter.formatValue(context, settings, state.engines.values.firstOrNull()?.exhaustTemperature, "temperature")
-            WidgetType.NAUTICAL_ALTERNATOR_VOLT -> SignalKUnitConverter.formatValue(context, settings, state.engines.values.firstOrNull()?.alternatorVoltage, "voltage")
-            WidgetType.NAUTICAL_ALTERNATOR_CURR -> SignalKUnitConverter.formatValue(context, settings, state.engines.values.firstOrNull()?.alternatorCurrent, "current")
-            WidgetType.NAUTICAL_TRANS_GEAR -> (state.engines.values.firstOrNull()?.transmissionGear ?: "--") to ""
-            WidgetType.NAUTICAL_TRANS_PRESS -> SignalKUnitConverter.formatValue(context, settings, state.engines.values.firstOrNull()?.transmissionPressure, "pressure")
-            WidgetType.NAUTICAL_TRANS_OIL_TEMP -> SignalKUnitConverter.formatValue(context, settings, state.engines.values.firstOrNull()?.transmissionOilTemperature, "temperature")
+            WidgetType.NAUTICAL_ENGINE_RPM -> {
+                val engine = resolveEngine(state, customId)
+                SignalKUnitConverter.formatValue(context, settings, engine?.revolutions ?: state.engineRpm, "revolutions")
+            }
+            WidgetType.NAUTICAL_ENGINE_TEMP -> {
+                val engine = resolveEngine(state, customId)
+                SignalKUnitConverter.formatValue(context, settings, engine?.temperature ?: state.engineTemperature, "temperature")
+            }
+            WidgetType.NAUTICAL_ENGINE_COOLANT -> {
+                val engine = resolveEngine(state, customId)
+                SignalKUnitConverter.formatValue(context, settings, engine?.coolantTemperature ?: state.engineCoolantTemperature, "temperature")
+            }
+            WidgetType.NAUTICAL_ENGINE_RUNTIME -> {
+                val engine = resolveEngine(state, customId)
+                SignalKUnitConverter.formatValue(context, settings, engine?.runTime ?: state.engineHours?.let { it * 3600.0 } ?: state.engineRunTime, "runTime")
+            }
+            WidgetType.NAUTICAL_ENGINE_LOAD -> {
+                val engine = resolveEngine(state, customId)
+                SignalKUnitConverter.formatValue(context, settings, engine?.load ?: state.engineLoad, "engineLoad")
+            }
+            WidgetType.NAUTICAL_ENGINE_STATE -> {
+                val engine = resolveEngine(state, customId)
+                (engine?.state?.uppercase(Locale.US) ?: state.engineState?.uppercase(Locale.US) ?: "--") to ""
+            }
+            WidgetType.NAUTICAL_FUEL_LEVEL -> {
+                val level = if (customId != null) {
+                    val raw = customId.substringAfterLast("#").removePrefix("tanks.fuel.").removePrefix("fuel.")
+                    state.tanks["fuel.$raw"]?.currentLevel ?: state.tanks[raw]?.currentLevel
+                } else null
+                SignalKUnitConverter.formatValue(context, settings, level ?: state.tanks["fuel.0"]?.currentLevel ?: state.tanks.values.firstOrNull { it.type.equals("fuel", ignoreCase = true) }?.currentLevel, "currentLevel")
+            }
+            WidgetType.NAUTICAL_FRESH_WATER_LEVEL -> {
+                val level = if (customId != null) {
+                    val raw = customId.substringAfterLast("#").removePrefix("tanks.freshWater.").removePrefix("freshWater.").removePrefix("freshwater.")
+                    state.tanks["freshWater.$raw"]?.currentLevel ?: state.tanks[raw]?.currentLevel
+                } else null
+                SignalKUnitConverter.formatValue(context, settings, level ?: state.tanks["freshWater.0"]?.currentLevel ?: state.tanks.values.firstOrNull { it.type.equals("freshWater", ignoreCase = true) || it.type.equals("freshwater", ignoreCase = true) }?.currentLevel, "currentLevel")
+            }
+            WidgetType.NAUTICAL_WASTE_WATER_LEVEL -> {
+                val level = if (customId != null) {
+                    val raw = customId.substringAfterLast("#").removePrefix("tanks.wasteWater.").removePrefix("wasteWater.").removePrefix("blackWater.")
+                    state.tanks["wasteWater.$raw"]?.currentLevel ?: state.tanks[raw]?.currentLevel
+                } else null
+                SignalKUnitConverter.formatValue(context, settings, level ?: state.tanks["wasteWater.0"]?.currentLevel ?: state.tanks.values.firstOrNull { it.type.equals("wasteWater", ignoreCase = true) || it.type.equals("blackWater", ignoreCase = true) || it.type.equals("wastewater", ignoreCase = true) || it.type.equals("blackwater", ignoreCase = true) }?.currentLevel, "currentLevel")
+            }
+            WidgetType.NAUTICAL_OIL_PRESSURE -> {
+                val engine = resolveEngine(state, customId)
+                SignalKUnitConverter.formatValue(context, settings, engine?.oilPressure ?: state.engineOilPressure, "oilPressure")
+            }
+            WidgetType.NAUTICAL_BOOST_PRESSURE -> {
+                val engine = resolveEngine(state, customId)
+                SignalKUnitConverter.formatValue(context, settings, engine?.boostPressure, "pressure")
+            }
+            WidgetType.NAUTICAL_EXHAUST_TEMP -> {
+                val engine = resolveEngine(state, customId)
+                SignalKUnitConverter.formatValue(context, settings, engine?.exhaustTemperature ?: state.engineExhaustTemperature, "temperature")
+            }
+            WidgetType.NAUTICAL_ALTERNATOR_VOLT -> {
+                val engine = resolveEngine(state, customId)
+                SignalKUnitConverter.formatValue(context, settings, engine?.alternatorVoltage, "voltage")
+            }
+            WidgetType.NAUTICAL_ALTERNATOR_CURR -> {
+                val engine = resolveEngine(state, customId)
+                SignalKUnitConverter.formatValue(context, settings, engine?.alternatorCurrent, "current")
+            }
+            WidgetType.NAUTICAL_TRANS_GEAR -> {
+                val engine = resolveEngine(state, customId)
+                (engine?.transmissionGear ?: state.transmissionGear ?: "--") to ""
+            }
+            WidgetType.NAUTICAL_TRANS_PRESS -> {
+                val engine = resolveEngine(state, customId)
+                SignalKUnitConverter.formatValue(context, settings, engine?.transmissionPressure ?: state.transmissionPressure, "pressure")
+            }
+            WidgetType.NAUTICAL_TRANS_OIL_TEMP -> {
+                val engine = resolveEngine(state, customId)
+                SignalKUnitConverter.formatValue(context, settings, engine?.transmissionOilTemperature, "temperature")
+            }
             WidgetType.NAUTICAL_INV_STATE -> (state.inverters.values.firstOrNull()?.state ?: "--") to ""
             WidgetType.NAUTICAL_CHG_STATE -> (state.chargers.values.firstOrNull()?.state ?: "--") to ""
             WidgetType.NAUTICAL_WATERMAKER_RATE -> SignalKUnitConverter.formatValue(context, settings, state.watermakers.values.firstOrNull()?.rate, "watermakerRate")
@@ -119,7 +212,7 @@ object NauticalWidgetHelper {
                 val deg = state.rudderAngle?.let { Math.toDegrees(it) }
                 if (deg != null) {
                     val side = if (deg < -0.5) "P" else if (deg > 0.5) "S" else "C"
-                    String.format(java.util.Locale.US, "%.0f° %s", kotlin.math.abs(deg), side) to ""
+                    String.format(Locale.US, "%.0f° %s", kotlin.math.abs(deg), side) to ""
                 } else {
                     "--" to ""
                 }

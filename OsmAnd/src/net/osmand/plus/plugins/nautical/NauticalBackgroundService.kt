@@ -1,6 +1,7 @@
 package net.osmand.plus.plugins.nautical
 
 import android.annotation.SuppressLint
+import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.net.wifi.WifiManager
@@ -61,20 +62,7 @@ class NauticalBackgroundService : NavigationService() {
     private val handler = android.os.Handler(android.os.Looper.getMainLooper())
     private val lockMonitor = object : Runnable {
         override fun run() {
-            val now = System.currentTimeMillis()
-            if (now - lastDataTime > 120000) { // 2 minutes idle
-                if (wifiLock?.isHeld == true) {
-                    log.info("Nautical: Releasing high-perf WiFi lock due to inactivity.")
-                    wifiLock?.release()
-                }
-                val isFollowing = NauticalPlugin.engine?.isFollowingRoute == true
-                val app = application as? OsmandApplication
-                val isAnchorActive = app?.settings?.NAUTICAL_ANCHOR_LAT?.get() != 0.0
-                if (!isFollowing && !isAnchorActive && wakeLock?.isHeld == true) {
-                    log.info("Nautical: Releasing WakeLock due to inactivity.")
-                    wakeLock?.release()
-                }
-            }
+            syncLocks()
             handler.postDelayed(this, 30000)
         }
     }
@@ -93,28 +81,74 @@ class NauticalBackgroundService : NavigationService() {
         }
     }
 
+    private fun isCriticalOperationActive(): Boolean {
+        val app = application as? OsmandApplication ?: return false
+        val isAnchorArmed = app.settings.NAUTICAL_ANCHOR_LAT.get() != 0.0
+        val isMobActive = app.settings.NAUTICAL_MOB_ACTIVE.get() ||
+                (NauticalPlugin.getInstance()?.mobViewModel?.activeMobPoint?.value != null)
+        val autopilotState = NauticalPlugin.engine?.getCurrentState()?.autopilotState?.lowercase()
+        val isAutopilotNavigating = (NauticalPlugin.engine?.isFollowingRoute == true) ||
+                (autopilotState in listOf("auto", "track", "wind", "route", "nav"))
+        return isAnchorArmed || isMobActive || isAutopilotNavigating
+    }
+
     @SuppressLint("WakelockTimeout")
-    private val engineListener: (net.osmand.plus.plugins.nautical.engine.MarineState) -> Unit = {
+    private fun syncLocks() {
+        val critical = isCriticalOperationActive()
         val now = System.currentTimeMillis()
-        lastDataTime = now
-        if (wifiLock != null && !wifiLock!!.isHeld) {
-            log.info("Nautical: Re-acquiring high-perf WiFi lock (data resumed).")
-            wifiLock?.acquire()
+        val isDataFresh = (now - lastDataTime) <= 600000L // 10 minutes max timeout
+
+        if (critical && isDataFresh) {
+            val pm = getSystemService(POWER_SERVICE) as PowerManager
+            if (wakeLock == null) {
+                wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "OsmAnd:NauticalBackgroundService")
+            }
+            if (wakeLock?.isHeld != true) {
+                log.info("Nautical: Acquiring WakeLock (critical operation active: Anchor/MOB/Autopilot).")
+                wakeLock?.acquire(10 * 60 * 1000L) // Strict 10-minute timeout
+            }
+
+            val wm = applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
+            if (wifiLock == null) {
+                wifiLock = wm.createWifiLock(
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                        @Suppress("DEPRECATION")
+                        WifiManager.WIFI_MODE_FULL_HIGH_PERF
+                    } else {
+                        @Suppress("DEPRECATION")
+                        WifiManager.WIFI_MODE_FULL
+                    },
+                    "OsmAnd:NauticalWifiLock",
+                )
+            }
+            if (wifiLock?.isHeld != true) {
+                log.info("Nautical: Acquiring WiFi lock.")
+                wifiLock?.acquire()
+            }
+        } else {
+            if (wakeLock?.isHeld == true) {
+                log.info("Nautical: Releasing WakeLock (no critical operation active).")
+                try { wakeLock?.release() } catch (_: Exception) {}
+            }
+            if (wifiLock?.isHeld == true) {
+                log.info("Nautical: Releasing WiFi lock (idle/no critical operation).")
+                try { wifiLock?.release() } catch (_: Exception) {}
+            }
         }
-        if (wakeLock != null && !wakeLock!!.isHeld) {
-            log.info("Nautical: Re-acquiring WakeLock (data resumed).")
-            wakeLock?.acquire()
-        }
+    }
+
+    private val engineListener: (net.osmand.plus.plugins.nautical.engine.MarineState) -> Unit = {
+        lastDataTime = System.currentTimeMillis()
+        syncLocks()
         updateNotification()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         log.info("NauticalBackgroundService: Starting...")
         val result = super.onStartCommand(intent, flags, startId)
-        acquireLocks()
+        syncLocks()
         handler.post(lockMonitor)
         
-        // Task: Monitor SignalK engine to reset inactivity timer (Safe registration)
         net.osmand.plus.plugins.nautical.NauticalPlugin.engine?.let {
             it.unregisterListener(engineListener)
             it.registerListener(engineListener)
@@ -137,37 +171,12 @@ class NauticalBackgroundService : NavigationService() {
         }
     }
 
-    @SuppressLint("WakelockTimeout")
-    private fun acquireLocks() {
-        val pm = getSystemService(POWER_SERVICE) as PowerManager
-        if (wakeLock == null) {
-            wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "OsmAnd:NauticalBackgroundService")
-            wakeLock?.acquire()
-        }
-
-        val wm = applicationContext.getSystemService(WIFI_SERVICE) as WifiManager
-        if (wifiLock == null) {
-            wifiLock = wm.createWifiLock(
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                    @Suppress("DEPRECATION")
-                    WifiManager.WIFI_MODE_FULL_HIGH_PERF
-                } else {
-                    @Suppress("DEPRECATION")
-                    WifiManager.WIFI_MODE_FULL
-                },
-                "OsmAnd:NauticalWifiLock",
-            )
-            wifiLock?.acquire()
-        }
-    }
-
     private fun releaseLocks() {
         try {
             wakeLock?.let {
                 if (it.isHeld) it.release()
             }
         } catch (_: Exception) {
-            // Log or ignore
         } finally {
             wakeLock = null
         }
@@ -177,7 +186,6 @@ class NauticalBackgroundService : NavigationService() {
                 if (it.isHeld) it.release()
             }
         } catch (_: Exception) {
-            // Log or ignore
         } finally {
             wifiLock = null
         }

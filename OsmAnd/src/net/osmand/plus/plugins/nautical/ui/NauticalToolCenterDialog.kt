@@ -74,6 +74,18 @@ class NauticalToolCenterDialog : BaseMaterialBottomSheetDialogFragment() {
             ToolItem("Polar Manager", R.drawable.ic_action_settings) {
                 net.osmand.plus.settings.fragments.BaseSettingsFragment.showInstance(requireActivity(), SettingsScreenType.SAILING_PERFORMANCE_SETTINGS)
                 dismiss()
+            },
+            ToolItem(getString(R.string.nautical_polar_recorder_title), R.drawable.ic_action_rec_start) {
+                net.osmand.plus.plugins.nautical.ui.polar.PolarRecorderBottomSheet.show(parentFragmentManager)
+                dismiss()
+            },
+            ToolItem(getString(R.string.nautical_weather_routing_title), R.drawable.ic_action_route_weather) {
+                net.osmand.plus.plugins.nautical.routing.ui.WeatherRoutingConfigBottomSheet.show(parentFragmentManager)
+                dismiss()
+            },
+            ToolItem(getString(R.string.nautical_passage_plan_inspector), R.drawable.ic_action_gpx_navigation) {
+                net.osmand.plus.plugins.nautical.routing.ui.PassagePlanBottomSheet.show(parentFragmentManager)
+                dismiss()
             }
         )
 

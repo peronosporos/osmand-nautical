@@ -1,74 +1,93 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools"
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="horizontal"
-    android:gravity="center_vertical"
-    android:paddingStart="8dp"
-    android:paddingEnd="8dp"
-    android:paddingTop="8dp"
-    android:paddingBottom="8dp"
-    android:background="?attr/selectableItemBackground">
+    android:layout_marginBottom="8dp"
+    app:cardCornerRadius="10dp"
+    app:cardElevation="1.5dp"
+    app:cardBackgroundColor="?attr/card_and_list_background_basic">
 
-    <TextView
-        android:id="@+id/leg_number"
-        android:layout_width="28dp"
+    <LinearLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:textAppearance="@style/TextAppearance.AppCompat.Body2"
-        android:textColor="?android:attr/textColorSecondary"
-        android:textStyle="bold"
-        tools:text="1" />
+        android:orientation="vertical"
+        android:padding="12dp">
 
-    <TextView
-        android:id="@+id/distance"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_weight="1"
-        android:textAppearance="@style/TextAppearance.AppCompat.Body2"
-        android:textColor="?android:attr/textColorPrimary"
-        android:fontFeatureSettings="tnum"
-        tools:text="2.4" />
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
 
-    <TextView
-        android:id="@+id/cts"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_weight="1"
-        android:textAppearance="@style/TextAppearance.AppCompat.Body2"
-        android:textColor="?android:attr/textColorPrimary"
-        android:fontFeatureSettings="tnum"
-        tools:text="045°" />
+            <TextView
+                android:id="@+id/txt_leg_title"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Leg 1: WP 1 → WP 2"
+                android:textAppearance="@style/TextAppearance.AppCompat.Small"
+                android:textStyle="bold"
+                android:textColor="?android:attr/textColorPrimary" />
 
-    <TextView
-        android:id="@+id/sog"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_weight="1"
-        android:textAppearance="@style/TextAppearance.AppCompat.Body2"
-        android:textColor="?android:attr/textColorPrimary"
-        android:fontFeatureSettings="tnum"
-        tools:text="6.8" />
+            <TextView
+                android:id="@+id/txt_leg_distance"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="4.2 NM"
+                android:textStyle="bold"
+                android:textSize="13sp"
+                android:textColor="?attr/colorAccent" />
+        </LinearLayout>
 
-    <TextView
-        android:id="@+id/ete"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_weight="1"
-        android:textAppearance="@style/TextAppearance.AppCompat.Body2"
-        android:textColor="?android:attr/textColorPrimary"
-        android:fontFeatureSettings="tnum"
-        tools:text="0.4" />
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="6dp">
 
-    <TextView
-        android:id="@+id/wind"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_weight="1.1"
-        android:textAppearance="@style/TextAppearance.AppCompat.Body2"
-        android:textColor="@color/nautical_status_blue"
-        android:fontFeatureSettings="tnum"
-        android:textStyle="bold"
-        tools:text="W:14" />
+            <TextView
+                android:id="@+id/txt_leg_cts_twa"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="CTS: 045° • TWA: 52°"
+                android:textSize="12sp"
+                android:textColor="?android:attr/textColorSecondary" />
 
-</LinearLayout>
+            <TextView
+                android:id="@+id/txt_leg_wind"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Wind: 14 kn @ 095°"
+                android:textSize="12sp"
+                android:textColor="?android:attr/textColorSecondary" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="4dp">
+
+            <TextView
+                android:id="@+id/txt_leg_depth_clearance"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Depth: > 5.0 m (Safe)"
+                android:textSize="12sp"
+                android:textColor="@color/nautical_status_green" />
+
+            <TextView
+                android:id="@+id/txt_leg_ete"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="ETE: 38 min"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:textColor="?android:attr/textColorPrimary" />
+        </LinearLayout>
+
+    </LinearLayout>
+</com.google.android.material.card.MaterialCardView>

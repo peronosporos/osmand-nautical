@@ -66,7 +66,7 @@ public enum SettingsScreenType {
 	NAUTICAL_SWITCH_PANEL("net.osmand.plus.plugins.nautical.ui.NauticalSwitchPanelFragment", false, null, -1, R.layout.global_preference_toolbar),
 	NAUTICAL_PASSAGE_PLAN("net.osmand.plus.plugins.nautical.routing.ui.NauticalRouteSummaryFragment", false, null, -1, R.layout.global_preference_toolbar),
 	NAUTICAL_MASTER_TELEMETRY("net.osmand.plus.views.mapwidgets.configure.settings.NauticalMasterTelemetrySettingsFragment", false, null, -1, R.layout.global_preference_toolbar),
-	NAUTICAL_TELEMETRY_CONFIG("net.osmand.plus.plugins.nautical.telemetry.TelemetryWidgetSettingsFragment", false, null, -1, R.layout.global_preference_toolbar),
+	NAUTICAL_TELEMETRY_CONFIG("net.osmand.plus.plugins.nautical.telemetry.TelemetryWidgetSettingsFragment", false, null, -1, -1),
 	ENC_CHART_MANAGER("net.osmand.plus.plugins.nautical.s57.ui.S57ChartManagerFragment", false, null, -1, R.layout.global_preference_toolbar),
 	NAUTICAL_CHECKLISTS("net.osmand.plus.plugins.nautical.ui.checklist.NauticalChecklistFragment", false, null, -1, R.layout.global_preference_toolbar),
 	SAIL_INVENTORY("net.osmand.plus.plugins.nautical.ui.sail.SailInventoryFragment", false, null, -1, R.layout.global_preference_toolbar),
@@ -77,7 +77,7 @@ public enum SettingsScreenType {
 	SIGNALK_SERVER_CHARTS("net.osmand.plus.plugins.nautical.ui.SignalKServerChartsFragment", false, null, -1, R.layout.global_preference_toolbar),
 	NAUTICAL_GNSS_STATUS("net.osmand.plus.plugins.nautical.ui.NauticalGnssStatusFragment", false, null, -1, R.layout.global_preference_toolbar),
 	NAUTICAL_TIDE_TABLE("net.osmand.plus.plugins.nautical.ui.SignalKTideTableFragment", false, null, -1, R.layout.global_preference_toolbar),
-	NAUTICAL_AIS_BUDDIES("net.osmand.plus.plugins.nautical.ui.NauticalBuddyListFragment", false, null, -1, R.layout.global_preference_toolbar),
+	NAUTICAL_AIS_BUDDIES("net.osmand.plus.plugins.nautical.ui.NauticalBuddyListFragment", false, null, -1, -1),
 	NAUTICAL_ADVANCED_SETTINGS("net.osmand.plus.plugins.nautical.ui.NauticalAdvancedSettingsFragment", false, null, R.xml.nautical_advanced_settings, R.layout.global_preference_toolbar),
 	SIGNALK_DIAGNOSTICS("net.osmand.plus.plugins.nautical.ui.SignalKOrchestratorFragment", false, null, -1, R.layout.global_preference_toolbar);
 	public final String fragmentName;

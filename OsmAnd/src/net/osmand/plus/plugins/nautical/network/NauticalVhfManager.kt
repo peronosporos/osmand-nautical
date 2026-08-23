@@ -19,7 +19,9 @@ data class VhfTransmission(
     val timestamp: Long,
     val vesselName: String?,
     val channel: String?,
-    val audioUrl: String
+    val audioUrl: String,
+    val durationSec: Int = 0,
+    val transcription: String? = null
 )
 
 enum class VhfStatus {
@@ -88,12 +90,16 @@ class NauticalVhfManager(private val app: OsmandApplication) {
                     val newList = mutableListOf<VhfTransmission>()
                     for (i in 0 until json.length()) {
                         val obj = json.getJSONObject(i)
+                        val duration = obj.optInt("duration", (obj.optDouble("duration", 0.0)).toInt())
+                        val transcript = if (!obj.isNull("transcription")) obj.getString("transcription") else null
                         newList.add(VhfTransmission(
                             id = obj.getString("id"),
                             timestamp = obj.getLong("timestamp"),
                             vesselName = if (obj.isNull("vessel_name")) null else obj.getString("vessel_name"),
                             channel = if (obj.isNull("channel")) null else obj.getString("channel"),
-                            audioUrl = "${url.trimEnd('/')}/recordings/${obj.getString("filename")}"
+                            audioUrl = "${url.trimEnd('/')}/recordings/${obj.getString("filename")}",
+                            durationSec = duration,
+                            transcription = transcript
                         ))
                     }
                     val sorted = newList.sortedByDescending { it.timestamp }

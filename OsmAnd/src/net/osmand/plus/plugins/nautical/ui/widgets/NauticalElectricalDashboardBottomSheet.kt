@@ -197,7 +197,7 @@ class NauticalElectricalDashboardBottomSheet : BaseNauticalBottomSheet() {
     }
 
     private class TankDiffCallback : DiffUtil.ItemCallback<Tank>() {
-        override fun areItemsTheSame(oldItem: Tank, newItem: Tank): Boolean = oldItem.instance == newItem.instance
+        override fun areItemsTheSame(oldItem: Tank, newItem: Tank): Boolean = oldItem.type == newItem.type && oldItem.instance == newItem.instance
         override fun areContentsTheSame(oldItem: Tank, newItem: Tank): Boolean = oldItem == newItem
     }
 
@@ -205,19 +205,57 @@ class NauticalElectricalDashboardBottomSheet : BaseNauticalBottomSheet() {
         private val txtName: TextView = view.findViewById(R.id.txt_tank_name)
         private val txtPercent: TextView = view.findViewById(R.id.txt_tank_percent)
         private val pbLevel: ProgressBar = view.findViewById(R.id.pb_tank_level)
+
         fun bind(tank: Tank) {
-            txtName.text = tank.name ?: (tank.type.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() } + " " + tank.instance)
-            val percent = (tank.currentLevel ?: 0.0) * 100
-            txtPercent.text = String.format("%.0f%%", percent)
+            txtName.text = tank.name ?: formatTankDisplayName(tank.type, tank.instance)
+            val level = tank.currentLevel ?: 0.0
+            val percent = (level * 100.0).coerceIn(0.0, 100.0)
+
+            val capLiters = if (tank.capacity != null && tank.capacity > 0.0) {
+                if (tank.capacity < 1.0) tank.capacity * 1000.0 else tank.capacity
+            } else null
+
+            val curVolLiters = if (tank.currentVolume != null && tank.currentVolume > 0.0) {
+                if (tank.currentVolume < 1.0) tank.currentVolume * 1000.0 else tank.currentVolume
+            } else if (capLiters != null && tank.currentLevel != null) {
+                capLiters * level
+            } else null
+
+            txtPercent.text = when {
+                curVolLiters != null && capLiters != null -> String.format(Locale.US, "%.0f%% (%.0f / %.0f L)", percent, curVolLiters, capLiters)
+                capLiters != null -> String.format(Locale.US, "%.0f%% (%.0f L)", percent, capLiters)
+                else -> String.format(Locale.US, "%.0f%%", percent)
+            }
+
             pbLevel.progress = percent.toInt()
-            val colorRes = when (tank.type.lowercase(Locale.getDefault())) {
+
+            val colorRes = when (tank.type.lowercase(Locale.US)) {
                 "fuel" -> R.color.nautical_status_red
                 "freshwater" -> R.color.nautical_status_blue
-                "wastewater", "blackwater", "greywater" -> R.color.buttons_secondary_dark_v2
-                "lubeoil" -> R.color.nautical_status_yellow
+                "blackwater", "wastewater", "greywater" -> R.color.buttons_secondary_dark_v2
+                "lubeoil", "oil" -> R.color.nautical_status_yellow
+                "gas", "lpg", "cng" -> R.color.nautical_status_orange
+                "livewell", "baitwell" -> R.color.nautical_status_green
                 else -> R.color.color_ok
             }
             pbLevel.progressTintList = android.content.res.ColorStateList.valueOf(androidx.core.content.ContextCompat.getColor(itemView.context, colorRes))
+        }
+
+        private fun formatTankDisplayName(type: String, instance: String): String {
+            val typeLabel = when (type.lowercase(Locale.US)) {
+                "fuel" -> "Fuel"
+                "freshwater" -> "Fresh Water"
+                "blackwater" -> "Black Water"
+                "wastewater" -> "Waste Water"
+                "greywater" -> "Grey Water"
+                "lubeoil", "oil" -> "Lube Oil"
+                "gas", "lpg", "cng" -> "Gas"
+                "livewell", "baitwell" -> "Live Well"
+                "ballast" -> "Ballast"
+                "rawwater" -> "Raw Water"
+                else -> type.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.US) else it.toString() }
+            }
+            return if (instance.isNotEmpty() && instance != "0") "$typeLabel $instance" else typeLabel
         }
     }
 

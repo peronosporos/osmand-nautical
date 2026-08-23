@@ -5,6 +5,7 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.launch
 import net.osmand.plus.R
 import net.osmand.plus.activities.MapActivity
@@ -40,11 +41,13 @@ class TargetVmgWidget(
                     if (broker != null) {
                         dataJob?.cancel()
                         dataJob = mapActivity.lifecycleScope.launch(Dispatchers.Main.immediate) {
-                            broker.marineState.collect {
-                                updateInfo(null)
-                                updateWidgetView()
-                                v.invalidate()
-                            }
+                            broker.marineState
+                                .sample(300L)
+                                .collect {
+                                    updateInfo(null)
+                                    updateWidgetView()
+                                    v.invalidate()
+                                }
                         }
                     }
                 }

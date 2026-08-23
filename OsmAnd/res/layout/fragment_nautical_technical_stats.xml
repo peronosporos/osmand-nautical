@@ -45,6 +45,21 @@
         <include layout="@layout/nautical_pilot_telemetry_grid" android:id="@+id/grid_systems" />
 
         <TextView
+            android:id="@+id/header_tanks"
+            style="@style/DashboardSubHeader"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:text="@string/nautical_tanks_section"
+            android:visibility="gone" />
+        <LinearLayout
+            android:id="@+id/container_tanks"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="gone" />
+
+        <TextView
             style="@style/DashboardSubHeader"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

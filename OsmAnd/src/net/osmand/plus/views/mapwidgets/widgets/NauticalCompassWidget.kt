@@ -6,6 +6,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.launch
 import net.osmand.plus.R
 import net.osmand.plus.activities.MapActivity
@@ -56,11 +57,13 @@ class NauticalCompassWidget(
                                 dataJob?.cancel()
                                 dataJob = mapActivity.lifecycleScope.launch {
                                     mapActivity.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
-                                        broker.marineState.collect {
-                                            updateInfo(null)
-                                            updateWidgetView()
-                                            v.invalidate()
-                                        }
+                                        broker.marineState
+                                            .sample(300L)
+                                            .collect {
+                                                updateInfo(null)
+                                                updateWidgetView()
+                                                v.invalidate()
+                                            }
                                     }
                                 }
                             }

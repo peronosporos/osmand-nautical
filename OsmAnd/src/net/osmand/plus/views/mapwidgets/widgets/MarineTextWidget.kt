@@ -11,6 +11,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.sample
 import net.osmand.plus.R
 import net.osmand.plus.activities.MapActivity
 import net.osmand.plus.plugins.nautical.NauticalPlugin
@@ -88,11 +89,13 @@ class MarineTextWidget(
                                 dataJob?.cancel()
                                 dataJob = mapActivity.lifecycleScope.launch {
                                     mapActivity.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
-                                        broker.marineState.collect {
-                                            updateInfo(null)
-                                            updateWidgetView()
-                                            v.invalidate()
-                                        }
+                                        broker.marineState
+                                            .sample(300L)
+                                            .collect {
+                                                updateInfo(null)
+                                                updateWidgetView()
+                                                v.invalidate()
+                                            }
                                     }
                                 }
                             }

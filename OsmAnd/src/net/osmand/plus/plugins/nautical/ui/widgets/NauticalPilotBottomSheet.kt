@@ -57,26 +57,20 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
     private lateinit var tackStbdBtn: MaterialButton
     private lateinit var btnExpandManeuvers: MaterialButton
     private lateinit var tacticalActionsRow: LinearLayout
-    private lateinit var layoutSecondaryManeuvers: LinearLayout
-    private lateinit var layoutSecondaryRow3: LinearLayout
-    private lateinit var layoutSecondaryRow4: LinearLayout
-    private lateinit var layoutSecondaryRow5: LinearLayout
-    private lateinit var layoutSecondaryRow6: LinearLayout
-    private lateinit var layoutSecondaryRow7: LinearLayout
-    private lateinit var btnManeuverSec1: MaterialButton
-    private lateinit var btnManeuverSec2: MaterialButton
-    private lateinit var btnManeuverSec3: MaterialButton
-    private lateinit var btnManeuverSec4: MaterialButton
-    private lateinit var btnManeuverSec5: MaterialButton
-    private lateinit var btnManeuverSec6: MaterialButton
-    private lateinit var btnManeuverSec7: MaterialButton
-    private lateinit var btnManeuverSec8: MaterialButton
-    private lateinit var btnManeuverSec9: MaterialButton
-    private lateinit var btnManeuverSec10: MaterialButton
-    private lateinit var btnManeuverSec11: MaterialButton
-    private lateinit var btnManeuverSec12: MaterialButton
-    private lateinit var btnManeuverSec13: MaterialButton
-    private lateinit var btnManeuverSec14: MaterialButton
+    private lateinit var layoutSecondaryManeuvers: View
+    private lateinit var btnGybePort: MaterialButton
+    private lateinit var btnGybeStbd: MaterialButton
+    private lateinit var btnHeaveTo: MaterialButton
+    private lateinit var btnCenterRudder: MaterialButton
+    private lateinit var btnDocking: MaterialButton
+    private lateinit var btnMedMooring: MaterialButton
+    private lateinit var btnSlipExit: MaterialButton
+    private lateinit var btnMooringBuoy: MaterialButton
+    private lateinit var btnDodgePort: MaterialButton
+    private lateinit var btnDodgeStbd: MaterialButton
+    private lateinit var btnWeighAnchor: MaterialButton
+    private lateinit var btnHoldingPattern: MaterialButton
+    private lateinit var btnEmergencyStop: MaterialButton
     private lateinit var layoutEmbeddedConfirmation: LinearLayout
     private lateinit var layoutManeuverTargetSetup: LinearLayout
     private lateinit var txtManeuverTitle: TextView
@@ -93,6 +87,8 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
     private var pendingTargetHeading: Int? = null
     private var pendingManeuverTitle: String = ""
     private var pendingExecuteAction: ((targetHeading: Int?) -> Unit)? = null
+
+    private var nightMode = false
 
     companion object {
         const val TAG = "NauticalPilotBottomSheet"
@@ -166,25 +162,19 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
         tackStbdBtn = customView.findViewById(R.id.btn_tack_stbd)
         tacticalActionsRow = customView.findViewById(R.id.tactical_actions_row)
         layoutSecondaryManeuvers = customView.findViewById(R.id.layout_secondary_maneuvers)
-        btnManeuverSec1 = customView.findViewById(R.id.btn_maneuver_secondary_1)
-        btnManeuverSec2 = customView.findViewById(R.id.btn_maneuver_secondary_2)
-        btnManeuverSec3 = customView.findViewById(R.id.btn_maneuver_secondary_3)
-        btnManeuverSec4 = customView.findViewById(R.id.btn_maneuver_secondary_4)
-        layoutSecondaryRow3 = customView.findViewById(R.id.layout_secondary_row_3)
-        btnManeuverSec5 = customView.findViewById(R.id.btn_maneuver_secondary_5)
-        btnManeuverSec6 = customView.findViewById(R.id.btn_maneuver_secondary_6)
-        layoutSecondaryRow4 = customView.findViewById(R.id.layout_secondary_row_4)
-        btnManeuverSec7 = customView.findViewById(R.id.btn_maneuver_secondary_7)
-        btnManeuverSec8 = customView.findViewById(R.id.btn_maneuver_secondary_8)
-        layoutSecondaryRow5 = customView.findViewById(R.id.layout_secondary_row_5)
-        btnManeuverSec9 = customView.findViewById(R.id.btn_maneuver_secondary_9)
-        btnManeuverSec10 = customView.findViewById(R.id.btn_maneuver_secondary_10)
-        layoutSecondaryRow6 = customView.findViewById(R.id.layout_secondary_row_6)
-        btnManeuverSec11 = customView.findViewById(R.id.btn_maneuver_secondary_11)
-        btnManeuverSec12 = customView.findViewById(R.id.btn_maneuver_secondary_12)
-        layoutSecondaryRow7 = customView.findViewById(R.id.layout_secondary_row_7)
-        btnManeuverSec13 = customView.findViewById(R.id.btn_maneuver_secondary_13)
-        btnManeuverSec14 = customView.findViewById(R.id.btn_maneuver_secondary_14)
+        btnGybePort = customView.findViewById(R.id.btn_maneuver_gybe_port)
+        btnGybeStbd = customView.findViewById(R.id.btn_maneuver_gybe_stbd)
+        btnHeaveTo = customView.findViewById(R.id.btn_maneuver_heave_to)
+        btnCenterRudder = customView.findViewById(R.id.btn_maneuver_center_rudder)
+        btnDocking = customView.findViewById(R.id.btn_maneuver_docking)
+        btnMedMooring = customView.findViewById(R.id.btn_maneuver_med_mooring)
+        btnSlipExit = customView.findViewById(R.id.btn_maneuver_slip_exit)
+        btnMooringBuoy = customView.findViewById(R.id.btn_maneuver_mooring_buoy)
+        btnDodgePort = customView.findViewById(R.id.btn_maneuver_dodge_port)
+        btnDodgeStbd = customView.findViewById(R.id.btn_maneuver_dodge_stbd)
+        btnWeighAnchor = customView.findViewById(R.id.btn_maneuver_weigh_anchor)
+        btnHoldingPattern = customView.findViewById(R.id.btn_maneuver_holding_pattern)
+        btnEmergencyStop = customView.findViewById(R.id.btn_maneuver_emergency_stop)
         
         layoutEmbeddedConfirmation = customView.findViewById(R.id.layout_embedded_confirmation)
         layoutManeuverTargetSetup = customView.findViewById(R.id.layout_maneuver_target_setup)
@@ -323,25 +313,19 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
             sheet = this,
             tackPortBtn = tackPortBtn,
             tackStbdBtn = tackStbdBtn,
-            btnManeuverSec1 = btnManeuverSec1,
-            btnManeuverSec2 = btnManeuverSec2,
-            btnManeuverSec3 = btnManeuverSec3,
-            btnManeuverSec4 = btnManeuverSec4,
-            btnManeuverSec5 = btnManeuverSec5,
-            btnManeuverSec6 = btnManeuverSec6,
-            btnManeuverSec7 = btnManeuverSec7,
-            btnManeuverSec8 = btnManeuverSec8,
-            btnManeuverSec9 = btnManeuverSec9,
-            btnManeuverSec10 = btnManeuverSec10,
-            btnManeuverSec11 = btnManeuverSec11,
-            btnManeuverSec12 = btnManeuverSec12,
-            btnManeuverSec13 = btnManeuverSec13,
-            btnManeuverSec14 = btnManeuverSec14,
-            layoutSecondaryRow3 = layoutSecondaryRow3,
-            layoutSecondaryRow4 = layoutSecondaryRow4,
-            layoutSecondaryRow5 = layoutSecondaryRow5,
-            layoutSecondaryRow6 = layoutSecondaryRow6,
-            layoutSecondaryRow7 = layoutSecondaryRow7,
+            btnGybePort = btnGybePort,
+            btnGybeStbd = btnGybeStbd,
+            btnHeaveTo = btnHeaveTo,
+            btnCenterRudder = btnCenterRudder,
+            btnDocking = btnDocking,
+            btnMedMooring = btnMedMooring,
+            btnSlipExit = btnSlipExit,
+            btnMooringBuoy = btnMooringBuoy,
+            btnDodgePort = btnDodgePort,
+            btnDodgeStbd = btnDodgeStbd,
+            btnWeighAnchor = btnWeighAnchor,
+            btnHoldingPattern = btnHoldingPattern,
+            btnEmergencyStop = btnEmergencyStop,
             onInitiateManeuver = { title, targetHeading, onExecute ->
                 showEmbeddedConfirmation(title, targetHeading, onExecute)
             }
@@ -357,62 +341,31 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
             helper.handlePrimaryManeuver(settings.NAUTICAL_VESSEL_TYPE.get(), state, isPort = false)
         }
 
-        btnManeuverSec1.setOnClickListener {
+        btnGybePort.setOnClickListener {
             val state = NauticalPlugin.engine?.getCurrentState()
-            helper.handleSecondaryManeuver(1, settings.NAUTICAL_VESSEL_TYPE.get(), state)
+            helper.handleGybe(isPort = true, state)
         }
-        btnManeuverSec2.setOnClickListener {
+        btnGybeStbd.setOnClickListener {
             val state = NauticalPlugin.engine?.getCurrentState()
-            helper.handleSecondaryManeuver(2, settings.NAUTICAL_VESSEL_TYPE.get(), state)
+            helper.handleGybe(isPort = false, state)
         }
-        btnManeuverSec3.setOnClickListener {
+        btnHeaveTo.setOnClickListener { helper.handleHeaveTo() }
+        btnCenterRudder.setOnClickListener { helper.handleCenterRudder() }
+        btnDocking.setOnClickListener { helper.handleDocking() }
+        btnMedMooring.setOnClickListener { helper.handleMedMooring() }
+        btnSlipExit.setOnClickListener { helper.handleSlipExit() }
+        btnMooringBuoy.setOnClickListener { helper.handleMooringBuoy() }
+        btnDodgePort.setOnClickListener {
             val state = NauticalPlugin.engine?.getCurrentState()
-            helper.handleSecondaryManeuver(3, settings.NAUTICAL_VESSEL_TYPE.get(), state)
+            helper.handleDodge(isPort = true, state)
         }
-        btnManeuverSec4.setOnClickListener {
+        btnDodgeStbd.setOnClickListener {
             val state = NauticalPlugin.engine?.getCurrentState()
-            helper.handleSecondaryManeuver(4, settings.NAUTICAL_VESSEL_TYPE.get(), state)
+            helper.handleDodge(isPort = false, state)
         }
-        btnManeuverSec5.setOnClickListener {
-            val state = NauticalPlugin.engine?.getCurrentState()
-            helper.handleSecondaryManeuver(5, settings.NAUTICAL_VESSEL_TYPE.get(), state)
-        }
-        btnManeuverSec6.setOnClickListener {
-            val state = NauticalPlugin.engine?.getCurrentState()
-            helper.handleSecondaryManeuver(6, settings.NAUTICAL_VESSEL_TYPE.get(), state)
-        }
-        btnManeuverSec7.setOnClickListener {
-            val state = NauticalPlugin.engine?.getCurrentState()
-            helper.handleSecondaryManeuver(7, settings.NAUTICAL_VESSEL_TYPE.get(), state)
-        }
-        btnManeuverSec8.setOnClickListener {
-            val state = NauticalPlugin.engine?.getCurrentState()
-            helper.handleSecondaryManeuver(8, settings.NAUTICAL_VESSEL_TYPE.get(), state)
-        }
-        btnManeuverSec9.setOnClickListener {
-            val state = NauticalPlugin.engine?.getCurrentState()
-            helper.handleSecondaryManeuver(9, settings.NAUTICAL_VESSEL_TYPE.get(), state)
-        }
-        btnManeuverSec10.setOnClickListener {
-            val state = NauticalPlugin.engine?.getCurrentState()
-            helper.handleSecondaryManeuver(10, settings.NAUTICAL_VESSEL_TYPE.get(), state)
-        }
-        btnManeuverSec11.setOnClickListener {
-            val state = NauticalPlugin.engine?.getCurrentState()
-            helper.handleSecondaryManeuver(11, settings.NAUTICAL_VESSEL_TYPE.get(), state)
-        }
-        btnManeuverSec12.setOnClickListener {
-            val state = NauticalPlugin.engine?.getCurrentState()
-            helper.handleSecondaryManeuver(12, settings.NAUTICAL_VESSEL_TYPE.get(), state)
-        }
-        btnManeuverSec13.setOnClickListener {
-            val state = NauticalPlugin.engine?.getCurrentState()
-            helper.handleSecondaryManeuver(13, settings.NAUTICAL_VESSEL_TYPE.get(), state)
-        }
-        btnManeuverSec14.setOnClickListener {
-            val state = NauticalPlugin.engine?.getCurrentState()
-            helper.handleSecondaryManeuver(14, settings.NAUTICAL_VESSEL_TYPE.get(), state)
-        }
+        btnWeighAnchor.setOnClickListener { helper.handleWeighAnchor() }
+        btnHoldingPattern.setOnClickListener { helper.handleHoldingPattern() }
+        btnEmergencyStop.setOnClickListener { helper.handleEmergencyStop() }
 
         // Continuous Heading / Wind Angle Slider Callbacks
         arcView.onHeadingChanged = { newHeading ->

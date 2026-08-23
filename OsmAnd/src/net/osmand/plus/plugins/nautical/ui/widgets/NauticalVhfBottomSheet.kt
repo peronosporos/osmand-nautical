@@ -241,24 +241,52 @@ class NauticalVhfBottomSheet : BaseNauticalBottomSheet() {
     }
 
     private class TransmissionViewHolder(view: View) : RecyclerView.ViewHolder(view) {
+        private val txtBadge: TextView? = view.findViewById(R.id.txt_transmission_badge)
         private val txtTitle: TextView = view.findViewById(R.id.txt_transmission_title)
         private val txtTime: TextView = view.findViewById(R.id.txt_transmission_time)
-        private val btnReplay: MaterialButton = view.findViewById(R.id.btn_replay_audio)
+        private val txtDuration: TextView? = view.findViewById(R.id.txt_transmission_duration)
+        private val txtTranscription: TextView? = view.findViewById(R.id.txt_transmission_transcription)
+        private val progressReplay: View? = view.findViewById(R.id.progress_audio_replay)
+        private val btnReplay: MaterialButton? = view.findViewById(R.id.btn_replay_audio)
         private val imgPlay: ImageView = view.findViewById(R.id.img_play_icon)
         private val timeFmt = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
 
         fun bind(item: VhfTransmission, onPlay: (VhfTransmission) -> Unit) {
-            val vessel = item.vesselName ?: "Vessel Broadcast"
             val ch = item.channel?.let { "CH $it" } ?: "VHF"
-            txtTitle.text = "$ch • $vessel"
+            txtBadge?.text = ch
+            val vessel = item.vesselName ?: "Vessel Broadcast"
+            txtTitle.text = vessel
             
             val dateStr = timeFmt.format(Date(item.timestamp))
             val agoSec = (System.currentTimeMillis() - item.timestamp) / 1000
             val agoStr = if (agoSec < 60) "${agoSec}s ago" else "${agoSec / 60}m ago"
             txtTime.text = "$dateStr ($agoStr)"
 
-            btnReplay.setOnClickListener { onPlay(item) }
-            imgPlay.setOnClickListener { onPlay(item) }
+            if (item.durationSec > 0) {
+                txtDuration?.visibility = View.VISIBLE
+                val min = item.durationSec / 60
+                val sec = item.durationSec % 60
+                txtDuration?.text = String.format(Locale.US, "%d:%02d", min, sec)
+            } else {
+                txtDuration?.visibility = View.GONE
+            }
+
+            if (!item.transcription.isNullOrEmpty()) {
+                txtTranscription?.visibility = View.VISIBLE
+                txtTranscription?.text = item.transcription
+            } else {
+                txtTranscription?.visibility = View.GONE
+            }
+
+            btnReplay?.setOnClickListener { onPlay(item) }
+            imgPlay.setOnClickListener {
+                progressReplay?.visibility = View.VISIBLE
+                onPlay(item)
+            }
+            itemView.setOnClickListener {
+                progressReplay?.visibility = View.VISIBLE
+                onPlay(item)
+            }
         }
     }
 }

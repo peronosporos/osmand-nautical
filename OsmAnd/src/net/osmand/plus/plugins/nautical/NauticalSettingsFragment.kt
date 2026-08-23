@@ -687,6 +687,14 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
             }
         }
 
+        findPreference<Preference>("nautical_polar_recorder")?.apply {
+            setThemedIcon(OsmAndR.drawable.ic_action_rec_start)
+            setOnPreferenceClickListener {
+                net.osmand.plus.plugins.nautical.ui.polar.PolarRecorderBottomSheet.show(parentFragmentManager)
+                true
+            }
+        }
+
         findPreference<EditTextPreferenceEx>(settings.NAUTICAL_LAYLINES_TACK_ANGLE.id)?.apply {
             setThemedIcon(OsmAndR.drawable.ic_action_additional_option)
             summary = "${settings.NAUTICAL_LAYLINES_TACK_ANGLE.get()}°"

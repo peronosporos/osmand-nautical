@@ -59,6 +59,22 @@ class NauticalAisManager(private val app: OsmandApplication) : AisDataListener {
 
     private var lastCpaExecutionTime: Long = 0
     private var isCpaOffloaded = false
+    private var lastMapRefreshTime: Long = 0
+    private val minMapRefreshIntervalMs = 500L
+
+    private fun requestThrottledMapRefresh() {
+        val pm = app.getSystemService(Context.POWER_SERVICE) as? android.os.PowerManager
+        if (pm?.isInteractive == false) return // Suppress if screen is off
+        val mapView = app.osmandMap?.mapView
+        if (mapView == null || !mapView.isShown) return // Suppress if map view is paused or hidden
+        val now = System.currentTimeMillis()
+        if (now - lastMapRefreshTime >= minMapRefreshIntervalMs) {
+            lastMapRefreshTime = now
+            app.runInUIThread {
+                app.osmandMap?.refreshMap()
+            }
+        }
+    }
 
     sealed class AisEvent {
         data class Updated(val obj: AisObject) : AisEvent()
@@ -208,9 +224,7 @@ class NauticalAisManager(private val app: OsmandApplication) : AisDataListener {
         _aisEvents.tryEmit(AisEvent.Updated(target))
         listeners.forEach { it.onAisObjectReceived(target) }
 
-        app.runInUIThread {
-            app.osmandMap?.refreshMap()
-        }
+        requestThrottledMapRefresh()
         NauticalPlugin.getInstance()?.requestRefresh()
     }
 
@@ -474,9 +488,7 @@ class NauticalAisManager(private val app: OsmandApplication) : AisDataListener {
         _aisEvents.tryEmit(AisEvent.Updated(obj))
         listeners.forEach { it.onAisObjectReceived(obj) }
 
-        app.runInUIThread {
-            app.osmandMap?.refreshMap()
-        }
+        requestThrottledMapRefresh()
         NauticalPlugin.getInstance()?.requestRefresh()
     }
 
@@ -487,9 +499,7 @@ class NauticalAisManager(private val app: OsmandApplication) : AisDataListener {
             objects[mmsi]?.let { obj ->
                 _aisEvents.tryEmit(AisEvent.Updated(obj))
                 listeners.forEach { it.onAisObjectReceived(obj) }
-                app.runInUIThread {
-                    app.osmandMap?.refreshMap()
-                }
+                requestThrottledMapRefresh()
             }
         }
     }
@@ -535,9 +545,7 @@ class NauticalAisManager(private val app: OsmandApplication) : AisDataListener {
         } else {
             enabledTrackMmsis.remove(mmsi)
         }
-        app.runInUIThread {
-            app.osmandMap?.refreshMap()
-        }
+        requestThrottledMapRefresh()
     }
 
     fun toggleTrack(mmsi: Int): Boolean {
@@ -548,9 +556,7 @@ class NauticalAisManager(private val app: OsmandApplication) : AisDataListener {
             enabledTrackMmsis.add(mmsi)
             true
         }
-        app.runInUIThread {
-            app.osmandMap?.refreshMap()
-        }
+        requestThrottledMapRefresh()
         return newState
     }
 
@@ -581,9 +587,7 @@ class NauticalAisManager(private val app: OsmandApplication) : AisDataListener {
         }
         sp.edit().putStringSet("ais_buddies", local).apply()
         engine?.sendDelta("navigation.aisBuddies", current.toList())
-        app.runInUIThread {
-            app.osmandMap?.refreshMap()
-        }
+        requestThrottledMapRefresh()
         return isNowBuddy
     }
 
@@ -617,9 +621,7 @@ class NauticalAisManager(private val app: OsmandApplication) : AisDataListener {
                     iterator.remove()
                     _aisEvents.tryEmit(AisEvent.Removed(obj))
                     listeners.forEach { it.onAisObjectRemoved(obj) }
-                    app.runInUIThread {
-                        app.osmandMap?.refreshMap()
-                    }
+                    requestThrottledMapRefresh()
                 }
             }
         }

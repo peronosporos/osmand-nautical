@@ -5,6 +5,8 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
+import android.widget.LinearLayout
+import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import android.widget.EditText
@@ -17,6 +19,7 @@ import net.osmand.plus.base.BaseOsmAndFragment
 import net.osmand.plus.plugins.nautical.NauticalPlugin
 import net.osmand.plus.plugins.nautical.engine.MarineState
 import net.osmand.plus.plugins.nautical.engine.SignalKUnitConverter
+import net.osmand.plus.plugins.nautical.engine.Tank
 import java.util.Locale
 
 class NauticalTechnicalStatsFragment : BaseOsmAndFragment() {
@@ -155,9 +158,7 @@ class NauticalTechnicalStatsFragment : BaseOsmAndFragment() {
             .show()
     }
 
-
     private fun updateStats(root: View, state: MarineState) {
-
         root.findViewById<TextView>(R.id.txt_vessel_title)?.text = state.vesselName ?: getString(R.string.nautical_vessel_details)
         root.findViewById<TextView>(R.id.txt_vessel_uuid)?.text = state.vesselUuid ?: ""
 
@@ -174,30 +175,86 @@ class NauticalTechnicalStatsFragment : BaseOsmAndFragment() {
         val dispFmt = SignalKUnitConverter.formatValue(requireContext(), app.settings, state.displacement, "design.displacement")
         fillCell(identity, 23, R.drawable.ic_action_weight_limit, getString(R.string.nautical_vessel_displacement_label), "${dispFmt.first}${dispFmt.second}")
 
-        // Engine & Tanks
+        // Engine & Systems
         val systems = root.findViewById<View?>(R.id.grid_systems)
         val mainBattery = state.batteries.values.firstOrNull()
         val cellInfo = mainBattery?.cellVoltages?.takeIf { it.isNotEmpty() }?.joinToString("/") { String.format(Locale.US, "%.2f", it) } ?: ""
-        
-        val mainEngine = state.engines.values.firstOrNull()
-        val wasteTank = state.tanks.values.find { it.type == "wasteWater" }
-        val greyTank = state.tanks.values.find { it.type == "greyWater" }
-        val oilTank = state.tanks.values.find { it.type == "lubeOil" }
-        val gasTank = state.tanks.values.find { it.type == "gas" }
 
         val battFmt = SignalKUnitConverter.formatValue(requireContext(), app.settings, mainBattery?.voltage, "electrical.batteries.0.voltage")
         fillCell(systems, 11, R.drawable.ic_action_nautical_battery_volt, getString(R.string.nautical_vessel_main_bms), "${battFmt.first}${battFmt.second}\n$cellInfo")
-        
-        val pressFmt = SignalKUnitConverter.formatValue(requireContext(), app.settings, mainEngine?.transmissionPressure, "propulsion.0.transmission.oilPressure")
-        fillCell(systems, 12, R.drawable.ic_action_settings, getString(R.string.nautical_vessel_transmission_label), "G:${mainEngine?.transmissionGear ?: "N/A"}\nP:${pressFmt.first}${pressFmt.second}")
-        
-        val altVFmt = SignalKUnitConverter.formatValue(requireContext(), app.settings, mainEngine?.alternatorVoltage, "propulsion.0.alternator.voltage")
-        val altCFmt = SignalKUnitConverter.formatValue(requireContext(), app.settings, mainEngine?.alternatorCurrent, "propulsion.0.alternator.current")
-        fillCell(systems, 13, R.drawable.ic_action_nautical_battery_volt, getString(R.string.nautical_vessel_alternator_label), "${altVFmt.first}${altVFmt.second}\n${altCFmt.first}${altCFmt.second}")
-        
-        fillCell(systems, 21, R.drawable.ic_action_nautical_waste_tank, getString(R.string.nautical_vessel_waste_grey), "${formatPercent(wasteTank?.currentLevel)} / ${formatPercent(greyTank?.currentLevel)}")
-        fillCell(systems, 22, R.drawable.ic_action_nautical_oil_pressure, getString(R.string.nautical_vessel_lube_oil_label), formatPercent(oilTank?.currentLevel))
-        fillCell(systems, 23, R.drawable.ic_action_fuel_tank, getString(R.string.nautical_vessel_gas_label), formatPercent(gasTank?.currentLevel))
+
+        val portEngine = state.engines["port"] ?: state.engines["0"] ?: state.engines.values.firstOrNull()
+        val stbdEngine = state.engines["starboard"] ?: state.engines["1"] ?: state.engines.values.elementAtOrNull(1)
+        val hasDualEngines = portEngine != null && stbdEngine != null && portEngine != stbdEngine
+
+        if (hasDualEngines) {
+            val pGear = portEngine?.transmissionGear ?: "N/A"
+            val sGear = stbdEngine?.transmissionGear ?: "N/A"
+            val pPressFmt = SignalKUnitConverter.formatValue(requireContext(), app.settings, portEngine?.transmissionPressure, "propulsion.0.transmission.oilPressure")
+            val sPressFmt = SignalKUnitConverter.formatValue(requireContext(), app.settings, stbdEngine?.transmissionPressure, "propulsion.1.transmission.oilPressure")
+            fillCell(systems, 12, R.drawable.ic_action_settings, getString(R.string.nautical_vessel_transmission_label), "G: P $pGear / S $sGear\nP: ${pPressFmt.first}/${sPressFmt.first}${pPressFmt.second}")
+
+            val pAltVFmt = SignalKUnitConverter.formatValue(requireContext(), app.settings, portEngine?.alternatorVoltage, "propulsion.0.alternator.voltage")
+            val sAltVFmt = SignalKUnitConverter.formatValue(requireContext(), app.settings, stbdEngine?.alternatorVoltage, "propulsion.1.alternator.voltage")
+            val pAltCFmt = SignalKUnitConverter.formatValue(requireContext(), app.settings, portEngine?.alternatorCurrent, "propulsion.0.alternator.current")
+            val sAltCFmt = SignalKUnitConverter.formatValue(requireContext(), app.settings, stbdEngine?.alternatorCurrent, "propulsion.1.alternator.current")
+            fillCell(systems, 13, R.drawable.ic_action_nautical_battery_volt, getString(R.string.nautical_vessel_alternator_label), "P: ${pAltVFmt.first}V ${pAltCFmt.first}A\nS: ${sAltVFmt.first}V ${sAltCFmt.first}A")
+
+            val pRpmFmt = SignalKUnitConverter.formatValue(requireContext(), app.settings, portEngine?.revolutions, "revolutions")
+            val sRpmFmt = SignalKUnitConverter.formatValue(requireContext(), app.settings, stbdEngine?.revolutions, "revolutions")
+            fillCell(systems, 21, R.drawable.ic_action_obd_engine_speed, getString(R.string.nautical_engine_rpm), "P: ${pRpmFmt.first} / S: ${sRpmFmt.first}\n${pRpmFmt.second}")
+
+            val pTempFmt = SignalKUnitConverter.formatValue(requireContext(), app.settings, portEngine?.temperature, "temperature")
+            val sTempFmt = SignalKUnitConverter.formatValue(requireContext(), app.settings, stbdEngine?.temperature, "temperature")
+            fillCell(systems, 22, R.drawable.ic_action_nautical_engine_temp, getString(R.string.nautical_engine_temp), "P: ${pTempFmt.first} / S: ${sTempFmt.first}\n${pTempFmt.second}")
+
+            val pOilFmt = SignalKUnitConverter.formatValue(requireContext(), app.settings, portEngine?.oilPressure, "oilPressure")
+            val sOilFmt = SignalKUnitConverter.formatValue(requireContext(), app.settings, stbdEngine?.oilPressure, "oilPressure")
+            fillCell(systems, 23, R.drawable.ic_action_nautical_oil_pressure, getString(R.string.nautical_oil_pressure), "P: ${pOilFmt.first} / S: ${sOilFmt.first}\n${pOilFmt.second}")
+        } else {
+            val mainEngine = portEngine ?: state.engines.values.firstOrNull()
+            val pressFmt = SignalKUnitConverter.formatValue(requireContext(), app.settings, mainEngine?.transmissionPressure ?: state.transmissionPressure, "propulsion.0.transmission.oilPressure")
+            fillCell(systems, 12, R.drawable.ic_action_settings, getString(R.string.nautical_vessel_transmission_label), "G:${mainEngine?.transmissionGear ?: state.transmissionGear ?: "N/A"}\nP:${pressFmt.first}${pressFmt.second}")
+
+            val altVFmt = SignalKUnitConverter.formatValue(requireContext(), app.settings, mainEngine?.alternatorVoltage, "propulsion.0.alternator.voltage")
+            val altCFmt = SignalKUnitConverter.formatValue(requireContext(), app.settings, mainEngine?.alternatorCurrent, "propulsion.0.alternator.current")
+            fillCell(systems, 13, R.drawable.ic_action_nautical_battery_volt, getString(R.string.nautical_vessel_alternator_label), "${altVFmt.first}${altVFmt.second}\n${altCFmt.first}${altCFmt.second}")
+
+            val rpmFmt = SignalKUnitConverter.formatValue(requireContext(), app.settings, mainEngine?.revolutions ?: state.engineRpm, "revolutions")
+            fillCell(systems, 21, R.drawable.ic_action_obd_engine_speed, getString(R.string.nautical_engine_rpm), "${rpmFmt.first} ${rpmFmt.second}")
+
+            val tempFmt = SignalKUnitConverter.formatValue(requireContext(), app.settings, mainEngine?.temperature ?: state.engineTemperature, "temperature")
+            fillCell(systems, 22, R.drawable.ic_action_nautical_engine_temp, getString(R.string.nautical_engine_temp), "${tempFmt.first} ${tempFmt.second}")
+
+            val oilFmt = SignalKUnitConverter.formatValue(requireContext(), app.settings, mainEngine?.oilPressure ?: state.engineOilPressure, "oilPressure")
+            fillCell(systems, 23, R.drawable.ic_action_nautical_oil_pressure, getString(R.string.nautical_oil_pressure), "${oilFmt.first} ${oilFmt.second}")
+        }
+
+        // Dynamic Tanks & Fluids List
+        val tanksHeader = root.findViewById<View?>(R.id.header_tanks)
+        val tanksContainer = root.findViewById<LinearLayout?>(R.id.container_tanks)
+        val tanks = state.tanks.values.toList()
+        if (tanksContainer != null) {
+            if (tanks.isNotEmpty()) {
+                tanksHeader?.visibility = View.VISIBLE
+                tanksContainer.visibility = View.VISIBLE
+
+                while (tanksContainer.childCount > tanks.size) {
+                    tanksContainer.removeViewAt(tanksContainer.childCount - 1)
+                }
+                while (tanksContainer.childCount < tanks.size) {
+                    val tankView = themedInflater.inflate(R.layout.item_nautical_tank, tanksContainer, false)
+                    tanksContainer.addView(tankView)
+                }
+
+                for (i in tanks.indices) {
+                    bindTankView(tanksContainer.getChildAt(i), tanks[i])
+                }
+            } else {
+                tanksHeader?.visibility = View.GONE
+                tanksContainer.visibility = View.GONE
+            }
+        }
 
         // AC Power & Sails
         val power = root.findViewById<View>(R.id.grid_power)
@@ -273,6 +330,69 @@ class NauticalTechnicalStatsFragment : BaseOsmAndFragment() {
         } else {
             pypilotHeader.visibility = View.GONE
             pypilotGrid.visibility = View.GONE
+        }
+    }
+
+    private fun bindTankView(view: View, tank: Tank) {
+        val txtName: TextView? = view.findViewById(R.id.txt_tank_name)
+        val txtPercent: TextView? = view.findViewById(R.id.txt_tank_percent)
+        val pbLevel: ProgressBar? = view.findViewById(R.id.pb_tank_level)
+
+        txtName?.text = tank.name ?: formatTankName(tank.type, tank.instance)
+
+        val level = tank.currentLevel ?: 0.0
+        val percent = (level * 100.0).coerceIn(0.0, 100.0)
+
+        val capLiters = if (tank.capacity != null && tank.capacity > 0.0) {
+            if (tank.capacity < 1.0) tank.capacity * 1000.0 else tank.capacity
+        } else null
+
+        val curVolLiters = if (tank.currentVolume != null && tank.currentVolume > 0.0) {
+            if (tank.currentVolume < 1.0) tank.currentVolume * 1000.0 else tank.currentVolume
+        } else if (capLiters != null && tank.currentLevel != null) {
+            capLiters * level
+        } else null
+
+        txtPercent?.text = when {
+            curVolLiters != null && capLiters != null -> String.format(Locale.US, "%.0f%% (%.0f / %.0f L)", percent, curVolLiters, capLiters)
+            capLiters != null -> String.format(Locale.US, "%.0f%% (%.0f L)", percent, capLiters)
+            else -> String.format(Locale.US, "%.0f%%", percent)
+        }
+
+        pbLevel?.progress = percent.toInt()
+
+        val colorRes = getTankColorRes(tank.type)
+        pbLevel?.progressTintList = android.content.res.ColorStateList.valueOf(
+            androidx.core.content.ContextCompat.getColor(view.context, colorRes)
+        )
+    }
+
+    private fun formatTankName(type: String, instance: String): String {
+        val typeLabel = when (type.lowercase(Locale.US)) {
+            "fuel" -> getString(R.string.nautical_tank_fuel)
+            "freshwater" -> getString(R.string.nautical_tank_fresh_water)
+            "blackwater" -> getString(R.string.nautical_tank_black_water)
+            "wastewater" -> getString(R.string.nautical_tank_waste_water)
+            "greywater" -> getString(R.string.nautical_tank_grey_water)
+            "lubeoil", "oil" -> getString(R.string.nautical_tank_lube_oil)
+            "gas", "lpg", "cng" -> getString(R.string.nautical_tank_gas)
+            "livewell", "baitwell" -> getString(R.string.nautical_tank_live_well)
+            "ballast" -> getString(R.string.nautical_tank_ballast)
+            "rawwater" -> getString(R.string.nautical_tank_raw_water)
+            else -> type.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.US) else it.toString() }
+        }
+        return if (instance.isNotEmpty() && instance != "0") "$typeLabel $instance" else typeLabel
+    }
+
+    private fun getTankColorRes(type: String): Int {
+        return when (type.lowercase(Locale.US)) {
+            "fuel" -> R.color.nautical_status_red
+            "freshwater" -> R.color.nautical_status_blue
+            "blackwater", "wastewater", "greywater" -> R.color.buttons_secondary_dark_v2
+            "lubeoil", "oil" -> R.color.nautical_status_yellow
+            "gas", "lpg", "cng" -> R.color.nautical_status_orange
+            "livewell", "baitwell" -> R.color.nautical_status_green
+            else -> R.color.color_ok
         }
     }
 

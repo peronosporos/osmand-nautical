@@ -19,6 +19,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.launch
 import net.osmand.plus.R
 import net.osmand.plus.activities.MapActivity
@@ -170,7 +171,9 @@ class NauticalPilotWidget(
                                 dataJob?.cancel()
                                 dataJob = mapActivity.lifecycleScope.launch {
                                     mapActivity.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
-                                        broker.marineState.collect { state ->
+                                        broker.marineState
+                                            .sample(300L)
+                                            .collect { state ->
                                             updateInfo(null)
                                             updateWidgetView()
                                             state.rudderAngle?.let { angle ->

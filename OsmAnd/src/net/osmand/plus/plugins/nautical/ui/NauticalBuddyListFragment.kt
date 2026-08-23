@@ -43,9 +43,8 @@ class NauticalBuddyListFragment : BaseOsmAndFragment() {
         
         adapter = BuddyAdapter(
             onClick = { mmsi ->
-                val ais = NauticalPlugin.getAisObject(mmsi)
-                if (ais != null && !parentFragmentManager.isStateSaved) {
-                    AisTargetBottomSheet.show(parentFragmentManager, ais)
+                if (!parentFragmentManager.isStateSaved) {
+                    NauticalAisDetailsDialog.show(parentFragmentManager, mmsi)
                 }
             },
             onDelete = { mmsi ->

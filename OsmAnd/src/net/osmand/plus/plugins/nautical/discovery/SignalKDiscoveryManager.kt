@@ -93,6 +93,7 @@ class SignalKDiscoveryManager(private val context: Context) {
                                     addDiscoveredServer(discovered)
                                     // Callback remains registered until stopDiscovery or similar, but for one-off resolve:
                                     try { nsdManager.unregisterServiceInfoCallback(this) } catch (_: Exception) {}
+                                    stopDiscovery()
                                 }
 
                                 override fun onServiceLost() {
@@ -122,6 +123,7 @@ class SignalKDiscoveryManager(private val context: Context) {
                                         isWebSocket = serviceInfo.serviceType.contains("signalk-ws"),
                                     )
                                     addDiscoveredServer(discovered)
+                                    stopDiscovery()
                                 }
                             }
                             @Suppress("DEPRECATION")

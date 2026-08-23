@@ -41,6 +41,7 @@ class TelemetryFilterEngine(
     private val depthOutlierCounters = ConcurrentHashMap<String, Int>()
 
     private var watchdogJob: Job? = null
+    private var lastProcessTime = 0L
 
     companion object {
         const val WATCHDOG_TIMEOUT_MS = 3500L
@@ -55,6 +56,14 @@ class TelemetryFilterEngine(
     }
 
     fun processState(state: MarineState, now: Long = System.currentTimeMillis()) {
+        val sogKn = (state.speedOverGround ?: 0.0) * 1.94384 // m/s to knots
+        // When vessel speed over ground (SOG) is below 0.5 knots (moored/anchored), reduce calculation frequency from 10 Hz to 1 Hz.
+        val minIntervalMs = if (sogKn < 0.5) 1000L else 100L
+        if (now - lastProcessTime < minIntervalMs) {
+            return
+        }
+        lastProcessTime = now
+
         val allDefs = TelemetryRegistry.getAllMetrics()
         val currentStates = HashMap<String, FilteredMetricState>(_filteredMetrics.value)
 

@@ -37,6 +37,21 @@ class AnchorDriftWatchdog(private val app: OsmandApplication) {
     val trackHistory: StateFlow<List<TrackPoint>> = _trackHistory.asStateFlow()
     private val trackBuffer = AnchorTrackBuffer()
 
+    private var lastMapRefreshTime: Long = 0
+    private val minMapRefreshIntervalMs = 500L
+
+    private fun requestThrottledMapRefresh() {
+        val pm = app.getSystemService(android.content.Context.POWER_SERVICE) as? android.os.PowerManager
+        if (pm?.isInteractive == false) return // Suppress if screen is off
+        val mapView = app.osmandMap?.mapView
+        if (mapView == null || !mapView.isShown) return // Suppress if map view is paused or hidden
+        val now = System.currentTimeMillis()
+        if (now - lastMapRefreshTime >= minMapRefreshIntervalMs) {
+            lastMapRefreshTime = now
+            app.runInUIThread { app.osmandMap?.refreshMap() }
+        }
+    }
+
     companion object {
         private const val CONSECUTIVE_PINGS_THRESHOLD = 3
     }
@@ -80,7 +95,7 @@ class AnchorDriftWatchdog(private val app: OsmandApplication) {
                                 app.settings.NAUTICAL_ANCHOR_LAT.set(sLat)
                                 app.settings.NAUTICAL_ANCHOR_LON.set(sLon)
                                 app.settings.NAUTICAL_ANCHOR_RADIUS.set(sRadius.toFloat())
-                                app.runInUIThread { app.osmandMap?.refreshMap() }
+                                requestThrottledMapRefresh()
                             }
                         } else {
                             // Item 13 Fix: Warn if locked but desynced significantly
@@ -96,7 +111,7 @@ class AnchorDriftWatchdog(private val app: OsmandApplication) {
                                             app.settings.NAUTICAL_ANCHOR_LAT.set(sLat)
                                             app.settings.NAUTICAL_ANCHOR_LON.set(sLon)
                                             app.settings.NAUTICAL_ANCHOR_RADIUS.set(sRadius.toFloat())
-                                            app.osmandMap?.refreshMap()
+                                            requestThrottledMapRefresh()
                                         }
                                     )
                                 }
@@ -166,7 +181,7 @@ class AnchorDriftWatchdog(private val app: OsmandApplication) {
         // Feed position to the Snail Trail buffer regardless of mode
         if (trackBuffer.addPosition(location)) {
             _trackHistory.value = trackBuffer.getPoints()
-            app.runInUIThread { app.osmandMap?.refreshMap() }
+            requestThrottledMapRefresh()
         }
 
         // Concurrent Safety: We always run local calculation as a validator,
@@ -301,7 +316,7 @@ class AnchorDriftWatchdog(private val app: OsmandApplication) {
         app.settings.NAUTICAL_ANCHOR_LON.set(0.0)
         app.settings.NAUTICAL_ANCHOR_RADIUS.set(0f)
         stop()
-        app.runInUIThread { app.osmandMap?.refreshMap() }
+        requestThrottledMapRefresh()
     }
 
     fun setAnchor(latitude: Double, longitude: Double, radius: Float) {
@@ -342,7 +357,7 @@ class AnchorDriftWatchdog(private val app: OsmandApplication) {
                 }
             }
         }
-        app.runInUIThread { app.osmandMap?.refreshMap() }
+        requestThrottledMapRefresh()
     }
 
     /**
