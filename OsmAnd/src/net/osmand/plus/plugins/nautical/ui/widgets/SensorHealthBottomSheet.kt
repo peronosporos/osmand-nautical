@@ -96,8 +96,8 @@ class SensorHealthBottomSheet : BaseNauticalBottomSheet() {
             val loc = app.locationProvider?.lastKnownLocation
             if (loc != null) String.format(Locale.US, "%.5f°, %.5f° (Internal GPS)", loc.latitude, loc.longitude) else "No Fix"
         }
-        val hdopStr = state.gnssHdop?.let { String.format(Locale.US, "%.1f", it) } ?: "--"
-        val satsStr = state.gnssSatellites?.toString() ?: "--"
+        val hdopStr = state.gnss?.horizontalDilution?.let { String.format(Locale.US, "%.1f", it) } ?: "--"
+        val satsStr = state.gnss?.satellites?.toString() ?: "--"
         val gpsLatencyStr = if (gpsAgeMs >= 0) "${gpsAgeMs}ms" else "--"
         txtGpsDetails.text = "Position: $posStr\nHDOP: $hdopStr • Satellites: $satsStr • Latency: $gpsLatencyStr"
 
@@ -114,7 +114,7 @@ class SensorHealthBottomSheet : BaseNauticalBottomSheet() {
 
         // 3. Depth Sounder
         val depthAgeMs = if (state.timeOfDepthFix > 0) now - state.timeOfDepthFix else -1L
-        val hasDepth = state.depthBelowTransducer != null || state.depthBelowKeel != null || state.depthBelowSurface != null
+        val hasDepth = state.depthBelowTransducer != null || state.depthBelowKeel != null || state.depthBelowWaterline != null
         setHealthBadge(badgeDepth, depthAgeMs, hasDepth)
 
         val depthXdrStr = state.depthBelowTransducer?.let { String.format(Locale.US, "%.2f m", it) } ?: "--"
@@ -166,7 +166,7 @@ class SensorHealthBottomSheet : BaseNauticalBottomSheet() {
             }
             ConnectionStatus.DISCONNECTED, ConnectionStatus.UNAUTHORIZED -> {
                 badgeServer.text = "OFFLINE"
-                badgeServer.setTextColor(ContextCompat.getColor(requireContext(), R.color.color_negative))
+                badgeServer.setTextColor(ContextCompat.getColor(requireContext(), R.color.text_color_negative))
             }
         }
         val serverLatency = if (state.connectionStatus == ConnectionStatus.CONNECTED) "42 ms" else "--"
@@ -177,7 +177,7 @@ class SensorHealthBottomSheet : BaseNauticalBottomSheet() {
         val ctx = context ?: return
         if (!hasValue || ageMs < 0 || ageMs > 5000) {
             badge.text = "LOST / OFFLINE"
-            badge.setTextColor(ContextCompat.getColor(ctx, R.color.color_negative))
+            badge.setTextColor(ContextCompat.getColor(ctx, R.color.text_color_negative))
         } else if (ageMs > 2000) {
             badge.text = "DELAYED (${ageMs / 1000}s)"
             badge.setTextColor(ContextCompat.getColor(ctx, R.color.color_warning))

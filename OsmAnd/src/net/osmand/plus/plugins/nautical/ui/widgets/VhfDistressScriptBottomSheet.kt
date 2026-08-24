@@ -104,7 +104,7 @@ class VhfDistressScriptBottomSheet : BaseNauticalBottomSheet() {
             val clip = ClipData.newPlainText("VHF Distress Script", scriptTextView.text)
             clipboard?.setPrimaryClip(clip)
             val app = activity?.application as? OsmandApplication
-            app?.showToastMessage(R.string.shared_string_copied_to_clipboard)
+            app?.showToastMessage(R.string.copied_to_clipboard)
         }
 
         btnSpeakScript.setOnClickListener {
@@ -150,9 +150,9 @@ class VhfDistressScriptBottomSheet : BaseNauticalBottomSheet() {
         val state = NauticalPlugin.engine?.getCurrentState()
         val loc = app?.locationProvider?.lastKnownLocation
 
-        val vesselName = settings?.NAUTICAL_VESSEL_NAME?.get()?.takeIf { it.isNotEmpty() } ?: "MY VESSEL"
-        val callsign = settings?.NAUTICAL_VESSEL_CALLSIGN?.get()?.takeIf { it.isNotEmpty() } ?: "CALLSIGN"
-        val ownMmsi = settings?.NAUTICAL_AIS_OWN_MMSI?.get() ?: 0
+        val vesselName = state?.vesselName?.takeIf { it.isNotEmpty() } ?: "MY VESSEL"
+        val callsign = (state?.vesselCallsign ?: state?.vesselCallSign)?.takeIf { it.isNotEmpty() } ?: "CALLSIGN"
+        val ownMmsi = state?.vesselMmsi ?: settings?.NAUTICAL_AIS_OWN_MMSI?.get() ?: 0
         val mmsiStr = if (ownMmsi > 0) ownMmsi.toString() else "MMSI"
 
         val lat = state?.latitude ?: loc?.latitude ?: 0.0
@@ -162,15 +162,18 @@ class VhfDistressScriptBottomSheet : BaseNauticalBottomSheet() {
 
         val sb = StringBuilder()
 
+        val upperVesselName = vesselName.uppercase(Locale.US)
+        val upperCallsign = callsign.uppercase(Locale.US)
+
         if (isMayday) {
             sb.append("MAYDAY, MAYDAY, MAYDAY\n")
-            sb.append("THIS IS ").append(vesselName.uppercase(Locale.US)).append(", ")
-                .append(vesselName.uppercase(Locale.US)).append(", ")
-                .append(vesselName.uppercase(Locale.US)).append("\n")
-            sb.append("CALLSIGN: ").append(callsign.uppercase(Locale.US))
+            sb.append("THIS IS ").append(upperVesselName).append(", ")
+                .append(upperVesselName).append(", ")
+                .append(upperVesselName).append("\n")
+            sb.append("CALLSIGN: ").append(upperCallsign)
                 .append(" • MMSI: ").append(mmsiStr).append("\n\n")
 
-            sb.append("MAYDAY ").append(vesselName.uppercase(Locale.US)).append("\n")
+            sb.append("MAYDAY ").append(upperVesselName).append("\n")
             sb.append("MY POSITION IS ").append(formattedPos).append(" AT ").append(timeUtc).append("\n\n")
             sb.append("NATURE OF DISTRESS: ").append(natureOfDistress).append("\n")
             sb.append("REQUIRE IMMEDIATE ASSISTANCE\n")
@@ -179,10 +182,10 @@ class VhfDistressScriptBottomSheet : BaseNauticalBottomSheet() {
         } else {
             sb.append("PAN-PAN, PAN-PAN, PAN-PAN\n")
             sb.append("ALL STATIONS, ALL STATIONS, ALL STATIONS\n")
-            sb.append("THIS IS ").append(vesselName.uppercase(Locale.US)).append(", ")
-                .append(vesselName.uppercase(Locale.US)).append(", ")
-                .append(vesselName.uppercase(Locale.US)).append("\n")
-            sb.append("CALLSIGN: ").append(callsign.uppercase(Locale.US))
+            sb.append("THIS IS ").append(upperVesselName).append(", ")
+                .append(upperVesselName).append(", ")
+                .append(upperVesselName).append("\n")
+            sb.append("CALLSIGN: ").append(upperCallsign)
                 .append(" • MMSI: ").append(mmsiStr).append("\n\n")
 
             sb.append("MY POSITION IS ").append(formattedPos).append(" AT ").append(timeUtc).append("\n\n")
