@@ -110,7 +110,7 @@ class MobViewModel(
                 val driftMps = state?.drift ?: 0.0
                 val setTrueRad = state?.setTrue ?: 0.0
                 val twsMps = state?.windSpeedTrue
-                val twdDeg = state?.windAngleTrueWater?.let { Math.toDegrees(it) }
+                val twdDeg: Double? = state?.windDirectionTrue?.let { Math.toDegrees(it) }
 
                 val (estimatedLoc, uncertainty) = if (active && event != null && dropLoc != null) {
                     val timeElapsedSec = (System.currentTimeMillis() - event.dropTimestamp) / 1000.0
@@ -118,7 +118,7 @@ class MobViewModel(
                     val tideDy = driftMps * kotlin.math.cos(setTrueRad)
                     val effectiveTws = twsMps ?: (10.0 * 0.514444)
                     val leewaySpeedMps = 0.03 * effectiveTws
-                    val downwindDeg = twdDeg?.let { (it + 180.0) % 360.0 } ?: Math.toDegrees(setTrueRad)
+                    val downwindDeg: Double = if (twdDeg != null) (twdDeg + 180.0) % 360.0 else Math.toDegrees(setTrueRad)
                     val leewayDx = leewaySpeedMps * kotlin.math.sin(Math.toRadians(downwindDeg))
                     val leewayDy = leewaySpeedMps * kotlin.math.cos(Math.toRadians(downwindDeg))
                     val totalVx = tideDx + leewayDx

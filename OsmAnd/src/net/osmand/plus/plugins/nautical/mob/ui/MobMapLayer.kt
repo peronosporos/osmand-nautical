@@ -143,7 +143,7 @@ class MobMapLayer(context: Context) : OsmandMapLayer(context) {
             canvas.drawCircle(datumX, datumY, radius * 0.8f, driftingDatumFillPaint)
             canvas.drawCircle(datumX, datumY, radius * 0.8f, driftingDatumPaint)
             canvas.drawLine(datumX - crosshairSize * 0.8f, datumY, datumX + crosshairSize * 0.8f, datumY, driftingDatumPaint)
-            canvas.drawLine(datumX, datumY - crosshairSize * 0.8f, datumX, datumY + crosshairSize * 0.8f, datumY, driftingDatumPaint)
+            canvas.drawLine(datumX, datumY - crosshairSize * 0.8f, datumX, datumY + crosshairSize * 0.8f, driftingDatumPaint)
         }
 
         // Uncertainty radius circle around estimated datum

@@ -131,14 +131,15 @@ class NauticalTargetPicker : BottomSheetDialogFragment() {
         // Sort targets by Range / Distance ascending
         val ownLoc = NauticalPlugin.getInstance()?.application?.locationProvider?.lastKnownLocation
         val sortedTargets = targets.sortedBy { target ->
-            if (target is AisObject && ownLoc != null && target.position != null) {
+            val pos = (target as? AisObject)?.position
+            if (pos != null && ownLoc != null) {
                 val loc = net.osmand.Location("AIS").apply {
-                    latitude = target.position.latitude
-                    longitude = target.position.longitude
+                    latitude = pos.latitude
+                    longitude = pos.longitude
                 }
-                ownLoc.distanceTo(loc)
+                ownLoc.distanceTo(loc).toDouble()
             } else {
-                Float.MAX_VALUE.toDouble()
+                Double.MAX_VALUE
             }
         }
 

@@ -69,9 +69,10 @@ class NauticalRouteSummaryFragment : BaseOsmAndFragment() {
                     btnCreatePlan.isEnabled = false
                     btnCreatePlan.text = getString(R.string.nautical_calculating_weather_route)
                     val routingEngine = net.osmand.plus.plugins.nautical.routing.NauticalWeatherRoutingEngine(app)
-                    val s57 = net.osmand.plus.plugins.nautical.NauticalPlugin.getInstance()?.s57Index
-                    val sm = net.osmand.plus.plugins.nautical.NauticalPlugin.getInstance()?.safetyManager
-                    val layerController = net.osmand.plus.plugins.nautical.NauticalPlugin.getInstance()?.sailingMapLayerController
+                    val plugin = net.osmand.plus.plugins.nautical.NauticalPlugin.getInstance()
+                    val s57 = plugin?.s57SpatialIndex
+                    val sm = plugin?.safetyManager
+                    val layerController = plugin?.layerManager?.layerController
                     routingEngine.calculateAndRenderWeatherRoute(
                         destLat = dest.latitude,
                         destLon = dest.longitude,
