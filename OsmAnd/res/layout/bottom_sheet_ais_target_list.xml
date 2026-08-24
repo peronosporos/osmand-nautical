@@ -86,7 +86,7 @@
             android:insetBottom="0dp"
             android:paddingStart="4dp"
             android:paddingEnd="4dp"
-            app:icon="@drawable/ic_action_point_on_map"
+            app:icon="@drawable/ic_action_pin_location"
             app:iconSize="16dp"
             app:iconPadding="4dp" />
 
