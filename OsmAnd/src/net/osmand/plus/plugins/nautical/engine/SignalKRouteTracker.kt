@@ -20,6 +20,7 @@ class SignalKRouteTracker {
     val routeQueue = ConcurrentLinkedQueue<Pair<Double, Double>>()
     var lastWaypointLat: Double? = null
     var lastWaypointLon: Double? = null
+    var activeWaypointName: String? = null
 
     var isFollowingRoute: Boolean = false
         internal set

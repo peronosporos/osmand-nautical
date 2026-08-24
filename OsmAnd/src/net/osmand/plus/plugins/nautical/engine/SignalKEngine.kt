@@ -32,7 +32,7 @@ import net.osmand.plus.plugins.nautical.network.SignalKLineString
 import net.osmand.plus.plugins.nautical.network.SignalKRestService
 import net.osmand.plus.plugins.nautical.network.SignalKRoute
 import net.osmand.plus.plugins.nautical.network.SignalKRouteFeature
-import net.osmand.plus.plugins.nautical.utils.KMapUtils
+import net.osmand.shared.util.KMapUtils
 import net.osmand.plus.plugins.nautical.utils.TemporalUtils
 import net.osmand.plus.settings.enums.XteDirection
 import net.osmand.shared.aistracker.AisObject

@@ -4,6 +4,7 @@ import net.osmand.plus.activities.MapActivity
 import net.osmand.plus.plugins.nautical.dr.ui.DeadReckoningMapLayer
 import net.osmand.plus.plugins.nautical.hazard.ui.DynamicHazardLayer
 import net.osmand.plus.plugins.nautical.hazard.ui.NavtexMapLayer
+import net.osmand.plus.plugins.nautical.laylines.ui.SailingLaylinesMapLayer
 import net.osmand.plus.plugins.nautical.map.layers.OceanographicGribMapLayer
 import net.osmand.plus.plugins.nautical.map.layers.WeatherRoutingMapLayer
 import net.osmand.plus.plugins.nautical.mob.ui.MobMapLayer

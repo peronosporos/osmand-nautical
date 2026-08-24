@@ -195,8 +195,7 @@ class OceanographicGribMapLayer(context: Context) : OsmandMapLayer(context) {
         val timestamp = System.currentTimeMillis()
         val mapRotate = tileBox.rotate
 
-        val plugin = NauticalPlugin.getInstance()
-        val liveState = plugin?.engine?.dataBroker?.marineState?.value
+        val liveState = NauticalPlugin.engine?.getCurrentState()
         val hasLiveDrift = liveState?.latitude != null && liveState.longitude != null &&
                 liveState.drift != null && liveState.setTrue != null
 
@@ -214,7 +213,7 @@ class OceanographicGribMapLayer(context: Context) : OsmandMapLayer(context) {
                 if (gribVector != null) {
                     u = gribVector.u
                     v = gribVector.v
-                } else if (hasLiveDrift) {
+                } else if (hasLiveDrift && liveState != null) {
                     val vesselLat = liveState.latitude ?: 0.0
                     val vesselLon = liveState.longitude ?: 0.0
                     val vesselPx = tileBox.getPixXFromLatLon(vesselLat, vesselLon)
