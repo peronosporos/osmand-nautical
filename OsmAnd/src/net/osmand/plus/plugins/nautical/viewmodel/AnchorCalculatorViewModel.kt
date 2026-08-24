@@ -70,6 +70,7 @@ class AnchorCalculatorViewModel(app: OsmandApplication) : ViewModel() {
     fun setSafetyMargin(value: Float) {
         _safetyMargin.value = value
         settings.NAUTICAL_ANCHOR_SAFETY_MARGIN.set(value)
+        updateCalculations()
     }
 
     fun setScopeRatio(value: Float) {
@@ -87,12 +88,43 @@ class AnchorCalculatorViewModel(app: OsmandApplication) : ViewModel() {
     }
 
     private fun updateCalculations() {
-        _recommendedRode.value = AnchorCalculator.calculateRodeLength(
+        val calculatedRode = AnchorCalculator.calculateRodeLength(
             _depth.value.toDouble(),
             _tideRise.value.toDouble(),
             _freeboard.value.toDouble(),
             _scopeRatio.value.toDouble(),
         )
+        _recommendedRode.value = calculatedRode
+    }
+
+    fun dropAnchorAtBow() {
+        val engine = NauticalPlugin.engine
+        val state = engine?.getCurrentState()
+        val loc = NauticalPlugin.getInstance()?.application?.locationProvider?.lastKnownLocation
+        val lat = state?.latitude ?: loc?.latitude ?: return
+        val lon = state?.longitude ?: loc?.longitude ?: return
+        val hdg = state?.headingTrue?.let { Math.toDegrees(it) }
+            ?: state?.courseOverGroundTrue?.let { Math.toDegrees(it) }
+            ?: (loc?.bearing?.toDouble() ?: 0.0)
+
+        val anchorPos = AnchorCalculator.calculateAnchorDrop(lat, lon, hdg, _bowOffset.value.toDouble())
+        val totalRadius = AnchorCalculator.calculateTotalRadius(
+            _recommendedRode.value,
+            _bowOffset.value.toDouble(),
+            _safetyMargin.value.toDouble(),
+        )
+
+        _anchorLat.value = anchorPos.latitude
+        _anchorLon.value = anchorPos.longitude
+
+        if (state?.connectionStatus == net.osmand.plus.plugins.nautical.engine.ConnectionStatus.CONNECTED) {
+            engine.setAnchor(anchorPos.latitude, anchorPos.longitude, totalRadius)
+        }
+
+        settings.NAUTICAL_ANCHOR_LAT.set(anchorPos.latitude)
+        settings.NAUTICAL_ANCHOR_LON.set(anchorPos.longitude)
+        settings.NAUTICAL_ANCHOR_RADIUS.set(totalRadius.toFloat())
+        NauticalPlugin.getInstance()?.anchorWatchdog?.start()
     }
 
     fun dropAnchor() {
@@ -122,6 +154,7 @@ class AnchorCalculatorViewModel(app: OsmandApplication) : ViewModel() {
         settings.NAUTICAL_ANCHOR_LAT.set(anchorPos.latitude)
         settings.NAUTICAL_ANCHOR_LON.set(anchorPos.longitude)
         settings.NAUTICAL_ANCHOR_RADIUS.set(totalRadius.toFloat())
+        NauticalPlugin.getInstance()?.anchorWatchdog?.start()
     }
 
     fun clearAnchor() {

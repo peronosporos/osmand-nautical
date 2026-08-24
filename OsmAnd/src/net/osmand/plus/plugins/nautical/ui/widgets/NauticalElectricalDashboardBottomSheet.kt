@@ -147,40 +147,75 @@ class NauticalElectricalDashboardBottomSheet : BaseNauticalBottomSheet() {
 
     private class BatteryViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         private val txtName: TextView = view.findViewById(R.id.txt_battery_name)
+        private val txtType: TextView? = view.findViewById(R.id.txt_battery_type)
         private val txtVolt: TextView = view.findViewById(R.id.txt_battery_volt)
         private val txtSoc: TextView = view.findViewById(R.id.txt_battery_soc)
+        private val pbSoc: ProgressBar? = view.findViewById(R.id.pb_battery_soc)
         private val txtCurrent: TextView = view.findViewById(R.id.txt_battery_current)
+        private val txtEta: TextView? = view.findViewById(R.id.txt_battery_eta)
+        private val cellText: TextView? = view.findViewById(R.id.txt_battery_cells)
+
         fun bind(battery: Battery) {
-            txtName.text = battery.name ?: "Battery ${battery.instance}"
-            txtVolt.text = battery.voltage?.let { String.format("%.1f V", it) } ?: "--"
+            val rawName = battery.name ?: "Battery ${battery.instance}"
+            val lowerName = rawName.lowercase(Locale.US)
+            val bankType = when {
+                lowerName.contains("house") || lowerName.contains("service") || battery.instance == "0" -> "HOUSE"
+                lowerName.contains("starter") || lowerName.contains("engine") || battery.instance == "1" -> "STARTER"
+                lowerName.contains("thruster") || lowerName.contains("bow") -> "THRUSTER"
+                lowerName.contains("gen") -> "GENERATOR"
+                else -> "AUX"
+            }
+
+            txtName.text = rawName
+            txtType?.text = bankType
+
+            txtVolt.text = battery.voltage?.let { String.format(Locale.US, "%.1f V", it) } ?: "--"
+
             val soc = battery.stateOfCharge
             if (soc != null) {
-                txtSoc.text = String.format("%.0f%%", soc * 100)
+                val pct = (soc * 100).toInt().coerceIn(0, 100)
+                txtSoc.text = String.format(Locale.US, "%d%%", pct)
+                pbSoc?.progress = pct
+
                 val color = when {
-                    soc > 0.7 -> androidx.core.content.ContextCompat.getColor(itemView.context, R.color.color_ok)
-                    soc > 0.3 -> androidx.core.content.ContextCompat.getColor(itemView.context, R.color.color_warning)
+                    soc > 0.60 -> androidx.core.content.ContextCompat.getColor(itemView.context, R.color.color_ok)
+                    soc >= 0.30 -> androidx.core.content.ContextCompat.getColor(itemView.context, R.color.color_warning)
                     else -> androidx.core.content.ContextCompat.getColor(itemView.context, R.color.color_invalid)
                 }
                 txtSoc.setTextColor(color)
+                pbSoc?.progressTintList = android.content.res.ColorStateList.valueOf(color)
             } else {
-                txtSoc.text = ""
+                txtSoc.text = "--%"
+                pbSoc?.progress = 50
             }
-            val currentText = StringBuilder()
-            battery.current?.let { currentText.append(String.format("%+.1f A", it)) }
+
+            val current = battery.current
+            if (current != null) {
+                txtCurrent.text = String.format(Locale.US, "%+.1f A", current)
+            } else {
+                txtCurrent.text = "-- A"
+            }
+
             val ttf = battery.timeToFull
             val ttr = battery.timeRemaining
-            if ((ttf != null && ttf > 0)) currentText.append(" (Full in ${formatDuration(ttf)})")
-            else if ((ttr != null && ttr > 0)) currentText.append(" (${formatDuration(ttr)} left)")
-            txtCurrent.text = currentText.toString()
-            val cellText = itemView.findViewById<TextView>(R.id.txt_battery_cells)
+            val etaStr = when {
+                ttf != null && ttf > 0 -> "Full in ${formatDuration(ttf)}"
+                ttr != null && ttr > 0 -> "Empty in ${formatDuration(ttr)}"
+                current != null && current > 0.5 -> "Charging"
+                current != null && current < -0.5 -> "Discharging"
+                else -> "Standby"
+            }
+            txtEta?.text = etaStr
+
             if (battery.cellVoltages.isNotEmpty()) {
                 cellText?.visibility = View.VISIBLE
-                val cells = battery.cellVoltages.joinToString(" | ") { String.format("%.2fV", it) }
+                val cells = battery.cellVoltages.joinToString(" | ") { String.format(Locale.US, "%.2fV", it) }
                 cellText?.text = itemView.context.getString(R.string.nautical_battery_cells_fmt, cells)
             } else {
                 cellText?.visibility = View.GONE
             }
         }
+
         private fun formatDuration(seconds: Double): String {
             val h = (seconds / 3600).toInt()
             val m = ((seconds % 3600) / 60).toInt()

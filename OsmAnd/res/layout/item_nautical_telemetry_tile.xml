@@ -8,7 +8,7 @@
     android:layout_margin="3dp"
     app:cardCornerRadius="10dp"
     app:cardElevation="0dp"
-    app:strokeWidth="1dp"
+    app:strokeWidth="1.5dp"
     app:strokeColor="?attr/divider_color"
     app:cardBackgroundColor="?attr/card_and_list_background_basic"
     android:clickable="true"
@@ -36,7 +36,7 @@
                 android:maxLines="1"
                 android:textAllCaps="true"
                 android:textColor="?android:attr/textColorSecondary"
-                android:textSize="11sp"
+                android:textSize="11.5sp"
                 android:textStyle="bold"
                 tools:text="SOG" />
 
@@ -62,7 +62,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
-            android:gravity="bottom"
+            android:gravity="baseline"
             android:orientation="horizontal">
 
             <TextView
@@ -72,7 +72,7 @@
                 android:fontFeatureSettings="tnum"
                 android:maxLines="1"
                 android:textColor="?android:attr/textColorPrimary"
-                android:textSize="24sp"
+                android:textSize="26sp"
                 android:textStyle="bold"
                 tools:text="14.2" />
 
@@ -82,8 +82,8 @@
                 android:layout_height="wrap_content"
                 android:layout_marginStart="4dp"
                 android:maxLines="1"
-                android:textColor="?android:attr/textColorSecondary"
-                android:textSize="12sp"
+                android:textColor="?android:attr/textColorPrimary"
+                android:textSize="13sp"
                 android:textStyle="bold"
                 tools:text="kn" />
         </LinearLayout>
@@ -96,7 +96,8 @@
             android:fontFeatureSettings="tnum"
             android:maxLines="1"
             android:textColor="?android:attr/textColorSecondary"
-            android:textSize="11sp"
+            android:textSize="11.5sp"
+            android:textStyle="bold"
             android:visibility="gone"
             tools:text="AWS: 18.5 kn"
             tools:visibility="visible" />

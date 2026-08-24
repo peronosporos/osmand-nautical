@@ -21,24 +21,58 @@ class AnchorWatchMapLayer(context: Context) : OsmandMapLayer(context) {
     private val app = context.applicationContext as OsmandApplication
     private val settings = app.settings
 
-    private val boundaryPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+    private val alarmBoundaryPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
         strokeWidth = 4f
         color = Color.RED
         pathEffect = DashPathEffect(floatArrayOf(20f, 10f), 0f)
     }
 
-    private val boundaryFillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+    private val alarmBoundaryFillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.FILL
         color = Color.RED
-        alpha = 30 // Semi-transparent
+        alpha = 25 // Semi-transparent red alarm zone
+    }
+
+    private val safeSwingPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+        strokeWidth = 3f
+        color = 0xFF43A047.toInt() // Green for safe swing zone
+        pathEffect = DashPathEffect(floatArrayOf(14f, 8f), 0f)
+    }
+
+    private val safeSwingFillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.FILL
+        color = 0xFF43A047.toInt()
+        alpha = 20
+    }
+
+    private val dropPinBgPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.FILL
+        color = 0xDD121212.toInt()
+    }
+
+    private val dropPinStrokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+        strokeWidth = 2.5f
+        color = Color.WHITE
+    }
+
+    private val dropPinCenterPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.FILL
+        color = 0xFFFF1744.toInt()
     }
 
     private val snailTrailPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
-        strokeWidth = 5f
+        strokeWidth = 4.5f
         strokeCap = Paint.Cap.ROUND
         strokeJoin = Paint.Join.ROUND
+    }
+
+    private val snailTrailPointPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.FILL
+        color = 0xFF00E5FF.toInt()
     }
 
     private val anchorIcon: Bitmap? by lazy {
@@ -62,13 +96,13 @@ class AnchorWatchMapLayer(context: Context) : OsmandMapLayer(context) {
         val radius = this.settings.NAUTICAL_ANCHOR_RADIUS.get()
 
         val isNight = settings.isNightMode
-        val color = if (isNight) AndroidUtils.getColorFromAttr(context, R.attr.colorError) else Color.RED
-        boundaryPaint.color = color
-        boundaryFillPaint.color = color
-        boundaryFillPaint.alpha = if (isNight) 20 else 30
+        val alarmColor = if (isNight) AndroidUtils.getColorFromAttr(context, R.attr.colorError) else Color.RED
+        alarmBoundaryPaint.color = alarmColor
+        alarmBoundaryFillPaint.color = alarmColor
+        alarmBoundaryFillPaint.alpha = if (isNight) 18 else 25
 
         if (lat != 0.0 && lon != 0.0 && radius > 0f) {
-            drawAnchorWatch(canvas, tileBox, lat, lon, radius)
+            drawAnchorWatch(canvas, tileBox, lat, lon, radius, isPreview = false)
         }
 
         // Draw Preview if active
@@ -77,13 +111,10 @@ class AnchorWatchMapLayer(context: Context) : OsmandMapLayer(context) {
         val pRadius = this.settings.NAUTICAL_ANCHOR_PREVIEW_RADIUS.get()
 
         if (pLat != 0.0 && pLon != 0.0 && pRadius > 0f) {
-            boundaryPaint.color = if (isNight) Color.GRAY else Color.BLUE
-            boundaryFillPaint.color = boundaryPaint.color
-            boundaryFillPaint.alpha = 15
-            drawAnchorWatch(canvas, tileBox, pLat, pLon, pRadius)
+            drawAnchorWatch(canvas, tileBox, pLat, pLon, pRadius, isPreview = true)
         }
 
-        // 3. Draw Snail Trail
+        // 3. Draw Snail Trail (vessel history inside swing zone)
         NauticalPlugin.getInstance()?.anchorWatchdog?.let { watchdog ->
             val points = watchdog.trackHistory.value
             if (points.size >= 2) {
@@ -92,22 +123,48 @@ class AnchorWatchMapLayer(context: Context) : OsmandMapLayer(context) {
         }
     }
 
-    private fun drawAnchorWatch(canvas: Canvas, tileBox: RotatedTileBox, lat: Double, lon: Double, radius: Float) {
+    private fun drawAnchorWatch(
+        canvas: Canvas,
+        tileBox: RotatedTileBox,
+        lat: Double,
+        lon: Double,
+        radius: Float,
+        isPreview: Boolean
+    ) {
         if ((lat == 0.0) || (lon == 0.0) || (radius <= 0f)) return
 
         val centerX = tileBox.getPixXFromLatLon(lat, lon)
         val centerY = tileBox.getPixYFromLatLon(lat, lon)
+        val density = tileBox.density
 
-        // 1. Draw boundary circle
         // Estimate pixel radius by projecting a point 'radius' meters North
         val northLatLon = net.osmand.util.MapUtils.rhumbDestinationPoint(lat, lon, 0.0, radius.toDouble())
         val northY = tileBox.getPixYFromLatLon(northLatLon.latitude, northLatLon.longitude)
         val pixRadius = abs(centerY - northY)
-        
-        canvas.drawCircle(centerX, centerY, pixRadius, boundaryFillPaint)
-        canvas.drawCircle(centerX, centerY, pixRadius, boundaryPaint)
 
-        // 2. Draw anchor icon
+        if (isPreview) {
+            safeSwingPaint.color = Color.BLUE
+            safeSwingFillPaint.color = Color.BLUE
+            safeSwingFillPaint.alpha = 15
+            canvas.drawCircle(centerX, centerY, pixRadius, safeSwingFillPaint)
+            canvas.drawCircle(centerX, centerY, pixRadius, safeSwingPaint)
+        } else {
+            // 1. Draw Safe Swing inner radius (e.g. 75% of total alarm radius)
+            val safePixRadius = (pixRadius * 0.75f).coerceAtLeast(4f)
+            canvas.drawCircle(centerX, centerY, safePixRadius, safeSwingFillPaint)
+            canvas.drawCircle(centerX, centerY, safePixRadius, safeSwingPaint)
+
+            // 2. Draw Alarm Threshold boundary circle
+            canvas.drawCircle(centerX, centerY, pixRadius, alarmBoundaryFillPaint)
+            canvas.drawCircle(centerX, centerY, pixRadius, alarmBoundaryPaint)
+        }
+
+        // 3. Draw Anchor Drop Pin & Icon
+        val pinRadius = 14f * density
+        canvas.drawCircle(centerX, centerY, pinRadius, dropPinBgPaint)
+        canvas.drawCircle(centerX, centerY, pinRadius, dropPinStrokePaint)
+        canvas.drawCircle(centerX, centerY, 3f * density, dropPinCenterPaint)
+
         anchorIcon?.let { bitmap ->
             canvas.drawBitmap(bitmap, centerX - bitmap.width / 2f, centerY - bitmap.height / 2f, null)
         }
@@ -136,6 +193,14 @@ class AnchorWatchMapLayer(context: Context) : OsmandMapLayer(context) {
             snailTrailPaint.alpha = (alphaRatio * 255).toInt()
 
             canvas.drawLine(x1, y1, x2, y2, snailTrailPaint)
+        }
+
+        // Draw latest position indicator dot
+        val last = points.lastOrNull()
+        if (last != null) {
+            val lx = tileBox.getPixXFromLatLon(last.latLon.latitude, last.latLon.longitude)
+            val ly = tileBox.getPixYFromLatLon(last.latLon.latitude, last.latLon.longitude)
+            canvas.drawCircle(lx, ly, 4f * tileBox.density, snailTrailPointPaint)
         }
     }
 

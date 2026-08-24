@@ -35,6 +35,7 @@ class AnchorWatchDialogFragment : BaseMaterialBottomSheetDialogFragment() {
         return inflater.inflate(R.layout.dialog_anchor_watch, container, false)
     }
 
+    private var btnQuickDropBow: MaterialButton? = null
     private var btnDropAnchor: MaterialButton? = null
     private var btnDisarmAnchor: MaterialButton? = null
     private var btnPreviewMap: MaterialButton? = null
@@ -46,6 +47,7 @@ class AnchorWatchDialogFragment : BaseMaterialBottomSheetDialogFragment() {
     private var layoutWindlass: View? = null
     private var btnWindlassUp: MaterialButton? = null
     private var btnWindlassDown: MaterialButton? = null
+    private var isDepthManuallyEdited: Boolean = false
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -68,6 +70,7 @@ class AnchorWatchDialogFragment : BaseMaterialBottomSheetDialogFragment() {
         val editLon = view.findViewById<TextInputEditText>(R.id.edit_anchor_lon)
         val toggleRatio = view.findViewById<MaterialButtonToggleGroup>(R.id.toggle_ratio)
         txtResultRode = view.findViewById(R.id.txt_result_rode)
+        btnQuickDropBow = view.findViewById(R.id.btn_quick_drop_bow)
         btnDropAnchor = view.findViewById(R.id.btn_drop_anchor)
         btnDisarmAnchor = view.findViewById(R.id.btn_disarm_anchor)
         btnPreviewMap = view.findViewById(R.id.btn_preview_map)
@@ -78,6 +81,11 @@ class AnchorWatchDialogFragment : BaseMaterialBottomSheetDialogFragment() {
         layoutWindlass = view.findViewById(R.id.layout_windlass_quick_control)
         btnWindlassUp = view.findViewById(R.id.btn_dlg_windlass_up)
         btnWindlassDown = view.findViewById(R.id.btn_dlg_windlass_down)
+
+        val btnDepthMinus5 = view.findViewById<MaterialButton>(R.id.btn_depth_minus_5)
+        val btnDepthPlus5 = view.findViewById<MaterialButton>(R.id.btn_depth_plus_5)
+        val btnRodeMinus10 = view.findViewById<MaterialButton>(R.id.btn_rode_minus_10)
+        val btnRodePlus10 = view.findViewById<MaterialButton>(R.id.btn_rode_plus_10)
 
         // Bind initial values
         editDepth.setText(viewModel.depth.value.toString())
@@ -96,9 +104,39 @@ class AnchorWatchDialogFragment : BaseMaterialBottomSheetDialogFragment() {
             else -> toggleRatio.check(R.id.btn_ratio_5)
         }
 
+        // Stepper Button Listeners
+        btnDepthMinus5?.setOnClickListener {
+            val cur = editDepth.text?.toString()?.toFloatOrNull() ?: viewModel.depth.value
+            val next = (cur - 5f).coerceAtLeast(1f)
+            isDepthManuallyEdited = true
+            editDepth.setText(String.format(Locale.US, "%.1f", next))
+        }
+
+        btnDepthPlus5?.setOnClickListener {
+            val cur = editDepth.text?.toString()?.toFloatOrNull() ?: viewModel.depth.value
+            val next = cur + 5f
+            isDepthManuallyEdited = true
+            editDepth.setText(String.format(Locale.US, "%.1f", next))
+        }
+
+        btnRodeMinus10?.setOnClickListener {
+            val curMargin = editSafetyMargin.text?.toString()?.toFloatOrNull() ?: viewModel.safetyMargin.value
+            val next = (curMargin - 10f).coerceAtLeast(0f)
+            editSafetyMargin.setText(String.format(Locale.US, "%.1f", next))
+        }
+
+        btnRodePlus10?.setOnClickListener {
+            val curMargin = editSafetyMargin.text?.toString()?.toFloatOrNull() ?: viewModel.safetyMargin.value
+            val next = curMargin + 10f
+            editSafetyMargin.setText(String.format(Locale.US, "%.1f", next))
+        }
+
         // Input Listeners
         editDepth.addTextChangedListener(object : SimpleTextWatcher() {
             override fun afterTextChanged(s: Editable?) {
+                if (editDepth.hasFocus()) {
+                    isDepthManuallyEdited = true
+                }
                 s?.toString()?.toFloatOrNull()?.let { viewModel.setDepth(it) }
             }
         })
@@ -157,6 +195,14 @@ class AnchorWatchDialogFragment : BaseMaterialBottomSheetDialogFragment() {
                 }
                 viewModel.setScopeRatio(ratio)
             }
+        }
+
+        btnQuickDropBow?.setOnClickListener {
+            viewModel.dropAnchorAtBow()
+            app.settings.NAUTICAL_ANCHOR_PREVIEW_LAT.set(0.0)
+            app.settings.NAUTICAL_ANCHOR_PREVIEW_LON.set(0.0)
+            app.showToastMessage(R.string.nautical_anchor_btn_drop)
+            dismiss()
         }
 
         btnDropAnchor?.setOnClickListener {
@@ -250,12 +296,17 @@ class AnchorWatchDialogFragment : BaseMaterialBottomSheetDialogFragment() {
                         
                         // Relaxed requirement: Allow manual depth fallback
                         val isSafe = hasGps
+                        btnQuickDropBow?.isEnabled = isSafe
                         btnDropAnchor?.isEnabled = isSafe
                         
-                        val hasDepth = state.depthBelowTransducer != null && !state.stalePaths.contains("environment.depth.belowTransducer")
+                        val liveDepth = state.depthBelowTransducer ?: state.depthBelowSurface ?: state.depthBelowKeel
+                        val hasDepth = liveDepth != null && !state.stalePaths.contains("environment.depth.belowTransducer")
                         txtSensorWarning?.visibility = if (hasDepth) View.GONE else View.VISIBLE
                         if (!hasDepth) {
                             txtSensorWarning?.text = getString(R.string.nautical_depth_unavailable)
+                        } else if (!isDepthManuallyEdited && (viewModel.depth.value == 0f || editDepth.text.isNullOrEmpty() || editDepth.text.toString() == "0.0")) {
+                            viewModel.setDepth(liveDepth.toFloat())
+                            editDepth.setText(String.format(Locale.US, "%.1f", liveDepth))
                         }
                     }
                 }
@@ -265,6 +316,7 @@ class AnchorWatchDialogFragment : BaseMaterialBottomSheetDialogFragment() {
 
     override fun onDestroyView() {
         super.onDestroyView()
+        btnQuickDropBow = null
         btnDropAnchor = null
         btnDisarmAnchor = null
         btnPreviewMap = null

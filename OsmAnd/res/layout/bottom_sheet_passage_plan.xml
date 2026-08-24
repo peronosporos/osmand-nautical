@@ -61,6 +61,29 @@
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
+        <!-- Route Depth & Keel Clearance Profile Graph Card -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/card_depth_profile"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="2dp"
+            app:cardBackgroundColor="?attr/card_and_list_background_basic">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="8dp">
+
+                <net.osmand.plus.plugins.nautical.routing.ui.RouteDepthProfileGraphView
+                    android:id="@+id/view_route_depth_profile"
+                    android:layout_width="match_parent"
+                    android:layout_height="140dp" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
         <!-- Waypoint Sequence List Label -->
         <TextView
             android:layout_width="match_parent"

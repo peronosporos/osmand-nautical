@@ -27,6 +27,22 @@ class HardwareHealthHudHeader @JvmOverloads constructor(
         icon = findViewById(R.id.health_icon)
         statusText = findViewById(R.id.health_status)
         latencyText = findViewById(R.id.health_latency)
+
+        setOnClickListener {
+            val mapActivity = findMapActivity()
+            if (mapActivity != null) {
+                net.osmand.plus.plugins.nautical.ui.widgets.SensorHealthBottomSheet.show(mapActivity.supportFragmentManager)
+            }
+        }
+    }
+
+    private fun findMapActivity(): net.osmand.plus.activities.MapActivity? {
+        var ctx = context
+        while (ctx is android.content.ContextWrapper) {
+            if (ctx is net.osmand.plus.activities.MapActivity) return ctx
+            ctx = ctx.baseContext
+        }
+        return null
     }
 
     override fun setCompactMode(enabled: Boolean) {

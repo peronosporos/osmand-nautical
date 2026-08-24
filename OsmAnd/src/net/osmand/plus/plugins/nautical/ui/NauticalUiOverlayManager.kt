@@ -71,6 +71,33 @@ class NauticalUiOverlayManager(private val app: OsmandApplication) {
         internal set
     var thermalWarningView: ThermalWarningView? = null
         internal set
+    var marineAlarmBannerView: net.osmand.plus.plugins.nautical.ui.widgets.MarineAlarmBannerView? = null
+        internal set
+    var gribTimeScrubberView: net.osmand.plus.plugins.nautical.grib.ui.GribTimeScrubberView? = null
+        internal set
+
+    fun initMarineAlarmBannerSystem(
+        activity: MapActivity,
+        hudManager: WeakReference<NauticalHudManager>?,
+        alarmPriorityManager: net.osmand.plus.plugins.nautical.engine.AlarmPriorityManager?
+    ) {
+        val apm = alarmPriorityManager ?: return
+        if (marineAlarmBannerView?.context == activity) return
+        hudManager?.get()?.removeHeader(marineAlarmBannerView)
+
+        val banner = net.osmand.plus.plugins.nautical.ui.widgets.MarineAlarmBannerView(activity, apm)
+        this.marineAlarmBannerView = banner
+        hudManager?.get()?.addHeader(banner, priority = 0)
+    }
+
+    fun initGribTimeScrubberSystem(
+        activity: MapActivity,
+        hudManager: WeakReference<NauticalHudManager>?
+    ) {
+        if (gribTimeScrubberView?.context == activity) return
+        val scrubber = net.osmand.plus.plugins.nautical.grib.ui.GribTimeScrubberView(activity)
+        this.gribTimeScrubberView = scrubber
+    }
 
     var isNightVisionEnabled: Boolean = false
         internal set
@@ -422,5 +449,7 @@ class NauticalUiOverlayManager(private val app: OsmandApplication) {
         anchorWatchHudView = null
         predictiveSteeringHudView = null
         thermalWarningView = null
+        marineAlarmBannerView = null
+        gribTimeScrubberView = null
     }
 }

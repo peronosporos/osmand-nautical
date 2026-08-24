@@ -29,6 +29,22 @@ class PolarCurveCanvasView @JvmOverloads constructor(
             invalidate()
         }
 
+    var recordedPoints: List<Triple<Double, Double, Double>> = emptyList()
+        set(value) {
+            field = value
+            updateScale()
+            invalidate()
+        }
+
+    var isNightVision: Boolean = false
+        set(value) {
+            if (field != value) {
+                field = value
+                updateNightVisionColors(value)
+                invalidate()
+            }
+        }
+
     var onPointDragged: ((Int, Double, Double) -> Unit)? = null
 
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
@@ -38,11 +54,14 @@ class PolarCurveCanvasView @JvmOverloads constructor(
     private var maxSpeedScale = 10.0
 
     // Cached semantic colors
-    private val colorGrid = 0x40888888
-    private val colorLabel = 0xBB888888.toInt()
-    private val colorRawPoint = 0x5029B6F6
-    private val colorCurve = ContextCompat.getColor(context, R.color.active_color_primary_light)
-    private val colorControlPoint = ContextCompat.getColor(context, R.color.nautical_status_green)
+    private var colorGrid = 0x40888888
+    private var colorLabel = 0xBB888888.toInt()
+    private var colorRawPoint = 0x5029B6F6
+    private var colorCurve = ContextCompat.getColor(context, R.color.active_color_primary_light)
+    private var colorControlPoint = ContextCompat.getColor(context, R.color.nautical_status_green)
+    private var colorPerfRed = 0xFFD32F2F.toInt() // <80% target
+    private var colorPerfAmber = 0xFFFFB300.toInt() // 80-95% target
+    private var colorPerfGreen = 0xFF43A047.toInt() // >95% target
 
     init {
         isClickable = true
@@ -50,8 +69,34 @@ class PolarCurveCanvasView @JvmOverloads constructor(
         textPaint.color = colorLabel
     }
 
+    private fun updateNightVisionColors(enabled: Boolean) {
+        if (enabled) {
+            colorGrid = 0x40FF1744.toInt()
+            colorLabel = 0xBBFF8A80.toInt()
+            colorRawPoint = 0x50FF5252.toInt()
+            colorCurve = 0xFFFF1744.toInt()
+            colorControlPoint = 0xFFFF5252.toInt()
+            colorPerfRed = 0xFF8B0000.toInt()
+            colorPerfAmber = 0xFFD50000.toInt()
+            colorPerfGreen = 0xFFFF1744.toInt()
+            textPaint.color = colorLabel
+        } else {
+            colorGrid = 0x40888888
+            colorLabel = 0xBB888888.toInt()
+            colorRawPoint = 0x5029B6F6
+            colorCurve = ContextCompat.getColor(context, R.color.active_color_primary_light)
+            colorControlPoint = ContextCompat.getColor(context, R.color.nautical_status_green)
+            colorPerfRed = 0xFFD32F2F.toInt()
+            colorPerfAmber = 0xFFFFB300.toInt()
+            colorPerfGreen = 0xFF43A047.toInt()
+            textPaint.color = colorLabel
+        }
+    }
+
     private fun updateScale() {
-        val maxPointSpeed = (rawPoints + smoothedPoints).maxByOrNull { it.second }?.second ?: 0.0
+        val maxRawSpeed = (rawPoints + smoothedPoints).maxByOrNull { it.second }?.second ?: 0.0
+        val maxRecSpeed = recordedPoints.maxOfOrNull { max(it.second, it.third) } ?: 0.0
+        val maxPointSpeed = max(maxRawSpeed, maxRecSpeed)
         maxSpeedScale = when {
             maxPointSpeed > 20.0 -> 30.0
             maxPointSpeed > 15.0 -> 25.0
@@ -117,6 +162,28 @@ class PolarCurveCanvasView @JvmOverloads constructor(
             val x = originX + r.toFloat() * sin(rad).toFloat()
             val y = originY - r.toFloat() * cos(rad).toFloat()
             canvas.drawCircle(x, y, rawRadius, paint)
+        }
+
+        // Draw recorded live performance scatter points (Zero Allocations)
+        val recRadius = 4.5f * density
+        for (i in recordedPoints.indices) {
+            val pt = recordedPoints[i]
+            val twa = pt.first
+            val stw = pt.second
+            val targetStw = pt.third
+            val ratio = if (targetStw > 0.0) stw / targetStw else 1.0
+
+            paint.color = when {
+                ratio < 0.80 -> colorPerfRed
+                ratio <= 0.95 -> colorPerfAmber
+                else -> colorPerfGreen
+            }
+
+            val rad = Math.toRadians(twa)
+            val r = (stw / maxSpeedScale) * maxRadius
+            val x = originX + r.toFloat() * sin(rad).toFloat()
+            val y = originY - r.toFloat() * cos(rad).toFloat()
+            canvas.drawCircle(x, y, recRadius, paint)
         }
 
         // Draw smoothed curve path and draggable control points (Zero Allocations)

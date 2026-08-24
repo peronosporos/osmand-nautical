@@ -108,6 +108,19 @@ class OceanographicGribMapLayer(context: Context) : OsmandMapLayer(context) {
         val isExpired: Boolean = false
     )
 
+    private var isobarLinesBuffer = FloatArray(2048)
+    private var waveLinesBuffer = FloatArray(2048)
+
+    var selectedTimestamp: Long? = null
+        set(value) {
+            if (field != value) {
+                field = value
+                renderCache = GribRenderCache() // Invalidate cache for new timestamp
+                val app = context.applicationContext as OsmandApplication
+                app.osmandMap?.refreshMap()
+            }
+        }
+
     @Volatile
     private var renderCache = GribRenderCache()
     private val layerScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
@@ -127,15 +140,15 @@ class OceanographicGribMapLayer(context: Context) : OsmandMapLayer(context) {
             return
         }
 
-        val timestamp = System.currentTimeMillis()
+        val timestamp = selectedTimestamp ?: System.currentTimeMillis()
         val center = tileBox.centerLatLon
         
-        // Item 18: Improved pan-debounce for GRIB refresh
+        // Improved pan-debounce for GRIB refresh
         val moveThreshold = if (tileBox.zoom > 12) 0.002 else 0.01 // Finer threshold
         if (renderCache.zoom != tileBox.zoom || 
             abs(renderCache.centerLat - center.latitude) > moveThreshold || 
             abs(renderCache.centerLon - center.longitude) > moveThreshold ||
-            abs(renderCache.timestamp - timestamp) > 300000) { // Refresh every 5 mins
+            abs(renderCache.timestamp - timestamp) > (if (selectedTimestamp != null) 0 else 300000)) {
             
             val app = context.applicationContext as OsmandApplication
             if (app.settings.NAUTICAL_GRIB_SOURCE_SIGNALK.get() && repository.status.value == GribStatus.IDLE) {
@@ -149,17 +162,20 @@ class OceanographicGribMapLayer(context: Context) : OsmandMapLayer(context) {
 
         val cache = renderCache
         
-        // 1. Optimized isobar rendering
+        // 1. Optimized isobar rendering with preallocated buffer (zero onDraw allocations)
         if (cache.isobarLatLons.isNotEmpty()) {
-            val lines = FloatArray(cache.isobarLatLons.size * 4)
+            val neededSize = cache.isobarLatLons.size * 4
+            if (isobarLinesBuffer.size < neededSize) {
+                isobarLinesBuffer = FloatArray(neededSize)
+            }
             for (i in cache.isobarLatLons.indices) {
                 val pair = cache.isobarLatLons[i]
-                lines[i * 4] = tileBox.getPixXFromLatLon(pair.first.latitude, pair.first.longitude)
-                lines[i * 4 + 1] = tileBox.getPixYFromLatLon(pair.first.latitude, pair.first.longitude)
-                lines[i * 4 + 2] = tileBox.getPixXFromLatLon(pair.second.latitude, pair.second.longitude)
-                lines[i * 4 + 3] = tileBox.getPixYFromLatLon(pair.second.latitude, pair.second.longitude)
+                isobarLinesBuffer[i * 4] = tileBox.getPixXFromLatLon(pair.first.latitude, pair.first.longitude)
+                isobarLinesBuffer[i * 4 + 1] = tileBox.getPixYFromLatLon(pair.first.latitude, pair.first.longitude)
+                isobarLinesBuffer[i * 4 + 2] = tileBox.getPixXFromLatLon(pair.second.latitude, pair.second.longitude)
+                isobarLinesBuffer[i * 4 + 3] = tileBox.getPixYFromLatLon(pair.second.latitude, pair.second.longitude)
             }
-            canvas.drawLines(lines, isobarPaint)
+            canvas.drawLines(isobarLinesBuffer, 0, neededSize, isobarPaint)
         }
 
         val textHeight = labelPaint.textSize
@@ -179,8 +195,8 @@ class OceanographicGribMapLayer(context: Context) : OsmandMapLayer(context) {
         // 3. Render Ocean/Tidal Current Vectors
         drawCurrentVectors(canvas, tileBox, repository.engine)
 
-        // 4. Render "EXPIRED FORECAST" Banner (Adjusted position)
-        if (cache.isExpired) {
+        // 4. Render "EXPIRED FORECAST" Banner (Adjusted position, only if live and expired)
+        if (cache.isExpired && selectedTimestamp == null) {
             drawExpiredBanner(canvas)
         }
     }
@@ -315,7 +331,10 @@ class OceanographicGribMapLayer(context: Context) : OsmandMapLayer(context) {
         
         // We can't easily use drawLines for arrows with rotation per arrow unless we pre-calculate points
         // But we can batch the main lines at least.
-        val mainLines = FloatArray(vectors.size * 4)
+        val neededSize = vectors.size * 4
+        if (waveLinesBuffer.size < neededSize) {
+            waveLinesBuffer = FloatArray(neededSize)
+        }
         for (i in vectors.indices) {
             val wv = vectors[i]
             val px = tileBox.getPixXFromLatLon(wv.lat, wv.lon)
@@ -325,10 +344,10 @@ class OceanographicGribMapLayer(context: Context) : OsmandMapLayer(context) {
             val dx = (sin(finalRotation) * wv.length / 2).toFloat()
             val dy = (-cos(finalRotation) * wv.length / 2).toFloat()
             
-            mainLines[i * 4] = px - dx
-            mainLines[i * 4 + 1] = py - dy
-            mainLines[i * 4 + 2] = px + dx
-            mainLines[i * 4 + 3] = py + dy
+            waveLinesBuffer[i * 4] = px - dx
+            waveLinesBuffer[i * 4 + 1] = py - dy
+            waveLinesBuffer[i * 4 + 2] = px + dx
+            waveLinesBuffer[i * 4 + 3] = py + dy
             
             // Still need to draw arrow heads and labels. 
             // For now, let's keep the rotation logic but avoid 'withTranslation' overhead where possible.
@@ -338,7 +357,7 @@ class OceanographicGribMapLayer(context: Context) : OsmandMapLayer(context) {
                 canvas.drawText(it, px + dx * 1.5f, py + dy * 1.5f + 10f, labelPaint)
             }
         }
-        canvas.drawLines(mainLines, wavePaint)
+        canvas.drawLines(waveLinesBuffer, 0, neededSize, wavePaint)
     }
 
     private fun drawArrowHead(canvas: Canvas, tipX: Float, tipY: Float, angleRad: Float, size: Float) {

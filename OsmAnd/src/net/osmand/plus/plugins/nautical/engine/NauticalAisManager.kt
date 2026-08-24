@@ -25,6 +25,29 @@ import kotlin.math.absoluteValue
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
+enum class AisSortMode {
+    THREAT_CPA,
+    DISTANCE,
+    NAME_ALPHA
+}
+
+data class AisTargetSummary(
+    val mmsi: Int,
+    val name: String,
+    val type: String,
+    val rangeMeters: Double,
+    val bearingDeg: Double,
+    val sogKnots: Double,
+    val cogDeg: Double,
+    val cpaNm: Double?,
+    val tcpaSec: Double?,
+    val isDangerous: Boolean,
+    val isMuted: Boolean,
+    val callSign: String? = null,
+    val lat: Double = Double.NaN,
+    val lon: Double = Double.NaN,
+)
+
 class NauticalAisManager(private val app: OsmandApplication) : AisDataListener {
 
     private val log = PlatformUtil.getLog(NauticalAisManager::class.java)
@@ -515,6 +538,13 @@ class NauticalAisManager(private val app: OsmandApplication) : AisDataListener {
         aisExtras[mmsi] = current.copy(isMuted = mute)
     }
 
+    fun toggleMute(mmsi: Int): Boolean {
+        val current = aisExtras.getOrPut(mmsi) { AisExtras() }
+        val newMute = !current.isMuted
+        aisExtras[mmsi] = current.copy(isMuted = newMute)
+        return newMute
+    }
+
     fun markRemoteVessel(mmsi: Int) {
         val current = aisExtras.getOrPut(mmsi) { AisExtras() }
         if (!current.isRemote) {
@@ -638,6 +668,87 @@ class NauticalAisManager(private val app: OsmandApplication) : AisDataListener {
     fun getAisExtras(mmsi: Int): AisExtras = aisExtras[mmsi] ?: AisExtras()
 
     fun getAisObjects(): List<AisObject> = objects.values.toList()
+
+    fun getActiveTargets(sortMode: AisSortMode = AisSortMode.THREAT_CPA): List<AisTargetSummary> {
+        val ownLoc = app.locationProvider.lastKnownLocation
+        val plugin = NauticalPlugin.getInstance()
+        val cpaDist = plugin?.aisCpaWarningDistance?.get()?.toDouble() ?: 1.0
+        val cpaTime = plugin?.aisCpaWarningTime?.get()?.toDouble() ?: 900.0
+
+        val rawObjects = synchronized(objects) { objects.values.toList() }
+        val summaries = rawObjects.map { obj ->
+            val extras = aisExtras[obj.mmsi] ?: AisExtras()
+            val pos = obj.position
+            val hasPos = pos != null && MarineStateConstants.isValidLat(pos.latitude) && MarineStateConstants.isValidLon(pos.longitude)
+            val rangeMeters: Double
+            val bearingDeg: Double
+
+            if (ownLoc != null && hasPos) {
+                val targetLoc = Location("AIS").apply {
+                    latitude = pos!!.latitude
+                    longitude = pos.longitude
+                }
+                rangeMeters = ownLoc.distanceTo(targetLoc).toDouble()
+                bearingDeg = ((ownLoc.bearingTo(targetLoc) + 360f) % 360f).toDouble()
+            } else {
+                rangeMeters = Double.MAX_VALUE
+                bearingDeg = 0.0
+            }
+
+            val sogKnots = if (obj.sog != AisObjectConstants.INVALID_SOG && obj.sog >= 0.0) obj.sog else 0.0
+            val cogDeg = if (obj.cog != AisObjectConstants.INVALID_COG && obj.cog >= 0.0) obj.cog else 0.0
+
+            val cpaNm: Double? = if (obj.cpa.valid) obj.cpa.cpa else null
+            val tcpaSec: Double? = if (obj.cpa.valid) obj.cpa.tcpa * 3600.0 else null
+
+            val isThreatTimeValid = obj.cpa.valid && obj.cpa.tcpa > 0 && obj.cpa.t1 >= 0 && obj.cpa.t2 >= 0
+            val isThreatDistance = obj.cpa.valid && obj.cpa.cpa <= cpaDist
+            val isThreatTime = (tcpaSec != null) && (tcpaSec <= cpaTime)
+            val isDangerous = extras.hasCpaWarning || (obj.isMovable() && isThreatTimeValid && isThreatDistance && isThreatTime)
+
+            val vesselName = obj.shipName?.trim().takeIf { !it.isNullOrEmpty() } ?: "MMSI: ${obj.mmsi}"
+            val shipType = obj.getShipTypeString().takeIf { it.isNotEmpty() && it != "unknown" } ?: "Vessel"
+
+            AisTargetSummary(
+                mmsi = obj.mmsi,
+                name = vesselName,
+                type = shipType,
+                rangeMeters = rangeMeters,
+                bearingDeg = bearingDeg,
+                sogKnots = sogKnots,
+                cogDeg = cogDeg,
+                cpaNm = cpaNm,
+                tcpaSec = tcpaSec,
+                isDangerous = isDangerous,
+                isMuted = extras.isMuted,
+                callSign = obj.callSign?.trim().takeIf { !it.isNullOrEmpty() },
+                lat = pos?.latitude ?: Double.NaN,
+                lon = pos?.longitude ?: Double.NaN,
+            )
+        }
+
+        return when (sortMode) {
+            AisSortMode.THREAT_CPA -> {
+                summaries.sortedWith(
+                    compareByDescending<AisTargetSummary> {
+                        it.isDangerous || ((it.cpaNm ?: Double.MAX_VALUE) < 1.0 && (it.tcpaSec ?: -1.0) > 0)
+                    }.thenBy {
+                        it.tcpaSec?.takeIf { t -> t > 0 } ?: Double.MAX_VALUE
+                    }.thenBy {
+                        it.cpaNm ?: Double.MAX_VALUE
+                    }.thenBy {
+                        it.rangeMeters
+                    }
+                )
+            }
+            AisSortMode.DISTANCE -> {
+                summaries.sortedBy { it.rangeMeters }
+            }
+            AisSortMode.NAME_ALPHA -> {
+                summaries.sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.name })
+            }
+        }
+    }
 
     fun getAisObject(mmsi: Int): AisObject? = objects[mmsi]
 

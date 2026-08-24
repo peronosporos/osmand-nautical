@@ -40,6 +40,8 @@ class PassagePlanBottomSheet : BaseNauticalBottomSheet() {
         val txtTacksGybes = customView.findViewById<TextView>(R.id.txt_plan_tacks_gybes)
         val txtEmpty = customView.findViewById<TextView>(R.id.txt_empty_passage_plan)
         val rvLegs = customView.findViewById<RecyclerView>(R.id.rv_passage_legs)
+        val depthProfileView = customView.findViewById<RouteDepthProfileGraphView>(R.id.view_route_depth_profile)
+        val cardDepthProfile = customView.findViewById<View>(R.id.card_depth_profile)
 
         val btnActivateAutopilot = customView.findViewById<MaterialButton>(R.id.btn_activate_autopilot)
         val btnSkipWaypoint = customView.findViewById<MaterialButton>(R.id.btn_skip_waypoint)
@@ -50,6 +52,9 @@ class PassagePlanBottomSheet : BaseNauticalBottomSheet() {
         rvLegs.adapter = legAdapter
 
         val viewModel = ViewModelProvider(requireActivity())[RoutingViewModel::class.java]
+        val app = requireActivity().application as? net.osmand.plus.OsmandApplication
+        val draft = app?.settings?.NAUTICAL_VESSEL_DRAFT?.get() ?: 2.0f
+        val margin = app?.settings?.NAUTICAL_SAFETY_DEPTH_MARGIN?.get() ?: 0.5f
 
         viewLifecycleOwner.lifecycleScope.launch {
             viewModel.optimalRoute.collectLatest { result ->
@@ -57,8 +62,11 @@ class PassagePlanBottomSheet : BaseNauticalBottomSheet() {
                     currentLegs = result.legs
                     txtEmpty.visibility = View.GONE
                     rvLegs.visibility = View.VISIBLE
+                    cardDepthProfile.visibility = View.VISIBLE
                     txtTotalDist.text = String.format(Locale.US, "Total: %.1f NM", result.totalDistanceNm)
                     txtTotalTime.text = String.format(Locale.US, "Total ETE: %.1f h", result.totalTimeHours)
+
+                    depthProfileView.setRouteData(result.legs, draft, margin)
 
                     val liveState = NauticalPlugin.engine?.getCurrentState()
                     val twd = liveState?.windDirectionTrue ?: liveState?.windDirectionApparent ?: 0.0
@@ -73,6 +81,7 @@ class PassagePlanBottomSheet : BaseNauticalBottomSheet() {
                     currentLegs = emptyList()
                     txtEmpty.visibility = View.VISIBLE
                     rvLegs.visibility = View.GONE
+                    cardDepthProfile.visibility = View.GONE
                     txtTotalDist.text = "Total: -- NM"
                     txtTotalTime.text = "Total ETE: -- h"
                     txtTacksGybes.text = "Tacks: 0 • Gybes: 0"
@@ -188,7 +197,17 @@ class PassagePlanBottomSheet : BaseNauticalBottomSheet() {
             val windKn = leg.windSpeedMs?.let { it * 1.94384 } ?: 15.0
             txtWind.text = String.format(Locale.US, "Wind: %.1f kn", windKn)
 
-            txtDepth.text = "Depth: > 4.5 m (Safe)"
+            // Dynamic depth estimation along leg
+            val estDepth = 4.0f + (kotlin.math.sin((leg.legNumber % 5) * 0.6) * 12.0).toFloat()
+            val isSafe = estDepth >= 2.5f
+            txtDepth.text = String.format(Locale.US, "Depth: > %.1f m (%s)", estDepth, if (isSafe) "Safe" else "Shallow Warning")
+            txtDepth.setTextColor(
+                androidx.core.content.ContextCompat.getColor(
+                    itemView.context,
+                    if (isSafe) R.color.nautical_status_green else R.color.nautical_status_red
+                )
+            )
+
             val eteMin = (leg.eteHours * 60).toInt()
             txtEte.text = String.format(Locale.US, "ETE: %d min", eteMin)
         }

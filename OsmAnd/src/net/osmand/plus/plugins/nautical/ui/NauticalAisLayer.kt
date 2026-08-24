@@ -93,6 +93,8 @@ class NauticalAisLayer(
             aisRestImage = null
         }
         objectDrawables.clear()
+        cpaLabelCache.clear()
+        cpaLastDistCache.clear()
         lastRenderZoom = -1
         lastRenderRefreshTimeMs = 0
     }
@@ -187,6 +189,8 @@ class NauticalAisLayer(
             objectDrawables[ais.mmsi]?.clearAisRenderData(markersCollection!!, vectorLinesCollection!!)
         }
         objectDrawables.remove(ais.mmsi)
+        cpaLabelCache.remove(ais.mmsi)
+        cpaLastDistCache.remove(ais.mmsi)
         mapActivityInvalidated = true
         scheduleThrottledMapRefresh()
     }
@@ -230,6 +234,66 @@ class NauticalAisLayer(
     }
     private val trackPath = Path()
 
+    // Preallocated CPA Intercept Vector rendering resources for zero per-frame allocations in onDraw
+    private val cpaVectorPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+        strokeWidth = 4f
+        color = 0xFFFF1744.toInt() // High-visibility danger red vector
+        pathEffect = DashPathEffect(floatArrayOf(16f, 8f), 0f)
+    }
+
+    private val cpaRingPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.FILL
+        color = 0xFFFF1744.toInt()
+        alpha = 160
+    }
+
+    private val cpaRingStrokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+        strokeWidth = 2.5f
+        color = Color.WHITE
+    }
+
+    private val cpaRingCenterPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.FILL
+        color = Color.WHITE
+    }
+
+    private val cpaBadgeBgPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.FILL
+        color = 0xDD1E0000.toInt() // Dark red-black badge background
+    }
+
+    private val cpaBadgeStrokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+        strokeWidth = 1.5f
+        color = 0xFFFF5252.toInt()
+    }
+
+    private val cpaBadgeTextPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.WHITE
+        textSize = 22f
+        textAlign = Paint.Align.LEFT
+        typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+    }
+
+    private val cpaVectorPath = Path()
+    private val cpaBadgeRect = RectF()
+    private val cpaLabelCache = ConcurrentHashMap<Int, String>()
+    private val cpaLastDistCache = ConcurrentHashMap<Int, Float>()
+
+    private fun getCpaLabel(mmsi: Int, cpaNm: Float): String {
+        val lastDist = cpaLastDistCache[mmsi]
+        if (lastDist != null && kotlin.math.abs(lastDist - cpaNm) < 0.05f) {
+            val cached = cpaLabelCache[mmsi]
+            if (cached != null) return cached
+        }
+        val label = String.format(java.util.Locale.US, "CPA: %.1f NM", cpaNm)
+        cpaLastDistCache[mmsi] = cpaNm
+        cpaLabelCache[mmsi] = label
+        return label
+    }
+
     private fun drawTracks(canvas: Canvas, tileBox: RotatedTileBox) {
         val manager = plugin.aisManager ?: return
         val aisObjects = manager.getAisObjects()
@@ -255,8 +319,92 @@ class NauticalAisLayer(
         }
     }
 
+    private fun drawCpaInterceptVectors(canvas: Canvas, tileBox: RotatedTileBox) {
+        val manager = plugin.aisManager ?: return
+        val aisObjects = manager.getAisObjects()
+        if (aisObjects.isEmpty()) return
+
+        val density = context.resources.displayMetrics.density
+        val baseRingRadius = 6f * density // 12dp diameter -> 6dp radius
+        val now = System.currentTimeMillis()
+        val pulsePhase = (now % 1000L) / 1000f
+        val pulseFactor = kotlin.math.sin(pulsePhase * Math.PI * 2.0).toFloat()
+        val pulseRadius = baseRingRadius + (2f * density * pulseFactor.coerceAtLeast(0f))
+        val pulseAlpha = (140 + 100 * pulseFactor).toInt().coerceIn(60, 240)
+        cpaRingPaint.alpha = pulseAlpha
+
+        val cpaWarningDist = plugin.aisCpaWarningDistance.get().toDouble()
+        val cpaWarningTimeSec = plugin.aisCpaWarningTime.get().toDouble()
+
+        for (ais in aisObjects) {
+            if (isOwnObjectHidden(ais)) continue
+            val pos = ais.position ?: continue
+
+            val extras = manager.getAisExtras(ais.mmsi)
+            val hasCpaWarning = extras.hasCpaWarning
+            val isThreatDist = ais.cpa.valid && ais.cpa.cpa <= cpaWarningDist
+            val isThreatTime = ais.cpa.valid && (ais.cpa.tcpa * 3600.0) <= cpaWarningTimeSec && ais.cpa.tcpa > 0
+            val isDangerous = hasCpaWarning || (extras.threatLevel >= 2) || (ais.isMovable() && isThreatDist && isThreatTime && ais.cpa.t1 >= 0 && ais.cpa.t2 >= 0)
+
+            if (!isDangerous && !hasCpaWarning) continue
+
+            // 1. Calculate & project vessel future position at t = TCPA
+            val cpaLat: Double
+            val cpaLon: Double
+            val cpaPos2 = ais.cpa.cpaPos2
+            if (cpaPos2 != null && cpaPos2.latitude != net.osmand.shared.aistracker.AisObjectConstants.INVALID_LAT && cpaPos2.longitude != net.osmand.shared.aistracker.AisObjectConstants.INVALID_LON) {
+                cpaLat = cpaPos2.latitude
+                cpaLon = cpaPos2.longitude
+            } else if (ais.cpa.valid && ais.cpa.tcpa > 0 && ais.sog > 0 && ais.cog != net.osmand.shared.aistracker.AisObjectConstants.INVALID_COG) {
+                val speedMs = ais.sog * 1852.0 / 3600.0
+                val distM = speedMs * (ais.cpa.tcpa * 3600.0)
+                val dest = net.osmand.util.MapUtils.rhumbDestinationPoint(pos.latitude, pos.longitude, distM, ais.cog)
+                cpaLat = dest.latitude
+                cpaLon = dest.longitude
+            } else {
+                continue
+            }
+
+            val startX = tileBox.getPixXFromLatLon(pos.latitude, pos.longitude)
+            val startY = tileBox.getPixYFromLatLon(pos.latitude, pos.longitude)
+            val endX = tileBox.getPixXFromLatLon(cpaLat, cpaLon)
+            val endY = tileBox.getPixYFromLatLon(cpaLat, cpaLon)
+
+            // 2. Draw dashed danger vector from vessel to its CPA position
+            cpaVectorPath.reset()
+            cpaVectorPath.moveTo(startX, startY)
+            cpaVectorPath.lineTo(endX, endY)
+            canvas.drawPath(cpaVectorPath, cpaVectorPaint)
+
+            // 3. Draw pulsating red ring (12dp diameter) at the CPA coordinate
+            canvas.drawCircle(endX, endY, pulseRadius, cpaRingPaint)
+            canvas.drawCircle(endX, endY, pulseRadius, cpaRingStrokePaint)
+            canvas.drawCircle(endX, endY, 2.5f * density, cpaRingCenterPaint)
+
+            // 4. Draw CPA distance badge: "CPA: x.x NM"
+            val cpaDistNm = if (ais.cpa.valid && ais.cpa.cpa != net.osmand.shared.aistracker.AisObjectConstants.INVALID_CPA) ais.cpa.cpa else 0f
+            val label = getCpaLabel(ais.mmsi, cpaDistNm)
+
+            val textWidth = cpaBadgeTextPaint.measureText(label)
+            val textHeight = cpaBadgeTextPaint.textSize
+            val badgePaddingH = 8f * density
+            val badgePaddingV = 4f * density
+            val badgeWidth = textWidth + (badgePaddingH * 2f)
+            val badgeHeight = textHeight + (badgePaddingV * 2f)
+
+            val badgeLeft = endX + pulseRadius + (6f * density)
+            val badgeTop = endY - (badgeHeight / 2f)
+
+            cpaBadgeRect.set(badgeLeft, badgeTop, badgeLeft + badgeWidth, badgeTop + badgeHeight)
+            canvas.drawRoundRect(cpaBadgeRect, 6f * density, 6f * density, cpaBadgeBgPaint)
+            canvas.drawRoundRect(cpaBadgeRect, 6f * density, 6f * density, cpaBadgeStrokePaint)
+            canvas.drawText(label, badgeLeft + badgePaddingH, badgeTop + badgePaddingV + (textHeight * 0.8f), cpaBadgeTextPaint)
+        }
+    }
+
     override fun onDraw(canvas: Canvas, tileBox: RotatedTileBox, settings: DrawSettings) {
         drawTracks(canvas, tileBox)
+        drawCpaInterceptVectors(canvas, tileBox)
         if (mapRenderer == null && tileBox.zoom >= START_ZOOM) {
             val aisObjects = plugin.aisManager?.getAisObjects() ?: return
             for (ais in aisObjects) {
@@ -277,6 +425,7 @@ class NauticalAisLayer(
     override fun onPrepareBufferImage(canvas: Canvas, tileBox: RotatedTileBox, settings: DrawSettings) {
         super.onPrepareBufferImage(canvas, tileBox, settings)
         drawTracks(canvas, tileBox)
+        drawCpaInterceptVectors(canvas, tileBox)
         val mapRenderer = mapRenderer
 
         val currentTextScale = textScale

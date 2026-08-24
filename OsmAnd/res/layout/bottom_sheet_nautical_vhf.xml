@@ -10,7 +10,19 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="20dp">
+        android:paddingStart="20dp"
+        android:paddingEnd="20dp"
+        android:paddingBottom="20dp"
+        android:paddingTop="8dp">
+
+        <!-- Centered Drag Handle Pill -->
+        <View
+            android:layout_width="36dp"
+            android:layout_height="4dp"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginTop="4dp"
+            android:layout_marginBottom="12dp"
+            android:background="?attr/divider_color" />
 
         <!-- Title -->
         <TextView
@@ -69,7 +81,8 @@
                         android:id="@+id/btn_vhf_power_toggle"
                         style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                         android:layout_width="wrap_content"
-                        android:layout_height="36dp"
+                        android:layout_height="48dp"
+                        android:minHeight="48dp"
                         android:text="25W HIGH"
                         android:textSize="12sp"
                         android:paddingStart="12dp"
@@ -80,7 +93,8 @@
                         android:id="@+id/btn_vhf_dual_watch_toggle"
                         style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                         android:layout_width="wrap_content"
-                        android:layout_height="36dp"
+                        android:layout_height="48dp"
+                        android:minHeight="48dp"
                         android:text="DUAL WATCH: OFF"
                         android:textSize="12sp"
                         android:paddingStart="12dp"
@@ -121,7 +135,8 @@
                 android:id="@+id/btn_ch_16"
                 style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                 android:layout_width="0dp"
-                android:layout_height="44dp"
+                android:layout_height="48dp"
+                android:minHeight="48dp"
                 android:layout_columnWeight="1"
                 android:layout_margin="4dp"
                 android:insetTop="0dp"
@@ -139,7 +154,8 @@
                 android:id="@+id/btn_ch_09"
                 style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                 android:layout_width="0dp"
-                android:layout_height="44dp"
+                android:layout_height="48dp"
+                android:minHeight="48dp"
                 android:layout_columnWeight="1"
                 android:layout_margin="4dp"
                 android:insetTop="0dp"
@@ -155,7 +171,8 @@
                 android:id="@+id/btn_ch_13"
                 style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                 android:layout_width="0dp"
-                android:layout_height="44dp"
+                android:layout_height="48dp"
+                android:minHeight="48dp"
                 android:layout_columnWeight="1"
                 android:layout_margin="4dp"
                 android:insetTop="0dp"
@@ -171,7 +188,8 @@
                 android:id="@+id/btn_ch_06"
                 style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                 android:layout_width="0dp"
-                android:layout_height="44dp"
+                android:layout_height="48dp"
+                android:minHeight="48dp"
                 android:layout_columnWeight="1"
                 android:layout_margin="4dp"
                 android:insetTop="0dp"
@@ -187,7 +205,8 @@
                 android:id="@+id/btn_ch_72"
                 style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                 android:layout_width="0dp"
-                android:layout_height="44dp"
+                android:layout_height="48dp"
+                android:minHeight="48dp"
                 android:layout_columnWeight="1"
                 android:layout_margin="4dp"
                 android:insetTop="0dp"
@@ -203,7 +222,8 @@
                 android:id="@+id/btn_ch_77"
                 style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                 android:layout_width="0dp"
-                android:layout_height="44dp"
+                android:layout_height="48dp"
+                android:minHeight="48dp"
                 android:layout_columnWeight="1"
                 android:layout_margin="4dp"
                 android:insetTop="0dp"
@@ -229,6 +249,7 @@
                 style="@style/Widget.MaterialComponents.Button"
                 android:layout_width="0dp"
                 android:layout_height="48dp"
+                android:minHeight="48dp"
                 android:layout_weight="1"
                 android:text="Select Channel"
                 android:textSize="13sp"
@@ -244,6 +265,7 @@
                 style="@style/Widget.MaterialComponents.Button"
                 android:layout_width="0dp"
                 android:layout_height="48dp"
+                android:minHeight="48dp"
                 android:layout_weight="1"
                 android:text="Live Stream"
                 android:textSize="13sp"
@@ -255,6 +277,22 @@
                 android:layout_marginStart="6dp" />
 
         </LinearLayout>
+
+        <!-- VHF Distress Radio Script Generator Button -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_vhf_distress_script"
+            style="@style/Widget.MaterialComponents.Button"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:layout_marginTop="10dp"
+            android:text="MAYDAY / PAN-PAN Radio Script"
+            android:textSize="13.5sp"
+            android:textStyle="bold"
+            android:textColor="@android:color/white"
+            app:backgroundTint="@color/nautical_status_bg_emergency"
+            app:icon="@drawable/ic_action_alert"
+            app:iconTint="@android:color/white"
+            app:cornerRadius="8dp" />
 
         <!-- Recent Transmissions & Audio Log -->
         <TextView

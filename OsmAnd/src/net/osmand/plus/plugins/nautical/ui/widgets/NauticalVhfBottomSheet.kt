@@ -47,6 +47,11 @@ class NauticalVhfBottomSheet : BaseNauticalBottomSheet() {
         val btnDualWatch = customView.findViewById<MaterialButton>(R.id.btn_vhf_dual_watch_toggle)
         val btnLiveAudio = customView.findViewById<MaterialButton>(R.id.btn_toggle_live_audio)
         val btnSelectChannel = customView.findViewById<MaterialButton>(R.id.btn_select_channel)
+        val btnDistressScript = customView.findViewById<MaterialButton>(R.id.btn_vhf_distress_script)
+
+        btnDistressScript?.setOnClickListener {
+            VhfDistressScriptBottomSheet.show(parentFragmentManager)
+        }
 
         val rvTransmissions = customView.findViewById<RecyclerView>(R.id.rv_vhf_transmissions)
         val txtNoTransmissions = customView.findViewById<View>(R.id.txt_no_vhf_transmissions)

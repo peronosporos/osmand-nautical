@@ -332,12 +332,70 @@ class NauticalContextMenuHelper(private val app: OsmandApplication) {
         )
 
         adapter.addItem(
+            ContextMenuItem("nautical_ebl_vrm").apply {
+                setTitleId(R.string.nautical_ebl_vrm, mapActivity)
+                icon = R.drawable.ic_action_direction_compass
+                setListener { _, _, _, _ ->
+                    val state = engine?.getCurrentState()
+                    val loc = app.locationProvider.lastKnownLocation
+                    val vesselLat = state?.latitude ?: loc?.latitude
+                    val vesselLon = state?.longitude ?: loc?.longitude
+
+                    if (vesselLat != null && vesselLon != null) {
+                        val distMeters = net.osmand.util.MapUtils.getDistance(vesselLat, vesselLon, lat, lon)
+                        val distNm = distMeters / 1852.0
+                        val trueBearing = (Math.toDegrees(net.osmand.util.MapUtils.bearing(vesselLat, vesselLon, lat, lon)) + 360.0) % 360.0
+                        val magVar = state?.magneticVariation ?: 0.0
+                        val magBearing = (trueBearing - Math.toDegrees(magVar) + 360.0) % 360.0
+
+                        val msg = String.format(
+                            Locale.US,
+                            "Electronic Bearing Line & Variable Range Marker:\n\n• Range: %.2f NM (%.0f meters)\n• Bearing: %03.1f° True (%03.1f° Magnetic)",
+                            distNm, distMeters, trueBearing, magBearing
+                        )
+                        androidx.appcompat.app.AlertDialog.Builder(mapActivity)
+                            .setTitle(R.string.nautical_ebl_vrm)
+                            .setMessage(msg)
+                            .setPositiveButton(R.string.shared_string_ok, null)
+                            .setNeutralButton(R.string.nautical_steer_here) { _, _ ->
+                                autopilot?.sendActiveWaypoint(lat, lon)
+                                app.showToastMessage(R.string.nautical_command_sent)
+                            }
+                            .show()
+                    } else {
+                        app.showToastMessage(R.string.nautical_no_gps_fix)
+                    }
+                    true
+                }
+            }
+        )
+
+        adapter.addItem(
+            ContextMenuItem("nautical_add_tactical_waypoint").apply {
+                setTitleId(R.string.nautical_add_tactical_waypoint, mapActivity)
+                icon = R.drawable.ic_action_flag
+                setListener { _, _, _, _ ->
+                    val currentPoints = engine?.getRoutePoints()?.toMutableList() ?: mutableListOf()
+                    currentPoints.add(Pair(lat, lon))
+                    engine?.loadRoute(currentPoints)
+                    app.showToastMessage("Tactical waypoint added (${currentPoints.size} total)")
+                    onRequestRefresh()
+                    app.osmandMap?.refreshMap()
+                    true
+                }
+            }
+        )
+
+        adapter.addItem(
             ContextMenuItem("nautical_set_anchor_here").apply {
                 setTitleId(R.string.nautical_set_anchor_here, mapActivity)
                 icon = R.drawable.ic_action_anchor
                 setListener { _, _, _, _ ->
                     app.settings.NAUTICAL_ANCHOR_LAT.set(lat)
                     app.settings.NAUTICAL_ANCHOR_LON.set(lon)
+                    if (app.settings.NAUTICAL_ANCHOR_RADIUS.get() <= 0f) {
+                        app.settings.NAUTICAL_ANCHOR_RADIUS.set(50f)
+                    }
                     net.osmand.plus.plugins.nautical.ui.anchor.AnchorWatchDialogFragment.show(mapActivity.supportFragmentManager)
                     onRequestRefresh()
                     app.osmandMap?.refreshMap()

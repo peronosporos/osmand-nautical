@@ -22,12 +22,24 @@ class MarineLogbookViewModel(
 
     enum class ExportFormat { CSV, GPX }
 
+    data class LogbookSummaryMetrics(
+        val totalDistanceNm: Double = 0.0,
+        val avgSogKnots: Double = 0.0,
+        val maxSogKnots: Double = 0.0,
+        val portTackPercent: Double = 50.0,
+        val starboardTackPercent: Double = 50.0,
+        val totalEntries: Int = 0
+    )
+
     sealed class UiEvent {
         data class ShowToast(val text: String) : UiEvent()
         data class ShowToastRes(val resId: Int, val formatArgs: Array<out Any> = emptyArray()) : UiEvent()
     }
 
     val logEntries: StateFlow<List<LogbookEntry>> = repository.logEntries
+
+    private val _summaryMetrics = MutableStateFlow(LogbookSummaryMetrics())
+    val summaryMetrics: StateFlow<LogbookSummaryMetrics> = _summaryMetrics.asStateFlow()
 
     private val _uiEvents = MutableSharedFlow<UiEvent>()
     val uiEvents: SharedFlow<UiEvent> = _uiEvents.asSharedFlow()
@@ -43,7 +55,50 @@ class MarineLogbookViewModel(
     private var isLoading = false
 
     init {
+        viewModelScope.launch {
+            logEntries.collect { entries ->
+                _summaryMetrics.value = calculateSummaryMetrics(entries)
+            }
+        }
         refresh()
+    }
+
+    companion object {
+        fun calculateSummaryMetrics(entries: List<LogbookEntry>): LogbookSummaryMetrics {
+            if (entries.isEmpty()) return LogbookSummaryMetrics()
+
+            var totalDistMeters = 0.0
+            val sorted = entries.sortedBy { it.timestamp }
+            for (i in 0 until sorted.size - 1) {
+                val p1 = sorted[i]
+                val p2 = sorted[i + 1]
+                if (p1.latitude != 0.0 && p1.longitude != 0.0 && p2.latitude != 0.0 && p2.longitude != 0.0) {
+                    totalDistMeters += net.osmand.util.MapUtils.getDistance(p1.latitude, p1.longitude, p2.latitude, p2.longitude)
+                }
+            }
+            val totalDistNm = totalDistMeters / 1852.0
+
+            val sogListKnots = entries.mapNotNull { it.sog?.let { sogMs -> sogMs * 1.94384 } }
+            val avgSog = if (sogListKnots.isNotEmpty()) sogListKnots.average() else 0.0
+            val maxSog = if (sogListKnots.isNotEmpty()) sogListKnots.maxOrNull() ?: 0.0 else 0.0
+
+            val twaEntries = entries.mapNotNull { it.twa }
+            val portCount = twaEntries.count {
+                val deg = (Math.toDegrees(it) + 360.0) % 360.0
+                deg > 180.0
+            }
+            val portPct = if (twaEntries.isNotEmpty()) (portCount.toDouble() / twaEntries.size) * 100.0 else 50.0
+            val stbdPct = if (twaEntries.isNotEmpty()) 100.0 - portPct else 50.0
+
+            return LogbookSummaryMetrics(
+                totalDistanceNm = totalDistNm,
+                avgSogKnots = avgSog,
+                maxSogKnots = maxSog,
+                portTackPercent = portPct,
+                starboardTackPercent = stbdPct,
+                totalEntries = entries.size
+            )
+        }
     }
 
     fun refresh() {

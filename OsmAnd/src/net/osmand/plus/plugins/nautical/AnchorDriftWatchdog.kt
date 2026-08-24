@@ -24,6 +24,12 @@ import kotlin.math.abs
  */
 class AnchorDriftWatchdog(private val app: OsmandApplication) {
 
+    enum class AnchorDriftStage {
+        SAFE,
+        CAUTION,       // 85% to 100% of swing radius
+        CRITICAL_DRAG  // >100% of swing radius for 3 consecutive filtered points
+    }
+
     private val log = PlatformUtil.getLog(AnchorDriftWatchdog::class.java)
     private val arbiter = NauticalAudioArbiter.getInstance(app)
     private var outOfBoundsCount = 0
@@ -33,9 +39,14 @@ class AnchorDriftWatchdog(private val app: OsmandApplication) {
     private var observationJob: Job? = null
     private val scope = CoroutineScope(NauticalDispatchers.SafetyDispatcher + SupervisorJob())
 
+    private val _driftStage = MutableStateFlow(AnchorDriftStage.SAFE)
+    val driftStage: StateFlow<AnchorDriftStage> = _driftStage.asStateFlow()
+
     private val _trackHistory = MutableStateFlow<List<TrackPoint>>(emptyList())
     val trackHistory: StateFlow<List<TrackPoint>> = _trackHistory.asStateFlow()
     private val trackBuffer = AnchorTrackBuffer()
+
+    private val gpsWindow = ArrayDeque<Pair<Double, Double>>(5)
 
     private var lastMapRefreshTime: Long = 0
     private val minMapRefreshIntervalMs = 500L
@@ -169,6 +180,25 @@ class AnchorDriftWatchdog(private val app: OsmandApplication) {
         }
     }
 
+    private fun applyMedianFilter(lat: Double, lon: Double): Pair<Double, Double> {
+        synchronized(gpsWindow) {
+            if (gpsWindow.size >= 5) {
+                gpsWindow.removeFirst()
+            }
+            gpsWindow.addLast(Pair(lat, lon))
+
+            if (gpsWindow.size < 3) {
+                return Pair(lat, lon)
+            }
+
+            val sortedLats = gpsWindow.map { it.first }.sorted()
+            val sortedLons = gpsWindow.map { it.second }.sorted()
+            val medianLat = sortedLats[sortedLats.size / 2]
+            val medianLon = sortedLons[sortedLons.size / 2]
+            return Pair(medianLat, medianLon)
+        }
+    }
+
     /**
      * Processes a new location update.
      * Returns true if alarm is triggered or remains active.
@@ -178,8 +208,17 @@ class AnchorDriftWatchdog(private val app: OsmandApplication) {
             onGpsRestored()
         }
 
+        // Apply 5-point rolling window median filter on incoming coordinates
+        val (filteredLat, filteredLon) = applyMedianFilter(location.latitude, location.longitude)
+        val filteredLocation = Location(location.provider).apply {
+            latitude = filteredLat
+            longitude = filteredLon
+            accuracy = location.accuracy
+            time = location.time
+        }
+
         // Feed position to the Snail Trail buffer regardless of mode
-        if (trackBuffer.addPosition(location)) {
+        if (trackBuffer.addPosition(filteredLocation)) {
             _trackHistory.value = trackBuffer.getPoints()
             requestThrottledMapRefresh()
         }
@@ -220,24 +259,38 @@ class AnchorDriftWatchdog(private val app: OsmandApplication) {
             return isAlarmActive
         }
 
-        val distance = KMapUtils.getDistance(anchorLat, anchorLon, location.latitude, location.longitude)
+        val distance = KMapUtils.getDistance(anchorLat, anchorLon, filteredLat, filteredLon)
 
         // 2. Swing-Depth Integration
         checkShallowSwing()
 
+        // 3. Multi-Stage Drift Detection:
+        //    - Caution Stage (85% to 100% of swing radius): silent warning state
+        //    - Critical Drag Stage (>100% of swing radius for 3 consecutive filtered points): triggers AlarmPriorityManager critical alert
         if (distance > radius) {
             outOfBoundsCount++
             log.warn("AnchorWatch (Local): Vessel outside boundary. Count: $outOfBoundsCount, Dist: ${distance.toInt()}m, Radius: ${radius.toInt()}m")
             
-            if ((outOfBoundsCount >= CONSECUTIVE_PINGS_THRESHOLD) && (!isAlarmActive)) {
-                triggerAlarm()
+            if (outOfBoundsCount >= CONSECUTIVE_PINGS_THRESHOLD) {
+                _driftStage.value = AnchorDriftStage.CRITICAL_DRAG
+                if (!isAlarmActive) {
+                    triggerAlarm()
+                }
+            } else {
+                _driftStage.value = AnchorDriftStage.CAUTION
             }
-        } else {
+        } else if (distance >= (radius * 0.85)) {
+            _driftStage.value = AnchorDriftStage.CAUTION
             if (outOfBoundsCount > 0) {
-                log.info("AnchorWatch (Local): Vessel back in boundary. Resetting counter.")
                 outOfBoundsCount = 0
             }
-            if (isAlarmActive && (distance < (radius * 0.9))) { 
+        } else {
+            _driftStage.value = AnchorDriftStage.SAFE
+            if (outOfBoundsCount > 0) {
+                log.info("AnchorWatch (Local): Vessel back in safe boundary. Resetting counter.")
+                outOfBoundsCount = 0
+            }
+            if (isAlarmActive && (distance < (radius * 0.85))) { 
                 stopAlarm()
             }
         }
@@ -384,11 +437,19 @@ class AnchorDriftWatchdog(private val app: OsmandApplication) {
     fun resetCounter() {
         log.info("AnchorWatch: Resetting watchdog state for new anchor position.")
         outOfBoundsCount = 0
+        synchronized(gpsWindow) {
+            gpsWindow.clear()
+        }
+        _driftStage.value = AnchorDriftStage.SAFE
     }
 
     fun reset() {
         stopAlarm()
         outOfBoundsCount = 0
+        synchronized(gpsWindow) {
+            gpsWindow.clear()
+        }
+        _driftStage.value = AnchorDriftStage.SAFE
     }
 
     private fun checkShallowSwing() {

@@ -6,6 +6,8 @@ import net.osmand.PlatformUtil
 import net.osmand.plus.R
 import net.osmand.plus.OsmandApplication
 import net.osmand.plus.plugins.nautical.audio.NauticalAudioArbiter
+import java.util.concurrent.ConcurrentHashMap
+import java.util.Locale
 
 /**
  * AlarmPriorityManager enforces strict safety hierarchy:
@@ -28,6 +30,8 @@ class AlarmPriorityManager(
     private val _activeCriticalNotifications = MutableStateFlow<Map<String, SignalKNotification>>(emptyMap())
     val activeCriticalNotifications = _activeCriticalNotifications.asStateFlow()
 
+    private val snoozedAlarms = ConcurrentHashMap<String, Long>()
+
     data class ThreatInfo(
         val vesselName: String,
         val cpaNm: Double,
@@ -38,20 +42,66 @@ class AlarmPriorityManager(
         startMonitoring()
     }
 
+    fun snoozeAlarm(notificationKey: String, durationMs: Long = 300_000L) {
+        val expiry = System.currentTimeMillis() + durationMs
+        snoozedAlarms[notificationKey] = expiry
+        log.info("AlarmPriorityManager: Snoozing alarm $notificationKey for ${durationMs}ms")
+
+        mapKeyToAlarmType(notificationKey)?.let { type ->
+            NauticalAudioArbiter.getInstance(app).muteAlarm(type, durationMs)
+        }
+
+        refreshActiveNotifications()
+
+        scope.launch {
+            delay(durationMs)
+            refreshActiveNotifications()
+        }
+    }
+
+    fun acknowledgeAlarm(notificationKey: String) {
+        snoozeAlarm(notificationKey, 300_000L)
+    }
+
+    fun isAlarmSnoozed(notificationKey: String): Boolean {
+        val expiry = snoozedAlarms[notificationKey] ?: return false
+        val now = System.currentTimeMillis()
+        if (now >= expiry) {
+            snoozedAlarms.remove(notificationKey)
+            return false
+        }
+        return true
+    }
+
+    private fun mapKeyToAlarmType(key: String): net.osmand.plus.plugins.nautical.audio.AlarmType? {
+        val lower = key.lowercase(Locale.US)
+        return when {
+            lower.contains("mob") -> net.osmand.plus.plugins.nautical.audio.AlarmType.MOB
+            lower.contains("watchdog") -> net.osmand.plus.plugins.nautical.audio.AlarmType.SOLO_WATCHDOG
+            lower.contains("collision") -> net.osmand.plus.plugins.nautical.audio.AlarmType.COLLISION_DANGER
+            lower.contains("anchor") -> net.osmand.plus.plugins.nautical.audio.AlarmType.ANCHOR_DRIFT
+            lower.contains("battery") -> net.osmand.plus.plugins.nautical.audio.AlarmType.ACTUATOR_OVERLOAD
+            lower.contains("xte") -> net.osmand.plus.plugins.nautical.audio.AlarmType.XTE_NAVIGATION
+            lower.contains("actuator") -> net.osmand.plus.plugins.nautical.audio.AlarmType.ACTUATOR_OVERLOAD
+            lower.contains("hazard") || lower.contains("navtex") || lower.contains("depth") -> net.osmand.plus.plugins.nautical.audio.AlarmType.MAP_HAZARD
+            else -> null
+        }
+    }
+
     private fun startMonitoring() {
         scope.launch {
             try {
                 dataBroker.marineState.map { it.notifications }
                     .distinctUntilChanged()
                     .collect { notifications ->
-                        val critical = notifications.filter { 
-                            (it.value.state == NotificationState.ALARM) || (it.value.state == NotificationState.EMERGENCY) 
+                        val critical = notifications.filter { (key, notif) ->
+                            ((notif.state == NotificationState.ALARM) || (notif.state == NotificationState.EMERGENCY)) && !isAlarmSnoozed(key)
                         }
                         _activeCriticalNotifications.value = critical
 
                         // Task 4: Solo Watchdog Alert
                         val watchdog = notifications[SignalKPaths.NOTIFICATIONS_WATCHDOG]
-                        if (watchdog != null && (watchdog.state == NotificationState.ALARM || watchdog.state == NotificationState.EMERGENCY)) {
+                        if (watchdog != null && (watchdog.state == NotificationState.ALARM || watchdog.state == NotificationState.EMERGENCY) && !isAlarmSnoozed(SignalKPaths.NOTIFICATIONS_WATCHDOG)) {
                             NauticalAudioArbiter.getInstance(app).dispatchAlarm(
                                 net.osmand.plus.plugins.nautical.audio.AlarmType.SOLO_WATCHDOG,
                                 voiceText = app.getString(R.string.nautical_solo_watchdog_timeout)
@@ -60,7 +110,7 @@ class AlarmPriorityManager(
 
                         // Task 2: Collision Risk from Plugin
                         val collisionRisk = notifications[SignalKPaths.NOTIFICATIONS_COLLISION_RISK]
-                        if (collisionRisk != null && (collisionRisk.state == NotificationState.ALARM || collisionRisk.state == NotificationState.EMERGENCY)) {
+                        if (collisionRisk != null && (collisionRisk.state == NotificationState.ALARM || collisionRisk.state == NotificationState.EMERGENCY) && !isAlarmSnoozed(SignalKPaths.NOTIFICATIONS_COLLISION_RISK)) {
                             if (!_isCollisionAlarmActive.value) {
                                 _isCollisionAlarmActive.value = true
                                 val vesselName = extractVesselName(collisionRisk.message)
@@ -71,6 +121,18 @@ class AlarmPriorityManager(
                     }
             } catch (e: Exception) {
                 log.error("Notification monitoring error: ${e.message}")
+            }
+        }
+
+        scope.launch {
+            try {
+                dataBroker.marineState.map { it.batteries }
+                    .distinctUntilChanged()
+                    .collect { batteries ->
+                        evaluateBatteryHealth(batteries)
+                    }
+            } catch (e: Exception) {
+                log.error("Battery safety monitoring error: ${e.message}")
             }
         }
 
@@ -94,7 +156,67 @@ class AlarmPriorityManager(
         }
     }
 
+    private fun evaluateBatteryHealth(batteries: Map<String, Battery>) {
+        if (batteries.isEmpty()) return
+        if (isAlarmSnoozed(SignalKPaths.NOTIFICATIONS_LOW_BATTERY)) return
+
+        for ((_, b) in batteries) {
+            val name = (b.name ?: "").lowercase(Locale.US)
+            val v = b.voltage ?: continue
+            val soc = b.stateOfCharge ?: 1.0
+
+            val is24V = v > 16.0
+            val houseMinV = if (is24V) 23.6 else 11.8
+            val starterMinV = if (is24V) 24.0 else 12.0
+
+            val isHouse = name.contains("house") || name.contains("service") || b.instance == "0"
+            val isStarter = name.contains("starter") || name.contains("engine") || b.instance == "1"
+
+            if (isHouse && (soc < 0.20 || v < houseMinV)) {
+                val msg = String.format(Locale.US, "Low Battery: %s at %.1fV (%.0f%% SoC)", b.name ?: "House Bank", v, soc * 100)
+                dataBroker.setNotification(
+                    SignalKPaths.NOTIFICATIONS_LOW_BATTERY,
+                    SignalKNotification(
+                        state = NotificationState.ALARM,
+                        method = listOf("visual", "sound"),
+                        message = msg
+                    )
+                )
+                NauticalAudioArbiter.getInstance(app).dispatchAlarm(
+                    net.osmand.plus.plugins.nautical.audio.AlarmType.ACTUATOR_OVERLOAD,
+                    voiceText = msg
+                )
+                break
+            } else if (isStarter && v < starterMinV) {
+                val msg = String.format(Locale.US, "Low Starter Battery: %s at %.1fV", b.name ?: "Starter Bank", v)
+                dataBroker.setNotification(
+                    SignalKPaths.NOTIFICATIONS_LOW_BATTERY,
+                    SignalKNotification(
+                        state = NotificationState.ALARM,
+                        method = listOf("visual", "sound"),
+                        message = msg
+                    )
+                )
+                NauticalAudioArbiter.getInstance(app).dispatchAlarm(
+                    net.osmand.plus.plugins.nautical.audio.AlarmType.ACTUATOR_OVERLOAD,
+                    voiceText = msg
+                )
+                break
+            }
+        }
+    }
+
     private fun evaluateThreat(cpa: Double, tcpa: Double, vesselName: String) {
+        val isCollSnoozed = isAlarmSnoozed(SignalKPaths.NOTIFICATIONS_COLLISION_RISK) || isAlarmSnoozed("collision") || isAlarmSnoozed("collision_danger")
+        if (isCollSnoozed) {
+            if (_isCollisionAlarmActive.value) {
+                _isCollisionAlarmActive.value = false
+                _threatDetails.value = null
+                NauticalAudioArbiter.getInstance(app).stopAlarm(net.osmand.plus.plugins.nautical.audio.AlarmType.COLLISION_DANGER)
+            }
+            return
+        }
+
         val cpaThreshold = app.settings.NAUTICAL_AIS_CPA_WARNING_DISTANCE.get()
         val tcpaThreshold = app.settings.NAUTICAL_AIS_CPA_WARNING_TIME.get().toDouble()
         
@@ -120,7 +242,34 @@ class AlarmPriorityManager(
         }
     }
 
+    fun refreshActiveNotifications() {
+        val notifications = dataBroker.marineState.value.notifications
+        val critical = notifications.filter { (key, notif) ->
+            ((notif.state == NotificationState.ALARM) || (notif.state == NotificationState.EMERGENCY)) && !isAlarmSnoozed(key)
+        }
+        _activeCriticalNotifications.value = critical
+
+        val isCollSnoozed = isAlarmSnoozed(SignalKPaths.NOTIFICATIONS_COLLISION_RISK) || isAlarmSnoozed("collision") || isAlarmSnoozed("collision_danger")
+        if (isCollSnoozed) {
+            if (_isCollisionAlarmActive.value) {
+                _isCollisionAlarmActive.value = false
+                _threatDetails.value = null
+                NauticalAudioArbiter.getInstance(app).stopAlarm(net.osmand.plus.plugins.nautical.audio.AlarmType.COLLISION_DANGER)
+            }
+        } else {
+            val cpa = dataBroker.marineState.value.cpa
+            val tcpa = dataBroker.marineState.value.tcpa
+            if (cpa != null && tcpa != null) {
+                val vesselName = dataBroker.marineState.value.threatName ?: app.getString(R.string.nautical_target_vessel)
+                evaluateThreat(cpa, tcpa, vesselName)
+            }
+        }
+    }
+
     private fun triggerCollisionAlarmAudio(vesselName: String, cpa: Double) {
+        val isCollSnoozed = isAlarmSnoozed(SignalKPaths.NOTIFICATIONS_COLLISION_RISK) || isAlarmSnoozed("collision") || isAlarmSnoozed("collision_danger")
+        if (isCollSnoozed) return
+
         val message = app.getString(R.string.nautical_collision_audio_msg, vesselName, cpa)
         NauticalAudioArbiter.getInstance(app).dispatchAlarm(
             net.osmand.plus.plugins.nautical.audio.AlarmType.COLLISION_DANGER,

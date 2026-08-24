@@ -82,9 +82,29 @@ class GpxStreamer(private val app: OsmandApplication) {
     suspend fun exportLogbookGpx(entries: List<LogbookEntry>): File? = withContext(Dispatchers.IO) {
         if (entries.isEmpty()) return@withContext null
 
+        val summary = net.osmand.plus.plugins.nautical.viewmodel.MarineLogbookViewModel.calculateSummaryMetrics(entries)
+
         val gpx = GpxFile("OsmAnd Nautical")
         gpx.metadata.name = app.getString(R.string.nautical_gpx_logbook_name)
         gpx.metadata.time = System.currentTimeMillis()
+        gpx.metadata.desc = String.format(
+            Locale.US,
+            "Voyage Logbook: %.1f NM sailed • Avg SOG: %.1f kn (Max: %.1f kn) • Tack: %.0f%% Port / %.0f%% Stbd • %d entries",
+            summary.totalDistanceNm,
+            summary.avgSogKnots,
+            summary.maxSogKnots,
+            summary.portTackPercent,
+            summary.starboardTackPercent,
+            summary.totalEntries
+        )
+
+        val metaEx = gpx.metadata.getExtensionsToWrite()
+        metaEx["total_distance_nm"] = String.format(Locale.US, "%.2f", summary.totalDistanceNm)
+        metaEx["avg_sog_knots"] = String.format(Locale.US, "%.2f", summary.avgSogKnots)
+        metaEx["max_sog_knots"] = String.format(Locale.US, "%.2f", summary.maxSogKnots)
+        metaEx["port_tack_percent"] = String.format(Locale.US, "%.1f", summary.portTackPercent)
+        metaEx["starboard_tack_percent"] = String.format(Locale.US, "%.1f", summary.starboardTackPercent)
+        metaEx["total_log_entries"] = summary.totalEntries.toString()
 
         val track = Track()
         val segment = TrkSegment()
@@ -95,17 +115,20 @@ class GpxStreamer(private val app: OsmandApplication) {
             pt.lon = entry.longitude
             pt.time = entry.timestamp
             
-            entry.sog?.let { pt.speed = it.toFloat() }
-            entry.cog?.let { pt.getExtensionsToWrite()["course"] = String.format(Locale.US, "%.1f", Math.toDegrees(it)) }
+            entry.sog?.let {
+                pt.speed = it.toFloat()
+                pt.getExtensionsToWrite()["sog_knots"] = String.format(Locale.US, "%.2f", it * 1.94384)
+            }
+            entry.cog?.let { pt.getExtensionsToWrite()["cog_deg"] = String.format(Locale.US, "%.1f", Math.toDegrees(it)) }
             
             val ex = pt.getExtensionsToWrite()
-            entry.heading?.let { ex["heading"] = String.format(Locale.US, "%.1f", Math.toDegrees(it)) }
-            entry.tws?.let { ex["vessel_wind_speed"] = String.format(Locale.US, "%.2f", it) }
-            entry.twa?.let { ex["vessel_wind_angle"] = String.format(Locale.US, "%.1f", Math.toDegrees(it)) }
-            entry.twd?.let { ex["vessel_wind_dir"] = String.format(Locale.US, "%.1f", Math.toDegrees(it)) }
-            entry.waterDepth?.let { ex["vessel_depth"] = String.format(Locale.US, "%.2f", it) }
-            entry.waterTemp?.let { ex["vessel_water_temp"] = String.format(Locale.US, "%.1f", it - 273.15) }
-            entry.batteryVoltage?.let { ex["vessel_voltage"] = String.format(Locale.US, "%.2f", it) }
+            entry.heading?.let { ex["heading_deg"] = String.format(Locale.US, "%.1f", Math.toDegrees(it)) }
+            entry.tws?.let { ex["vessel_wind_speed_knots"] = String.format(Locale.US, "%.1f", it * 1.94384) }
+            entry.twa?.let { ex["vessel_wind_angle_deg"] = String.format(Locale.US, "%.1f", Math.toDegrees(it)) }
+            entry.twd?.let { ex["vessel_wind_dir_deg"] = String.format(Locale.US, "%.1f", Math.toDegrees(it)) }
+            entry.waterDepth?.let { ex["vessel_depth_m"] = String.format(Locale.US, "%.2f", it) }
+            entry.waterTemp?.let { ex["vessel_water_temp_c"] = String.format(Locale.US, "%.1f", it - 273.15) }
+            entry.batteryVoltage?.let { ex["vessel_voltage_v"] = String.format(Locale.US, "%.2f", it) }
             entry.engineHours?.let { ex["vessel_engine_hours"] = String.format(Locale.US, "%.1f", it) }
             
             if (entry.sailPlan.isNotEmpty()) ex["vessel_sail_plan"] = entry.sailPlan

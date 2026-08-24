@@ -31,6 +31,7 @@ class TacticalHudView @JvmOverloads constructor(
     private val setText: TextView
     private val gustText: TextView
     private val rudderView: RudderView
+    private val analogWindRoseView: net.osmand.plus.plugins.nautical.ui.widgets.AnalogWindRoseView
     private val telemetryBuilder = StringBuilder()
     
     private var lastAnnouncementTime = 0L
@@ -49,6 +50,15 @@ class TacticalHudView @JvmOverloads constructor(
     private val forwardHazardWarning: TextView
     private val riggingLoadWarning: TextView
 
+    var isNightVision: Boolean = false
+        set(value) {
+            if (field != value) {
+                field = value
+                applyNightVisionTheme(value)
+                invalidate()
+            }
+        }
+
     init {
         LayoutInflater.from(context).inflate(R.layout.nautical_tactical_hud, this, true)
         rotText = findViewById(R.id.rot_value)
@@ -56,6 +66,7 @@ class TacticalHudView @JvmOverloads constructor(
         setText = findViewById(R.id.set_value)
         gustText = findViewById(R.id.gust_indicator)
         rudderView = findViewById(R.id.rudder_view)
+        analogWindRoseView = findViewById(R.id.analog_wind_rose_view)
         
         mobButton = findViewById(R.id.btn_hud_mob)
         resetWatchdogButton = findViewById(R.id.btn_reset_watchdog)
@@ -64,6 +75,7 @@ class TacticalHudView @JvmOverloads constructor(
         riggingLoadWarning = findViewById(R.id.rigging_load_warning)
 
         mobButton.setOnClickListener {
+            mobButton.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS)
             val plugin = NauticalPlugin.getInstance()
             val loc = plugin?.application?.locationProvider?.lastKnownLocation
             if (loc != null) {
@@ -77,10 +89,12 @@ class TacticalHudView @JvmOverloads constructor(
         }
 
         resetWatchdogButton.setOnClickListener {
+            resetWatchdogButton.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
             resetWatchdog()
         }
 
         contextButton.setOnClickListener {
+            contextButton.performHapticFeedback(android.view.HapticFeedbackConstants.CONTEXT_CLICK)
             showContextPicker()
         }
 
@@ -98,6 +112,40 @@ class TacticalHudView @JvmOverloads constructor(
         setPrefix = context.getString(R.string.nautical_set_label, "", "").trim()
 
         setupAccessibility()
+
+        val app = context.applicationContext as? net.osmand.plus.OsmandApplication
+        isNightVision = NauticalPlugin.isNightVision(app)
+    }
+
+    private fun applyNightVisionTheme(enabled: Boolean) {
+        val density = context.resources.displayMetrics.density
+        if (enabled) {
+            val bg = android.graphics.drawable.GradientDrawable().apply {
+                shape = android.graphics.drawable.GradientDrawable.RECTANGLE
+                cornerRadius = 12f * density
+                setColor(0xEE120000.toInt()) // Translucent pitch black
+                setStroke((1.5f * density).toInt(), 0xFFFF1744.toInt()) // Deep red border
+            }
+            background = bg
+            rotText.setTextColor(0xFFFF1744.toInt())
+            driftText.setTextColor(0xFFFF8A80.toInt())
+            setText.setTextColor(0xFFFF8A80.toInt())
+            contextButton.setBackgroundColor(0xFF1E0003.toInt())
+            contextButton.setTextColor(0xFFFF8A80.toInt())
+            contextButton.iconTint = android.content.res.ColorStateList.valueOf(0xFFFF1744.toInt())
+            resetWatchdogButton.setBackgroundColor(0xFF1E0003.toInt())
+            resetWatchdogButton.setTextColor(0xFFFF8A80.toInt())
+            resetWatchdogButton.iconTint = android.content.res.ColorStateList.valueOf(0xFFFF1744.toInt())
+            analogWindRoseView.isNightVision = true
+            rudderView.setNightMode(true)
+        } else {
+            setBackgroundResource(R.drawable.bg_nautical_hud_panel)
+            rotText.setTextColor(Color.WHITE)
+            driftText.setTextColor(Color.WHITE)
+            setText.setTextColor(Color.WHITE)
+            analogWindRoseView.isNightVision = false
+            rudderView.setNightMode(false)
+        }
     }
 
     private fun setupAccessibility() {
@@ -268,6 +316,19 @@ class TacticalHudView @JvmOverloads constructor(
         updateTelemetry(rotText, state.rateOfTurn, rotPrefix, "angle", state.timeOfRotFix)
         updateTelemetry(driftText, state.drift, driftPrefix, "speed", state.timeOfDriftFix)
         updateTelemetry(setText, state.setTrue, setPrefix, "angle", state.timeOfDriftFix)
+
+        // Wind Rose Tactical Instrument
+        val isNight = NauticalPlugin.isNightVision(app)
+        isNightVision = isNight
+        analogWindRoseView.setData(
+            awaRad = if (isOffline) null else state.windDirectionApparent,
+            awsMs = if (isOffline) null else state.windSpeedApparent,
+            twaRad = if (isOffline) null else state.windDirectionTrue,
+            twsMs = if (isOffline) null else state.windSpeedTrue,
+            targetUpwindRad = Math.toRadians(42.0),
+            targetDownwindRad = Math.toRadians(145.0),
+            isNightMode = isNight
+        )
 
         // Gust Indicator Integration
         val filterService = net.osmand.plus.plugins.nautical.di.SailingDependencyContainer.environmentalFilterService

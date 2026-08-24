@@ -111,6 +111,7 @@ object SignalKPaths {
     const val NOTIFICATIONS_MOB = "notifications.security.mob"
     const val NOTIFICATIONS_WATCHDOG = "notifications.safety.watchdog"
     const val NOTIFICATIONS_COLLISION_RISK = "notifications.navigation.collisionRisk"
+    const val NOTIFICATIONS_LOW_BATTERY = "notifications.electrical.lowBattery"
 
     // Media
     const val MEDIA_FUSION_PREFIX = "entertainment.device.fusion."

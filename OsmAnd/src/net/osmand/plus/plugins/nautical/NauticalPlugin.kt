@@ -1322,6 +1322,8 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
         uiOverlayManager.initWatchScheduleSystem(activity, hudManager)
         uiOverlayManager.initWorkflowSystem(activity, hudManager, workflowEngine, workflowManager)
         uiOverlayManager.initTacticalHudSystem(activity, hudManager)
+        uiOverlayManager.initMarineAlarmBannerSystem(activity, hudManager, alarmPriorityManager)
+        uiOverlayManager.initGribTimeScrubberSystem(activity, hudManager)
 
         layerManager.layerController?.let { controller ->
             uiOverlayManager.initMobSystem(activity, controller, hudManager, mobStateMachine, mobAudioAlertManager) { mobViewModel = it }

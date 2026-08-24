@@ -5,8 +5,7 @@ import androidx.annotation.Keep
 import net.osmand.plus.R
 import net.osmand.plus.activities.MapActivity
 import net.osmand.plus.plugins.nautical.NauticalPlugin
-import net.osmand.plus.plugins.nautical.ui.NauticalBuddyListFragment
-import net.osmand.plus.plugins.nautical.ui.NauticalTargetPicker
+import net.osmand.plus.plugins.nautical.ui.widgets.AisTargetListBottomSheet
 import net.osmand.plus.quickaction.QuickAction
 import net.osmand.plus.quickaction.QuickActionIds.NAUTICAL_AIS_ACTION_ID
 import net.osmand.plus.quickaction.QuickActionType
@@ -40,11 +39,6 @@ class NauticalAisQuickAction : QuickAction {
             mapActivity.app.showToastMessage(R.string.nautical_plugin_inactive)
             return
         }
-        val aisObjects = plugin.aisManager?.getAisObjects() ?: emptyList()
-        if (aisObjects.isNotEmpty()) {
-            NauticalTargetPicker.newInstance(aisObjects).show(mapActivity.supportFragmentManager, "ais_target_picker")
-        } else {
-            NauticalBuddyListFragment.show(mapActivity.supportFragmentManager)
-        }
+        AisTargetListBottomSheet.show(mapActivity.supportFragmentManager)
     }
 }

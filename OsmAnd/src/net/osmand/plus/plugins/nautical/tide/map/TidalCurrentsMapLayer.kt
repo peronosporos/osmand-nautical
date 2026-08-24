@@ -145,19 +145,23 @@ class TidalCurrentsMapLayer(context: Context) : OsmandMapLayer(context) {
     }
 
     private fun drawTidalArrow(canvas: Canvas, x: Float, y: Float, speed: Double, angleRad: Double, isNight: Boolean) {
+        val speedKnots = speed * 1.94384
         if (isNight) {
-            arrowPaint.color = Color.RED
-        } else {
-            // Color based on speed: Blue for slow, Red for fast
             arrowPaint.color = when {
-                speed > 2.0 -> Color.RED
-                speed > 1.0 -> Color.YELLOW
-                else -> Color.CYAN
+                speedKnots > 2.5 -> 0xFFFF1744.toInt() // Vibrant deep red
+                speedKnots > 1.0 -> 0xFFD50000.toInt() // Mid deep red
+                else -> 0xFF8B0000.toInt() // Dark red
+            }
+        } else {
+            arrowPaint.color = when {
+                speedKnots > 2.5 -> 0xFFFF1744.toInt() // Red for fast tidal currents
+                speedKnots > 1.0 -> 0xFFFFD600.toInt() // Amber for moderate currents
+                else -> 0xFF00E5FF.toInt() // Cyan for gentle currents
             }
         }
 
-        val length = (20 + speed * 30).toFloat()
-        val width = (4 + speed * 4).toFloat()
+        val length = (24f + (speedKnots.toFloat() * 18f)).coerceIn(24f, 100f)
+        val width = (3.5f + (speedKnots.toFloat() * 2f)).coerceIn(3.5f, 12f)
         arrowPaint.strokeWidth = width
 
         canvas.withTranslation(x, y) {
@@ -168,10 +172,10 @@ class TidalCurrentsMapLayer(context: Context) : OsmandMapLayer(context) {
             arrowPath.lineTo(length, 0f)
 
             // Arrow head
-            val headSize = 15f
-            arrowPath.moveTo(length - headSize, -headSize)
+            val headSize = (length * 0.32f).coerceIn(10f, 26f)
+            arrowPath.moveTo(length - headSize, -headSize * 0.7f)
             arrowPath.lineTo(length, 0f)
-            arrowPath.lineTo(length - headSize, headSize)
+            arrowPath.lineTo(length - headSize, headSize * 0.7f)
 
             drawPath(arrowPath, arrowPaint)
         }
