@@ -383,8 +383,7 @@ class MarineAlarmBannerView @JvmOverloads constructor(
 
     private fun resolveActiveAlarm(): ActiveAlarmInfo? {
         val apm = alarmPriorityManager ?: NauticalPlugin.getInstance()?.alarmPriorityManager ?: return null
-        val plugin = NauticalPlugin.getInstance()
-        val state = plugin?.marineEngine?.getCurrentState() ?: NauticalPlugin.engine?.getCurrentState()
+        val state = NauticalPlugin.engine?.getCurrentState()
         val ownLoc = (context.applicationContext as? OsmandApplication)?.locationProvider?.lastKnownLocation
 
         // 1. Man Overboard (MOB) - Priority 1
