@@ -154,7 +154,7 @@ class GribTimeScrubberView @JvmOverloads constructor(
             layoutParams = LinearLayout.LayoutParams(size, size).apply {
                 rightMargin = (4f * density).toInt()
             }
-            setImageResource(R.drawable.ic_action_arrow_left)
+            setImageResource(R.drawable.ic_arrow_back)
             setColorFilter(Color.WHITE)
             setOnClickListener {
                 stopPlayback()
@@ -169,7 +169,7 @@ class GribTimeScrubberView @JvmOverloads constructor(
             layoutParams = LinearLayout.LayoutParams(size, size).apply {
                 rightMargin = (4f * density).toInt()
             }
-            setImageResource(R.drawable.ic_action_play_dark)
+            setImageResource(R.drawable.ic_play_dark)
             setColorFilter(0xFF00E5FF.toInt())
             setOnClickListener {
                 togglePlayback()
@@ -183,7 +183,7 @@ class GribTimeScrubberView @JvmOverloads constructor(
             layoutParams = LinearLayout.LayoutParams(size, size).apply {
                 rightMargin = (8f * density).toInt()
             }
-            setImageResource(R.drawable.ic_action_arrow_right)
+            setImageResource(R.drawable.ic_action_profile_next)
             setColorFilter(Color.WHITE)
             setOnClickListener {
                 stopPlayback()
@@ -250,7 +250,7 @@ class GribTimeScrubberView @JvmOverloads constructor(
     fun startPlayback() {
         if (timeSteps.isEmpty()) return
         isPlaying = true
-        playPauseButton.setImageResource(R.drawable.ic_action_pause_dark)
+        playPauseButton.setImageResource(R.drawable.ic_pause)
         playbackJob?.cancel()
         playbackJob = viewScope.launch {
             while (isActive && isPlaying) {
@@ -265,7 +265,7 @@ class GribTimeScrubberView @JvmOverloads constructor(
         isPlaying = false
         playbackJob?.cancel()
         playbackJob = null
-        playPauseButton.setImageResource(R.drawable.ic_action_play_dark)
+        playPauseButton.setImageResource(R.drawable.ic_play_dark)
     }
 
     fun stepRelative(offset: Int) {

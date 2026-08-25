@@ -426,13 +426,11 @@ class MarineAlarmBannerView @JvmOverloads constructor(
             }
 
             // Find target vessel location
-            val aisManager = plugin?.aisManager
-            val dangerousAis = aisManager?.getAisObjects()?.firstOrNull { ais ->
-                val extras = aisManager.getAisExtras(ais.mmsi)
-                extras.hasCpaWarning || extras.threatLevel >= 2 || (ais.shipName != null && ais.shipName.equals(vesselName, ignoreCase = true))
-            }
-            val pos = dangerousAis?.position
-            val targetPos = if (pos != null) LatLon(pos.latitude, pos.longitude) else null
+            val aisManager = NauticalPlugin.getInstance()?.aisManager
+            val dangerousAis = aisManager?.getTargetSummaries()?.firstOrNull { it.isDangerous || it.name.equals(vesselName, ignoreCase = true) }
+            val targetPos = if (dangerousAis != null && MarineStateConstants.isValidLat(dangerousAis.lat) && MarineStateConstants.isValidLon(dangerousAis.lon)) {
+                LatLon(dangerousAis.lat, dangerousAis.lon)
+            } else null
 
             return ActiveAlarmInfo(
                 key = SignalKPaths.NOTIFICATIONS_COLLISION_RISK,

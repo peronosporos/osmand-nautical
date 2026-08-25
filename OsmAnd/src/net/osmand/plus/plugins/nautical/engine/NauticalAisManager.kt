@@ -698,8 +698,8 @@ class NauticalAisManager(private val app: OsmandApplication) : AisDataListener {
             val sogKnots = if (obj.sog != AisObjectConstants.INVALID_SOG && obj.sog >= 0.0) obj.sog else 0.0
             val cogDeg = if (obj.cog != AisObjectConstants.INVALID_COG && obj.cog >= 0.0) obj.cog else 0.0
 
-            val cpaNm: Double? = if (obj.cpa.valid) obj.cpa.cpa else null
-            val tcpaSec: Double? = if (obj.cpa.valid) obj.cpa.tcpa * 3600.0 else null
+            val cpaNm: Double? = if (obj.cpa.valid) obj.cpa.cpa.toDouble() else null
+            val tcpaSec: Double? = if (obj.cpa.valid) obj.cpa.tcpa.toDouble() * 3600.0 else null
 
             val isThreatTimeValid = obj.cpa.valid && obj.cpa.tcpa > 0 && obj.cpa.t1 >= 0 && obj.cpa.t2 >= 0
             val isThreatDistance = obj.cpa.valid && obj.cpa.cpa <= cpaDist

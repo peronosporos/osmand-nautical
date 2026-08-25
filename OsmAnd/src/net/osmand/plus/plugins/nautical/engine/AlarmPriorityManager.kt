@@ -174,14 +174,12 @@ class AlarmPriorityManager(
 
             if (isHouse && (soc < 0.20 || v < houseMinV)) {
                 val msg = String.format(Locale.US, "Low Battery: %s at %.1fV (%.0f%% SoC)", b.name ?: "House Bank", v, soc * 100)
-                dataBroker.setNotification(
-                    SignalKPaths.NOTIFICATIONS_LOW_BATTERY,
-                    SignalKNotification(
-                        state = NotificationState.ALARM,
-                        method = listOf("visual", "sound"),
-                        message = msg
-                    )
+                val notif = SignalKNotification(
+                    message = msg,
+                    state = NotificationState.ALARM,
+                    methods = listOf("visual", "sound")
                 )
+                _activeCriticalNotifications.value = _activeCriticalNotifications.value + (SignalKPaths.NOTIFICATIONS_LOW_BATTERY to notif)
                 NauticalAudioArbiter.getInstance(app).dispatchAlarm(
                     net.osmand.plus.plugins.nautical.audio.AlarmType.ACTUATOR_OVERLOAD,
                     voiceText = msg
@@ -189,14 +187,12 @@ class AlarmPriorityManager(
                 break
             } else if (isStarter && v < starterMinV) {
                 val msg = String.format(Locale.US, "Low Starter Battery: %s at %.1fV", b.name ?: "Starter Bank", v)
-                dataBroker.setNotification(
-                    SignalKPaths.NOTIFICATIONS_LOW_BATTERY,
-                    SignalKNotification(
-                        state = NotificationState.ALARM,
-                        method = listOf("visual", "sound"),
-                        message = msg
-                    )
+                val notif = SignalKNotification(
+                    message = msg,
+                    state = NotificationState.ALARM,
+                    methods = listOf("visual", "sound")
                 )
+                _activeCriticalNotifications.value = _activeCriticalNotifications.value + (SignalKPaths.NOTIFICATIONS_LOW_BATTERY to notif)
                 NauticalAudioArbiter.getInstance(app).dispatchAlarm(
                     net.osmand.plus.plugins.nautical.audio.AlarmType.ACTUATOR_OVERLOAD,
                     voiceText = msg
