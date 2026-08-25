@@ -25,6 +25,7 @@ import net.osmand.plus.OsmandApplication
 import net.osmand.plus.R
 import net.osmand.plus.activities.MapActivity
 import net.osmand.plus.plugins.nautical.NauticalPlugin
+import net.osmand.plus.plugins.nautical.engine.AisTargetSummary
 import net.osmand.plus.plugins.nautical.engine.AlarmPriorityManager
 import net.osmand.plus.plugins.nautical.engine.MarineStateConstants
 import net.osmand.plus.plugins.nautical.engine.SignalKPaths
@@ -427,7 +428,7 @@ class MarineAlarmBannerView @JvmOverloads constructor(
 
             // Find target vessel location
             val aisManager = NauticalPlugin.getInstance()?.aisManager
-            val dangerousAis = aisManager?.getTargetSummaries()?.firstOrNull { it.isDangerous || it.name.equals(vesselName, ignoreCase = true) }
+            val dangerousAis = aisManager?.getActiveTargets()?.firstOrNull { it.isDangerous || it.name.equals(vesselName, ignoreCase = true) }
             val targetPos = if (dangerousAis != null && MarineStateConstants.isValidLat(dangerousAis.lat) && MarineStateConstants.isValidLon(dangerousAis.lon)) {
                 LatLon(dangerousAis.lat, dangerousAis.lon)
             } else null
