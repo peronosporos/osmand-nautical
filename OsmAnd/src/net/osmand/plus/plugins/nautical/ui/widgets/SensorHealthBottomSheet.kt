@@ -114,7 +114,7 @@ class SensorHealthBottomSheet : BaseNauticalBottomSheet() {
 
         // 3. Depth Sounder
         val depthAgeMs = if (state.timeOfDepthFix > 0) now - state.timeOfDepthFix else -1L
-        val hasDepth = state.depthBelowTransducer != null || state.depthBelowKeel != null || state.depthBelowWaterline != null
+        val hasDepth = state.depthBelowTransducer != null || state.depthBelowKeel != null || state.depthSurfaceToTransducer != null
         setHealthBadge(badgeDepth, depthAgeMs, hasDepth)
 
         val depthXdrStr = state.depthBelowTransducer?.let { String.format(Locale.US, "%.2f m", it) } ?: "--"
