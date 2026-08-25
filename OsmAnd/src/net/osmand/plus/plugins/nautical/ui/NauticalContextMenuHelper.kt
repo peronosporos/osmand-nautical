@@ -344,7 +344,10 @@ class NauticalContextMenuHelper(private val app: OsmandApplication) {
                     if (vesselLat != null && vesselLon != null) {
                         val distMeters = net.osmand.util.MapUtils.getDistance(vesselLat, vesselLon, lat, lon)
                         val distNm = distMeters / 1852.0
-                        val trueBearing = (Math.toDegrees(net.osmand.util.MapUtils.bearing(vesselLat, vesselLon, lat, lon)) + 360.0) % 360.0
+                        val dLon = Math.toRadians(lon - vesselLon)
+                        val y = Math.sin(dLon) * Math.cos(Math.toRadians(lat))
+                        val x = Math.cos(Math.toRadians(vesselLat)) * Math.sin(Math.toRadians(lat)) - Math.sin(Math.toRadians(vesselLat)) * Math.cos(Math.toRadians(lat)) * Math.cos(dLon)
+                        val trueBearing = (Math.toDegrees(Math.atan2(y, x)) + 360.0) % 360.0
                         val magVar = state?.magneticVariation ?: 0.0
                         val magBearing = (trueBearing - Math.toDegrees(magVar) + 360.0) % 360.0
 
@@ -363,7 +366,7 @@ class NauticalContextMenuHelper(private val app: OsmandApplication) {
                             }
                             .show()
                     } else {
-                        app.showToastMessage(R.string.nautical_no_gps_fix)
+                        app.showToastMessage(R.string.nautical_error_no_gps)
                     }
                     true
                 }

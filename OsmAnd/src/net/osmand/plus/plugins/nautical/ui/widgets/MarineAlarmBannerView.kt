@@ -202,9 +202,7 @@ class MarineAlarmBannerView @JvmOverloads constructor(
 
         // Snooze 5m Button
         snoozeButton = TextView(context).apply {
-            text = context.getString(R.string.shared_string_snooze).let { base ->
-                if (base.isNotEmpty() && !base.startsWith("shared_string")) "$base 5m" else "Snooze 5m"
-            }
+            text = "Snooze 5m"
             setTextColor(Color.WHITE)
             textSize = 12f
             typeface = android.graphics.Typeface.DEFAULT_BOLD
@@ -386,7 +384,7 @@ class MarineAlarmBannerView @JvmOverloads constructor(
     private fun resolveActiveAlarm(): ActiveAlarmInfo? {
         val apm = alarmPriorityManager ?: NauticalPlugin.getInstance()?.alarmPriorityManager ?: return null
         val plugin = NauticalPlugin.getInstance()
-        val state = plugin?.engine?.getCurrentState()
+        val state = plugin?.marineEngine?.getCurrentState() ?: NauticalPlugin.engine?.getCurrentState()
         val ownLoc = (context.applicationContext as? OsmandApplication)?.locationProvider?.lastKnownLocation
 
         // 1. Man Overboard (MOB) - Priority 1
@@ -434,7 +432,8 @@ class MarineAlarmBannerView @JvmOverloads constructor(
                 val extras = aisManager.getAisExtras(ais.mmsi)
                 extras.hasCpaWarning || extras.threatLevel >= 2 || (ais.shipName != null && ais.shipName.equals(vesselName, ignoreCase = true))
             }
-            val targetPos = dangerousAis?.position?.let { LatLon(it.latitude, it.longitude) }
+            val pos = dangerousAis?.position
+            val targetPos = if (pos != null) LatLon(pos.latitude, pos.longitude) else null
 
             return ActiveAlarmInfo(
                 key = SignalKPaths.NOTIFICATIONS_COLLISION_RISK,
@@ -474,9 +473,12 @@ class MarineAlarmBannerView @JvmOverloads constructor(
                 }
                 lowerKey.contains("anchor") -> {
                     title = "ANCHOR DRAG ALARM"
-                    location = state?.anchor?.let {
-                        if (it.latitude != null && it.longitude != null) LatLon(it.latitude, it.longitude) else it.position
-                    } ?: ownLoc?.let { LatLon(it.latitude, it.longitude) }
+                    val anchor = state?.anchor
+                    val aLat = anchor?.latitude ?: anchor?.position?.latitude
+                    val aLon = anchor?.longitude ?: anchor?.position?.longitude
+                    location = if (aLat != null && aLon != null) {
+                        LatLon(aLat, aLon)
+                    } else ownLoc?.let { LatLon(it.latitude, it.longitude) }
                 }
                 else -> {
                     title = key.substringAfterLast('.').replace('_', ' ').uppercase(Locale.US) + " ALARM"

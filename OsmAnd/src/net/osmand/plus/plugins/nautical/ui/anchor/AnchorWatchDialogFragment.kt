@@ -299,7 +299,7 @@ class AnchorWatchDialogFragment : BaseMaterialBottomSheetDialogFragment() {
                         btnQuickDropBow?.isEnabled = isSafe
                         btnDropAnchor?.isEnabled = isSafe
                         
-                        val liveDepth = state.depthBelowTransducer ?: state.depthBelowSurface ?: state.depthBelowKeel
+                        val liveDepth = state.depthBelowTransducer ?: state.depthSurfaceToTransducer ?: state.depthBelowKeel
                         val hasDepth = liveDepth != null && !state.stalePaths.contains("environment.depth.belowTransducer")
                         txtSensorWarning?.visibility = if (hasDepth) View.GONE else View.VISIBLE
                         if (!hasDepth) {

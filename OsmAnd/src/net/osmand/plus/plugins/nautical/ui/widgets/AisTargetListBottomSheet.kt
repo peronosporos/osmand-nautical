@@ -81,7 +81,6 @@ class AisTargetListBottomSheet : BaseBottomSheetDialogFragment() {
                     if ((mapActivity?.mapView?.zoom ?: 0) < 14) {
                         mapActivity?.mapView?.setIntZoom(15)
                     }
-                    app?.osmandMap?.setLatLon(target.lat, target.lon)
                 }
             },
             onRowLongClick = { target ->

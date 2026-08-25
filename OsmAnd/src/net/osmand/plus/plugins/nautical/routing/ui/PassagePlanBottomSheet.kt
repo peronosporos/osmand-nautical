@@ -53,8 +53,8 @@ class PassagePlanBottomSheet : BaseNauticalBottomSheet() {
 
         val viewModel = ViewModelProvider(requireActivity())[RoutingViewModel::class.java]
         val app = requireActivity().application as? net.osmand.plus.OsmandApplication
-        val draft = app?.settings?.NAUTICAL_VESSEL_DRAFT?.get() ?: 2.0f
-        val margin = app?.settings?.NAUTICAL_SAFETY_DEPTH_MARGIN?.get() ?: 0.5f
+        val draft: Float = app?.settings?.NAUTICAL_VESSEL_DRAFT?.get() ?: 2.0f
+        val margin: Float = 0.5f
 
         viewLifecycleOwner.lifecycleScope.launch {
             viewModel.optimalRoute.collectLatest { result ->

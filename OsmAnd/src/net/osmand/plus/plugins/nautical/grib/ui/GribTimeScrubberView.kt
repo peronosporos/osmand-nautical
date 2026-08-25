@@ -289,27 +289,11 @@ class GribTimeScrubberView @JvmOverloads constructor(
 
         // Update GRIB map layer selected timestamp
         val plugin = NauticalPlugin.getInstance()
-        val gribLayer = plugin?.layerManager?.getLayer(OceanographicGribMapLayer::class.java)
-        if (gribLayer != null) {
-            gribLayer.selectedTimestamp = stepTime
-        } else {
-            val app = context.applicationContext as? OsmandApplication
-            app?.osmandMap?.mapLayers?.allLayers?.filterIsInstance<OceanographicGribMapLayer>()?.forEach {
-                it.selectedTimestamp = stepTime
-            }
-        }
+        plugin?.layerManager?.oceanographicGribMapLayer?.selectedTimestamp = stepTime
     }
 
     private fun resetToLive() {
         val plugin = NauticalPlugin.getInstance()
-        val gribLayer = plugin?.layerManager?.getLayer(OceanographicGribMapLayer::class.java)
-        if (gribLayer != null) {
-            gribLayer.selectedTimestamp = null
-        } else {
-            val app = context.applicationContext as? OsmandApplication
-            app?.osmandMap?.mapLayers?.allLayers?.filterIsInstance<OceanographicGribMapLayer>()?.forEach {
-                it.selectedTimestamp = null
-            }
-        }
+        plugin?.layerManager?.oceanographicGribMapLayer?.selectedTimestamp = null
     }
 }

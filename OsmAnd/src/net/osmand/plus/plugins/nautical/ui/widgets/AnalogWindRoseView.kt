@@ -258,8 +258,8 @@ class AnalogWindRoseView @JvmOverloads constructor(
             twaNeedlePaint.color = 0xFFD50000.toInt() // Deep red TWA needle
             hubBgPaint.color = 0xEE120000.toInt()
             hubStrokePaint.color = 0xFFFF1744.toInt()
-            hubTextPrimaryPaint.color = 0xFFFF5252.toInt()
-            hubTextSecondaryPaint.color = 0xFFFF8A80.toInt()
+            hubTextAwaPaint.color = 0xFFFF5252.toInt()
+            hubTextTwaPaint.color = 0xFFFF8A80.toInt()
             deadZonePaint.color = 0x334A0007.toInt()
             polarSectorPaint.color = 0x338B0000.toInt()
         } else {
@@ -272,8 +272,8 @@ class AnalogWindRoseView @JvmOverloads constructor(
             twaNeedlePaint.color = 0xFFFFD600.toInt()
             hubBgPaint.color = 0xEE1A232E.toInt()
             hubStrokePaint.color = 0xFF0288D1.toInt()
-            hubTextPrimaryPaint.color = 0xFF00E5FF.toInt()
-            hubTextSecondaryPaint.color = Color.WHITE
+            hubTextAwaPaint.color = 0xFF00E5FF.toInt()
+            hubTextTwaPaint.color = 0xFFFFD600.toInt()
             deadZonePaint.color = 0x44D32F2F.toInt()
             polarSectorPaint.color = 0x33FFD600.toInt()
         }
