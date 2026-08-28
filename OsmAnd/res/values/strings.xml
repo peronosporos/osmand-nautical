@@ -6,7 +6,6 @@
     <string name="nautical_hud_tab_motor">MOTOR</string>
     <string name="nautical_hud_tab_anchor">ANCHOR</string>
     <string name="nautical_no_media_playing">No Media Playing</string>
-    <string name="nautical_calculated_rode">Calculated Rode: 0.0 m</string>
     <string name="nautical_start_line_flag">Start Line</string>
     <string name="nautical_start_dist_placeholder">Dist: -- m</string>
     <string name="nautical_start_burn_placeholder">Burn: --:--</string>
@@ -23,8 +22,6 @@
     <string name="nautical_swing_radius_label">SWING RADIUS</string>
     <string name="nautical_chafe_ok">CHAFE: OK</string>
     <string name="nautical_rode_deployed_placeholder">Rode Deployed: -- m</string>
-    <string name="nautical_windlass_down">DOWN</string>
-    <string name="nautical_windlass_up">UP</string>
     <string name="nautical_anchor_track_history_live">Track History: Live (Now)</string>
     <string name="nautical_preview_adjust_map">Preview &amp; Adjust on Map</string>
     <string name="nautical_anchor_cable_prohibited">⚠ PROHIBITED: Submarine Cable / Pipeline within swing radius</string>
