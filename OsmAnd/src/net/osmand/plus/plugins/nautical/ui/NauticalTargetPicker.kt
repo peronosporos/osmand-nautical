@@ -168,6 +168,7 @@ class NauticalTargetPicker : BottomSheetDialogFragment() {
         val row = LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = android.view.Gravity.CENTER_VERTICAL
+            minimumHeight = dpToPx(context, 48f)
             setPadding(0, dpToPx(context, 10f), 0, dpToPx(context, 10f))
             setBackgroundResource(net.osmand.plus.utils.AndroidUtils.resolveAttribute(context, android.R.attr.selectableItemBackground))
             isClickable = true
@@ -323,6 +324,10 @@ class NauticalTargetPicker : BottomSheetDialogFragment() {
     }
 
     private fun selectColor(type: AisObjType): Int {
+        val app = requireActivity().application as? OsmandApplication
+        if (app != null && NauticalPlugin.isNightVision(app)) {
+            return 0xFFFF1744.toInt()
+        }
         return when (type) {
             AisObjType.AIS_VESSEL -> Color.GREEN
             AisObjType.AIS_VESSEL_SPORT -> Color.YELLOW

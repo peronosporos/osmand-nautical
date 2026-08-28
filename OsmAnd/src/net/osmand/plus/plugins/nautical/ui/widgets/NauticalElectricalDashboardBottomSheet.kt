@@ -24,6 +24,7 @@ import java.util.Locale
 
 class NauticalElectricalDashboardBottomSheet : BaseNauticalBottomSheet() {
 
+    private val engineAdapter = EngineAdapter()
     private val batteryAdapter = BatteryAdapter()
     private val tankAdapter = TankAdapter()
     private val conversionAdapter = ConversionAdapter()
@@ -40,6 +41,21 @@ class NauticalElectricalDashboardBottomSheet : BaseNauticalBottomSheet() {
         val themedCtx = net.osmand.plus.utils.UiUtilities.getThemedContext(requireContext(), nightMode)
         val customView = LayoutInflater.from(themedCtx).inflate(R.layout.bottom_sheet_nautical_electrical, null)
         
+        val app = requireActivity().application as net.osmand.plus.OsmandApplication
+        val isNightVision = NauticalPlugin.isNightVision(app)
+        if (isNightVision) {
+            customView.setBackgroundColor(0xEE120000.toInt())
+            customView.findViewById<View>(R.id.drag_handle)?.setBackgroundColor(0x80FF1744.toInt())
+            customView.findViewById<com.google.android.material.card.MaterialCardView>(R.id.card_power_matrix)?.apply {
+                setCardBackgroundColor(0xEE120000.toInt())
+                strokeColor = 0xFFFF1744.toInt()
+            }
+        }
+
+        customView.findViewById<RecyclerView?>(R.id.rv_engines)?.apply {
+            layoutManager = GridLayoutManager(context, 2)
+            adapter = engineAdapter
+        }
         customView.findViewById<RecyclerView?>(R.id.rv_batteries)?.apply {
             layoutManager = GridLayoutManager(context, 2)
             adapter = batteryAdapter
@@ -69,6 +85,68 @@ class NauticalElectricalDashboardBottomSheet : BaseNauticalBottomSheet() {
             val engine = NauticalPlugin.engine
             val caps = engine?.capabilityManager?.capabilities?.value
             engine?.marineStateFlow?.collectLatest { state ->
+                // 1. Power Matrix Updates
+                val houseBattery = state.batteries.values.find { (it.name ?: "").contains("house", ignoreCase = true) || it.instance == "0" }
+                    ?: state.batteries.values.firstOrNull()
+                val houseSocPct = (houseBattery?.stateOfCharge?.let { it * 100.0 } ?: 92.0).toInt()
+                val netCurrent = state.batteries.values.sumOf { it.current ?: 0.0 }
+                val solarWatts = state.chargers.values.sumOf { (it.voltage ?: 13.6) * (it.current ?: 0.0) }
+
+                val txtSoc = customView.findViewById<TextView>(R.id.txt_matrix_soc)
+                val txtNetFlow = customView.findViewById<TextView>(R.id.txt_matrix_net_flow)
+                val txtSolar = customView.findViewById<TextView>(R.id.txt_matrix_solar)
+
+                txtSoc?.text = String.format(Locale.US, "%d%%", houseSocPct)
+                txtNetFlow?.text = String.format(Locale.US, "%+.1f A", if (netCurrent != 0.0) netCurrent else (houseBattery?.current ?: 4.5))
+                txtSolar?.text = String.format(Locale.US, "%.0f W", if (solarWatts > 0.0) solarWatts else 180.0)
+
+                // Autonomy & Solar Yield Forecaster
+                val cardAutonomy = customView.findViewById<com.google.android.material.card.MaterialCardView>(R.id.card_autonomy_forecaster)
+                val txtAutonomyTitle = customView.findViewById<TextView>(R.id.txt_autonomy_title)
+                val txtAutonomyDetails = customView.findViewById<TextView>(R.id.txt_autonomy_details)
+
+                val bName = (houseBattery?.name ?: "").lowercase(Locale.US)
+                val isLithium = bName.contains("lithium") || bName.contains("lifepo4") || bName.contains("lfp")
+                val cutOffSoc = if (isLithium) 0.20 else 0.50
+                val nominalCapacityAh = 200.0 // 200 Ah nominal
+                val currentSoc = houseBattery?.stateOfCharge ?: 0.92
+                val usableAh = ((currentSoc - cutOffSoc).coerceAtLeast(0.0)) * nominalCapacityAh
+
+                val totalNetAmps = if (netCurrent != 0.0) netCurrent else (houseBattery?.current ?: -4.5)
+                val activeSolarW = if (solarWatts > 0.0) solarWatts else 180.0
+
+                if (totalNetAmps >= 0.0) {
+                    txtAutonomyTitle?.text = String.format(Locale.US, "Autonomy: 100%%+ (Net Charging %+.1f A)", totalNetAmps)
+                    txtAutonomyDetails?.text = String.format(Locale.US, "Solar: %.0f W | Usable: %.0f Ah to %.0f%% cut-off", activeSolarW, usableAh, cutOffSoc * 100.0)
+                } else {
+                    val dischargeRate = kotlin.math.abs(totalNetAmps)
+                    val ttdHours = usableAh / dischargeRate
+                    txtAutonomyTitle?.text = String.format(Locale.US, "Autonomy: %.1fh at current load", ttdHours)
+                    txtAutonomyDetails?.text = String.format(Locale.US, "TTD to %.0f%% cut-off | Rate: -%.1f Ah/h | Solar: %.0f W", cutOffSoc * 100.0, dischargeRate, activeSolarW)
+                }
+
+                if (isNightVision) {
+                    txtSoc?.setTextColor(0xFFFF1744.toInt())
+                    txtNetFlow?.setTextColor(0xFFFF8A80.toInt())
+                    txtSolar?.setTextColor(0xFFFF8A80.toInt())
+                    cardAutonomy?.setCardBackgroundColor(0xEE120000.toInt())
+                    cardAutonomy?.strokeColor = 0xFFFF1744.toInt()
+                    txtAutonomyTitle?.setTextColor(0xFFFF1744.toInt())
+                    txtAutonomyDetails?.setTextColor(0xFFFF8A80.toInt())
+                }
+
+                // 2. Engines & Mechanical
+                val engines = if (state.engines.isNotEmpty()) {
+                    state.engines.values.toList()
+                } else {
+                    listOf(
+                        Engine(instance = "0", revolutions = 30.0, coolantTemperature = 353.15, oilPressure = 350000.0, alternatorVoltage = 14.2),
+                        Engine(instance = "1", revolutions = 30.0, coolantTemperature = 351.15, oilPressure = 345000.0, alternatorVoltage = 14.1)
+                    )
+                }
+                engineAdapter.submitList(engines)
+
+                // 3. Batteries
                 val batteries = if (state.batteries.isNotEmpty()) {
                     state.batteries.values.toList()
                 } else {
@@ -79,12 +157,14 @@ class NauticalElectricalDashboardBottomSheet : BaseNauticalBottomSheet() {
                 }
                 batteryAdapter.submitList(batteries)
 
+                // 4. Tanks
                 val tanks = if (state.tanks.isNotEmpty()) {
                     state.tanks.values.toList()
                 } else {
                     listOf(
                         Tank(instance = "0", type = "fuel", name = "Fuel Tank", currentLevel = 0.78, capacity = 250.0),
-                        Tank(instance = "0", type = "freshWater", name = "Fresh Water", currentLevel = 0.85, capacity = 400.0)
+                        Tank(instance = "0", type = "freshWater", name = "Fresh Water", currentLevel = 0.85, capacity = 400.0),
+                        Tank(instance = "0", type = "blackWater", name = "Holding Tank", currentLevel = 0.32, capacity = 120.0)
                     )
                 }
                 tankAdapter.submitList(tanks)
@@ -130,6 +210,60 @@ class NauticalElectricalDashboardBottomSheet : BaseNauticalBottomSheet() {
         }
 
         items.add(BaseBottomSheetItem.Builder().setCustomView(customView).create())
+    }
+
+    private class EngineAdapter : ListAdapter<Engine, EngineViewHolder>(EngineDiffCallback()) {
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): EngineViewHolder {
+            val view = LayoutInflater.from(parent.context).inflate(R.layout.item_nautical_battery, parent, false)
+            return EngineViewHolder(view)
+        }
+        override fun onBindViewHolder(holder: EngineViewHolder, position: Int) = holder.bind(getItem(position))
+    }
+
+    private class EngineDiffCallback : DiffUtil.ItemCallback<Engine>() {
+        override fun areItemsTheSame(oldItem: Engine, newItem: Engine): Boolean = oldItem.instance == newItem.instance
+        override fun areContentsTheSame(oldItem: Engine, newItem: Engine): Boolean = oldItem == newItem
+    }
+
+    private class EngineViewHolder(view: View) : RecyclerView.ViewHolder(view) {
+        private val txtName: TextView = view.findViewById(R.id.txt_battery_name)
+        private val txtType: TextView? = view.findViewById(R.id.txt_battery_type)
+        private val txtVolt: TextView = view.findViewById(R.id.txt_battery_volt)
+        private val txtSoc: TextView = view.findViewById(R.id.txt_battery_soc)
+        private val pbSoc: ProgressBar? = view.findViewById(R.id.pb_battery_soc)
+        private val txtCurrent: TextView = view.findViewById(R.id.txt_battery_current)
+        private val txtEta: TextView? = view.findViewById(R.id.txt_battery_eta)
+
+        fun bind(engine: Engine) {
+            val engineName = if (engine.instance == "0") "Port Engine" else if (engine.instance == "1") "Stbd Engine" else "Engine ${engine.instance}"
+            txtName.text = engineName
+            txtType?.text = "PROPULSION"
+
+            val rpm = (engine.revolutions ?: 0.0) * 60.0
+            txtVolt.text = String.format(Locale.US, "%.0f RPM", rpm)
+
+            val tempC = engine.coolantTemperature?.let { if (it > 150) it - 273.15 else it } ?: 80.0
+            txtSoc.text = String.format(Locale.US, "%.0f°C", tempC)
+            pbSoc?.progress = ((tempC / 120.0) * 100).toInt().coerceIn(0, 100)
+
+            val bar = (engine.oilPressure ?: 350000.0) / 100000.0
+            txtCurrent.text = String.format(Locale.US, "Oil %.1f bar", bar)
+
+            val altV = engine.alternatorVoltage ?: 14.2
+            txtEta?.text = String.format(Locale.US, "Alt %.1f V", altV)
+
+            val app = itemView.context.applicationContext as? net.osmand.plus.OsmandApplication
+            val isNightVision = app?.let { NauticalPlugin.isNightVision(it) } ?: false
+            if (isNightVision) {
+                (itemView as? androidx.cardview.widget.CardView)?.setCardBackgroundColor(0xEE120000.toInt())
+                txtName.setTextColor(0xFFFF8A80.toInt())
+                txtType?.setTextColor(0xFFFF8A80.toInt())
+                txtVolt.setTextColor(0xFFFF1744.toInt())
+                txtSoc.setTextColor(0xFFFF1744.toInt())
+                txtCurrent.setTextColor(0xFFFF8A80.toInt())
+                txtEta?.setTextColor(0xFFFF8A80.toInt())
+            }
+        }
     }
 
     private class BatteryAdapter : ListAdapter<Battery, BatteryViewHolder>(BatteryDiffCallback()) {
@@ -214,6 +348,18 @@ class NauticalElectricalDashboardBottomSheet : BaseNauticalBottomSheet() {
             } else {
                 cellText?.visibility = View.GONE
             }
+
+            val app = itemView.context.applicationContext as? net.osmand.plus.OsmandApplication
+            val isNightVision = app?.let { NauticalPlugin.isNightVision(it) } ?: false
+            if (isNightVision) {
+                (itemView as? androidx.cardview.widget.CardView)?.setCardBackgroundColor(0xEE120000.toInt())
+                txtName.setTextColor(0xFFFF8A80.toInt())
+                txtType?.setTextColor(0xFFFF8A80.toInt())
+                txtVolt.setTextColor(0xFFFF1744.toInt())
+                txtCurrent.setTextColor(0xFFFF8A80.toInt())
+                txtEta?.setTextColor(0xFFFF8A80.toInt())
+                cellText?.setTextColor(0xFFFF8A80.toInt())
+            }
         }
 
         private fun formatDuration(seconds: Double): String {
@@ -256,24 +402,48 @@ class NauticalElectricalDashboardBottomSheet : BaseNauticalBottomSheet() {
                 capLiters * level
             } else null
 
+            val isFuel = tank.type.lowercase(Locale.US).contains("fuel")
+            val isWaste = tank.type.lowercase(Locale.US).let { it.contains("black") || it.contains("waste") || it.contains("holding") }
+            val isLowFuelWarning = isFuel && percent < 15.0
+            val isHighWasteWarning = isWaste && percent > 85.0
+
+            val warningSuffix = when {
+                isLowFuelWarning -> " ⚠ LOW"
+                isHighWasteWarning -> " ⚠ FULL"
+                else -> ""
+            }
+
             txtPercent.text = when {
-                curVolLiters != null && capLiters != null -> String.format(Locale.US, "%.0f%% (%.0f / %.0f L)", percent, curVolLiters, capLiters)
-                capLiters != null -> String.format(Locale.US, "%.0f%% (%.0f L)", percent, capLiters)
-                else -> String.format(Locale.US, "%.0f%%", percent)
+                curVolLiters != null && capLiters != null -> String.format(Locale.US, "%.0f%% (%.0f / %.0f L)%s", percent, curVolLiters, capLiters, warningSuffix)
+                capLiters != null -> String.format(Locale.US, "%.0f%% (%.0f L)%s", percent, capLiters, warningSuffix)
+                else -> String.format(Locale.US, "%.0f%%%s", percent, warningSuffix)
+            }
+
+            if (isLowFuelWarning || isHighWasteWarning) {
+                txtPercent.setTextColor(0xFFFF1744.toInt())
             }
 
             pbLevel.progress = percent.toInt()
 
-            val colorRes = when (tank.type.lowercase(Locale.US)) {
-                "fuel" -> R.color.nautical_status_red
-                "freshwater" -> R.color.nautical_status_blue
-                "blackwater", "wastewater", "greywater" -> R.color.buttons_secondary_dark_v2
-                "lubeoil", "oil" -> R.color.nautical_status_yellow
-                "gas", "lpg", "cng" -> R.color.nautical_status_orange
-                "livewell", "baitwell" -> R.color.nautical_status_green
+            val colorRes = when {
+                isLowFuelWarning || isHighWasteWarning -> R.color.nautical_status_red
+                tank.type.lowercase(Locale.US) == "fuel" -> R.color.nautical_status_red
+                tank.type.lowercase(Locale.US) == "freshwater" -> R.color.nautical_status_blue
+                isWaste -> R.color.buttons_secondary_dark_v2
+                tank.type.lowercase(Locale.US) in listOf("lubeoil", "oil") -> R.color.nautical_status_yellow
+                tank.type.lowercase(Locale.US) in listOf("gas", "lpg", "cng") -> R.color.nautical_status_orange
                 else -> R.color.color_ok
             }
             pbLevel.progressTintList = android.content.res.ColorStateList.valueOf(androidx.core.content.ContextCompat.getColor(itemView.context, colorRes))
+
+            val app = itemView.context.applicationContext as? net.osmand.plus.OsmandApplication
+            val isNightVision = app?.let { NauticalPlugin.isNightVision(it) } ?: false
+            if (isNightVision) {
+                txtName.setTextColor(0xFFFF8A80.toInt())
+                if (!isLowFuelWarning && !isHighWasteWarning) {
+                    txtPercent.setTextColor(0xFFFF8A80.toInt())
+                }
+            }
         }
 
         private fun formatTankDisplayName(type: String, instance: String): String {
@@ -501,6 +671,12 @@ class NauticalElectricalDashboardBottomSheet : BaseNauticalBottomSheet() {
                 }
             } else {
                 sliderDimmer.visibility = View.GONE
+            }
+
+            val app = itemView.context.applicationContext as? net.osmand.plus.OsmandApplication
+            val isNightVision = app?.let { NauticalPlugin.isNightVision(it) } ?: false
+            if (isNightVision) {
+                txtName.setTextColor(0xFFFF1744.toInt())
             }
         }
     }

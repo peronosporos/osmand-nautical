@@ -102,9 +102,9 @@ class NauticalTouchArbitrator(private val activity: MapActivity) : GestureDetect
                 }
             }
             
-            // If closest is within 16dp threshold, and there are others near, show picker
+            // If closest is within 24dp (48dp diameter) threshold, and there are others near, show picker
             val density = activity.resources.displayMetrics.density
-            val thresholdPx = 16 * density
+            val thresholdPx = 24 * density
             
             val nearObjects = sorted.filter { target ->
                 val loc = getTargetLocation(target)

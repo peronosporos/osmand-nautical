@@ -81,6 +81,20 @@
     <com.google.android.material.textfield.TextInputLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:hint="@string/nautical_anchor_bow_roller_height"
+        app:suffixText="m"
+        android:layout_marginBottom="8dp">
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/edit_bow_roller_height"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="1.5"
+            android:inputType="numberDecimal" />
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <com.google.android.material.textfield.TextInputLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
         android:hint="@string/nautical_anchor_label_bow_offset"
         app:suffixText="m"
         android:layout_marginBottom="8dp">
@@ -162,26 +176,32 @@
         app:singleSelection="true"
         android:layout_marginBottom="16dp">
         <com.google.android.material.button.MaterialButton
-            android:id="@+id/btn_ratio_3"
+            android:id="@+id/btn_ratio_all_chain"
             style="?attr/materialButtonOutlinedStyle"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
+            android:minHeight="48dp"
             android:layout_weight="1"
-            android:text="@string/nautical_anchor_ratio_3" />
+            android:text="@string/nautical_anchor_ratio_all_chain"
+            android:textSize="11sp" />
         <com.google.android.material.button.MaterialButton
-            android:id="@+id/btn_ratio_5"
+            android:id="@+id/btn_ratio_rope_chain"
             style="?attr/materialButtonOutlinedStyle"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
+            android:minHeight="48dp"
             android:layout_weight="1"
-            android:text="@string/nautical_anchor_ratio_5" />
+            android:text="@string/nautical_anchor_ratio_rope_chain"
+            android:textSize="11sp" />
         <com.google.android.material.button.MaterialButton
-            android:id="@+id/btn_ratio_7"
+            android:id="@+id/btn_ratio_storm"
             style="?attr/materialButtonOutlinedStyle"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
+            android:minHeight="48dp"
             android:layout_weight="1"
-            android:text="@string/nautical_anchor_ratio_7" />
+            android:text="@string/nautical_anchor_ratio_storm"
+            android:textSize="11sp" />
     </com.google.android.material.button.MaterialButtonToggleGroup>
 
     <!-- Rode Result with Quick Stepper Touch Buttons (-10m / +10m) -->
@@ -190,7 +210,7 @@
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:gravity="center_vertical"
-        android:layout_marginBottom="16dp">
+        android:layout_marginBottom="12dp">
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_rode_minus_10"
@@ -234,6 +254,16 @@
             android:layout_marginStart="6dp" />
     </LinearLayout>
 
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btn_apply_calculated_radius"
+        style="@style/Widget.Material3.Button.TonalButton"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:minHeight="48dp"
+        android:layout_marginBottom="16dp"
+        android:text="@string/nautical_anchor_btn_apply_radius"
+        app:icon="@drawable/ic_action_done" />
+
     <LinearLayout
         android:id="@+id/layout_sk_anchor_info"
         android:layout_width="match_parent"
@@ -246,7 +276,7 @@
             android:id="@+id/txt_rode_deployed"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Rode Deployed: -- m"
+            android:text="@string/nautical_rode_deployed_placeholder"
             android:textColor="?attr/active_color_primary"
             android:textStyle="bold" />
 
@@ -264,7 +294,7 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="DOWN"
+                android:text="@string/nautical_windlass_down"
                 app:icon="@drawable/ic_arrow_down"
                 android:layout_marginEnd="4dp" />
 
@@ -274,10 +304,39 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="UP"
+                android:text="@string/nautical_windlass_up"
                 app:icon="@drawable/ic_action_arrow_up"
                 android:layout_marginStart="4dp" />
         </LinearLayout>
+    </LinearLayout>
+
+    <!-- 60-Minute Snail-Trail Playback Slider -->
+    <LinearLayout
+        android:id="@+id/layout_playback_slider"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:layout_marginTop="8dp"
+        android:layout_marginBottom="12dp">
+
+        <TextView
+            android:id="@+id/txt_playback_time"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/nautical_anchor_track_history_live"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:textColor="?attr/colorAccent" />
+
+        <com.google.android.material.slider.Slider
+            android:id="@+id/slider_anchor_playback"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:minHeight="48dp"
+            android:valueFrom="0"
+            android:valueTo="60"
+            android:stepSize="1"
+            android:value="60" />
     </LinearLayout>
 
     <com.google.android.material.button.MaterialButton
@@ -286,7 +345,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginBottom="8dp"
-        android:text="Preview &amp; Adjust on Map"
+        android:text="@string/nautical_preview_adjust_map"
         app:icon="@drawable/ic_action_world_globe" />
 
     <com.google.android.material.button.MaterialButton
@@ -316,6 +375,20 @@
         app:iconTint="@color/nautical_status_text_emergency"
         android:textColor="@color/nautical_status_text_emergency"
         app:backgroundTint="@color/nautical_status_bg_emergency" />
+
+    <TextView
+        android:id="@+id/txt_submarine_hazard_warning"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:padding="8dp"
+        android:gravity="center"
+        android:background="@color/nautical_status_bg_emergency"
+        android:textColor="@color/nautical_status_text_emergency"
+        android:text="@string/nautical_anchor_cable_prohibited"
+        android:visibility="gone"
+        android:textStyle="bold"
+        android:textSize="12sp" />
 
     <TextView
         android:id="@+id/txt_sensor_warning"

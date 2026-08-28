@@ -2,7 +2,8 @@
 <androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:background="?attr/list_background_color">
 
     <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
@@ -13,15 +14,231 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="16dp">
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:paddingBottom="24dp">
 
+            <View
+                android:id="@+id/drag_handle"
+                android:layout_width="36dp"
+                android:layout_height="4dp"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="12dp"
+                android:background="?attr/divider_color" />
+
+            <!-- Title -->
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:gravity="center"
-                android:padding="8dp"
+                android:paddingTop="4dp"
+                android:paddingBottom="8dp"
                 android:text="@string/grib_files_manager"
-                android:textAppearance="?attr/textAppearanceTitleLarge" />
+                android:textAppearance="?attr/textAppearanceTitleLarge"
+                android:textColor="?android:attr/textColorPrimary"
+                android:textStyle="bold" />
+
+            <!-- Weather Layers ChipGroup -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="@string/nautical_weather_layers"
+                android:textAppearance="?attr/textAppearanceTitleSmall"
+                android:textColor="?android:attr/textColorSecondary"
+                android:textStyle="bold" />
+
+            <HorizontalScrollView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:scrollbars="none">
+
+                <com.google.android.material.chip.ChipGroup
+                    android:id="@+id/grib_layers_chip_group"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    app:singleLine="true"
+                    app:singleSelection="false">
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chip_layer_wind"
+                        style="@style/Widget.MaterialComponents.Chip.Filter"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:checked="true"
+                        android:text="@string/nautical_layer_wind_barbs" />
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chip_layer_gusts"
+                        style="@style/Widget.MaterialComponents.Chip.Filter"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:checked="true"
+                        android:text="@string/nautical_layer_gusts" />
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chip_layer_waves"
+                        style="@style/Widget.MaterialComponents.Chip.Filter"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:checked="true"
+                        android:text="@string/nautical_layer_wave_height" />
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chip_layer_pressure"
+                        style="@style/Widget.MaterialComponents.Chip.Filter"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:checked="true"
+                        android:text="@string/nautical_layer_pressure_isobars" />
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chip_layer_temp"
+                        style="@style/Widget.MaterialComponents.Chip.Filter"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:checked="false"
+                        android:text="@string/nautical_layer_temperature" />
+                </com.google.android.material.chip.ChipGroup>
+            </HorizontalScrollView>
+
+            <!-- Forecast Playback Controls Card -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/card_grib_playback"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                app:cardCornerRadius="10dp"
+                app:cardElevation="0dp"
+                app:strokeWidth="1dp"
+                app:strokeColor="?attr/divider_color"
+                app:cardBackgroundColor="?attr/card_and_list_background_basic">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="12dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="@string/nautical_forecast_playback"
+                            android:textAppearance="?attr/textAppearanceTitleSmall"
+                            android:textColor="?attr/active_color_primary"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/txt_grib_playback_time"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/nautical_live_latest"
+                            android:textAppearance="?attr/textAppearanceCaption"
+                            android:textColor="?android:attr/textColorPrimary"
+                            android:textStyle="bold" />
+                    </LinearLayout>
+
+                    <!-- Playback Step Buttons & Seekbar -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="10dp"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btn_grib_step_prev"
+                            style="@style/Widget.Material3.Button.OutlinedButton"
+                            android:layout_width="52dp"
+                            android:layout_height="48dp"
+                            android:minHeight="48dp"
+                            android:minWidth="52dp"
+                            android:padding="0dp"
+                            android:text="-3h"
+                            android:textSize="12sp"
+                            android:textStyle="bold"
+                            app:cornerRadius="8dp"
+                            android:contentDescription="Step back 3 hours" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btn_grib_play_pause"
+                            style="@style/Widget.Material3.Button.IconButton.Filled"
+                            android:layout_width="48dp"
+                            android:layout_height="48dp"
+                            android:minHeight="48dp"
+                            android:minWidth="48dp"
+                            android:layout_marginStart="6dp"
+                            android:layout_marginEnd="6dp"
+                            app:icon="@drawable/ic_play_dark"
+                            app:iconGravity="textStart"
+                            app:cornerRadius="24dp"
+                            android:contentDescription="Play/Pause forecast loop" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btn_grib_step_next"
+                            style="@style/Widget.Material3.Button.OutlinedButton"
+                            android:layout_width="52dp"
+                            android:layout_height="48dp"
+                            android:minHeight="48dp"
+                            android:minWidth="52dp"
+                            android:padding="0dp"
+                            android:text="+3h"
+                            android:textSize="12sp"
+                            android:textStyle="bold"
+                            app:cornerRadius="8dp"
+                            android:contentDescription="Step forward 3 hours" />
+
+                        <SeekBar
+                            android:id="@+id/grib_playback_seekbar"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:layout_marginStart="8dp" />
+                    </LinearLayout>
+
+                    <!-- Playback Speed Selector Row -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="@string/nautical_loop_speed"
+                            android:textAppearance="?attr/textAppearanceCaption"
+                            android:textColor="?android:attr/textColorSecondary" />
+
+                        <Spinner
+                            android:id="@+id/spinner_grib_playback_speed"
+                            android:layout_width="wrap_content"
+                            android:layout_height="36dp"
+                            android:gravity="end" />
+                    </LinearLayout>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- GRIB Files List -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="@string/nautical_available_grib_files"
+                android:textAppearance="?attr/textAppearanceTitleSmall"
+                android:textColor="?android:attr/textColorSecondary"
+                android:textStyle="bold" />
 
             <FrameLayout
                 android:layout_width="match_parent"
@@ -32,7 +249,7 @@
                     android:id="@+id/grib_files_list"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:minHeight="100dp" />
+                    android:minHeight="80dp" />
 
                 <ProgressBar
                     android:id="@+id/grib_loading_progress"
@@ -42,24 +259,29 @@
                     android:visibility="gone" />
             </FrameLayout>
 
+            <!-- Settings Section -->
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
                 android:text="@string/shared_string_settings"
-                android:textAppearance="?attr/textAppearanceTitleMedium" />
+                android:textAppearance="?attr/textAppearanceTitleSmall"
+                android:textColor="?android:attr/textColorSecondary"
+                android:textStyle="bold" />
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
+                android:gravity="center_vertical"
                 android:orientation="horizontal">
 
                 <TextView
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="@string/grib_isobar_step" />
+                    android:text="@string/grib_isobar_step"
+                    android:textColor="?android:attr/textColorPrimary" />
 
                 <Spinner
                     android:id="@+id/isobar_step_spinner"
@@ -72,22 +294,29 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:text="@string/grib_wave_direction_to" />
+                android:text="@string/grib_wave_direction_to"
+                android:textColor="?android:attr/textColorPrimary" />
 
+            <!-- Action Buttons -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btn_sync_signalk_grib"
-                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                style="@style/Widget.Material3.Button.OutlinedButton"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
+                android:layout_height="48dp"
+                android:minHeight="48dp"
                 android:layout_marginTop="16dp"
+                app:cornerRadius="8dp"
                 android:text="@string/nautical_grib_sync_signalk"
                 app:icon="@drawable/ic_action_refresh_dark" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btn_import_grib"
+                style="@style/Widget.Material3.Button.FilledButton"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
+                android:layout_height="48dp"
+                android:minHeight="48dp"
                 android:layout_marginTop="8dp"
+                app:cornerRadius="8dp"
                 android:text="@string/shared_string_import"
                 app:icon="@drawable/ic_action_import" />
 

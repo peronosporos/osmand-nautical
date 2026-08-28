@@ -138,6 +138,21 @@ class TacticalStartManager(private val app: OsmandApplication) {
         _remainingSeconds.value = durationSeconds
     }
 
+    private fun triggerHapticCountdown(durationMs: Long = 100L) {
+        try {
+            val vibrator = app.getSystemService(android.os.Vibrator::class.java)
+            if (vibrator != null && vibrator.hasVibrator()) {
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                    vibrator.vibrate(android.os.VibrationEffect.createOneShot(durationMs, android.os.VibrationEffect.DEFAULT_AMPLITUDE))
+                } else {
+                    @Suppress("DEPRECATION")
+                    vibrator.vibrate(durationMs)
+                }
+            }
+        } catch (_: Exception) {
+        }
+    }
+
     private fun checkAudioMilestones(sec: Double) {
         val currentSecInt = sec.roundToInt()
         if (currentSecInt == lastAnnouncedSecond) return
@@ -147,26 +162,32 @@ class TacticalStartManager(private val app: OsmandApplication) {
             300, 240, 180, 120 -> {
                 val mins = currentSecInt / 60
                 arbiter.dispatchAlarm(AlarmType.RACE_START_COUNTDOWN, voiceText = "$mins minutes")
+                triggerHapticCountdown(100L)
                 lastAnnouncedSecond = currentSecInt
             }
             60 -> {
                 arbiter.dispatchAlarm(AlarmType.RACE_START_COUNTDOWN, voiceText = "1 minute to start")
+                triggerHapticCountdown(200L)
                 lastAnnouncedSecond = currentSecInt
             }
             30 -> {
                 arbiter.dispatchAlarm(AlarmType.RACE_START_COUNTDOWN, voiceText = "30 seconds")
+                triggerHapticCountdown(200L)
                 lastAnnouncedSecond = currentSecInt
             }
             10 -> {
                 arbiter.dispatchAlarm(AlarmType.RACE_START_COUNTDOWN, voiceText = "10")
+                triggerHapticCountdown(150L)
                 lastAnnouncedSecond = currentSecInt
             }
             5, 4, 3, 2, 1 -> {
                 arbiter.dispatchAlarm(AlarmType.RACE_START_COUNTDOWN, voiceText = "$currentSecInt")
+                triggerHapticCountdown(80L)
                 lastAnnouncedSecond = currentSecInt
             }
             0 -> {
                 arbiter.dispatchAlarm(AlarmType.RACE_START_COUNTDOWN, voiceText = "GUN! START!")
+                triggerHapticCountdown(500L)
                 lastAnnouncedSecond = currentSecInt
             }
         }

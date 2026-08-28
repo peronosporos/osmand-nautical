@@ -92,4 +92,7 @@ public class QuickActionIds {
 	public static final int NAUTICAL_TACTICAL_STBD_PIN_ACTION_ID = 99;
 	public static final int NAUTICAL_LAYLINES_ACTION_ID = 100;
 	public static final int NAUTICAL_AIS_ACTION_ID = 101;
+	public static final int NAUTICAL_CHECKLIST_ACTION_ID = 102;
+	public static final int NAUTICAL_PASSAGE_PLAN_ACTION_ID = 103;
+	public static final int NAUTICAL_WET_SCREEN_ACTION_ID = 104;
 }

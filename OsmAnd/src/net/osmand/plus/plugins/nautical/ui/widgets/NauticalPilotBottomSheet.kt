@@ -1,11 +1,15 @@
 package net.osmand.plus.plugins.nautical.ui.widgets
 
 import android.app.Dialog
+import android.content.res.ColorStateList
 import android.graphics.Color
 import android.os.Bundle
+import android.view.HapticFeedbackConstants
 import android.view.LayoutInflater
 import android.view.View
+import android.widget.ImageButton
 import android.widget.ImageView
+import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.view.ContextThemeWrapper
 import androidx.core.content.ContextCompat
@@ -15,6 +19,9 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.button.MaterialButtonToggleGroup
+import com.google.android.material.card.MaterialCardView
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import net.osmand.plus.R
@@ -26,60 +33,53 @@ import net.osmand.plus.plugins.nautical.ui.HeadingArcView
 import net.osmand.plus.plugins.nautical.ui.HeadingErrorLinearView
 import net.osmand.plus.plugins.nautical.ui.NauticalTouchGuard
 import net.osmand.plus.plugins.nautical.ui.RudderView
-import net.osmand.plus.settings.enums.VesselType
-import android.widget.LinearLayout
 import net.osmand.plus.plugins.nautical.ui.SlideToConfirmView
+import net.osmand.plus.settings.enums.VesselType
 import net.osmand.plus.track.GpxDialogs
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import java.util.Locale
 import kotlin.math.abs
 
 class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
 
-    private lateinit var errorLinear: HeadingErrorLinearView
-    private lateinit var arcView: HeadingArcView
-    private lateinit var steeringCard: View
-    private lateinit var modeToggleGroup: MaterialButtonToggleGroup
+    private lateinit var pilotRoot: LinearLayout
+    private lateinit var bottomSheetHandle: View
+    private lateinit var txtPilotTitle: TextView
     private lateinit var badgePilotMode: TextView
-    private lateinit var lockBtn: MaterialButton
-    private lateinit var rudderView: RudderView
-    private lateinit var predictiveActiveImg: ImageView
-    private lateinit var minus1Btn: MaterialButton
-    private lateinit var plus1Btn: MaterialButton
-    private lateinit var minus10Btn: MaterialButton
-    private lateinit var plus10Btn: MaterialButton
+    private lateinit var btnSettingsGear: ImageButton
+    private lateinit var modeToggleGroup: MaterialButtonToggleGroup
     private lateinit var stopBtn: MaterialButton
     private lateinit var compassBtn: MaterialButton
     private lateinit var windBtn: MaterialButton
     private lateinit var routeBtn: MaterialButton
-    private lateinit var tackPortBtn: MaterialButton
-    private lateinit var tackStbdBtn: MaterialButton
-    private lateinit var btnExpandManeuvers: MaterialButton
+    private lateinit var modeButtons: Array<MaterialButton>
+
+    private lateinit var steeringCard: MaterialCardView
+    private lateinit var errorLinear: HeadingErrorLinearView
+    private lateinit var minus10Btn: MaterialButton
+    private lateinit var minus1Btn: MaterialButton
+    private lateinit var plus1Btn: MaterialButton
+    private lateinit var plus10Btn: MaterialButton
+    private lateinit var arcView: HeadingArcView
+    private lateinit var predictiveActiveImg: ImageView
+    private lateinit var rudderView: RudderView
+
+    private lateinit var cardTacticalManeuvers: MaterialCardView
     private lateinit var tacticalActionsRow: LinearLayout
-    private lateinit var layoutSecondaryManeuvers: View
-    private lateinit var btnGybePort: MaterialButton
-    private lateinit var btnGybeStbd: MaterialButton
-    private lateinit var btnHeaveTo: MaterialButton
-    private lateinit var btnCenterRudder: MaterialButton
-    private lateinit var btnDocking: MaterialButton
-    private lateinit var btnMedMooring: MaterialButton
-    private lateinit var btnSlipExit: MaterialButton
-    private lateinit var btnMooringBuoy: MaterialButton
-    private lateinit var btnDodgePort: MaterialButton
-    private lateinit var btnDodgeStbd: MaterialButton
-    private lateinit var btnWeighAnchor: MaterialButton
-    private lateinit var btnHoldingPattern: MaterialButton
-    private lateinit var btnEmergencyStop: MaterialButton
+    private lateinit var tackPortBtn: MaterialButton
+    private lateinit var lockBtn: MaterialButton
+    private lateinit var tackStbdBtn: MaterialButton
+
     private lateinit var layoutEmbeddedConfirmation: LinearLayout
     private lateinit var layoutManeuverTargetSetup: LinearLayout
     private lateinit var txtManeuverTitle: TextView
     private lateinit var txtManeuverTargetDeg: TextView
     private lateinit var btnManeuverDegMinus: MaterialButton
     private lateinit var btnManeuverDegPlus: MaterialButton
-    private lateinit var embeddedSlideConfirm: SlideToConfirmView
     private lateinit var btnCancelEmbeddedConfirmation: MaterialButton
-    private lateinit var modeButtons: Array<MaterialButton>
+    private lateinit var embeddedSlideConfirm: SlideToConfirmView
+
+    private lateinit var btnDisengageStandby: MaterialButton
+
     private var confirmationJob: Job? = null
     private var maneuverHelper: AutopilotBottomSheetHelper? = null
 
@@ -89,6 +89,7 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
     private var pendingExecuteAction: ((targetHeading: Int?) -> Unit)? = null
 
     private var nightMode = false
+    private var isNightVision = false
 
     companion object {
         const val TAG = "NauticalPilotBottomSheet"
@@ -137,57 +138,50 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
         val themedContext = net.osmand.plus.utils.UiUtilities.getThemedContext(requireContext(), nightMode)
         val customView = LayoutInflater.from(themedContext).inflate(R.layout.nautical_pilot_bottom_sheet, null)
 
+        pilotRoot = customView.findViewById(R.id.pilot_root)
+        bottomSheetHandle = customView.findViewById(R.id.drag_handle)
+        txtPilotTitle = customView.findViewById(R.id.txt_pilot_title)
         badgePilotMode = customView.findViewById(R.id.badge_pilot_mode)
-        errorLinear = customView.findViewById(R.id.heading_error_linear)
-        arcView = customView.findViewById(R.id.heading_arc_view)
-        steeringCard = customView.findViewById(R.id.steering_card)
-        modeToggleGroup = customView.findViewById(R.id.mode_toggle_group)
-        lockBtn = customView.findViewById(R.id.btn_lock_unlock)
-        btnExpandManeuvers = customView.findViewById(R.id.btn_expand_maneuvers)
-        rudderView = customView.findViewById(R.id.rudder_view)
-        predictiveActiveImg = customView.findViewById(R.id.img_predictive_active)
+        btnSettingsGear = customView.findViewById(R.id.btn_settings_gear)
 
+        modeToggleGroup = customView.findViewById(R.id.mode_toggle_group)
+        stopBtn = customView.findViewById(R.id.btn_mode_stop)
+        compassBtn = customView.findViewById(R.id.btn_mode_compass)
+        windBtn = customView.findViewById(R.id.btn_mode_wind)
+        val twaBtn = customView.findViewById<MaterialButton>(R.id.btn_mode_twa)
+        routeBtn = customView.findViewById(R.id.btn_mode_route)
+        modeButtons = arrayOf(compassBtn, windBtn, twaBtn, routeBtn, stopBtn)
+
+        steeringCard = customView.findViewById(R.id.steering_card)
+        errorLinear = customView.findViewById(R.id.heading_error_linear)
         minus10Btn = customView.findViewById(R.id.btn_minus_10)
         minus1Btn = customView.findViewById(R.id.btn_minus_1)
         plus1Btn = customView.findViewById(R.id.btn_plus_1)
         plus10Btn = customView.findViewById(R.id.btn_plus_10)
+        arcView = customView.findViewById(R.id.heading_arc_view)
+        predictiveActiveImg = customView.findViewById(R.id.img_predictive_active)
+        rudderView = customView.findViewById(R.id.rudder_view)
 
-        stopBtn = customView.findViewById(R.id.btn_mode_stop)
-        compassBtn = customView.findViewById(R.id.btn_mode_compass)
-        windBtn = customView.findViewById(R.id.btn_mode_wind)
-        routeBtn = customView.findViewById(R.id.btn_mode_route)
-        modeButtons = arrayOf(compassBtn, windBtn, routeBtn, stopBtn)
-
-        tackPortBtn = customView.findViewById(R.id.btn_tack_port)
-        tackStbdBtn = customView.findViewById(R.id.btn_tack_stbd)
+        cardTacticalManeuvers = customView.findViewById(R.id.card_tactical_maneuvers)
         tacticalActionsRow = customView.findViewById(R.id.tactical_actions_row)
-        layoutSecondaryManeuvers = customView.findViewById(R.id.layout_secondary_maneuvers)
-        btnGybePort = customView.findViewById(R.id.btn_maneuver_gybe_port)
-        btnGybeStbd = customView.findViewById(R.id.btn_maneuver_gybe_stbd)
-        btnHeaveTo = customView.findViewById(R.id.btn_maneuver_heave_to)
-        btnCenterRudder = customView.findViewById(R.id.btn_maneuver_center_rudder)
-        btnDocking = customView.findViewById(R.id.btn_maneuver_docking)
-        btnMedMooring = customView.findViewById(R.id.btn_maneuver_med_mooring)
-        btnSlipExit = customView.findViewById(R.id.btn_maneuver_slip_exit)
-        btnMooringBuoy = customView.findViewById(R.id.btn_maneuver_mooring_buoy)
-        btnDodgePort = customView.findViewById(R.id.btn_maneuver_dodge_port)
-        btnDodgeStbd = customView.findViewById(R.id.btn_maneuver_dodge_stbd)
-        btnWeighAnchor = customView.findViewById(R.id.btn_maneuver_weigh_anchor)
-        btnHoldingPattern = customView.findViewById(R.id.btn_maneuver_holding_pattern)
-        btnEmergencyStop = customView.findViewById(R.id.btn_maneuver_emergency_stop)
-        
+        tackPortBtn = customView.findViewById(R.id.btn_tack_port)
+        lockBtn = customView.findViewById(R.id.btn_lock_unlock)
+        tackStbdBtn = customView.findViewById(R.id.btn_tack_stbd)
+
         layoutEmbeddedConfirmation = customView.findViewById(R.id.layout_embedded_confirmation)
         layoutManeuverTargetSetup = customView.findViewById(R.id.layout_maneuver_target_setup)
         txtManeuverTitle = customView.findViewById(R.id.txt_maneuver_title)
         txtManeuverTargetDeg = customView.findViewById(R.id.txt_maneuver_target_deg)
         btnManeuverDegMinus = customView.findViewById(R.id.btn_maneuver_deg_minus)
         btnManeuverDegPlus = customView.findViewById(R.id.btn_maneuver_deg_plus)
-        embeddedSlideConfirm = customView.findViewById(R.id.embedded_slide_confirm)
         btnCancelEmbeddedConfirmation = customView.findViewById(R.id.btn_cancel_embedded_confirmation)
+        embeddedSlideConfirm = customView.findViewById(R.id.embedded_slide_confirm)
+
+        btnDisengageStandby = customView.findViewById(R.id.btn_disengage_standby)
 
         btnCancelEmbeddedConfirmation.setOnClickListener {
             hideEmbeddedConfirmation()
-            it.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
+            it.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
         }
 
         btnManeuverDegMinus.setOnClickListener {
@@ -195,7 +189,7 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
                 val newH = (((cur - 5) % 360) + 360) % 360
                 pendingTargetHeading = newH
                 updateEmbeddedTargetDisplay()
-                it.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
+                it.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
             }
         }
 
@@ -204,23 +198,13 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
                 val newH = (((cur + 5) % 360) + 360) % 360
                 pendingTargetHeading = newH
                 updateEmbeddedTargetDisplay()
-                it.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
+                it.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
             }
         }
 
-        btnExpandManeuvers.setOnClickListener {
-            val willShow = layoutSecondaryManeuvers.visibility != View.VISIBLE
-            layoutSecondaryManeuvers.visibility = if (willShow) View.VISIBLE else View.GONE
-            btnExpandManeuvers.setIconResource(
-                if (willShow) R.drawable.ic_action_arrow_drop_up else R.drawable.ic_action_arrow_drop_down
-            )
-            it.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
-        }
-
-        updateManeuverButtons()
-
         // Settings gear button
-        customView.findViewById<View>(R.id.btn_settings_gear)?.setOnClickListener {
+        btnSettingsGear.setOnClickListener {
+            it.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
             NauticalAdvancedSettingsBottomSheet.newInstance().show(parentFragmentManager, "advanced_settings")
         }
 
@@ -233,14 +217,21 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
             updateLockButton()
             val msgRes = if (isCourseLocked) R.string.nautical_touch_lock_active else R.string.nautical_lock_course
             app.showToastMessage(msgRes)
-            customView.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
+            it.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
         }
 
         // Mode Switcher Listeners
         stopBtn.setOnClickListener {
             autopilot.stopNavigation()
             speakMode("STANDBY")
-            customView.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
+            it.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+            syncUiWithState()
+        }
+
+        btnDisengageStandby.setOnClickListener {
+            autopilot.stopNavigation()
+            speakMode("STANDBY")
+            it.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
             syncUiWithState()
         }
 
@@ -253,7 +244,11 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
                     }
                     R.id.btn_mode_wind -> {
                         autopilot.setAutopilotMode("wind")
-                        speakMode("WIND")
+                        speakMode("AWA")
+                    }
+                    R.id.btn_mode_twa -> {
+                        autopilot.setAutopilotMode("twa")
+                        speakMode("TWA")
                     }
                     R.id.btn_mode_route -> {
                         if (engine.isFollowingRoute) {
@@ -267,11 +262,11 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
                                         val gpx = result[0]
                                         val points = mutableListOf<Pair<Double, Double>>()
                                         gpx.tracks.forEach { track ->
-                                             track.segments.forEach { segment ->
-                                                 segment.points.forEach { pt ->
-                                                     points.add(Pair(pt.lat, pt.lon))
-                                                 }
-                                             }
+                                            track.segments.forEach { segment ->
+                                                segment.points.forEach { pt ->
+                                                    points.add(Pair(pt.lat, pt.lon))
+                                                }
+                                            }
                                         }
                                         if (points.isNotEmpty()) {
                                             engine.loadRoute(points)
@@ -285,7 +280,12 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
                             )
                         }
                     }
+                    R.id.btn_mode_stop -> {
+                        autopilot.stopNavigation()
+                        speakMode("STANDBY")
+                    }
                 }
+                customView.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
                 syncUiWithState()
             }
         }
@@ -293,19 +293,19 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
         // Tactile Stepped Nudge Buttons
         minus10Btn.setOnClickListener {
             autopilot.adjustHeading(-10.0)
-            it.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
+            it.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
         }
         minus1Btn.setOnClickListener {
             autopilot.adjustHeading(-1.0)
-            it.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
+            it.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
         }
         plus1Btn.setOnClickListener {
             autopilot.adjustHeading(1.0)
-            it.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
+            it.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
         }
         plus10Btn.setOnClickListener {
             autopilot.adjustHeading(10.0)
-            it.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
+            it.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
         }
 
         // Tactical Maneuver Actions with Pre-activation Target Heading Setup
@@ -313,19 +313,6 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
             sheet = this,
             tackPortBtn = tackPortBtn,
             tackStbdBtn = tackStbdBtn,
-            btnGybePort = btnGybePort,
-            btnGybeStbd = btnGybeStbd,
-            btnHeaveTo = btnHeaveTo,
-            btnCenterRudder = btnCenterRudder,
-            btnDocking = btnDocking,
-            btnMedMooring = btnMedMooring,
-            btnSlipExit = btnSlipExit,
-            btnMooringBuoy = btnMooringBuoy,
-            btnDodgePort = btnDodgePort,
-            btnDodgeStbd = btnDodgeStbd,
-            btnWeighAnchor = btnWeighAnchor,
-            btnHoldingPattern = btnHoldingPattern,
-            btnEmergencyStop = btnEmergencyStop,
             onInitiateManeuver = { title, targetHeading, onExecute ->
                 showEmbeddedConfirmation(title, targetHeading, onExecute)
             }
@@ -333,39 +320,17 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
         maneuverHelper = helper
 
         tackPortBtn.setOnClickListener {
+            it.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
             val state = NauticalPlugin.engine?.getCurrentState()
             helper.handlePrimaryManeuver(settings.NAUTICAL_VESSEL_TYPE.get(), state, isPort = true)
         }
         tackStbdBtn.setOnClickListener {
+            it.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
             val state = NauticalPlugin.engine?.getCurrentState()
             helper.handlePrimaryManeuver(settings.NAUTICAL_VESSEL_TYPE.get(), state, isPort = false)
         }
 
-        btnGybePort.setOnClickListener {
-            val state = NauticalPlugin.engine?.getCurrentState()
-            helper.handleGybe(isPort = true, state)
-        }
-        btnGybeStbd.setOnClickListener {
-            val state = NauticalPlugin.engine?.getCurrentState()
-            helper.handleGybe(isPort = false, state)
-        }
-        btnHeaveTo.setOnClickListener { helper.handleHeaveTo() }
-        btnCenterRudder.setOnClickListener { helper.handleCenterRudder() }
-        btnDocking.setOnClickListener { helper.handleDocking() }
-        btnMedMooring.setOnClickListener { helper.handleMedMooring() }
-        btnSlipExit.setOnClickListener { helper.handleSlipExit() }
-        btnMooringBuoy.setOnClickListener { helper.handleMooringBuoy() }
-        btnDodgePort.setOnClickListener {
-            val state = NauticalPlugin.engine?.getCurrentState()
-            helper.handleDodge(isPort = true, state)
-        }
-        btnDodgeStbd.setOnClickListener {
-            val state = NauticalPlugin.engine?.getCurrentState()
-            helper.handleDodge(isPort = false, state)
-        }
-        btnWeighAnchor.setOnClickListener { helper.handleWeighAnchor() }
-        btnHoldingPattern.setOnClickListener { helper.handleHoldingPattern() }
-        btnEmergencyStop.setOnClickListener { helper.handleEmergencyStop() }
+        updateManeuverButtons()
 
         // Continuous Heading / Wind Angle Slider Callbacks
         arcView.onHeadingChanged = { newHeading ->
@@ -401,7 +366,7 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
                     }
                 }
                 actualDeg?.let { plugin?.speakHeading(it.toInt()) }
-                customView.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS)
+                customView.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
             }
         }
 
@@ -411,11 +376,17 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
             state?.headingTrue?.let { hdg ->
                 NauticalPlugin.autopilot?.setTargetHeading(Math.toDegrees(hdg))
                 app.showToastMessage(R.string.nautical_course_reset)
+                it.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
             }
         }
 
         // Apply touch guard to arc view
         NauticalTouchGuard.apply(arcView, isLockedCheck = { isCourseLocked })
+
+        // Initial styling
+        val isNight = NauticalPlugin.isNightVision(app)
+        isNightVision = isNight
+        applyNightVisionStyling(isNightVision)
 
         // Bind StateFlow
         viewLifecycleOwner.lifecycleScope.launch {
@@ -441,14 +412,14 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
         if (isCourseLocked) {
             lockBtn.setIconResource(R.drawable.ic_action_lock)
             val activeColor = net.osmand.plus.utils.AndroidUtils.getColorFromAttr(requireContext(), R.attr.active_color_primary)
-            lockBtn.backgroundTintList = android.content.res.ColorStateList.valueOf(activeColor)
-            lockBtn.iconTint = android.content.res.ColorStateList.valueOf(Color.WHITE)
+            lockBtn.backgroundTintList = ColorStateList.valueOf(activeColor)
+            lockBtn.iconTint = ColorStateList.valueOf(Color.WHITE)
             lockBtn.contentDescription = getString(R.string.nautical_touch_lock_active)
         } else {
             lockBtn.setIconResource(R.drawable.ic_action_lock_open)
-            lockBtn.backgroundTintList = android.content.res.ColorStateList.valueOf(Color.TRANSPARENT)
+            lockBtn.backgroundTintList = ColorStateList.valueOf(Color.TRANSPARENT)
             val defaultIconColor = net.osmand.plus.utils.AndroidUtils.getColorFromAttr(requireContext(), R.attr.icon_color_primary)
-            lockBtn.iconTint = android.content.res.ColorStateList.valueOf(defaultIconColor)
+            lockBtn.iconTint = ColorStateList.valueOf(defaultIconColor)
             lockBtn.contentDescription = getString(R.string.nautical_lock_course)
         }
         arcView.alpha = if (isCourseLocked) 0.5f else 1.0f
@@ -483,7 +454,6 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
         pendingExecuteAction = onExecute
 
         tacticalActionsRow.visibility = View.GONE
-        layoutSecondaryManeuvers.visibility = View.GONE
         layoutEmbeddedConfirmation.visibility = View.VISIBLE
 
         txtManeuverTitle.text = title
@@ -522,6 +492,58 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
         embeddedSlideConfirm.reset()
     }
 
+    private fun applyNightVisionStyling(isNightVision: Boolean) {
+        if (isNightVision) {
+            pilotRoot.setBackgroundColor(0xEE120000.toInt())
+            bottomSheetHandle.backgroundTintList = ColorStateList.valueOf(0xFF8B0000.toInt())
+            txtPilotTitle.setTextColor(0xFFFF1744.toInt())
+            badgePilotMode.setTextColor(0xFFFF1744.toInt())
+            badgePilotMode.backgroundTintList = ColorStateList.valueOf(0xFF4A0007.toInt())
+            steeringCard.setCardBackgroundColor(0xFF1E0002.toInt())
+            steeringCard.strokeColor = 0xFF4A0007.toInt()
+            cardTacticalManeuvers.setCardBackgroundColor(0xFF1E0002.toInt())
+            cardTacticalManeuvers.strokeColor = 0xFF4A0007.toInt()
+            minus10Btn.strokeColor = ColorStateList.valueOf(0xFFFF1744.toInt())
+            minus10Btn.setTextColor(0xFFFF1744.toInt())
+            minus1Btn.strokeColor = ColorStateList.valueOf(0xFFFF1744.toInt())
+            minus1Btn.setTextColor(0xFFFF1744.toInt())
+            plus10Btn.strokeColor = ColorStateList.valueOf(0xFFFF1744.toInt())
+            plus10Btn.setTextColor(0xFFFF1744.toInt())
+            plus1Btn.strokeColor = ColorStateList.valueOf(0xFFFF1744.toInt())
+            plus1Btn.setTextColor(0xFFFF1744.toInt())
+            tackPortBtn.strokeColor = ColorStateList.valueOf(0xFFFF1744.toInt())
+            tackPortBtn.setTextColor(0xFFFF1744.toInt())
+            tackStbdBtn.strokeColor = ColorStateList.valueOf(0xFFFF1744.toInt())
+            tackStbdBtn.setTextColor(0xFFFF1744.toInt())
+            btnDisengageStandby.backgroundTintList = ColorStateList.valueOf(0xFFB71C1C.toInt())
+            btnDisengageStandby.setTextColor(Color.WHITE)
+        } else {
+            val defaultCardBg = net.osmand.plus.utils.AndroidUtils.getColorFromAttr(requireContext(), R.attr.card_and_list_background_basic)
+            val defaultDivider = net.osmand.plus.utils.AndroidUtils.getColorFromAttr(requireContext(), R.attr.divider_color)
+            val defaultTextPrimary = net.osmand.plus.utils.AndroidUtils.getColorFromAttr(requireContext(), android.R.attr.textColorPrimary)
+
+            txtPilotTitle.setTextColor(defaultTextPrimary)
+            steeringCard.setCardBackgroundColor(defaultCardBg)
+            steeringCard.strokeColor = defaultDivider
+            cardTacticalManeuvers.setCardBackgroundColor(defaultCardBg)
+            cardTacticalManeuvers.strokeColor = defaultDivider
+            minus10Btn.strokeColor = ColorStateList.valueOf(0xFFE53935.toInt())
+            minus10Btn.setTextColor(0xFFE53935.toInt())
+            minus1Btn.strokeColor = ColorStateList.valueOf(0xFFE53935.toInt())
+            minus1Btn.setTextColor(0xFFE53935.toInt())
+            plus10Btn.strokeColor = ColorStateList.valueOf(0xFF43A047.toInt())
+            plus10Btn.setTextColor(0xFF43A047.toInt())
+            plus1Btn.strokeColor = ColorStateList.valueOf(0xFF43A047.toInt())
+            plus1Btn.setTextColor(0xFF43A047.toInt())
+            tackPortBtn.strokeColor = ColorStateList.valueOf(0xFFE53935.toInt())
+            tackPortBtn.setTextColor(0xFFE53935.toInt())
+            tackStbdBtn.strokeColor = ColorStateList.valueOf(0xFF43A047.toInt())
+            tackStbdBtn.setTextColor(0xFF43A047.toInt())
+            btnDisengageStandby.backgroundTintList = ColorStateList.valueOf(0xFFD32F2F.toInt())
+            btnDisengageStandby.setTextColor(Color.WHITE)
+        }
+    }
+
     private fun updateUi(state: MarineState) {
         if (!isAdded) return
 
@@ -529,15 +551,27 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
         val arbitrator = app.let { net.osmand.plus.plugins.nautical.engine.NauticalHelmArbitrator.getInstance(it) }
         val isLocked = arbitrator.isLockedByEmergency()
 
+        val isNight = NauticalPlugin.isNightVision(app)
+        if (isNightVision != isNight) {
+            isNightVision = isNight
+            applyNightVisionStyling(isNightVision)
+        }
+
         arcView.currentMode = rawMode
-        arcView.setNightMode(nightMode)
-        errorLinear.setNightMode(nightMode)
+        arcView.setNightMode(nightMode || isNightVision)
+        errorLinear.setNightMode(nightMode || isNightVision)
+        rudderView.setNightMode(nightMode || isNightVision)
 
         // Mode badge update with OsmAnd styling
         badgePilotMode.text = rawMode
-        badgePilotMode.setBackgroundResource(R.drawable.btn_active_light)
-        badgePilotMode.backgroundTintList = ContextCompat.getColorStateList(requireContext(), R.color.icon_color_osmand_light)
-        badgePilotMode.setTextColor(Color.WHITE)
+        if (isNightVision) {
+            badgePilotMode.setTextColor(0xFFFF1744.toInt())
+            badgePilotMode.backgroundTintList = ColorStateList.valueOf(0xFF4A0007.toInt())
+        } else {
+            badgePilotMode.setBackgroundResource(R.drawable.btn_active_light)
+            badgePilotMode.backgroundTintList = ContextCompat.getColorStateList(requireContext(), R.color.icon_color_osmand_light)
+            badgePilotMode.setTextColor(Color.WHITE)
+        }
 
         // Enable/Disable mode toggle group
         if (isLocked) {
@@ -556,6 +590,7 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
         val targetCheckedId = when (rawMode) {
             "AUTO" -> R.id.btn_mode_compass
             "WIND" -> R.id.btn_mode_wind
+            "TWA" -> R.id.btn_mode_twa
             "TRACK", "ROUTE" -> R.id.btn_mode_route
             "STANDBY" -> R.id.btn_mode_stop
             else -> View.NO_ID
@@ -565,20 +600,20 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
             modeToggleGroup.check(targetCheckedId)
         }
 
-        val orangeColor = ContextCompat.getColor(requireContext(), R.color.icon_color_osmand_light)
-        val defaultIconColor = net.osmand.plus.utils.AndroidUtils.getColorFromAttr(requireContext(), R.attr.icon_color_primary)
-        val defaultStrokeColor = net.osmand.plus.utils.AndroidUtils.getColorFromAttr(requireContext(), R.attr.active_color_primary)
+        val orangeColor = if (isNightVision) 0xFFFF1744.toInt() else ContextCompat.getColor(requireContext(), R.color.icon_color_osmand_light)
+        val defaultIconColor = if (isNightVision) 0xFFFF1744.toInt() else net.osmand.plus.utils.AndroidUtils.getColorFromAttr(requireContext(), R.attr.icon_color_primary)
+        val defaultStrokeColor = if (isNightVision) 0xFFFF1744.toInt() else net.osmand.plus.utils.AndroidUtils.getColorFromAttr(requireContext(), R.attr.active_color_primary)
 
         for (btn in modeButtons) {
             val isChecked = btn.id == targetCheckedId
             if (isChecked) {
-                btn.backgroundTintList = android.content.res.ColorStateList.valueOf(orangeColor)
-                btn.iconTint = android.content.res.ColorStateList.valueOf(Color.WHITE)
+                btn.backgroundTintList = ColorStateList.valueOf(orangeColor)
+                btn.iconTint = ColorStateList.valueOf(Color.WHITE)
             } else {
-                btn.backgroundTintList = android.content.res.ColorStateList.valueOf(Color.TRANSPARENT)
-                btn.iconTint = android.content.res.ColorStateList.valueOf(defaultIconColor)
+                btn.backgroundTintList = ColorStateList.valueOf(Color.TRANSPARENT)
+                btn.iconTint = ColorStateList.valueOf(defaultIconColor)
             }
-            btn.strokeColor = android.content.res.ColorStateList.valueOf(defaultStrokeColor)
+            btn.strokeColor = ColorStateList.valueOf(defaultStrokeColor)
         }
 
         // Headings & Deviations
@@ -592,6 +627,13 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
             val awaDeg = state.windDirectionApparent?.let { Math.toDegrees(it).toInt() } ?: 0
             val targetAwaDeg = state.targetWindAngleApparent?.let { Math.toDegrees(it).toInt() } ?: 0
             var windErr = (awaDeg - targetAwaDeg).toFloat()
+            while (windErr > 180) windErr -= 360
+            while (windErr < -180) windErr += 360
+            errorLinear.headingError = windErr
+        } else if (rawMode == "TWA") {
+            val twaDeg = state.trueWindAngle?.let { Math.toDegrees(it).toInt() } ?: 0
+            val targetTwaDeg = state.targetWindAngleTrue?.let { Math.toDegrees(it).toInt() } ?: 0
+            var windErr = (twaDeg - targetTwaDeg).toFloat()
             while (windErr > 180) windErr -= 360
             while (windErr < -180) windErr += 360
             errorLinear.headingError = windErr
@@ -633,18 +675,6 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
                 "TRACK" -> R.string.nautical_mode_engaged_track
                 "STANDBY" -> R.string.nautical_mode_engaged_standby
                 else -> return
-            }
-            player.playCommands(player.newCommandBuilder().attention(getString(textId)))
-        }
-    }
-
-    private fun speakManeuver(tacking: Boolean, port: Boolean) {
-        val app = activity?.application as? net.osmand.plus.OsmandApplication
-        app?.player?.let { player ->
-            val textId = if (tacking) {
-                if (port) R.string.nautical_tack_port else R.string.nautical_tack_stbd
-            } else {
-                if (port) R.string.nautical_gybe_port else R.string.nautical_gybe_stbd
             }
             player.playCommands(player.newCommandBuilder().attention(getString(textId)))
         }

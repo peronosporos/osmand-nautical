@@ -76,10 +76,13 @@ import net.osmand.plus.plugins.nautical.quickaction.NauticalLaylinesQuickAction
 import net.osmand.plus.plugins.nautical.quickaction.NauticalMasterTelemetryQuickAction
 import net.osmand.plus.plugins.nautical.quickaction.NauticalMobQuickAction
 import net.osmand.plus.plugins.nautical.quickaction.NauticalNightVisionQuickAction
+import net.osmand.plus.plugins.nautical.quickaction.NauticalChecklistQuickAction
+import net.osmand.plus.plugins.nautical.quickaction.NauticalPassagePlanQuickAction
 import net.osmand.plus.plugins.nautical.quickaction.NauticalSailInventoryQuickAction
 import net.osmand.plus.plugins.nautical.quickaction.NauticalSwitchQuickAction
 import net.osmand.plus.plugins.nautical.quickaction.NauticalTacticalStartPinQuickAction
 import net.osmand.plus.plugins.nautical.quickaction.NauticalVhfQuickAction
+import net.osmand.plus.plugins.nautical.quickaction.NauticalWetScreenLockQuickAction
 import net.osmand.plus.plugins.nautical.s57.S57SpatialIndex
 import net.osmand.plus.plugins.nautical.system.NauticalSystemManager
 import net.osmand.plus.plugins.nautical.ui.NauticalAisLayer
@@ -178,7 +181,7 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
         fun isNightVision(app: OsmandApplication?): Boolean {
             if (app == null) return false
             val plugin = getInstance()
-            return (plugin != null) && plugin.isActive && plugin.isNightVisionEnabled
+            return (plugin != null) && plugin.isActive && (plugin.isNightVisionEnabled || app.settings.NAUTICAL_DISPLAY_MODE.get() == net.osmand.plus.settings.enums.NauticalDisplayMode.DARK)
         }
 
         @JvmStatic
@@ -679,6 +682,7 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
     val aisCpaWarningDistance: CommonPreference<Float> get() = app.settings.NAUTICAL_AIS_CPA_WARNING_DISTANCE
     val aisOwnMmsi: CommonPreference<Int> get() = app.settings.NAUTICAL_AIS_OWN_MMSI as CommonPreference<Int>
     val aisDisplayOwnPosition: CommonPreference<Boolean> get() = app.settings.NAUTICAL_AIS_DISPLAY_OWN_POSITION
+    val aisGuardZoneRadius: CommonPreference<Float> get() = app.settings.NAUTICAL_GUARD_ZONE_RADIUS
 
     override fun init(app: OsmandApplication, activity: android.app.Activity?): Boolean {
         initPlugin()
@@ -1525,6 +1529,7 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
                     engine?.disarmAnchor()
                 }
             }
+            workflowManager?.onVesselContextChanged(context, app.osmandMap?.mapView?.mapActivity)
             updateFeatureLifecycle()
             requestRefresh()
         } finally {
@@ -1595,7 +1600,10 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
             NauticalTacticalStartPinQuickAction.TYPE_PORT,
             NauticalTacticalStartPinQuickAction.TYPE_STBD,
             NauticalLaylinesQuickAction.TYPE,
-            NauticalAisQuickAction.TYPE
+            NauticalAisQuickAction.TYPE,
+            NauticalChecklistQuickAction.TYPE,
+            NauticalPassagePlanQuickAction.TYPE,
+            NauticalWetScreenLockQuickAction.TYPE
         )
     }
 

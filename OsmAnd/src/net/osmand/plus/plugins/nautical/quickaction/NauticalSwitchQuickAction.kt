@@ -34,6 +34,7 @@ class NauticalSwitchQuickAction : QuickAction {
         if (mapActivity.isFinishing || mapActivity.isDestroyed || mapActivity.supportFragmentManager.isStateSaved) {
             return
         }
+        mapActivity.mapView?.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
         if (NauticalPlugin.getInstance() == null) {
             mapActivity.app.showToastMessage(R.string.nautical_plugin_inactive)
             return

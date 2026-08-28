@@ -97,6 +97,12 @@ class NauticalContextMenuHelper(private val app: OsmandApplication) {
             adapter.addItem(createToggle(R.string.nautical_show_wind_shifts, app.settings.NAUTICAL_SHOW_WIND_SHIFTS, mapActivity, onRequestRefresh))
             adapter.addItem(createToggle(R.string.nautical_show_trajectory, app.settings.NAUTICAL_SHOW_TRAJECTORY, mapActivity, onRequestRefresh))
 
+            // Polar Rose, Depth Profile, Radar & S-57 Clearances
+            adapter.addItem(createToggle(R.string.nautical_polar_target_vmg, app.settings.NAUTICAL_SHOW_POLAR_OVERLAY, mapActivity, onRequestRefresh))
+            adapter.addItem(createToggle(R.string.nautical_forward_depth_clearance_title, app.settings.NAUTICAL_SHOW_DEPTH_PROFILE, mapActivity, onRequestRefresh))
+            adapter.addItem(createToggle(R.string.nautical_radar_overlay, app.settings.NAUTICAL_SHOW_RADAR_OVERLAY, mapActivity, onRequestRefresh))
+            adapter.addItem(createToggle(R.string.nautical_bridge_clearance_title, app.settings.NAUTICAL_SHOW_CLEARANCE_BADGES, mapActivity, onRequestRefresh))
+
             if (isModuleEnabled(NauticalModule.TIDES)) {
                 adapter.addItem(createToggleWithGear(R.string.layer_tides_title, app.settings.NAUTICAL_SHOW_TIDES, mapActivity, onRequestRefresh) {
                     showSettings(mapActivity, SettingsScreenType.TIDE_DATA_MANAGER)
@@ -228,10 +234,183 @@ class NauticalContextMenuHelper(private val app: OsmandApplication) {
     ) {
         if (!app.settings.APPLICATION_MODE.get().isDerivedRoutingFrom(ApplicationMode.BOAT)) return
 
+        val isNight = NauticalPlugin.isNightVision(app)
+        val minTouchHeight = (48f * app.resources.displayMetrics.density).toInt()
+        val itemColor = if (isNight) 0xFFFF1744.toInt() else null
+
+        fun ContextMenuItem.applyNauticalStyle(): ContextMenuItem {
+            this.minHeight = minTouchHeight
+            if (itemColor != null) {
+                this.color = itemColor
+            }
+            return this
+        }
+
+        // 1. Water Long-Press Quick Actions: Drop Anchor Here, Set Layline Mark, SAR Search Datum
+        adapter.addItem(
+            ContextMenuItem("nautical_set_anchor_here").apply {
+                setTitleId(R.string.nautical_drop_anchor_here, mapActivity)
+                icon = R.drawable.ic_action_anchor
+                applyNauticalStyle()
+                setListener { _, _, _, _ ->
+                    app.settings.NAUTICAL_ANCHOR_LAT.set(lat)
+                    app.settings.NAUTICAL_ANCHOR_LON.set(lon)
+                    if (app.settings.NAUTICAL_ANCHOR_RADIUS.get() <= 0f) {
+                        app.settings.NAUTICAL_ANCHOR_RADIUS.set(50f)
+                    }
+                    val plugin = net.osmand.plus.plugins.PluginsHelper.getPlugin(NauticalPlugin::class.java)
+                    plugin?.anchorWatchdog?.setAnchor(lat, lon, app.settings.NAUTICAL_ANCHOR_RADIUS.get())
+                    app.showToastMessage(R.string.nautical_drop_anchor_here)
+                    net.osmand.plus.plugins.nautical.ui.anchor.AnchorWatchDialogFragment.show(mapActivity.supportFragmentManager)
+                    onRequestRefresh()
+                    app.osmandMap?.refreshMap()
+                    true
+                }
+            }
+        )
+
+        val isLaylinesActive = app.settings.NAUTICAL_SHOW_LAYLINES.get()
+        val curTargetLat = app.settings.NAUTICAL_TACTICAL_TARGET_LAT.get()
+        val curTargetLon = app.settings.NAUTICAL_TACTICAL_TARGET_LON.get()
+        val isCurrentTarget = isLaylinesActive && curTargetLat == lat && curTargetLon == lon
+
+        adapter.addItem(
+            ContextMenuItem("nautical_show_laylines_to_here").apply {
+                setTitleId(if (isCurrentTarget) R.string.nautical_laylines_disabled else R.string.nautical_set_layline_mark, mapActivity)
+                icon = R.drawable.ic_action_sail_boat_dark
+                applyNauticalStyle()
+                setListener { _, _, _, _ ->
+                    val isCurrentlyActive = app.settings.NAUTICAL_SHOW_LAYLINES.get() &&
+                        app.settings.NAUTICAL_TACTICAL_TARGET_LAT.get() == lat &&
+                        app.settings.NAUTICAL_TACTICAL_TARGET_LON.get() == lon
+                    if (isCurrentlyActive) {
+                        app.settings.NAUTICAL_SHOW_LAYLINES.set(false)
+                        app.settings.NAUTICAL_TACTICAL_TARGET_LAT.set(0.0)
+                        app.settings.NAUTICAL_TACTICAL_TARGET_LON.set(0.0)
+                        app.showToastMessage(R.string.nautical_laylines_disabled)
+                    } else {
+                        app.settings.NAUTICAL_TACTICAL_TARGET_LAT.set(lat)
+                        app.settings.NAUTICAL_TACTICAL_TARGET_LON.set(lon)
+                        app.settings.NAUTICAL_SHOW_LAYLINES.set(true)
+                        app.showToastMessage(R.string.nautical_laylines_enabled_target)
+                    }
+                    onRequestRefresh()
+                    app.osmandMap?.refreshMap()
+                    true
+                }
+            }
+        )
+
+        adapter.addItem(
+            ContextMenuItem("nautical_mob_here").apply {
+                setTitleId(R.string.nautical_sar_search_datum_action, mapActivity)
+                icon = R.drawable.ic_action_alert
+                applyNauticalStyle()
+                setListener { _, _, _, _ ->
+                    mobViewModel?.triggerMob(
+                        LatLon(lat, lon),
+                        MobTriggerSource.MAP
+                    )
+                    app.showToastMessage(R.string.nautical_mob_triggered)
+                    onRequestRefresh()
+                    app.osmandMap?.refreshMap()
+                    true
+                }
+            }
+        )
+
+        // Set Parallel Index (PI) Line action
+        adapter.addItem(
+            ContextMenuItem("nautical_set_pi_line").apply {
+                title = "Set Parallel Index (PI) Line"
+                icon = R.drawable.ic_action_ruler
+                applyNauticalStyle()
+                setListener { _, _, _, _ ->
+                    val options = arrayOf(
+                        "Anchor to PI Line 1 (Starboard)",
+                        "Anchor to PI Line 2 (Port)",
+                        "Clear Active PI Lines"
+                    )
+                    androidx.appcompat.app.AlertDialog.Builder(mapActivity)
+                        .setTitle("Parallel Index (PI) Lines")
+                        .setItems(options) { _, which ->
+                            val plugin = net.osmand.plus.plugins.PluginsHelper.getPlugin(NauticalPlugin::class.java)
+                            val aisLayer = plugin?.aisLayer
+                            val state = engine?.getCurrentState()
+                            val cog = state?.courseOverGroundTrue?.let { Math.toDegrees(it) } ?: 0.0
+                            when (which) {
+                                0 -> {
+                                    aisLayer?.piLine1 = net.osmand.plus.plugins.nautical.ui.ParallelIndexLine(
+                                        originLat = lat,
+                                        originLon = lon,
+                                        bearingTrueDeg = cog,
+                                        rangeNm = 0.5,
+                                        isStarboard = true,
+                                        label = "PI-1 (${String.format(Locale.US, "%.3f, %.3f", lat, lon)})"
+                                    )
+                                    app.showToastMessage("PI Line 1 anchored to point (${String.format(Locale.US, "%.0f°T", cog)})")
+                                }
+                                1 -> {
+                                    aisLayer?.piLine2 = net.osmand.plus.plugins.nautical.ui.ParallelIndexLine(
+                                        originLat = lat,
+                                        originLon = lon,
+                                        bearingTrueDeg = cog,
+                                        rangeNm = 0.5,
+                                        isStarboard = false,
+                                        label = "PI-2 (${String.format(Locale.US, "%.3f, %.3f", lat, lon)})"
+                                    )
+                                    app.showToastMessage("PI Line 2 anchored to point (${String.format(Locale.US, "%.0f°T", cog)})")
+                                }
+                                2 -> {
+                                    aisLayer?.piLine1 = null
+                                    aisLayer?.piLine2 = null
+                                    app.showToastMessage("Parallel Index Lines cleared")
+                                }
+                            }
+                            onRequestRefresh()
+                            app.osmandMap?.refreshMap()
+                        }
+                        .setNegativeButton(R.string.shared_string_cancel, null)
+                        .show()
+                    true
+                }
+            }
+        )
+
+        // Slew Camera to Point action
+        adapter.addItem(
+            ContextMenuItem("nautical_slew_camera").apply {
+                title = "Slew Camera to Point (PTZ/FLIR)"
+                icon = R.drawable.ic_action_photo_camera
+                applyNauticalStyle()
+                setListener { _, _, _, _ ->
+                    val camManager = net.osmand.plus.plugins.nautical.camera.NauticalCameraManager.getInstance(app)
+                    camManager.slewToCoordinate(
+                        targetLat = lat,
+                        targetLon = lon,
+                        label = String.format(Locale.US, "Point (%.3f, %.3f)", lat, lon),
+                        onSuccess = { target ->
+                            val msg = String.format(
+                                Locale.US,
+                                "Camera slewed to target: Bearing %03.0f° / Range %.2f NM",
+                                target.bearingDeg, target.distanceNm
+                            )
+                            app.showToastMessage(msg)
+                        },
+                        onError = { err ->
+                            app.showToastMessage("Camera Slew: $err")
+                        }
+                    )
+                    true
+                }
+            }
+        )
+
         adapter.addItem(
             ContextMenuItem("nautical_switches").apply {
                 setTitleId(R.string.nautical_electrical_dashboard, mapActivity)
                 icon = R.drawable.ic_action_nautical_battery_volt
+                applyNauticalStyle()
                 setListener { _, _, _, _ ->
                     NauticalElectricalDashboardBottomSheet.show(mapActivity.supportFragmentManager)
                     true
@@ -244,6 +423,7 @@ class NauticalContextMenuHelper(private val app: OsmandApplication) {
             ContextMenuItem("nautical_ping_port").apply {
                 title = if (isPortSet) mapActivity.getString(R.string.nautical_clear_port_pin) else mapActivity.getString(R.string.nautical_ping_port_pin)
                 icon = if (isPortSet) R.drawable.ic_action_remove else R.drawable.ic_action_flag
+                applyNauticalStyle()
                 setListener { _, _, _, _ ->
                     val loc = app.locationProvider.lastKnownLocation
                     val pinLat = loc?.latitude ?: lat
@@ -284,6 +464,7 @@ class NauticalContextMenuHelper(private val app: OsmandApplication) {
             ContextMenuItem("nautical_ping_stbd").apply {
                 title = if (isStbdSet) mapActivity.getString(R.string.nautical_clear_stbd_pin) else mapActivity.getString(R.string.nautical_ping_stbd_pin)
                 icon = if (isStbdSet) R.drawable.ic_action_remove else R.drawable.ic_action_flag
+                applyNauticalStyle()
                 setListener { _, _, _, _ ->
                     val loc = app.locationProvider.lastKnownLocation
                     val pinLat = loc?.latitude ?: lat
@@ -324,6 +505,7 @@ class NauticalContextMenuHelper(private val app: OsmandApplication) {
                 setTitleId(R.string.nautical_anchor_label, mapActivity)
                 icon = R.drawable.ic_action_anchor
                 selected = app.settings.NAUTICAL_ANCHOR_LAT.get() != 0.0
+                applyNauticalStyle()
                 setListener { _, _, _, _ ->
                     net.osmand.plus.plugins.nautical.ui.anchor.AnchorWatchDialogFragment.show(mapActivity.supportFragmentManager)
                     true
@@ -335,6 +517,7 @@ class NauticalContextMenuHelper(private val app: OsmandApplication) {
             ContextMenuItem("nautical_ebl_vrm").apply {
                 setTitleId(R.string.nautical_ebl_vrm, mapActivity)
                 icon = R.drawable.ic_action_direction_compass
+                applyNauticalStyle()
                 setListener { _, _, _, _ ->
                     val state = engine?.getCurrentState()
                     val loc = app.locationProvider.lastKnownLocation
@@ -377,6 +560,7 @@ class NauticalContextMenuHelper(private val app: OsmandApplication) {
             ContextMenuItem("nautical_add_tactical_waypoint").apply {
                 setTitleId(R.string.nautical_add_tactical_waypoint, mapActivity)
                 icon = R.drawable.ic_action_flag
+                applyNauticalStyle()
                 setListener { _, _, _, _ ->
                     val currentPoints = engine?.getRoutePoints()?.toMutableList() ?: mutableListOf()
                     currentPoints.add(Pair(lat, lon))
@@ -390,48 +574,14 @@ class NauticalContextMenuHelper(private val app: OsmandApplication) {
         )
 
         adapter.addItem(
-            ContextMenuItem("nautical_set_anchor_here").apply {
-                setTitleId(R.string.nautical_set_anchor_here, mapActivity)
-                icon = R.drawable.ic_action_anchor
-                setListener { _, _, _, _ ->
-                    app.settings.NAUTICAL_ANCHOR_LAT.set(lat)
-                    app.settings.NAUTICAL_ANCHOR_LON.set(lon)
-                    if (app.settings.NAUTICAL_ANCHOR_RADIUS.get() <= 0f) {
-                        app.settings.NAUTICAL_ANCHOR_RADIUS.set(50f)
-                    }
-                    net.osmand.plus.plugins.nautical.ui.anchor.AnchorWatchDialogFragment.show(mapActivity.supportFragmentManager)
-                    onRequestRefresh()
-                    app.osmandMap?.refreshMap()
-                    true
-                }
-            }
-        )
-
-        adapter.addItem(
             ContextMenuItem("nautical_navigate_weather_route_here").apply {
                 setTitleId(R.string.nautical_navigate_weather_route_here, mapActivity)
                 icon = R.drawable.ic_action_plan_route
+                applyNauticalStyle()
                 setListener { _, _, _, _ ->
                     app.settings.NAUTICAL_TACTICAL_TARGET_LAT.set(lat)
                     app.settings.NAUTICAL_TACTICAL_TARGET_LON.set(lon)
                     net.osmand.plus.plugins.nautical.routing.ui.WeatherRoutingConfigBottomSheet.show(mapActivity.supportFragmentManager, lat, lon)
-                    true
-                }
-            }
-        )
-
-        adapter.addItem(
-            ContextMenuItem("nautical_mob_here").apply {
-                setTitleId(R.string.nautical_mob_here, mapActivity)
-                icon = R.drawable.ic_action_alert
-                setListener { _, _, _, _ ->
-                    mobViewModel?.triggerMob(
-                        LatLon(lat, lon),
-                        MobTriggerSource.BUTTON
-                    )
-                    app.showToastMessage(R.string.nautical_mob_triggered)
-                    onRequestRefresh()
-                    app.osmandMap?.refreshMap()
                     true
                 }
             }
@@ -442,6 +592,7 @@ class NauticalContextMenuHelper(private val app: OsmandApplication) {
                 ContextMenuItem("nautical_anchor_set_preview").apply {
                     setTitleId(R.string.nautical_adjust_anchor_here, mapActivity)
                     icon = R.drawable.ic_action_anchor
+                    applyNauticalStyle()
                     setListener { _, _, _, _ ->
                         app.settings.NAUTICAL_ANCHOR_PREVIEW_LAT.set(lat)
                         app.settings.NAUTICAL_ANCHOR_PREVIEW_LON.set(lon)
@@ -458,6 +609,7 @@ class NauticalContextMenuHelper(private val app: OsmandApplication) {
                 val mode = autopilot?.let { " (${engine?.getCurrentState()?.autopilotState ?: "standby"})" } ?: ""
                 title = app.getString(R.string.nautical_autopilot) + mode
                 icon = R.drawable.ic_action_settings
+                applyNauticalStyle()
                 setListener { _, _, _, _ ->
                     val options = arrayOf<CharSequence>(
                         app.getString(R.string.nautical_autopilot_mode_standby),
@@ -476,41 +628,11 @@ class NauticalContextMenuHelper(private val app: OsmandApplication) {
             }
         )
 
-        val isLaylinesActive = app.settings.NAUTICAL_SHOW_LAYLINES.get()
-        val curTargetLat = app.settings.NAUTICAL_TACTICAL_TARGET_LAT.get()
-        val curTargetLon = app.settings.NAUTICAL_TACTICAL_TARGET_LON.get()
-        val isCurrentTarget = isLaylinesActive && curTargetLat == lat && curTargetLon == lon
-
-        adapter.addItem(
-            ContextMenuItem("nautical_show_laylines_to_here").apply {
-                setTitleId(if (isCurrentTarget) R.string.nautical_laylines_disabled else R.string.nautical_show_laylines_here, mapActivity)
-                icon = R.drawable.ic_action_sail_boat_dark
-                setListener { _, _, _, _ ->
-                    val isCurrentlyActive = app.settings.NAUTICAL_SHOW_LAYLINES.get() &&
-                        app.settings.NAUTICAL_TACTICAL_TARGET_LAT.get() == lat &&
-                        app.settings.NAUTICAL_TACTICAL_TARGET_LON.get() == lon
-                    if (isCurrentlyActive) {
-                        app.settings.NAUTICAL_SHOW_LAYLINES.set(false)
-                        app.settings.NAUTICAL_TACTICAL_TARGET_LAT.set(0.0)
-                        app.settings.NAUTICAL_TACTICAL_TARGET_LON.set(0.0)
-                        app.showToastMessage(R.string.nautical_laylines_disabled)
-                    } else {
-                        app.settings.NAUTICAL_TACTICAL_TARGET_LAT.set(lat)
-                        app.settings.NAUTICAL_TACTICAL_TARGET_LON.set(lon)
-                        app.settings.NAUTICAL_SHOW_LAYLINES.set(true)
-                        app.showToastMessage(R.string.nautical_laylines_enabled_target)
-                    }
-                    onRequestRefresh()
-                    app.osmandMap?.refreshMap()
-                    true
-                }
-            }
-        )
-
         adapter.addItem(
             ContextMenuItem("nautical_maneuvers_menu").apply {
                 setTitleId(R.string.nautical_maneuver_menu, mapActivity)
                 icon = R.drawable.ic_action_sail_boat_dark
+                applyNauticalStyle()
                 setListener { _, _, _, _ ->
                     NauticalManeuversBottomSheet.show(mapActivity.supportFragmentManager, lat, lon)
                     true
@@ -521,6 +643,7 @@ class NauticalContextMenuHelper(private val app: OsmandApplication) {
         adapter.addItem(
             ContextMenuItem("mob_maneuver").apply {
                 setTitleId(R.string.nautical_mob_label, mapActivity)
+                applyNauticalStyle()
                 setListener { _, _, _, _ ->
                     mobViewModel?.triggerMob(
                         LatLon(lat, lon),
@@ -538,6 +661,7 @@ class NauticalContextMenuHelper(private val app: OsmandApplication) {
             ContextMenuItem("nautical_replay_controls").apply {
                 setTitleId(R.string.nautical_replay_title, mapActivity)
                 icon = R.drawable.ic_action_play_dark
+                applyNauticalStyle()
                 setListener { _, _, _, _ ->
                     net.osmand.plus.plugins.nautical.replay.NmeaPlaybackControlBottomSheet.show(mapActivity.supportFragmentManager)
                     true
@@ -549,6 +673,7 @@ class NauticalContextMenuHelper(private val app: OsmandApplication) {
             ContextMenuItem("nautical_open_logbook_menu").apply {
                 setTitleId(R.string.nautical_log_entries, mapActivity)
                 icon = R.drawable.ic_action_note_dark
+                applyNauticalStyle()
                 setListener { _, _, _, _ ->
                     showSettings(mapActivity, SettingsScreenType.MARINE_LOGBOOK)
                     true
@@ -560,6 +685,7 @@ class NauticalContextMenuHelper(private val app: OsmandApplication) {
             ContextMenuItem("nautical_boat_ai").apply {
                 setTitleId(R.string.nautical_boat_ai_title, mapActivity)
                 icon = R.drawable.ic_action_message
+                applyNauticalStyle()
                 setListener { _, _, _, _ ->
                     showSettings(mapActivity, SettingsScreenType.BOAT_AI)
                     true
@@ -571,6 +697,7 @@ class NauticalContextMenuHelper(private val app: OsmandApplication) {
             ContextMenuItem("nautical_checklists_menu").apply {
                 setTitleId(R.string.nautical_checklists, mapActivity)
                 icon = R.drawable.ic_action_list_bullet
+                applyNauticalStyle()
                 setListener { _, _, _, _ ->
                     showSettings(mapActivity, SettingsScreenType.NAUTICAL_CHECKLISTS)
                     true
@@ -582,6 +709,7 @@ class NauticalContextMenuHelper(private val app: OsmandApplication) {
             ContextMenuItem("nautical_sail_inventory_menu").apply {
                 setTitleId(R.string.nautical_sail_inventory_title, mapActivity)
                 icon = R.drawable.ic_action_sail_boat_dark
+                applyNauticalStyle()
                 setListener { _, _, _, _ ->
                     showSettings(mapActivity, SettingsScreenType.SAIL_INVENTORY)
                     true
@@ -593,6 +721,7 @@ class NauticalContextMenuHelper(private val app: OsmandApplication) {
             ContextMenuItem("nautical_follow_gpx").apply {
                 title = mapActivity.getString(R.string.nautical_follow_gpx_route)
                 icon = R.drawable.ic_action_track_16
+                applyNauticalStyle()
                 setListener { _, _, _, _ ->
                     handleGpxSelection(mapActivity, engine)
                     true
@@ -604,6 +733,7 @@ class NauticalContextMenuHelper(private val app: OsmandApplication) {
             ContextMenuItem("nautical_export_trajectory").apply {
                 title = app.getString(R.string.nautical_export_trajectory)
                 icon = R.drawable.ic_action_export
+                applyNauticalStyle()
                 setListener { _, _, _, _ ->
                     if (pluginScope != null) {
                         exportCurrentTrajectory(mapActivity, engine, pluginScope)
@@ -617,6 +747,7 @@ class NauticalContextMenuHelper(private val app: OsmandApplication) {
             ContextMenuItem("nautical_clear_trajectory").apply {
                 title = app.getString(R.string.nautical_clear_breadcrumbs)
                 icon = R.drawable.ic_action_remove
+                applyNauticalStyle()
                 setListener { _, _, _, _ ->
                     engine?.clearTrajectory()
                     app.showToastMessage(R.string.nautical_breadcrumbs_cleared)
@@ -629,6 +760,7 @@ class NauticalContextMenuHelper(private val app: OsmandApplication) {
             ContextMenuItem("nautical_steer_id").apply {
                 title = mapActivity.getString(R.string.nautical_steer_here)
                 icon = R.drawable.ic_action_direction_compass
+                applyNauticalStyle()
                 setListener { _, _, _, _ ->
                     if (autopilot?.isConnected() == true) {
                         autopilot.sendActiveWaypoint(lat, lon)
@@ -645,6 +777,7 @@ class NauticalContextMenuHelper(private val app: OsmandApplication) {
             ContextMenuItem("nautical_sync_routes").apply {
                 title = app.getString(R.string.nautical_sync_routes_from_server)
                 icon = R.drawable.ic_action_import
+                applyNauticalStyle()
                 setListener { _, _, _, _ ->
                     pluginScope?.launch {
                         val routes = engine?.fetchRoutesFromServer()
@@ -701,6 +834,7 @@ class NauticalContextMenuHelper(private val app: OsmandApplication) {
             ContextMenuItem("nautical_sync_charts").apply {
                 setTitleId(R.string.nautical_server_charts, mapActivity)
                 icon = R.drawable.ic_action_world_globe
+                applyNauticalStyle()
                 setListener { _, _, _, _ ->
                     pluginScope?.launch {
                         val charts = engine?.getRestService()?.getCharts()?.body()
@@ -731,6 +865,7 @@ class NauticalContextMenuHelper(private val app: OsmandApplication) {
             ContextMenuItem("nautical_upload_route").apply {
                 title = app.getString(R.string.nautical_upload_route_to_server)
                 icon = R.drawable.ic_action_export
+                applyNauticalStyle()
                 setListener { _, _, _, _ ->
                     val name = "Route-${System.currentTimeMillis()}"
                     pluginScope?.launch {
@@ -745,6 +880,7 @@ class NauticalContextMenuHelper(private val app: OsmandApplication) {
             ContextMenuItem("nautical_weather_route").apply {
                 title = mapActivity.getString(R.string.nautical_calculate_weather_route)
                 icon = R.drawable.ic_action_wind
+                applyNauticalStyle()
                 setListener { _, _, _, _ ->
                     app.settings.NAUTICAL_TACTICAL_TARGET_LAT.set(lat)
                     app.settings.NAUTICAL_TACTICAL_TARGET_LON.set(lon)
@@ -760,6 +896,7 @@ class NauticalContextMenuHelper(private val app: OsmandApplication) {
                 ContextMenuItem("nautical_export_route_active").apply {
                     setTitleId(R.string.nautical_export_route_gpx, mapActivity)
                     icon = R.drawable.ic_action_export
+                    applyNauticalStyle()
                     setListener { _, _, _, _ ->
                         pluginScope?.launch {
                             val file = GpxStreamer(app).exportRoute(activeRoute)
@@ -780,6 +917,7 @@ class NauticalContextMenuHelper(private val app: OsmandApplication) {
                 ContextMenuItem("nautical_export_weather_route").apply {
                     title = app.getString(R.string.nautical_export_route_gpx) + " (Weather)"
                     icon = R.drawable.ic_action_export
+                    applyNauticalStyle()
                     setListener { _, _, _, _ ->
                         pluginScope?.launch {
                             val file = GpxStreamer(app).exportRouteGpx(weatherRoute)
@@ -803,6 +941,7 @@ class NauticalContextMenuHelper(private val app: OsmandApplication) {
                 ContextMenuItem("nautical_ais_details").apply {
                     setTitleId(R.string.nautical_vessel_details, mapActivity)
                     icon = R.drawable.ic_action_info
+                    applyNauticalStyle()
                     setListener { _, _, _, _ ->
                         NauticalAisDetailsDialog.show(mapActivity.supportFragmentManager, obj.mmsi)
                         true

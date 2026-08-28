@@ -47,7 +47,8 @@ class SignalKTideLayer(context: Context) : OsmandMapLayer(context) {
         val vesselTide = marineState?.tide
 
         val isNight = NauticalPlugin.isNightVision(app)
-        textPaint.color = if (isNight) Color.RED else Color.WHITE
+        textPaint.color = if (isNight) 0xFFFF8A80.toInt() else Color.WHITE
+        bgPaint.color = if (isNight) 0xEE120000.toInt() else 0xCC000000.toInt()
 
         // Signal K Stations
         stations.values.forEach { station ->
@@ -68,7 +69,7 @@ class SignalKTideLayer(context: Context) : OsmandMapLayer(context) {
     }
 
     private fun drawStationIcon(canvas: Canvas, x: Float, y: Float, station: SignalKTideStation, vesselTide: net.osmand.plus.plugins.nautical.engine.TideState?, isNight: Boolean) {
-        val color = if (isNight) Color.RED else Color.CYAN
+        val color = if (isNight) 0xFFFF1744.toInt() else Color.CYAN
         paint.color = color
         paint.style = Paint.Style.STROKE
         paint.strokeWidth = 3f
@@ -100,7 +101,7 @@ class SignalKTideLayer(context: Context) : OsmandMapLayer(context) {
 
     private fun drawTrendArrow(canvas: Canvas, x: Float, y: Float, rising: Boolean, isNight: Boolean) {
         val arrowPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = if (isNight) Color.RED else Color.GREEN
+            color = if (isNight) 0xFFFF1744.toInt() else Color.GREEN
             style = Paint.Style.FILL
         }
         val path = Path()

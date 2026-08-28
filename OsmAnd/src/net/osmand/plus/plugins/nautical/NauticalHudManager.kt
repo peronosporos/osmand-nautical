@@ -58,26 +58,65 @@ class NauticalHudManager(val activity: MapActivity) {
         return nauticalHudContainer
     }
 
+    private data class HeaderRecord(val view: View, val priority: Int)
+    private val registeredHeaders = mutableListOf<HeaderRecord>()
+    private var activeHeader: View? = null
+
     fun addHeader(header: View, priority: Int = 100) {
-        val container = getOrCreateContainer() ?: return
-        if (priority == 0) {
-            container.addView(header, 0)
-        } else {
-            container.addView(header)
-        }
+        getOrCreateContainer() ?: return
+        registeredHeaders.removeAll { it.view == header }
+        registeredHeaders.add(HeaderRecord(header, priority))
+        registeredHeaders.sortBy { it.priority }
+        arbitrateHeaders()
         updateLayout()
     }
 
     fun removeHeader(header: View?) {
-        header?.let {
-            nauticalHudContainer?.removeView(it)
-            updateLayout()
+        if (header == null) return
+        registeredHeaders.removeAll { it.view == header }
+        if (activeHeader == header) {
+            nauticalHudContainer?.removeView(header)
+            activeHeader = null
         }
+        arbitrateHeaders()
+        updateLayout()
     }
 
     fun removeAllHeaders() {
+        registeredHeaders.clear()
+        activeHeader = null
         nauticalHudContainer?.removeAllViews()
         updateLayout()
+    }
+
+    private fun arbitrateHeaders() {
+        val container = getOrCreateContainer() ?: return
+        val isNight = NauticalPlugin.isNightVision(activity.app)
+        
+        val highest = registeredHeaders.firstOrNull()?.view
+        
+        if (activeHeader != highest) {
+            activeHeader?.let { container.removeView(it) }
+            activeHeader = highest
+            if (highest != null) {
+                if (highest.parent != null) {
+                    (highest.parent as? ViewGroup)?.removeView(highest)
+                }
+                container.addView(highest, 0)
+            }
+        }
+        
+        registeredHeaders.forEach { record ->
+            (record.view as? INauticalHudHeader)?.applyNightVision(isNight)
+            try {
+                val method = record.view.javaClass.getMethod("applyNightVisionTheme", Boolean::class.javaPrimitiveType)
+                method.invoke(record.view, isNight)
+            } catch (_: Exception) {}
+            try {
+                val method = record.view.javaClass.getMethod("setNightVision", Boolean::class.javaPrimitiveType)
+                method.invoke(record.view, isNight)
+            } catch (_: Exception) {}
+        }
     }
 
     private val bannerQueue = PriorityBlockingQueue<BannerRequest>()
@@ -310,6 +349,8 @@ class NauticalHudManager(val activity: MapActivity) {
         nauticalHudContainer?.let { hud ->
             (hud.parent as? ViewGroup)?.removeView(hud)
         }
+        registeredHeaders.clear()
+        activeHeader = null
         nauticalHudContainer = null
         topBarListener = null
         topWidgetsListener = null

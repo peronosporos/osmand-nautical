@@ -68,8 +68,26 @@ class NavtexMapLayer(private val activity: MapActivity) : OsmandMapLayer(activit
 
     override fun drawInScreenPixels(): Boolean = true
 
+    private fun setupPaints(isNight: Boolean) {
+        if (isNight) {
+            polygonFillPaint.color = 0x25B71C1C.toInt() // Translucent deep red (#25B71C1C)
+            polygonStrokePaint.color = 0xCCFF1744.toInt() // Monochromatic red border (#CCFF1744)
+            hatchPaint.color = 0x80FF1744.toInt() // Deep red hatch lines (#80FF1744)
+            badgePaint.color = 0xFFFF8A80.toInt() // Monochromatic light red (#FF8A80)
+            strokePaint.color = 0xFFFF8A80.toInt()
+        } else {
+            polygonFillPaint.color = 0x30FF5252.toInt()
+            polygonStrokePaint.color = 0xFFFF5252.toInt()
+            hatchPaint.color = 0xFFFF5252.toInt()
+            badgePaint.color = Color.WHITE
+            strokePaint.color = Color.WHITE
+        }
+    }
+
     override fun onDraw(canvas: Canvas, tileBox: RotatedTileBox, settings: DrawSettings) {
         val viewport = tileBox.latLonBounds
+        val isNight = net.osmand.plus.plugins.nautical.NauticalPlugin.isNightVision(activity.app)
+        setupPaints(isNight)
         
         // Update scale factor cache
         if ((tileBox.zoom != lastZoom) || (tileBox.density != lastDensity)) {
@@ -92,14 +110,14 @@ class NavtexMapLayer(private val activity: MapActivity) : OsmandMapLayer(activit
             if (!isMessageVisible(msg, viewport)) return@forEach
 
             if (msg.isPolygon) {
-                drawPolygon(canvas, tileBox, msg, settings.isNightMode, scaleFactor)
+                drawPolygon(canvas, tileBox, msg, isNight, scaleFactor)
             } else {
                 val coords = msg.points[0]
                 val x = tileBox.getPixXFromLatLon(coords.latitude, coords.longitude)
                 val y = tileBox.getPixYFromLatLon(coords.latitude, coords.longitude)
                 
                 if (x >= 0 && x <= canvas.width && y >= 0 && y <= canvas.height) {
-                    drawWarningMarker(canvas, x, y, msg.isUrgent, settings.isNightMode, scaleFactor)
+                    drawWarningMarker(canvas, x, y, msg.isUrgent, isNight, scaleFactor)
                 }
             }
         }
@@ -155,7 +173,7 @@ class NavtexMapLayer(private val activity: MapActivity) : OsmandMapLayer(activit
 
         // Colorblind Accessibility: Hatching for urgent areas
         if (msg.isUrgent) {
-            val baseColor = if (isNight) 0xFFB71C1C.toInt() else 0xFFFF5252.toInt()
+            val baseColor = if (isNight) 0x80FF1744.toInt() else 0xFFFF5252.toInt()
             drawHatching(canvas, polygonPath, baseColor, scale)
         }
 
@@ -168,7 +186,6 @@ class NavtexMapLayer(private val activity: MapActivity) : OsmandMapLayer(activit
         path.computeBounds(hatchingBounds, true)
         
         hatchPaint.color = color
-        hatchPaint.alpha = 80
         hatchPaint.strokeWidth = 2f * scale
         
         val step = 15f * scale
@@ -185,12 +202,12 @@ class NavtexMapLayer(private val activity: MapActivity) : OsmandMapLayer(activit
     private fun drawWarningMarker(canvas: Canvas, x: Float, y: Float, isUrgent: Boolean, isNight: Boolean, scale: Float) {
         markerPaint.style = Paint.Style.FILL
         markerPaint.color = if (isUrgent) {
-            if (isNight) 0xFFB71C1C.toInt() else Color.RED
+            if (isNight) 0xFFFF1744.toInt() else Color.RED
         } else {
-            if (isNight) 0xFFE65100.toInt() else 0xFFFF8F00.toInt()
+            if (isNight) 0xFFD50000.toInt() else 0xFFFF8F00.toInt()
         }
         
-        strokePaint.color = if (isNight) Color.LTGRAY else Color.WHITE
+        strokePaint.color = if (isNight) 0xFFFF8A80.toInt() else Color.WHITE
         strokePaint.strokeWidth = 2f * scale
         
         val size = 20f * scale
@@ -206,7 +223,7 @@ class NavtexMapLayer(private val activity: MapActivity) : OsmandMapLayer(activit
         // Colorblind Accessibility: Badge icon for urgent markers
         if (isUrgent) {
             badgePaint.textSize = 18f * scale
-            badgePaint.color = if (isNight) Color.WHITE else Color.YELLOW
+            badgePaint.color = if (isNight) 0xFFFF8A80.toInt() else Color.YELLOW
             canvas.drawText("!", x, y + size * 0.7f, badgePaint)
         }
     }

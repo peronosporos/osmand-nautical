@@ -42,6 +42,11 @@ class NauticalPilotWidget(
     private var statusIconView: AppCompatImageView? = null
     private var progressBar: ProgressBar? = null
     private var rudderMarker: View? = null
+    private var layoutMicroSteer: View? = null
+    private var btnSteerMinus10: com.google.android.material.button.MaterialButton? = null
+    private var btnSteerMinus1: com.google.android.material.button.MaterialButton? = null
+    private var btnSteerPlus1: com.google.android.material.button.MaterialButton? = null
+    private var btnSteerPlus10: com.google.android.material.button.MaterialButton? = null
     private var gestureDetector: GestureDetector? = null
     private val holdHandler = Handler(Looper.getMainLooper())
     private var holdProgress = 0
@@ -147,6 +152,15 @@ class NauticalPilotWidget(
     override fun getContentLayoutId(): Int = R.layout.map_hud_pilot_widget
 
     private var dataJob: kotlinx.coroutines.Job? = null
+    private var dodgeJob: kotlinx.coroutines.Job? = null
+    private var tackJob: kotlinx.coroutines.Job? = null
+
+    private var btnDodgePort: com.google.android.material.button.MaterialButton? = null
+    private var btnDodgeStbd: com.google.android.material.button.MaterialButton? = null
+    private var btnDodgeResume: com.google.android.material.button.MaterialButton? = null
+    private var btnTackPort: com.google.android.material.button.MaterialButton? = null
+    private var btnTackStbd: com.google.android.material.button.MaterialButton? = null
+    private var btnTackAbort: com.google.android.material.button.MaterialButton? = null
 
     @SuppressLint("ClickableViewAccessibility")
     override fun setupView(view: View) {
@@ -160,6 +174,59 @@ class NauticalPilotWidget(
         }
         progressBar = view.findViewById(R.id.pilot_progress_bar)
         rudderMarker = view.findViewById(R.id.hud_rudder_marker)
+
+        layoutMicroSteer = view.findViewById(R.id.layout_micro_steer)
+        btnSteerMinus10 = view.findViewById(R.id.btn_steer_minus_10)
+        btnSteerMinus1 = view.findViewById(R.id.btn_steer_minus_1)
+        btnSteerPlus1 = view.findViewById(R.id.btn_steer_plus_1)
+        btnSteerPlus10 = view.findViewById(R.id.btn_steer_plus_10)
+        btnDodgePort = view.findViewById(R.id.btn_dodge_port)
+        btnDodgeStbd = view.findViewById(R.id.btn_dodge_stbd)
+        btnDodgeResume = view.findViewById(R.id.btn_dodge_resume)
+        btnTackPort = view.findViewById(R.id.btn_tack_port)
+        btnTackStbd = view.findViewById(R.id.btn_tack_stbd)
+        btnTackAbort = view.findViewById(R.id.btn_tack_abort)
+
+        btnSteerMinus10?.setOnClickListener {
+            view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+            NauticalPlugin.autopilot?.adjustHeading(-10.0)
+        }
+        btnSteerMinus1?.setOnClickListener {
+            view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+            NauticalPlugin.autopilot?.adjustHeading(-1.0)
+        }
+        btnSteerPlus1?.setOnClickListener {
+            view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+            NauticalPlugin.autopilot?.adjustHeading(1.0)
+        }
+        btnSteerPlus10?.setOnClickListener {
+            view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+            NauticalPlugin.autopilot?.adjustHeading(10.0)
+        }
+        btnDodgePort?.setOnClickListener {
+            view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+            NauticalPlugin.autopilot?.executeTacticalDodge(-30.0)
+        }
+        btnDodgeStbd?.setOnClickListener {
+            view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+            NauticalPlugin.autopilot?.executeTacticalDodge(30.0)
+        }
+        btnDodgeResume?.setOnClickListener {
+            view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+            NauticalPlugin.autopilot?.resumeCourseAfterDodge()
+        }
+        btnTackPort?.setOnClickListener {
+            view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+            NauticalPlugin.autopilot?.initiateAutoTack("PORT")
+        }
+        btnTackStbd?.setOnClickListener {
+            view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+            NauticalPlugin.autopilot?.initiateAutoTack("STBD")
+        }
+        btnTackAbort?.setOnClickListener {
+            view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+            NauticalPlugin.autopilot?.abortAutoTack()
+        }
 
         view.addOnAttachStateChangeListener(
             object : View.OnAttachStateChangeListener {
@@ -177,7 +244,8 @@ class NauticalPilotWidget(
                                             updateInfo(null)
                                             updateWidgetView()
                                             state.rudderAngle?.let { angle ->
-                                                val maxAngle = Math.toRadians(app.settings.NAUTICAL_RUDDER_LIMIT.get().toDouble())
+                                                val absAngleDeg = kotlin.math.abs(Math.toDegrees(angle))
+                                                val maxAngle = Math.toRadians(app.settings.NAUTICAL_RUDDER_LIMIT.get().toDouble().coerceIn(15.0, 35.0))
                                                 val ratio = (angle.coerceIn(-maxAngle, maxAngle) / maxAngle).toFloat()
                                                 rudderMarker?.let { marker ->
                                                     val parent = marker.parent as? View
@@ -185,9 +253,52 @@ class NauticalPilotWidget(
                                                         val translationX = ratio * (parent.width / 2f - marker.width / 2f)
                                                         marker.translationX = translationX
                                                     }
+                                                    val isNight = NauticalPlugin.isNightVision(app)
+                                                    val markerColor = when {
+                                                        absAngleDeg > 25.0 -> if (isNight) 0xFFFF1744.toInt() else 0xFFD32F2F.toInt()
+                                                        absAngleDeg > 15.0 -> if (isNight) 0xFFFF8A80.toInt() else 0xFFFFB300.toInt()
+                                                        else -> if (isNight) 0x80FF8A80.toInt() else 0xFF00E5FF.toInt()
+                                                    }
+                                                    marker.setBackgroundColor(markerColor)
                                                 }
                                             }
                                             v.invalidate()
+                                        }
+                                    }
+                                }
+
+                                dodgeJob?.cancel()
+                                dodgeJob = mapActivity.lifecycleScope.launch {
+                                    mapActivity.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+                                        NauticalPlugin.autopilot?.dodgeStateFlow?.collect { dodge ->
+                                            if (dodge.isDodging) {
+                                                btnDodgeResume?.visibility = View.VISIBLE
+                                                btnDodgeResume?.text = "RESUME (${dodge.remainingSeconds}s)"
+                                                btnDodgePort?.visibility = View.GONE
+                                                btnDodgeStbd?.visibility = View.GONE
+                                            } else {
+                                                btnDodgeResume?.visibility = View.GONE
+                                                btnDodgePort?.visibility = View.VISIBLE
+                                                btnDodgeStbd?.visibility = View.VISIBLE
+                                            }
+                                        }
+                                    }
+                                }
+
+                                tackJob?.cancel()
+                                tackJob = mapActivity.lifecycleScope.launch {
+                                    mapActivity.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+                                        NauticalPlugin.autopilot?.autoTackStateFlow?.collect { tack ->
+                                            if (tack.isTacking) {
+                                                btnTackAbort?.visibility = View.VISIBLE
+                                                btnTackAbort?.text = if (tack.isCountdown) "ABORT (${tack.countdownSeconds}s)" else "ABORT"
+                                                btnTackPort?.visibility = View.GONE
+                                                btnTackStbd?.visibility = View.GONE
+                                            } else {
+                                                btnTackAbort?.visibility = View.GONE
+                                                btnTackPort?.visibility = View.VISIBLE
+                                                btnTackStbd?.visibility = View.VISIBLE
+                                            }
                                         }
                                     }
                                 }
@@ -199,6 +310,10 @@ class NauticalPilotWidget(
                 override fun onViewDetachedFromWindow(v: View) {
                     dataJob?.cancel()
                     dataJob = null
+                    dodgeJob?.cancel()
+                    dodgeJob = null
+                    tackJob?.cancel()
+                    tackJob = null
                     holdHandler.removeCallbacksAndMessages(null)
                     pendingAnimator?.cancel()
                     pendingAnimator = null
@@ -389,21 +504,45 @@ class NauticalPilotWidget(
             setText("STANDBY", "")
             setStatusIcon(0)
         } else {
+            val rotDegSec = state.rateOfTurn?.let { Math.toDegrees(it) } ?: 0.0
+            val rotSub = if (kotlin.math.abs(rotDegSec) > 0.1) String.format(Locale.US, "ROT: %.1f°/s", kotlin.math.abs(rotDegSec)) else ""
+
             when (mode) {
-                "wind" -> {
+                "wind", "awa" -> {
                     val targetWind = state.targetWindAngleApparent ?: state.windDirectionApparent
                     if (targetWind != null && !isStale) {
                         val deg = Math.toDegrees(targetWind)
-                        setText(String.format(Locale.US, "W %.0f°", deg), "")
+                        val isNearGybe = abs(deg) > 155.0
+                        if (isNearGybe) {
+                            setText(String.format(Locale.US, "AWA %.0f° ⚠", deg), "GYBE LOCK")
+                        } else {
+                            setText(String.format(Locale.US, "AWA %.0f°", deg), rotSub)
+                        }
+                    } else {
+                        setText("--", "")
+                    }
+                }
+                "twa" -> {
+                    val targetWind = state.trueWindAngle ?: state.targetWindAngleTrue
+                    if (targetWind != null && !isStale) {
+                        val deg = Math.toDegrees(targetWind)
+                        val isNearGybe = abs(deg) > 155.0
+                        if (isNearGybe) {
+                            setText(String.format(Locale.US, "TWA %.0f° ⚠", deg), "GYBE LOCK")
+                        } else {
+                            setText(String.format(Locale.US, "TWA %.0f°", deg), rotSub)
+                        }
                     } else {
                         setText("--", "")
                     }
                 }
                 "nav", "track", "route" -> {
                     val heading = state.targetHeading ?: state.courseOverGroundTrue
+                    val leewayComp = NauticalPlugin.autopilot?.computeLeewayFeedforward(state) ?: 0.0
+                    val subText = if (kotlin.math.abs(leewayComp) > 0.5) String.format(Locale.US, "LEEWAY: %+.1f°", leewayComp) else rotSub
                     if (heading != null && !isStale) {
                         val deg = Math.toDegrees(heading)
-                        setText(String.format(Locale.US, "%.0f°", deg), "")
+                        setText(String.format(Locale.US, "%.0f°", deg), subText)
                     } else {
                         setText("--", "")
                     }
@@ -412,7 +551,7 @@ class NauticalPilotWidget(
                     val heading = state.targetHeading ?: state.headingTrue
                     if (heading != null && !isStale) {
                         val deg = Math.toDegrees(heading)
-                        setText(String.format(Locale.US, "%.0f°", deg), "")
+                        setText(String.format(Locale.US, "%.0f°", deg), rotSub)
                     } else {
                         setText("--", "")
                     }
@@ -424,9 +563,26 @@ class NauticalPilotWidget(
         if (isStale) {
             statusIconView?.alpha = 0.5f
             contentView?.alpha = 0.5f
+            layoutMicroSteer?.visibility = View.GONE
         } else {
             statusIconView?.alpha = 1.0f
             contentView?.alpha = 1.0f
+            layoutMicroSteer?.visibility = if (isEngaged) View.VISIBLE else View.GONE
+        }
+
+        val isNight = NauticalPlugin.isNightVision(app)
+        if (isNight) {
+            view?.findViewById<View>(R.id.widget_bg)?.setBackgroundColor(0xEE120000.toInt())
+            btnSteerMinus10?.setTextColor(0xFFFF1744.toInt())
+            btnSteerMinus1?.setTextColor(0xFFFF5252.toInt())
+            btnSteerPlus1?.setTextColor(0xFFFF8A80.toInt())
+            btnSteerPlus10?.setTextColor(0xFFFF1744.toInt())
+            btnDodgePort?.setTextColor(0xFFFF1744.toInt())
+            btnDodgeStbd?.setTextColor(0xFFFF8A80.toInt())
+            btnDodgeResume?.setTextColor(0xFFFF1744.toInt())
+            btnTackPort?.setTextColor(0xFFFF1744.toInt())
+            btnTackStbd?.setTextColor(0xFFFF8A80.toInt())
+            btnTackAbort?.setTextColor(0xFFFF1744.toInt())
         }
     }
 

@@ -31,7 +31,8 @@ class NauticalCameraWidget(
     override fun updateIcon() {
         val iconId = iconId
         if (iconId != 0) {
-            val color = settings.applicationMode.getProfileColor(isNightMode)
+            val isNight = NauticalPlugin.isNightVision(mapActivity.app)
+            val color = if (isNight) 0xFFFF1744.toInt() else settings.applicationMode.getProfileColor(isNightMode)
             setImageDrawable(iconsCache.getPaintedIcon(iconId, color))
         }
     }
@@ -43,8 +44,16 @@ class NauticalCameraWidget(
 
     override fun updateSimpleWidgetInfo(drawSettings: OsmandMapLayer.DrawSettings?) {
         updateIcon()
-        val sub = if (availableCameras.isNotEmpty()) "${availableCameras.size} CAM" else ""
-        setText(mapActivity.getString(R.string.nautical_camera), sub)
+        val target = net.osmand.plus.plugins.nautical.camera.NauticalCameraManager.getInstance(mapActivity.app).getCurrentPriorityTarget()
+        val sub = if (target != null) {
+            "${target.bearingDeg.toInt()}°"
+        } else if (availableCameras.isNotEmpty()) {
+            "${availableCameras.size} CAM"
+        } else {
+            ""
+        }
+        val mainText = if (target != null) "SLEW" else mapActivity.getString(R.string.nautical_camera)
+        setText(mainText, sub)
     }
 
     override fun setupView(view: View) {
@@ -71,23 +80,46 @@ class NauticalCameraWidget(
 
     override fun getOnClickListener(): View.OnClickListener {
         return View.OnClickListener {
-            if (availableCameras.isEmpty()) {
-                refreshCameraList()
-                mapActivity.app.showToastMessage("Searching for cameras...")
-            } else {
-                showCameraSelector()
-            }
+            showCameraMenu()
         }
     }
 
-    private fun showCameraSelector() {
-        val names = availableCameras.map { it.name ?: it.identifier }.toTypedArray()
+    private fun showCameraMenu() {
+        val manager = net.osmand.plus.plugins.nautical.camera.NauticalCameraManager.getInstance(mapActivity.app)
+        val target = manager.getCurrentPriorityTarget()
+
+        val options = mutableListOf<String>()
+        if (target != null) {
+            options.add("🎯 Slew PTZ to ${target.name} (${target.bearingDeg.toInt()}° / ${String.format(java.util.Locale.US, "%.1f", target.distanceNm)} NM)")
+        } else {
+            options.add("🎯 Slew PTZ (No Target Active)")
+        }
+
+        availableCameras.forEach {
+            options.add("📹 Stream: ${it.name ?: it.identifier}")
+        }
+
         AlertDialog.Builder(mapActivity)
             .setTitle(R.string.nautical_camera)
-            .setItems(names) { _, which ->
-                watchCamera(availableCameras[which])
+            .setItems(options.toTypedArray()) { _, which ->
+                if (which == 0) {
+                    manager.slewToTarget(
+                        onSuccess = { t ->
+                            mapActivity.app.showToastMessage("PTZ Camera Slewed to ${t.name} (${t.bearingDeg.toInt()}°)")
+                            updateInfo(null)
+                        },
+                        onError = { err ->
+                            mapActivity.app.showToastMessage(err)
+                        }
+                    )
+                } else {
+                    val camIdx = which - 1
+                    if (camIdx in availableCameras.indices) {
+                        watchCamera(availableCameras[camIdx])
+                    }
+                }
             }
-            .setNeutralButton("Refresh") { _, _ -> refreshCameraList() }
+            .setNeutralButton("Refresh Cameras") { _, _ -> refreshCameraList() }
             .show()
     }
 

@@ -17,10 +17,11 @@
 
         <!-- Centered Drag Handle Pill -->
         <View
+            android:id="@+id/drag_handle"
             android:layout_width="36dp"
             android:layout_height="4dp"
             android:layout_gravity="center_horizontal"
-            android:layout_marginTop="4dp"
+            android:layout_marginTop="8dp"
             android:layout_marginBottom="12dp"
             android:background="?attr/divider_color" />
 
@@ -54,7 +55,7 @@
                     android:id="@+id/txt_vhf_active_channel"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="CH 16"
+                    android:text="@string/nautical_vhf_ch_16"
                     android:textSize="36sp"
                     android:textStyle="bold"
                     android:textColor="?attr/colorAccent" />
@@ -64,7 +65,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="4dp"
-                    android:text="International Distress, Safety &amp; Calling"
+                    android:text="@string/nautical_vhf_ch_16_desc"
                     android:textAppearance="@style/TextAppearance.AppCompat.Medium"
                     android:textColor="?android:attr/textColorPrimary"
                     android:gravity="center" />
@@ -83,7 +84,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="48dp"
                         android:minHeight="48dp"
-                        android:text="25W HIGH"
+                        android:text="@string/nautical_vhf_25w_high"
                         android:textSize="12sp"
                         android:paddingStart="12dp"
                         android:paddingEnd="12dp"
@@ -95,7 +96,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="48dp"
                         android:minHeight="48dp"
-                        android:text="DUAL WATCH: OFF"
+                        android:text="@string/nautical_vhf_dual_watch_off"
                         android:textSize="12sp"
                         android:paddingStart="12dp"
                         android:paddingEnd="12dp" />
@@ -107,7 +108,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
-                    android:text="Status: Standby / Ready"
+                    android:text="@string/nautical_vhf_status_ready"
                     android:textSize="12sp"
                     android:textColor="?android:attr/textColorSecondary" />
 
@@ -119,7 +120,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="20dp"
-            android:text="Quick Safety &amp; Calling Channels"
+            android:text="@string/nautical_vhf_quick_safety_channels"
             android:textAppearance="@style/TextAppearance.AppCompat.Medium"
             android:textColor="?attr/colorAccent"
             android:textStyle="bold" />
@@ -145,7 +146,7 @@
                 android:paddingEnd="4dp"
                 android:textSize="12sp"
                 android:maxLines="1"
-                android:text="16 DISTRESS"
+                android:text="@string/nautical_vhf_16_distress"
                 android:textColor="@color/color_warning"
                 app:strokeColor="@color/color_warning"
                 app:cornerRadius="8dp" />
@@ -164,7 +165,7 @@
                 android:paddingEnd="4dp"
                 android:textSize="12sp"
                 android:maxLines="1"
-                android:text="09 CALL"
+                android:text="@string/nautical_vhf_09_call"
                 app:cornerRadius="8dp" />
 
             <com.google.android.material.button.MaterialButton
@@ -181,7 +182,7 @@
                 android:paddingEnd="4dp"
                 android:textSize="12sp"
                 android:maxLines="1"
-                android:text="13 SAFETY"
+                android:text="@string/nautical_vhf_13_safety"
                 app:cornerRadius="8dp" />
 
             <com.google.android.material.button.MaterialButton
@@ -198,7 +199,7 @@
                 android:paddingEnd="4dp"
                 android:textSize="12sp"
                 android:maxLines="1"
-                android:text="06 INTER"
+                android:text="@string/nautical_vhf_06_inter"
                 app:cornerRadius="8dp" />
 
             <com.google.android.material.button.MaterialButton
@@ -215,7 +216,7 @@
                 android:paddingEnd="4dp"
                 android:textSize="12sp"
                 android:maxLines="1"
-                android:text="72 SHIP-SHIP"
+                android:text="@string/nautical_vhf_72_ship_ship"
                 app:cornerRadius="8dp" />
 
             <com.google.android.material.button.MaterialButton
@@ -232,7 +233,7 @@
                 android:paddingEnd="4dp"
                 android:textSize="12sp"
                 android:maxLines="1"
-                android:text="77 PORT"
+                android:text="@string/nautical_vhf_77_port"
                 app:cornerRadius="8dp" />
 
         </GridLayout>
@@ -251,7 +252,7 @@
                 android:layout_height="48dp"
                 android:minHeight="48dp"
                 android:layout_weight="1"
-                android:text="Select Channel"
+                android:text="@string/nautical_vhf_select_channel"
                 android:textSize="13sp"
                 android:paddingStart="8dp"
                 android:paddingEnd="8dp"
@@ -267,7 +268,7 @@
                 android:layout_height="48dp"
                 android:minHeight="48dp"
                 android:layout_weight="1"
-                android:text="Live Stream"
+                android:text="@string/nautical_vhf_live_stream"
                 android:textSize="13sp"
                 android:paddingStart="8dp"
                 android:paddingEnd="8dp"
@@ -285,7 +286,7 @@
             android:layout_width="match_parent"
             android:layout_height="48dp"
             android:layout_marginTop="10dp"
-            android:text="MAYDAY / PAN-PAN Radio Script"
+            android:text="@string/nautical_vhf_distress_script_btn"
             android:textSize="13.5sp"
             android:textStyle="bold"
             android:textColor="@android:color/white"
@@ -300,7 +301,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="20dp"
-            android:text="Recent VHF Transmissions"
+            android:text="@string/nautical_vhf_recent_transmissions"
             android:textAppearance="@style/TextAppearance.AppCompat.Medium"
             android:textColor="?attr/colorAccent"
             android:textStyle="bold" />
@@ -318,7 +319,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
             android:gravity="center"
-            android:text="No recent audio transmissions recorded"
+            android:text="@string/nautical_vhf_no_transmissions"
             android:textColor="?android:attr/textColorSecondary" />
 
     </LinearLayout>

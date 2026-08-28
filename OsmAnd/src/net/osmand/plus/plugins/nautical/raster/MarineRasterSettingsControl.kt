@@ -47,7 +47,17 @@ class MarineRasterSettingsControl : BaseMaterialBottomSheetDialogFragment() {
             override fun onStopTrackingTouch(seekBar: SeekBar?) {}
         })
 
+        val blendGroup = view.findViewById<com.google.android.material.button.MaterialButtonToggleGroup>(R.id.raster_blend_group)
+        blendGroup?.check(R.id.btn_blend_normal)
+        blendGroup?.addOnButtonCheckedListener { _, _, isChecked ->
+            if (isChecked) {
+                view.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
+                app.osmandMap.refreshMap()
+            }
+        }
+
         view.findViewById<View>(R.id.manage_btn)?.setOnClickListener {
+            it.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
             dismiss()
             BaseSettingsFragment.showInstance(requireActivity(), SettingsScreenType.MARINE_RASTER_MANAGER)
         }

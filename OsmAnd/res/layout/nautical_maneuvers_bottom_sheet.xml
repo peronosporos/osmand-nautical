@@ -2,8 +2,18 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
+    android:background="?attr/list_background_color"
     android:orientation="vertical"
     android:padding="16dp">
+
+    <View
+        android:id="@+id/drag_handle"
+        android:layout_width="36dp"
+        android:layout_height="4dp"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="0dp"
+        android:layout_marginBottom="12dp"
+        android:background="?attr/divider_color" />
 
     <TextView
         android:layout_width="match_parent"
@@ -44,8 +54,10 @@
             android:textColor="?android:attr/textColorSecondary"/>
         <ImageButton
             android:id="@+id/btn_length_minus"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:minWidth="48dp"
+            android:minHeight="48dp"
             android:src="@drawable/ic_action_remove"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:contentDescription="@string/nautical_accessibility_minus"/>
@@ -58,8 +70,10 @@
             android:textStyle="bold"/>
         <ImageButton
             android:id="@+id/btn_length_plus"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:minWidth="48dp"
+            android:minHeight="48dp"
             android:src="@drawable/ic_action_plus"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:contentDescription="@string/nautical_accessibility_plus"/>
@@ -80,8 +94,10 @@
             android:textColor="?android:attr/textColorSecondary"/>
         <ImageButton
             android:id="@+id/btn_scope_minus"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:minWidth="48dp"
+            android:minHeight="48dp"
             android:src="@drawable/ic_action_remove"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:contentDescription="@string/nautical_accessibility_minus"/>
@@ -94,8 +110,10 @@
             android:textStyle="bold"/>
         <ImageButton
             android:id="@+id/btn_scope_plus"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:minWidth="48dp"
+            android:minHeight="48dp"
             android:src="@drawable/ic_action_plus"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:contentDescription="@string/nautical_accessibility_plus"/>
@@ -115,10 +133,13 @@
             android:textColor="?android:attr/textColorSecondary"/>
         <ImageButton
             android:id="@+id/btn_depth_minus"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:minWidth="48dp"
+            android:minHeight="48dp"
             android:src="@drawable/ic_action_remove"
-            android:background="?attr/selectableItemBackgroundBorderless"/>
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/nautical_accessibility_minus"/>
         <TextView
             android:id="@+id/txt_anchor_depth"
             android:layout_width="60dp"
@@ -128,10 +149,13 @@
             android:textStyle="bold"/>
         <ImageButton
             android:id="@+id/btn_depth_plus"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:minWidth="48dp"
+            android:minHeight="48dp"
             android:src="@drawable/ic_action_plus"
-            android:background="?attr/selectableItemBackgroundBorderless"/>
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/nautical_accessibility_plus"/>
     </LinearLayout>
 
     <LinearLayout
@@ -148,10 +172,13 @@
             android:textColor="?android:attr/textColorSecondary"/>
         <ImageButton
             android:id="@+id/btn_tide_minus"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:minWidth="48dp"
+            android:minHeight="48dp"
             android:src="@drawable/ic_action_remove"
-            android:background="?attr/selectableItemBackgroundBorderless"/>
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/nautical_accessibility_minus"/>
         <TextView
             android:id="@+id/txt_anchor_tide"
             android:layout_width="60dp"
@@ -161,10 +188,13 @@
             android:textStyle="bold"/>
         <ImageButton
             android:id="@+id/btn_tide_plus"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:minWidth="48dp"
+            android:minHeight="48dp"
             android:src="@drawable/ic_action_plus"
-            android:background="?attr/selectableItemBackgroundBorderless"/>
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/nautical_accessibility_plus"/>
     </LinearLayout>
 
     <LinearLayout
@@ -182,10 +212,13 @@
             android:textColor="?android:attr/textColorSecondary"/>
         <ImageButton
             android:id="@+id/btn_bow_minus"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:minWidth="48dp"
+            android:minHeight="48dp"
             android:src="@drawable/ic_action_remove"
-            android:background="?attr/selectableItemBackgroundBorderless"/>
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/nautical_accessibility_minus"/>
         <TextView
             android:id="@+id/txt_bow_offset"
             android:layout_width="60dp"
@@ -195,10 +228,13 @@
             android:textStyle="bold"/>
         <ImageButton
             android:id="@+id/btn_bow_plus"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:minWidth="48dp"
+            android:minHeight="48dp"
             android:src="@drawable/ic_action_plus"
-            android:background="?attr/selectableItemBackgroundBorderless"/>
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/nautical_accessibility_plus"/>
     </LinearLayout>
 
     <TextView
@@ -209,7 +245,7 @@
         android:gravity="center"
         android:textColor="?attr/colorAccent"
         android:textStyle="italic"
-        android:text="Calculated Rode: 0.0 m"/>
+        android:text="@string/nautical_calculated_rode"/>
 
     <TextView
         android:id="@+id/txt_maneuver_instructions"

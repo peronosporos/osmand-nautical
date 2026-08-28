@@ -3,6 +3,7 @@
     android:id="@+id/item_container"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
+    android:minHeight="48dp"
     android:orientation="vertical"
     android:gravity="center"
     android:layout_margin="4dp"

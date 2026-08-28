@@ -71,7 +71,7 @@ class PolarCurveCanvasView @JvmOverloads constructor(
 
     private fun updateNightVisionColors(enabled: Boolean) {
         if (enabled) {
-            colorGrid = 0x40FF1744.toInt()
+            colorGrid = 0x33FF1744.toInt()
             colorLabel = 0xBBFF8A80.toInt()
             colorRawPoint = 0x50FF5252.toInt()
             colorCurve = 0xFFFF1744.toInt()
@@ -108,6 +108,14 @@ class PolarCurveCanvasView @JvmOverloads constructor(
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
+        val app = context.applicationContext as? net.osmand.plus.OsmandApplication
+        val night = isNightVision || net.osmand.plus.plugins.nautical.NauticalPlugin.isNightVision(app)
+        updateNightVisionColors(night)
+
+        if (night) {
+            canvas.drawColor(0xEE120000.toInt())
+        }
+
         val w = width.toFloat()
         val h = height.toFloat()
         val density = resources.displayMetrics.density

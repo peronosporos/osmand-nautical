@@ -22,33 +22,38 @@ object S52SymbolManager {
         strokePaint.strokeWidth = (if (isSunlight) 4f else 2f) * scale
 
         when (symbolId) {
-            SymbolId.LATERAL_PORT -> drawSquare(canvas, x, y, finalScale)
-            SymbolId.LATERAL_STARBOARD -> drawTriangle(canvas, x, y, finalScale)
+            SymbolId.LATERAL_PORT -> drawSquare(canvas, x, y, isNight, finalScale)
+            SymbolId.LATERAL_STARBOARD -> drawTriangle(canvas, x, y, isNight, finalScale)
             SymbolId.ISOLATED_DANGER -> drawIsolatedDanger(canvas, x, y, isNight, finalScale)
-            SymbolId.SAFE_WATER -> drawCircle(canvas, x, y, finalScale)
-            SymbolId.SPECIAL_PURPOSE -> drawX(canvas, x, y, finalScale)
-            SymbolId.LIGHT_MAJOR -> drawFlare(canvas, x, y, 15f * finalScale, finalScale)
-            SymbolId.LIGHT_MINOR -> drawFlare(canvas, x, y, 8f * finalScale, finalScale)
+            SymbolId.SAFE_WATER -> drawCircle(canvas, x, y, isNight, finalScale)
+            SymbolId.SPECIAL_PURPOSE -> drawX(canvas, x, y, isNight, finalScale)
+            SymbolId.LIGHT_MAJOR -> drawFlare(canvas, x, y, 15f * finalScale, isNight, finalScale)
+            SymbolId.LIGHT_MINOR -> drawFlare(canvas, x, y, 8f * finalScale, isNight, finalScale)
             SymbolId.ROCK_AWASH -> drawRock(canvas, x, y, isNight, finalScale)
             SymbolId.WRECK -> drawWreck(canvas, x, y, isNight, finalScale)
             SymbolId.OBSTRUCTION -> drawObstruction(canvas, x, y, isNight, finalScale)
             SymbolId.HAZARD_CLUSTER -> drawHazardCluster(canvas, x, y, isNight, finalScale)
-            SymbolId.CARDINAL_NORTH -> drawCardinal(canvas, x, y, 1, finalScale)
-            SymbolId.CARDINAL_EAST -> drawCardinal(canvas, x, y, 2, finalScale)
-            SymbolId.CARDINAL_SOUTH -> drawCardinal(canvas, x, y, 3, finalScale)
-            SymbolId.CARDINAL_WEST -> drawCardinal(canvas, x, y, 4, finalScale)
-            SymbolId.BUOY_PORT -> drawBuoy(canvas, x, y, Color.RED, 1, finalScale)
-            SymbolId.BUOY_STARBOARD -> drawBuoy(canvas, x, y, Color.GREEN, 2, finalScale)
-            SymbolId.BUOY_NORTH -> drawBuoy(canvas, x, y, Color.BLACK, 3, finalScale)
-            SymbolId.BUOY_EAST -> drawBuoy(canvas, x, y, Color.BLACK, 4, finalScale)
-            SymbolId.BUOY_SOUTH -> drawBuoy(canvas, x, y, Color.BLACK, 5, finalScale)
-            SymbolId.BUOY_WEST -> drawBuoy(canvas, x, y, Color.BLACK, 6, finalScale)
-            SymbolId.BEACON_PORT -> drawBeacon(canvas, x, y, Color.RED, 1, finalScale)
-            SymbolId.BCN_STARBOARD -> drawBeacon(canvas, x, y, Color.GREEN, 2, finalScale)
+            SymbolId.CARDINAL_NORTH -> drawCardinal(canvas, x, y, 1, isNight, finalScale)
+            SymbolId.CARDINAL_EAST -> drawCardinal(canvas, x, y, 2, isNight, finalScale)
+            SymbolId.CARDINAL_SOUTH -> drawCardinal(canvas, x, y, 3, isNight, finalScale)
+            SymbolId.CARDINAL_WEST -> drawCardinal(canvas, x, y, 4, isNight, finalScale)
+            SymbolId.BUOY_PORT -> drawBuoy(canvas, x, y, if (isNight) 0xFFFF1744.toInt() else Color.RED, 1, isNight, finalScale)
+            SymbolId.BUOY_STARBOARD -> drawBuoy(canvas, x, y, if (isNight) 0xFFFF5252.toInt() else Color.GREEN, 2, isNight, finalScale)
+            SymbolId.BUOY_NORTH -> drawBuoy(canvas, x, y, if (isNight) 0xFFFF8A80.toInt() else Color.BLACK, 3, isNight, finalScale)
+            SymbolId.BUOY_EAST -> drawBuoy(canvas, x, y, if (isNight) 0xFFFF8A80.toInt() else Color.BLACK, 4, isNight, finalScale)
+            SymbolId.BUOY_SOUTH -> drawBuoy(canvas, x, y, if (isNight) 0xFFFF8A80.toInt() else Color.BLACK, 5, isNight, finalScale)
+            SymbolId.BUOY_WEST -> drawBuoy(canvas, x, y, if (isNight) 0xFFFF8A80.toInt() else Color.BLACK, 6, isNight, finalScale)
+            SymbolId.BEACON_PORT -> drawBeacon(canvas, x, y, if (isNight) 0xFFFF1744.toInt() else Color.RED, 1, isNight, finalScale)
+            SymbolId.BCN_STARBOARD -> drawBeacon(canvas, x, y, if (isNight) 0xFFFF5252.toInt() else Color.GREEN, 2, isNight, finalScale)
         }
     }
 
-    private fun drawBuoy(canvas: Canvas, x: Float, y: Float, color: Int, type: Int, scale: Float) {
+    private fun drawBuoy(canvas: Canvas, x: Float, y: Float, color: Int, type: Int, isNight: Boolean, scale: Float) {
+        if (isNight) {
+            fillPaint.color = 0x25FF1744.toInt()
+            canvas.drawCircle(x, y, (12f * scale), fillPaint)
+        }
+
         fillPaint.color = color
         path.reset()
         // Buoy base
@@ -76,11 +81,15 @@ object S52SymbolManager {
                  drawTriangleAt(canvas, x, y - 8f * scale, 2f * scale, true)
                  drawTriangleAt(canvas, x, y - 5f * scale, 2f * scale, true)
             }
-            // ... add others if needed
         }
     }
 
-    private fun drawBeacon(canvas: Canvas, x: Float, y: Float, color: Int, type: Int, scale: Float) {
+    private fun drawBeacon(canvas: Canvas, x: Float, y: Float, color: Int, type: Int, isNight: Boolean, scale: Float) {
+        if (isNight) {
+            fillPaint.color = 0x25FF1744.toInt()
+            canvas.drawCircle(x, y, (12f * scale), fillPaint)
+        }
+
         strokePaint.color = color
         strokePaint.strokeWidth = 3f * scale
         canvas.drawLine(x, y + 8f * scale, x, y - 4f * scale, strokePaint)
@@ -96,8 +105,8 @@ object S52SymbolManager {
         }
     }
 
-    private fun drawCardinal(canvas: Canvas, x: Float, y: Float, type: Int, scale: Float) {
-        fillPaint.color = Color.BLACK
+    private fun drawCardinal(canvas: Canvas, x: Float, y: Float, type: Int, isNight: Boolean, scale: Float) {
+        fillPaint.color = if (isNight) 0xFFFF8A80.toInt() else Color.BLACK
         val size = (5f * scale)
         val gap = (2f * scale)
         when (type) {
@@ -135,46 +144,51 @@ object S52SymbolManager {
         canvas.drawPath(path, fillPaint)
     }
 
-    private fun drawSquare(canvas: Canvas, x: Float, y: Float, scale: Float) {
-        fillPaint.color = Color.RED
+    private fun drawSquare(canvas: Canvas, x: Float, y: Float, isNight: Boolean, scale: Float) {
+        fillPaint.color = if (isNight) 0xFFFF1744.toInt() else Color.RED
         val size = (6f * scale)
         canvas.drawRect(x - size, y - size, x + size, y + size, fillPaint)
-        strokePaint.color = Color.BLACK
+        strokePaint.color = if (isNight) 0xFFFF8A80.toInt() else Color.BLACK
         strokePaint.strokeWidth = (2f * scale)
         canvas.drawRect(x - size, y - size, x + size, y + size, strokePaint)
     }
 
-    private fun drawTriangle(canvas: Canvas, x: Float, y: Float, scale: Float) {
-        fillPaint.color = Color.GREEN
+    private fun drawTriangle(canvas: Canvas, x: Float, y: Float, isNight: Boolean, scale: Float) {
+        fillPaint.color = if (isNight) 0xFFFF5252.toInt() else Color.GREEN
         path.reset()
         path.moveTo(x, y - (8f * scale))
         path.lineTo(x - (7f * scale), y + (6f * scale))
         path.lineTo(x + (7f * scale), y + (6f * scale))
         path.close()
         canvas.drawPath(path, fillPaint)
-        strokePaint.color = Color.BLACK
+        strokePaint.color = if (isNight) 0xFFFF8A80.toInt() else Color.BLACK
         strokePaint.strokeWidth = (2f * scale)
         canvas.drawPath(path, strokePaint)
     }
 
-    private fun drawCircle(canvas: Canvas, x: Float, y: Float, scale: Float) {
-        fillPaint.color = Color.RED
+    private fun drawCircle(canvas: Canvas, x: Float, y: Float, isNight: Boolean, scale: Float) {
+        fillPaint.color = if (isNight) 0xFFFF1744.toInt() else Color.RED
         canvas.drawCircle(x, y, (7f * scale), fillPaint)
-        strokePaint.color = Color.BLACK
+        strokePaint.color = if (isNight) 0xFFFF8A80.toInt() else Color.BLACK
         strokePaint.strokeWidth = (2f * scale)
         canvas.drawCircle(x, y, (7f * scale), strokePaint)
     }
 
-    private fun drawX(canvas: Canvas, x: Float, y: Float, scale: Float) {
-        strokePaint.color = Color.YELLOW
+    private fun drawX(canvas: Canvas, x: Float, y: Float, isNight: Boolean, scale: Float) {
+        strokePaint.color = if (isNight) 0xFFFF8A80.toInt() else Color.YELLOW
         strokePaint.strokeWidth = (3f * scale)
         val size = (6f * scale)
         canvas.drawLine(x - size, y - size, x + size, y + size, strokePaint)
         canvas.drawLine(x + size, y - size, x - size, y + size, strokePaint)
     }
 
-    private fun drawFlare(canvas: Canvas, x: Float, y: Float, size: Float, scale: Float) {
-        strokePaint.color = Color.MAGENTA
+    private fun drawFlare(canvas: Canvas, x: Float, y: Float, size: Float, isNight: Boolean, scale: Float) {
+        if (isNight) {
+            fillPaint.color = 0x40FF1744.toInt()
+            canvas.drawCircle(x, y, (8f * scale), fillPaint)
+        }
+
+        strokePaint.color = if (isNight) 0xFFFF5252.toInt() else Color.MAGENTA
         strokePaint.strokeWidth = (2f * scale)
         strokePaint.style = Paint.Style.STROKE
         path.reset()
@@ -185,7 +199,7 @@ object S52SymbolManager {
     }
 
     private fun drawRock(canvas: Canvas, x: Float, y: Float, isNight: Boolean, scale: Float) {
-        strokePaint.color = if (isNight) Color.RED else Color.BLACK
+        strokePaint.color = if (isNight) 0xFFFF1744.toInt() else Color.BLACK
         strokePaint.strokeWidth = (2f * scale)
         val size = (5f * scale)
         canvas.drawLine(x - size, y - size, x + size, y + size, strokePaint)
@@ -198,7 +212,7 @@ object S52SymbolManager {
     }
 
     private fun drawWreck(canvas: Canvas, x: Float, y: Float, isNight: Boolean, scale: Float) {
-        strokePaint.color = if (isNight) Color.RED else Color.BLACK
+        strokePaint.color = if (isNight) 0xFFFF1744.toInt() else Color.BLACK
         strokePaint.strokeWidth = (2f * scale)
         path.reset()
         path.moveTo(x - (8f * scale), y)
@@ -210,16 +224,16 @@ object S52SymbolManager {
     }
 
     private fun drawIsolatedDanger(canvas: Canvas, x: Float, y: Float, isNight: Boolean, scale: Float) {
-        fillPaint.color = if (isNight) Color.RED else Color.BLACK
+        fillPaint.color = if (isNight) 0xFFFF1744.toInt() else Color.BLACK
         canvas.drawCircle(x, y - (8f * scale), (3f * scale), fillPaint)
         canvas.drawCircle(x, y, (3f * scale), fillPaint)
-        strokePaint.color = if (isNight) Color.RED else Color.BLACK
+        strokePaint.color = if (isNight) 0xFFFF1744.toInt() else Color.BLACK
         strokePaint.strokeWidth = (2f * scale)
         canvas.drawLine(x, y, x, y + (10f * scale), strokePaint)
     }
 
     private fun drawObstruction(canvas: Canvas, x: Float, y: Float, isNight: Boolean, scale: Float) {
-        strokePaint.color = if (isNight) Color.RED else Color.BLACK
+        strokePaint.color = if (isNight) 0xFFFF1744.toInt() else Color.BLACK
         strokePaint.strokeWidth = (2f * scale)
         strokePaint.pathEffect = android.graphics.DashPathEffect(floatArrayOf((2f * scale), (2f * scale)), 0f)
         canvas.drawCircle(x, y, (8f * scale), strokePaint)
@@ -228,18 +242,18 @@ object S52SymbolManager {
     }
 
     private fun drawHazardCluster(canvas: Canvas, x: Float, y: Float, isNight: Boolean, scale: Float) {
-        // High-contrast hazard cluster symbol: thick orange circle with central exclamation point
-        val orange = if (isNight) 0xFFFFA500.toInt() else 0xFFFF8C00.toInt()
-        fillPaint.color = orange
-        fillPaint.alpha = 180
+        // High-contrast hazard cluster symbol: thick red/orange circle with central exclamation point
+        val color = if (isNight) 0xFFFF1744.toInt() else 0xFFFF8C00.toInt()
+        fillPaint.color = color
+        fillPaint.alpha = if (isNight) 200 else 180
         canvas.drawCircle(x, y, (12f * scale), fillPaint)
         
-        strokePaint.color = Color.BLACK
+        strokePaint.color = if (isNight) 0xFFFF8A80.toInt() else Color.BLACK
         strokePaint.strokeWidth = (3f * scale)
         canvas.drawCircle(x, y, (12f * scale), strokePaint)
         
         // Central "!" mark
-        fillPaint.color = Color.BLACK
+        fillPaint.color = if (isNight) Color.WHITE else Color.BLACK
         fillPaint.alpha = 255
         canvas.drawRect(x - (1.5f * scale), y - (6f * scale), x + (1.5f * scale), y + (2f * scale), fillPaint)
         canvas.drawCircle(x, y + (6f * scale), (2f * scale), fillPaint)

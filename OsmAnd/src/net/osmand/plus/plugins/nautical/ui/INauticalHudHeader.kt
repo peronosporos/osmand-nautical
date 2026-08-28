@@ -14,4 +14,9 @@ interface INauticalHudHeader {
      * Returns true if the header contains a critical/emergency warning that requires priority arbitration.
      */
     fun isEmergency(): Boolean = false
+
+    /**
+     * Applies monochromatic red night vision theming.
+     */
+    fun applyNightVision(enabled: Boolean) {}
 }

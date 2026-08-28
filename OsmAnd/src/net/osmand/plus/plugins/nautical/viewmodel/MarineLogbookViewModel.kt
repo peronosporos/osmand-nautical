@@ -28,6 +28,8 @@ class MarineLogbookViewModel(
         val maxSogKnots: Double = 0.0,
         val portTackPercent: Double = 50.0,
         val starboardTackPercent: Double = 50.0,
+        val enginePercent: Double = 0.0,
+        val sailPercent: Double = 100.0,
         val totalEntries: Int = 0
     )
 
@@ -90,12 +92,20 @@ class MarineLogbookViewModel(
             val portPct = if (twaEntries.isNotEmpty()) (portCount.toDouble() / twaEntries.size) * 100.0 else 50.0
             val stbdPct = if (twaEntries.isNotEmpty()) 100.0 - portPct else 50.0
 
+            val engineCount = entries.count { it.engineHours != null || it.sailPlan.contains("engine", ignoreCase = true) || it.sailPlan.contains("motor", ignoreCase = true) }
+            val sailCount = entries.count { it.sailPlan.contains("sail", ignoreCase = true) || it.sailPlan.contains("main", ignoreCase = true) || it.sailPlan.contains("jib", ignoreCase = true) || it.sailPlan.contains("genoa", ignoreCase = true) || it.twa != null }
+            val totalCategorized = engineCount + sailCount
+            val engPct = if (totalCategorized > 0) (engineCount.toDouble() / totalCategorized) * 100.0 else 0.0
+            val slPct = if (totalCategorized > 0) (sailCount.toDouble() / totalCategorized) * 100.0 else 100.0
+
             return LogbookSummaryMetrics(
                 totalDistanceNm = totalDistNm,
                 avgSogKnots = avgSog,
                 maxSogKnots = maxSog,
                 portTackPercent = portPct,
                 starboardTackPercent = stbdPct,
+                enginePercent = engPct,
+                sailPercent = slPct,
                 totalEntries = entries.size
             )
         }

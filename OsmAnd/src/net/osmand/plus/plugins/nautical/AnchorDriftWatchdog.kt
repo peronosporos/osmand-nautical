@@ -33,6 +33,7 @@ class AnchorDriftWatchdog(private val app: OsmandApplication) {
     private val log = PlatformUtil.getLog(AnchorDriftWatchdog::class.java)
     private val arbiter = NauticalAudioArbiter.getInstance(app)
     private var outOfBoundsCount = 0
+    private var firstOutOfBoundsTimestampMs: Long = 0L
     private var isAlarmActive = false
     private var isGpsLostAlarmActive = false
     
@@ -42,6 +43,126 @@ class AnchorDriftWatchdog(private val app: OsmandApplication) {
     private val _driftStage = MutableStateFlow(AnchorDriftStage.SAFE)
     val driftStage: StateFlow<AnchorDriftStage> = _driftStage.asStateFlow()
 
+    private val _shallowHazardSector = MutableStateFlow<Pair<Double, Double>?>(null)
+    val shallowHazardSector: StateFlow<Pair<Double, Double>?> = _shallowHazardSector.asStateFlow()
+
+    private val _shallowHazardQuadrant = MutableStateFlow<String?>(null)
+    val shallowHazardQuadrant: StateFlow<String?> = _shallowHazardQuadrant.asStateFlow()
+
+    private val _rodeTensionKg = MutableStateFlow(0.0)
+    val rodeTensionKg: StateFlow<Double> = _rodeTensionKg.asStateFlow()
+
+    private val _isHighRodeLoad = MutableStateFlow(false)
+    val isHighRodeLoad: StateFlow<Boolean> = _isHighRodeLoad.asStateFlow()
+
+    private val _waveSurgeCycles = MutableStateFlow(0)
+    val waveSurgeCycles: StateFlow<Int> = _waveSurgeCycles.asStateFlow()
+
+    private val _isChafeAdvisoryActive = MutableStateFlow(false)
+    val isChafeAdvisoryActive: StateFlow<Boolean> = _isChafeAdvisoryActive.asStateFlow()
+
+    private var lastPitchRad: Double? = null
+    private var pitchDirectionPositive = false
+
+    fun trackWaveSurge(pitchRad: Double?, rollRad: Double?, windSpeedMps: Double?) {
+        val currentPitch = pitchRad ?: rollRad ?: return
+        val lastPitch = lastPitchRad
+        if (lastPitch != null) {
+            val delta = currentPitch - lastPitch
+            if (kotlin.math.abs(Math.toDegrees(delta)) > 1.0) {
+                val currentDirectionPositive = delta > 0
+                if (currentDirectionPositive != pitchDirectionPositive) {
+                    pitchDirectionPositive = currentDirectionPositive
+                    _waveSurgeCycles.value++
+                    
+                    val windSpeedKn = (windSpeedMps ?: 0.0) * 1.94384
+                    if (windSpeedKn > 20.0 && _waveSurgeCycles.value >= 2000) {
+                        _isChafeAdvisoryActive.value = true
+                    }
+                }
+            }
+        }
+        lastPitchRad = currentPitch
+    }
+
+    fun resetChafeCycleCounter() {
+        _waveSurgeCycles.value = 0
+        _isChafeAdvisoryActive.value = false
+    }
+
+    private val _isWindlassOverload = MutableStateFlow(false)
+    val isWindlassOverload: StateFlow<Boolean> = _isWindlassOverload.asStateFlow()
+
+    private var overloadStartTime = 0L
+
+    private val _isWindShiftBreakoutRisk = MutableStateFlow(false)
+    val isWindShiftBreakoutRisk: StateFlow<Boolean> = _isWindShiftBreakoutRisk.asStateFlow()
+
+    private val _windShiftDeltaDeg = MutableStateFlow(0.0)
+    val windShiftDeltaDeg: StateFlow<Double> = _windShiftDeltaDeg.asStateFlow()
+
+    private val _predictedSwingAngleDeg = MutableStateFlow(0.0)
+    val predictedSwingAngleDeg: StateFlow<Double> = _predictedSwingAngleDeg.asStateFlow()
+
+    private val windHistory = ArrayDeque<Pair<Long, Double>>()
+
+    fun monitorWindShift(windDeg: Double?, windSpeedMps: Double?) {
+        if (windDeg == null) return
+        val now = System.currentTimeMillis()
+        windHistory.addLast(Pair(now, windDeg))
+
+        while (windHistory.isNotEmpty() && (now - windHistory.first().first) > 900_000L) {
+            windHistory.removeFirst()
+        }
+
+        if (windHistory.size >= 2) {
+            val oldestWind = windHistory.first().second
+            val shift = kotlin.math.abs(((windDeg - oldestWind + 540.0) % 360.0) - 180.0)
+            val twsKn = (windSpeedMps ?: 0.0) * 1.94384
+            _windShiftDeltaDeg.value = shift
+            _predictedSwingAngleDeg.value = (windDeg + 180.0) % 360.0
+
+            if (shift > 45.0 && twsKn > 20.0) {
+                _isWindShiftBreakoutRisk.value = true
+            } else {
+                _isWindShiftBreakoutRisk.value = false
+            }
+        }
+    }
+
+    fun monitorWindlass(motorCurrentAmps: Double?, isHaulingIn: Boolean) {
+        val now = System.currentTimeMillis()
+        val current = motorCurrentAmps ?: 0.0
+
+        // Spike > 85A (e.g. > 85% stall current of typical 100A windlass)
+        if (isHaulingIn || current > 60.0) {
+            if (current >= 85.0) {
+                if (overloadStartTime == 0L) {
+                    overloadStartTime = now
+                } else if (now - overloadStartTime > 2000L) {
+                    if (!_isWindlassOverload.value) {
+                        _isWindlassOverload.value = true
+                        net.osmand.plus.plugins.nautical.audio.NauticalAudioArbiter.getInstance(app).dispatchAlarm(
+                            net.osmand.plus.plugins.nautical.audio.AlarmType.ACTUATOR_OVERLOAD,
+                            voiceText = "Anchor snagged, windlass overload"
+                        )
+                    }
+                }
+            } else {
+                overloadStartTime = 0L
+                _isWindlassOverload.value = false
+            }
+        } else {
+            overloadStartTime = 0L
+            _isWindlassOverload.value = false
+        }
+    }
+
+    fun clearWindlassOverload() {
+        overloadStartTime = 0L
+        _isWindlassOverload.value = false
+    }
+
     private val _trackHistory = MutableStateFlow<List<TrackPoint>>(emptyList())
     val trackHistory: StateFlow<List<TrackPoint>> = _trackHistory.asStateFlow()
     private val trackBuffer = AnchorTrackBuffer()
@@ -50,6 +171,93 @@ class AnchorDriftWatchdog(private val app: OsmandApplication) {
 
     private var lastMapRefreshTime: Long = 0
     private val minMapRefreshIntervalMs = 500L
+
+    fun computeRodeTension(windSpeedMps: Double?, rodeDeployedM: Double?, depthM: Double?): Double {
+        val windSpeedKn = (windSpeedMps ?: 0.0) * 1.94384
+        val displacementTons = (app.settings.NAUTICAL_VESSEL_DISPLACEMENT_KG.get().toDouble().takeIf { it > 0.0 } ?: 10000.0) / 1000.0
+        val depth = depthM ?: 5.0
+        val scopeRatio = if (rodeDeployedM != null && depth > 0.5) (rodeDeployedM / depth).coerceAtLeast(1.0) else 5.0
+        val tensionKg = 0.004 * kotlin.math.pow(windSpeedKn, 2.0) * kotlin.math.pow(displacementTons, 2.0 / 3.0) / scopeRatio
+
+        val chainSizeMm = app.settings.NAUTICAL_CHAIN_SIZE_MM.get().toDouble().takeIf { it > 0.0 } ?: 8.0
+        val breakingLoadKg = 55.0 * kotlin.math.pow(chainSizeMm, 2.0)
+        val swlThresholdKg = 0.40 * breakingLoadKg
+
+        _rodeTensionKg.value = tensionKg
+        _isHighRodeLoad.value = tensionKg > swlThresholdKg && windSpeedKn > 12.0
+        return tensionKg
+    }
+
+    fun probeAnchorSwingDepthHazard(anchorLat: Double, anchorLon: Double, radiusM: Float) {
+        if (anchorLat == 0.0 || anchorLon == 0.0 || radiusM <= 0f) {
+            _shallowHazardSector.value = null
+            _shallowHazardQuadrant.value = null
+            return
+        }
+
+        val draft = app.settings.NAUTICAL_VESSEL_DRAFT.get().toDouble()
+        val keelSafety = app.settings.NAUTICAL_DEPTH_SAFETY_MARGIN.get().toDouble()
+        val minSafeDepth = draft + keelSafety
+
+        val degRadius = (radiusM / 111320.0) * 1.5
+        val dbHelper = net.osmand.plus.plugins.nautical.s57.S57SqliteHelper(app)
+        val soundings = try {
+            dbHelper.queryFeatures(
+                anchorLat - degRadius, anchorLat + degRadius,
+                anchorLon - degRadius, anchorLon + degRadius,
+                listOf("SOUNDG", "DEPCNT", "DEPARE"),
+                limit = 100
+            )
+        } catch (e: Exception) {
+            emptyList()
+        }
+
+        var minBearing: Double? = null
+        var maxBearing: Double? = null
+        var countShallow = 0
+        var sumBearing = 0.0
+
+        for (f in soundings) {
+            val depth = f.attributes["VALSOU"]?.toDoubleOrNull()
+                ?: f.attributes["DRVAL1"]?.toDoubleOrNull()
+                ?: continue
+
+            if (depth < minSafeDepth) {
+                for (geom in f.geometries) {
+                    val latLon = when (geom) {
+                        is net.osmand.plus.plugins.nautical.s57.S57Geometry.Point -> geom.position
+                        is net.osmand.plus.plugins.nautical.s57.S57Geometry.Line -> geom.nodes.firstOrNull()
+                        is net.osmand.plus.plugins.nautical.s57.S57Geometry.Area -> geom.boundaries.firstOrNull()?.firstOrNull()
+                        else -> null
+                    } ?: continue
+
+                    val dist = net.osmand.util.MapUtils.getDistance(anchorLat, anchorLon, latLon.latitude, latLon.longitude)
+                    if (dist <= radiusM * 1.1) {
+                        val bearing = (net.osmand.util.MapUtils.calculateAngle(anchorLat, anchorLon, latLon.latitude, latLon.longitude) + 360.0) % 360.0
+                        countShallow++
+                        sumBearing += bearing
+                        minBearing = if (minBearing == null) bearing else minOf(minBearing, bearing)
+                        maxBearing = if (maxBearing == null) bearing else maxOf(maxBearing, bearing)
+                    }
+                }
+            }
+        }
+
+        if (countShallow > 0 && minBearing != null && maxBearing != null) {
+            val avgBearing = sumBearing / countShallow
+            val quadrant = when (avgBearing) {
+                in 0.0..90.0 -> "NE"
+                in 90.0..180.0 -> "SE"
+                in 180.0..270.0 -> "SW"
+                else -> "NW"
+            }
+            _shallowHazardSector.value = Pair((minBearing - 15.0).coerceAtLeast(0.0), (maxBearing + 15.0).coerceAtMost(360.0))
+            _shallowHazardQuadrant.value = quadrant
+        } else {
+            _shallowHazardSector.value = null
+            _shallowHazardQuadrant.value = null
+        }
+    }
 
     private fun requestThrottledMapRefresh() {
         val pm = app.getSystemService(android.content.Context.POWER_SERVICE) as? android.os.PowerManager
@@ -65,6 +273,7 @@ class AnchorDriftWatchdog(private val app: OsmandApplication) {
 
     companion object {
         private const val CONSECUTIVE_PINGS_THRESHOLD = 3
+        private const val MIN_OUT_OF_BOUNDS_DURATION_MS = 5000L
     }
 
     fun start() {
@@ -131,7 +340,22 @@ class AnchorDriftWatchdog(private val app: OsmandApplication) {
                     }
                 }
 
-                // 3. Handle position updates for fallback calculation
+                // 3. Compute Rode Tension and Wave Surge Chafe Cycles
+                computeRodeTension(
+                    windSpeedMps = state.windSpeedTrue ?: state.windSpeedApparent,
+                    rodeDeployedM = state.rodeDeployed,
+                    depthM = state.depthBelowKeel ?: state.depthBelowTransducer
+                )
+                trackWaveSurge(
+                    pitchRad = state.pitch,
+                    rollRad = state.roll,
+                    windSpeedMps = state.windSpeedTrue ?: state.windSpeedApparent
+                )
+                val windlassCurrent = state.actuatorCurrent ?: state.batteries.values.firstOrNull { (it.name ?: "").contains("windlass", ignoreCase = true) }?.current
+                val isHauling = state.switches["electrical.switches.windlass.up"] == true
+                monitorWindlass(windlassCurrent, isHauling)
+
+                // 4. Handle position updates for fallback calculation
                 if (state.connectionStatus == ConnectionStatus.DISCONNECTED) {
                     onGpsLost()
                 } else {
@@ -217,8 +441,16 @@ class AnchorDriftWatchdog(private val app: OsmandApplication) {
             time = location.time
         }
 
+        val engine = NauticalPlugin.engine
+        val state = engine?.getCurrentState()
+        val windDeg = state?.windDirectionTrue?.let { Math.toDegrees(it) }
+            ?: state?.windAngleTrue?.let { Math.toDegrees(it) }
+        val currentDeg = state?.currentSetTrue?.let { Math.toDegrees(it) }
+
+        monitorWindShift(windDeg, state?.windSpeedTrue)
+
         // Feed position to the Snail Trail buffer regardless of mode
-        if (trackBuffer.addPosition(filteredLocation)) {
+        if (trackBuffer.addPosition(filteredLocation, windDeg, currentDeg)) {
             _trackHistory.value = trackBuffer.getPoints()
             requestThrottledMapRefresh()
         }
@@ -228,13 +460,11 @@ class AnchorDriftWatchdog(private val app: OsmandApplication) {
         
         // Smart Offloading (TASK-CPU-001): If Signal K server is actively monitoring,
         // skip local math to save cycles.
-        val engine = NauticalPlugin.engine
-        val state = engine?.getCurrentState()
         val caps = engine?.capabilityManager?.capabilities?.value
         
         val canOffload = (state?.connectionStatus == ConnectionStatus.CONNECTED) && 
                         (caps?.hasAnchorAlarm == true) && 
-                        (state.anchor?.state?.lowercase() in listOf("armed", "active"))
+                        (state?.anchor?.state?.lowercase() in listOf("armed", "active"))
         
         if (canOffload) {
             return isAlarmActive
@@ -266,12 +496,18 @@ class AnchorDriftWatchdog(private val app: OsmandApplication) {
 
         // 3. Multi-Stage Drift Detection:
         //    - Caution Stage (85% to 100% of swing radius): silent warning state
-        //    - Critical Drag Stage (>100% of swing radius for 3 consecutive filtered points): triggers AlarmPriorityManager critical alert
+        //    - Critical Drag Stage (>100% of swing radius for 3 consecutive filtered points AND >= 5000ms continuous drift): triggers Level 2 CRITICAL alert
         if (distance > radius) {
+            val now = System.currentTimeMillis()
+            if (firstOutOfBoundsTimestampMs == 0L) {
+                firstOutOfBoundsTimestampMs = now
+            }
             outOfBoundsCount++
-            log.warn("AnchorWatch (Local): Vessel outside boundary. Count: $outOfBoundsCount, Dist: ${distance.toInt()}m, Radius: ${radius.toInt()}m")
+            val durationOutOfBounds = now - firstOutOfBoundsTimestampMs
+            log.warn("AnchorWatch (Local): Vessel outside boundary. Count: $outOfBoundsCount, Duration: ${durationOutOfBounds}ms, Dist: ${distance.toInt()}m, Radius: ${radius.toInt()}m")
             
-            if (outOfBoundsCount >= CONSECUTIVE_PINGS_THRESHOLD) {
+            // Temporal Debounce: require >= 5000ms continuous drift AND >= 3 consecutive fixes
+            if (outOfBoundsCount >= CONSECUTIVE_PINGS_THRESHOLD && durationOutOfBounds >= MIN_OUT_OF_BOUNDS_DURATION_MS) {
                 _driftStage.value = AnchorDriftStage.CRITICAL_DRAG
                 if (!isAlarmActive) {
                     triggerAlarm()
@@ -283,12 +519,14 @@ class AnchorDriftWatchdog(private val app: OsmandApplication) {
             _driftStage.value = AnchorDriftStage.CAUTION
             if (outOfBoundsCount > 0) {
                 outOfBoundsCount = 0
+                firstOutOfBoundsTimestampMs = 0L
             }
         } else {
             _driftStage.value = AnchorDriftStage.SAFE
             if (outOfBoundsCount > 0) {
                 log.info("AnchorWatch (Local): Vessel back in safe boundary. Resetting counter.")
                 outOfBoundsCount = 0
+                firstOutOfBoundsTimestampMs = 0L
             }
             if (isAlarmActive && (distance < (radius * 0.85))) { 
                 stopAlarm()
@@ -362,6 +600,7 @@ class AnchorDriftWatchdog(private val app: OsmandApplication) {
             isAlarmActive = false
             isGpsLostAlarmActive = false
             outOfBoundsCount = 0
+            firstOutOfBoundsTimestampMs = 0L
         }
     }
 
@@ -393,6 +632,10 @@ class AnchorDriftWatchdog(private val app: OsmandApplication) {
         app.settings.NAUTICAL_ANCHOR_LON.set(longitude)
         app.settings.NAUTICAL_ANCHOR_RADIUS.set(finalRadius)
         resetCounter()
+
+        scope.launch {
+            probeAnchorSwingDepthHazard(latitude, longitude, finalRadius)
+        }
         
         // Task: Write-Back to Signal K
         val plugin = NauticalPlugin.getInstance()
@@ -437,6 +680,7 @@ class AnchorDriftWatchdog(private val app: OsmandApplication) {
     fun resetCounter() {
         log.info("AnchorWatch: Resetting watchdog state for new anchor position.")
         outOfBoundsCount = 0
+        firstOutOfBoundsTimestampMs = 0L
         synchronized(gpsWindow) {
             gpsWindow.clear()
         }
@@ -446,6 +690,7 @@ class AnchorDriftWatchdog(private val app: OsmandApplication) {
     fun reset() {
         stopAlarm()
         outOfBoundsCount = 0
+        firstOutOfBoundsTimestampMs = 0L
         synchronized(gpsWindow) {
             gpsWindow.clear()
         }

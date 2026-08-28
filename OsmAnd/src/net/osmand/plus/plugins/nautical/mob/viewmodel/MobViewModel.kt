@@ -36,13 +36,17 @@ data class MobUiState(
     val mobLocation: LatLon? = null,
     val estimatedCasualtyLocation: LatLon? = null,
     val uncertaintyRadiusMeters: Double = 0.0,
+    val ellipseMajorRadiusMeters: Double = 0.0,
+    val ellipseMinorRadiusMeters: Double = 0.0,
+    val ellipseBearingDeg: Double = 0.0,
     val state: MobState = MobState.INACTIVE,
     val isMotoring: Boolean = false,
     val isUpwind: Boolean = true,
     val isSearching: Boolean = false,
     val muteUntil: Long = 0L,
     val activeMobCount: Int = 0,
-    val sarPatternWaypoints: List<LatLon> = emptyList()
+    val sarPatternWaypoints: List<LatLon> = emptyList(),
+    val activeSarWaypointIndex: Int = 0
 )
 
 enum class MobTriggerSource {
@@ -112,8 +116,14 @@ class MobViewModel(
                 val twsMps = state?.windSpeedTrue
                 val twdDeg: Double? = state?.windDirectionTrue?.let { Math.toDegrees(it) }
 
-                val (estimatedLoc, uncertainty) = if (active && event != null && dropLoc != null) {
+                var estimatedLoc: LatLon? = dropLoc
+                var majorRadiusMeters = 0.0
+                var minorRadiusMeters = 0.0
+                var driftBearingDeg = 0.0
+
+                if (active && event != null && dropLoc != null) {
                     val timeElapsedSec = (System.currentTimeMillis() - event.dropTimestamp) / 1000.0
+                    val elapsedHours = timeElapsedSec / 3600.0
                     val tideDx = driftMps * kotlin.math.sin(setTrueRad)
                     val tideDy = driftMps * kotlin.math.cos(setTrueRad)
                     val effectiveTws = twsMps ?: (10.0 * 0.514444)
@@ -123,17 +133,23 @@ class MobViewModel(
                     val leewayDy = leewaySpeedMps * kotlin.math.cos(Math.toRadians(downwindDeg))
                     val totalVx = tideDx + leewayDx
                     val totalVy = tideDy + leewayDy
-                    val totalSpeed = kotlin.math.sqrt(totalVx * totalVx + totalVy * totalVy)
+                    val totalSpeedMps = kotlin.math.sqrt(totalVx * totalVx + totalVy * totalVy)
+                    val totalSpeedKn = totalSpeedMps * 1.94384
                     val totalBearing = (Math.toDegrees(kotlin.math.atan2(totalVx, totalVy)) + 360.0) % 360.0
-                    val totalDist = totalSpeed * timeElapsedSec
-                    val est = if (totalDist > 0.5) {
+                    val totalDist = totalSpeedMps * timeElapsedSec
+                    
+                    driftBearingDeg = totalBearing
+                    estimatedLoc = if (totalDist > 0.5) {
                         val p = KMapUtils.rhumbDestinationPoint(dropLoc.latitude, dropLoc.longitude, totalDist, totalBearing)
                         LatLon(p.latitude, p.longitude)
                     } else dropLoc
-                    val unc = 15.0 + (totalSpeed * timeElapsedSec * 0.05)
-                    Pair(est, unc)
-                } else {
-                    Pair(dropLoc, 0.0)
+
+                    // IAMSAR Expanding Search Probability Ellipse: Radius_nm = DatumDriftSpeed * ElapsedHours * 0.3 + InitialUncertainty
+                    val initialUncertaintyNm = 0.1 // 0.1 NM initial uncertainty
+                    val majorRadiusNm = (totalSpeedKn * elapsedHours * 0.3) + initialUncertaintyNm
+                    val minorRadiusNm = (totalSpeedKn * elapsedHours * 0.15) + initialUncertaintyNm
+                    majorRadiusMeters = majorRadiusNm * 1852.0
+                    minorRadiusMeters = minorRadiusNm * 1852.0
                 }
 
                 _uiState.update { current ->
@@ -144,7 +160,10 @@ class MobViewModel(
                         etaSeconds = status.returnVector?.estimatedTimeToMarkerSeconds,
                         mobLocation = dropLoc,
                         estimatedCasualtyLocation = estimatedLoc,
-                        uncertaintyRadiusMeters = uncertainty,
+                        uncertaintyRadiusMeters = majorRadiusMeters,
+                        ellipseMajorRadiusMeters = majorRadiusMeters,
+                        ellipseMinorRadiusMeters = minorRadiusMeters,
+                        ellipseBearingDeg = driftBearingDeg,
                         state = status.state,
                         muteUntil = status.muteUntil,
                         activeMobCount = status.activeEvents.size
@@ -496,6 +515,20 @@ class MobViewModel(
         app.showToastMessage(R.string.nautical_mob_heading_hold)
     }
 
+    fun setSarPatternWaypoints(waypoints: List<LatLon>) {
+        _uiState.update { it.copy(sarPatternWaypoints = waypoints, activeSarWaypointIndex = 0, isSearching = waypoints.isNotEmpty()) }
+    }
+
+    fun advanceSarWaypoint() {
+        _uiState.update { current ->
+            if (current.activeSarWaypointIndex < current.sarPatternWaypoints.size - 1) {
+                current.copy(activeSarWaypointIndex = current.activeSarWaypointIndex + 1)
+            } else {
+                current
+            }
+        }
+    }
+
     override fun updateLocation(location: net.osmand.Location?) {
         if (location != null) {
             val sog = location.speed.toDouble()
@@ -506,6 +539,19 @@ class MobViewModel(
                 LatLon(location.latitude, location.longitude), 
                 sog, driftMps, setTrueRad
             )
+
+            // Auto-advance SAR waypoint if vessel is within 50m (0.03 NM) of active waypoint
+            val currentSar = _uiState.value.sarPatternWaypoints
+            val activeIdx = _uiState.value.activeSarWaypointIndex
+            if (currentSar.isNotEmpty() && activeIdx < currentSar.size) {
+                val targetWp = currentSar[activeIdx]
+                val distM = KMapUtils.getDistance(location.latitude, location.longitude, targetWp.latitude, targetWp.longitude)
+                if (distM < 50.0 && activeIdx < currentSar.size - 1) {
+                    _uiState.update { it.copy(activeSarWaypointIndex = activeIdx + 1) }
+                    val nextWp = currentSar[activeIdx + 1]
+                    NauticalPlugin.autopilot?.sendActiveWaypoint(nextWp.latitude, nextWp.longitude)
+                }
+            }
         }
     }
 

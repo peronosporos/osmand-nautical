@@ -35,6 +35,9 @@ class SailingWorkflowEngine(
         set(value) { _pendingWorkflow.value = value }
     private var anchoredTimeStart: Long = 0L
 
+    private val _leewayFeedforwardDeg = MutableStateFlow(0.0)
+    val leewayFeedforwardDeg: StateFlow<Double> = _leewayFeedforwardDeg.asStateFlow()
+
     init {
         startEvaluation()
     }
@@ -42,9 +45,19 @@ class SailingWorkflowEngine(
     private fun startEvaluation() {
         scope.launch {
             dataBroker.marineState.collect { state ->
+                calculateLeewayFeedforward(state)
                 evaluateEnvironment(state)
             }
         }
+    }
+
+    fun calculateLeewayFeedforward(state: MarineState): Double {
+        val twa = state.trueWindAngle ?: return 0.0
+        val stw = if (state.isStwUnreliable) state.speedOverGround ?: 0.0 else (state.speedThroughWater ?: state.speedOverGround ?: 0.0)
+        val kLeeway = app.settings.getCustomRenderProperty("kLeeway", "5.0").get().toDoubleOrNull() ?: 5.0
+        val leewayDeg = (kLeeway * (kotlin.math.sin(twa) / (stw * stw + 0.1))).coerceIn(-20.0, 20.0)
+        _leewayFeedforwardDeg.value = leewayDeg
+        return leewayDeg
     }
 
     private fun evaluateEnvironment(state: MarineState) {

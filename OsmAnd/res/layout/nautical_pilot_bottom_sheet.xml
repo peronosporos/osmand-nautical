@@ -16,14 +16,13 @@
 
         <!-- Drag Handle -->
         <View
-            android:id="@+id/bottom_sheet_handle"
+            android:id="@+id/drag_handle"
             android:layout_width="36dp"
             android:layout_height="4dp"
             android:layout_gravity="center_horizontal"
-            android:layout_marginTop="10dp"
-            android:layout_marginBottom="8dp"
-            android:background="@drawable/bg_rounded_handle"
-            android:backgroundTint="?android:attr/textColorSecondary" />
+            android:layout_marginTop="8dp"
+            android:layout_marginBottom="12dp"
+            android:background="?attr/divider_color" />
 
         <!-- Header: Title, Mode Indicator & Settings -->
         <LinearLayout
@@ -57,15 +56,17 @@
                 android:paddingTop="4dp"
                 android:paddingEnd="10dp"
                 android:paddingBottom="4dp"
-                android:text="STANDBY"
+                android:text="@string/nautical_pilot_mode_standby"
                 android:textColor="@android:color/white"
                 android:textSize="12sp"
                 android:textStyle="bold" />
 
             <ImageButton
                 android:id="@+id/btn_settings_gear"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:minWidth="48dp"
+                android:minHeight="48dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:src="@drawable/ic_action_settings"
                 app:tint="?attr/icon_color_primary"
@@ -131,13 +132,25 @@
                     android:minHeight="48dp"
                     android:layout_weight="1"
                     android:padding="0dp"
-                    app:icon="@drawable/ic_action_wind"
-                    app:iconGravity="textStart"
-                    app:iconPadding="0dp"
-                    app:iconSize="22dp"
-                    app:iconTint="?attr/icon_color_primary"
+                    android:text="AWA"
+                    android:textSize="11sp"
+                    android:textStyle="bold"
                     app:strokeColor="?attr/active_color_primary"
                     android:contentDescription="@string/nautical_mode_wind" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_mode_twa"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    android:layout_width="0dp"
+                    android:layout_height="48dp"
+                    android:minHeight="48dp"
+                    android:layout_weight="1"
+                    android:padding="0dp"
+                    android:text="TWA"
+                    android:textSize="11sp"
+                    android:textStyle="bold"
+                    app:strokeColor="?attr/active_color_primary"
+                    android:contentDescription="TWA Hold Mode" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btn_mode_route"
@@ -195,22 +208,22 @@
                     android:layout_marginTop="8dp"
                     android:layout_marginBottom="8dp">
 
-                    <!-- Port Step Buttons Column -->
+                    <!-- Port Step Buttons Column: -10° (56dp x 48dp) and -1° (50dp x 42dp) with red tint -->
                     <LinearLayout
                         android:id="@+id/left_controls"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginStart="12dp"
+                        android:layout_marginStart="8dp"
                         android:gravity="center_horizontal"
                         android:orientation="vertical">
 
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/btn_minus_10"
                             style="@style/Widget.Material3.Button.OutlinedButton"
-                            android:layout_width="60dp"
+                            android:layout_width="56dp"
                             android:layout_height="48dp"
                             android:minHeight="48dp"
-                            android:minWidth="60dp"
+                            android:minWidth="56dp"
                             android:insetLeft="0dp"
                             android:insetTop="0dp"
                             android:insetRight="0dp"
@@ -219,36 +232,36 @@
                             android:text="-10°"
                             android:textSize="15sp"
                             android:textStyle="bold"
-                            android:textColor="?attr/active_color_primary"
-                            app:strokeColor="?attr/active_color_primary"
+                            android:textColor="#E53935"
+                            app:strokeColor="#E53935"
                             app:strokeWidth="2dp"
-                            app:cornerRadius="10dp"
+                            app:cornerRadius="8dp"
                             android:contentDescription="-10 degrees" />
 
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/btn_minus_1"
                             style="@style/Widget.Material3.Button.OutlinedButton"
-                            android:layout_width="60dp"
-                            android:layout_height="48dp"
-                            android:minHeight="48dp"
-                            android:minWidth="60dp"
-                            android:layout_marginTop="10dp"
+                            android:layout_width="50dp"
+                            android:layout_height="42dp"
+                            android:minHeight="42dp"
+                            android:minWidth="50dp"
+                            android:layout_marginTop="8dp"
                             android:insetLeft="0dp"
                             android:insetTop="0dp"
                             android:insetRight="0dp"
                             android:insetBottom="0dp"
                             android:padding="0dp"
                             android:text="-1°"
-                            android:textColor="?attr/active_color_primary"
+                            android:textColor="#E53935"
                             android:textSize="14sp"
                             android:textStyle="bold"
-                            app:cornerRadius="10dp"
-                            app:strokeColor="?attr/active_color_primary"
+                            app:cornerRadius="8dp"
+                            app:strokeColor="#E53935"
                             app:strokeWidth="1.5dp"
                             android:contentDescription="-1 degree" />
                     </LinearLayout>
 
-                    <!-- Center Heading Arc Wheel -->
+                    <!-- Center Heading Arc Wheel (170dp x 170dp) -->
                     <FrameLayout
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
@@ -276,22 +289,22 @@
                             android:contentDescription="@string/nautical_predictive_steering_active" />
                     </FrameLayout>
 
-                    <!-- Starboard Step Buttons Column -->
+                    <!-- Starboard Step Buttons Column: +10° (56dp x 48dp) and +1° (50dp x 42dp) with green tint -->
                     <LinearLayout
                         android:id="@+id/right_controls"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginEnd="12dp"
+                        android:layout_marginEnd="8dp"
                         android:gravity="center_horizontal"
                         android:orientation="vertical">
 
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/btn_plus_10"
                             style="@style/Widget.Material3.Button.OutlinedButton"
-                            android:layout_width="60dp"
+                            android:layout_width="56dp"
                             android:layout_height="48dp"
                             android:minHeight="48dp"
-                            android:minWidth="60dp"
+                            android:minWidth="56dp"
                             android:insetLeft="0dp"
                             android:insetTop="0dp"
                             android:insetRight="0dp"
@@ -300,31 +313,31 @@
                             android:text="+10°"
                             android:textSize="15sp"
                             android:textStyle="bold"
-                            android:textColor="?attr/active_color_primary"
-                            app:strokeColor="?attr/active_color_primary"
+                            android:textColor="#43A047"
+                            app:strokeColor="#43A047"
                             app:strokeWidth="2dp"
-                            app:cornerRadius="10dp"
+                            app:cornerRadius="8dp"
                             android:contentDescription="+10 degrees" />
 
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/btn_plus_1"
                             style="@style/Widget.Material3.Button.OutlinedButton"
-                            android:layout_width="60dp"
-                            android:layout_height="48dp"
-                            android:minHeight="48dp"
-                            android:minWidth="60dp"
-                            android:layout_marginTop="10dp"
+                            android:layout_width="50dp"
+                            android:layout_height="42dp"
+                            android:minHeight="42dp"
+                            android:minWidth="50dp"
+                            android:layout_marginTop="8dp"
                             android:insetLeft="0dp"
                             android:insetTop="0dp"
                             android:insetRight="0dp"
                             android:insetBottom="0dp"
                             android:padding="0dp"
                             android:text="+1°"
-                            android:textColor="?attr/active_color_primary"
+                            android:textColor="#43A047"
                             android:textSize="14sp"
                             android:textStyle="bold"
-                            app:cornerRadius="10dp"
-                            app:strokeColor="?attr/active_color_primary"
+                            app:cornerRadius="8dp"
+                            app:strokeColor="#43A047"
                             app:strokeWidth="1.5dp"
                             android:contentDescription="+1 degree" />
                     </LinearLayout>
@@ -337,23 +350,25 @@
                     android:layout_height="46dp"
                     android:layout_marginStart="16dp"
                     android:layout_marginEnd="16dp"
-                    android:layout_marginTop="8dp"
-                    android:layout_marginBottom="4dp"
+                    android:layout_marginTop="6dp"
+                    android:layout_marginBottom="2dp"
                     android:contentDescription="@string/nautical_rudder_angle"
                     android:focusable="true" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
-        <!-- 3. Wind Vane & Tactical Maneuvers Card -->
+        <!-- Action Footer: Tactical Tack Card with SlideToConfirmView -->
         <com.google.android.material.card.MaterialCardView
             android:id="@+id/card_tactical_maneuvers"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginStart="16dp"
             android:layout_marginEnd="16dp"
-            android:layout_marginTop="12dp"
+            android:layout_marginTop="10dp"
             app:cardCornerRadius="12dp"
             app:cardElevation="2dp"
+            app:strokeWidth="1dp"
+            app:strokeColor="?attr/divider_color"
             app:cardBackgroundColor="?attr/card_and_list_background_basic">
 
             <LinearLayout
@@ -362,7 +377,7 @@
                 android:orientation="vertical"
                 android:padding="12dp">
 
-                <!-- Primary Maneuver Row (Tack Port / Lock / Expand / Tack Stbd) -->
+                <!-- Primary Tack Row (Auto-Tack Port / Lock Guard / Auto-Tack Starboard) -->
                 <LinearLayout
                     android:id="@+id/tactical_actions_row"
                     android:layout_width="match_parent"
@@ -370,7 +385,7 @@
                     android:orientation="horizontal"
                     android:gravity="center_vertical">
 
-                    <!-- Tack Port / Shunt -->
+                    <!-- Auto-Tack Port -->
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btn_tack_port"
                         style="@style/Widget.Material3.Button.OutlinedButton"
@@ -378,47 +393,36 @@
                         android:layout_height="48dp"
                         android:minHeight="48dp"
                         android:layout_weight="1"
-                        android:layout_marginEnd="6dp"
-                        android:paddingStart="4dp"
-                        android:paddingEnd="4dp"
+                        android:layout_marginEnd="8dp"
+                        android:paddingStart="6dp"
+                        android:paddingEnd="6dp"
                         android:singleLine="true"
                         android:ellipsize="end"
                         android:text="@string/nautical_tack_port_short"
-                        android:textColor="?attr/active_color_primary"
+                        android:textColor="#E53935"
                         android:textStyle="bold"
                         android:textSize="13sp"
-                        app:strokeColor="?attr/active_color_primary"
+                        app:strokeColor="#E53935"
                         app:strokeWidth="1.5dp"
                         app:cornerRadius="8dp"
                         android:contentDescription="@string/nautical_tack_port" />
 
-                    <!-- Touch Guard Lock Button -->
+                    <!-- Lock Touch Guard Button -->
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btn_lock_unlock"
                         style="@style/Widget.Material3.Button.IconButton"
                         android:layout_width="48dp"
                         android:layout_height="48dp"
-                        android:layout_marginEnd="4dp"
+                        android:minHeight="48dp"
+                        android:minWidth="48dp"
+                        android:layout_marginEnd="8dp"
                         android:padding="0dp"
                         app:icon="@drawable/ic_action_lock_open"
                         app:iconSize="22dp"
                         app:iconTint="?attr/icon_color_primary"
                         android:contentDescription="@string/nautical_lock_course" />
 
-                    <!-- Expand / Collapse Extra Maneuvers -->
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btn_expand_maneuvers"
-                        style="@style/Widget.Material3.Button.IconButton"
-                        android:layout_width="48dp"
-                        android:layout_height="48dp"
-                        android:layout_marginEnd="6dp"
-                        android:padding="0dp"
-                        app:icon="@drawable/ic_action_arrow_drop_down"
-                        app:iconSize="26dp"
-                        app:iconTint="?attr/active_color_primary"
-                        android:contentDescription="@string/nautical_more_maneuvers" />
-
-                    <!-- Tack Starboard / Center Rudder -->
+                    <!-- Auto-Tack Starboard -->
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btn_tack_stbd"
                         style="@style/Widget.Material3.Button.OutlinedButton"
@@ -426,416 +430,142 @@
                         android:layout_height="48dp"
                         android:minHeight="48dp"
                         android:layout_weight="1"
-                        android:paddingStart="4dp"
-                        android:paddingEnd="4dp"
+                        android:paddingStart="6dp"
+                        android:paddingEnd="6dp"
                         android:singleLine="true"
                         android:ellipsize="end"
                         android:text="@string/nautical_tack_stbd_short"
-                        android:textColor="?attr/active_color_primary"
+                        android:textColor="#43A047"
                         android:textStyle="bold"
                         android:textSize="13sp"
-                        app:strokeColor="?attr/active_color_primary"
+                        app:strokeColor="#43A047"
                         app:strokeWidth="1.5dp"
                         app:cornerRadius="8dp"
                         android:contentDescription="@string/nautical_tack_stbd" />
                 </LinearLayout>
 
-                <!-- Secondary Expandable Maneuvers Container -->
+                <!-- Embedded Confirmation Container (Target Heading & Slide-to-Confirm) -->
                 <LinearLayout
-                    android:id="@+id/layout_secondary_maneuvers"
+                    android:id="@+id/layout_embedded_confirmation"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:layout_marginTop="10dp"
                     android:visibility="gone">
 
-                    <!-- Section: Sailing & Wind Maneuvers -->
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="Sailing Maneuvers"
-                        android:textAppearance="@style/TextAppearance.AppCompat.Caption"
-                        android:textColor="?android:attr/textColorSecondary"
-                        android:textStyle="bold"
-                        android:layout_marginBottom="4dp" />
-
+                    <!-- Target Heading Pre-activation Selector Row -->
                     <LinearLayout
+                        android:id="@+id/layout_maneuver_target_setup"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:orientation="horizontal">
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginBottom="8dp">
+
+                        <TextView
+                            android:id="@+id/txt_maneuver_title"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Tack Port"
+                            android:textSize="14sp"
+                            android:textStyle="bold"
+                            android:textColor="?android:attr/textColorPrimary" />
+
+                        <!-- Target Heading Adjusters (-5° / +5°) -->
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btn_maneuver_deg_minus"
+                            style="@style/Widget.Material3.Button.OutlinedButton"
+                            android:layout_width="44dp"
+                            android:layout_height="42dp"
+                            android:minHeight="42dp"
+                            android:minWidth="44dp"
+                            android:padding="0dp"
+                            android:insetLeft="0dp"
+                            android:insetTop="0dp"
+                            android:insetRight="0dp"
+                            android:insetBottom="0dp"
+                            android:text="-5°"
+                            android:textSize="12sp"
+                            android:textStyle="bold"
+                            android:textColor="?attr/active_color_primary"
+                            app:strokeColor="?attr/active_color_primary"
+                            app:strokeWidth="1dp"
+                            app:cornerRadius="6dp" />
+
+                        <TextView
+                            android:id="@+id/txt_maneuver_target_deg"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="8dp"
+                            android:layout_marginEnd="8dp"
+                            android:text="Target: 315°"
+                            android:textSize="14sp"
+                            android:textStyle="bold"
+                            android:textColor="?attr/active_color_primary" />
 
                         <com.google.android.material.button.MaterialButton
-                            android:id="@+id/btn_maneuver_gybe_port"
+                            android:id="@+id/btn_maneuver_deg_plus"
                             style="@style/Widget.Material3.Button.OutlinedButton"
-                            android:layout_width="0dp"
-                            android:layout_height="48dp"
-                            android:minHeight="48dp"
-                            android:layout_weight="1"
-                            android:layout_marginEnd="6dp"
-                            android:text="@string/nautical_gybe_port_short"
-                            android:textColor="?attr/active_color_primary"
-                            android:textStyle="bold"
+                            android:layout_width="44dp"
+                            android:layout_height="42dp"
+                            android:minHeight="42dp"
+                            android:minWidth="44dp"
+                            android:padding="0dp"
+                            android:insetLeft="0dp"
+                            android:insetTop="0dp"
+                            android:insetRight="0dp"
+                            android:insetBottom="0dp"
+                            android:text="+5°"
                             android:textSize="12sp"
+                            android:textStyle="bold"
+                            android:textColor="?attr/active_color_primary"
                             app:strokeColor="?attr/active_color_primary"
-                            app:strokeWidth="1.5dp"
-                            app:cornerRadius="8dp" />
+                            app:strokeWidth="1dp"
+                            app:cornerRadius="6dp" />
 
                         <com.google.android.material.button.MaterialButton
-                            android:id="@+id/btn_maneuver_gybe_stbd"
-                            style="@style/Widget.Material3.Button.OutlinedButton"
-                            android:layout_width="0dp"
-                            android:layout_height="48dp"
-                            android:minHeight="48dp"
-                            android:layout_weight="1"
-                            android:text="@string/nautical_gybe_stbd_short"
-                            android:textColor="?attr/active_color_primary"
-                            android:textStyle="bold"
-                            android:textSize="12sp"
-                            app:strokeColor="?attr/active_color_primary"
-                            app:strokeWidth="1.5dp"
-                            app:cornerRadius="8dp" />
+                            android:id="@+id/btn_cancel_embedded_confirmation"
+                            style="@style/Widget.Material3.Button.IconButton"
+                            android:layout_width="42dp"
+                            android:layout_height="42dp"
+                            android:layout_marginStart="8dp"
+                            android:padding="0dp"
+                            app:icon="@drawable/ic_action_cancel"
+                            app:iconSize="22dp"
+                            app:iconTint="?attr/icon_color_primary"
+                            android:contentDescription="@string/shared_string_cancel" />
                     </LinearLayout>
 
-                    <LinearLayout
+                    <!-- Slide-To-Confirm Bar -->
+                    <net.osmand.plus.plugins.nautical.ui.SlideToConfirmView
+                        android:id="@+id/embedded_slide_confirm"
                         android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="6dp"
-                        android:orientation="horizontal">
-
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/btn_maneuver_heave_to"
-                            style="@style/Widget.Material3.Button.OutlinedButton"
-                            android:layout_width="0dp"
-                            android:layout_height="48dp"
-                            android:minHeight="48dp"
-                            android:layout_weight="1"
-                            android:layout_marginEnd="6dp"
-                            android:text="@string/nautical_heave_to"
-                            android:textColor="?attr/active_color_primary"
-                            android:textStyle="bold"
-                            android:textSize="12sp"
-                            app:strokeColor="?attr/active_color_primary"
-                            app:strokeWidth="1.5dp"
-                            app:cornerRadius="8dp" />
-
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/btn_maneuver_center_rudder"
-                            style="@style/Widget.Material3.Button.OutlinedButton"
-                            android:layout_width="0dp"
-                            android:layout_height="48dp"
-                            android:minHeight="48dp"
-                            android:layout_weight="1"
-                            android:text="@string/nautical_center_rudder"
-                            android:textColor="?attr/active_color_primary"
-                            android:textStyle="bold"
-                            android:textSize="12sp"
-                            app:strokeColor="?attr/active_color_primary"
-                            app:strokeWidth="1.5dp"
-                            app:cornerRadius="8dp" />
-                    </LinearLayout>
-
-                    <!-- Section: Docking & Holding -->
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="Docking &amp; Holding"
-                        android:textAppearance="@style/TextAppearance.AppCompat.Caption"
-                        android:textColor="?android:attr/textColorSecondary"
-                        android:textStyle="bold"
-                        android:layout_marginTop="10dp"
-                        android:layout_marginBottom="4dp" />
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal">
-
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/btn_maneuver_docking"
-                            style="@style/Widget.Material3.Button.OutlinedButton"
-                            android:layout_width="0dp"
-                            android:layout_height="48dp"
-                            android:minHeight="48dp"
-                            android:layout_weight="1"
-                            android:layout_marginEnd="6dp"
-                            android:text="@string/nautical_maneuver_docking"
-                            android:textColor="?attr/active_color_primary"
-                            android:textStyle="bold"
-                            android:textSize="12sp"
-                            app:strokeColor="?attr/active_color_primary"
-                            app:strokeWidth="1.5dp"
-                            app:cornerRadius="8dp" />
-
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/btn_maneuver_med_mooring"
-                            style="@style/Widget.Material3.Button.OutlinedButton"
-                            android:layout_width="0dp"
-                            android:layout_height="48dp"
-                            android:minHeight="48dp"
-                            android:layout_weight="1"
-                            android:text="@string/nautical_maneuver_med_mooring"
-                            android:textColor="?attr/active_color_primary"
-                            android:textStyle="bold"
-                            android:textSize="12sp"
-                            app:strokeColor="?attr/active_color_primary"
-                            app:strokeWidth="1.5dp"
-                            app:cornerRadius="8dp" />
-                    </LinearLayout>
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="6dp"
-                        android:orientation="horizontal">
-
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/btn_maneuver_slip_exit"
-                            style="@style/Widget.Material3.Button.OutlinedButton"
-                            android:layout_width="0dp"
-                            android:layout_height="48dp"
-                            android:minHeight="48dp"
-                            android:layout_weight="1"
-                            android:layout_marginEnd="6dp"
-                            android:text="@string/nautical_maneuver_slip_exit"
-                            android:textColor="?attr/active_color_primary"
-                            android:textStyle="bold"
-                            android:textSize="12sp"
-                            app:strokeColor="?attr/active_color_primary"
-                            app:strokeWidth="1.5dp"
-                            app:cornerRadius="8dp" />
-
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/btn_maneuver_mooring_buoy"
-                            style="@style/Widget.Material3.Button.OutlinedButton"
-                            android:layout_width="0dp"
-                            android:layout_height="48dp"
-                            android:minHeight="48dp"
-                            android:layout_weight="1"
-                            android:text="@string/nautical_maneuver_mooring"
-                            android:textColor="?attr/active_color_primary"
-                            android:textStyle="bold"
-                            android:textSize="12sp"
-                            app:strokeColor="?attr/active_color_primary"
-                            app:strokeWidth="1.5dp"
-                            app:cornerRadius="8dp" />
-                    </LinearLayout>
-
-                    <!-- Section: Tactical & Emergency -->
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="Tactical &amp; Emergency"
-                        android:textAppearance="@style/TextAppearance.AppCompat.Caption"
-                        android:textColor="?android:attr/textColorSecondary"
-                        android:textStyle="bold"
-                        android:layout_marginTop="10dp"
-                        android:layout_marginBottom="4dp" />
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal">
-
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/btn_maneuver_dodge_port"
-                            style="@style/Widget.Material3.Button.OutlinedButton"
-                            android:layout_width="0dp"
-                            android:layout_height="48dp"
-                            android:minHeight="48dp"
-                            android:layout_weight="1"
-                            android:layout_marginEnd="6dp"
-                            android:text="@string/nautical_dodge_port_label"
-                            android:textColor="?attr/active_color_primary"
-                            android:textStyle="bold"
-                            android:textSize="12sp"
-                            app:strokeColor="?attr/active_color_primary"
-                            app:strokeWidth="1.5dp"
-                            app:cornerRadius="8dp" />
-
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/btn_maneuver_dodge_stbd"
-                            style="@style/Widget.Material3.Button.OutlinedButton"
-                            android:layout_width="0dp"
-                            android:layout_height="48dp"
-                            android:minHeight="48dp"
-                            android:layout_weight="1"
-                            android:text="@string/nautical_dodge_stbd_label"
-                            android:textColor="?attr/active_color_primary"
-                            android:textStyle="bold"
-                            android:textSize="12sp"
-                            app:strokeColor="?attr/active_color_primary"
-                            app:strokeWidth="1.5dp"
-                            app:cornerRadius="8dp" />
-                    </LinearLayout>
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="6dp"
-                        android:orientation="horizontal">
-
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/btn_maneuver_weigh_anchor"
-                            style="@style/Widget.Material3.Button.OutlinedButton"
-                            android:layout_width="0dp"
-                            android:layout_height="48dp"
-                            android:minHeight="48dp"
-                            android:layout_weight="1"
-                            android:layout_marginEnd="6dp"
-                            android:text="@string/nautical_weigh_anchor"
-                            android:textColor="?attr/active_color_primary"
-                            android:textStyle="bold"
-                            android:textSize="12sp"
-                            app:strokeColor="?attr/active_color_primary"
-                            app:strokeWidth="1.5dp"
-                            app:cornerRadius="8dp" />
-
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/btn_maneuver_holding_pattern"
-                            style="@style/Widget.Material3.Button.OutlinedButton"
-                            android:layout_width="0dp"
-                            android:layout_height="48dp"
-                            android:minHeight="48dp"
-                            android:layout_weight="1"
-                            android:text="@string/nautical_holding_pattern"
-                            android:textColor="?attr/active_color_primary"
-                            android:textStyle="bold"
-                            android:textSize="12sp"
-                            app:strokeColor="?attr/active_color_primary"
-                            app:strokeWidth="1.5dp"
-                            app:cornerRadius="8dp" />
-                    </LinearLayout>
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btn_maneuver_emergency_stop"
-                        style="@style/Widget.Material3.Button.OutlinedButton"
-                        android:layout_width="match_parent"
-                        android:layout_height="48dp"
-                        android:minHeight="48dp"
-                        android:layout_marginTop="8dp"
-                        android:text="@string/nautical_emergency_stop_label"
-                        android:textColor="@color/color_warning"
-                        android:textStyle="bold"
-                        android:textSize="13sp"
-                        app:icon="@drawable/ic_action_alert"
-                        app:iconTint="@color/color_warning"
-                        app:strokeColor="@color/color_warning"
-                        app:strokeWidth="2dp"
-                        app:cornerRadius="8dp" />
+                        android:layout_height="48dp" />
                 </LinearLayout>
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
-        <!-- 4. Embedded Maneuver Confirmation & Target Setup Card -->
-        <com.google.android.material.card.MaterialCardView
-            android:id="@+id/card_embedded_confirmation"
+        <!-- Prominent Standby / Disengage Bar -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_disengage_standby"
+            style="@style/Widget.Material3.Button.UnelevatedButton"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
+            android:layout_height="52dp"
+            android:minHeight="52dp"
             android:layout_marginStart="16dp"
             android:layout_marginEnd="16dp"
-            android:layout_marginTop="12dp"
-            app:cardCornerRadius="12dp"
-            app:cardElevation="2dp"
-            app:cardBackgroundColor="?attr/card_and_list_background_basic">
-
-            <LinearLayout
-                android:id="@+id/layout_embedded_confirmation"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="12dp"
-                android:visibility="gone">
-
-                <!-- Target Heading Pre-activation Selector Row -->
-                <LinearLayout
-                    android:id="@+id/layout_maneuver_target_setup"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical"
-                    android:layout_marginBottom="8dp">
-
-                    <TextView
-                        android:id="@+id/txt_maneuver_title"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="Tack Port"
-                        android:textSize="14sp"
-                        android:textStyle="bold"
-                        android:textColor="?android:attr/textColorPrimary" />
-
-                    <!-- Target Heading Adjusters -->
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btn_maneuver_deg_minus"
-                        style="@style/Widget.Material3.Button.OutlinedButton"
-                        android:layout_width="44dp"
-                        android:layout_height="42dp"
-                        android:minHeight="42dp"
-                        android:minWidth="44dp"
-                        android:padding="0dp"
-                        android:insetLeft="0dp"
-                        android:insetTop="0dp"
-                        android:insetRight="0dp"
-                        android:insetBottom="0dp"
-                        android:text="-5°"
-                        android:textSize="12sp"
-                        android:textStyle="bold"
-                        android:textColor="?attr/active_color_primary"
-                        app:strokeColor="?attr/active_color_primary"
-                        app:strokeWidth="1dp"
-                        app:cornerRadius="6dp" />
-
-                    <TextView
-                        android:id="@+id/txt_maneuver_target_deg"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="8dp"
-                        android:layout_marginEnd="8dp"
-                        android:text="Target: 315°"
-                        android:textSize="14sp"
-                        android:textStyle="bold"
-                        android:textColor="?attr/active_color_primary" />
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btn_maneuver_deg_plus"
-                        style="@style/Widget.Material3.Button.OutlinedButton"
-                        android:layout_width="44dp"
-                        android:layout_height="42dp"
-                        android:minHeight="42dp"
-                        android:minWidth="44dp"
-                        android:padding="0dp"
-                        android:insetLeft="0dp"
-                        android:insetTop="0dp"
-                        android:insetRight="0dp"
-                        android:insetBottom="0dp"
-                        android:text="+5°"
-                        android:textSize="12sp"
-                        android:textStyle="bold"
-                        android:textColor="?attr/active_color_primary"
-                        app:strokeColor="?attr/active_color_primary"
-                        app:strokeWidth="1dp"
-                        app:cornerRadius="6dp" />
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btn_cancel_embedded_confirmation"
-                        style="@style/Widget.Material3.Button.IconButton"
-                        android:layout_width="42dp"
-                        android:layout_height="42dp"
-                        android:layout_marginStart="8dp"
-                        android:padding="0dp"
-                        app:icon="@drawable/ic_action_cancel"
-                        app:iconSize="22dp"
-                        app:iconTint="?attr/icon_color_primary"
-                        android:contentDescription="@string/shared_string_cancel" />
-                </LinearLayout>
-
-                <net.osmand.plus.plugins.nautical.ui.SlideToConfirmView
-                    android:id="@+id/embedded_slide_confirm"
-                    android:layout_width="match_parent"
-                    android:layout_height="48dp" />
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
+            android:layout_marginTop="10dp"
+            app:icon="@drawable/ic_action_stop"
+            app:iconSize="22dp"
+            app:iconPadding="8dp"
+            app:iconTint="@android:color/white"
+            android:text="@string/nautical_disengage_standby"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:textColor="@android:color/white"
+            app:backgroundTint="#D32F2F"
+            app:cornerRadius="10dp"
+            android:contentDescription="@string/nautical_disengage_standby" />
 
     </LinearLayout>
 </androidx.core.widget.NestedScrollView>

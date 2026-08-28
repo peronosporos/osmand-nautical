@@ -176,6 +176,9 @@ class MobEmergencyHeaderView @JvmOverloads constructor(
         val app = context.applicationContext as net.osmand.plus.OsmandApplication
         val settings = app.settings
 
+        val isNight = net.osmand.plus.plugins.nautical.NauticalPlugin.isNightVision(app)
+        applyNightVisionTheme(isNight)
+
         state.distanceMeters?.let {
             val (v, u) = net.osmand.plus.plugins.nautical.engine.SignalKUnitConverter.formatValue(context, settings, it, "distance")
             distanceView.text = "$v $u"
@@ -218,6 +221,25 @@ class MobEmergencyHeaderView @JvmOverloads constructor(
             } else {
                 heaveToButton.alpha = 1.0f
             }
+        }
+    }
+
+    private fun applyNightVisionTheme(enabled: Boolean) {
+        val container = findViewById<android.widget.LinearLayout>(R.id.mob_hud_container)
+        if (enabled) {
+            container?.setBackgroundColor(0xEE120000.toInt())
+            mobIcon.setColorFilter(0xFFFF1744.toInt())
+            findViewById<TextView>(R.id.mob_title)?.setTextColor(0xFFFF1744.toInt())
+            distanceView.setTextColor(0xFFFF1744.toInt())
+            bearingView.setTextColor(0xFFFF1744.toInt())
+            etaView.setTextColor(0xFFFF1744.toInt())
+        } else {
+            container?.setBackgroundColor(0xFFD32F2F.toInt())
+            mobIcon.setColorFilter(android.graphics.Color.WHITE)
+            findViewById<TextView>(R.id.mob_title)?.setTextColor(android.graphics.Color.WHITE)
+            distanceView.setTextColor(android.graphics.Color.WHITE)
+            bearingView.setTextColor(android.graphics.Color.WHITE)
+            etaView.setTextColor(android.graphics.Color.WHITE)
         }
     }
 }

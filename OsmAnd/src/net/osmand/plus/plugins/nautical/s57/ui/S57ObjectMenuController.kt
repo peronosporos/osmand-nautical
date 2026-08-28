@@ -22,32 +22,37 @@ class S57ObjectMenuController(
 
     override fun addPlainMenuItems(typeStr: String?, pointDescription: PointDescription?, latLon: LatLon?) {
         val activity = mapActivity ?: return
-        addMenuItem(activity.getString(R.string.nautical_s57_acronym), s57Object.acronym)
+        addMenuItem(activity.getString(R.string.nautical_s57_acronym), s57Object.acronym, "ACRONYM")
 
         // Composite Light Characteristic if available
         val compositeLight = formatCompositeLightCharacteristic(s57Object.attributes)
         if (!compositeLight.isNullOrEmpty()) {
-            addMenuItem("Light Characteristic (Full)", compositeLight)
+            addMenuItem("Light Characteristic (Full)", compositeLight, "LITCHR")
         }
 
         s57Object.attributes.forEach { (key, rawValue) ->
             val label = getAttributeLabel(key)
             val decodedValue = decodeAttributeValue(key, rawValue)
-            addMenuItem(label, decodedValue)
+            addMenuItem(label, decodedValue, key)
         }
 
         // Add geometry info if relevant
         val geo = s57Object.geometries.firstOrNull()
         if (geo is S57Geometry.Point && geo.depth != null) {
-            addMenuItem(activity.getString(R.string.nautical_s57_depth_label), String.format(Locale.US, "%.1f m", geo.depth))
+            addMenuItem(activity.getString(R.string.nautical_s57_depth_label), String.format(Locale.US, "%.1f m", geo.depth), "VALSOU")
         }
 
         super.addPlainMenuItems(typeStr, pointDescription, latLon)
     }
 
-    private fun addMenuItem(type: String, value: String?) {
+    private fun addMenuItem(type: String, value: String?, key: String = "") {
         if (!value.isNullOrEmpty()) {
-            addPlainMenuItem(0, value, type, null, false, false, null)
+            val iconId = when (key.uppercase(Locale.US)) {
+                "VALSOU", "159", "DRVAL1", "87", "DRVAL2", "88", "VALCO", "157", "HEIGHT", "96" -> R.drawable.ic_action_ruler
+                "RESTRN", "131", "WATLEV", "162" -> R.drawable.ic_action_alert
+                else -> R.drawable.ic_action_info_dark
+            }
+            addPlainMenuItem(iconId, value, type, null, false, false, null)
         }
     }
 

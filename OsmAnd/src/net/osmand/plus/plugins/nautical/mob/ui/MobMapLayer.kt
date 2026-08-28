@@ -101,15 +101,79 @@ class MobMapLayer(context: Context) : OsmandMapLayer(context) {
         pathEffect = DashPathEffect(floatArrayOf(20f, 10f), 0f)
     }
 
+    private val pulsingCirclePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+        strokeWidth = 2.5f
+        color = Color.RED
+    }
+
     private val patternPath = Path()
+    private val activeLegPath = Path()
     private val returnLinePath = Path()
     private val waypointRect = RectF()
+    private val searchEllipseRect = RectF()
 
     fun updateState(state: MobUiState) {
         this.mobUiState = state
     }
 
     override fun drawInScreenPixels(): Boolean = true
+
+    private fun setupPaints(isNight: Boolean) {
+        if (isNight) {
+            val brightRed = 0xFFFF1744.toInt()
+            val vibrantRed = 0xFFFF5252.toInt()
+            val lightRed = 0xFFFF8A80.toInt()
+
+            markerPaint.color = brightRed
+            fillPaint.color = brightRed
+            fillPaint.alpha = 60
+
+            driftingDatumPaint.color = vibrantRed
+            driftingDatumFillPaint.color = vibrantRed
+            driftingDatumFillPaint.alpha = 60
+
+            driftLinePaint.color = vibrantRed
+
+            searchUncertaintyFillPaint.color = 0x25B71C1C.toInt()
+            searchUncertaintyStrokePaint.color = 0x80FF1744.toInt()
+
+            patternPaint.color = brightRed
+            activeLegPaint.color = brightRed
+            sarWaypointPaint.color = lightRed
+            sarWaypointBgPaint.color = 0xEE120000.toInt()
+            sarWaypointStrokePaint.color = brightRed
+            sarWaypointTextPaint.color = lightRed
+
+            linePaint.color = brightRed
+            pulsingCirclePaint.color = brightRed
+        } else {
+            markerPaint.color = Color.RED
+            fillPaint.color = Color.RED
+            fillPaint.alpha = 90
+
+            driftingDatumPaint.color = 0xFFFF9800.toInt()
+            driftingDatumFillPaint.color = 0xFFFF9800.toInt()
+            driftingDatumFillPaint.alpha = 90
+
+            driftLinePaint.color = 0xFFFF9800.toInt()
+
+            searchUncertaintyFillPaint.color = 0xFFFF9800.toInt()
+            searchUncertaintyFillPaint.alpha = 30
+            searchUncertaintyStrokePaint.color = 0xFFFF9800.toInt()
+            searchUncertaintyStrokePaint.alpha = 140
+
+            patternPaint.color = Color.YELLOW
+            activeLegPaint.color = 0xFF00E5FF.toInt()
+            sarWaypointPaint.color = Color.YELLOW
+            sarWaypointBgPaint.color = 0xDD212121.toInt()
+            sarWaypointStrokePaint.color = Color.YELLOW
+            sarWaypointTextPaint.color = Color.WHITE
+
+            linePaint.color = Color.RED
+            pulsingCirclePaint.color = Color.RED
+        }
+    }
 
     override fun onDraw(canvas: Canvas, tileBox: RotatedTileBox, settings: DrawSettings) {
         val state = mobUiState ?: return
@@ -118,15 +182,25 @@ class MobMapLayer(context: Context) : OsmandMapLayer(context) {
         val mobLocation = state.mobLocation ?: return
         val density = context.resources.displayMetrics.density
 
-        // 1. Draw original MOB drop location marker (Red circle + crosshair)
+        val app = context.applicationContext as? OsmandApplication ?: return
+        val isNight = net.osmand.plus.plugins.nautical.NauticalPlugin.isNightVision(app)
+        setupPaints(isNight)
+
+        // 1. Draw original MOB drop location marker (Red circle + crosshair + pulsing circle)
         val dropX = tileBox.getPixXFromLatLon(mobLocation.latitude, mobLocation.longitude)
         val dropY = tileBox.getPixYFromLatLon(mobLocation.latitude, mobLocation.longitude)
 
         val radius = 24f * density
         val crosshairSize = 36f * density
 
+        val pulsePhase = (System.currentTimeMillis() % 1200L) / 1200f
+        val pulseRadius = radius + (pulsePhase * 20f * density)
+        val pulseAlpha = ((1f - pulsePhase) * 220).toInt().coerceIn(0, 255)
+        pulsingCirclePaint.alpha = pulseAlpha
+
         canvas.drawCircle(dropX, dropY, radius, fillPaint)
         canvas.drawCircle(dropX, dropY, radius, markerPaint)
+        canvas.drawCircle(dropX, dropY, pulseRadius, pulsingCirclePaint)
         canvas.drawLine(dropX - crosshairSize, dropY, dropX + crosshairSize, dropY, markerPaint)
         canvas.drawLine(dropX, dropY - crosshairSize, dropX, dropY + crosshairSize, markerPaint)
 
@@ -146,18 +220,28 @@ class MobMapLayer(context: Context) : OsmandMapLayer(context) {
             canvas.drawLine(datumX, datumY - crosshairSize * 0.8f, datumX, datumY + crosshairSize * 0.8f, driftingDatumPaint)
         }
 
-        // Uncertainty radius circle around estimated datum
-        val uncertaintyMeters = state.uncertaintyRadiusMeters
-        if (uncertaintyMeters > 0.0) {
-            val northP = KMapUtils.rhumbDestinationPoint(datumLocation.latitude, datumLocation.longitude, uncertaintyMeters, 0.0)
+        // 2b. IAMSAR Expanding Search Probability Ellipse around estimated datum
+        val majorMeters = if (state.ellipseMajorRadiusMeters > 0.0) state.ellipseMajorRadiusMeters else state.uncertaintyRadiusMeters
+        val minorMeters = if (state.ellipseMinorRadiusMeters > 0.0) state.ellipseMinorRadiusMeters else majorMeters * 0.6
+        if (majorMeters > 0.0) {
+            val northP = KMapUtils.rhumbDestinationPoint(datumLocation.latitude, datumLocation.longitude, majorMeters, 0.0)
             val northY = tileBox.getPixYFromLatLon(northP.latitude, northP.longitude)
-            val pixRadius = abs(datumY - northY).coerceAtLeast(6f)
-            canvas.drawCircle(datumX, datumY, pixRadius, searchUncertaintyFillPaint)
-            canvas.drawCircle(datumX, datumY, pixRadius, searchUncertaintyStrokePaint)
+            val majorPix = abs(datumY - northY).coerceAtLeast(8f)
+
+            val eastP = KMapUtils.rhumbDestinationPoint(datumLocation.latitude, datumLocation.longitude, minorMeters, 90.0)
+            val eastX = tileBox.getPixXFromLatLon(eastP.latitude, eastP.longitude)
+            val minorPix = abs(datumX - eastX).coerceAtLeast(6f)
+
+            searchEllipseRect.set(datumX - majorPix, datumY - minorPix, datumX + majorPix, datumY + minorPix)
+
+            canvas.save()
+            canvas.rotate((state.ellipseBearingDeg - tileBox.rotate).toFloat(), datumX, datumY)
+            canvas.drawOval(searchEllipseRect, searchUncertaintyFillPaint)
+            canvas.drawOval(searchEllipseRect, searchUncertaintyStrokePaint)
+            canvas.restore()
         }
 
-        val app = context.applicationContext as? OsmandApplication
-        val boatLocation = app?.locationProvider?.lastKnownLocation
+        val boatLocation = app.locationProvider.lastKnownLocation
         val engine = net.osmand.plus.plugins.nautical.NauticalPlugin.engine
 
         // 3. Draw SAR Pattern if active
@@ -185,15 +269,44 @@ class MobMapLayer(context: Context) : OsmandMapLayer(context) {
             }
             canvas.drawPath(patternPath, patternPaint)
 
-            // Draw numbered search waypoints
+            // Draw highlighted active leg
+            val activeIdx = state.activeSarWaypointIndex.coerceIn(0, sarWaypoints.size - 1)
+            activeLegPath.reset()
+            if (activeIdx == 0) {
+                val startX = if (boatLocation != null) tileBox.getPixXFromLatLon(boatLocation.latitude, boatLocation.longitude) else datumX
+                val startY = if (boatLocation != null) tileBox.getPixYFromLatLon(boatLocation.latitude, boatLocation.longitude) else datumY
+                val endX = tileBox.getPixXFromLatLon(sarWaypoints[0].latitude, sarWaypoints[0].longitude)
+                val endY = tileBox.getPixYFromLatLon(sarWaypoints[0].latitude, sarWaypoints[0].longitude)
+                activeLegPath.moveTo(startX, startY)
+                activeLegPath.lineTo(endX, endY)
+            } else {
+                val prevPt = sarWaypoints[activeIdx - 1]
+                val targetPt = sarWaypoints[activeIdx]
+                activeLegPath.moveTo(
+                    tileBox.getPixXFromLatLon(prevPt.latitude, prevPt.longitude),
+                    tileBox.getPixYFromLatLon(prevPt.latitude, prevPt.longitude)
+                )
+                activeLegPath.lineTo(
+                    tileBox.getPixXFromLatLon(targetPt.latitude, targetPt.longitude),
+                    tileBox.getPixYFromLatLon(targetPt.latitude, targetPt.longitude)
+                )
+            }
+            canvas.drawPath(activeLegPath, activeLegPaint)
+
+            // Draw numbered search waypoints (S_1, S_2, ... S_n)
             for (i in sarWaypoints.indices) {
                 val pt = sarWaypoints[i]
                 val px = tileBox.getPixXFromLatLon(pt.latitude, pt.longitude)
                 val py = tileBox.getPixYFromLatLon(pt.latitude, pt.longitude)
 
-                canvas.drawCircle(px, py, 5f * density, sarWaypointPaint)
+                val isActiveWp = (i == activeIdx)
+                if (isActiveWp) {
+                    canvas.drawCircle(px, py, 9f * density, pulsingCirclePaint)
+                }
 
-                val label = (i + 1).toString()
+                canvas.drawCircle(px, py, (if (isActiveWp) 6f else 4f) * density, sarWaypointPaint)
+
+                val label = "S${i + 1}"
                 val textW = sarWaypointTextPaint.measureText(label)
                 val textH = sarWaypointTextPaint.textSize
                 val badgeW = textW + 12f
@@ -208,7 +321,7 @@ class MobMapLayer(context: Context) : OsmandMapLayer(context) {
                     badgeY + badgeH / 2f
                 )
                 canvas.drawRoundRect(waypointRect, 6f, 6f, sarWaypointBgPaint)
-                canvas.drawRoundRect(waypointRect, 6f, 6f, sarWaypointStrokePaint)
+                canvas.drawRoundRect(waypointRect, 6f, 6f, if (isActiveWp) activeLegPaint else sarWaypointStrokePaint)
                 canvas.drawText(label, badgeX, badgeY + (textH * 0.35f), sarWaypointTextPaint)
             }
         }

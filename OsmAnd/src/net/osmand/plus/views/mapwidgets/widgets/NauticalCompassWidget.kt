@@ -35,7 +35,8 @@ class NauticalCompassWidget(
     override fun updateIcon() {
         val iconId = iconId
         if (iconId != 0) {
-            val color = settings.applicationMode.getProfileColor(isNightMode)
+            val isNight = NauticalPlugin.isNightVision(mapActivity.app)
+            val color = if (isNight) 0xFFFF1744.toInt() else settings.applicationMode.getProfileColor(isNightMode)
             setImageDrawable(iconsCache.getPaintedIcon(iconId, color))
         }
     }
@@ -90,13 +91,24 @@ class NauticalCompassWidget(
         val heading = state.headingMagnetic ?: state.headingTrue
         val mainText = heading?.let { String.format(Locale.US, "%.0f°", Math.toDegrees(it)) } ?: "--"
 
-        val variation = state.magneticVariation?.let { 
-            val deg = Math.toDegrees(it)
-            val dir = if (deg >= 0) "E" else "W"
-            String.format(Locale.US, "%.1f°%s", Math.abs(deg), dir)
-        } ?: ""
+        val hasThreat = state.threatName != null && state.cpa != null && state.cpa < 1.0
+        val subText = if (hasThreat) {
+            "⚠ EVADE"
+        } else if (state.rudderAngle != null) {
+            val rDeg = Math.toDegrees(state.rudderAngle)
+            val absR = kotlin.math.abs(rDeg)
+            val dir = if (rDeg < -0.5) "◀" else if (rDeg > 0.5) "▶" else ""
+            val warn = if (absR > 25.0) "⚠" else if (absR > 15.0) "⚡" else ""
+            String.format(Locale.US, "%sRUD %s%.0f°", warn, dir, absR)
+        } else {
+            state.magneticVariation?.let { 
+                val deg = Math.toDegrees(it)
+                val dir = if (deg >= 0) "E" else "W"
+                String.format(Locale.US, "%.1f°%s", Math.abs(deg), dir)
+            } ?: ""
+        }
 
-        setText(mainText, variation)
+        setText(mainText, subText)
         updateIcon()
     }
 

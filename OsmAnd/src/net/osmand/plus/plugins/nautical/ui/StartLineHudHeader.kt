@@ -80,7 +80,7 @@ class StartLineHudHeader @JvmOverloads constructor(
             val bg = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
                 cornerRadius = 8f * density
-                setColor(0xEE120000.toInt()) // Pitch black
+                setColor(0xEE120000.toInt()) // Pitch dark red/black
                 setStroke((1.5f * density).toInt(), 0xFFFF1744.toInt())
             }
             rootLayout.background = bg
@@ -91,6 +91,8 @@ class StartLineHudHeader @JvmOverloads constructor(
             biasLabel.setTextColor(0xFFFF8A80.toInt())
             btnSync.setTextColor(Color.WHITE)
             btnSync.setBackgroundColor(0xFFB71C1C.toInt())
+            btnClear.setTextColor(0xFFFF8A80.toInt())
+            btnClear.setBackgroundColor(0xFF8B0000.toInt())
         } else {
             rootLayout.setBackgroundResource(R.drawable.bg_side_widget_day)
             flagIcon.setColorFilter(0xFF00E676.toInt())
@@ -98,6 +100,10 @@ class StartLineHudHeader @JvmOverloads constructor(
             distLabel.setTextColor(0xFFB0BEC5.toInt())
             timeLabel.setTextColor(0xFFFF1744.toInt())
             biasLabel.setTextColor(0xFF00E5FF.toInt())
+            btnSync.setTextColor(Color.WHITE)
+            btnSync.setBackgroundColor(0xFF1E88E5.toInt())
+            btnClear.setTextColor(Color.WHITE)
+            btnClear.setBackgroundColor(0xFF757575.toInt())
         }
     }
 
@@ -129,6 +135,8 @@ class StartLineHudHeader @JvmOverloads constructor(
         timerLabel.text = String.format(Locale.US, "%s%02d:%02d", timerSign, mins, secs)
         if (remainingSec <= 0 && remainingSec > -10) {
             timerLabel.setTextColor(if (isNightVision) 0xFFFF1744.toInt() else 0xFF00E676.toInt())
+        } else {
+            timerLabel.setTextColor(if (isNightVision) 0xFFFF1744.toInt() else 0xFFFFFFFF.toInt())
         }
 
         distLabel.text = String.format(Locale.US, "Dist: %.0fm", dist)

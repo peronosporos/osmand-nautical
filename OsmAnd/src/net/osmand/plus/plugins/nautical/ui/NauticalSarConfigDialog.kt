@@ -69,6 +69,43 @@ class NauticalSarConfigDialog : BottomSheetDialogFragment() {
         // Default selection
         toggleGroup.check(R.id.btn_expanding_square)
 
+        val app = activity?.application as? net.osmand.plus.OsmandApplication
+        val isNightVision = app?.let { NauticalPlugin.isNightVision(it) } ?: false
+        if (isNightVision) {
+            view.setBackgroundColor(0xEE120000.toInt())
+            btnExecute.backgroundTintList = android.content.res.ColorStateList.valueOf(0xFFB71C1C.toInt())
+        }
+
+        // Stepper: Track Spacing (-0.5 / +0.5 NM)
+        view.findViewById<View>(R.id.btn_spacing_minus)?.setOnClickListener {
+            val current = inputSpacing.editText?.text?.toString()?.toDoubleOrNull() ?: 0.20
+            val next = (current - 0.5).coerceAtLeast(0.05)
+            inputSpacing.editText?.setText(String.format(java.util.Locale.US, "%.2f", next))
+            it.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
+        }
+        view.findViewById<View>(R.id.btn_spacing_plus)?.setOnClickListener {
+            val current = inputSpacing.editText?.text?.toString()?.toDoubleOrNull() ?: 0.20
+            val next = current + 0.5
+            inputSpacing.editText?.setText(String.format(java.util.Locale.US, "%.2f", next))
+            it.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
+        }
+
+        // Stepper: Iterations / Search Radius (-1.0 / +1.0)
+        view.findViewById<View>(R.id.btn_radius_minus)?.setOnClickListener {
+            val current = inputIterRadius.editText?.text?.toString()?.toDoubleOrNull() ?: 4.0
+            val isExpandingSquare = toggleGroup.checkedButtonId == R.id.btn_expanding_square
+            val next = if (isExpandingSquare) (current - 1.0).toInt().coerceAtLeast(1).toDouble() else (current - 1.0).coerceAtLeast(0.25)
+            inputIterRadius.editText?.setText(if (isExpandingSquare) next.toInt().toString() else String.format(java.util.Locale.US, "%.1f", next))
+            it.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
+        }
+        view.findViewById<View>(R.id.btn_radius_plus)?.setOnClickListener {
+            val current = inputIterRadius.editText?.text?.toString()?.toDoubleOrNull() ?: 4.0
+            val isExpandingSquare = toggleGroup.checkedButtonId == R.id.btn_expanding_square
+            val next = if (isExpandingSquare) (current + 1.0).toInt().toDouble() else current + 1.0
+            inputIterRadius.editText?.setText(if (isExpandingSquare) next.toInt().toString() else String.format(java.util.Locale.US, "%.1f", next))
+            it.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
+        }
+
         btnExecute.setOnClickListener {
             val engine = NauticalPlugin.engine ?: return@setOnClickListener
             val state = engine.getCurrentState()
@@ -90,7 +127,7 @@ class NauticalSarConfigDialog : BottomSheetDialogFragment() {
                 startLon = state.longitude ?: 0.0
             }
 
-            val spacing = inputSpacing.editText?.text?.toString()?.toDoubleOrNull() ?: 0.25
+            val spacing = inputSpacing.editText?.text?.toString()?.toDoubleOrNull() ?: 0.20
             val orient = inputOrientation.editText?.text?.toString()?.toDoubleOrNull() ?: 0.0
             val turnsRight = switchRight.isChecked
 
@@ -108,12 +145,7 @@ class NauticalSarConfigDialog : BottomSheetDialogFragment() {
                     val radius = inputIterRadius.editText?.text?.toString()?.toDoubleOrNull() ?: 0.5
                     PatternSteeringEngine.generateSectorSearch(startLat, startLon, radius, orient, turnsRight)
                 }
-                R.id.btn_creeping_line -> {
-                    val l = inputLength.editText?.text?.toString()?.toDoubleOrNull() ?: 2.0
-                    val w = inputWidth.editText?.text?.toString()?.toDoubleOrNull() ?: 1.0
-                    PatternSteeringEngine.generateCreepingLine(startLat, startLon, orient, l, w, spacing, turnsRight)
-                }
-                R.id.btn_parallel_sweep -> {
+                R.id.btn_creeping_line, R.id.btn_parallel_sweep -> {
                     val l = inputLength.editText?.text?.toString()?.toDoubleOrNull() ?: 2.0
                     val w = inputWidth.editText?.text?.toString()?.toDoubleOrNull() ?: 1.0
                     PatternSteeringEngine.generateParallelSweep(startLat, startLon, orient, l, w, spacing)
@@ -122,6 +154,8 @@ class NauticalSarConfigDialog : BottomSheetDialogFragment() {
             }
 
             if (waypoints.isNotEmpty()) {
+                val latLons = waypoints.map { net.osmand.data.LatLon(it.first, it.second) }
+                NauticalPlugin.getInstance()?.mobViewModel?.setSarPatternWaypoints(latLons)
                 NauticalPlugin.autopilot?.executePattern(waypoints)
                 dismiss()
             }

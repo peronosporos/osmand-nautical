@@ -12,19 +12,6 @@ class AutopilotBottomSheetHelper(
     private val sheet: NauticalPilotBottomSheet,
     private val tackPortBtn: MaterialButton,
     private val tackStbdBtn: MaterialButton,
-    private val btnGybePort: MaterialButton,
-    private val btnGybeStbd: MaterialButton,
-    private val btnHeaveTo: MaterialButton,
-    private val btnCenterRudder: MaterialButton,
-    private val btnDocking: MaterialButton,
-    private val btnMedMooring: MaterialButton,
-    private val btnSlipExit: MaterialButton,
-    private val btnMooringBuoy: MaterialButton,
-    private val btnDodgePort: MaterialButton,
-    private val btnDodgeStbd: MaterialButton,
-    private val btnWeighAnchor: MaterialButton,
-    private val btnHoldingPattern: MaterialButton,
-    private val btnEmergencyStop: MaterialButton,
     private val onInitiateManeuver: (title: String, targetHeading: Int?, onExecute: (targetHeading: Int?) -> Unit) -> Unit
 ) {
 
@@ -35,31 +22,12 @@ class AutopilotBottomSheetHelper(
             tackPortBtn.contentDescription = sheet.getString(R.string.nautical_shunt)
             tackStbdBtn.text = sheet.getString(R.string.nautical_center_rudder)
             tackStbdBtn.contentDescription = sheet.getString(R.string.nautical_center_rudder)
-
-            btnGybePort.visibility = View.GONE
-            btnGybeStbd.visibility = View.GONE
-            btnHeaveTo.visibility = View.GONE
         } else {
             tackPortBtn.text = sheet.getString(R.string.nautical_tack_port_short)
             tackPortBtn.contentDescription = sheet.getString(R.string.nautical_tack_port)
             tackStbdBtn.text = sheet.getString(R.string.nautical_tack_stbd_short)
             tackStbdBtn.contentDescription = sheet.getString(R.string.nautical_tack_stbd)
-
-            btnGybePort.visibility = View.VISIBLE
-            btnGybeStbd.visibility = View.VISIBLE
-            btnHeaveTo.visibility = View.VISIBLE
         }
-
-        btnCenterRudder.visibility = View.VISIBLE
-        btnDocking.visibility = View.VISIBLE
-        btnMedMooring.visibility = View.VISIBLE
-        btnSlipExit.visibility = View.VISIBLE
-        btnMooringBuoy.visibility = View.VISIBLE
-        btnDodgePort.visibility = View.VISIBLE
-        btnDodgeStbd.visibility = View.VISIBLE
-        btnWeighAnchor.visibility = View.VISIBLE
-        btnHoldingPattern.visibility = View.VISIBLE
-        btnEmergencyStop.visibility = View.VISIBLE
     }
 
     fun handlePrimaryManeuver(vesselType: VesselType, state: MarineState?, isPort: Boolean) {
@@ -196,6 +164,10 @@ class AutopilotBottomSheetHelper(
             mm?.setActiveManeuver("holding_pattern")
             mm?.execute()
         }
+    }
+
+    fun handleMicroSteer(deltaDeg: Double) {
+        NauticalPlugin.autopilot?.adjustHeading(deltaDeg)
     }
 
     fun handleEmergencyStop() {
