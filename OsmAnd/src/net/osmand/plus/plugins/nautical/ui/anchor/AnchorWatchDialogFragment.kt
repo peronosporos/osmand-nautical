@@ -354,6 +354,9 @@ class AnchorWatchDialogFragment : BaseMaterialBottomSheetDialogFragment() {
     }
 
     override fun onDestroyView() {
+        val app = requireActivity().application as OsmandApplication
+        app.osmandMap?.mapView?.getLayerByClass(AnchorWatchMapLayer::class.java)?.playbackMinuteOffset = null
+        app.osmandMap?.mapView?.refreshMap()
         super.onDestroyView()
         btnQuickDropBow = null
         btnDropAnchor = null
@@ -393,13 +396,6 @@ class AnchorWatchDialogFragment : BaseMaterialBottomSheetDialogFragment() {
                 else -> false
             }
         }
-    }
-
-    override fun onDestroyView() {
-        val app = requireActivity().application as OsmandApplication
-        app.osmAndMapLayers.getLayer(AnchorWatchMapLayer::class.java)?.playbackMinuteOffset = null
-        app.getMapTileView()?.refreshMap()
-        super.onDestroyView()
     }
 
     abstract class SimpleTextWatcher : TextWatcher {

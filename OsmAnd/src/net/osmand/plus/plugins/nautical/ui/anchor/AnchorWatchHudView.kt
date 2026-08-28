@@ -128,7 +128,7 @@ class AnchorWatchHudView @JvmOverloads constructor(
             if (isOverload) {
                 btnResetAnchorPos.text = "Pay Out 2m"
                 btnResetAnchorPos.setOnClickListener {
-                    plugin.electricalController?.payoutRodeMeters(2.0)
+                    NauticalPlugin.electrical?.payoutRodeMeters(2.0)
                     plugin.anchorWatchdog?.clearWindlassOverload()
                     update()
                 }
@@ -198,7 +198,7 @@ class AnchorWatchHudView @JvmOverloads constructor(
             txtRadius.setTextColor(primaryColor)
             txtRode.setTextColor(primaryColor)
             dividerView.setBackgroundColor(AndroidUtils.getColorFromAttr(context, R.attr.divider_color))
-            val btnColor = AndroidUtils.getColorFromAttr(context, R.attr.color_accent)
+            val btnColor = AndroidUtils.getColorFromAttr(context, R.attr.active_color_primary_v2)
             btnWeigh.setTextColor(btnColor)
             btnAdjustScope.setTextColor(btnColor)
             btnResetAnchorPos.setTextColor(btnColor)

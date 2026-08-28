@@ -148,14 +148,10 @@ class NauticalMasterTelemetryWidget(
         val tendency = state?.barometricTendencySymbol ?: ""
         val deltaP = state?.barometricTendency3hHpa
 
-        val mainText = if (pressure != null) {
+        val finalMainText = if (pressure != null) {
             String.format(java.util.Locale.US, "%.0f %s", pressure, tendency)
         } else {
-            when (mode) {
-                SailingWorkflowState.TACTICAL_PASSAGE -> "PASS"
-                SailingWorkflowState.CLOSE_QUARTERS -> "DOCK"
-                SailingWorkflowState.STATIONARY_ANCHORED -> "ANCH"
-            }
+            mainText
         }
 
         val subText = if (deltaP != null) {
@@ -166,7 +162,7 @@ class NauticalMasterTelemetryWidget(
             "OFF"
         }
 
-        setText(mainText, subText)
+        setText(finalMainText, subText)
         contentView?.alpha = if (isConnected) 1.0f else 0.45f
     }
 

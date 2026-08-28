@@ -567,7 +567,7 @@ class MarineAlarmBannerView @JvmOverloads constructor(
             iconView.setColorFilter(0xFFFF1744.toInt())
 
             val btnBgSnooze = GradientDrawable().apply {
-                shape = GradientDrawable.RECTANGLE
+                this.shape = GradientDrawable.RECTANGLE
                 cornerRadius = 6f * density
                 setColor(0x33120000.toInt())
                 setStroke((1.5f * density).toInt(), 0xFFFF1744.toInt())
@@ -576,7 +576,7 @@ class MarineAlarmBannerView @JvmOverloads constructor(
             snoozeButton.setTextColor(0xFFFF1744.toInt())
 
             val btnBgAck = GradientDrawable().apply {
-                shape = GradientDrawable.RECTANGLE
+                this.shape = GradientDrawable.RECTANGLE
                 cornerRadius = 6f * density
                 setColor(0xEE8B0000.toInt())
                 setStroke((1.5f * density).toInt(), 0xFFFF1744.toInt())
@@ -585,7 +585,7 @@ class MarineAlarmBannerView @JvmOverloads constructor(
             ackButton.setTextColor(0xFFFF1744.toInt())
 
             val btnBgFocus = GradientDrawable().apply {
-                shape = GradientDrawable.RECTANGLE
+                this.shape = GradientDrawable.RECTANGLE
                 cornerRadius = 6f * density
                 setColor(0x33120000.toInt())
                 setStroke((1.5f * density).toInt(), 0xFFFF1744.toInt())
@@ -606,7 +606,7 @@ class MarineAlarmBannerView @JvmOverloads constructor(
             iconView.setColorFilter(0xFFFFEB3B.toInt())
 
             val btnBgSnooze = GradientDrawable().apply {
-                shape = GradientDrawable.RECTANGLE
+                this.shape = GradientDrawable.RECTANGLE
                 cornerRadius = 6f * density
                 setColor(0x44000000.toInt())
                 setStroke((1.5f * density).toInt(), 0xAAFFFFFF.toInt())
@@ -615,7 +615,7 @@ class MarineAlarmBannerView @JvmOverloads constructor(
             snoozeButton.setTextColor(Color.WHITE)
 
             val btnBgAck = GradientDrawable().apply {
-                shape = GradientDrawable.RECTANGLE
+                this.shape = GradientDrawable.RECTANGLE
                 cornerRadius = 6f * density
                 setColor(0xEE424242.toInt())
                 setStroke((1.5f * density).toInt(), Color.WHITE)
@@ -624,7 +624,7 @@ class MarineAlarmBannerView @JvmOverloads constructor(
             ackButton.setTextColor(Color.WHITE)
 
             val btnBgFocus = GradientDrawable().apply {
-                shape = GradientDrawable.RECTANGLE
+                this.shape = GradientDrawable.RECTANGLE
                 cornerRadius = 6f * density
                 setColor(Color.WHITE)
                 setStroke((1.5f * density).toInt(), Color.WHITE)

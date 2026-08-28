@@ -266,6 +266,7 @@ data class MarineState(
     val simulatedRudderAngle: Double? = null, // Radians (rad) (Fallback)
     val targetHeading: Double? = null, // Radians (rad)
     val targetWindAngleApparent: Double? = null, // Radians (rad)
+    val targetWindAngleTrue: Double? = null, // Radians (rad)
     val seaState: Int? = null, // Sensitivity (1-5)
     val isAutoSeaStateEnabled: Boolean = false,
 

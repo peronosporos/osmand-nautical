@@ -33,6 +33,7 @@ import net.osmand.plus.plugins.nautical.engine.MarineStateConstants
 import net.osmand.plus.plugins.nautical.ui.NauticalAisDetailsDialog
 import net.osmand.plus.settings.enums.ThemeUsageContext
 import net.osmand.plus.utils.AndroidUtils
+import net.osmand.shared.util.KMapUtils
 import java.util.Locale
 
 class AisTargetListBottomSheet : BaseBottomSheetDialogFragment() {
@@ -82,7 +83,7 @@ class AisTargetListBottomSheet : BaseBottomSheetDialogFragment() {
         txtPredictiveTime = view.findViewById(R.id.txt_predictive_time)
         val btnToggleVector = view.findViewById<MaterialButton>(R.id.btn_toggle_vector_mode)
 
-        val aisLayer = NauticalPlugin.getInstance()?.aisMapLayer
+        val aisLayer = NauticalPlugin.getInstance()?.aisAisLayer
         val currentHorizon = aisLayer?.predictiveHorizonMinutes ?: 0
         sliderPredictiveHorizon?.value = currentHorizon.toFloat()
         txtPredictiveTime?.text = if (currentHorizon > 0) "Forward Horizon: T +${currentHorizon}m" else "Forward Horizon: Real-time (T +0m)"
@@ -90,7 +91,7 @@ class AisTargetListBottomSheet : BaseBottomSheetDialogFragment() {
         sliderPredictiveHorizon?.addOnChangeListener { _, value, _ ->
             val minutes = value.toInt()
             txtPredictiveTime?.text = if (minutes > 0) "Forward Horizon: T +${minutes}m" else "Forward Horizon: Real-time (T +0m)"
-            NauticalPlugin.getInstance()?.aisMapLayer?.predictiveHorizonMinutes = minutes
+            NauticalPlugin.getInstance()?.aisAisLayer?.predictiveHorizonMinutes = minutes
             val mapActivity = activity as? MapActivity
             mapActivity?.mapView?.refreshMap()
         }
@@ -98,7 +99,7 @@ class AisTargetListBottomSheet : BaseBottomSheetDialogFragment() {
         val updateVectorBtn = {
             val isRel = aisLayer?.isRelativeMotionVectorMode == true
             btnToggleVector?.text = if (isRel) "MOTION VECTORS: RELATIVE" else "MOTION VECTORS: TRUE"
-            btnToggleVector?.setIconResource(if (isRel) R.drawable.ic_action_direction else R.drawable.ic_action_navigation)
+            btnToggleVector?.setIconResource(if (isRel) R.drawable.ic_action_direction_movement else R.drawable.ic_action_navigation_outlined)
         }
         updateVectorBtn()
 
@@ -149,7 +150,7 @@ class AisTargetListBottomSheet : BaseBottomSheetDialogFragment() {
                     }
                 }
                 val plugin = NauticalPlugin.getInstance()
-                plugin?.aisMapLayer?.setFollowedTarget(target.mmsi)
+                plugin?.aisAisLayer?.setFollowedTarget(target.mmsi)
                 mapActivity?.mapView?.refreshMap()
             },
             onRowLongClick = { target ->
@@ -263,7 +264,7 @@ class AisTargetListBottomSheet : BaseBottomSheetDialogFragment() {
         val ownLoc = app?.locationProvider?.lastKnownLocation
         if (mobTarget != null && ownLoc != null && MarineStateConstants.isValidLat(mobTarget.lat) && MarineStateConstants.isValidLon(mobTarget.lon)) {
             cardMobEmergency?.visibility = View.VISIBLE
-            val bearing = net.osmand.util.MapUtils.getBearing(ownLoc.latitude, ownLoc.longitude, mobTarget.lat, mobTarget.lon)
+            val bearing = KMapUtils.getBearing(ownLoc.latitude, ownLoc.longitude, mobTarget.lat, mobTarget.lon)
             val distNm = net.osmand.util.MapUtils.getDistance(ownLoc.latitude, ownLoc.longitude, mobTarget.lat, mobTarget.lon) / 1852.0
             txtMobEmergencyTitle?.text = String.format(Locale.US, "AIS-MOB ACTIVATED: Bearing %.0f° / Distance %.1f NM", bearing, distNm)
             btnMobSetSarCourse?.setOnClickListener {

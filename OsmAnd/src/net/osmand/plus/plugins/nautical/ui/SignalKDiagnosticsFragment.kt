@@ -73,7 +73,7 @@ class SignalKDiagnosticsFragment : BaseOsmAndFragment() {
 
         val rateView = TextView(requireContext()).apply {
             text = "Stream: 0.0 Hz"
-            textSize = 13spToPx()
+            textSize = 13f
             typeface = android.graphics.Typeface.MONOSPACE
             layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
             setTextColor(if (isNightVision) 0xFFFF8A80.toInt() else 0xFF37474F.toInt())
@@ -81,7 +81,7 @@ class SignalKDiagnosticsFragment : BaseOsmAndFragment() {
         txtPacketRate = rateView
         toolbar.addView(rateView)
 
-        val btnPause = MaterialButton(requireContext(), null, com.google.android.material.R.attr.borderlessButtonStyle).apply {
+        val btnPause = MaterialButton(requireContext(), null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
             text = "Pause"
             minHeight = (48 * resources.displayMetrics.density).toInt()
             setTextColor(if (isNightVision) 0xFFFF1744.toInt() else 0xFF00E5FF.toInt())
@@ -92,7 +92,7 @@ class SignalKDiagnosticsFragment : BaseOsmAndFragment() {
         }
         toolbar.addView(btnPause)
 
-        val btnExport = MaterialButton(requireContext(), null, com.google.android.material.R.attr.borderlessButtonStyle).apply {
+        val btnExport = MaterialButton(requireContext(), null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
             text = "Export Log"
             minHeight = (48 * resources.displayMetrics.density).toInt()
             setTextColor(if (isNightVision) 0xFFFF1744.toInt() else 0xFF00E5FF.toInt())
@@ -146,7 +146,7 @@ class SignalKDiagnosticsFragment : BaseOsmAndFragment() {
         // 3. Monospace Live Packet Terminal Window
         val terminal = TextView(requireContext()).apply {
             typeface = android.graphics.Typeface.MONOSPACE
-            textSize = 11spToPx()
+            textSize = 11f
             setLines(6)
             maxLines = 6
             val bg = if (isNightVision) 0xCC1A0000.toInt() else 0xFF212121.toInt()
@@ -188,16 +188,14 @@ class SignalKDiagnosticsFragment : BaseOsmAndFragment() {
         }
 
         viewLifecycleOwner.lifecycleScope.launch {
-            val broker = NauticalPlugin.engine?.broker
-            broker?.livePackets?.collect { packet ->
+            val dataBroker = NauticalPlugin.engine?.dataBroker
+            dataBroker?.livePackets?.collect { packet ->
                 onNewPacket(packet)
             }
         }
 
         return root
     }
-
-    private fun TextView.spToPx(): Float = 13f
 
     private fun onNewPacket(packet: SignalKDataBroker.DiagnosticPacket) {
         totalPacketCountInSecond++

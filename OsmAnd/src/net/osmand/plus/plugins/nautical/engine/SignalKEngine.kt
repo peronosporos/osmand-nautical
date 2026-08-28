@@ -521,10 +521,6 @@ class SignalKEngine(
         routeTracker.clearRoute()
     }
 
-    fun isAuthenticated(): Boolean = sessionManager.isAuthenticated()
-
-    fun triggerAuthError() = sessionManager.triggerAuthError()
-
     fun sendDelta(path: String, value: Any) = sessionManager.sendDelta(path, value)
 
     fun dispatchCommand(command: String) = sessionManager.dispatchCommand(command) { switchPath, state ->

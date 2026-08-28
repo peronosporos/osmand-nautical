@@ -220,7 +220,7 @@ class VhfDistressScriptBottomSheet : BaseNauticalBottomSheet() {
                 if (distM < nearestDist) {
                     nearestDist = distM
                     nearestName = name
-                    nearestBearing = (net.osmand.util.MapUtils.calculateAngle(p.latitude, p.longitude, lat, lon) + 360.0) % 360.0
+                    nearestBearing = (net.osmand.shared.util.KMapUtils.getBearing(p.latitude, p.longitude, lat, lon) + 360.0) % 360.0
                 }
             }
         }

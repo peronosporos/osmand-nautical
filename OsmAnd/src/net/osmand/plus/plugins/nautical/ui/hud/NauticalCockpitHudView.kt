@@ -247,7 +247,7 @@ class NauticalCockpitHudView @JvmOverloads constructor(
         } ?: 100.0
         txtPassageVmgVal.text = String.format(Locale.US, "%.0f%%", polarPct)
 
-        val xteM = state.crossTrackErrorMeters ?: 0.0
+        val xteM = state.xteMeters ?: 0.0
         txtPassageXteVal.text = String.format(Locale.US, "XTE %.2f", abs(xteM) / 1852.0)
 
         // Mode 2 Updates
@@ -255,7 +255,7 @@ class NauticalCockpitHudView @JvmOverloads constructor(
         txtMotorRudderVal.text = String.format(Locale.US, "%s%.0f°", if (rudderDeg < 0) "P " else if (rudderDeg > 0) "S " else "", abs(rudderDeg))
         txtMotorDepthVal.text = String.format(Locale.US, "%.1f m", depthM)
 
-        val tideH = state.tideHeight ?: app.settings.NAUTICAL_ANCHOR_TIDE_RISE.get().toDouble()
+        val tideH = state.tide?.heightNow ?: app.settings.NAUTICAL_ANCHOR_TIDE_RISE.get().toDouble()
         txtMotorTideLbl.text = String.format(Locale.US, "TIDE: %.1fm", tideH)
 
         val isNight = NauticalPlugin.isNightVision(app)
@@ -269,7 +269,7 @@ class NauticalCockpitHudView @JvmOverloads constructor(
 
         // Mode 3 Updates
         txtAnchorDepthVal.text = String.format(Locale.US, "%.1f m", depthM)
-        val rodeM = app.settings.NAUTICAL_ANCHOR_RODE_DEPLOYED_METERS.get()
+        val rodeM = app.settings.NAUTICAL_ANCHOR_RODE_DEPLOYED_METERS.get().toDouble()
         val scope = if (depthM > 0.5) rodeM / depthM else 5.0
         txtAnchorRodeVal.text = String.format(Locale.US, "%.0f m", rodeM)
         txtAnchorScopeLbl.text = String.format(Locale.US, "SCOPE: %.1f:1", scope)

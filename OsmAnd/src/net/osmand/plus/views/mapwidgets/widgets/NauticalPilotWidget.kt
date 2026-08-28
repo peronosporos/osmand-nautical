@@ -31,6 +31,7 @@ import net.osmand.plus.views.layers.base.OsmandMapLayer
 import net.osmand.plus.views.mapwidgets.WidgetType
 import net.osmand.plus.views.mapwidgets.WidgetsPanel
 import java.util.Locale
+import kotlin.math.abs
 
 class NauticalPilotWidget(
     mapActivity: MapActivity,

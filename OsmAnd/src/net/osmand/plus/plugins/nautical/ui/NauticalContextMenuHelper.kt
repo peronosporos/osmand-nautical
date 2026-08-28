@@ -335,12 +335,12 @@ class NauticalContextMenuHelper(private val app: OsmandApplication) {
                         .setTitle("Parallel Index (PI) Lines")
                         .setItems(options) { _, which ->
                             val plugin = net.osmand.plus.plugins.PluginsHelper.getPlugin(NauticalPlugin::class.java)
-                            val aisLayer = plugin?.aisLayer
+                            val aisLayer = plugin?.aisAisLayer
                             val state = engine?.getCurrentState()
                             val cog = state?.courseOverGroundTrue?.let { Math.toDegrees(it) } ?: 0.0
                             when (which) {
                                 0 -> {
-                                    aisLayer?.piLine1 = net.osmand.plus.plugins.nautical.ui.ParallelIndexLine(
+                                    aisLayer?.piLine1 = NauticalAisLayer.ParallelIndexLine(
                                         originLat = lat,
                                         originLon = lon,
                                         bearingTrueDeg = cog,
@@ -351,7 +351,7 @@ class NauticalContextMenuHelper(private val app: OsmandApplication) {
                                     app.showToastMessage("PI Line 1 anchored to point (${String.format(Locale.US, "%.0f°T", cog)})")
                                 }
                                 1 -> {
-                                    aisLayer?.piLine2 = net.osmand.plus.plugins.nautical.ui.ParallelIndexLine(
+                                    aisLayer?.piLine2 = NauticalAisLayer.ParallelIndexLine(
                                         originLat = lat,
                                         originLon = lon,
                                         bearingTrueDeg = cog,
@@ -381,7 +381,7 @@ class NauticalContextMenuHelper(private val app: OsmandApplication) {
         adapter.addItem(
             ContextMenuItem("nautical_slew_camera").apply {
                 title = "Slew Camera to Point (PTZ/FLIR)"
-                icon = R.drawable.ic_action_photo_camera
+                icon = R.drawable.ic_action_device_camera
                 applyNauticalStyle()
                 setListener { _, _, _, _ ->
                     val camManager = net.osmand.plus.plugins.nautical.camera.NauticalCameraManager.getInstance(app)

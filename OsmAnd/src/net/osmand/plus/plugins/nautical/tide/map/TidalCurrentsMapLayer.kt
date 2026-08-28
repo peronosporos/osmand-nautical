@@ -6,6 +6,8 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.PointF
+import android.graphics.RectF
+import android.graphics.Typeface
 import android.os.Bundle
 import kotlinx.coroutines.*
 import net.osmand.data.RotatedTileBox

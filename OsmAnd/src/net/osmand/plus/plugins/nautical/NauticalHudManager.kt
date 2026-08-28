@@ -131,14 +131,19 @@ class NauticalHudManager(val activity: MapActivity) {
         val onConfirm: (() -> Unit)?,
         val secondaryLabel: String?,
         val onSecondaryConfirm: (() -> Unit)?,
+        val priority: Int = 100,
         val timestamp: Long = System.currentTimeMillis()
     ) : Comparable<BannerRequest> {
         override fun compareTo(other: BannerRequest): Int {
-            // Priority 1: Warnings/Emergencies first
+            // Priority 1: Lower value = higher priority (consistent with addHeader)
+            if (this.priority != other.priority) {
+                return this.priority.compareTo(other.priority)
+            }
+            // Priority 2: Warnings/Emergencies first
             if (this.isWarning != other.isWarning) {
                 return if (this.isWarning) -1 else 1
             }
-            // Priority 2: Older items first within same category
+            // Priority 3: Older items first within same category
             return this.timestamp.compareTo(other.timestamp)
         }
     }
@@ -150,12 +155,13 @@ class NauticalHudManager(val activity: MapActivity) {
         isWarning: Boolean = false,
         onConfirm: (() -> Unit)? = null,
         secondaryLabel: String? = null,
-        onSecondaryConfirm: (() -> Unit)? = null
+        onSecondaryConfirm: (() -> Unit)? = null,
+        priority: Int = 100
     ) {
         // Priority check: if text is same as current or queued, ignore to avoid duplicates and clutter
         if (currentBannerText == text || bannerQueue.any { it.text == text }) return
 
-        val request = BannerRequest(text, durationMs, label, isWarning, onConfirm, secondaryLabel, onSecondaryConfirm)
+        val request = BannerRequest(text, durationMs, label, isWarning, onConfirm, secondaryLabel, onSecondaryConfirm, priority)
         bannerQueue.add(request)
         activity.runOnUiThread { processNextBanner() }
     }
@@ -183,7 +189,7 @@ class NauticalHudManager(val activity: MapActivity) {
                 processNextBanner()
             }
         }
-        addHeader(banner, priority = 0)
+        addHeader(banner, priority = next.priority)
         banner.show(next.durationMs)
     }
 

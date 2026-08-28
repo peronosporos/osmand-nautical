@@ -19,6 +19,8 @@ import net.osmand.plus.views.layers.MapSelectionResult
 import net.osmand.plus.views.layers.MapSelectionRules
 import net.osmand.plus.views.layers.base.OsmandMapLayer
 import net.osmand.shared.aistracker.AisObject
+import net.osmand.shared.util.KMapUtils
+import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
 
 class NauticalAisLayer(
@@ -55,7 +57,7 @@ class NauticalAisLayer(
         manager.addListener(this)
         mapActivityInvalidated = true
         manager.getAisObjects().forEach { onAisObjectReceived(it) }
-        getApplication().runInUIThread {
+        application.runInUIThread {
             tileView?.refreshMap()
         }
     }
@@ -556,17 +558,22 @@ class NauticalAisLayer(
     private val predictiveGhostPath = Path()
 
     data class ParallelIndexLine(
-        var anchorLat: Double = 0.0,
-        var anchorLon: Double = 0.0,
-        var bearingDeg: Double = 0.0,
-        var rangeMeters: Double = 0.0,
-        var isStarboard: Boolean = true,
-        var isEnabled: Boolean = false,
-        var label: String = "PI 1"
-    )
+        val originLat: Double,
+        val originLon: Double,
+        val bearingTrueDeg: Double,
+        val rangeNm: Double,
+        val isStarboard: Boolean,
+        val label: String
+    ) {
+        val anchorLat: Double get() = originLat
+        val anchorLon: Double get() = originLon
+        val bearingDeg: Double get() = bearingTrueDeg
+        val rangeMeters: Double get() = rangeNm * 1852.0
+        val isEnabled: Boolean = true
+    }
 
-    val piLine1 = ParallelIndexLine(label = "PI 1")
-    val piLine2 = ParallelIndexLine(label = "PI 2")
+    var piLine1: ParallelIndexLine? = null
+    var piLine2: ParallelIndexLine? = null
 
     private val piLinePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
@@ -657,7 +664,7 @@ class NauticalAisLayer(
         val cy = tileBox.getPixYFromLatLon(ownLat, ownLon)
         val radius = 55f * density
 
-        val safeCpaM = plugin.aisSafeCpaDistance.get().toDouble().coerceIn(0.1, 5.0) * 1852.0
+        val safeCpaM = plugin.aisCpaWarningDistance.get().toDouble().coerceIn(0.1, 5.0) * 1852.0
 
         collisionWedgePaint.color = if (isNight) 0x40FF1744.toInt() else 0x35FF1744.toInt()
         collisionWedgeStrokePaint.color = 0xFFFF1744.toInt()
@@ -676,7 +683,7 @@ class NauticalAisLayer(
             if (sogKn < 0.5) continue
             val sogMps = sogKn * 0.514444
 
-            val targetBearing = net.osmand.util.MapUtils.getBearing(ownLat, ownLon, pos.latitude, pos.longitude)
+            val targetBearing = KMapUtils.getBearing(ownLat, ownLon, pos.latitude, pos.longitude)
 
             var minCollisionAngle: Double? = null
             var maxCollisionAngle: Double? = null
@@ -877,7 +884,7 @@ class NauticalAisLayer(
         canvas.drawLine(ox1, oy1, ox2, oy2, predictiveVectorPaint)
         drawGhostVesselIcon(canvas, ox2, oy2, ownCogDeg, tileBox.rotate, density)
 
-        val safeCpaM = plugin.aisSafeCpaDistance.get().toDouble().coerceIn(0.1, 5.0) * 1852.0
+        val safeCpaM = plugin.aisCpaWarningDistance.get().toDouble().coerceIn(0.1, 5.0) * 1852.0
         val pulse = (kotlin.math.sin((System.currentTimeMillis() % 1000L) / 1000.0 * Math.PI * 2.0) * 0.5 + 0.5).toFloat()
 
         // 2. Targets projected forward positions
@@ -1007,9 +1014,9 @@ class NauticalAisLayer(
         piTextPaint.color = textColor
         piTextPaint.textSize = 11f * density
 
-        val lines = listOf(piLine1, piLine2)
+        val lines = listOfNotNull(piLine1, piLine2)
         for (pi in lines) {
-            if (!pi.isEnabled || pi.anchorLat == 0.0 || pi.anchorLon == 0.0) continue
+            if (pi.anchorLat == 0.0 || pi.anchorLon == 0.0) continue
 
             val offsetAngle = if (pi.isStarboard) (pi.bearingDeg + 90.0) % 360.0 else (pi.bearingDeg - 90.0 + 360.0) % 360.0
             val offsetP = net.osmand.shared.util.KMapUtils.rhumbDestinationPoint(pi.anchorLat, pi.anchorLon, pi.rangeMeters, offsetAngle)

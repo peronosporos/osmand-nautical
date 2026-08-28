@@ -827,6 +827,10 @@
     <string name="nautical_export_route_failed">Failed to export route</string>
     <string name="nautical_sail_plan_label">SAILS: %1$s</string>
     <string name="nautical_touch_lock_active">LOCKED: Hold to Unlock</string>
+    <string name="nautical_polar_target_vmg">Polar Rose &amp; Target VMG</string>
+    <string name="nautical_forward_depth_clearance_title">Forward Depth Clearance</string>
+    <string name="nautical_radar_overlay">Radar Overlay</string>
+    <string name="nautical_bridge_clearance_title">Bridge Clearance Badges</string>
     <string name="nautical_plugin_name">OsmAnd Nautical</string>
     <string name="grib_file_info_format">%1$s - %2$d KB</string>
     <string name="nautical_heavy_weather_mode_active">Heavy Weather Mode Active: UI Optimized for Safety</string>

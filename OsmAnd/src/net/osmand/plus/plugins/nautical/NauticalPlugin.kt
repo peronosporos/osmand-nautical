@@ -11,7 +11,6 @@ import android.graphics.drawable.Drawable
 import android.net.Uri
 import android.os.Handler
 import android.os.Looper
-import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
 import androidx.fragment.app.FragmentActivity
 import kotlinx.coroutines.CoroutineScope
@@ -40,7 +39,6 @@ import net.osmand.plus.plugins.nautical.engine.ElectricalController
 import net.osmand.plus.plugins.nautical.engine.GpxStreamer
 import net.osmand.plus.plugins.nautical.engine.MarineState
 import net.osmand.plus.plugins.nautical.engine.NauticalAisManager
-import net.osmand.plus.plugins.nautical.location.SignalKLocationManager
 import net.osmand.plus.plugins.nautical.engine.NauticalNotificationManager
 import net.osmand.plus.plugins.nautical.engine.NauticalSafetyEvaluator
 import net.osmand.plus.plugins.nautical.engine.NauticalSafetyManager
@@ -55,6 +53,7 @@ import net.osmand.plus.plugins.nautical.engine.SignalKTideManager
 import net.osmand.plus.plugins.nautical.hazard.engine.NavtexMessageDecoder
 import net.osmand.plus.plugins.nautical.hazard.viewmodel.NavtexViewModel
 import net.osmand.plus.plugins.nautical.laylines.viewmodel.LaylineViewModel
+import net.osmand.plus.plugins.nautical.location.SignalKLocationManager
 import net.osmand.plus.plugins.nautical.logbook.data.MarineLogbookRepository
 import net.osmand.plus.plugins.nautical.logbook.engine.AutomatedLogbookEngine
 import net.osmand.plus.plugins.nautical.maneuvers.ManeuverManager
@@ -72,11 +71,11 @@ import net.osmand.plus.plugins.nautical.network.SignalKDiscovery
 import net.osmand.plus.plugins.nautical.quickaction.NauticalAisQuickAction
 import net.osmand.plus.plugins.nautical.quickaction.NauticalAnchorQuickAction
 import net.osmand.plus.plugins.nautical.quickaction.NauticalAutopilotQuickAction
+import net.osmand.plus.plugins.nautical.quickaction.NauticalChecklistQuickAction
 import net.osmand.plus.plugins.nautical.quickaction.NauticalLaylinesQuickAction
 import net.osmand.plus.plugins.nautical.quickaction.NauticalMasterTelemetryQuickAction
 import net.osmand.plus.plugins.nautical.quickaction.NauticalMobQuickAction
 import net.osmand.plus.plugins.nautical.quickaction.NauticalNightVisionQuickAction
-import net.osmand.plus.plugins.nautical.quickaction.NauticalChecklistQuickAction
 import net.osmand.plus.plugins.nautical.quickaction.NauticalPassagePlanQuickAction
 import net.osmand.plus.plugins.nautical.quickaction.NauticalSailInventoryQuickAction
 import net.osmand.plus.plugins.nautical.quickaction.NauticalSwitchQuickAction
@@ -181,7 +180,7 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
         fun isNightVision(app: OsmandApplication?): Boolean {
             if (app == null) return false
             val plugin = getInstance()
-            return (plugin != null) && plugin.isActive && (plugin.isNightVisionEnabled || app.settings.NAUTICAL_DISPLAY_MODE.get() == net.osmand.plus.settings.enums.NauticalDisplayMode.DARK)
+            return (plugin != null) && plugin.isActive && (plugin.isNightVisionEnabled || app.settings.NAUTICAL_DISPLAY_MODE.get() == NauticalDisplayMode.DARK)
         }
 
         @JvmStatic
@@ -559,7 +558,7 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
     private val logbookModuleListener = StateChangedListener<Boolean> { updateFeatureLifecycle() }
     private val encModuleListener = StateChangedListener<Boolean> { updateFeatureLifecycle() }
     private val rasterModuleListener = StateChangedListener<Boolean> { updateFeatureLifecycle() }
-    private val nmeaSourceListener = StateChangedListener<net.osmand.plus.settings.enums.NmeaSource> { updateNmeaSource() }
+    private val nmeaSourceListener = StateChangedListener<NmeaSource> { updateNmeaSource() }
     private val serverIpListener = StateChangedListener<String> { reconnect() }
     private val serverPortListener = StateChangedListener<String> { reconnect() }
     private val serverSecureListener = StateChangedListener<Boolean> { reconnect() }
@@ -684,7 +683,7 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
     val aisDisplayOwnPosition: CommonPreference<Boolean> get() = app.settings.NAUTICAL_AIS_DISPLAY_OWN_POSITION
     val aisGuardZoneRadius: CommonPreference<Float> get() = app.settings.NAUTICAL_GUARD_ZONE_RADIUS
 
-    override fun init(app: OsmandApplication, activity: android.app.Activity?): Boolean {
+    override fun init(app: OsmandApplication, activity: Activity?): Boolean {
         initPlugin()
         return super.init(app, activity)
     }
@@ -1561,7 +1560,7 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
     override fun getSettingsScreenType(): SettingsScreenType = SettingsScreenType.NAUTICAL_SETTINGS
 
     override fun showPluginSettings(activity: Activity) {
-        if (activity is androidx.fragment.app.FragmentActivity) {
+        if (activity is FragmentActivity) {
             net.osmand.plus.settings.fragments.BaseSettingsFragment.showInstance(
                 activity,
                 SettingsScreenType.NAUTICAL_SETTINGS

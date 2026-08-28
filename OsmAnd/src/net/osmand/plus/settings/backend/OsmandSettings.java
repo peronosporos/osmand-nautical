@@ -3762,6 +3762,8 @@ public class OsmandSettings {
 	public final CommonPreference<Boolean> NAUTICAL_ALLOW_UNCHECKSUMMED_NMEA = registerBooleanPreference("nautical_allow_unchecksummed_nmea", false);
 
 	// Missing AIS Tracking Details
+	public final CommonPreference<Float> NAUTICAL_VESSEL_LENGTH = registerFloatPreference("nautical_vessel_length", 10.0f).makeProfile();
+	public final CommonPreference<Float> NAUTICAL_ANCHOR_RODE_DEPLOYED_METERS = registerFloatPreference("nautical_anchor_rode_deployed_meters", 0.0f).makeProfile();
 	public final CommonPreference<Integer> NAUTICAL_AIS_OBJ_LOST_TIMEOUT = registerIntPreference("nautical_ais_obj_lost_timeout", 7).makeProfile();
 	public final CommonPreference<Integer> NAUTICAL_AIS_SHIP_LOST_TIMEOUT = registerIntPreference("nautical_ais_ship_lost_timeout", 4).makeProfile();
 	public final CommonPreference<Integer> NAUTICAL_AIS_CPA_WARNING_TIME = registerIntPreference("nautical_ais_cpa_warning_time", 0).makeProfile();

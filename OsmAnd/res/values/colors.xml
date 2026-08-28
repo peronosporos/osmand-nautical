@@ -23,6 +23,8 @@
 	<color name="text_color_tab_active_dark">#cccccc</color>
 	<color name="text_color_negative">#E71D36</color>
 	<color name="text_color_positive">#5baf3f</color>
+	<color name="color_alert">#E71D36</color>
+	<color name="bg_color_light">#f0f0f0</color>
 
 	<!-- Icon -->
 	<color name="icon_color_default_light">#727272</color>
