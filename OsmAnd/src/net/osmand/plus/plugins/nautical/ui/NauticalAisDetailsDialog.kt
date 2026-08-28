@@ -399,12 +399,12 @@ class NauticalAisDetailsDialog : BaseBottomSheetDialogFragment() {
             AisObjType.AIS_VESSEL_AUTHORITIES,
             AisObjType.AIS_VESSEL_SAR,
             AisObjType.AIS_VESSEL_OTHER,
-            AisObjType.AIS_INVALID -> R.drawable.mm_ais_vessel
-            AisObjType.AIS_LANDSTATION -> R.drawable.mm_ais_land
-            AisObjType.AIS_AIRPLANE -> R.drawable.mm_ais_plane
-            AisObjType.AIS_SART -> R.drawable.mm_ais_sar
-            AisObjType.AIS_ATON -> R.drawable.mm_ais_aton
-            AisObjType.AIS_ATON_VIRTUAL -> R.drawable.mm_ais_aton_virt
+            AisObjType.AIS_INVALID -> R.drawable.ic_action_motorboat
+            AisObjType.AIS_LANDSTATION -> R.drawable.ic_action_antenna
+            AisObjType.AIS_AIRPLANE -> R.drawable.ic_action_aircraft
+            AisObjType.AIS_SART -> R.drawable.ic_action_alert
+            AisObjType.AIS_ATON -> R.drawable.ic_action_target
+            AisObjType.AIS_ATON_VIRTUAL -> R.drawable.ic_action_target
         }
     }
 

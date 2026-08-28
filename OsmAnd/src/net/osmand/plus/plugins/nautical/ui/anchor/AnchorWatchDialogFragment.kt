@@ -248,13 +248,13 @@ class AnchorWatchDialogFragment : BaseMaterialBottomSheetDialogFragment() {
         // Snail-Trail Playback Slider
         val sliderPlayback = view.findViewById<com.google.android.material.slider.Slider>(R.id.slider_anchor_playback)
         val txtPlaybackTime = view.findViewById<TextView>(R.id.txt_playback_time)
-        val anchorMapLayer = app.osmAndMapLayers.getLayer(AnchorWatchMapLayer::class.java)
+        val anchorMapLayer = app.osmandMap?.mapView?.getLayerByClass(AnchorWatchMapLayer::class.java)
 
         sliderPlayback?.addOnChangeListener { _, value, _ ->
             val minAgo = (60 - value.toInt())
             anchorMapLayer?.playbackMinuteOffset = value.toInt()
             txtPlaybackTime?.text = if (minAgo == 0) "Track History: Live (Now)" else "Track History: T -${minAgo}m"
-            app.getMapTileView()?.refreshMap()
+            app.osmandMap?.mapView?.refreshMap()
         }
 
         val isNight = NauticalPlugin.isNightVision(app)

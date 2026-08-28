@@ -19,6 +19,7 @@ import net.osmand.plus.views.layers.MapSelectionResult
 import net.osmand.plus.views.layers.MapSelectionRules
 import net.osmand.plus.views.layers.base.OsmandMapLayer
 import net.osmand.shared.aistracker.AisObject
+import net.osmand.shared.extensions.toDegrees
 import net.osmand.shared.util.KMapUtils
 import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
@@ -683,7 +684,7 @@ class NauticalAisLayer(
             if (sogKn < 0.5) continue
             val sogMps = sogKn * 0.514444
 
-            val targetBearing = KMapUtils.getBearing(ownLat, ownLon, pos.latitude, pos.longitude)
+            val targetBearing = (KMapUtils.getBearing(ownLat, ownLon, pos.latitude, pos.longitude).toDegrees() + 360.0) % 360.0
 
             var minCollisionAngle: Double? = null
             var maxCollisionAngle: Double? = null

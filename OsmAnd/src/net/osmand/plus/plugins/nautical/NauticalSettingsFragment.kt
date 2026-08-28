@@ -911,7 +911,7 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
             isChecked = settings.NAUTICAL_SHOW_DEPTH_PROFILE.get()
         }
         findPreference<SwitchPreferenceEx>(settings.NAUTICAL_SHOW_RADAR_OVERLAY.id)?.apply {
-            setThemedIcon(OsmAndR.drawable.ic_action_radar)
+            setThemedIcon(OsmAndR.drawable.ic_action_antenna)
             isChecked = settings.NAUTICAL_SHOW_RADAR_OVERLAY.get()
         }
         findPreference<SwitchPreferenceEx>(settings.NAUTICAL_SHOW_CLEARANCE_BADGES.id)?.apply {
@@ -1522,11 +1522,5 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
             }
         }
         return changed
-    }
-
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        super.onViewCreated(view, savedInstanceState)
-        
-        // Activity decorView filter handles scotopic rendering
     }
 }

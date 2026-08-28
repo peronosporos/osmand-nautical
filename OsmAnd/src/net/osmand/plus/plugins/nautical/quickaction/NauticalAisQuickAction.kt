@@ -17,7 +17,7 @@ class NauticalAisQuickAction : QuickAction {
         @JvmField
         val TYPE: QuickActionType = QuickActionType(NAUTICAL_AIS_ACTION_ID, "nautical.ais.open", NauticalAisQuickAction::class.java)
             .nameRes(R.string.nautical_ais_targets_title)
-            .iconRes(R.drawable.mm_ais_vessel)
+            .iconRes(R.drawable.ic_action_motorboat)
             .category(QuickActionType.INTERFACE)
     }
 

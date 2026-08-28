@@ -36,6 +36,7 @@ import net.osmand.shared.util.KMapUtils
 import net.osmand.plus.plugins.nautical.utils.TemporalUtils
 import net.osmand.plus.settings.enums.XteDirection
 import net.osmand.shared.aistracker.AisObject
+import net.osmand.shared.extensions.toDegrees
 import java.util.Locale
 import java.util.concurrent.CopyOnWriteArraySet
 import kotlin.math.abs
@@ -700,7 +701,7 @@ class SignalKEngine(
         if (targetPoint != null && lat != null && lon != null) {
             val dtwMeters = finalState.distanceToWaypoint ?: KMapUtils.getDistance(lat, lon, targetPoint.latitude, targetPoint.longitude)
             val dtwNm = SignalKUnitConverter.metersToNm(dtwMeters)
-            val bearingDeg = KMapUtils.getBearing(lat, lon, targetPoint.latitude, targetPoint.longitude)
+            val bearingDeg = (KMapUtils.getBearing(lat, lon, targetPoint.latitude, targetPoint.longitude).toDegrees() + 360.0) % 360.0
             val xteMeters = finalState.xteMeters ?: abs(finalState.crossTrackError ?: 0.0)
             val xteNm = SignalKUnitConverter.metersToNm(xteMeters)
             val isSteerLeft = finalState.xteDirection == XteDirection.STARBOARD

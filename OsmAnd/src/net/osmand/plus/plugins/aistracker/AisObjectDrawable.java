@@ -108,12 +108,12 @@ public class AisObjectDrawable {
 		return switch (type) {
 			case AIS_VESSEL, AIS_VESSEL_SPORT, AIS_VESSEL_FAST, AIS_VESSEL_PASSENGER,
 				 AIS_VESSEL_FREIGHT, AIS_VESSEL_COMMERCIAL, AIS_VESSEL_AUTHORITIES, AIS_VESSEL_SAR,
-				 AIS_VESSEL_OTHER, AIS_INVALID -> R.drawable.mm_ais_vessel;
-			case AIS_LANDSTATION -> R.drawable.mm_ais_land;
-			case AIS_AIRPLANE -> R.drawable.mm_ais_plane;
-			case AIS_SART -> R.drawable.mm_ais_sar;
-			case AIS_ATON -> R.drawable.mm_ais_aton;
-			case AIS_ATON_VIRTUAL -> R.drawable.mm_ais_aton_virt;
+				 AIS_VESSEL_OTHER, AIS_INVALID -> R.drawable.ic_action_motorboat;
+			case AIS_LANDSTATION -> R.drawable.ic_action_antenna;
+			case AIS_AIRPLANE -> R.drawable.ic_action_aircraft;
+			case AIS_SART -> R.drawable.ic_action_alert;
+			case AIS_ATON -> R.drawable.ic_action_target;
+			case AIS_ATON_VIRTUAL -> R.drawable.ic_action_target;
 		};
 	}
 
@@ -187,7 +187,7 @@ public class AisObjectDrawable {
 		boolean vesselAtRest = ais.isVesselAtRest();
 		if (ais.isLost(getPlugin().getVesselLostTimeoutInMinutes()) && !vesselAtRest) {
 			if (ais.isMovable()) {
-				this.bitmap = imagesCache.getBitmap(R.drawable.mm_ais_vessel_cross);
+				this.bitmap = imagesCache.getBitmap(R.drawable.ic_action_cancel);
 				this.bitmapValid = true;
 			}
 		} else {
@@ -369,7 +369,7 @@ public class AisObjectDrawable {
 									@NonNull SingleSkImage restImage) {
 		updateBitmap(paint);
 
-		Bitmap lostBitmap = imagesCache.getBitmap(R.drawable.mm_ais_vessel_cross);
+		Bitmap lostBitmap = imagesCache.getBitmap(R.drawable.ic_action_cancel);
 		if (bitmap == null || lostBitmap == null) {
 			return;
 		}
