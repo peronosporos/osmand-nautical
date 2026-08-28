@@ -22,7 +22,7 @@ jobs:
         path: resources # Places the icons right next to it, where Gradle expects them
 
     - name: Set up Java Development Kit
-      uses: actions/setup-java@v5.6.0
+      uses: actions/setup-java@v4
       with:
         distribution: 'zulu'
         java-version: '17'
