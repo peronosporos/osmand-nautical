@@ -25,7 +25,7 @@
             app:cardCornerRadius="10dp"
             app:cardElevation="0dp"
             app:strokeWidth="1.5dp"
-            app:strokeColor="?attr/color_alert"
+            app:strokeColor="@color/color_warning"
             app:cardBackgroundColor="?attr/card_and_list_background_basic"
             android:visibility="gone">
 
@@ -48,7 +48,7 @@
                         android:layout_marginEnd="10dp"
                         android:contentDescription="Hazard Warning"
                         android:src="@drawable/ic_action_alert"
-                        app:tint="?attr/color_alert" />
+                        app:tint="@color/color_warning" />
 
                     <TextView
                         android:id="@+id/txt_hazard_warning_title"
@@ -57,7 +57,7 @@
                         android:layout_weight="1"
                         android:text="@string/nautical_shallow_hazard_warning"
                         android:textAppearance="@style/TextAppearance.AppCompat.Subhead"
-                        android:textColor="?attr/color_alert"
+                        android:textColor="@color/color_warning"
                         android:textStyle="bold" />
 
                     <ImageView

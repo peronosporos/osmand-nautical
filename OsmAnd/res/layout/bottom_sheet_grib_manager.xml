@@ -311,7 +311,7 @@
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btn_import_grib"
-                style="@style/Widget.Material3.Button.FilledButton"
+                style="@style/Widget.Material3.Button"
                 android:layout_width="match_parent"
                 android:layout_height="48dp"
                 android:minHeight="48dp"

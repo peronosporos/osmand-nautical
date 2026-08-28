@@ -123,7 +123,7 @@
             android:layout_height="wrap_content"
             android:text="INCOMPLETE"
             android:textAppearance="@style/TextAppearance.AppCompat.Caption"
-            android:textColor="?attr/color_alert"
+            android:textColor="@color/text_color_negative"
             android:textStyle="bold" />
     </LinearLayout>
 
