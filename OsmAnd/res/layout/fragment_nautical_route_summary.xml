@@ -16,93 +16,6 @@
         android:orientation="vertical"
         android:padding="12dp">
 
-        <!-- Expandable Route Hazard / Shallow Water Warning Card -->
-        <com.google.android.material.card.MaterialCardView
-            android:id="@+id/card_route_hazard_warning"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="12dp"
-            app:cardCornerRadius="10dp"
-            app:cardElevation="0dp"
-            app:strokeWidth="1.5dp"
-            app:strokeColor="@color/color_warning"
-            app:cardBackgroundColor="?attr/card_and_list_background_basic"
-            android:visibility="gone">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="12dp">
-
-                <LinearLayout
-                    android:id="@+id/layout_hazard_header"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal">
-
-                    <ImageView
-                        android:layout_width="24dp"
-                        android:layout_height="24dp"
-                        android:layout_marginEnd="10dp"
-                        android:contentDescription="Hazard Warning"
-                        android:src="@drawable/ic_action_alert"
-                        app:tint="@color/color_warning" />
-
-                    <TextView
-                        android:id="@+id/txt_hazard_warning_title"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="@string/nautical_shallow_hazard_warning"
-                        android:textAppearance="@style/TextAppearance.AppCompat.Subhead"
-                        android:textColor="@color/color_warning"
-                        android:textStyle="bold" />
-
-                    <ImageView
-                        android:id="@+id/btn_expand_hazard"
-                        android:layout_width="32dp"
-                        android:layout_height="32dp"
-                        android:padding="4dp"
-                        android:background="?attr/selectableItemBackgroundBorderless"
-                        android:contentDescription="Expand Hazard Details"
-                        android:src="@drawable/ic_action_arrow_drop_down"
-                        app:tint="?attr/icon_color_primary" />
-                </LinearLayout>
-
-                <TextView
-                    android:id="@+id/txt_hazard_summary"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    android:text="@string/nautical_shallow_hazard_desc"
-                    android:textAppearance="@style/TextAppearance.AppCompat.Caption"
-                    android:textColor="?android:attr/textColorSecondary" />
-
-                <!-- Expandable Detail Container -->
-                <LinearLayout
-                    android:id="@+id/layout_hazard_details"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:orientation="vertical"
-                    android:paddingTop="8dp"
-                    android:background="?attr/list_background_color"
-                    android:padding="8dp"
-                    android:visibility="gone">
-
-                    <TextView
-                        android:id="@+id/txt_hazard_details_text"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="Critical sounding alert: Leg crosses depth area &lt; 2.5m near shallow water contours."
-                        android:textAppearance="@style/TextAppearance.AppCompat.Caption"
-                        android:textColor="?android:attr/textColorPrimary" />
-                </LinearLayout>
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
-
         <!-- Summary Stats Card -->
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
@@ -165,31 +78,78 @@
                     android:textAppearance="@style/TextAppearance.AppCompat.Caption"
                     android:textColor="?android:attr/textColorSecondary"
                     tools:text="Tacks: 3 • Gybes: 1" />
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btn_export_passage_plan"
-                    style="@style/Widget.Material3.Button.TonalButton"
-                    android:layout_width="match_parent"
-                    android:layout_height="48dp"
-                    android:minHeight="48dp"
-                    android:layout_marginTop="8dp"
-                    android:text="EXPORT PASSAGE PLAN"
-                    android:textSize="12sp"
-                    android:textStyle="bold"
-                    app:icon="@drawable/ic_action_export"
-                    app:cornerRadius="8dp" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
-        <!-- Leg Breakdown Section Header -->
-        <TextView
+        <!-- Table Header Row -->
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="8dp"
-            android:text="Passage Legs Breakdown"
-            android:textAppearance="@style/TextAppearance.AppCompat.Caption"
-            android:textColor="?android:attr/textColorSecondary"
-            android:textStyle="bold" />
+            android:orientation="horizontal"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp"
+            android:paddingTop="6dp"
+            android:paddingBottom="6dp"
+            android:background="?attr/card_and_list_background_basic">
+
+            <TextView
+                android:layout_width="28dp"
+                android:layout_height="wrap_content"
+                android:text="#"
+                android:textAppearance="@style/TextAppearance.AppCompat.Caption"
+                android:textColor="?android:attr/textColorSecondary"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_height="wrap_content"
+                android:text="Dist"
+                android:textAppearance="@style/TextAppearance.AppCompat.Caption"
+                android:textColor="?android:attr/textColorSecondary"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_height="wrap_content"
+                android:text="CTS"
+                android:textAppearance="@style/TextAppearance.AppCompat.Caption"
+                android:textColor="?android:attr/textColorSecondary"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_height="wrap_content"
+                android:text="SOG"
+                android:textAppearance="@style/TextAppearance.AppCompat.Caption"
+                android:textColor="?android:attr/textColorSecondary"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_height="wrap_content"
+                android:text="ETE"
+                android:textAppearance="@style/TextAppearance.AppCompat.Caption"
+                android:textColor="?android:attr/textColorSecondary"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_weight="1.1"
+                android:layout_height="wrap_content"
+                android:text="Wind"
+                android:textAppearance="@style/TextAppearance.AppCompat.Caption"
+                android:textColor="?android:attr/textColorSecondary"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="?attr/divider_color" />
 
         <!-- Empty State Container -->
         <LinearLayout

@@ -36,7 +36,6 @@ class NauticalAnchorQuickAction : QuickAction {
         if (mapActivity.isFinishing || mapActivity.isDestroyed) {
             return
         }
-        mapActivity.layout?.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
         val app = mapActivity.app
         val plugin = PluginsHelper.getPlugin(NauticalPlugin::class.java)
         if (plugin == null) {
@@ -70,9 +69,7 @@ class NauticalAnchorQuickAction : QuickAction {
                     plugin.anchorWatchdog?.setAnchor(anchorPos.latitude, anchorPos.longitude, totalRadius.toFloat())
                     app.settings.NAUTICAL_ANCHOR_DEPTH.set(depth)
                     
-                    val deployed = state.rodeDeployed
-                    val deployedStr = if (deployed != null) " • Rode: ${deployed.toInt()}m/${(deployed * 3.28084).toInt()}ft" else ""
-                    app.showToastMessage(app.getString(R.string.nautical_anchor_set_auto, depth, scopeRatio, totalRadius.toInt()) + deployedStr)
+                    app.showToastMessage(app.getString(R.string.nautical_anchor_set_auto, depth, scopeRatio, totalRadius.toInt()))
                 } else if (!mapActivity.supportFragmentManager.isStateSaved) {
                     AnchorWatchDialogFragment.show(mapActivity.supportFragmentManager)
                 }

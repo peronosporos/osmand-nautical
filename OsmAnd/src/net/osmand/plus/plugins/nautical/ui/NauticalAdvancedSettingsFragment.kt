@@ -12,15 +12,6 @@ import kotlin.time.Duration.Companion.milliseconds
 
 class NauticalAdvancedSettingsFragment : BaseSettingsFragment(), androidx.preference.Preference.OnPreferenceChangeListener {
 
-    override fun onViewCreated(view: android.view.View, savedInstanceState: android.os.Bundle?) {
-        super.onViewCreated(view, savedInstanceState)
-        val isNightVision = NauticalPlugin.isNightVision(app)
-        if (isNightVision) {
-            view.setBackgroundColor(0xEE120000.toInt())
-            listView?.setBackgroundColor(0xEE120000.toInt())
-        }
-    }
-
     override fun setupPreferences() {
         setupTuningCategory()
         setupEmaCategory()

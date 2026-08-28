@@ -25,13 +25,7 @@ class SignalKDiscoveryManager(private val context: Context) {
 
     private var discoveryActive = false
 
-    private val serviceTypes = listOf(
-        "_signalk-ws._tcp.",
-        "_signalk-http._tcp.",
-        "_nmea-0183._tcp.",
-        "_nmea-0183._udp.",
-        "_http._tcp."
-    )
+    private val serviceTypes = listOf("_signalk-ws._tcp.", "_http._tcp.")
 
     private val discoveryListeners = java.util.concurrent.ConcurrentHashMap<String, NsdManager.DiscoveryListener>()
 

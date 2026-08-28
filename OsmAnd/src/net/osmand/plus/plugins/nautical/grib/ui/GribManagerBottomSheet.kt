@@ -16,7 +16,6 @@ import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.isActive
 import net.osmand.plus.OsmandApplication
 import net.osmand.plus.R
 import net.osmand.plus.plugins.nautical.di.SailingDependencyContainer
@@ -33,25 +32,6 @@ class GribManagerBottomSheet : BottomSheetDialogFragment() {
     private lateinit var isobarStepSpinner: android.widget.Spinner
     private lateinit var waveToSwitch: com.google.android.material.switchmaterial.SwitchMaterial
     private val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
-
-    // Forecast Playback Controls
-    private var txtPlaybackTime: TextView? = null
-    private var btnPlayPause: com.google.android.material.button.MaterialButton? = null
-    private var btnStepPrev: com.google.android.material.button.MaterialButton? = null
-    private var btnStepNext: com.google.android.material.button.MaterialButton? = null
-    private var playbackSeekBar: android.widget.SeekBar? = null
-    private var speedSpinner: android.widget.Spinner? = null
-
-    private var playbackJob: kotlinx.coroutines.Job? = null
-    private var isPlaying = false
-    private var playbackDelayMs = 1500L
-    private var timeSteps: List<net.osmand.plus.plugins.nautical.grib.parser.TimeStepGrid> = emptyList()
-    private var currentStepIndex = 0
-    private var baseTimestamp = 0L
-
-    private val timeFormat = SimpleDateFormat("EEE HH:mm 'UTC'", Locale.US).apply {
-        timeZone = TimeZone.getTimeZone("UTC")
-    }
 
     private val importLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         uri?.let { handleImportedUri(it) }
@@ -101,160 +81,9 @@ class GribManagerBottomSheet : BottomSheetDialogFragment() {
             importLauncher.launch("*/*")
         }
 
-        setupPlaybackControls(view)
-        setupWeatherLayers(view)
         setupSettings()
         observeStatus()
         refreshList()
-        refreshPlaybackData()
-    }
-
-    private fun setupWeatherLayers(view: View) {
-        val app = activity?.application as? OsmandApplication ?: return
-        val map = app.osmandMap
-
-        val chipWind = view.findViewById<com.google.android.material.chip.Chip>(R.id.chip_layer_wind)
-        val chipGusts = view.findViewById<com.google.android.material.chip.Chip>(R.id.chip_layer_gusts)
-        val chipWaves = view.findViewById<com.google.android.material.chip.Chip>(R.id.chip_layer_waves)
-        val chipPressure = view.findViewById<com.google.android.material.chip.Chip>(R.id.chip_layer_pressure)
-        val chipTemp = view.findViewById<com.google.android.material.chip.Chip>(R.id.chip_layer_temp)
-
-        val layerListener = { _: android.widget.CompoundButton, _: Boolean ->
-            map?.refreshMap()
-            Unit
-        }
-
-        chipWind?.setOnCheckedChangeListener(layerListener)
-        chipGusts?.setOnCheckedChangeListener(layerListener)
-        chipWaves?.setOnCheckedChangeListener(layerListener)
-        chipPressure?.setOnCheckedChangeListener(layerListener)
-        chipTemp?.setOnCheckedChangeListener(layerListener)
-    }
-
-    private fun setupPlaybackControls(view: View) {
-        txtPlaybackTime = view.findViewById(R.id.txt_grib_playback_time)
-        btnPlayPause = view.findViewById(R.id.btn_grib_play_pause)
-        btnStepPrev = view.findViewById(R.id.btn_grib_step_prev)
-        btnStepNext = view.findViewById(R.id.btn_grib_step_next)
-        playbackSeekBar = view.findViewById(R.id.grib_playback_seekbar)
-        speedSpinner = view.findViewById(R.id.spinner_grib_playback_speed)
-
-        btnPlayPause?.setOnClickListener {
-            togglePlayback()
-            it.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
-        }
-
-        btnStepPrev?.setOnClickListener {
-            stopPlayback()
-            stepRelative(-1)
-            it.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
-        }
-
-        btnStepNext?.setOnClickListener {
-            stopPlayback()
-            stepRelative(1)
-            it.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
-        }
-
-        playbackSeekBar?.setOnSeekBarChangeListener(object : android.widget.SeekBar.OnSeekBarChangeListener {
-            override fun onProgressChanged(seekBar: android.widget.SeekBar?, progress: Int, fromUser: Boolean) {
-                if (fromUser) {
-                    stopPlayback()
-                    applyStep(progress)
-                }
-            }
-            override fun onStartTrackingTouch(seekBar: android.widget.SeekBar?) {}
-            override fun onStopTrackingTouch(seekBar: android.widget.SeekBar?) {}
-        })
-
-        val speeds = arrayOf("0.5x (Slow)", "1.0x (Normal)", "2.0x (Fast)", "4.0x (Rapid)")
-        val adapter = android.widget.ArrayAdapter(requireContext(), android.R.layout.simple_spinner_item, speeds)
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-        speedSpinner?.adapter = adapter
-        speedSpinner?.setSelection(1)
-
-        speedSpinner?.onItemSelectedListener = object : android.widget.AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(parent: android.widget.AdapterView<*>?, view: View?, position: Int, id: Long) {
-                playbackDelayMs = when (position) {
-                    0 -> 3000L
-                    1 -> 1500L
-                    2 -> 750L
-                    3 -> 400L
-                    else -> 1500L
-                }
-                if (isPlaying) {
-                    startPlayback()
-                }
-            }
-            override fun onNothingSelected(parent: android.widget.AdapterView<*>?) {}
-        }
-    }
-
-    private fun refreshPlaybackData() {
-        val repo = SailingDependencyContainer.gribRepository ?: return
-        val grid = repo.gridData
-        if (grid != null && grid.timeSteps.isNotEmpty()) {
-            timeSteps = grid.timeSteps.sortedBy { it.timestamp }
-            baseTimestamp = timeSteps.first().timestamp
-            playbackSeekBar?.max = (timeSteps.size - 1).coerceAtLeast(0)
-            applyStep(currentStepIndex.coerceIn(0, (timeSteps.size - 1).coerceAtLeast(0)))
-        } else {
-            txtPlaybackTime?.text = "No forecast steps"
-        }
-    }
-
-    private fun togglePlayback() {
-        if (isPlaying) stopPlayback() else startPlayback()
-    }
-
-    private fun startPlayback() {
-        if (timeSteps.isEmpty()) return
-        isPlaying = true
-        btnPlayPause?.setIconResource(R.drawable.ic_pause)
-        playbackJob?.cancel()
-        playbackJob = viewLifecycleOwner.lifecycleScope.launch {
-            while (isActive && isPlaying) {
-                kotlinx.coroutines.delay(playbackDelayMs)
-                val nextIdx = (currentStepIndex + 1) % timeSteps.size
-                applyStep(nextIdx)
-            }
-        }
-    }
-
-    private fun stopPlayback() {
-        isPlaying = false
-        playbackJob?.cancel()
-        playbackJob = null
-        btnPlayPause?.setIconResource(R.drawable.ic_play_dark)
-    }
-
-    private fun stepRelative(offset: Int) {
-        if (timeSteps.isEmpty()) return
-        val newIdx = (currentStepIndex + offset).coerceIn(0, timeSteps.size - 1)
-        applyStep(newIdx)
-    }
-
-    private fun applyStep(index: Int) {
-        if (timeSteps.isEmpty()) return
-        currentStepIndex = index.coerceIn(0, timeSteps.size - 1)
-        playbackSeekBar?.progress = currentStepIndex
-
-        val step = timeSteps[currentStepIndex]
-        val stepTime = step.timestamp
-        val offsetHours = ((stepTime - baseTimestamp) / 3600000L).toInt()
-
-        val formattedDate = timeFormat.format(Date(stepTime))
-        val offsetLabel = if (offsetHours >= 0) "+${offsetHours}h" else "${offsetHours}h"
-        txtPlaybackTime?.text = "$formattedDate ($offsetLabel)"
-
-        val plugin = net.osmand.plus.plugins.nautical.NauticalPlugin.getInstance()
-        plugin?.layerManager?.oceanographicGribMapLayer?.selectedTimestamp = stepTime
-        plugin?.application?.osmandMap?.refreshMap()
-    }
-
-    override fun onDestroyView() {
-        stopPlayback()
-        super.onDestroyView()
     }
 
     private fun setupSettings() {

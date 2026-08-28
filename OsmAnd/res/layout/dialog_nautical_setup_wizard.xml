@@ -12,7 +12,6 @@
         android:layout_height="wrap_content"
         android:text="@string/nautical_wizard_setup_title"
         android:textAppearance="?attr/textAppearanceHeadline5"
-        android:textColor="?android:attr/textColorPrimary"
         android:textStyle="bold" />
 
     <ViewFlipper
@@ -30,7 +29,6 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="@string/nautical_wizard_welcome_msg"
-                android:textColor="?android:attr/textColorSecondary"
                 android:textAppearance="?attr/textAppearanceBody1" />
 
             <com.google.android.material.textfield.TextInputLayout
@@ -43,8 +41,6 @@
                     android:id="@+id/vessel_type_spinner"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:textAppearance="@style/TextAppearance.AppCompat.Subhead"
-                    android:textColor="?android:attr/textColorPrimary"
                     android:inputType="none" />
             </com.google.android.material.textfield.TextInputLayout>
 
@@ -82,8 +78,6 @@
                     android:id="@+id/nmea_source_spinner"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:textAppearance="@style/TextAppearance.AppCompat.Subhead"
-                    android:textColor="?android:attr/textColorPrimary"
                     android:inputType="none" />
             </com.google.android.material.textfield.TextInputLayout>
 
@@ -109,7 +103,6 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="@string/nautical_wizard_connect_server_msg"
-                android:textColor="?android:attr/textColorSecondary"
                 android:textAppearance="?attr/textAppearanceBody1" />
 
             <com.google.android.material.textfield.TextInputLayout
@@ -194,7 +187,6 @@
                 android:layout_marginTop="16dp"
                 android:gravity="center"
                 android:text="@string/nautical_wizard_ready_msg"
-                android:textColor="?android:attr/textColorPrimary"
                 android:textAppearance="?attr/textAppearanceHeadline6" />
 
             <Button
@@ -211,7 +203,6 @@
                 android:layout_marginTop="8dp"
                 android:gravity="center"
                 android:text="@string/nautical_receive_in_background_description"
-                android:textColor="?android:attr/textColorSecondary"
                 android:textAppearance="?attr/textAppearanceCaption" />
         </LinearLayout>
     </ViewFlipper>

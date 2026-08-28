@@ -28,13 +28,6 @@ class OceanographicGribMapLayer(context: Context) : OsmandMapLayer(context) {
         strokeWidth = 2.5f
     }
 
-    private val troughPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = 0xFFFF7043.toInt() // Accent highlight for steep pressure gradients / troughs
-        style = Paint.Style.STROKE
-        strokeWidth = 5f
-        strokeCap = Paint.Cap.ROUND
-    }
-
     private val wavePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = 0xFF2196F3.toInt() // Blue for wave vectors
         style = Paint.Style.STROKE
@@ -106,7 +99,6 @@ class OceanographicGribMapLayer(context: Context) : OsmandMapLayer(context) {
 
     private data class GribRenderCache(
         val isobarLatLons: List<Pair<net.osmand.data.LatLon, net.osmand.data.LatLon>> = emptyList(),
-        val troughLatLons: List<Pair<net.osmand.data.LatLon, net.osmand.data.LatLon>> = emptyList(),
         val isobarLabels: List<IsobarLabel> = emptyList(),
         val waveVectors: List<WaveVector> = emptyList(),
         val zoom: Int = -1,
@@ -117,7 +109,6 @@ class OceanographicGribMapLayer(context: Context) : OsmandMapLayer(context) {
     )
 
     private var isobarLinesBuffer = FloatArray(2048)
-    private var troughLinesBuffer = FloatArray(2048)
     private var waveLinesBuffer = FloatArray(2048)
 
     var selectedTimestamp: Long? = null
@@ -140,14 +131,11 @@ class OceanographicGribMapLayer(context: Context) : OsmandMapLayer(context) {
     override fun onDraw(canvas: Canvas, tileBox: RotatedTileBox, settings: DrawSettings) {
         if (tileBox.zoom < 3) return // Lowered zoom limit for overview
 
-        val app = context.applicationContext as OsmandApplication
-        val isNight = NauticalPlugin.isNightVision(app)
-        applyThemePaints(isNight)
-
         val repository = SailingDependencyContainer.gribRepository
         if (repository?.status?.value != GribStatus.READY) {
+            val app = context.applicationContext as OsmandApplication
             if (app.settings.NAUTICAL_SHOW_GRIB_CURRENTS.get()) {
-                drawCurrentVectors(canvas, tileBox, null, isNight)
+                drawCurrentVectors(canvas, tileBox, null)
             }
             return
         }
@@ -162,6 +150,7 @@ class OceanographicGribMapLayer(context: Context) : OsmandMapLayer(context) {
             abs(renderCache.centerLon - center.longitude) > moveThreshold ||
             abs(renderCache.timestamp - timestamp) > (if (selectedTimestamp != null) 0 else 300000)) {
             
+            val app = context.applicationContext as OsmandApplication
             if (app.settings.NAUTICAL_GRIB_SOURCE_SIGNALK.get() && repository.status.value == GribStatus.IDLE) {
                 val pluginId = app.settings.NAUTICAL_GRIB_SIGNALK_PLUGIN_ID.get()
                 NauticalPlugin.engine?.getRestService()?.let { service ->
@@ -173,23 +162,7 @@ class OceanographicGribMapLayer(context: Context) : OsmandMapLayer(context) {
 
         val cache = renderCache
         
-        // 1. Accent highlights along steep pressure gradient troughs
-        if (cache.troughLatLons.isNotEmpty()) {
-            val neededSize = cache.troughLatLons.size * 4
-            if (troughLinesBuffer.size < neededSize) {
-                troughLinesBuffer = FloatArray(neededSize)
-            }
-            for (i in cache.troughLatLons.indices) {
-                val pair = cache.troughLatLons[i]
-                troughLinesBuffer[i * 4] = tileBox.getPixXFromLatLon(pair.first.latitude, pair.first.longitude)
-                troughLinesBuffer[i * 4 + 1] = tileBox.getPixYFromLatLon(pair.first.latitude, pair.first.longitude)
-                troughLinesBuffer[i * 4 + 2] = tileBox.getPixXFromLatLon(pair.second.latitude, pair.second.longitude)
-                troughLinesBuffer[i * 4 + 3] = tileBox.getPixYFromLatLon(pair.second.latitude, pair.second.longitude)
-            }
-            canvas.drawLines(troughLinesBuffer, 0, neededSize, troughPaint)
-        }
-
-        // 2. Optimized isobar rendering with preallocated buffer (zero onDraw allocations)
+        // 1. Optimized isobar rendering with preallocated buffer (zero onDraw allocations)
         if (cache.isobarLatLons.isNotEmpty()) {
             val neededSize = cache.isobarLatLons.size * 4
             if (isobarLinesBuffer.size < neededSize) {
@@ -216,46 +189,19 @@ class OceanographicGribMapLayer(context: Context) : OsmandMapLayer(context) {
             canvas.drawText(label.text, px, py + textHeight / 3, labelPaint)
         }
 
-        // 3. Render Wave Vectors (Batched)
-        drawWaveVectorsBatched(canvas, cache.waveVectors, tileBox, isNight)
+        // 2. Render Wave Vectors (Batched)
+        drawWaveVectorsBatched(canvas, cache.waveVectors, tileBox)
 
-        // 4. Render Ocean/Tidal Current Vectors
-        drawCurrentVectors(canvas, tileBox, repository.engine, isNight)
+        // 3. Render Ocean/Tidal Current Vectors
+        drawCurrentVectors(canvas, tileBox, repository.engine)
 
-        // 5. Render "EXPIRED FORECAST" Banner (Adjusted position, only if live and expired)
+        // 4. Render "EXPIRED FORECAST" Banner (Adjusted position, only if live and expired)
         if (cache.isExpired && selectedTimestamp == null) {
-            drawExpiredBanner(canvas, isNight)
+            drawExpiredBanner(canvas)
         }
     }
 
-    private fun applyThemePaints(isNight: Boolean) {
-        if (isNight) {
-            isobarPaint.color = 0x80B71C1C.toInt() // Deep monochromatic red for isobars
-            troughPaint.color = 0xFFFF1744.toInt() // High-contrast red accent for steep pressure gradients
-            troughPaint.alpha = 200
-            labelPaint.color = 0xFFFF8A80.toInt() // Data readout token
-            labelBgPaint.color = 0xEE120000.toInt() // Translucent deep red/black
-            wavePaint.color = 0xFFFF1744.toInt()
-            currentLabelBgPaint.color = 0xEE120000.toInt()
-            warningBgPaint.color = 0xEE120000.toInt()
-            warningPaint.color = 0xFFFF1744.toInt()
-        } else {
-            isobarPaint.color = 0xFF555555.toInt() // Dark gray for isobars
-            troughPaint.color = 0xFFFF7043.toInt() // Coral/amber accent for steep pressure gradients
-            troughPaint.alpha = 180
-            labelPaint.color = Color.DKGRAY
-            labelBgPaint.color = Color.WHITE
-            labelBgPaint.alpha = 180
-            wavePaint.color = 0xFF2196F3.toInt()
-            currentLabelBgPaint.color = Color.WHITE
-            currentLabelBgPaint.alpha = 200
-            warningBgPaint.color = Color.YELLOW
-            warningBgPaint.alpha = 200
-            warningPaint.color = Color.RED
-        }
-    }
-
-    fun drawCurrentVectors(canvas: Canvas, tileBox: RotatedTileBox, gribEngine: GribInterpolationEngine?, isNight: Boolean = false) {
+    fun drawCurrentVectors(canvas: Canvas, tileBox: RotatedTileBox, gribEngine: GribInterpolationEngine?) {
         val app = context.applicationContext as OsmandApplication
         if (!app.settings.NAUTICAL_SHOW_GRIB_CURRENTS.get()) return
 
@@ -305,18 +251,10 @@ class OceanographicGribMapLayer(context: Context) : OsmandMapLayer(context) {
                         val thetaRad = atan2(u, v)
                         val screenAngle = thetaRad - Math.toRadians(mapRotate.toDouble())
 
-                        val color = if (isNight) {
-                            when {
-                                speedKn < 1.0 -> 0xFF8B0000.toInt() // Dark red
-                                speedKn <= 2.5 -> 0xFFB71C1C.toInt() // Crimson red
-                                else -> 0xFFFF5252.toInt() // Bright red
-                            }
-                        } else {
-                            when {
-                                speedKn < 1.0 -> 0xFF0288D1.toInt() // Cyan/Blue
-                                speedKn <= 2.5 -> 0xFFF57C00.toInt() // Amber
-                                else -> 0xFFD32F2F.toInt() // Red
-                            }
+                        val color = when {
+                            speedKn < 1.0 -> 0xFF0288D1.toInt() // Cyan/Blue
+                            speedKn <= 2.5 -> 0xFFF57C00.toInt() // Amber
+                            else -> 0xFFD32F2F.toInt() // Red
                         }
 
                         currentVectorPaint.color = color
@@ -367,7 +305,7 @@ class OceanographicGribMapLayer(context: Context) : OsmandMapLayer(context) {
                                 labelY + textHeight / 2f + 2f
                             )
                             canvas.drawRoundRect(currentLabelRect, 4f, 4f, currentLabelBgPaint)
-                            currentLabelPaint.color = if (isNight) 0xFFFF1744.toInt() else color
+                            currentLabelPaint.color = color
                             canvas.drawText(labelText, labelX, labelY + textHeight * 0.35f, currentLabelPaint)
                         }
                     }
@@ -378,7 +316,7 @@ class OceanographicGribMapLayer(context: Context) : OsmandMapLayer(context) {
         }
     }
 
-    private fun drawExpiredBanner(canvas: Canvas, isNight: Boolean = false) {
+    private fun drawExpiredBanner(canvas: Canvas) {
         val w = canvas.width.toFloat()
         val bannerHeight = 60f
         val top = 250f // Lowered to avoid top widgets
@@ -386,11 +324,13 @@ class OceanographicGribMapLayer(context: Context) : OsmandMapLayer(context) {
         canvas.drawText("EXPIRED FORECAST", w / 2, top + bannerHeight * 0.75f, warningPaint)
     }
 
-    private fun drawWaveVectorsBatched(canvas: Canvas, vectors: List<WaveVector>, tileBox: RotatedTileBox, isNight: Boolean = false) {
+    private fun drawWaveVectorsBatched(canvas: Canvas, vectors: List<WaveVector>, tileBox: RotatedTileBox) {
         if (vectors.isEmpty()) return
         val directionTo = (context.applicationContext as OsmandApplication).settings.NAUTICAL_GRIB_WAVE_DIRECTION_TO.get()
         val mapRotate = tileBox.rotate
         
+        // We can't easily use drawLines for arrows with rotation per arrow unless we pre-calculate points
+        // But we can batch the main lines at least.
         val neededSize = vectors.size * 4
         if (waveLinesBuffer.size < neededSize) {
             waveLinesBuffer = FloatArray(neededSize)
@@ -409,6 +349,8 @@ class OceanographicGribMapLayer(context: Context) : OsmandMapLayer(context) {
             waveLinesBuffer[i * 4 + 2] = px + dx
             waveLinesBuffer[i * 4 + 3] = py + dy
             
+            // Still need to draw arrow heads and labels. 
+            // For now, let's keep the rotation logic but avoid 'withTranslation' overhead where possible.
             drawArrowHead(canvas, px + dx, py + dy, finalRotation.toFloat(), wv.length / 5)
             
             wv.label?.let {
@@ -435,12 +377,11 @@ class OceanographicGribMapLayer(context: Context) : OsmandMapLayer(context) {
             
             val newCache = withContext(Dispatchers.Default) {
                 val isobarLatLons = mutableListOf<Pair<net.osmand.data.LatLon, net.osmand.data.LatLon>>()
-                val troughLatLons = mutableListOf<Pair<net.osmand.data.LatLon, net.osmand.data.LatLon>>()
                 val isobarLabels = mutableListOf<IsobarLabel>()
                 val waveVectors = mutableListOf<WaveVector>()
 
                 if (osmandSettings.NAUTICAL_SHOW_GRIB_PRESSURE.get()) {
-                    prepareIsobars(tileBox, repository, timestamp, isobarLatLons, troughLatLons, isobarLabels, osmandSettings.NAUTICAL_GRIB_ISOBAR_STEP.get())
+                    prepareIsobars(tileBox, repository, timestamp, isobarLatLons, isobarLabels, osmandSettings.NAUTICAL_GRIB_ISOBAR_STEP.get())
                 }
                 if (osmandSettings.NAUTICAL_SHOW_GRIB_WAVES.get()) {
                     prepareWaves(tileBox, repository, timestamp, waveVectors)
@@ -450,22 +391,14 @@ class OceanographicGribMapLayer(context: Context) : OsmandMapLayer(context) {
                 val latestTime = gridData?.timeSteps?.maxByOrNull { it.timestamp }?.timestamp ?: 0L
                 val isExpired = latestTime > 0 && (timestamp - latestTime) > 86400000L
 
-                GribRenderCache(isobarLatLons, troughLatLons, isobarLabels, waveVectors, tileBox.zoom, center.latitude, center.longitude, timestamp, isExpired)
+                GribRenderCache(isobarLatLons, isobarLabels, waveVectors, tileBox.zoom, center.latitude, center.longitude, timestamp, isExpired)
             }
             renderCache = newCache
             app.osmandMap?.refreshMap()
         }
     }
 
-    private fun prepareIsobars(
-        tileBox: RotatedTileBox,
-        repository: GribRepository,
-        timestamp: Long,
-        latLons: MutableList<Pair<net.osmand.data.LatLon, net.osmand.data.LatLon>>,
-        troughLatLons: MutableList<Pair<net.osmand.data.LatLon, net.osmand.data.LatLon>>,
-        labels: MutableList<IsobarLabel>,
-        stepHpa: Int
-    ) {
+    private fun prepareIsobars(tileBox: RotatedTileBox, repository: GribRepository, timestamp: Long, latLons: MutableList<Pair<net.osmand.data.LatLon, net.osmand.data.LatLon>>, labels: MutableList<IsobarLabel>, stepHpa: Int) {
         val bounds = tileBox.latLonBounds
         val step = if (tileBox.zoom > 10) 0.25 else 0.5
         
@@ -485,31 +418,6 @@ class OceanographicGribMapLayer(context: Context) : OsmandMapLayer(context) {
         for (j in 0 until nLat) {
             for (i in 0 until nLon) {
                 pressureGrid[j * nLon + i] = (repository.getPressure(gridLats[j], gridLons[i], timestamp) ?: Double.NaN).toFloat()
-            }
-        }
-
-        // Steep gradient detection (>3 hPa per 60nm, i.e. > 0.05 hPa/nm)
-        val gradientThreshold = 3.0 / 60.0 // 0.05 hPa/nm
-        val steepCells = BooleanArray(nLat * nLon)
-
-        for (j in 0 until nLat - 1) {
-            val latRad = Math.toRadians(gridLats[j])
-            val dxNm = (step * 60.0 * cos(latRad)).coerceAtLeast(1.0)
-            val dyNm = step * 60.0
-
-            for (i in 0 until nLon - 1) {
-                val v00 = pressureGrid[j * nLon + i].toDouble()
-                val v10 = pressureGrid[j * nLon + i + 1].toDouble()
-                val v01 = pressureGrid[(j + 1) * nLon + i].toDouble()
-
-                if (!v00.isNaN() && !v10.isNaN() && !v01.isNaN()) {
-                    val dPdx = (v10 - v00) / dxNm
-                    val dPdy = (v01 - v00) / dyNm
-                    val gradMag = sqrt(dPdx * dPdx + dPdy * dPdy)
-                    if (gradMag > gradientThreshold) {
-                        steepCells[j * nLon + i] = true
-                    }
-                }
             }
         }
 
@@ -541,10 +449,6 @@ class OceanographicGribMapLayer(context: Context) : OsmandMapLayer(context) {
                     
                     val segments = getSegmentsForCase(case, threshold, v00, v10, v11, v01, p00, p10, p11, p01)
                     latLons.addAll(segments)
-
-                    if (steepCells[j * nLon + i]) {
-                        troughLatLons.addAll(segments)
-                    }
                     
                     if (!labelPlacedInView && segments.isNotEmpty() && (i % 8 == 0) && (j % 8 == 0)) {
                         val mid = segments[0].first

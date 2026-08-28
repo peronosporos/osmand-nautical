@@ -68,8 +68,6 @@ class NauticalAisObjectDrawable(
         typeface = Typeface.DEFAULT_BOLD
     }
 
-    private val circlePaint = Paint(Paint.ANTI_ALIAS_FLAG)
-
     fun isVesselAtRestWithHysteresis(): Boolean {
         return ais.isVesselAtRest()
     }
@@ -131,20 +129,16 @@ class NauticalAisObjectDrawable(
     }
 
     private fun activateCpaWarning() {
-        val isNight = NauticalPlugin.isNightVision(plugin.application)
-        bitmapColor = if (isNight) 0xFFFF1744.toInt() else Color.RED
+        bitmapColor = Color.RED
     }
 
     private fun deactivateCpaWarning() {
-        if (bitmapColor == Color.RED || bitmapColor == 0xFFFF1744.toInt()) {
+        if (bitmapColor == Color.RED) {
             setColor(isVesselAtRestWithHysteresis())
         }
     }
 
     private fun selectBitmap(type: AisObjType): Int {
-        if (ais.mmsi in 970000000..974999999) {
-            return R.drawable.ic_action_alert
-        }
         return when (type) {
             AisObjType.AIS_VESSEL,
             AisObjType.AIS_VESSEL_SPORT,
@@ -156,19 +150,16 @@ class NauticalAisObjectDrawable(
             AisObjType.AIS_VESSEL_SAR,
             AisObjType.AIS_VESSEL_OTHER,
             AisObjType.AIS_INVALID,
-            -> R.drawable.ic_action_motorboat
-            AisObjType.AIS_LANDSTATION -> R.drawable.ic_action_antenna
-            AisObjType.AIS_AIRPLANE -> R.drawable.ic_action_aircraft
-            AisObjType.AIS_SART -> R.drawable.ic_action_alert
-            AisObjType.AIS_ATON -> R.drawable.ic_action_target
-            AisObjType.AIS_ATON_VIRTUAL -> R.drawable.ic_action_target
+            -> R.drawable.mm_ais_vessel
+            AisObjType.AIS_LANDSTATION -> R.drawable.mm_ais_land
+            AisObjType.AIS_AIRPLANE -> R.drawable.mm_ais_plane
+            AisObjType.AIS_SART -> R.drawable.mm_ais_sar
+            AisObjType.AIS_ATON -> R.drawable.mm_ais_aton
+            AisObjType.AIS_ATON_VIRTUAL -> R.drawable.mm_ais_aton_virt
         }
     }
 
     private fun selectColor(type: AisObjType): Int {
-        if (ais.mmsi in 970000000..974999999) {
-            return 0xFFFF1744.toInt()
-        }
         return when (type) {
             AisObjType.AIS_VESSEL -> Color.GREEN
             AisObjType.AIS_VESSEL_SPORT -> Color.YELLOW
@@ -181,7 +172,7 @@ class NauticalAisObjectDrawable(
             AisObjType.AIS_VESSEL_OTHER -> Color.argb(0xff, 0x00, 0xbf, 0xff)
             AisObjType.AIS_LANDSTATION -> Color.argb(0xff, 0x8b, 0x45, 0x13)
             AisObjType.AIS_AIRPLANE -> Color.argb(0xff, 0x93, 0x70, 0xdb)
-            AisObjType.AIS_SART -> 0xFFFF1744.toInt()
+            AisObjType.AIS_SART -> Color.RED
             AisObjType.AIS_ATON, AisObjType.AIS_ATON_VIRTUAL -> Color.argb(0xff, 0xff, 0xa5, 0x00)
             else -> 0
         }
@@ -218,7 +209,7 @@ class NauticalAisObjectDrawable(
         val vesselAtRest = isVesselAtRestWithHysteresis()
         if (ais.isLost(plugin.aisShipLostTimeout.get()) && !vesselAtRest) {
             if (ais.isMovable()) {
-                bitmap = imagesCache.getBitmap(R.drawable.ic_action_cancel)
+                bitmap = imagesCache.getBitmap(R.drawable.mm_ais_vessel_cross)
                 bitmapValid = true
             }
         } else {
@@ -246,29 +237,9 @@ class NauticalAisObjectDrawable(
 
     private fun setColor(vesselAtRest: Boolean) {
         val caps = plugin.capabilityManager?.capabilities?.value
-        val isNight = NauticalPlugin.isNightVision(plugin.application)
-
-        if (isNight) {
-            val isSart = ais.objectClass == AisObjType.AIS_SART
-            val isDanger = hasCpaWarning || checkCpaWarning() || threatLevel >= 3
-            val isCaution = threatLevel in 1..2
-
-            bitmapColor = when {
-                isSart || isDanger -> 0xFFFF1744.toInt() // Bold monochromatic red
-                isCaution -> 0xFFFF8A80.toInt() // Monochromatic light red
-                ownObject -> 0xFFFF1744.toInt()
-                isBuddy() -> 0xFFFF8A80.toInt()
-                else -> 0x80B71C1C.toInt() // Muted dark red outline for safe targets
-            }
-            alpha = if (caps?.hasAisPrioritizer == true && threatLevel == 0 && !ownObject && !hasCpaWarning && !checkCpaWarning()) {
-                150
-            } else {
-                closeQuartersAlpha ?: 255
-            }
-            return
-        }
-
-        if (hasCpaWarning || checkCpaWarning()) {
+        if (NauticalPlugin.isNightVision(plugin.application)) {
+            bitmapColor = Color.RED
+        } else if (hasCpaWarning || checkCpaWarning()) {
             bitmapColor = Color.RED
         } else if (ownObject) {
             bitmapColor = Color.BLACK
@@ -327,7 +298,7 @@ class NauticalAisObjectDrawable(
     ) {
         updateBitmap(paint)
 
-        val lostBitmap = imagesCache.getBitmap(R.drawable.ic_action_cancel)
+        val lostBitmap = imagesCache.getBitmap(R.drawable.mm_ais_vessel_cross)
         val activeBitmap = bitmap
         if ((activeBitmap == null) || (lostBitmap == null)) {
             return
@@ -564,14 +535,6 @@ class NauticalAisObjectDrawable(
                 val lineStartY = locationY - bmp.height / 4f
                 val lineEndY = lineStartY - lineLength
                 canvas.drawLine(locationX.toFloat(), lineStartY, locationX.toFloat(), lineEndY, paint)
-
-                // 1-minute interval tick marks along the vector (10-minute predictor)
-                val tickInterval = lineLength / 10f
-                val tickHalfWidth = 3f * tileBox.density
-                for (i in 1..9) {
-                    val tickY = lineStartY - (tickInterval * i)
-                    canvas.drawLine(locationX.toFloat() - tickHalfWidth, tickY, locationX.toFloat() + tickHalfWidth, tickY, paint)
-                }
             }
             if (needRotation && heading != AisObjectConstants.INVALID_HEADING && heading != 0 && heading.toFloat() != rotation) {
                 canvas.rotate(heading.toFloat() - rotation, locationX.toFloat(), locationY.toFloat())
@@ -582,13 +545,13 @@ class NauticalAisObjectDrawable(
     }
 
     private fun drawCircle(locationX: Float, locationY: Float, paint: Paint, canvas: Canvas) {
-        val isNight = NauticalPlugin.isNightVision(plugin.application)
-        val outerColor = if (isNight) 0x80B71C1C.toInt() else Color.DKGRAY
-        val innerColor = if (isNight) (if (bitmapColor != 0) bitmapColor else 0xFFFF1744.toInt()) else bitmapColor
-        circlePaint.color = outerColor
-        canvas.drawCircle(locationX, locationY, 22.0f, circlePaint)
-        circlePaint.color = innerColor
-        canvas.drawCircle(locationX, locationY, 18.0f, circlePaint)
+        val localPaint = Paint(paint).apply {
+            colorFilter = null
+            color = Color.DKGRAY
+        }
+        canvas.drawCircle(locationX, locationY, 22.0f, localPaint)
+        localPaint.color = bitmapColor
+        canvas.drawCircle(locationX, locationY, 18.0f, localPaint)
     }
 
     private fun drawShape(locationX: Float, locationY: Float, tileBox: RotatedTileBox, paint: Paint, canvas: Canvas) {

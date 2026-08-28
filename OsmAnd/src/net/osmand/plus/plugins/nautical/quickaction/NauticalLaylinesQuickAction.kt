@@ -31,7 +31,6 @@ class NauticalLaylinesQuickAction : QuickAction {
 
     override fun execute(mapActivity: MapActivity, params: Bundle?) {
         if (mapActivity.isFinishing || mapActivity.isDestroyed) return
-        mapActivity.layout?.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
         val app = mapActivity.app
         if (NauticalPlugin.getInstance() == null) {
             app.showToastMessage(R.string.nautical_plugin_inactive)

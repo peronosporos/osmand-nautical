@@ -5,9 +5,7 @@
     android:layout_height="wrap_content"
     android:layout_marginBottom="8dp"
     app:cardCornerRadius="10dp"
-    app:cardElevation="1dp"
-    app:strokeWidth="1dp"
-    app:strokeColor="?attr/divider_color"
+    app:cardElevation="1.5dp"
     app:cardBackgroundColor="?attr/card_and_list_background_basic">
 
     <LinearLayout
@@ -39,7 +37,7 @@
                 android:text="4.2 NM"
                 android:textStyle="bold"
                 android:textSize="13sp"
-                android:textColor="?attr/active_color_primary" />
+                android:textColor="?attr/colorAccent" />
         </LinearLayout>
 
         <LinearLayout
@@ -53,7 +51,7 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="CTS: 045°T • TWA: 52°"
+                android:text="CTS: 045° • TWA: 52°"
                 android:textSize="12sp"
                 android:textColor="?android:attr/textColorSecondary" />
 
@@ -70,7 +68,6 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:gravity="center_vertical"
             android:layout_marginTop="4dp">
 
             <TextView
@@ -81,20 +78,6 @@
                 android:text="Depth: > 5.0 m (Safe)"
                 android:textSize="12sp"
                 android:textColor="@color/nautical_status_green" />
-
-            <TextView
-                android:id="@+id/txt_leg_tidal_drift"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="+0.8 kn Current"
-                android:textSize="11sp"
-                android:textStyle="bold"
-                android:paddingHorizontal="6dp"
-                android:paddingVertical="2dp"
-                android:layout_marginEnd="8dp"
-                android:background="@drawable/bg_nautical_chip"
-                android:textColor="?attr/active_color_primary"
-                android:visibility="gone" />
 
             <TextView
                 android:id="@+id/txt_leg_ete"

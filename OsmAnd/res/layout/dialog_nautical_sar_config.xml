@@ -25,157 +25,70 @@
             android:layout_marginTop="16dp"
             app:singleSelection="true">
 
-            <com.google.android.material.button.MaterialButton
+            <Button
                 android:id="@+id/btn_expanding_square"
-                style="@style/Widget.Material3.Button.OutlinedButton"
+                style="?attr/materialButtonOutlinedStyle"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:minHeight="48dp"
                 android:layout_weight="1"
-                android:padding="0dp"
                 android:text="@string/nautical_sar_expanding_square_short"
                 android:textAppearance="?attr/textAppearanceCaption" />
 
-            <com.google.android.material.button.MaterialButton
+            <Button
                 android:id="@+id/btn_sector_search"
-                style="@style/Widget.Material3.Button.OutlinedButton"
+                style="?attr/materialButtonOutlinedStyle"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:minHeight="48dp"
                 android:layout_weight="1"
-                android:padding="0dp"
                 android:text="@string/nautical_sar_sector_search_short"
                 android:textAppearance="?attr/textAppearanceCaption" />
 
-            <com.google.android.material.button.MaterialButton
+            <Button
                 android:id="@+id/btn_creeping_line"
-                style="@style/Widget.Material3.Button.OutlinedButton"
+                style="?attr/materialButtonOutlinedStyle"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:minHeight="48dp"
                 android:layout_weight="1"
-                android:padding="0dp"
                 android:text="@string/nautical_sar_creeping_line_short"
                 android:textAppearance="?attr/textAppearanceCaption" />
 
-            <com.google.android.material.button.MaterialButton
+            <Button
                 android:id="@+id/btn_parallel_sweep"
-                style="@style/Widget.Material3.Button.OutlinedButton"
+                style="?attr/materialButtonOutlinedStyle"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:minHeight="48dp"
                 android:layout_weight="1"
-                android:padding="0dp"
                 android:text="@string/nautical_sar_parallel_sweep_short"
                 android:textAppearance="?attr/textAppearanceCaption" />
         </com.google.android.material.button.MaterialButtonToggleGroup>
 
-        <!-- Track Spacing with Stepper Buttons -->
-        <LinearLayout
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/input_track_spacing"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
-            android:gravity="center_vertical"
-            android:orientation="horizontal">
+            android:hint="@string/nautical_sar_track_spacing">
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btn_spacing_minus"
-                style="@style/Widget.Material3.Button.OutlinedButton"
-                android:layout_width="56dp"
-                android:layout_height="48dp"
-                android:minHeight="48dp"
-                android:minWidth="56dp"
-                android:layout_marginEnd="6dp"
-                android:padding="0dp"
-                android:text="-0.5"
-                android:textSize="13sp"
-                android:textStyle="bold"
-                app:cornerRadius="8dp"
-                android:contentDescription="Decrease Track Spacing by 0.5 NM" />
-
-            <com.google.android.material.textfield.TextInputLayout
-                android:id="@+id/input_track_spacing"
-                android:layout_width="0dp"
+            <com.google.android.material.textfield.TextInputEditText
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:hint="@string/nautical_sar_track_spacing">
+                android:inputType="numberDecimal"
+                android:text="0.25" />
+        </com.google.android.material.textfield.TextInputLayout>
 
-                <com.google.android.material.textfield.TextInputEditText
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:inputType="numberDecimal"
-                    android:text="0.25" />
-            </com.google.android.material.textfield.TextInputLayout>
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btn_spacing_plus"
-                style="@style/Widget.Material3.Button.OutlinedButton"
-                android:layout_width="56dp"
-                android:layout_height="48dp"
-                android:minHeight="48dp"
-                android:minWidth="56dp"
-                android:layout_marginStart="6dp"
-                android:padding="0dp"
-                android:text="+0.5"
-                android:textSize="13sp"
-                android:textStyle="bold"
-                app:cornerRadius="8dp"
-                android:contentDescription="Increase Track Spacing by 0.5 NM" />
-        </LinearLayout>
-
-        <!-- Iterations / Search Radius with Stepper Buttons -->
-        <LinearLayout
-            android:id="@+id/layout_iterations_radius_container"
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/input_iterations_radius"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:gravity="center_vertical"
-            android:orientation="horizontal">
+            android:hint="@string/nautical_sar_iterations_radius_hint">
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btn_radius_minus"
-                style="@style/Widget.Material3.Button.OutlinedButton"
-                android:layout_width="56dp"
-                android:layout_height="48dp"
-                android:minHeight="48dp"
-                android:minWidth="56dp"
-                android:layout_marginEnd="6dp"
-                android:padding="0dp"
-                android:text="-1.0"
-                android:textSize="13sp"
-                android:textStyle="bold"
-                app:cornerRadius="8dp"
-                android:contentDescription="Decrease Radius / Iterations by 1.0" />
-
-            <com.google.android.material.textfield.TextInputLayout
-                android:id="@+id/input_iterations_radius"
-                android:layout_width="0dp"
+            <com.google.android.material.textfield.TextInputEditText
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:hint="@string/nautical_sar_iterations_radius_hint">
-
-                <com.google.android.material.textfield.TextInputEditText
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:inputType="numberDecimal"
-                    android:text="4" />
-            </com.google.android.material.textfield.TextInputLayout>
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btn_radius_plus"
-                style="@style/Widget.Material3.Button.OutlinedButton"
-                android:layout_width="56dp"
-                android:layout_height="48dp"
-                android:minHeight="48dp"
-                android:minWidth="56dp"
-                android:layout_marginStart="6dp"
-                android:padding="0dp"
-                android:text="+1.0"
-                android:textSize="13sp"
-                android:textStyle="bold"
-                app:cornerRadius="8dp"
-                android:contentDescription="Increase Radius / Iterations by 1.0" />
-        </LinearLayout>
+                android:inputType="numberDecimal"
+                android:text="4" />
+        </com.google.android.material.textfield.TextInputLayout>
 
         <LinearLayout
             android:id="@+id/area_dimensions_layout"

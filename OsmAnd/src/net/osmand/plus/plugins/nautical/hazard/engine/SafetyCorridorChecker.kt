@@ -1,7 +1,6 @@
 package net.osmand.plus.plugins.nautical.hazard.engine
 
 import com.vividsolutions.jts.geom.Coordinate
-import com.vividsolutions.jts.geom.CoordinateFilter
 import com.vividsolutions.jts.geom.GeometryFactory
 import com.vividsolutions.jts.operation.buffer.BufferParameters
 import net.osmand.plus.plugins.nautical.routing.model.Waypoint
@@ -30,7 +29,6 @@ class SafetyCorridorChecker(
         val corridorWidthNm = safetyManager.getSafetyCorridorWidthNm()
         val corridorBufferNm = safetyManager.getSafetyCorridorBufferNm()
         val totalHalfWidthNm = corridorWidthNm / 2.0 + corridorBufferNm
-        val degreesLat = totalHalfWidthNm / 60.0
 
         for (i in 0 until waypoints.size - 1) {
             val p1 = waypoints[i]
@@ -38,20 +36,16 @@ class SafetyCorridorChecker(
 
             if (p1.latitude.isNaN() || p1.longitude.isNaN() || p2.latitude.isNaN() || p2.longitude.isNaN()) continue
 
-            // Account for longitude convergence with an affine transformation before buffering
+            // Item 7 Fix: Account for longitude convergence
             val midLat = (p1.latitude + p2.latitude) / 2.0
-            val cosLat = kotlin.math.cos(Math.toRadians(midLat)).coerceIn(0.01, 1.0)
+            val halfWidthDegrees = totalHalfWidthNm / (60.0 * kotlin.math.cos(Math.toRadians(midLat)).coerceAtLeast(0.01))
 
-            val scaledLine = geometryFactory.createLineString(arrayOf(
-                Coordinate(p1.longitude * cosLat, p1.latitude),
-                Coordinate(p2.longitude * cosLat, p2.latitude)
+            val line = geometryFactory.createLineString(arrayOf(
+                Coordinate(p1.longitude, p1.latitude),
+                Coordinate(p2.longitude, p2.latitude)
             ))
 
-            val corridor = scaledLine.buffer(degreesLat, 8, BufferParameters.CAP_ROUND)
-            corridor.apply(CoordinateFilter { coord ->
-                coord.x /= cosLat
-            })
-            corridor.geometryChanged()
+            val corridor = line.buffer(halfWidthDegrees, 8, BufferParameters.CAP_ROUND)
 
             val candidates = indexManager.queryFeatures(corridor)
             for (hazard in candidates) {
@@ -125,15 +119,10 @@ class SafetyCorridorChecker(
         if (lat.isNaN() || lon.isNaN()) return emptyList()
         val issues = mutableListOf<SafetyIssue>()
         val lookAheadRadiusNm = safetyManager.getLookAheadRadiusNm()
-        val degreesLat = lookAheadRadiusNm / 60.0
-        val cosLat = kotlin.math.cos(Math.toRadians(lat)).coerceIn(0.01, 1.0)
+        val radiusDegrees = lookAheadRadiusNm / 60.0
 
-        val scaledPoint = geometryFactory.createPoint(Coordinate(lon * cosLat, lat))
-        val lookAheadArea = scaledPoint.buffer(degreesLat, 8)
-        lookAheadArea.apply(CoordinateFilter { coord ->
-            coord.x /= cosLat
-        })
-        lookAheadArea.geometryChanged()
+        val point = geometryFactory.createPoint(Coordinate(lon, lat))
+        val lookAheadArea = point.buffer(radiusDegrees)
 
         val candidates = indexManager.queryFeatures(lookAheadArea)
         for (hazard in candidates) {

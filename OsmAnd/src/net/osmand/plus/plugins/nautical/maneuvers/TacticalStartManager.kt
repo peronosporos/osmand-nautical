@@ -8,10 +8,11 @@ import net.osmand.plus.OsmandApplication
 import net.osmand.plus.plugins.nautical.NauticalPlugin
 import net.osmand.plus.plugins.nautical.audio.AlarmType
 import net.osmand.plus.plugins.nautical.audio.NauticalAudioArbiter
-import net.osmand.shared.extensions.toDegrees
 import net.osmand.shared.util.KMapUtils
 import java.util.Locale
-import kotlin.math.*
+import kotlin.math.abs
+import kotlin.math.roundToInt
+import kotlin.math.sin
 
 /**
  * Manages the Tactical Start Line (Port and Starboard pins).
@@ -137,21 +138,6 @@ class TacticalStartManager(private val app: OsmandApplication) {
         _remainingSeconds.value = durationSeconds
     }
 
-    private fun triggerHapticCountdown(durationMs: Long = 100L) {
-        try {
-            val vibrator = app.getSystemService(android.os.Vibrator::class.java)
-            if (vibrator != null && vibrator.hasVibrator()) {
-                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-                    vibrator.vibrate(android.os.VibrationEffect.createOneShot(durationMs, android.os.VibrationEffect.DEFAULT_AMPLITUDE))
-                } else {
-                    @Suppress("DEPRECATION")
-                    vibrator.vibrate(durationMs)
-                }
-            }
-        } catch (_: Exception) {
-        }
-    }
-
     private fun checkAudioMilestones(sec: Double) {
         val currentSecInt = sec.roundToInt()
         if (currentSecInt == lastAnnouncedSecond) return
@@ -161,32 +147,26 @@ class TacticalStartManager(private val app: OsmandApplication) {
             300, 240, 180, 120 -> {
                 val mins = currentSecInt / 60
                 arbiter.dispatchAlarm(AlarmType.RACE_START_COUNTDOWN, voiceText = "$mins minutes")
-                triggerHapticCountdown(100L)
                 lastAnnouncedSecond = currentSecInt
             }
             60 -> {
                 arbiter.dispatchAlarm(AlarmType.RACE_START_COUNTDOWN, voiceText = "1 minute to start")
-                triggerHapticCountdown(200L)
                 lastAnnouncedSecond = currentSecInt
             }
             30 -> {
                 arbiter.dispatchAlarm(AlarmType.RACE_START_COUNTDOWN, voiceText = "30 seconds")
-                triggerHapticCountdown(200L)
                 lastAnnouncedSecond = currentSecInt
             }
             10 -> {
                 arbiter.dispatchAlarm(AlarmType.RACE_START_COUNTDOWN, voiceText = "10")
-                triggerHapticCountdown(150L)
                 lastAnnouncedSecond = currentSecInt
             }
             5, 4, 3, 2, 1 -> {
                 arbiter.dispatchAlarm(AlarmType.RACE_START_COUNTDOWN, voiceText = "$currentSecInt")
-                triggerHapticCountdown(80L)
                 lastAnnouncedSecond = currentSecInt
             }
             0 -> {
                 arbiter.dispatchAlarm(AlarmType.RACE_START_COUNTDOWN, voiceText = "GUN! START!")
-                triggerHapticCountdown(500L)
                 lastAnnouncedSecond = currentSecInt
             }
         }
@@ -206,9 +186,9 @@ class TacticalStartManager(private val app: OsmandApplication) {
         val b1p = KMapUtils.getBearing(p1.first, p1.second, lat, lon)
         val d1p = KMapUtils.getDistance(p1.first, p1.second, lat, lon)
         
-        val angle = b1p - b12
+        val angle = Math.toRadians(b1p - b12)
         val xtd = d1p * sin(angle)
-        val atd = d1p * cos(angle)
+        val atd = d1p * Math.cos(angle)
         
         return when {
             atd < 0 -> KMapUtils.getDistance(lat, lon, p1.first, p1.second)
@@ -227,7 +207,7 @@ class TacticalStartManager(private val app: OsmandApplication) {
         val state = NauticalPlugin.engine?.getCurrentState() ?: return null
         val twd = state.windDirectionTrue?.let { Math.toDegrees(it) } ?: return null
         
-        val lineBearing = KMapUtils.getBearing(p1.first, p1.second, p2.first, p2.second).toDegrees()
+        val lineBearing = KMapUtils.getBearing(p1.first, p1.second, p2.first, p2.second)
         val perpendicular = (lineBearing + 90 + 360) % 360
         
         var bias = perpendicular - twd
@@ -272,7 +252,7 @@ class TacticalStartManager(private val app: OsmandApplication) {
         
         val p1 = portPin ?: return null
         val p2 = starboardPin ?: return null
-        val lineBearing = KMapUtils.getBearing(p1.first, p1.second, p2.first, p2.second).toDegrees()
+        val lineBearing = KMapUtils.getBearing(p1.first, p1.second, p2.first, p2.second)
         val linePerp = (lineBearing + 90 + 360) % 360
         
         val vPerp = sog * Math.cos(Math.toRadians(cog - linePerp))

@@ -19,33 +19,23 @@ import kotlin.time.Duration.Companion.seconds
 import java.util.Calendar
 
 enum class AlarmType(var priority: Int) {
-    // Tier 1 (Emergency)
     MOB(1),
-    DSC_DISTRESS(1),
-    AIS_SART(1),
-
-    // Tier 2 (Critical Collision & Grounding)
-    COLLISION_DANGER(2),
-    ANCHOR_DRIFT(2),
-
-    // Tier 3 (Safety of Navigation & Vessel Watchdog)
+    DSC_DISTRESS(2),
+    AIS_SART(2),
     SOLO_WATCHDOG(3),
-    MAP_HAZARD(3),
-    SHALLOW_WATER(3),
     ACTUATOR_OVERLOAD(4),
-
-    // Tier 4 (Tactical & Routing)
-    XTE_NAVIGATION(5),
-    WAYPOINT_ARRIVAL(6),
-    ROUTE_COMPLETED(6),
-    TACTICAL_TACK(7),
+    MAP_HAZARD(4),
+    ANCHOR_DRIFT(5),
+    XTE_NAVIGATION(6),
+    COLLISION_DANGER(6),
     TACTICAL_GYBE(7),
+    TACTICAL_TACK(7),
     RACE_START_COUNTDOWN(7),
-
-    // Tier 5 (Advisory)
     AUTOPILOT_COMMAND_REJECTED(8),
-    VHF_TRAFFIC(9),
-    TTS_INSTRUCTION(10)
+    WAYPOINT_ARRIVAL(8),
+    ROUTE_COMPLETED(8),
+    VHF_TRAFFIC(10),
+    TTS_INSTRUCTION(12)
 }
 
 
@@ -416,12 +406,6 @@ class NauticalAudioArbiter private constructor(private val app: OsmandApplicatio
                             delay(400.milliseconds)
                         }
                     }
-                    AlarmType.SHALLOW_WATER -> {
-                        repeat(4) {
-                            tg.startTone(ToneGenerator.TONE_CDMA_HIGH_L, 250)
-                            delay(300.milliseconds)
-                        }
-                    }
                     else -> {
                         tg.startTone(ToneGenerator.TONE_PROP_BEEP2, 200)
                     }
@@ -446,15 +430,7 @@ class NauticalAudioArbiter private constructor(private val app: OsmandApplicatio
         try {
             val maxVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_ALARM)
             when (type) {
-                AlarmType.MOB, AlarmType.DSC_DISTRESS, AlarmType.AIS_SART, AlarmType.COLLISION_DANGER -> {
-                    audioManager.setStreamVolume(AudioManager.STREAM_ALARM, maxVolume, 0)
-                }
-                AlarmType.ANCHOR_DRIFT, AlarmType.SHALLOW_WATER, AlarmType.SOLO_WATCHDOG -> {
-                    val currentVolume = audioManager.getStreamVolume(AudioManager.STREAM_ALARM)
-                    if (currentVolume < maxVolume * 0.85) {
-                        audioManager.setStreamVolume(AudioManager.STREAM_ALARM, (maxVolume * 0.85).toInt(), 0)
-                    }
-                }
+                AlarmType.MOB, AlarmType.DSC_DISTRESS, AlarmType.AIS_SART -> audioManager.setStreamVolume(AudioManager.STREAM_ALARM, maxVolume, 0)
                 AlarmType.ACTUATOR_OVERLOAD -> {
                     val currentVolume = audioManager.getStreamVolume(AudioManager.STREAM_ALARM)
                     if (currentVolume < maxVolume * 0.8) {
@@ -465,6 +441,12 @@ class NauticalAudioArbiter private constructor(private val app: OsmandApplicatio
                     val currentVolume = audioManager.getStreamVolume(AudioManager.STREAM_ALARM)
                     if (currentVolume < maxVolume * 0.6) {
                         audioManager.setStreamVolume(AudioManager.STREAM_ALARM, (maxVolume * 0.6).toInt(), 0)
+                    }
+                }
+                AlarmType.ANCHOR_DRIFT -> {
+                    val currentVolume = audioManager.getStreamVolume(AudioManager.STREAM_ALARM)
+                    if (currentVolume < maxVolume * 0.7) {
+                        audioManager.setStreamVolume(AudioManager.STREAM_ALARM, (maxVolume * 0.7).toInt(), 0)
                     }
                 }
                 else -> {}
@@ -502,9 +484,7 @@ class NauticalAudioArbiter private constructor(private val app: OsmandApplicatio
         }
     }
 
-    private fun isEmergency(type: AlarmType?): Boolean =
-        type == AlarmType.MOB || type == AlarmType.DSC_DISTRESS || type == AlarmType.AIS_SART ||
-        type == AlarmType.COLLISION_DANGER || type == AlarmType.ANCHOR_DRIFT || type == AlarmType.ACTUATOR_OVERLOAD
+    private fun isEmergency(type: AlarmType?): Boolean = type == AlarmType.MOB || type == AlarmType.DSC_DISTRESS || type == AlarmType.AIS_SART || type == AlarmType.ACTUATOR_OVERLOAD
 
     private fun startWatchBellMonitor() {
         arbiterScope.launch {
@@ -556,96 +536,6 @@ class NauticalAudioArbiter private constructor(private val app: OsmandApplicatio
                 try {
                     tg?.release()
                 } catch (_: Exception) {}
-            }
-        }
-    }
-
-    private var aisProximityJob: Job? = null
-    private var aisProximityUrgency = 0
-    private var hasPlayedAdvisoryChime = false
-
-    fun updateAisCollisionProximity(tcpaSeconds: Double, cpaNm: Double) {
-        if (isMuted(AlarmType.COLLISION_DANGER) || app.settings.NAUTICAL_AUDIO_MUTED.get()) {
-            stopAisProximityModulation()
-            return
-        }
-
-        // Urgency tiers:
-        // High Urgency: TCPA < 3 min (180s) and CPA < 0.3 NM -> 2-tone pulse every 1.5s
-        // Medium Urgency: TCPA < 6 min (360s) and CPA < 0.6 NM -> single chime pulse every 4.0s
-        // Advisory: TCPA < 12 min (720s) -> single alerting chime on entry
-        val isHighUrgency = tcpaSeconds < 180.0 && cpaNm < 0.3
-        val isMedUrgency = tcpaSeconds < 360.0 && cpaNm < 0.6
-        val isAdvisory = tcpaSeconds < 720.0
-
-        if (isHighUrgency) {
-            if (aisProximityJob?.isActive != true || aisProximityUrgency != 1) {
-                startAisProximityLoop(intervalMs = 1500L, urgency = 1)
-            }
-        } else if (isMedUrgency) {
-            if (aisProximityJob?.isActive != true || aisProximityUrgency != 2) {
-                startAisProximityLoop(intervalMs = 4000L, urgency = 2)
-            }
-        } else if (isAdvisory) {
-            stopAisProximityModulation(keepAdvisoryFlag = true)
-            if (!hasPlayedAdvisoryChime) {
-                hasPlayedAdvisoryChime = true
-                playSingleChime(ToneGenerator.TONE_PROP_ACK)
-            }
-        } else {
-            stopAisProximityModulation()
-        }
-    }
-
-    private fun startAisProximityLoop(intervalMs: Long, urgency: Int) {
-        aisProximityJob?.cancel()
-        aisProximityUrgency = urgency
-        aisProximityJob = arbiterScope.launch {
-            var tg: ToneGenerator? = null
-            try {
-                val isNight = NauticalPlugin.isNightVision(app)
-                val vol = if (isNight) 50 else 85
-                tg = ToneGenerator(AudioManager.STREAM_ALARM, vol)
-                while (isActive) {
-                    if (urgency == 1) {
-                        // High Urgency: Fast 2-tone pulse
-                        tg.startTone(ToneGenerator.TONE_DTMF_D, 120)
-                        delay(150.milliseconds)
-                        tg.startTone(ToneGenerator.TONE_DTMF_A, 120)
-                    } else {
-                        // Medium Urgency: Single chime pulse
-                        tg.startTone(ToneGenerator.TONE_PROP_BEEP, 200)
-                    }
-                    delay(intervalMs.milliseconds)
-                }
-            } catch (e: Exception) {
-                log.warn("NauticalAudioArbiter: AIS Proximity tone error", e)
-            } finally {
-                try { tg?.release() } catch (_: Exception) {}
-            }
-        }
-    }
-
-    fun stopAisProximityModulation(keepAdvisoryFlag: Boolean = false) {
-        aisProximityJob?.cancel()
-        aisProximityJob = null
-        aisProximityUrgency = 0
-        if (!keepAdvisoryFlag) {
-            hasPlayedAdvisoryChime = false
-        }
-    }
-
-    private fun playSingleChime(toneType: Int) {
-        arbiterScope.launch {
-            var tg: ToneGenerator? = null
-            try {
-                val isNight = NauticalPlugin.isNightVision(app)
-                val vol = if (isNight) 50 else 85
-                tg = ToneGenerator(AudioManager.STREAM_ALARM, vol)
-                tg.startTone(toneType, 200)
-            } catch (_: Exception) {
-            } finally {
-                try { tg?.release() } catch (_: Exception) {}
             }
         }
     }

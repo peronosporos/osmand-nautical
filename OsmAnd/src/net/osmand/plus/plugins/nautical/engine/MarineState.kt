@@ -259,14 +259,12 @@ data class MarineState(
     val autopilotHeadingSet: Double? = null, // Radians (rad)
     val autopilotWindAngleSet: Double? = null, // Radians (rad)
     val connectionStatus: ConnectionStatus = ConnectionStatus.DISCONNECTED,
-    val isInternalSensorFallback: Boolean = false,
 
     // Professional Autopilot Data
     val rudderAngle: Double? = null, // Radians (rad)
     val simulatedRudderAngle: Double? = null, // Radians (rad) (Fallback)
     val targetHeading: Double? = null, // Radians (rad)
     val targetWindAngleApparent: Double? = null, // Radians (rad)
-    val targetWindAngleTrue: Double? = null, // Radians (rad)
     val seaState: Int? = null, // Sensitivity (1-5)
     val isAutoSeaStateEnabled: Boolean = false,
 
@@ -304,10 +302,6 @@ data class MarineState(
     val waterSalinity: Double? = null, // Ratio 0-1
     val outsideTemperature: Double? = null, // Kelvin (K)
     val outsidePressure: Double? = null, // Pascal (Pa)
-    val atmosphericPressureHpa: Double? = null,
-    val barometricTendency3hHpa: Double? = null,
-    val barometricTendencySymbol: String? = null, // "+", "~", "-", "--"
-    val isSquallAdvisoryActive: Boolean = false,
     val outsideHumidity: Double? = null, // Ratio 0-1
     val outsideIlluminance: Double? = null, // Lux
     val airDewPoint: Double? = null, // Kelvin (K)
@@ -327,9 +321,6 @@ data class MarineState(
     val inverters: Map<String, Inverter> = emptyMap(),
     val riggingLoads: Map<String, Double> = emptyMap(),
     val watermakers: Map<String, Watermaker> = emptyMap(),
-    val batteryAutonomyHours: Double? = null,
-    val batteryHourlyConsumptionAh: Double? = null,
-    val solarYieldWatts: Double? = null,
 
     // Legacy Propulsion (for backward compatibility, use 'engines' map instead)
     @Deprecated("Use engines map with specific instance key", ReplaceWith("engines[\"0\"].revolutions"))
@@ -430,8 +421,6 @@ data class MarineState(
     val serverNextPoint: LatLon? = null,
     val vmgTimeToWaypoint: Double? = null, // Seconds
     val sogTimeToWaypoint: Double? = null, // Seconds
-    val activeWaypointPosition: LatLon? = null,
-    val activeWaypointName: String? = null,
     val rhumbLineBearing: Double? = null,
     val rhumbLineDistance: Double? = null,
     val isOffCourse: Boolean = false,
@@ -444,14 +433,11 @@ data class MarineState(
     val cpa: Double? = null, // Meters
     val tcpa: Double? = null, // Seconds
     val threatName: String? = null,
-    val threatLatitude: Double? = null,
-    val threatLongitude: Double? = null,
 
     // MOB State
     val isMobActive: Boolean = false,
     val mobLatitude: Double? = null,
     val mobLongitude: Double? = null,
-    val mobDatumPosition: LatLon? = null,
 
     val isDeadReckoning: Boolean = false,
 
@@ -502,12 +488,6 @@ data class MarineState(
     val timeOfRudderFix: Long = 0,
     val timeOfDriftFix: Long = 0
 ) : Serializable
-
-val MarineState.tidalCurrentSpeed: Double?
-    get() = drift
-
-val MarineState.tidalCurrentDirection: Double?
-    get() = setTrue
 
 val MarineState.hasValidFix: Boolean
     get() {
@@ -580,59 +560,6 @@ enum class ConnectionStatus {
     STALE,
     UNAUTHORIZED,
     DISCONNECTED
-}
-
-@kotlinx.serialization.Serializable
-enum class TelemetryChannel {
-    GPS_POSITION,
-    SOG_COG,
-    WIND,
-    DEPTH,
-    RUDDER,
-    HEADING,
-    ATTITUDE
-}
-
-fun MarineState.getLastUpdatedTimestampMs(channel: TelemetryChannel): Long {
-    return when (channel) {
-        TelemetryChannel.GPS_POSITION -> timeOfPositionFix
-        TelemetryChannel.SOG_COG -> timeOfSogFix
-        TelemetryChannel.WIND -> timeOfWindFix
-        TelemetryChannel.DEPTH -> timeOfDepthFix
-        TelemetryChannel.RUDDER -> timeOfRudderFix
-        TelemetryChannel.HEADING -> timeOfHeadingFix
-        TelemetryChannel.ATTITUDE -> timeOfAttitudeFix
-    }
-}
-
-fun MarineState.isChannelStale(channel: TelemetryChannel, timeoutMs: Long = 5000L, now: Long = System.currentTimeMillis()): Boolean {
-    val lastFix = getLastUpdatedTimestampMs(channel)
-    return lastFix == 0L || (now - lastFix) > timeoutMs
-}
-
-fun MarineState.isGpsStale(timeoutMs: Long = 5000L, now: Long = System.currentTimeMillis()): Boolean =
-    isChannelStale(TelemetryChannel.GPS_POSITION, timeoutMs, now)
-
-fun MarineState.isSogStale(timeoutMs: Long = 5000L, now: Long = System.currentTimeMillis()): Boolean =
-    isChannelStale(TelemetryChannel.SOG_COG, timeoutMs, now)
-
-fun MarineState.isWindStale(timeoutMs: Long = 5000L, now: Long = System.currentTimeMillis()): Boolean =
-    isChannelStale(TelemetryChannel.WIND, timeoutMs, now)
-
-fun MarineState.isDepthStale(timeoutMs: Long = 5000L, now: Long = System.currentTimeMillis()): Boolean =
-    isChannelStale(TelemetryChannel.DEPTH, timeoutMs, now)
-
-fun MarineState.isRudderStale(timeoutMs: Long = 5000L, now: Long = System.currentTimeMillis()): Boolean =
-    isChannelStale(TelemetryChannel.RUDDER, timeoutMs, now)
-
-fun MarineState.isHeadingStale(timeoutMs: Long = 5000L, now: Long = System.currentTimeMillis()): Boolean =
-    isChannelStale(TelemetryChannel.HEADING, timeoutMs, now)
-
-fun MarineState.isStale(timeoutMs: Long = 5000L, now: Long = System.currentTimeMillis()): Boolean {
-    return connectionStatus == ConnectionStatus.STALE ||
-           connectionStatus == ConnectionStatus.DISCONNECTED ||
-           lastMessageTime == 0L ||
-           (now - lastMessageTime) > timeoutMs
 }
 
 @kotlinx.serialization.Serializable

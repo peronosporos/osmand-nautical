@@ -51,7 +51,6 @@ class MarineAlarmBannerView @JvmOverloads constructor(
     private val titleTextView: TextView
     private val messageTextView: TextView
     private val snoozeButton: TextView
-    private val ackButton: TextView
     private val focusButton: TextView
     private val closeButton: ImageView
 
@@ -172,30 +171,25 @@ class MarineAlarmBannerView @JvmOverloads constructor(
         textCol.addView(messageTextView)
         topRow.addView(textCol)
 
-        // Close / Dismiss X icon (48dp x 48dp touch target)
+        // Close / Dismiss X icon
         closeButton = ImageView(context).apply {
-            val size = (48f * density).toInt()
-            val pad = (12f * density).toInt()
+            val size = (24f * density).toInt()
             layoutParams = LinearLayout.LayoutParams(size, size).apply {
-                leftMargin = (4f * density).toInt()
+                leftMargin = (6f * density).toInt()
             }
-            setPadding(pad, pad, pad, pad)
             setImageResource(R.drawable.ic_action_remove_dark)
             setColorFilter(0xCCFFFFFF.toInt())
-            background = RippleDrawable(ColorStateList.valueOf(0x44FFFFFF), null, null)
-            contentDescription = "Dismiss Banner"
             setOnClickListener {
-                it.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
                 val key = currentAlarm?.key ?: "alarm"
                 val apm = alarmPriorityManager ?: NauticalPlugin.getInstance()?.alarmPriorityManager
-                apm?.acknowledgeAlarm(key)
+                apm?.snoozeAlarm(key, 300_000L)
                 hideBanner()
             }
         }
         topRow.addView(closeButton)
         cardLayout.addView(topRow)
 
-        // Bottom Action Buttons Row: [Focus on Map] [SNOOZE (2m)] [ACKNOWLEDGE]
+        // Bottom Action Buttons Row: [Snooze 5m] [Focus on Map]
         val buttonRow = LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.END or Gravity.CENTER_VERTICAL
@@ -207,7 +201,34 @@ class MarineAlarmBannerView @JvmOverloads constructor(
             }
         }
 
-        // Focus on Map Button (48dp minimum touch target)
+        // Snooze 5m Button
+        snoozeButton = TextView(context).apply {
+            text = "Snooze 5m"
+            setTextColor(Color.WHITE)
+            textSize = 12f
+            typeface = android.graphics.Typeface.DEFAULT_BOLD
+            val padH = (12f * density).toInt()
+            val padV = (6f * density).toInt()
+            setPadding(padH, padV, padH, padV)
+
+            val btnBg = GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                cornerRadius = 6f * density
+                setColor(0x44000000)
+                setStroke((1.5f * density).toInt(), 0xAAFFFFFF.toInt())
+            }
+            background = RippleDrawable(ColorStateList.valueOf(0x44FFFFFF), btnBg, null)
+
+            setOnClickListener {
+                val key = currentAlarm?.key ?: SignalKPaths.NOTIFICATIONS_COLLISION_RISK
+                val apm = alarmPriorityManager ?: NauticalPlugin.getInstance()?.alarmPriorityManager
+                apm?.snoozeAlarm(key, 300_000L)
+                hideBanner()
+            }
+        }
+        buttonRow.addView(snoozeButton)
+
+        // Focus on Map Button
         focusButton = TextView(context).apply {
             text = context.getString(R.string.nautical_focus_on_map).let { base ->
                 if (base.isNotEmpty() && !base.startsWith("nautical_")) base else "Focus on Map"
@@ -215,10 +236,8 @@ class MarineAlarmBannerView @JvmOverloads constructor(
             setTextColor(0xFF1E0000.toInt())
             textSize = 12f
             typeface = android.graphics.Typeface.DEFAULT_BOLD
-            gravity = Gravity.CENTER
-            minHeight = (48f * density).toInt()
             val padH = (12f * density).toInt()
-            val padV = (8f * density).toInt()
+            val padV = (6f * density).toInt()
             setPadding(padH, padV, padH, padV)
 
             val btnBg = GradientDrawable().apply {
@@ -232,12 +251,11 @@ class MarineAlarmBannerView @JvmOverloads constructor(
                 LinearLayout.LayoutParams.WRAP_CONTENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
             ).apply {
-                marginEnd = (6f * density).toInt()
+                leftMargin = (8f * density).toInt()
             }
             layoutParams = lp
 
             setOnClickListener {
-                it.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
                 val loc = currentLocation ?: currentAlarm?.location
                 if (loc != null && MarineStateConstants.isValidLat(loc.latitude) && MarineStateConstants.isValidLon(loc.longitude)) {
                     val mapActivity = findMapActivity()
@@ -252,72 +270,6 @@ class MarineAlarmBannerView @JvmOverloads constructor(
             }
         }
         buttonRow.addView(focusButton)
-
-        // SNOOZE (2m) Button (48dp minimum touch target)
-        snoozeButton = TextView(context).apply {
-            text = "SNOOZE (2m)"
-            setTextColor(Color.WHITE)
-            textSize = 12f
-            typeface = android.graphics.Typeface.DEFAULT_BOLD
-            gravity = Gravity.CENTER
-            minHeight = (48f * density).toInt()
-            val padH = (12f * density).toInt()
-            val padV = (8f * density).toInt()
-            setPadding(padH, padV, padH, padV)
-
-            val btnBg = GradientDrawable().apply {
-                shape = GradientDrawable.RECTANGLE
-                cornerRadius = 6f * density
-                setColor(0x44000000)
-                setStroke((1.5f * density).toInt(), 0xAAFFFFFF.toInt())
-            }
-            background = RippleDrawable(ColorStateList.valueOf(0x44FFFFFF), btnBg, null)
-            val lp = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            ).apply {
-                marginEnd = (6f * density).toInt()
-            }
-            layoutParams = lp
-
-            setOnClickListener {
-                it.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
-                val key = currentAlarm?.key ?: SignalKPaths.NOTIFICATIONS_COLLISION_RISK
-                val apm = alarmPriorityManager ?: NauticalPlugin.getInstance()?.alarmPriorityManager
-                apm?.snoozeAudioOnly(key, 120_000L)
-            }
-        }
-        buttonRow.addView(snoozeButton)
-
-        // ACKNOWLEDGE Button (48dp minimum touch target)
-        ackButton = TextView(context).apply {
-            text = "ACKNOWLEDGE"
-            setTextColor(Color.WHITE)
-            textSize = 12f
-            typeface = android.graphics.Typeface.DEFAULT_BOLD
-            gravity = Gravity.CENTER
-            minHeight = (48f * density).toInt()
-            val padH = (12f * density).toInt()
-            val padV = (8f * density).toInt()
-            setPadding(padH, padV, padH, padV)
-
-            val btnBg = GradientDrawable().apply {
-                shape = GradientDrawable.RECTANGLE
-                cornerRadius = 6f * density
-                setColor(0xEE424242.toInt())
-                setStroke((1.5f * density).toInt(), Color.WHITE)
-            }
-            background = RippleDrawable(ColorStateList.valueOf(0x44FFFFFF), btnBg, null)
-
-            setOnClickListener {
-                it.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
-                val key = currentAlarm?.key ?: SignalKPaths.NOTIFICATIONS_COLLISION_RISK
-                val apm = alarmPriorityManager ?: NauticalPlugin.getInstance()?.alarmPriorityManager
-                apm?.acknowledgeAlarm(key)
-                hideBanner()
-            }
-        }
-        buttonRow.addView(ackButton)
         cardLayout.addView(buttonRow)
 
         addView(cardLayout)
@@ -565,34 +517,6 @@ class MarineAlarmBannerView @JvmOverloads constructor(
             titleTextView.setTextColor(0xFFFF1744.toInt())
             messageTextView.setTextColor(0xFFFF8A80.toInt())
             iconView.setColorFilter(0xFFFF1744.toInt())
-
-            val btnBgSnooze = GradientDrawable().apply {
-                this.shape = GradientDrawable.RECTANGLE
-                cornerRadius = 6f * density
-                setColor(0x33120000.toInt())
-                setStroke((1.5f * density).toInt(), 0xFFFF1744.toInt())
-            }
-            snoozeButton.background = RippleDrawable(ColorStateList.valueOf(0x44FF1744), btnBgSnooze, null)
-            snoozeButton.setTextColor(0xFFFF1744.toInt())
-
-            val btnBgAck = GradientDrawable().apply {
-                this.shape = GradientDrawable.RECTANGLE
-                cornerRadius = 6f * density
-                setColor(0xEE8B0000.toInt())
-                setStroke((1.5f * density).toInt(), 0xFFFF1744.toInt())
-            }
-            ackButton.background = RippleDrawable(ColorStateList.valueOf(0x44FF1744), btnBgAck, null)
-            ackButton.setTextColor(0xFFFF1744.toInt())
-
-            val btnBgFocus = GradientDrawable().apply {
-                this.shape = GradientDrawable.RECTANGLE
-                cornerRadius = 6f * density
-                setColor(0x33120000.toInt())
-                setStroke((1.5f * density).toInt(), 0xFFFF1744.toInt())
-            }
-            focusButton.background = RippleDrawable(ColorStateList.valueOf(0x44FF1744), btnBgFocus, null)
-            focusButton.setTextColor(0xFFFF1744.toInt())
-            closeButton.setColorFilter(0xFFFF1744.toInt())
         } else {
             val shape = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
@@ -604,34 +528,6 @@ class MarineAlarmBannerView @JvmOverloads constructor(
             titleTextView.setTextColor(0xFFFFEB3B.toInt())
             messageTextView.setTextColor(Color.WHITE)
             iconView.setColorFilter(0xFFFFEB3B.toInt())
-
-            val btnBgSnooze = GradientDrawable().apply {
-                this.shape = GradientDrawable.RECTANGLE
-                cornerRadius = 6f * density
-                setColor(0x44000000.toInt())
-                setStroke((1.5f * density).toInt(), 0xAAFFFFFF.toInt())
-            }
-            snoozeButton.background = RippleDrawable(ColorStateList.valueOf(0x44FFFFFF), btnBgSnooze, null)
-            snoozeButton.setTextColor(Color.WHITE)
-
-            val btnBgAck = GradientDrawable().apply {
-                this.shape = GradientDrawable.RECTANGLE
-                cornerRadius = 6f * density
-                setColor(0xEE424242.toInt())
-                setStroke((1.5f * density).toInt(), Color.WHITE)
-            }
-            ackButton.background = RippleDrawable(ColorStateList.valueOf(0x44FFFFFF), btnBgAck, null)
-            ackButton.setTextColor(Color.WHITE)
-
-            val btnBgFocus = GradientDrawable().apply {
-                this.shape = GradientDrawable.RECTANGLE
-                cornerRadius = 6f * density
-                setColor(Color.WHITE)
-                setStroke((1.5f * density).toInt(), Color.WHITE)
-            }
-            focusButton.background = RippleDrawable(ColorStateList.valueOf(0x44B71C1C), btnBgFocus, null)
-            focusButton.setTextColor(0xFF1E0000.toInt())
-            closeButton.setColorFilter(0xCCFFFFFF.toInt())
         }
     }
 

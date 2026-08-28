@@ -36,7 +36,6 @@ import net.osmand.shared.util.KMapUtils
 import net.osmand.plus.plugins.nautical.utils.TemporalUtils
 import net.osmand.plus.settings.enums.XteDirection
 import net.osmand.shared.aistracker.AisObject
-import net.osmand.shared.extensions.toDegrees
 import java.util.Locale
 import java.util.concurrent.CopyOnWriteArraySet
 import kotlin.math.abs
@@ -522,6 +521,10 @@ class SignalKEngine(
         routeTracker.clearRoute()
     }
 
+    fun isAuthenticated(): Boolean = sessionManager.isAuthenticated()
+
+    fun triggerAuthError() = sessionManager.triggerAuthError()
+
     fun sendDelta(path: String, value: Any) = sessionManager.sendDelta(path, value)
 
     fun dispatchCommand(command: String) = sessionManager.dispatchCommand(command) { switchPath, state ->
@@ -701,7 +704,7 @@ class SignalKEngine(
         if (targetPoint != null && lat != null && lon != null) {
             val dtwMeters = finalState.distanceToWaypoint ?: KMapUtils.getDistance(lat, lon, targetPoint.latitude, targetPoint.longitude)
             val dtwNm = SignalKUnitConverter.metersToNm(dtwMeters)
-            val bearingDeg = (KMapUtils.getBearing(lat, lon, targetPoint.latitude, targetPoint.longitude).toDegrees() + 360.0) % 360.0
+            val bearingDeg = KMapUtils.getBearing(lat, lon, targetPoint.latitude, targetPoint.longitude)
             val xteMeters = finalState.xteMeters ?: abs(finalState.crossTrackError ?: 0.0)
             val xteNm = SignalKUnitConverter.metersToNm(xteMeters)
             val isSteerLeft = finalState.xteDirection == XteDirection.STARBOARD
@@ -756,7 +759,7 @@ class SignalKEngine(
                 if (next != null && lat != null && lon != null) {
                     val distMeters = KMapUtils.getDistance(lat, lon, next.first, next.second)
                     val distNm = SignalKUnitConverter.metersToNm(distMeters)
-                    val bearing = (KMapUtils.getBearing(lat, lon, next.first, next.second).toDegrees() + 360.0) % 360.0
+                    val bearing = KMapUtils.getBearing(lat, lon, next.first, next.second)
                     nmeaBroadcaster.updateNavigation(
                         hasActiveWaypoint = true,
                         xteNm = 0.0,

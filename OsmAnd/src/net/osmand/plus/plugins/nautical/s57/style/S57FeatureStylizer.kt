@@ -1,41 +1,11 @@
 package net.osmand.plus.plugins.nautical.s57.style
 
 import net.osmand.plus.plugins.nautical.s57.S57Object
-import kotlin.math.roundToInt
 
 /**
  * Translates S-57 objects into visual style rules based on attributes and safety parameters.
  */
 object S57FeatureStylizer {
-
-    enum class DepthUnit(val factor: Double, val suffix: String) {
-        METERS(1.0, "m"),
-        FEET(3.28084, "ft"),
-        FATHOMS(0.546807, "fm");
-
-        companion object {
-            fun fromIndex(index: Int): DepthUnit {
-                return when (index) {
-                    1 -> FEET
-                    2 -> FATHOMS
-                    else -> METERS
-                }
-            }
-        }
-    }
-
-    fun convertDepth(depthMeters: Double, unit: DepthUnit): Double {
-        return depthMeters * unit.factor
-    }
-
-    fun formatSounding(depthMeters: Double, unit: DepthUnit, tideOffsetMeters: Double = 0.0): Pair<String, String> {
-        val effectiveDepth = (depthMeters + tideOffsetMeters).coerceAtLeast(0.0)
-        val converted = convertDepth(effectiveDepth, unit)
-        val intVal = converted.toInt()
-        val intPart = intVal.toString()
-        val fracDigit = ((converted - intVal) * 10.0).roundToInt().coerceIn(0, 9).toString()
-        return Pair(intPart, fracDigit)
-    }
 
     fun getStyleForFeature(feature: S57Object, safetyContour: Double, shallowContour: Double): S57StyleRule {
         return when (feature.acronym) {

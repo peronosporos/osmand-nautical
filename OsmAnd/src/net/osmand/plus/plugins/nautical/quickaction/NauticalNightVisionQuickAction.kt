@@ -30,13 +30,9 @@ class NauticalNightVisionQuickAction : QuickAction {
         if (mapActivity.isFinishing || mapActivity.isDestroyed) {
             return
         }
-        mapActivity.layout?.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
         val plugin = NauticalPlugin.getInstance()
         if (plugin != null) {
             plugin.toggleNightVision(mapActivity)
-            mapActivity.mapView?.refreshMap()
-            mapActivity.updateStatusBarColor()
-            plugin.requestRefresh()
         } else {
             mapActivity.app.showToastMessage(R.string.nautical_plugin_inactive)
         }

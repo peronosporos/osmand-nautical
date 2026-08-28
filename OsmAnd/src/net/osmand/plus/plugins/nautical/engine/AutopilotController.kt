@@ -372,70 +372,6 @@ class AutopilotController(
         }
     }
 
-    enum class WindDampingSensitivity(val alpha: Double) {
-        LOW(0.35),
-        MEDIUM(0.20),
-        HIGH(0.10)
-    }
-
-    private var smoothedAwaRad: Double? = null
-    private var lastDispatchedAwaRad: Double? = null
-    private val DEADBAND_RAD = Math.toRadians(2.0)
-    private var currentDampingSensitivity: WindDampingSensitivity = WindDampingSensitivity.MEDIUM
-
-    fun setDampingSensitivity(sensitivity: WindDampingSensitivity) {
-        currentDampingSensitivity = sensitivity
-        val sensValue = when (sensitivity) {
-            WindDampingSensitivity.LOW -> 1.0
-            WindDampingSensitivity.MEDIUM -> 2.0
-            WindDampingSensitivity.HIGH -> 3.0
-        }
-        setFilterSensitivity(sensValue)
-    }
-
-    fun applyWindSteerDamping(rawAwaRad: Double, rollRateRadPerSec: Double? = null): Double? {
-        val baseAlpha = currentDampingSensitivity.alpha
-        // Adaptive alpha: In choppy seas/high roll rate, increase damping (lower alpha)
-        val adaptiveAlpha = if (rollRateRadPerSec != null && abs(rollRateRadPerSec) > 0.05) {
-            (baseAlpha * 0.7).coerceAtLeast(0.05)
-        } else {
-            baseAlpha
-        }
-
-        val currentSmoothed = smoothedAwaRad
-        val newSmoothed = if (currentSmoothed == null) {
-            rawAwaRad
-        } else {
-            var diff = rawAwaRad - currentSmoothed
-            while (diff > PI) diff -= 2 * PI
-            while (diff < -PI) diff += 2 * PI
-            currentSmoothed + adaptiveAlpha * diff
-        }
-        smoothedAwaRad = newSmoothed
-
-        val lastSent = lastDispatchedAwaRad
-        if (lastSent == null) {
-            lastDispatchedAwaRad = newSmoothed
-            return newSmoothed
-        }
-
-        var delta = newSmoothed - lastSent
-        while (delta > PI) delta -= 2 * PI
-        while (delta < -PI) delta += 2 * PI
-
-        if (abs(delta) >= DEADBAND_RAD) {
-            lastDispatchedAwaRad = newSmoothed
-            return newSmoothed
-        }
-
-        return null // Suppressed by deadband hysteresis
-    }
-
-    fun resetWindSteerFilter() {
-        smoothedAwaRad = null
-        lastDispatchedAwaRad = null
-    }
-
     fun setTargetWindAngle(angleRad: Double) {
         val now = System.currentTimeMillis()
         if ((now - lastServoCommandTime) < servoRateLimitMs) {
@@ -445,14 +381,6 @@ class AutopilotController(
         lastServoCommandTime = now
 
         val rad = if (abs(angleRad) > 2 * PI) Math.toRadians(angleRad) else angleRad
-
-        if (checkGybePreventionLock(rad, isTrueWind = false)) {
-            return
-        }
-
-        smoothedAwaRad = rad
-        lastDispatchedAwaRad = rad
-
         val url = buildAutopilotUrl("target/windAngleApparent") ?: buildAutopilotUrl("target")
         if (url == null) {
             showPersistentError(R.string.nautical_autopilot_not_connected)
@@ -462,48 +390,6 @@ class AutopilotController(
         engine?.updatePendingCommand(targetHeading = null, mode = "wind", path = "steering.autopilot.targetWindAngleApparent")
         val payload = """{ "value": $rad }"""
         executePut(url, payload, null, showToast = false)
-    }
-
-    private var isGybeUnlocked = false
-
-    private fun checkGybePreventionLock(targetRad: Double, isTrueWind: Boolean): Boolean {
-        if (isGybeUnlocked) {
-            isGybeUnlocked = false
-            return false
-        }
-        val targetDeg = abs(Math.toDegrees(targetRad))
-        val state = NauticalPlugin.engine?.getCurrentState()
-        val currentTwaDeg = abs(Math.toDegrees(state?.trueWindAngle ?: state?.windDirectionApparent ?: 0.0))
-        
-        // Running downwind (TWA > 130°) and target moves within 25° of dead downwind (targetDeg > 155°)
-        if ((currentTwaDeg > 130.0 || targetDeg > 130.0) && targetDeg > 155.0) {
-            log.warn("Autopilot: Accidental Gybe Prevention Lock engaged for target ${targetDeg}°")
-            try {
-                NauticalAudioArbiter.getInstance(app).dispatchAlarm(AlarmType.AUTOPILOT_COMMAND_REJECTED, loop = false)
-            } catch (e: Exception) {
-                log.error("Failed to play gybe warning sound: ${e.message}")
-            }
-            NauticalPlugin.hudManager?.get()?.showBanner(
-                "GYBE PREVENTED - CONFIRM TO GYBE",
-                10000L,
-                label = "CONFIRM GYBE",
-                isWarning = true,
-                onConfirm = {
-                    confirmGybeAndExecute(targetRad, isTrueWind)
-                }
-            )
-            return true // Block command
-        }
-        return false
-    }
-
-    fun confirmGybeAndExecute(targetRad: Double, isTrueWind: Boolean) {
-        isGybeUnlocked = true
-        if (isTrueWind) {
-            setTargetTrueWindAngle(Math.toDegrees(targetRad))
-        } else {
-            setTargetWindAngle(targetRad)
-        }
     }
 
     fun setRudderAngle(radians: Double) {
@@ -532,10 +418,6 @@ class AutopilotController(
         lastServoCommandTime = now
 
         val rad = Math.toRadians(degrees)
-        if (checkGybePreventionLock(rad, isTrueWind = true)) {
-            return
-        }
-
         val url = buildAutopilotUrl("target/windAngleTrue")
         if (url == null) {
             showPersistentError(R.string.nautical_autopilot_not_connected)
@@ -543,168 +425,6 @@ class AutopilotController(
         }
         val payload = """{ "value": $rad }"""
         executePut(url, payload, null, showToast = false)
-    }
-
-    data class DodgeState(
-        val isDodging: Boolean = false,
-        val preDodgeHeadingRad: Double? = null,
-        val preDodgeWindAngleRad: Double? = null,
-        val preDodgeMode: String = "auto",
-        val dodgeExpiryTimeMs: Long = 0L,
-        val remainingSeconds: Int = 0
-    )
-
-    val leewayCompensationDegFlow = kotlinx.coroutines.flow.MutableStateFlow(0.0)
-
-    fun computeLeewayFeedforward(state: MarineState?): Double {
-        if (state == null) return 0.0
-        val twa = state.trueWindAngle ?: calculateTwaFallback(state) ?: return 0.0
-        val stw = if (state.isStwUnreliable) state.speedOverGround ?: 0.0 else (state.speedThroughWater ?: state.speedOverGround ?: 0.0)
-        val kLeeway = app.settings.getCustomRenderProperty("kLeeway", "5.0").get().toDoubleOrNull() ?: 5.0
-        val leewayDeg = (kLeeway * (kotlin.math.sin(twa) / (stw * stw + 0.1))).coerceIn(-20.0, 20.0)
-        leewayCompensationDegFlow.value = leewayDeg
-        return leewayDeg
-    }
-
-    fun getCompensatedTrackHeading(baseBearingDeg: Double, state: MarineState?): Double {
-        val leewayDeg = computeLeewayFeedforward(state)
-        return (baseBearingDeg - leewayDeg + 360.0) % 360.0
-    }
-
-    private val _dodgeStateFlow = kotlinx.coroutines.flow.MutableStateFlow(DodgeState())
-    val dodgeStateFlow: kotlinx.coroutines.flow.StateFlow<DodgeState> = _dodgeStateFlow
-
-    private var dodgeTimerJob: Job? = null
-
-    fun executeTacticalDodge(deltaDegrees: Double) {
-        val state = NauticalPlugin.engine?.getCurrentState() ?: return
-        val currentHeading = state.targetHeading ?: state.headingTrue ?: 0.0
-        val currentWindAngle = state.targetWindAngleApparent ?: state.windDirectionApparent
-        val mode = state.autopilotState
-
-        val expiry = System.currentTimeMillis() + 60000L
-        _dodgeStateFlow.value = DodgeState(
-            isDodging = true,
-            preDodgeHeadingRad = currentHeading,
-            preDodgeWindAngleRad = currentWindAngle,
-            preDodgeMode = mode,
-            dodgeExpiryTimeMs = expiry,
-            remainingSeconds = 60
-        )
-
-        stepTargetHeading(deltaDegrees, "Tactical Dodge")
-
-        dodgeTimerJob?.cancel()
-        dodgeTimerJob = controllerScope.launch {
-            for (sec in 60 downTo 1) {
-                _dodgeStateFlow.value = _dodgeStateFlow.value.copy(remainingSeconds = sec)
-                delay(1000L)
-            }
-            resumeCourseAfterDodge()
-        }
-    }
-
-    fun resumeCourseAfterDodge() {
-        dodgeTimerJob?.cancel()
-        dodgeTimerJob = null
-        val dodge = _dodgeStateFlow.value
-        if (!dodge.isDodging) return
-
-        val preHeading = dodge.preDodgeHeadingRad
-        val preWind = dodge.preDodgeWindAngleRad
-        val preMode = dodge.preDodgeMode
-
-        _dodgeStateFlow.value = DodgeState(isDodging = false)
-
-        if (preMode.equals("wind", ignoreCase = true) && preWind != null) {
-            setTargetWindAngle(Math.toDegrees(preWind))
-        } else if (preHeading != null) {
-            setTargetHeading(Math.toDegrees(preHeading))
-        }
-        NauticalPlugin.hudManager?.get()?.showBanner("Resumed Original Course", 3000L, isWarning = false)
-    }
-
-    data class AutoTackState(
-        val isTacking: Boolean = false,
-        val isCountdown: Boolean = false,
-        val countdownSeconds: Int = 0,
-        val originalHeadingDeg: Double = 0.0,
-        val targetTwaDeg: Double = 0.0,
-        val targetHeadingDeg: Double = 0.0,
-        val direction: String = "PORT"
-    )
-
-    private val _autoTackStateFlow = kotlinx.coroutines.flow.MutableStateFlow(AutoTackState())
-    val autoTackStateFlow: kotlinx.coroutines.flow.StateFlow<AutoTackState> = _autoTackStateFlow
-
-    private var tackJob: Job? = null
-
-    fun initiateAutoTack(direction: String) {
-        val state = NauticalPlugin.engine?.getCurrentState() ?: return
-        val currentHeadingDeg = Math.toDegrees(state.headingTrue ?: state.targetHeading ?: 0.0)
-        val currentTwaRad = state.trueWindAngle ?: state.windDirectionApparent ?: Math.toRadians(45.0)
-        val currentTwaDeg = Math.toDegrees(currentTwaRad)
-
-        val twsMs = state.windSpeedTrue ?: state.windSpeedApparent ?: 5.0
-        val polarDiagram = NauticalPlugin.getInstance()?.polarDiagram
-        val optTwa = polarDiagram?.getOptimalUpwindVmg(twsMs)?.targetTwaDeg ?: 45.0
-        val finalTwa = if (direction == "PORT") -optTwa else optTwa
-
-        val deltaTurnDeg = if (direction == "PORT") -kotlin.math.abs(currentTwaDeg - finalTwa).coerceAtLeast(60.0) else kotlin.math.abs(currentTwaDeg - finalTwa).coerceAtLeast(60.0)
-        val targetHeading = (currentHeadingDeg + deltaTurnDeg + 360.0) % 360.0
-
-        tackJob?.cancel()
-        tackJob = controllerScope.launch {
-            // 1. 5-second countdown warning with audible tone
-            for (sec in 5 downTo 1) {
-                _autoTackStateFlow.value = AutoTackState(
-                    isTacking = true,
-                    isCountdown = true,
-                    countdownSeconds = sec,
-                    originalHeadingDeg = currentHeadingDeg,
-                    targetTwaDeg = finalTwa,
-                    targetHeadingDeg = targetHeading,
-                    direction = direction
-                )
-                net.osmand.plus.plugins.nautical.audio.NauticalAudioArbiter.getInstance(app).dispatchAlarm(
-                    net.osmand.plus.plugins.nautical.audio.AlarmType.MANEUVER_TACTICAL,
-                    voiceText = "Tack in $sec"
-                )
-                delay(1000L)
-            }
-
-            _autoTackStateFlow.value = _autoTackStateFlow.value.copy(isCountdown = false)
-            NauticalPlugin.hudManager?.get()?.showBanner("Auto-Tacking $direction", 4000L, isWarning = false)
-
-            // 2. Controlled turn rate (3°/second) through the eye of the wind
-            val turnRateDegPerSec = 3.0
-            val totalTurnAngle = kotlin.math.abs(deltaTurnDeg)
-            val turnSteps = (totalTurnAngle / (turnRateDegPerSec * 0.5)).toInt().coerceAtLeast(5)
-            val stepAngle = deltaTurnDeg / turnSteps
-            var headingAcc = currentHeadingDeg
-
-            for (step in 1..turnSteps) {
-                headingAcc = (headingAcc + stepAngle + 360.0) % 360.0
-                setTargetHeading(headingAcc)
-                delay(500L)
-            }
-
-            // 3. Settle at mirrored target TWA
-            setTargetWindAngle(finalTwa)
-            _autoTackStateFlow.value = AutoTackState(isTacking = false)
-            NauticalPlugin.hudManager?.get()?.showBanner("Auto-Tack Complete: Settled on $direction tack", 4000L, isWarning = false)
-        }
-    }
-
-    fun abortAutoTack() {
-        tackJob?.cancel()
-        tackJob = null
-        val tackState = _autoTackStateFlow.value
-        _autoTackStateFlow.value = AutoTackState(isTacking = false)
-        if (tackState.isTacking) {
-            setTargetHeading(tackState.originalHeadingDeg)
-            NauticalPlugin.hudManager?.get()?.showBanner("Maneuver Aborted: Returning to ${tackState.originalHeadingDeg.toInt()}°", 4000L, isWarning = true)
-        }
     }
 
     fun buildVesselUrl(path: String): String? {
@@ -861,46 +581,6 @@ class AutopilotController(
         // Advanced Synergy: Sync pattern to server resources
         controllerScope.launch {
             engine.resourceManager.uploadActiveRouteToSignalK(app.getString(R.string.nautical_sar_pattern_name))
-        }
-    }
-
-    private var governedTurnJob: Job? = null
-    var maxRotDegPerSec: Double = 5.0
-
-    fun commandHeading(targetHeadingDeg: Double) {
-        val currentState = NauticalPlugin.engine?.getCurrentState()
-        val currentHeadingDeg = Math.toDegrees(currentState?.headingMagnetic ?: currentState?.headingTrue ?: 0.0)
-        val diffDeg = ((targetHeadingDeg - currentHeadingDeg + 540.0) % 360.0) - 180.0
-
-        if (kotlin.math.abs(diffDeg) > 20.0) {
-            governedTurnJob?.cancel()
-            governedTurnJob = controllerScope.launch {
-                val stepIntervalMs = 200L
-                val maxStepDeg = maxRotDegPerSec * (stepIntervalMs / 1000.0)
-                var remainingDiff = diffDeg
-                val dir = if (diffDeg > 0) 1.0 else -1.0
-                var currentCmd = currentHeadingDeg
-
-                while (kotlin.math.abs(remainingDiff) > 0.5 && isActive) {
-                    val liveState = NauticalPlugin.engine?.getCurrentState()
-                    val liveRotDegSec = liveState?.rateOfTurn?.let { kotlin.math.abs(Math.toDegrees(it)) } ?: 0.0
-
-                    val actualStep = if (liveRotDegSec > maxRotDegPerSec) {
-                        maxStepDeg * 0.4
-                    } else {
-                        maxStepDeg
-                    }
-
-                    val step = (actualStep * dir).coerceIn(-kotlin.math.abs(remainingDiff), kotlin.math.abs(remainingDiff))
-                    currentCmd += step
-                    remainingDiff -= step
-
-                    dispatchAdjustHeading(step, "ROT Governor")
-                    delay(stepIntervalMs)
-                }
-            }
-        } else {
-            adjustHeading(diffDeg)
         }
     }
 

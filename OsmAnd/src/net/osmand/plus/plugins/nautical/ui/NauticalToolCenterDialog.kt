@@ -70,7 +70,7 @@ class NauticalToolCenterDialog : BaseMaterialBottomSheetDialogFragment() {
                 NauticalElectricalDashboardBottomSheet.show(parentFragmentManager)
                 dismiss()
             },
-            ToolItem(getString(R.string.nautical_ais_targets_title), R.drawable.ic_action_motorboat) {
+            ToolItem(getString(R.string.nautical_ais_targets_title), R.drawable.mm_ais_vessel) {
                 val aisObjects = NauticalPlugin.getInstance()?.aisManager?.getAisObjects() ?: emptyList()
                 if (aisObjects.isNotEmpty()) {
                     NauticalTargetPicker.newInstance(aisObjects).show(parentFragmentManager, "ais_target_picker")

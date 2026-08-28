@@ -129,20 +129,26 @@ class DeadReckoningViewModel(
     }
 
     private fun calculateDrVector(telemetry: LivePerformanceData): Pair<DrVector, Double> {
-        val magVar = telemetry.magneticVariation ?: 0.0
         val headingRad = telemetry.headingTrue
-            ?: telemetry.headingMagnetic?.let { it + magVar }
+            ?: telemetry.headingMagnetic?.let { it + (telemetry.magneticVariation ?: 0.0) }
             ?: 0.0
 
         val stw = telemetry.speedThroughWater ?: telemetry.polarSpeed ?: 0.0
-        val twaRad = telemetry.windAngleTrueWater ?: telemetry.windAngleApparent ?: 0.0
-        val kLeeway = settings.NAUTICAL_LEEWAY_COEFFICIENT.get().toDouble()
 
-        val leewayRad = if (twaRad != 0.0 && stw > 0.05) {
-            val leewayDeg = (kLeeway * (sin(twaRad) / (stw.pow(2.0) + 0.1))).coerceIn(-15.0, 15.0)
+        val leewayRad = telemetry.leeway ?: if (telemetry.roll != null) {
+            net.osmand.plus.plugins.nautical.utils.LeewayCalculator.calculateLeewayRadians(
+                telemetry.roll,
+                stw,
+                settings.NAUTICAL_LEEWAY_COEFFICIENT.get()
+            )
+        } else if (telemetry.windAngleApparent != null && stw > 0.0) {
+            val k = settings.NAUTICAL_LEEWAY_COEFFICIENT.get().toDouble()
+            val awaDeg = Math.toDegrees(telemetry.windAngleApparent)
+            val stwKnots = stw * 1.94384
+            val leewayDeg = (k * (awaDeg / stwKnots.coerceAtLeast(0.5).pow(2.0))).coerceIn(-30.0, 30.0)
             Math.toRadians(leewayDeg)
         } else {
-            telemetry.leeway ?: 0.0
+            0.0
         }
 
         val driftMps = telemetry.drift ?: 0.0

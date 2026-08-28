@@ -10,16 +10,8 @@ import net.osmand.plus.settings.enums.CompassMode
 
 class NauticalWorkflowManager(private val app: OsmandApplication) {
 
-    enum class WorkflowMode {
-        PASSAGE,
-        DOCKING,
-        ANCHORED,
-        HEAVY_WEATHER
-    }
-
     private val screenTouchLockManager = ScreenTouchLockManager()
     private var previousAutoZoom: Boolean? = null
-    private var currentWorkflowMode: WorkflowMode = WorkflowMode.PASSAGE
 
     private val criticalWidgets = setOf(
         WidgetType.NAUTICAL_AWS,
@@ -54,115 +46,9 @@ class NauticalWorkflowManager(private val app: OsmandApplication) {
         WidgetType.NAUTICAL_MAG_VARIATION,
     )
 
-    private val anchoredSuppressedWidgets = setOf(
-        WidgetType.NAUTICAL_SOG,
-        WidgetType.NAUTICAL_STW,
-        WidgetType.NAUTICAL_COG,
-        WidgetType.NAUTICAL_XTE,
-        WidgetType.NAUTICAL_VMG,
-        WidgetType.NAUTICAL_DTW,
-        WidgetType.NAUTICAL_LOG,
-        WidgetType.NAUTICAL_TRIP_LOG,
-        WidgetType.NAUTICAL_ENGINE_RPM
-    )
-
-    private val dockingSuppressedWidgets = setOf(
-        WidgetType.NAUTICAL_VMG,
-        WidgetType.NAUTICAL_XTE,
-        WidgetType.NAUTICAL_DTW,
-        WidgetType.NAUTICAL_LOG,
-        WidgetType.NAUTICAL_TRIP_LOG
-    )
-
-    fun onVesselContextChanged(context: net.osmand.plus.settings.enums.VesselContext, activity: MapActivity?) {
-        val targetMode = when (context) {
-            net.osmand.plus.settings.enums.VesselContext.SAILING,
-            net.osmand.plus.settings.enums.VesselContext.MOTORING -> WorkflowMode.PASSAGE
-            net.osmand.plus.settings.enums.VesselContext.DOCKING,
-            net.osmand.plus.settings.enums.VesselContext.MOORED -> WorkflowMode.DOCKING
-            net.osmand.plus.settings.enums.VesselContext.ANCHORED -> WorkflowMode.ANCHORED
-            net.osmand.plus.settings.enums.VesselContext.EMERGENCY_HEAVE_TO -> WorkflowMode.HEAVY_WEATHER
-        }
-        onWorkflowModeChanged(targetMode, activity)
-    }
-
-    fun onWorkflowModeChanged(mode: WorkflowMode, activity: MapActivity?) {
-        val registry = app.osmandMap.mapLayers.mapWidgetRegistry
-        val appMode = app.settings.APPLICATION_MODE.get()
-
-        // 1. Recover from previous mode
-        when (currentWorkflowMode) {
-            WorkflowMode.HEAVY_WEATHER -> {
-                for (widgetType in nonCriticalWidgets) {
-                    registry.getWidgetInfoForType(widgetType).forEach { info: MapWidgetInfo ->
-                        registry.enableDisableWidgetForMode(appMode, info, null, null, false)
-                    }
-                }
-                for (widgetType in criticalWidgets) {
-                    registry.getWidgetInfoForType(widgetType).forEach { info: MapWidgetInfo ->
-                        (info.widget as? ISupportWidgetResizing)?.widgetSizePref?.resetToDefault()
-                    }
-                }
-                screenTouchLockManager.setTouchLockActive(active = false)
-                previousAutoZoom?.let {
-                    app.settings.AUTO_ZOOM_MAP.set(it)
-                    previousAutoZoom = null
-                }
-            }
-            WorkflowMode.ANCHORED -> {
-                for (widgetType in anchoredSuppressedWidgets) {
-                    registry.getWidgetInfoForType(widgetType).forEach { info: MapWidgetInfo ->
-                        registry.enableDisableWidgetForMode(appMode, info, null, null, false)
-                    }
-                }
-            }
-            WorkflowMode.DOCKING -> {
-                for (widgetType in dockingSuppressedWidgets) {
-                    registry.getWidgetInfoForType(widgetType).forEach { info: MapWidgetInfo ->
-                        registry.enableDisableWidgetForMode(appMode, info, null, null, false)
-                    }
-                }
-            }
-            WorkflowMode.PASSAGE -> {}
-        }
-
-        currentWorkflowMode = mode
-
-        // 2. Apply new mode suppressions
-        when (mode) {
-            WorkflowMode.HEAVY_WEATHER -> {
-                onHeavyWeatherModeChanged(true, activity)
-                return
-            }
-            WorkflowMode.ANCHORED -> {
-                for (widgetType in anchoredSuppressedWidgets) {
-                    registry.getWidgetInfoForType(widgetType).forEach { info: MapWidgetInfo ->
-                        registry.enableDisableWidgetForMode(appMode, info, false, null, false)
-                    }
-                }
-            }
-            WorkflowMode.DOCKING -> {
-                for (widgetType in dockingSuppressedWidgets) {
-                    registry.getWidgetInfoForType(widgetType).forEach { info: MapWidgetInfo ->
-                        registry.enableDisableWidgetForMode(appMode, info, false, null, false)
-                    }
-                }
-            }
-            WorkflowMode.PASSAGE -> {
-                // All restored cleanly
-            }
-        }
-
-        activity?.runOnUiThread {
-            app.osmandMap.mapLayers.mapInfoLayer.recreateControls()
-            activity.mapView.refreshMap()
-        }
-    }
-
     fun onHeavyWeatherModeChanged(enabled: Boolean, activity: MapActivity?) {
         val registry = app.osmandMap.mapLayers.mapWidgetRegistry
         val appMode = app.settings.APPLICATION_MODE.get()
-        currentWorkflowMode = if (enabled) WorkflowMode.HEAVY_WEATHER else WorkflowMode.PASSAGE
         
         if (enabled) {
             // 1. Suppress non-critical widgets

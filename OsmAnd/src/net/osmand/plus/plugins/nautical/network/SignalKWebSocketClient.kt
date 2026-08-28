@@ -22,7 +22,7 @@ class SignalKWebSocketClient(private val client: OkHttpClient) {
     private var isConnected = false
     private var reconnectAttempt = 0
     private var reconnectJob: Job? = null
-    private val reconnectCeilingMs = 30000L // 1s, 2s, 4s, 8s, 16s, up to 30s max
+    private val reconnectCeilingMs = 60000L
     private val reconnectBaseMs = 1000L
 
     var onConnectionFailure: (() -> Unit)? = null

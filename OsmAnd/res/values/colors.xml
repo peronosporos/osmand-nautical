@@ -23,8 +23,6 @@
 	<color name="text_color_tab_active_dark">#cccccc</color>
 	<color name="text_color_negative">#E71D36</color>
 	<color name="text_color_positive">#5baf3f</color>
-	<color name="color_alert">#E71D36</color>
-	<color name="bg_color_light">#f0f0f0</color>
 
 	<!-- Icon -->
 	<color name="icon_color_default_light">#727272</color>
@@ -651,13 +649,6 @@
 	<color name="nautical_status_bg_standby">#EEEEEE</color>
 	<color name="nautical_widget_background">#E6000000</color>
 
-	<!-- Nautical Night Vision Tokens -->
-	<color name="nautical_night_vision_bg">#EE120000</color>
-	<color name="nautical_night_vision_surface">#CC1A0000</color>
-	<color name="nautical_night_vision_stroke">#80B71C1C</color>
-	<color name="nautical_night_vision_primary">#FFFF1744</color>
-	<color name="nautical_night_vision_secondary">#FFFF5252</color>
-	<color name="nautical_night_vision_data">#FF8A80</color>
-	<color name="nautical_night_vision_muted">#80FF1744</color>
+
 
 </resources>

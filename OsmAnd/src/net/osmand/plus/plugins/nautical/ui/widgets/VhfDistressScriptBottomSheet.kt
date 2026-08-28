@@ -21,7 +21,6 @@ import net.osmand.plus.OsmandApplication
 import net.osmand.plus.R
 import net.osmand.plus.base.bottomsheetmenu.BaseBottomSheetItem
 import net.osmand.plus.plugins.nautical.NauticalPlugin
-import net.osmand.shared.extensions.toDegrees
 import java.text.SimpleDateFormat
 import java.util.*
 import kotlin.math.abs
@@ -34,11 +33,7 @@ import kotlin.math.abs
  */
 class VhfDistressScriptBottomSheet : BaseNauticalBottomSheet() {
 
-    enum class CallType {
-        MAYDAY, PAN_PAN, SECURITE
-    }
-
-    private var callType = CallType.MAYDAY
+    private var isMayday = true
     private var natureOfDistress = "SINKING / FLOODING"
     private var personsOnBoard = 4
     private var tts: TextToSpeech? = null
@@ -54,11 +49,7 @@ class VhfDistressScriptBottomSheet : BaseNauticalBottomSheet() {
     }
 
     override fun createMenuItems(savedInstanceState: Bundle?) {
-        val title = when (callType) {
-            CallType.MAYDAY -> "MAYDAY Distress Script"
-            CallType.PAN_PAN -> "PAN-PAN Urgency Script"
-            CallType.SECURITE -> "SECURITE Safety Script"
-        }
+        val title = if (isMayday) "MAYDAY Distress Script" else "PAN-PAN Urgency Script"
         addTitleItem(title)
 
         val themedCtx = net.osmand.plus.utils.UiUtilities.getThemedContext(requireContext(), nightMode)
@@ -79,12 +70,7 @@ class VhfDistressScriptBottomSheet : BaseNauticalBottomSheet() {
         toggleCallType.check(R.id.btn_type_mayday)
         toggleCallType.addOnButtonCheckedListener { _, checkedId, isChecked ->
             if (isChecked) {
-                callType = when (checkedId) {
-                    R.id.btn_type_mayday -> CallType.MAYDAY
-                    R.id.btn_type_pan_pan -> CallType.PAN_PAN
-                    R.id.btn_type_securite -> CallType.SECURITE
-                    else -> CallType.MAYDAY
-                }
+                isMayday = (checkedId == R.id.btn_type_mayday)
                 updateScript()
             }
         }
@@ -132,25 +118,6 @@ class VhfDistressScriptBottomSheet : BaseNauticalBottomSheet() {
         }
 
         txtPobCount.text = personsOnBoard.toString()
-
-        val app = activity?.application as? OsmandApplication
-        val isNightVision = app?.let { NauticalPlugin.isNightVision(it) } ?: false
-        if (isNightVision) {
-            customView.setBackgroundColor(0xEE120000.toInt())
-            customView.findViewById<View>(R.id.drag_handle)?.setBackgroundColor(0x80FF1744.toInt())
-            customView.findViewById<TextView>(R.id.txt_nature_label)?.setTextColor(0xFFFF1744.toInt())
-            customView.findViewById<TextView>(R.id.txt_pob_label)?.setTextColor(0xFFFF8A80.toInt())
-            txtPobCount.setTextColor(0xFFFF1744.toInt())
-            customView.findViewById<com.google.android.material.card.MaterialCardView>(R.id.card_distress_script)?.apply {
-                setCardBackgroundColor(0xEE120000.toInt())
-                strokeColor = 0xFFFF1744.toInt()
-            }
-            scriptTextView.setTextColor(0xFFFF1744.toInt())
-            btnCopyScript.setTextColor(0xFFFF1744.toInt())
-            btnCopyScript.strokeColor = android.content.res.ColorStateList.valueOf(0xFFFF1744.toInt())
-            btnSpeakScript.backgroundTintList = android.content.res.ColorStateList.valueOf(0xFFB71C1C.toInt())
-        }
-
         updateScript()
 
         items.add(BaseBottomSheetItem.Builder().setCustomView(customView).create())
@@ -177,63 +144,6 @@ class VhfDistressScriptBottomSheet : BaseNauticalBottomSheet() {
         tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, "vhf_distress_tts")
     }
 
-    private fun toNatoPhonetic(text: String): String {
-        val natoMap = mapOf(
-            'A' to "Alpha", 'B' to "Bravo", 'C' to "Charlie", 'D' to "Delta", 'E' to "Echo",
-            'F' to "Foxtrot", 'G' to "Golf", 'H' to "Hotel", 'I' to "India", 'J' to "Juliett",
-            'K' to "Kilo", 'L' to "Lima", 'M' to "Mike", 'N' to "November", 'O' to "Oscar",
-            'P' to "Papa", 'Q' to "Quebec", 'R' to "Romeo", 'S' to "Sierra", 'T' to "Tango",
-            'U' to "Uniform", 'V' to "Victor", 'W' to "Whiskey", 'X' to "X-ray", 'Y' to "Yankee",
-            'Z' to "Zulu", '0' to "Zero", '1' to "One", '2' to "Two", '3' to "Three",
-            '4' to "Four", '5' to "Five", '6' to "Six", '7' to "Seven", '8' to "Eight", '9' to "Nine"
-        )
-        return text.uppercase(Locale.US)
-            .filter { it.isLetterOrDigit() }
-            .map { char -> natoMap[char] ?: char.toString() }
-            .joinToString(" ")
-    }
-
-    private fun getNearestLandmarkReference(lat: Double, lon: Double): String? {
-        val app = activity?.application as? OsmandApplication ?: return null
-        val dbHelper = net.osmand.plus.plugins.nautical.s57.S57SqliteHelper(app)
-        val degRadius = 0.2 // ~12 NM
-        val features = try {
-            dbHelper.queryFeatures(lat - degRadius, lat + degRadius, lon - degRadius, lon + degRadius, listOf("LNDARE", "ISLAND", "SEAMRK", "LIGHTS", "BCNCAR"), limit = 30)
-        } catch (e: Exception) {
-            emptyList()
-        }
-
-        var nearestDist = Double.MAX_VALUE
-        var nearestName: String? = null
-        var nearestBearing = 0.0
-
-        for (f in features) {
-            val name = f.attributes["OBJNAM"] ?: f.attributes["NOBJNM"] ?: f.attributes["name"]
-            if (!name.isNullOrBlank()) {
-                val p = when (val g = f.geometries.firstOrNull()) {
-                    is net.osmand.plus.plugins.nautical.s57.S57Geometry.Point -> g.position
-                    is net.osmand.plus.plugins.nautical.s57.S57Geometry.Line -> g.nodes.firstOrNull()
-                    is net.osmand.plus.plugins.nautical.s57.S57Geometry.Area -> g.boundaries.firstOrNull()?.firstOrNull()
-                    else -> null
-                } ?: continue
-
-                val distM = net.osmand.util.MapUtils.getDistance(lat, lon, p.latitude, p.longitude)
-                if (distM < nearestDist) {
-                    nearestDist = distM
-                    nearestName = name
-                    nearestBearing = (net.osmand.shared.util.KMapUtils.getBearing(p.latitude, p.longitude, lat, lon).toDegrees() + 360.0) % 360.0
-                }
-            }
-        }
-
-        return if (nearestName != null && nearestDist < 50000.0) {
-            val distNm = nearestDist / 1852.0
-            String.format(Locale.US, "BEARING %.0f° TRUE, %.1f NM FROM %s", nearestBearing, distNm, nearestName.uppercase(Locale.US))
-        } else {
-            null
-        }
-    }
-
     private fun updateScript() {
         val app = activity?.application as? OsmandApplication
         val settings = app?.settings
@@ -249,84 +159,40 @@ class VhfDistressScriptBottomSheet : BaseNauticalBottomSheet() {
         val lon = state?.longitude ?: loc?.longitude ?: 0.0
         val formattedPos = formatPositionDdm(lat, lon)
         val timeUtc = utcTimeFormat.format(Date())
-        val landmarkRef = if (lat != 0.0 && lon != 0.0) getNearestLandmarkReference(lat, lon) else null
 
         val sb = StringBuilder()
 
         val upperVesselName = vesselName.uppercase(Locale.US)
         val upperCallsign = callsign.uppercase(Locale.US)
-        val phoneticName = toNatoPhonetic(upperVesselName)
-        val phoneticCallsign = if (upperCallsign != "CALLSIGN") toNatoPhonetic(upperCallsign) else ""
 
-        when (callType) {
-            CallType.MAYDAY -> {
-                sb.append("MAYDAY, MAYDAY, MAYDAY\n")
-                sb.append("THIS IS ").append(upperVesselName).append(", ")
-                    .append(upperVesselName).append(", ")
-                    .append(upperVesselName).append("\n")
-                if (phoneticName.isNotEmpty()) {
-                    sb.append("PHONETIC: ").append(phoneticName).append("\n")
-                }
-                sb.append("CALLSIGN: ").append(upperCallsign)
-                if (phoneticCallsign.isNotEmpty()) {
-                    sb.append(" [").append(phoneticCallsign).append("]")
-                }
-                sb.append("\nMMSI: ").append(mmsiStr).append("\n\n")
+        if (isMayday) {
+            sb.append("MAYDAY, MAYDAY, MAYDAY\n")
+            sb.append("THIS IS ").append(upperVesselName).append(", ")
+                .append(upperVesselName).append(", ")
+                .append(upperVesselName).append("\n")
+            sb.append("CALLSIGN: ").append(upperCallsign)
+                .append(" • MMSI: ").append(mmsiStr).append("\n\n")
 
-                sb.append("MAYDAY ").append(upperVesselName).append("\n")
-                sb.append("MY POSITION IS:\n").append(formattedPos).append("\nAT ").append(timeUtc)
-                if (landmarkRef != null) {
-                    sb.append("\n(").append(landmarkRef).append(")")
-                }
-                sb.append("\n\nNATURE OF DISTRESS: ").append(natureOfDistress).append("\n")
-                sb.append("REQUIRE IMMEDIATE ASSISTANCE\n")
-                sb.append(personsOnBoard).append(" PERSONS ON BOARD\n")
-                sb.append("OVER")
-            }
-            CallType.PAN_PAN -> {
-                sb.append("PAN-PAN, PAN-PAN, PAN-PAN\n")
-                sb.append("ALL STATIONS, ALL STATIONS, ALL STATIONS\n")
-                sb.append("THIS IS ").append(upperVesselName).append(", ")
-                    .append(upperVesselName).append(", ")
-                    .append(upperVesselName).append("\n")
-                if (phoneticName.isNotEmpty()) {
-                    sb.append("PHONETIC: ").append(phoneticName).append("\n")
-                }
-                sb.append("CALLSIGN: ").append(upperCallsign)
-                if (phoneticCallsign.isNotEmpty()) {
-                    sb.append(" [").append(phoneticCallsign).append("]")
-                }
-                sb.append("\nMMSI: ").append(mmsiStr).append("\n\n")
+            sb.append("MAYDAY ").append(upperVesselName).append("\n")
+            sb.append("MY POSITION IS ").append(formattedPos).append(" AT ").append(timeUtc).append("\n\n")
+            sb.append("NATURE OF DISTRESS: ").append(natureOfDistress).append("\n")
+            sb.append("REQUIRE IMMEDIATE ASSISTANCE\n")
+            sb.append(personsOnBoard).append(" PERSONS ON BOARD\n")
+            sb.append("OVER")
+        } else {
+            sb.append("PAN-PAN, PAN-PAN, PAN-PAN\n")
+            sb.append("ALL STATIONS, ALL STATIONS, ALL STATIONS\n")
+            sb.append("THIS IS ").append(upperVesselName).append(", ")
+                .append(upperVesselName).append(", ")
+                .append(upperVesselName).append("\n")
+            sb.append("CALLSIGN: ").append(upperCallsign)
+                .append(" • MMSI: ").append(mmsiStr).append("\n\n")
 
-                sb.append("MY POSITION IS:\n").append(formattedPos).append("\nAT ").append(timeUtc)
-                if (landmarkRef != null) {
-                    sb.append("\n(").append(landmarkRef).append(")")
-                }
-                sb.append("\n\nURGENT SITUATION: ").append(natureOfDistress).append("\n")
-                sb.append("REQUIRE ASSISTANCE / MONITORING\n")
-                sb.append(personsOnBoard).append(" PERSONS ON BOARD\n")
-                sb.append("OVER")
-            }
-            CallType.SECURITE -> {
-                sb.append("SECURITE, SECURITE, SECURITE\n")
-                sb.append("ALL STATIONS, ALL STATIONS, ALL STATIONS\n")
-                sb.append("THIS IS ").append(upperVesselName).append(", ")
-                    .append(upperVesselName).append(", ")
-                    .append(upperVesselName).append("\n")
-                if (phoneticName.isNotEmpty()) {
-                    sb.append("PHONETIC: ").append(phoneticName).append("\n")
-                }
-                sb.append("CALLSIGN: ").append(upperCallsign).append(" • MMSI: ").append(mmsiStr).append("\n\n")
-
-                sb.append("NAVIGATIONAL / SAFETY HAZARD REPORT:\n")
-                sb.append("POSITION: ").append(formattedPos).append(" AT ").append(timeUtc)
-                if (landmarkRef != null) {
-                    sb.append("\n(").append(landmarkRef).append(")")
-                }
-                sb.append("\n\nHAZARD / OBSERVATION: ").append(natureOfDistress).append("\n")
-                sb.append("ALL VESSELS IN VICINITY PLEASE KEEP SHARP LOOKOUT\n")
-                sb.append("OVER")
-            }
+            sb.append("MY POSITION IS ").append(formattedPos).append(" AT ").append(timeUtc).append("\n\n")
+            sb.append("URGENT SITUATION: ").append(natureOfDistress).append("\n")
+            sb.append("REQUIRE ASSISTANCE / MONITORING\n")
+            sb.append(personsOnBoard).append(" PERSONS ON BOARD\n")
+            sb.append("OVER")
         }
 
         scriptTextView.text = sb.toString()

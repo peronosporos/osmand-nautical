@@ -1,38 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:id="@+id/scroll_polar_root"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:background="?attr/list_background_color"
     android:fitsSystemWindows="true">
 
     <LinearLayout
-        android:id="@+id/layout_polar_content"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
         android:padding="16dp">
 
-        <!-- Centered Drag Handle Pill -->
-        <View
-            android:id="@+id/drag_handle"
-            android:layout_width="36dp"
-            android:layout_height="4dp"
-            android:layout_gravity="center_horizontal"
-            android:layout_marginTop="8dp"
-            android:layout_marginBottom="12dp"
-            android:background="?attr/divider_color" />
-
         <!-- Title & Status Header Card -->
         <com.google.android.material.card.MaterialCardView
-            android:id="@+id/card_polar_header"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             app:cardCornerRadius="12dp"
             app:cardElevation="2dp"
-            app:strokeWidth="1dp"
-            app:strokeColor="?attr/divider_color"
             app:cardBackgroundColor="?attr/card_and_list_background_basic">
 
             <LinearLayout
@@ -48,7 +33,6 @@
                     android:gravity="center_vertical">
 
                     <TextView
-                        android:id="@+id/txt_polar_title"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
@@ -100,14 +84,11 @@
 
         <!-- Polar Curve Canvas Card with Scatter Overlay Toggle -->
         <com.google.android.material.card.MaterialCardView
-            android:id="@+id/card_polar_canvas"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
             app:cardCornerRadius="12dp"
             app:cardElevation="2dp"
-            app:strokeWidth="1dp"
-            app:strokeColor="?attr/divider_color"
             app:cardBackgroundColor="?attr/card_and_list_background_basic">
 
             <LinearLayout
@@ -129,7 +110,6 @@
                     android:layout_marginTop="8dp">
 
                     <TextView
-                        android:id="@+id/txt_scatter_overlay_label"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
@@ -158,7 +138,6 @@
                 style="@style/Widget.MaterialComponents.Button"
                 android:layout_width="match_parent"
                 android:layout_height="48dp"
-                android:minHeight="48dp"
                 android:text="@string/nautical_polar_start_recording"
                 android:textSize="14sp"
                 android:textStyle="bold"
@@ -171,7 +150,6 @@
                 style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                 android:layout_width="match_parent"
                 android:layout_height="48dp"
-                android:minHeight="48dp"
                 android:layout_marginTop="8dp"
                 android:text="@string/nautical_polar_stop_and_save"
                 android:textSize="14sp"
@@ -183,8 +161,7 @@
                 android:id="@+id/btn_download_server_polar"
                 style="@style/Widget.MaterialComponents.Button.TextButton"
                 android:layout_width="match_parent"
-                android:layout_height="48dp"
-                android:minHeight="48dp"
+                android:layout_height="44dp"
                 android:layout_marginTop="4dp"
                 android:text="@string/nautical_polar_download_server"
                 android:textSize="13sp"

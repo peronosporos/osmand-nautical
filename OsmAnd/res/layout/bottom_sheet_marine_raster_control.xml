@@ -1,69 +1,42 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:paddingStart="20dp"
-    android:paddingEnd="20dp"
-    android:paddingTop="8dp"
-    android:paddingBottom="24dp"
+    android:padding="24dp"
     android:background="?attr/list_background_color">
 
-    <!-- Centered Drag Handle Pill -->
-    <View
-        android:layout_width="36dp"
-        android:layout_height="4dp"
-        android:layout_gravity="center_horizontal"
-        android:layout_marginTop="8dp"
-        android:layout_marginBottom="12dp"
-        android:background="@drawable/bg_rounded_handle"
-        android:backgroundTint="?attr/divider_color" />
-
-    <!-- Title -->
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="@string/raster_layer_name"
-        android:textAppearance="?attr/textAppearanceTitleMedium"
+        android:textAppearance="@style/TextAppearance.AppCompat.Large"
         android:textColor="?android:attr/textColorPrimary"
         android:gravity="center"
-        android:textStyle="bold"
-        android:paddingBottom="12dp" />
+        android:paddingBottom="16dp" />
 
-    <!-- Show / Hide Toggle (min 48dp touch height) -->
     <androidx.appcompat.widget.SwitchCompat
         android:id="@+id/raster_toggle"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:minHeight="48dp"
         android:text="@string/shared_string_show"
         android:textAppearance="@style/TextAppearance.AppCompat.Medium"
-        android:textColor="?android:attr/textColorPrimary" />
+        android:paddingTop="8dp"
+        android:paddingBottom="8dp" />
 
-    <View
-        android:layout_width="match_parent"
-        android:layout_height="1dp"
-        android:layout_marginTop="8dp"
-        android:layout_marginBottom="8dp"
-        android:background="?attr/divider_color" />
-
-    <!-- Opacity Header -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:gravity="center_vertical"
-        android:paddingTop="8dp">
+        android:paddingTop="16dp">
 
         <TextView
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:text="@string/raster_opacity_title"
-            android:textAppearance="@style/TextAppearance.AppCompat.Medium"
-            android:textColor="?android:attr/textColorPrimary" />
+            android:textAppearance="@style/TextAppearance.AppCompat.Medium" />
 
         <TextView
             android:id="@+id/opacity_percent"
@@ -71,78 +44,23 @@
             android:layout_height="wrap_content"
             android:text="100%"
             android:textAppearance="@style/TextAppearance.AppCompat.Medium"
-            android:textColor="?android:attr/textColorSecondary"
-            android:textStyle="bold" />
+            android:textColor="?android:attr/textColorSecondary" />
     </LinearLayout>
 
-    <!-- Opacity SeekBar (min 48dp touch height) -->
     <SeekBar
         android:id="@+id/opacity_seekbar"
         android:layout_width="match_parent"
-        android:layout_height="48dp"
-        android:minHeight="48dp"
+        android:layout_height="wrap_content"
         android:max="255"
-        android:paddingStart="12dp"
-        android:paddingEnd="12dp" />
+        android:paddingTop="8dp"
+        android:paddingBottom="16dp" />
 
-    <!-- Blend Mode Section -->
-    <TextView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="12dp"
-        android:layout_marginBottom="6dp"
-        android:text="Blend Mode"
-        android:textAppearance="@style/TextAppearance.AppCompat.Small"
-        android:textColor="?android:attr/textColorSecondary" />
-
-    <!-- Blend Mode Toggle Group (48dp min height buttons) -->
-    <com.google.android.material.button.MaterialButtonToggleGroup
-        android:id="@+id/raster_blend_group"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        app:singleSelection="true"
-        app:selectionRequired="true">
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btn_blend_normal"
-            style="?attr/materialButtonOutlinedStyle"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:minHeight="48dp"
-            android:text="Normal"
-            android:textSize="12sp" />
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btn_blend_multiply"
-            style="?attr/materialButtonOutlinedStyle"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:minHeight="48dp"
-            android:text="Multiply"
-            android:textSize="12sp" />
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btn_blend_overlay"
-            style="?attr/materialButtonOutlinedStyle"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:minHeight="48dp"
-            android:text="Overlay"
-            android:textSize="12sp" />
-
-    </com.google.android.material.button.MaterialButtonToggleGroup>
-
-    <!-- Manage Button (min 48dp touch height) -->
-    <com.google.android.material.button.MaterialButton
+    <Button
         android:id="@+id/manage_btn"
-        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:minHeight="48dp"
         android:text="@string/raster_manager_title"
+        style="@style/Widget.AppCompat.Button.Borderless.Colored"
         android:layout_marginTop="16dp" />
 
 </LinearLayout>

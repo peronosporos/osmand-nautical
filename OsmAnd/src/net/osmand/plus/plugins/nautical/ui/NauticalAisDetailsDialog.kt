@@ -3,7 +3,6 @@ package net.osmand.plus.plugins.nautical.ui
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
-import android.content.res.ColorStateList
 import android.graphics.Color
 import android.graphics.PorterDuff
 import android.graphics.PorterDuffColorFilter
@@ -86,24 +85,6 @@ class NauticalAisDetailsDialog : BaseBottomSheetDialogFragment() {
         val na = getString(R.string.nautical_not_available)
 
         // Header: Icon, Name, MMSI, Call Sign, IMO
-        val app = plugin?.application
-        val isNightVision = app?.let { NauticalPlugin.isNightVision(it) } ?: false
-        if (isNightVision) {
-            view.setBackgroundColor(0xEE120000.toInt())
-            view.findViewById<com.google.android.material.card.MaterialCardView>(R.id.card_vessel_identification)?.apply {
-                setCardBackgroundColor(0xEE120000.toInt())
-                strokeColor = 0x80FF1744.toInt()
-            }
-            view.findViewById<com.google.android.material.card.MaterialCardView>(R.id.card_kinematics_grid)?.apply {
-                setCardBackgroundColor(0xEE120000.toInt())
-                strokeColor = 0x80FF1744.toInt()
-            }
-            view.findViewById<com.google.android.material.card.MaterialCardView>(R.id.card_collision_geometry)?.apply {
-                setCardBackgroundColor(0xEE120000.toInt())
-                strokeColor = 0x80FF1744.toInt()
-            }
-        }
-
         val imgIcon = view.findViewById<ImageView>(R.id.img_vessel_icon)
         val iconRes = selectBitmap(ais.objectClass)
         val iconColor = selectColor(ais.objectClass)
@@ -114,9 +95,7 @@ class NauticalAisDetailsDialog : BaseBottomSheetDialogFragment() {
         imgIcon?.setImageDrawable(iconDrawable)
 
         val shipName = ais.shipName?.trim()
-        val txtShipName = view.findViewById<TextView>(R.id.txt_ship_name)
-        txtShipName.text = if (!shipName.isNullOrEmpty()) shipName else "MMSI: ${ais.mmsi}"
-        if (isNightVision) txtShipName.setTextColor(0xFFFF1744.toInt())
+        view.findViewById<TextView>(R.id.txt_ship_name).text = if (!shipName.isNullOrEmpty()) shipName else "MMSI: ${ais.mmsi}"
 
         val country = getMidCountry(ais.mmsi)
         val mmsiSb = StringBuilder("MMSI: ${ais.mmsi}")
@@ -129,9 +108,7 @@ class NauticalAisDetailsDialog : BaseBottomSheetDialogFragment() {
         if (ais.imo != 0) {
             mmsiSb.append(" • IMO: ").append(ais.imo)
         }
-        val txtMmsi = view.findViewById<TextView>(R.id.txt_mmsi_callsign)
-        txtMmsi.text = mmsiSb.toString()
-        if (isNightVision) txtMmsi.setTextColor(0xFFFF8A80.toInt())
+        view.findViewById<TextView>(R.id.txt_mmsi_callsign).text = mmsiSb.toString()
 
         val shipType = ais.getShipTypeString()
         val isClassB = ais.msgTypes.any { it in setOf(18, 19, 24) }
@@ -179,25 +156,17 @@ class NauticalAisDetailsDialog : BaseBottomSheetDialogFragment() {
             view.findViewById<TextView>(R.id.txt_range_bearing).text = getString(R.string.nautical_ais_range_bearing, na, na)
         }
 
-        val txtCpa = view.findViewById<TextView>(R.id.txt_cpa_tcpa)
-        if (ais.cpa.valid) {
-            val cpaNm = ais.cpa.cpa
-            val tcpaMin = ais.cpa.tcpa * 60.0
-            txtCpa.text = String.format(Locale.US, "CPA: %.2f NM • TCPA: %.1f min", cpaNm, tcpaMin)
-
-            // Background chip: red <0.5 NM, amber 0.5-1.5 NM, green >1.5 NM
-            val chipBgColor = when {
-                cpaNm < 0.5 -> Color.parseColor("#D32F2F")
-                cpaNm <= 1.5 -> Color.parseColor("#F57C00")
-                else -> Color.parseColor("#2E7D32")
-            }
-            txtCpa.setBackgroundResource(R.drawable.btn_active_light)
-            txtCpa.backgroundTintList = ColorStateList.valueOf(chipBgColor)
-            txtCpa.setTextColor(Color.WHITE)
+        val cpaTcpaStr = if (ais.cpa.valid) {
+            String.format(Locale.US, "CPA: %.2f nm (%.1fm)", ais.cpa.cpa, ais.cpa.tcpa * 60.0)
         } else {
-            txtCpa.text = "CPA: $na"
-            txtCpa.background = null
-            txtCpa.setTextColor(net.osmand.plus.utils.AndroidUtils.getColorFromAttr(requireContext(), android.R.attr.textColorSecondary))
+            "CPA: $na"
+        }
+        val txtCpa = view.findViewById<TextView>(R.id.txt_cpa_tcpa)
+        txtCpa.text = cpaTcpaStr
+        if (isDanger && ais.cpa.valid) {
+            txtCpa.setTextColor(Color.RED)
+        } else {
+            txtCpa.setTextColor(net.osmand.plus.utils.AndroidUtils.getColorFromAttr(requireContext(), android.R.attr.textColorPrimary))
         }
 
         view.findViewById<TextView>(R.id.txt_status).text = getString(R.string.nautical_ais_details_status, ais.getNavStatusString())
@@ -399,20 +368,16 @@ class NauticalAisDetailsDialog : BaseBottomSheetDialogFragment() {
             AisObjType.AIS_VESSEL_AUTHORITIES,
             AisObjType.AIS_VESSEL_SAR,
             AisObjType.AIS_VESSEL_OTHER,
-            AisObjType.AIS_INVALID -> R.drawable.ic_action_motorboat
-            AisObjType.AIS_LANDSTATION -> R.drawable.ic_action_antenna
-            AisObjType.AIS_AIRPLANE -> R.drawable.ic_action_aircraft
-            AisObjType.AIS_SART -> R.drawable.ic_action_alert
-            AisObjType.AIS_ATON -> R.drawable.ic_action_target
-            AisObjType.AIS_ATON_VIRTUAL -> R.drawable.ic_action_target
+            AisObjType.AIS_INVALID -> R.drawable.mm_ais_vessel
+            AisObjType.AIS_LANDSTATION -> R.drawable.mm_ais_land
+            AisObjType.AIS_AIRPLANE -> R.drawable.mm_ais_plane
+            AisObjType.AIS_SART -> R.drawable.mm_ais_sar
+            AisObjType.AIS_ATON -> R.drawable.mm_ais_aton
+            AisObjType.AIS_ATON_VIRTUAL -> R.drawable.mm_ais_aton_virt
         }
     }
 
     private fun selectColor(type: AisObjType): Int {
-        val isNight = NauticalPlugin.getInstance()?.application?.let { NauticalPlugin.isNightVision(it) } ?: false
-        if (isNight) {
-            return 0xFFFF1744.toInt()
-        }
         return when (type) {
             AisObjType.AIS_VESSEL -> Color.GREEN
             AisObjType.AIS_VESSEL_SPORT -> Color.YELLOW

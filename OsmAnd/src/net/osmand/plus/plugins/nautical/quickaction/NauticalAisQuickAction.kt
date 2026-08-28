@@ -17,7 +17,7 @@ class NauticalAisQuickAction : QuickAction {
         @JvmField
         val TYPE: QuickActionType = QuickActionType(NAUTICAL_AIS_ACTION_ID, "nautical.ais.open", NauticalAisQuickAction::class.java)
             .nameRes(R.string.nautical_ais_targets_title)
-            .iconRes(R.drawable.ic_action_motorboat)
+            .iconRes(R.drawable.mm_ais_vessel)
             .category(QuickActionType.INTERFACE)
     }
 
@@ -34,7 +34,6 @@ class NauticalAisQuickAction : QuickAction {
         if (mapActivity.isFinishing || mapActivity.isDestroyed || mapActivity.supportFragmentManager.isStateSaved) {
             return
         }
-        mapActivity.layout?.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
         val plugin = NauticalPlugin.getInstance()
         if (plugin == null) {
             mapActivity.app.showToastMessage(R.string.nautical_plugin_inactive)

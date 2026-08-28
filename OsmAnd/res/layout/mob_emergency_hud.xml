@@ -126,9 +126,6 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:layout_marginEnd="4dp"
-                android:minWidth="56dp"
-                android:minHeight="56dp"
                 android:backgroundTint="#009688"
                 android:text="@string/nautical_sar_patterns"
                 android:textColor="#FFFFFF" />
@@ -139,9 +136,6 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:layout_marginStart="4dp"
-                android:minWidth="56dp"
-                android:minHeight="56dp"
                 android:backgroundTint="#3F51B5"
                 android:text="@string/nautical_sar_maneuvers"
                 android:textColor="#FFFFFF" />
@@ -160,9 +154,6 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:layout_marginEnd="3dp"
-                android:minWidth="56dp"
-                android:minHeight="56dp"
                 android:backgroundTint="#FF9800"
                 android:text="@string/nautical_mob_btn_heave_to"
                 android:textColor="#FFFFFF" />
@@ -173,10 +164,6 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:layout_marginStart="3dp"
-                android:layout_marginEnd="3dp"
-                android:minWidth="56dp"
-                android:minHeight="56dp"
                 android:backgroundTint="#4CAF50"
                 android:text="@string/nautical_mob_btn_motor_return"
                 android:textColor="#FFFFFF" />
@@ -187,9 +174,6 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:layout_marginStart="3dp"
-                android:minWidth="56dp"
-                android:minHeight="56dp"
                 android:backgroundTint="#607D8B"
                 android:text="@string/nautical_mob_btn_hold_heading"
                 android:textColor="#FFFFFF" />
@@ -207,9 +191,6 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:layout_marginEnd="4dp"
-                android:minWidth="56dp"
-                android:minHeight="56dp"
                 android:backgroundTint="#F44336"
                 android:text="@string/nautical_silence_alarm"
                 android:textColor="#FFFFFF" />
@@ -217,16 +198,13 @@
             <FrameLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:layout_marginStart="4dp">
+                android:layout_weight="1">
 
                 <Button
                     android:id="@+id/btn_cancel_mob"
                     style="@style/Widget.AppCompat.Button.Colored"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:minWidth="56dp"
-                    android:minHeight="56dp"
                     android:backgroundTint="#B71C1C"
                     android:text="@string/mob_btn_cancel"
                     android:textColor="#FFFFFF" />

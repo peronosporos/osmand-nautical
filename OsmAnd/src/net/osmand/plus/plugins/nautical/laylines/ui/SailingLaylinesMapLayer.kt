@@ -197,68 +197,6 @@ class SailingLaylinesMapLayer(context: Context) : OsmandMapLayer(context), Share
 
     override fun drawInScreenPixels(): Boolean = true
 
-    private val windShiftConePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        style = Paint.Style.FILL
-        color = 0x2000BCD4.toInt()
-    }
-
-    private val windShiftConeStrokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        style = Paint.Style.STROKE
-        strokeWidth = 1.5f
-        color = 0x8000BCD4.toInt()
-        pathEffect = DashPathEffect(floatArrayOf(8f, 6f), 0f)
-    }
-
-    private val optimumTackPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        style = Paint.Style.FILL
-        color = 0x8000E5FF.toInt()
-    }
-
-    private val optimumTackStrokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        style = Paint.Style.STROKE
-        strokeWidth = 2.5f
-        color = Color.WHITE
-    }
-
-    private val portWindShiftConePath = Path()
-    private val stbdWindShiftConePath = Path()
-    private val optimumTackZonePath = Path()
-
-    private fun setupPaints(isFetchable: Boolean, isNight: Boolean) {
-        val pathEffect = if (isFetchable) null else dashedEffect
-        
-        if (isNight) {
-            portPaint.color = 0xFFFF1744.toInt() // Bright red for Port tack (#FFFF1744)
-            portPaint.pathEffect = pathEffect
-            stbdPaint.color = 0xCCB71C1C.toInt() // Deep muted crimson for Starboard tack (#CCB71C1C)
-            stbdPaint.pathEffect = pathEffect
-
-            portConePaint.color = 0x15FF1744.toInt()
-            stbdConePaint.color = 0x15FF1744.toInt()
-            windShiftPaint.color = 0x30FF1744.toInt()
-
-            windShiftConePaint.color = 0x15FF1744.toInt()
-            windShiftConeStrokePaint.color = 0x80FF1744.toInt()
-            optimumTackPaint.color = 0xCCFF1744.toInt()
-            optimumTackStrokePaint.color = 0xFFFF8A80.toInt()
-        } else {
-            val baseColor = if (isFetchable) colorFetchable else colorTackRequired
-            portPaint.color = baseColor
-            portPaint.pathEffect = pathEffect
-            stbdPaint.color = baseColor
-            stbdPaint.pathEffect = pathEffect
-
-            portConePaint.color = 0x2000BCD4.toInt()
-            stbdConePaint.color = 0x2000BCD4.toInt()
-            windShiftPaint.color = colorWindShift
-
-            windShiftConePaint.color = 0x2000BCD4.toInt()
-            windShiftConeStrokePaint.color = 0x8000BCD4.toInt()
-            optimumTackPaint.color = 0x8000E5FF.toInt()
-            optimumTackStrokePaint.color = Color.WHITE
-        }
-    }
-
     override fun onDraw(canvas: Canvas, tileBox: RotatedTileBox, settings: DrawSettings) {
         val plugin = NauticalPlugin.getInstance() ?: return
         val caps = plugin.capabilityManager?.capabilities?.value
@@ -290,70 +228,55 @@ class SailingLaylinesMapLayer(context: Context) : OsmandMapLayer(context), Share
         val targetX = tileBox.getPixXFromLatLon(target.latitude, target.longitude)
         val targetY = tileBox.getPixYFromLatLon(target.latitude, target.longitude)
 
+        // 0. Render Wind Shift Uncertainty Cones along Port and Starboard Laylines
+        val portShiftCone = if (caps?.hasWindshift == true && marineState?.serverLaylines != null) {
+            marineState.serverLaylines.portShiftCone
+        } else {
+            state.portShiftCone
+        }
+
+        val stbdShiftCone = if (caps?.hasWindshift == true && marineState?.serverLaylines != null) {
+            marineState.serverLaylines.stbdShiftCone
+        } else {
+            state.stbdShiftCone
+        }
+
+        // Draw Port Tack Wind Shift Cone (Header Sector)
+        portShiftCone?.let { (p1, p2) ->
+            val p1X = tileBox.getPixXFromLatLon(p1.latitude, p1.longitude)
+            val p1Y = tileBox.getPixYFromLatLon(p1.latitude, p1.longitude)
+            val p2X = tileBox.getPixXFromLatLon(p2.latitude, p2.longitude)
+            val p2Y = tileBox.getPixYFromLatLon(p2.latitude, p2.longitude)
+
+            portConePath.reset()
+            portConePath.moveTo(boatX, boatY)
+            portConePath.lineTo(p1X, p1Y)
+            portConePath.lineTo(targetX, targetY)
+            portConePath.lineTo(p2X, p2Y)
+            portConePath.close()
+            canvas.drawPath(portConePath, portConePaint)
+        }
+
+        // Draw Starboard Tack Wind Shift Cone (Lift Sector)
+        stbdShiftCone?.let { (s1, s2) ->
+            val s1X = tileBox.getPixXFromLatLon(s1.latitude, s1.longitude)
+            val s1Y = tileBox.getPixYFromLatLon(s1.latitude, s1.longitude)
+            val s2X = tileBox.getPixXFromLatLon(s2.latitude, s2.longitude)
+            val s2Y = tileBox.getPixYFromLatLon(s2.latitude, s2.longitude)
+
+            stbdConePath.reset()
+            stbdConePath.moveTo(boatX, boatY)
+            stbdConePath.lineTo(s1X, s1Y)
+            stbdConePath.lineTo(targetX, targetY)
+            stbdConePath.lineTo(s2X, s2Y)
+            stbdConePath.close()
+            canvas.drawPath(stbdConePath, stbdConePaint)
+        }
+
         val portTackPoint = if (caps?.hasWindshift == true && marineState?.serverLaylines != null) {
             marineState.serverLaylines.portTackPoint
         } else {
             state.portTackPoint
-        }
-
-        val starboardTackPoint = if (caps?.hasWindshift == true && marineState?.serverLaylines != null) {
-            marineState.serverLaylines.starboardTackPoint
-        } else {
-            state.starboardTackPoint
-        }
-
-        val density = tileBox.density
-        val now = System.currentTimeMillis()
-        val pulsePhase = (now % 1200L) / 1200f
-        val pulseFactor = kotlin.math.sin(pulsePhase * Math.PI * 2.0).toFloat()
-
-        // 0. Render +/-7.5° Oscillating Wind Shift Sectors around Port and Starboard Laylines
-        portTackPoint?.let { ptp ->
-            val distM = net.osmand.util.MapUtils.getDistance(boatLat, boatLon, ptp.latitude, ptp.longitude)
-            val bearingDeg = net.osmand.util.MapUtils.calculateAngle(boatLat, boatLon, ptp.latitude, ptp.longitude)
-            val leftP = net.osmand.util.MapUtils.rhumbDestinationPoint(boatLat, boatLon, distM, bearingDeg - 7.5)
-            val rightP = net.osmand.util.MapUtils.rhumbDestinationPoint(boatLat, boatLon, distM, bearingDeg + 7.5)
-
-            val ptpX = tileBox.getPixXFromLatLon(ptp.latitude, ptp.longitude)
-            val ptpY = tileBox.getPixYFromLatLon(ptp.latitude, ptp.longitude)
-            val lpX = tileBox.getPixXFromLatLon(leftP.latitude, leftP.longitude)
-            val lpY = tileBox.getPixYFromLatLon(leftP.latitude, leftP.longitude)
-            val rpX = tileBox.getPixXFromLatLon(rightP.latitude, rightP.longitude)
-            val rpY = tileBox.getPixYFromLatLon(rightP.latitude, rightP.longitude)
-
-            portWindShiftConePath.reset()
-            portWindShiftConePath.moveTo(boatX, boatY)
-            portWindShiftConePath.lineTo(lpX, lpY)
-            portWindShiftConePath.lineTo(ptpX, ptpY)
-            portWindShiftConePath.lineTo(rpX, rpY)
-            portWindShiftConePath.close()
-
-            canvas.drawPath(portWindShiftConePath, windShiftConePaint)
-            canvas.drawPath(portWindShiftConePath, windShiftConeStrokePaint)
-        }
-
-        starboardTackPoint?.let { stp ->
-            val distM = net.osmand.util.MapUtils.getDistance(boatLat, boatLon, stp.latitude, stp.longitude)
-            val bearingDeg = net.osmand.util.MapUtils.calculateAngle(boatLat, boatLon, stp.latitude, stp.longitude)
-            val leftS = net.osmand.util.MapUtils.rhumbDestinationPoint(boatLat, boatLon, distM, bearingDeg - 7.5)
-            val rightS = net.osmand.util.MapUtils.rhumbDestinationPoint(boatLat, boatLon, distM, bearingDeg + 7.5)
-
-            val stpX = tileBox.getPixXFromLatLon(stp.latitude, stp.longitude)
-            val stpY = tileBox.getPixYFromLatLon(stp.latitude, stp.longitude)
-            val lsX = tileBox.getPixXFromLatLon(leftS.latitude, leftS.longitude)
-            val lsY = tileBox.getPixYFromLatLon(leftS.latitude, leftS.longitude)
-            val rsX = tileBox.getPixXFromLatLon(rightS.latitude, rightS.longitude)
-            val rsY = tileBox.getPixYFromLatLon(rightS.latitude, rightS.longitude)
-
-            stbdWindShiftConePath.reset()
-            stbdWindShiftConePath.moveTo(boatX, boatY)
-            stbdWindShiftConePath.lineTo(lsX, lsY)
-            stbdWindShiftConePath.lineTo(stpX, stpY)
-            stbdWindShiftConePath.lineTo(rsX, rsY)
-            stbdWindShiftConePath.close()
-
-            canvas.drawPath(stbdWindShiftConePath, windShiftConePaint)
-            canvas.drawPath(stbdWindShiftConePath, windShiftConeStrokePaint)
         }
 
         // 1. Render Port Tack Layline: Boat -> PortIntersection -> Target
@@ -367,21 +290,12 @@ class SailingLaylinesMapLayer(context: Context) : OsmandMapLayer(context), Share
                 portCache.updatePixels(tileBox)
             }
             canvas.drawPath(portCache.cachedPath, portPaint)
+        }
 
-            // Optimum Tack Zone Indicator at Port Tack Point
-            val ptpX = tileBox.getPixXFromLatLon(ptp.latitude, ptp.longitude)
-            val ptpY = tileBox.getPixYFromLatLon(ptp.latitude, ptp.longitude)
-            val diamondSize = (8f + 3f * pulseFactor.coerceAtLeast(0f)) * density
-
-            optimumTackZonePath.reset()
-            optimumTackZonePath.moveTo(ptpX, ptpY - diamondSize)
-            optimumTackZonePath.lineTo(ptpX + diamondSize, ptpY)
-            optimumTackZonePath.lineTo(ptpX, ptpY + diamondSize)
-            optimumTackZonePath.lineTo(ptpX - diamondSize, ptpY)
-            optimumTackZonePath.close()
-
-            canvas.drawPath(optimumTackZonePath, optimumTackPaint)
-            canvas.drawPath(optimumTackZonePath, optimumTackStrokePaint)
+        val starboardTackPoint = if (caps?.hasWindshift == true && marineState?.serverLaylines != null) {
+            marineState.serverLaylines.starboardTackPoint
+        } else {
+            state.starboardTackPoint
         }
 
         // 2. Render Starboard Tack Layline: Boat -> StbdIntersection -> Target
@@ -395,27 +309,29 @@ class SailingLaylinesMapLayer(context: Context) : OsmandMapLayer(context), Share
                 stbdCache.updatePixels(tileBox)
             }
             canvas.drawPath(stbdCache.cachedPath, stbdPaint)
-
-            // Optimum Tack Zone Indicator at Starboard Tack Point
-            val stpX = tileBox.getPixXFromLatLon(stp.latitude, stp.longitude)
-            val stpY = tileBox.getPixYFromLatLon(stp.latitude, stp.longitude)
-            val diamondSize = (8f + 3f * pulseFactor.coerceAtLeast(0f)) * density
-
-            optimumTackZonePath.reset()
-            optimumTackZonePath.moveTo(stpX, stpY - diamondSize)
-            optimumTackZonePath.lineTo(stpX + diamondSize, stpY)
-            optimumTackZonePath.lineTo(stpX, stpY + diamondSize)
-            optimumTackZonePath.lineTo(stpX - diamondSize, stpY)
-            optimumTackZonePath.close()
-
-            canvas.drawPath(optimumTackZonePath, optimumTackPaint)
-            canvas.drawPath(optimumTackZonePath, optimumTackStrokePaint)
         }
 
         // 3. Render Wind Shifts
         if (app.settings.NAUTICAL_SHOW_WIND_SHIFTS.get()) {
             drawWindShifts(canvas, tileBox, boatLat, boatLon)
         }
+    }
+
+    private fun setupPaints(isFetchable: Boolean, isNight: Boolean) {
+        val baseColor = when {
+            isNight -> Color.RED
+            isFetchable -> colorFetchable
+            else -> colorTackRequired
+        }
+        val pathEffect = if (isFetchable) null else dashedEffect
+        
+        portPaint.color = baseColor
+        portPaint.pathEffect = pathEffect
+        stbdPaint.color = baseColor
+        stbdPaint.pathEffect = pathEffect
+
+        windShiftPaint.color = if (isNight) Color.RED else colorWindShift
+        if (isNight) windShiftPaint.alpha = 60
     }
 
     private fun drawWindShifts(canvas: Canvas, tileBox: RotatedTileBox, boatLat: Double, boatLon: Double) {

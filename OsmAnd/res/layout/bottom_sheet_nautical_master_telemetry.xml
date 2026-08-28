@@ -9,13 +9,13 @@
 
     <!-- Drag Handle -->
     <View
-        android:id="@+id/drag_handle"
         android:layout_width="36dp"
         android:layout_height="4dp"
         android:layout_gravity="center_horizontal"
-        android:layout_marginTop="8dp"
-        android:layout_marginBottom="12dp"
-        android:background="?attr/divider_color" />
+        android:layout_marginTop="10dp"
+        android:layout_marginBottom="6dp"
+        android:background="@drawable/bg_rounded_handle"
+        android:backgroundTint="#99FFFFFF" />
 
     <!-- Top Bar -->
     <RelativeLayout
@@ -36,10 +36,8 @@
 
         <ImageView
             android:id="@+id/btn_settings"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:minWidth="48dp"
-            android:minHeight="48dp"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
             android:layout_alignParentEnd="true"
             android:layout_centerVertical="true"
             android:background="?attr/selectableItemBackgroundBorderless"

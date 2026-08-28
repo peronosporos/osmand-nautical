@@ -51,67 +51,44 @@ class NauticalLayerManager(
         onInitSubsystems: (SailingMapLayerController) -> Unit
     ) {
         val mapView = mapActivity.mapView
-        if (skRasterLayer == null) {
-            skRasterLayer = SignalKRasterLayer(mapActivity)
-            mapView.addLayer(skRasterLayer!!, 1.10f)
-        } else if (!mapView.layers.contains(skRasterLayer!!)) {
-            mapView.addLayer(skRasterLayer!!, 1.10f)
+        if (nauticalMapLayer == null) {
+            nauticalMapLayer = NauticalMapLayer(app)
+            mapView.addLayer(nauticalMapLayer!!, 5.0f)
         }
-
-        if (oceanographicGribMapLayer == null) {
-            oceanographicGribMapLayer = OceanographicGribMapLayer(app)
-            mapView.addLayer(oceanographicGribMapLayer!!, 2.10f)
-        } else if (!mapView.layers.contains(oceanographicGribMapLayer!!)) {
-            mapView.addLayer(oceanographicGribMapLayer!!, 2.10f)
+        if (aisAisLayer == null) {
+            aisAisLayer = NauticalAisLayer(context, plugin)
+            mapView.addLayer(aisAisLayer!!, 4.5f)
+        } else if (!mapView.layers.contains(aisAisLayer!!)) {
+            mapView.addLayer(aisAisLayer!!, 4.5f)
         }
-
         if (skTideLayer == null) {
             skTideLayer = SignalKTideLayer(context)
-            mapView.addLayer(skTideLayer!!, 2.20f)
-        } else if (!mapView.layers.contains(skTideLayer!!)) {
-            mapView.addLayer(skTideLayer!!, 2.20f)
+            mapView.addLayer(skTideLayer!!, 4.6f)
         }
-
         if (tidalCurrentsMapLayer == null) {
             tidalCurrentsMapLayer = TidalCurrentsMapLayer(app)
-            mapView.addLayer(tidalCurrentsMapLayer!!, 2.20f)
-        } else if (!mapView.layers.contains(tidalCurrentsMapLayer!!)) {
-            mapView.addLayer(tidalCurrentsMapLayer!!, 2.20f)
+            mapView.addLayer(tidalCurrentsMapLayer!!, 4.5f)
         }
-
-        if (skWaypointLayer == null) {
-            skWaypointLayer = SignalKWaypointLayer(mapActivity)
-            mapView.addLayer(skWaypointLayer!!, 3.30f)
-        } else if (!mapView.layers.contains(skWaypointLayer!!)) {
-            mapView.addLayer(skWaypointLayer!!, 3.30f)
-        }
-
-        if (skLogbookLayer == null) {
-            skLogbookLayer = SignalKLogbookLayer(mapActivity)
-            mapView.addLayer(skLogbookLayer!!, 3.30f)
-        } else if (!mapView.layers.contains(skLogbookLayer!!)) {
-            mapView.addLayer(skLogbookLayer!!, 3.30f)
+        if (oceanographicGribMapLayer == null) {
+            oceanographicGribMapLayer = OceanographicGribMapLayer(app)
+            mapView.addLayer(oceanographicGribMapLayer!!, 4.0f)
         }
 
         if (vhfPoiLayer == null) {
             vhfPoiLayer = VhfPoiSearchLayer(mapActivity)
-            mapView.addLayer(vhfPoiLayer!!, 3.30f)
-        } else if (!mapView.layers.contains(vhfPoiLayer!!)) {
-            mapView.addLayer(vhfPoiLayer!!, 3.30f)
+            mapView.addLayer(vhfPoiLayer!!, 4.8f)
         }
-
-        if (aisAisLayer == null) {
-            aisAisLayer = NauticalAisLayer(context, plugin)
-            mapView.addLayer(aisAisLayer!!, 4.50f)
-        } else if (!mapView.layers.contains(aisAisLayer!!)) {
-            mapView.addLayer(aisAisLayer!!, 4.50f)
+        if (skRasterLayer == null) {
+            skRasterLayer = SignalKRasterLayer(mapActivity)
+            mapView.addLayer(skRasterLayer!!, 4.2f)
         }
-
-        if (nauticalMapLayer == null) {
-            nauticalMapLayer = NauticalMapLayer(app)
-            mapView.addLayer(nauticalMapLayer!!, 5.00f)
-        } else if (!mapView.layers.contains(nauticalMapLayer!!)) {
-            mapView.addLayer(nauticalMapLayer!!, 5.00f)
+        if (skLogbookLayer == null) {
+            skLogbookLayer = SignalKLogbookLayer(mapActivity)
+            mapView.addLayer(skLogbookLayer!!, 4.9f)
+        }
+        if (skWaypointLayer == null) {
+            skWaypointLayer = SignalKWaypointLayer(mapActivity)
+            mapView.addLayer(skWaypointLayer!!, 4.7f)
         }
 
         val controller = SailingMapLayerController(mapActivity, s57SpatialIndex)
@@ -136,67 +113,59 @@ class NauticalLayerManager(
             if (layerController == null) {
                 registerLayers(context, activity, s57SpatialIndex, onInitSubsystems)
             } else {
-                nauticalMapLayer?.let { if (!mapView.layers.contains(it)) mapView.addLayer(it, 5.00f) }
+                nauticalMapLayer?.let { if (!mapView.layers.contains(it)) mapView.addLayer(it, 5.0f) }
 
-                if (isModuleEnabled(NauticalModule.RASTER)) {
-                    val raster = skRasterLayer ?: SignalKRasterLayer(activity).also { skRasterLayer = it }
-                    if (!mapView.layers.contains(raster)) mapView.addLayer(raster, 1.10f)
+                if (isModuleEnabled(NauticalModule.AIS)) {
+                    val ais = aisAisLayer ?: NauticalAisLayer(context, plugin).also { aisAisLayer = it }
+                    if (!mapView.layers.contains(ais)) mapView.addLayer(ais, 4.5f)
                 } else {
-                    skRasterLayer?.let { mapView.removeLayer(it) }
-                }
-
-                if (isModuleEnabled(NauticalModule.GRIB)) {
-                    val grib = oceanographicGribMapLayer ?: OceanographicGribMapLayer(app).also { oceanographicGribMapLayer = it }
-                    if (!mapView.layers.contains(grib)) mapView.addLayer(grib, 2.10f)
-                } else {
-                    oceanographicGribMapLayer?.let { mapView.removeLayer(it) }
+                    aisAisLayer?.let { mapView.removeLayer(it) }
                 }
 
                 if (isModuleEnabled(NauticalModule.TIDES)) {
-                    val tide = skTideLayer ?: SignalKTideLayer(context).also { skTideLayer = it }
-                    val current = tidalCurrentsMapLayer ?: TidalCurrentsMapLayer(app).also { tidalCurrentsMapLayer = it }
-                    if (!mapView.layers.contains(tide)) mapView.addLayer(tide, 2.20f)
-                    if (!mapView.layers.contains(current)) mapView.addLayer(current, 2.20f)
+                    skTideLayer?.let { if (!mapView.layers.contains(it)) mapView.addLayer(it, 4.6f) }
+                    tidalCurrentsMapLayer?.let { if (!mapView.layers.contains(it)) mapView.addLayer(it, 4.5f) }
                 } else {
                     skTideLayer?.let { mapView.removeLayer(it) }
                     tidalCurrentsMapLayer?.let { mapView.removeLayer(it) }
                 }
 
-                skWaypointLayer?.let { if (!mapView.layers.contains(it)) mapView.addLayer(it, 3.30f) }
-
-                if (isModuleEnabled(NauticalModule.LOGBOOK)) {
-                    val logbook = skLogbookLayer ?: SignalKLogbookLayer(activity).also { skLogbookLayer = it }
-                    if (!mapView.layers.contains(logbook)) mapView.addLayer(logbook, 3.30f)
+                if (isModuleEnabled(NauticalModule.GRIB)) {
+                    oceanographicGribMapLayer?.let { if (!mapView.layers.contains(it)) mapView.addLayer(it, 4.0f) }
                 } else {
-                    skLogbookLayer?.let { mapView.removeLayer(it) }
+                    oceanographicGribMapLayer?.let { mapView.removeLayer(it) }
                 }
 
                 if (isModuleEnabled(NauticalModule.VHF)) {
-                    val vhf = vhfPoiLayer ?: VhfPoiSearchLayer(activity).also { vhfPoiLayer = it }
-                    if (!mapView.layers.contains(vhf)) mapView.addLayer(vhf, 3.30f)
+                    vhfPoiLayer?.let { if (!mapView.layers.contains(it)) mapView.addLayer(it, 4.8f) }
                 } else {
                     vhfPoiLayer?.let { mapView.removeLayer(it) }
                 }
 
-                if (isModuleEnabled(NauticalModule.AIS)) {
-                    val ais = aisAisLayer ?: NauticalAisLayer(context, plugin).also { aisAisLayer = it }
-                    if (!mapView.layers.contains(ais)) mapView.addLayer(ais, 4.50f)
+                if (isModuleEnabled(NauticalModule.RASTER)) {
+                    skRasterLayer?.let { if (!mapView.layers.contains(it)) mapView.addLayer(it, 4.2f) }
                 } else {
-                    aisAisLayer?.let { mapView.removeLayer(it) }
+                    skRasterLayer?.let { mapView.removeLayer(it) }
                 }
+
+                if (isModuleEnabled(NauticalModule.LOGBOOK)) {
+                    skLogbookLayer?.let { if (!mapView.layers.contains(it)) mapView.addLayer(it, 4.9f) }
+                } else {
+                    skLogbookLayer?.let { mapView.removeLayer(it) }
+                }
+
+                skWaypointLayer?.let { if (!mapView.layers.contains(it)) mapView.addLayer(it, 4.7f) }
 
                 layerController?.updateLayerVisibility()
             }
         } else {
             nauticalMapLayer?.let { mapView.removeLayer(it) }
-            skRasterLayer?.let { mapView.removeLayer(it) }
-            oceanographicGribMapLayer?.let { mapView.removeLayer(it) }
-            skTideLayer?.let { mapView.removeLayer(it) }
-            tidalCurrentsMapLayer?.let { mapView.removeLayer(it) }
-            skWaypointLayer?.let { mapView.removeLayer(it) }
-            skLogbookLayer?.let { mapView.removeLayer(it) }
-            vhfPoiLayer?.let { mapView.removeLayer(it) }
             aisAisLayer?.let { mapView.removeLayer(it) }
+            skTideLayer?.let { mapView.removeLayer(it) }
+            vhfPoiLayer?.let { mapView.removeLayer(it) }
+            skWaypointLayer?.let { mapView.removeLayer(it) }
+            tidalCurrentsMapLayer?.let { mapView.removeLayer(it) }
+            oceanographicGribMapLayer?.let { mapView.removeLayer(it) }
             layerController?.unregisterLayers()
         }
     }

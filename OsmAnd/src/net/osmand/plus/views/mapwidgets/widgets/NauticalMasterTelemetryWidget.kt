@@ -144,31 +144,13 @@ class NauticalMasterTelemetryWidget(
         val state = engine?.getCurrentState()
         val isConnected = state != null && state.connectionStatus != ConnectionStatus.DISCONNECTED
 
-        val pressure = state?.atmosphericPressureHpa
-        val tendency = state?.barometricTendencySymbol ?: ""
-        val deltaP = state?.barometricTendency3hHpa
-
-        val finalMainText = if (pressure != null) {
-            String.format(java.util.Locale.US, "%.0f %s", pressure, tendency)
-        } else {
-            mainText
-        }
-
-        val subText = if (deltaP != null) {
-            String.format(java.util.Locale.US, "%+.1f", deltaP)
-        } else if (isConnected) {
-            "ON"
-        } else {
-            "OFF"
-        }
-
-        setText(finalMainText, subText)
+        val subText = if (isConnected) "ON" else "OFF"
+        setText(mainText, subText)
         contentView?.alpha = if (isConnected) 1.0f else 0.45f
     }
 
     override fun updateIcon() {
-        val isNight = NauticalPlugin.isNightVision(mapActivity.app)
-        val iconColor = if (isNight) 0xFFFF1744.toInt() else mapActivity.app.settings.APPLICATION_MODE.get().getProfileColor(nightMode)
+        val iconColor = mapActivity.app.settings.APPLICATION_MODE.get().getProfileColor(nightMode)
         setImageDrawable(iconsCache.getPaintedIcon(R.drawable.ic_action_nautical_perf, iconColor))
     }
 

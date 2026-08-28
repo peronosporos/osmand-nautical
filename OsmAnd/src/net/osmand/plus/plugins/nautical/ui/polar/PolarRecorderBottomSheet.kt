@@ -33,9 +33,6 @@ class PolarRecorderBottomSheet : BaseNauticalBottomSheet() {
         val themedCtx = net.osmand.plus.utils.UiUtilities.getThemedContext(requireContext(), nightMode)
         val customView = LayoutInflater.from(themedCtx).inflate(R.layout.bottom_sheet_polar_recorder, null)
 
-        val app = requireContext().applicationContext as net.osmand.plus.OsmandApplication
-        val isNightVision = NauticalPlugin.isNightVision(app)
-
         val txtStatus = customView.findViewById<TextView>(R.id.txt_polar_rec_status)
         val txtSampleCount = customView.findViewById<TextView>(R.id.txt_polar_sample_count)
         val txtActiveProfile = customView.findViewById<TextView>(R.id.txt_polar_active_profile)
@@ -45,27 +42,8 @@ class PolarRecorderBottomSheet : BaseNauticalBottomSheet() {
         val btnStopAndSave = customView.findViewById<MaterialButton>(R.id.btn_stop_and_save)
         val btnDownload = customView.findViewById<MaterialButton>(R.id.btn_download_server_polar)
 
-        if (isNightVision) {
-            customView.setBackgroundColor(0xEE120000.toInt())
-            customView.findViewById<View>(R.id.drag_handle)?.setBackgroundColor(0x80FF1744.toInt())
-            customView.findViewById<com.google.android.material.card.MaterialCardView>(R.id.card_polar_header)?.apply {
-                setCardBackgroundColor(0xEE120000.toInt())
-                strokeColor = 0xFFFF1744.toInt()
-            }
-            customView.findViewById<com.google.android.material.card.MaterialCardView>(R.id.card_polar_canvas)?.apply {
-                setCardBackgroundColor(0xEE120000.toInt())
-                strokeColor = 0xFFFF1744.toInt()
-            }
-            customView.findViewById<TextView>(R.id.txt_polar_title)?.setTextColor(0xFFFF1744.toInt())
-            customView.findViewById<TextView>(R.id.txt_scatter_overlay_label)?.setTextColor(0xFFFF1744.toInt())
-            txtSampleCount.setTextColor(0xFFFF8A80.toInt())
-            txtActiveProfile.setTextColor(0xFFFF8A80.toInt())
-            btnStopAndSave.setTextColor(0xFFFF1744.toInt())
-            btnDownload.setTextColor(0xFFFF8A80.toInt())
-        }
-
-        val activeColor = if (isNightVision) 0xFFFF1744.toInt() else ContextCompat.getColor(themedCtx, R.color.nautical_status_green)
-        val idleColor = if (isNightVision) 0x80FF1744.toInt() else ContextCompat.getColor(themedCtx, R.color.text_color_secondary_light)
+        val activeColor = ContextCompat.getColor(themedCtx, R.color.nautical_status_green)
+        val idleColor = ContextCompat.getColor(themedCtx, R.color.text_color_secondary_light)
 
         fun updateRecordingUi() {
             if (isRecording) {
@@ -73,13 +51,13 @@ class PolarRecorderBottomSheet : BaseNauticalBottomSheet() {
                 txtStatus.setTextColor(activeColor)
                 btnToggleRec.text = getString(R.string.nautical_polar_stop_recording)
                 btnToggleRec.setIconResource(R.drawable.ic_action_rec_stop)
-                btnToggleRec.backgroundTintList = ColorStateList.valueOf(if (isNightVision) 0xFFB71C1C.toInt() else ContextCompat.getColor(themedCtx, R.color.color_warning))
+                btnToggleRec.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(themedCtx, R.color.color_warning))
             } else {
                 txtStatus.text = getString(R.string.nautical_polar_rec_status_idle)
                 txtStatus.setTextColor(idleColor)
                 btnToggleRec.text = getString(R.string.nautical_polar_start_recording)
                 btnToggleRec.setIconResource(R.drawable.ic_action_rec_start)
-                btnToggleRec.backgroundTintList = if (isNightVision) ColorStateList.valueOf(0xFF8B0000.toInt()) else null
+                btnToggleRec.backgroundTintList = null
             }
             txtSampleCount.text = getString(R.string.nautical_polar_samples_count, recordedScatterPoints.size)
             if (showScatterOverlay) {

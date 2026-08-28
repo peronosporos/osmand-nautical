@@ -58,65 +58,26 @@ class NauticalHudManager(val activity: MapActivity) {
         return nauticalHudContainer
     }
 
-    private data class HeaderRecord(val view: View, val priority: Int)
-    private val registeredHeaders = mutableListOf<HeaderRecord>()
-    private var activeHeader: View? = null
-
     fun addHeader(header: View, priority: Int = 100) {
-        getOrCreateContainer() ?: return
-        registeredHeaders.removeAll { it.view == header }
-        registeredHeaders.add(HeaderRecord(header, priority))
-        registeredHeaders.sortBy { it.priority }
-        arbitrateHeaders()
+        val container = getOrCreateContainer() ?: return
+        if (priority == 0) {
+            container.addView(header, 0)
+        } else {
+            container.addView(header)
+        }
         updateLayout()
     }
 
     fun removeHeader(header: View?) {
-        if (header == null) return
-        registeredHeaders.removeAll { it.view == header }
-        if (activeHeader == header) {
-            nauticalHudContainer?.removeView(header)
-            activeHeader = null
+        header?.let {
+            nauticalHudContainer?.removeView(it)
+            updateLayout()
         }
-        arbitrateHeaders()
-        updateLayout()
     }
 
     fun removeAllHeaders() {
-        registeredHeaders.clear()
-        activeHeader = null
         nauticalHudContainer?.removeAllViews()
         updateLayout()
-    }
-
-    private fun arbitrateHeaders() {
-        val container = getOrCreateContainer() ?: return
-        val isNight = NauticalPlugin.isNightVision(activity.app)
-        
-        val highest = registeredHeaders.firstOrNull()?.view
-        
-        if (activeHeader != highest) {
-            activeHeader?.let { container.removeView(it) }
-            activeHeader = highest
-            if (highest != null) {
-                if (highest.parent != null) {
-                    (highest.parent as? ViewGroup)?.removeView(highest)
-                }
-                container.addView(highest, 0)
-            }
-        }
-        
-        registeredHeaders.forEach { record ->
-            (record.view as? INauticalHudHeader)?.applyNightVision(isNight)
-            try {
-                val method = record.view.javaClass.getMethod("applyNightVisionTheme", Boolean::class.javaPrimitiveType)
-                method.invoke(record.view, isNight)
-            } catch (_: Exception) {}
-            try {
-                val method = record.view.javaClass.getMethod("setNightVision", Boolean::class.javaPrimitiveType)
-                method.invoke(record.view, isNight)
-            } catch (_: Exception) {}
-        }
     }
 
     private val bannerQueue = PriorityBlockingQueue<BannerRequest>()
@@ -131,19 +92,14 @@ class NauticalHudManager(val activity: MapActivity) {
         val onConfirm: (() -> Unit)?,
         val secondaryLabel: String?,
         val onSecondaryConfirm: (() -> Unit)?,
-        val priority: Int = 100,
         val timestamp: Long = System.currentTimeMillis()
     ) : Comparable<BannerRequest> {
         override fun compareTo(other: BannerRequest): Int {
-            // Priority 1: Lower value = higher priority (consistent with addHeader)
-            if (this.priority != other.priority) {
-                return this.priority.compareTo(other.priority)
-            }
-            // Priority 2: Warnings/Emergencies first
+            // Priority 1: Warnings/Emergencies first
             if (this.isWarning != other.isWarning) {
                 return if (this.isWarning) -1 else 1
             }
-            // Priority 3: Older items first within same category
+            // Priority 2: Older items first within same category
             return this.timestamp.compareTo(other.timestamp)
         }
     }
@@ -155,13 +111,12 @@ class NauticalHudManager(val activity: MapActivity) {
         isWarning: Boolean = false,
         onConfirm: (() -> Unit)? = null,
         secondaryLabel: String? = null,
-        onSecondaryConfirm: (() -> Unit)? = null,
-        priority: Int = 100
+        onSecondaryConfirm: (() -> Unit)? = null
     ) {
         // Priority check: if text is same as current or queued, ignore to avoid duplicates and clutter
         if (currentBannerText == text || bannerQueue.any { it.text == text }) return
 
-        val request = BannerRequest(text, durationMs, label, isWarning, onConfirm, secondaryLabel, onSecondaryConfirm, priority)
+        val request = BannerRequest(text, durationMs, label, isWarning, onConfirm, secondaryLabel, onSecondaryConfirm)
         bannerQueue.add(request)
         activity.runOnUiThread { processNextBanner() }
     }
@@ -189,7 +144,7 @@ class NauticalHudManager(val activity: MapActivity) {
                 processNextBanner()
             }
         }
-        addHeader(banner, priority = next.priority)
+        addHeader(banner, priority = 0)
         banner.show(next.durationMs)
     }
 
@@ -355,8 +310,6 @@ class NauticalHudManager(val activity: MapActivity) {
         nauticalHudContainer?.let { hud ->
             (hud.parent as? ViewGroup)?.removeView(hud)
         }
-        registeredHeaders.clear()
-        activeHeader = null
         nauticalHudContainer = null
         topBarListener = null
         topWidgetsListener = null

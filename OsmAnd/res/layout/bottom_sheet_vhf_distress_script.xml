@@ -12,16 +12,6 @@
         android:orientation="vertical"
         android:padding="16dp">
 
-        <!-- Centered Drag Handle Pill -->
-        <View
-            android:id="@+id/drag_handle"
-            android:layout_width="36dp"
-            android:layout_height="4dp"
-            android:layout_gravity="center_horizontal"
-            android:layout_marginTop="8dp"
-            android:layout_marginBottom="12dp"
-            android:background="?attr/divider_color" />
-
         <!-- Call Type Toggle: MAYDAY (Distress) vs PAN-PAN (Urgency) -->
         <com.google.android.material.button.MaterialButtonToggleGroup
             android:id="@+id/toggle_call_type"
@@ -36,9 +26,8 @@
                 style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                 android:layout_width="0dp"
                 android:layout_height="48dp"
-                android:minHeight="48dp"
                 android:layout_weight="1"
-                android:text="@string/nautical_vhf_mayday"
+                android:text="MAYDAY (DISTRESS)"
                 android:textColor="@color/color_warning"
                 android:textStyle="bold" />
 
@@ -47,28 +36,16 @@
                 style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                 android:layout_width="0dp"
                 android:layout_height="48dp"
-                android:minHeight="48dp"
                 android:layout_weight="1"
-                android:text="@string/nautical_vhf_pan_pan"
-                android:textStyle="bold" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btn_type_securite"
-                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                android:layout_width="0dp"
-                android:layout_height="48dp"
-                android:minHeight="48dp"
-                android:layout_weight="1"
-                android:text="@string/nautical_vhf_securite"
+                android:text="PAN-PAN (URGENT)"
                 android:textStyle="bold" />
         </com.google.android.material.button.MaterialButtonToggleGroup>
 
         <!-- Nature of Distress Chips -->
         <TextView
-            android:id="@+id/txt_nature_label"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/nautical_vhf_nature_of_emergency"
+            android:text="Nature of Emergency / Distress"
             android:textAppearance="@style/TextAppearance.AppCompat.Small"
             android:textStyle="bold"
             android:textColor="?attr/colorAccent"
@@ -93,49 +70,49 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:checked="true"
-                    android:text="@string/nautical_emergency_sinking" />
+                    android:text="Sinking / Flooding" />
 
                 <com.google.android.material.chip.Chip
                     android:id="@+id/chip_fire"
                     style="@style/Widget.MaterialComponents.Chip.Choice"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="@string/nautical_emergency_fire" />
+                    android:text="Fire / Explosion" />
 
                 <com.google.android.material.chip.Chip
                     android:id="@+id/chip_grounding"
                     style="@style/Widget.MaterialComponents.Chip.Choice"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="@string/nautical_emergency_grounding" />
+                    android:text="Grounding" />
 
                 <com.google.android.material.chip.Chip
                     android:id="@+id/chip_collision"
                     style="@style/Widget.MaterialComponents.Chip.Choice"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="@string/nautical_emergency_collision" />
+                    android:text="Collision" />
 
                 <com.google.android.material.chip.Chip
                     android:id="@+id/chip_mob"
                     style="@style/Widget.MaterialComponents.Chip.Choice"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="@string/nautical_emergency_mob" />
+                    android:text="Man Overboard (MOB)" />
 
                 <com.google.android.material.chip.Chip
                     android:id="@+id/chip_adrift"
                     style="@style/Widget.MaterialComponents.Chip.Choice"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="@string/nautical_emergency_disabled" />
+                    android:text="Disabled &amp; Adrift" />
 
                 <com.google.android.material.chip.Chip
                     android:id="@+id/chip_medical"
                     style="@style/Widget.MaterialComponents.Chip.Choice"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="@string/nautical_emergency_medical" />
+                    android:text="Medical Emergency" />
 
             </com.google.android.material.chip.ChipGroup>
         </HorizontalScrollView>
@@ -149,27 +126,24 @@
             android:layout_marginBottom="12dp">
 
             <TextView
-                android:id="@+id/txt_pob_label"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="@string/nautical_pob_label"
+                android:text="Persons on Board (POB):"
                 android:textAppearance="@style/TextAppearance.AppCompat.Medium"
                 android:textColor="?android:attr/textColorPrimary" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btn_pob_minus"
                 style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                android:minHeight="48dp"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
                 android:text="−"
                 android:textSize="18sp"
-                app:cornerRadius="24dp"
+                app:cornerRadius="22dp"
                 android:insetTop="0dp"
                 android:insetBottom="0dp"
-                android:padding="0dp"
-                android:contentDescription="@string/nautical_accessibility_minus" />
+                android:padding="0dp" />
 
             <TextView
                 android:id="@+id/txt_pob_count"
@@ -184,42 +158,47 @@
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btn_pob_plus"
                 style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                android:minHeight="48dp"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
                 android:text="+"
                 android:textSize="18sp"
-                app:cornerRadius="24dp"
+                app:cornerRadius="22dp"
                 android:insetTop="0dp"
                 android:insetBottom="0dp"
-                android:padding="0dp"
-                android:contentDescription="@string/nautical_accessibility_plus" />
+                android:padding="0dp" />
         </LinearLayout>
 
-        <!-- Dynamic Read-Aloud Script Box -->
+        <!-- Recitation Script Card -->
         <com.google.android.material.card.MaterialCardView
-            android:id="@+id/card_distress_script"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            app:cardCornerRadius="8dp"
-            app:cardElevation="0dp"
+            app:cardCornerRadius="10dp"
+            app:cardElevation="3dp"
             app:strokeWidth="1.5dp"
-            app:strokeColor="?attr/colorAccent"
+            app:strokeColor="@color/color_warning"
             app:cardBackgroundColor="?attr/card_and_list_background_basic"
             android:layout_marginBottom="16dp">
 
-            <TextView
-                android:id="@+id/txt_distress_script_body"
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:padding="16dp"
-                android:lineSpacingExtra="4dp"
-                android:typeface="monospace"
-                android:textSize="13.5sp"
-                android:textColor="?android:attr/textColorPrimary" />
+                android:orientation="vertical"
+                android:padding="14dp">
+
+                <TextView
+                    android:id="@+id/txt_distress_script_body"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="monospace"
+                    android:textSize="14.5sp"
+                    android:lineSpacingExtra="4dp"
+                    android:textColor="?android:attr/textColorPrimary"
+                    android:textIsSelectable="true" />
+
+            </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
-        <!-- Copy & Practice Controls -->
+        <!-- Bottom Action Buttons: Copy & Speak/Practice -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -231,7 +210,7 @@
                 android:layout_width="0dp"
                 android:layout_height="48dp"
                 android:layout_weight="1"
-                android:text="@string/nautical_copy_script"
+                android:text="Copy Script"
                 app:icon="@drawable/ic_action_copy"
                 android:layout_marginEnd="6dp" />
 
@@ -241,7 +220,7 @@
                 android:layout_width="0dp"
                 android:layout_height="48dp"
                 android:layout_weight="1"
-                android:text="@string/nautical_speak_script"
+                android:text="Practice / Speak"
                 app:icon="@drawable/ic_action_volume_up"
                 android:layout_marginStart="6dp" />
         </LinearLayout>

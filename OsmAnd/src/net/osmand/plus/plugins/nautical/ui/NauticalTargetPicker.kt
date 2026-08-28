@@ -168,7 +168,6 @@ class NauticalTargetPicker : BottomSheetDialogFragment() {
         val row = LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = android.view.Gravity.CENTER_VERTICAL
-            minimumHeight = dpToPx(context, 48f)
             setPadding(0, dpToPx(context, 10f), 0, dpToPx(context, 10f))
             setBackgroundResource(net.osmand.plus.utils.AndroidUtils.resolveAttribute(context, android.R.attr.selectableItemBackground))
             isClickable = true
@@ -314,20 +313,16 @@ class NauticalTargetPicker : BottomSheetDialogFragment() {
             AisObjType.AIS_VESSEL_AUTHORITIES,
             AisObjType.AIS_VESSEL_SAR,
             AisObjType.AIS_VESSEL_OTHER,
-            AisObjType.AIS_INVALID -> R.drawable.ic_action_motorboat
-            AisObjType.AIS_LANDSTATION -> R.drawable.ic_action_antenna
-            AisObjType.AIS_AIRPLANE -> R.drawable.ic_action_aircraft
-            AisObjType.AIS_SART -> R.drawable.ic_action_alert
-            AisObjType.AIS_ATON -> R.drawable.ic_action_target
-            AisObjType.AIS_ATON_VIRTUAL -> R.drawable.ic_action_target
+            AisObjType.AIS_INVALID -> R.drawable.mm_ais_vessel
+            AisObjType.AIS_LANDSTATION -> R.drawable.mm_ais_land
+            AisObjType.AIS_AIRPLANE -> R.drawable.mm_ais_plane
+            AisObjType.AIS_SART -> R.drawable.mm_ais_sar
+            AisObjType.AIS_ATON -> R.drawable.mm_ais_aton
+            AisObjType.AIS_ATON_VIRTUAL -> R.drawable.mm_ais_aton_virt
         }
     }
 
     private fun selectColor(type: AisObjType): Int {
-        val app = requireActivity().application as? OsmandApplication
-        if (app != null && NauticalPlugin.isNightVision(app)) {
-            return 0xFFFF1744.toInt()
-        }
         return when (type) {
             AisObjType.AIS_VESSEL -> Color.GREEN
             AisObjType.AIS_VESSEL_SPORT -> Color.YELLOW

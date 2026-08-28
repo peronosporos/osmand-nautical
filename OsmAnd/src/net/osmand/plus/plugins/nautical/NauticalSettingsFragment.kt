@@ -52,15 +52,6 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
     }
 
 
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        super.onViewCreated(view, savedInstanceState)
-        val isNightVision = NauticalPlugin.isNightVision(app)
-        if (isNightVision) {
-            view.setBackgroundColor(0xEE120000.toInt())
-            listView?.setBackgroundColor(0xEE120000.toInt())
-        }
-    }
-
     override fun setupPreferences() {
         setupDisplayCategory()
         setupVesselContext()
@@ -76,9 +67,6 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
         setupVhfCategory()
         setupNavtexCategory()
         setupLogbookCategory()
-        setupChartOverlaysCategory()
-        setupNmeaDiagnosticsCategory()
-        setupCockpitErgonomicsCategory()
         setupMaintenanceCategory()
 
         updateSecureSettingsVisibility(settings.NAUTICAL_USE_SECURE_CONNECTION.get())
@@ -901,49 +889,6 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
         }
     }
 
-    private fun setupChartOverlaysCategory() {
-        findPreference<SwitchPreferenceEx>(settings.NAUTICAL_SHOW_POLAR_OVERLAY.id)?.apply {
-            setThemedIcon(OsmAndR.drawable.ic_action_sail_boat_dark)
-            isChecked = settings.NAUTICAL_SHOW_POLAR_OVERLAY.get()
-        }
-        findPreference<SwitchPreferenceEx>(settings.NAUTICAL_SHOW_DEPTH_PROFILE.id)?.apply {
-            setThemedIcon(OsmAndR.drawable.ic_action_additional_option)
-            isChecked = settings.NAUTICAL_SHOW_DEPTH_PROFILE.get()
-        }
-        findPreference<SwitchPreferenceEx>(settings.NAUTICAL_SHOW_RADAR_OVERLAY.id)?.apply {
-            setThemedIcon(OsmAndR.drawable.ic_action_antenna)
-            isChecked = settings.NAUTICAL_SHOW_RADAR_OVERLAY.get()
-        }
-        findPreference<SwitchPreferenceEx>(settings.NAUTICAL_SHOW_CLEARANCE_BADGES.id)?.apply {
-            setThemedIcon(OsmAndR.drawable.ic_action_alert)
-            isChecked = settings.NAUTICAL_SHOW_CLEARANCE_BADGES.get()
-        }
-    }
-
-    private fun setupNmeaDiagnosticsCategory() {
-        findPreference<ListPreferenceEx>(settings.NAUTICAL_SENSOR_FALLBACK_TIMEOUT.id)?.apply {
-            setThemedIcon(OsmAndR.drawable.ic_action_time)
-            entries = arrayOf("1.5 seconds", "3.0 seconds (Default)", "5.0 seconds", "10.0 seconds")
-            entryValues = arrayOf("1.5", "3.0", "5.0", "10.0")
-            val current = settings.NAUTICAL_SENSOR_FALLBACK_TIMEOUT.get()
-            value = current.toString()
-            summary = "${current}s"
-            setOnPreferenceChangeListener { _, newValue ->
-                val f = (newValue as? String)?.toFloatOrNull() ?: 3.0f
-                settings.NAUTICAL_SENSOR_FALLBACK_TIMEOUT.set(f)
-                summary = "${f}s"
-                true
-            }
-        }
-    }
-
-    private fun setupCockpitErgonomicsCategory() {
-        findPreference<SwitchPreferenceEx>(settings.NAUTICAL_WET_SCREEN_VOLUME_KEYS.id)?.apply {
-            setThemedIcon(OsmAndR.drawable.ic_action_lock)
-            isChecked = settings.NAUTICAL_WET_SCREEN_VOLUME_KEYS.get()
-        }
-    }
-
     private fun updateModuleDetailsVisibility() {
         val caps = NauticalPlugin.engine?.capabilityManager?.capabilities?.value
         val isWatch = WearOsNauticalManager(requireContext()).isWatchMode()
@@ -1522,5 +1467,11 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
             }
         }
         return changed
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        
+        // Activity decorView filter handles scotopic rendering
     }
 }

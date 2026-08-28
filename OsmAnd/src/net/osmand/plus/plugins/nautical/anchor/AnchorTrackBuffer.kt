@@ -7,12 +7,7 @@ import net.osmand.shared.util.KMapUtils
 /**
  * Data point for the anchor snail trail.
  */
-data class TrackPoint(
-    val latLon: LatLon,
-    val timestamp: Long,
-    val windDirectionDeg: Double? = null,
-    val currentDirectionDeg: Double? = null
-)
+data class TrackPoint(val latLon: LatLon, val timestamp: Long)
 
 /**
  * Thread-safe circular buffer for storing historical anchor positions.
@@ -31,7 +26,7 @@ class AnchorTrackBuffer(private val maxCapacity: Int = 720) {
      * Adds a new location to the buffer if it meets the filtering criteria.
      * @return true if point was added, false otherwise.
      */
-    fun addPosition(location: Location, windDirDeg: Double? = null, currentDirDeg: Double? = null): Boolean {
+    fun addPosition(location: Location): Boolean {
         synchronized(lock) {
             val lastPoint = buffer.lastOrNull()
             if (lastPoint != null) {
@@ -50,7 +45,7 @@ class AnchorTrackBuffer(private val maxCapacity: Int = 720) {
             if (buffer.size >= maxCapacity) {
                 buffer.removeFirst()
             }
-            buffer.addLast(TrackPoint(LatLon(location.latitude, location.longitude), location.time, windDirDeg, currentDirDeg))
+            buffer.addLast(TrackPoint(LatLon(location.latitude, location.longitude), location.time))
             return true
         }
     }

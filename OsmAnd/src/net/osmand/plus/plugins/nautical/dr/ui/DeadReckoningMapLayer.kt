@@ -93,56 +93,9 @@ class DeadReckoningMapLayer(context: Context) : OsmandMapLayer(context) {
 
     override fun drawInScreenPixels(): Boolean = true
 
-    private fun setupPaints(isNight: Boolean) {
-        if (isNight) {
-            val redColor = 0xFFFF1744.toInt()
-            val redLight = 0xFFFF8A80.toInt()
-            
-            amberPaint.color = redColor
-            dashedAmberPaint.color = redColor
-            projectionLinePaint.color = redColor
-            
-            fillPaint.color = redColor
-            fillPaint.alpha = 40
-            
-            uncertaintyFillPaint.color = 0x20FF1744.toInt()
-            uncertaintyStrokePaint.color = 0x80FF1744.toInt()
-            
-            milestonePointPaint.color = redColor
-            
-            badgeBgPaint.color = 0xEE120000.toInt()
-            badgeStrokePaint.color = redColor
-            badgeTextPaint.color = redLight
-        } else {
-            amberPaint.color = colorAmber
-            dashedAmberPaint.color = colorAmber
-            projectionLinePaint.color = colorAmber
-            
-            fillPaint.color = colorAmber
-            fillPaint.alpha = 100
-            
-            uncertaintyFillPaint.color = colorAmber
-            uncertaintyFillPaint.alpha = 35
-            
-            uncertaintyStrokePaint.color = colorAmber
-            uncertaintyStrokePaint.alpha = 140
-            
-            milestonePointPaint.color = colorAmber
-            
-            badgeBgPaint.color = 0xFF263238.toInt()
-            badgeBgPaint.alpha = 220
-            badgeStrokePaint.color = colorAmber
-            badgeTextPaint.color = Color.WHITE
-        }
-    }
-
     override fun onDraw(canvas: Canvas, tileBox: RotatedTileBox, settings: DrawSettings) {
         val state = drUiState ?: return
         if (state.source != FixSource.DEAD_RECKONING) return
-
-        val app = context.applicationContext as? net.osmand.plus.OsmandApplication ?: return
-        val isNight = net.osmand.plus.plugins.nautical.NauticalPlugin.isNightVision(app)
-        setupPaints(isNight)
 
         val lat = state.latitude ?: return
         val lon = state.longitude ?: return
@@ -213,15 +166,7 @@ class DeadReckoningMapLayer(context: Context) : OsmandMapLayer(context) {
             }
         }
 
-        // 3. Draw estimated boat position marker & growing CEP uncertainty circle
-        val drUncertaintyMeters = 15.0 + (state.drDurationSeconds * 0.25)
-        val northDrPoint = MapUtils.rhumbDestinationPoint(lat, lon, 0.0, drUncertaintyMeters)
-        val northDrY = tileBox.getPixYFromLatLon(northDrPoint.latitude, northDrPoint.longitude)
-        val drPixRadius = abs(drY - northDrY).coerceAtLeast(8f)
-
-        canvas.drawCircle(drX, drY, drPixRadius, uncertaintyFillPaint)
-        canvas.drawCircle(drX, drY, drPixRadius, uncertaintyStrokePaint)
-
+        // 3. Draw estimated boat position marker (Amber circle with crosshair)
         canvas.drawCircle(drX, drY, 25f, fillPaint)
         canvas.drawCircle(drX, drY, 25f, amberPaint)
         

@@ -35,7 +35,6 @@ class NauticalSailInventoryQuickAction : QuickAction {
         if (mapActivity.isFinishing || mapActivity.isDestroyed || mapActivity.supportFragmentManager.isStateSaved) {
             return
         }
-        mapActivity.layout?.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
         if (NauticalPlugin.getInstance() == null) {
             mapActivity.app.showToastMessage(R.string.nautical_plugin_inactive)
             return

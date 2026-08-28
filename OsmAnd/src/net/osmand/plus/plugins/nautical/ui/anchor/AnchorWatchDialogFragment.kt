@@ -40,7 +40,6 @@ class AnchorWatchDialogFragment : BaseMaterialBottomSheetDialogFragment() {
     private var btnDisarmAnchor: MaterialButton? = null
     private var btnPreviewMap: MaterialButton? = null
     private var txtSensorWarning: TextView? = null
-    private var txtSubmarineHazardWarning: TextView? = null
     private var txtResultRode: TextView? = null
 
     private var layoutSkInfo: View? = null
@@ -63,7 +62,6 @@ class AnchorWatchDialogFragment : BaseMaterialBottomSheetDialogFragment() {
         viewModel = ViewModelProvider(this, factory)[AnchorCalculatorViewModel::class.java]
 
         val editDepth = view.findViewById<TextInputEditText>(R.id.edit_depth)
-        val editBowRollerHeight = view.findViewById<TextInputEditText>(R.id.edit_bow_roller_height)
         val editTide = view.findViewById<TextInputEditText>(R.id.edit_tide)
         val editBowOffset = view.findViewById<TextInputEditText>(R.id.edit_bow_offset)
         val editFreeboard = view.findViewById<TextInputEditText>(R.id.edit_freeboard)
@@ -71,14 +69,12 @@ class AnchorWatchDialogFragment : BaseMaterialBottomSheetDialogFragment() {
         val editLat = view.findViewById<TextInputEditText>(R.id.edit_anchor_lat)
         val editLon = view.findViewById<TextInputEditText>(R.id.edit_anchor_lon)
         val toggleRatio = view.findViewById<MaterialButtonToggleGroup>(R.id.toggle_ratio)
-        val btnApplyCalculatedRadius = view.findViewById<MaterialButton>(R.id.btn_apply_calculated_radius)
         txtResultRode = view.findViewById(R.id.txt_result_rode)
         btnQuickDropBow = view.findViewById(R.id.btn_quick_drop_bow)
         btnDropAnchor = view.findViewById(R.id.btn_drop_anchor)
         btnDisarmAnchor = view.findViewById(R.id.btn_disarm_anchor)
         btnPreviewMap = view.findViewById(R.id.btn_preview_map)
         txtSensorWarning = view.findViewById(R.id.txt_sensor_warning)
-        txtSubmarineHazardWarning = view.findViewById(R.id.txt_submarine_hazard_warning)
 
         layoutSkInfo = view.findViewById(R.id.layout_sk_anchor_info)
         txtRodeDeployed = view.findViewById(R.id.txt_rode_deployed)
@@ -93,7 +89,6 @@ class AnchorWatchDialogFragment : BaseMaterialBottomSheetDialogFragment() {
 
         // Bind initial values
         editDepth.setText(viewModel.depth.value.toString())
-        editBowRollerHeight?.setText(viewModel.bowRollerHeight.value.toString())
         editTide.setText(viewModel.tideRise.value.toString())
         editBowOffset.setText(viewModel.bowOffset.value.toString())
         editFreeboard.setText(viewModel.freeboard.value.toString())
@@ -103,10 +98,10 @@ class AnchorWatchDialogFragment : BaseMaterialBottomSheetDialogFragment() {
         if (viewModel.anchorLon.value != 0.0) editLon.setText(viewModel.anchorLon.value.toString())
         
         when (viewModel.scopeRatio.value) {
-            5f -> toggleRatio.check(R.id.btn_ratio_all_chain)
-            7f -> toggleRatio.check(R.id.btn_ratio_rope_chain)
-            8f -> toggleRatio.check(R.id.btn_ratio_storm)
-            else -> toggleRatio.check(R.id.btn_ratio_all_chain)
+            3f -> toggleRatio.check(R.id.btn_ratio_3)
+            5f -> toggleRatio.check(R.id.btn_ratio_5)
+            7f -> toggleRatio.check(R.id.btn_ratio_7)
+            else -> toggleRatio.check(R.id.btn_ratio_5)
         }
 
         // Stepper Button Listeners
@@ -143,12 +138,6 @@ class AnchorWatchDialogFragment : BaseMaterialBottomSheetDialogFragment() {
                     isDepthManuallyEdited = true
                 }
                 s?.toString()?.toFloatOrNull()?.let { viewModel.setDepth(it) }
-            }
-        })
-
-        editBowRollerHeight?.addTextChangedListener(object : SimpleTextWatcher() {
-            override fun afterTextChanged(s: Editable?) {
-                s?.toString()?.toFloatOrNull()?.let { viewModel.setBowRollerHeight(it) }
             }
         })
 
@@ -199,19 +188,13 @@ class AnchorWatchDialogFragment : BaseMaterialBottomSheetDialogFragment() {
         toggleRatio.addOnButtonCheckedListener { _, checkedId, isChecked ->
             if (isChecked) {
                 val ratio = when (checkedId) {
-                    R.id.btn_ratio_all_chain -> 5f
-                    R.id.btn_ratio_rope_chain -> 7f
-                    R.id.btn_ratio_storm -> 8f
+                    R.id.btn_ratio_3 -> 3f
+                    R.id.btn_ratio_5 -> 5f
+                    R.id.btn_ratio_7 -> 7f
                     else -> 5f
                 }
                 viewModel.setScopeRatio(ratio)
             }
-        }
-
-        btnApplyCalculatedRadius?.setOnClickListener {
-            viewModel.applyCalculatedRadius()
-            app.showToastMessage(R.string.nautical_anchor_set)
-            dismiss()
         }
 
         btnQuickDropBow?.setOnClickListener {
@@ -243,25 +226,6 @@ class AnchorWatchDialogFragment : BaseMaterialBottomSheetDialogFragment() {
             
             // TASK-049: Implement manual drag via interaction with map layers
             dismiss()
-        }
-
-        // Snail-Trail Playback Slider
-        val sliderPlayback = view.findViewById<com.google.android.material.slider.Slider>(R.id.slider_anchor_playback)
-        val txtPlaybackTime = view.findViewById<TextView>(R.id.txt_playback_time)
-        val anchorMapLayer = app.osmandMap?.mapView?.getLayerByClass(AnchorWatchMapLayer::class.java)
-
-        sliderPlayback?.addOnChangeListener { _, value, _ ->
-            val minAgo = (60 - value.toInt())
-            anchorMapLayer?.playbackMinuteOffset = value.toInt()
-            txtPlaybackTime?.text = if (minAgo == 0) "Track History: Live (Now)" else "Track History: T -${minAgo}m"
-            app.osmandMap?.mapView?.refreshMap()
-        }
-
-        val isNight = NauticalPlugin.isNightVision(app)
-        if (isNight) {
-            sliderPlayback?.trackActiveTintList = android.content.res.ColorStateList.valueOf(0xFFFF1744.toInt())
-            sliderPlayback?.thumbTintList = android.content.res.ColorStateList.valueOf(0xFFFF1744.toInt())
-            txtPlaybackTime?.setTextColor(0xFFFF1744.toInt())
         }
 
         btnDisarmAnchor?.setOnClickListener {
@@ -335,9 +299,6 @@ class AnchorWatchDialogFragment : BaseMaterialBottomSheetDialogFragment() {
                         btnQuickDropBow?.isEnabled = isSafe
                         btnDropAnchor?.isEnabled = isSafe
                         
-                        val subHazard = NauticalPlugin.getInstance()?.safetyEvaluator?.violatedSubmarineHazardFeatureId != null
-                        txtSubmarineHazardWarning?.visibility = if (subHazard) View.VISIBLE else View.GONE
-
                         val liveDepth = state.depthBelowTransducer ?: state.depthSurfaceToTransducer ?: state.depthBelowKeel
                         val hasDepth = liveDepth != null && !state.stalePaths.contains("environment.depth.belowTransducer")
                         txtSensorWarning?.visibility = if (hasDepth) View.GONE else View.VISIBLE
@@ -354,9 +315,6 @@ class AnchorWatchDialogFragment : BaseMaterialBottomSheetDialogFragment() {
     }
 
     override fun onDestroyView() {
-        val app = requireActivity().application as OsmandApplication
-        app.osmandMap?.mapView?.getLayerByClass(AnchorWatchMapLayer::class.java)?.playbackMinuteOffset = null
-        app.osmandMap?.mapView?.refreshMap()
         super.onDestroyView()
         btnQuickDropBow = null
         btnDropAnchor = null

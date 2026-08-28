@@ -122,35 +122,8 @@ class MarineLogbookFragment : BaseOsmAndFragment() {
         swipeRefresh = view.findViewById(R.id.swipe_refresh)
         val fab: FloatingActionButton = view.findViewById(R.id.add_entry_fab)
         
-        // Voyage Summary Card
-        val cardVoyageSummary = view.findViewById<View>(R.id.card_voyage_summary)
-        val layoutSummaryHeader = view.findViewById<View>(R.id.layout_voyage_summary_header)
-        val btnExpandSummary = view.findViewById<android.widget.ImageView>(R.id.btn_expand_voyage_summary)
-        val layoutMetricsGrid = view.findViewById<View>(R.id.layout_voyage_metrics_grid)
-        val txtTotalDist = view.findViewById<TextView>(R.id.txt_summary_total_distance)
-        val txtAvgSog = view.findViewById<TextView>(R.id.txt_summary_avg_sog)
-        val txtMaxSog = view.findViewById<TextView>(R.id.txt_summary_max_sog)
-        val txtEngineSail = view.findViewById<TextView>(R.id.txt_summary_engine_sail_ratio)
-
-        var isSummaryExpanded = true
-        fun toggleSummary() {
-            isSummaryExpanded = !isSummaryExpanded
-            layoutMetricsGrid?.visibility = if (isSummaryExpanded) View.VISIBLE else View.GONE
-            btnExpandSummary?.setImageResource(if (isSummaryExpanded) R.drawable.ic_action_arrow_drop_up else R.drawable.ic_action_arrow_drop_down)
-        }
-
-        layoutSummaryHeader?.setOnClickListener {
-            toggleSummary()
-            it.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
-        }
-        btnExpandSummary?.setOnClickListener {
-            toggleSummary()
-            it.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
-        }
-
         val isWatch = wearOsManager.isWatchMode()
         if (isWatch) {
-             cardVoyageSummary?.visibility = View.GONE
              // Item 13: Use proper WindowInsets for round bezel padding
              view.setOnApplyWindowInsetsListener { _, insets ->
                  if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
@@ -264,26 +237,6 @@ class MarineLogbookFragment : BaseOsmAndFragment() {
             viewModel.logEntries.collectLatest { entries ->
                 adapter.submitList(entries)
                 emptyView.visibility = if (entries.isEmpty()) View.VISIBLE else View.GONE
-            }
-        }
-
-        lifecycleScope.launch {
-            viewModel.summaryMetrics.collectLatest { metrics ->
-                val isWatchMode = wearOsManager.isWatchMode()
-                if (!isWatchMode && metrics.totalEntries > 0) {
-                    view.findViewById<View>(R.id.card_voyage_summary)?.visibility = View.VISIBLE
-                    view.findViewById<TextView>(R.id.txt_summary_total_distance)?.text = String.format(java.util.Locale.US, "%.1f NM", metrics.totalDistanceNm)
-                    view.findViewById<TextView>(R.id.txt_summary_avg_sog)?.text = String.format(java.util.Locale.US, "%.1f kn", metrics.avgSogKnots)
-                    view.findViewById<TextView>(R.id.txt_summary_max_sog)?.text = String.format(java.util.Locale.US, "%.1f kn", metrics.maxSogKnots)
-                    val ratioStr = if (metrics.enginePercent > 0 || metrics.sailPercent > 0) {
-                        String.format(java.util.Locale.US, "%.0f%% / %.0f%%", metrics.enginePercent, metrics.sailPercent)
-                    } else {
-                        "-- / --"
-                    }
-                    view.findViewById<TextView>(R.id.txt_summary_engine_sail_ratio)?.text = ratioStr
-                } else if (!isWatchMode && metrics.totalEntries == 0) {
-                    view.findViewById<View>(R.id.card_voyage_summary)?.visibility = View.GONE
-                }
             }
         }
 

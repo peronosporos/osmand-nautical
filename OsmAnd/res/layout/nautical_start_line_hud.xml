@@ -15,7 +15,7 @@
         android:layout_height="24dp"
         android:src="@drawable/ic_action_flag"
         app:tint="#00E676"
-        android:contentDescription="@string/nautical_start_line_flag" />
+        android:contentDescription="Start Line" />
 
     <LinearLayout
         android:layout_width="0dp"
@@ -44,7 +44,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="8dp"
-                android:text="@string/nautical_start_dist_placeholder"
+                android:text="Dist: -- m"
                 android:textColor="?android:attr/textColorSecondary"
                 android:textSize="13sp" />
 
@@ -53,7 +53,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="8dp"
-                android:text="@string/nautical_start_burn_placeholder"
+                android:text="Burn: --:--"
                 android:textColor="#FF1744"
                 android:textSize="13sp"
                 android:textStyle="bold" />
@@ -64,7 +64,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="2dp"
-            android:text="@string/nautical_start_favored_placeholder"
+            android:text="Favored: --"
             android:textColor="#00E5FF"
             android:textSize="12.5sp"
             android:textStyle="bold" />
@@ -74,9 +74,8 @@
         android:id="@+id/btn_sync_timer"
         style="@style/Widget.AppCompat.Button.Colored"
         android:layout_width="wrap_content"
-        android:layout_height="48dp"
-        android:minHeight="48dp"
-        android:text="@string/nautical_sync_timer"
+        android:layout_height="36dp"
+        android:text="SYNC"
         android:textStyle="bold"
         android:textColor="@android:color/white"
         android:textSize="12sp"
@@ -86,10 +85,9 @@
         android:id="@+id/btn_clear_line"
         style="@style/Widget.AppCompat.Button.Borderless"
         android:layout_width="wrap_content"
-        android:layout_height="48dp"
-        android:minHeight="48dp"
-        android:text="@string/shared_string_clear"
-        android:textColor="?android:attr/textColorSecondary"
+        android:layout_height="36dp"
+        android:text="Clear"
+        android:textColor="#888888"
         android:textSize="12sp" />
 
 </LinearLayout>

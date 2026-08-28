@@ -16,8 +16,6 @@ class PropulsionContextManager private constructor(@Suppress("unused") app: Osma
     private val hysteresisMs = 5000L
 
     companion object {
-        private const val ENGINE_STALE_TIMEOUT_MS = 5000L
-
         @Volatile
         private var instance: PropulsionContextManager? = null
 
@@ -29,37 +27,13 @@ class PropulsionContextManager private constructor(@Suppress("unused") app: Osma
     }
 
     private var lastState: MarineState? = null
-    @Volatile
     private var debouncedEngineRunning = false
-    @Volatile
-    private var lastEngineTelemetryTimestampMs: Long = 0L
-
-    private val staleWatchdogRunnable = Runnable {
-        synchronized(this) {
-            if (isEngineStaleInternal()) {
-                cancelHysteresis()
-                debouncedEngineRunning = false
-            }
-        }
-    }
 
     init {
         NauticalPlugin.engine?.registerListener { state ->
-            synchronized(this) {
-                lastState = state
-                if (state.engineRpm != null || state.engineState != null) {
-                    lastEngineTelemetryTimestampMs = System.currentTimeMillis()
-                    handler.removeCallbacks(staleWatchdogRunnable)
-                    handler.postDelayed(staleWatchdogRunnable, ENGINE_STALE_TIMEOUT_MS)
-                }
-                updateDebouncedState()
-            }
+            lastState = state
+            updateDebouncedState()
         }
-    }
-
-    private fun isEngineStaleInternal(): Boolean {
-        if (lastEngineTelemetryTimestampMs == 0L) return false
-        return (System.currentTimeMillis() - lastEngineTelemetryTimestampMs) > ENGINE_STALE_TIMEOUT_MS
     }
 
     private fun updateDebouncedState() {
@@ -87,9 +61,6 @@ class PropulsionContextManager private constructor(@Suppress("unused") app: Osma
     }
 
     private fun isEngineRunningInternal(): Boolean {
-        if (isEngineStaleInternal()) {
-            return false
-        }
         val state = lastState ?: return false
         val rpm = state.engineRpm ?: 0.0
         val engineStarted = state.engineState?.lowercase(Locale.US) == "started"
@@ -107,7 +78,7 @@ class PropulsionContextManager private constructor(@Suppress("unused") app: Osma
      */
     fun isEngineStateUnknown(): Boolean {
         val state = lastState ?: return true
-        return (state.engineRpm == null && state.engineState == null) || isEngineStaleInternal()
+        return state.engineRpm == null && state.engineState == null
     }
 
     @Suppress("unused")

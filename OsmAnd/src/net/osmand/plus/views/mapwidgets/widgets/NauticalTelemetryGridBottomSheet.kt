@@ -54,23 +54,13 @@ class NauticalTelemetryGridBottomSheet : NauticalMenuBottomSheetDialogFragment()
         val gridView = LayoutInflater.from(requireContext()).inflate(R.layout.bottom_sheet_nautical_telemetry_grid, null)
         recyclerView = gridView.findViewById(R.id.recycler_view)
         recyclerView?.layoutManager = GridLayoutManager(requireContext(), 3)
-
-        val isNightVision = NauticalPlugin.isNightVision(app)
-        if (isNightVision) {
-            gridView.setBackgroundColor(0xEE120000.toInt())
-            gridView.findViewById<View>(R.id.drag_handle)?.setBackgroundColor(0x80FF1744.toInt())
-        }
         
-        adapter = TelemetryAdapter(widgets, app, isNightVision)
+        adapter = TelemetryAdapter(widgets, app)
         recyclerView?.adapter = adapter
         
-        val titleView = gridView.findViewById<TextView>(R.id.title)
-        titleView.visibility = View.GONE
-        val btnSettings = gridView.findViewById<ImageView>(R.id.btn_settings)
+        gridView.findViewById<View>(R.id.title).visibility = View.GONE
+        val btnSettings = gridView.findViewById<View>(R.id.btn_settings)
         btnSettings.visibility = View.VISIBLE
-        if (isNightVision) {
-            btnSettings.setColorFilter(0xFFFF1744.toInt())
-        }
         btnSettings.setOnClickListener { onRightBottomButtonClick() }
 
         items.add(net.osmand.plus.base.bottomsheetmenu.BaseBottomSheetItem.Builder().setCustomView(gridView).create())
@@ -114,7 +104,6 @@ class NauticalTelemetryGridBottomSheet : NauticalMenuBottomSheetDialogFragment()
     private inner class TelemetryAdapter(
         private val widgets: List<WidgetType>,
         private val app: OsmandApplication,
-        private val isNightVision: Boolean
     ) : RecyclerView.Adapter<TelemetryViewHolder>() {
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): TelemetryViewHolder {
@@ -133,14 +122,8 @@ class NauticalTelemetryGridBottomSheet : NauticalMenuBottomSheetDialogFragment()
             holder.value.text = value
             holder.unit.text = unit
 
-            if (isNightVision) {
-                holder.header.setTextColor(0xFFFF1744.toInt())
-                holder.value.setTextColor(0xFFFF8A80.toInt())
-                holder.unit.setTextColor(0xFFFF5252.toInt())
-            } else {
-                val color = getSemanticColor(widget, state)
-                holder.value.setTextColor(color)
-            }
+            val color = getSemanticColor(widget, state)
+            holder.value.setTextColor(color)
 
             holder.itemView.setOnClickListener {
                 NauticalDataBottomSheet.newInstance(widget).show(parentFragmentManager, "nautical_data")

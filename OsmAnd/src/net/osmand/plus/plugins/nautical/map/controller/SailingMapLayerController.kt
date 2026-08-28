@@ -35,79 +35,79 @@ class SailingMapLayerController(private val mapActivity: MapActivity, s57Spatial
         val mapView = mapActivity.mapView
         val settings = mapActivity.app.settings
 
-        // 1. Raster Charts (Z = 1.10f)
+        // Raster
         if (settings.NAUTICAL_SHOW_RASTER_CHARTS.get()) {
-            if (!mapView.layers.contains(rasterLayer)) mapView.addLayer(rasterLayer, 1.10f)
+            if (!mapView.layers.contains(rasterLayer)) mapView.addLayer(rasterLayer, 0.5f)
         } else {
             mapView.removeLayer(rasterLayer)
         }
 
-        // 2. PMTiles (Z = 1.20f)
+        // PMTiles
         if (settings.NAUTICAL_SHOW_PMTILES.get()) {
-            if (!mapView.layers.contains(skPmtilesLayer)) mapView.addLayer(skPmtilesLayer, 1.20f)
+            if (!mapView.layers.contains(skPmtilesLayer)) mapView.addLayer(skPmtilesLayer, 0.55f)
         } else {
             mapView.removeLayer(skPmtilesLayer)
         }
 
-        // 3. S-57 Vector Objects (Z = 1.30f)
+        // S-57
         s57Layer?.let {
-            if (settings.NAUTICAL_SHOW_S57_CHARTS.get()) {
-                if (!mapView.layers.contains(it)) mapView.addLayer(it, 1.30f)
+            if (settings.NAUTICAL_SHOW_RASTER_CHARTS.get()) { // Assuming S-57 visibility linked for now
+                if (!mapView.layers.contains(it)) mapView.addLayer(it, 0.6f)
             } else {
                 mapView.removeLayer(it)
             }
         }
 
-        // 4. GRIB Oceanographic Overlay (Z = 2.10f)
+        // Oceanographic GRIB Overlay
         if (settings.NAUTICAL_SHOW_GRIB_OVERLAY.get()) {
-            if (!mapView.layers.contains(gribLayer)) mapView.addLayer(gribLayer, 2.10f)
+            if (!mapView.layers.contains(gribLayer)) mapView.addLayer(gribLayer, 0.65f)
         } else {
             mapView.removeLayer(gribLayer)
         }
 
-        // 5. Weather Routing & Isochrones (Z = 3.10f)
-        if (weatherRoutingLayer.optimalRouteResult != null) {
-            if (!mapView.layers.contains(weatherRoutingLayer)) mapView.addLayer(weatherRoutingLayer, 3.10f)
-        } else {
-            mapView.removeLayer(weatherRoutingLayer)
-        }
-
-        // 6. Sailing Laylines & Dead Reckoning (Z = 3.20f)
+        // Laylines
         if (settings.NAUTICAL_SHOW_LAYLINES.get()) {
-            if (!mapView.layers.contains(laylinesLayer)) mapView.addLayer(laylinesLayer, 3.20f)
+            if (!mapView.layers.contains(laylinesLayer)) mapView.addLayer(laylinesLayer, 4.3f)
         } else {
             mapView.removeLayer(laylinesLayer)
         }
 
+        // MOB
+        if (settings.NAUTICAL_MOB_ACTIVE.get()) {
+            if (!mapView.layers.contains(mobLayer)) mapView.addLayer(mobLayer, 10f)
+        } else {
+            mapView.removeLayer(mobLayer)
+        }
+
+        // Dead Reckoning
         if (settings.NAUTICAL_DR_START_TIME.get() != 0L) {
-            if (!mapView.layers.contains(drLayer)) mapView.addLayer(drLayer, 3.20f)
+            if (!mapView.layers.contains(drLayer)) mapView.addLayer(drLayer, 6.5f)
         } else {
             mapView.removeLayer(drLayer)
         }
 
-        // 7. Navtex & Hazards (Z = 4.10f)
-        if (settings.NAVTEX_MAX_DISTANCE.get() > 0f) {
-            if (!mapView.layers.contains(navtexLayer)) mapView.addLayer(navtexLayer, 4.10f)
-        } else {
-            mapView.removeLayer(navtexLayer)
-        }
-
-        if (!mapView.layers.contains(hazardLayer)) {
-            mapView.addLayer(hazardLayer, 4.10f)
-        }
-
-        // 8. Anchor Watch (Z = 4.80f)
+        // Anchor
         if (settings.NAUTICAL_ANCHOR_LAT.get() != 0.0) {
-            if (!mapView.layers.contains(anchorLayer)) mapView.addLayer(anchorLayer, 4.80f)
+            if (!mapView.layers.contains(anchorLayer)) mapView.addLayer(anchorLayer, 4.0f)
         } else {
             mapView.removeLayer(anchorLayer)
         }
 
-        // 9. MOB Emergency (Z = 5.50f)
-        if (settings.NAUTICAL_MOB_ACTIVE.get()) {
-            if (!mapView.layers.contains(mobLayer)) mapView.addLayer(mobLayer, 5.50f)
+        // Navtex (Hazards on top of routes)
+        if (settings.NAVTEX_MAX_DISTANCE.get() > 0f) {
+            if (!mapView.layers.contains(navtexLayer)) mapView.addLayer(navtexLayer, 7.0f)
         } else {
-            mapView.removeLayer(mobLayer)
+            mapView.removeLayer(navtexLayer)
+        }
+
+        // Dynamic Hazards (High priority)
+        if (!mapView.layers.contains(hazardLayer)) {
+            mapView.addLayer(hazardLayer, 8.0f)
+        }
+
+        // Weather Routing (Below nautical map)
+        if (!mapView.layers.contains(weatherRoutingLayer)) {
+            mapView.addLayer(weatherRoutingLayer, 4.1f)
         }
     }
 

@@ -3659,27 +3659,13 @@ public class OsmandSettings {
 	public final CommonPreference<Boolean> NAUTICAL_RESTRICTED_AREAS_ENABLED = registerBooleanPreference("nautical_restricted_areas_enabled", true).makeProfile();
 	public final CommonPreference<Boolean> NAUTICAL_SHOW_LOGBOOK_LAYER = registerBooleanPreference("nautical_show_logbook_layer", false).makeProfile();
 	public final CommonPreference<Boolean> NAUTICAL_SHOW_RASTER_CHARTS = registerBooleanPreference("nautical_show_raster_charts", true).makeProfile();
-	public final CommonPreference<Boolean> NAUTICAL_SHOW_S57_CHARTS = registerBooleanPreference("nautical_show_s57_charts", true).makeProfile();
 	public final CommonPreference<Boolean> NAUTICAL_SHOW_RAIN_RADAR = registerBooleanPreference("nautical_show_rain_radar", false).makeProfile();
-	public final CommonPreference<Integer> NAUTICAL_RADAR_GAIN = registerIntPreference("nautical_radar_gain", 75).makeProfile();
-	public final CommonPreference<Boolean> NAUTICAL_RADAR_AUTO_GAIN = registerBooleanPreference("nautical_radar_auto_gain", true).makeProfile();
-	public final CommonPreference<Integer> NAUTICAL_RADAR_SEA_CLUTTER = registerIntPreference("nautical_radar_sea_clutter", 20).makeProfile();
-	public final CommonPreference<Integer> NAUTICAL_RADAR_RAIN_CLUTTER = registerIntPreference("nautical_radar_rain_clutter", 15).makeProfile();
-	public final CommonPreference<Integer> NAUTICAL_RADAR_OPACITY = registerIntPreference("nautical_radar_opacity", 80).makeProfile();
-	public final CommonPreference<Integer> NAUTICAL_DEPTH_UNITS = registerIntPreference("nautical_depth_units", 0).makeProfile();
-	public final CommonPreference<Boolean> NAUTICAL_DYNAMIC_TIDE_DEPTH_ENABLED = registerBooleanPreference("nautical_dynamic_tide_depth_enabled", true).makeProfile();
 	public final CommonPreference<Boolean> NAUTICAL_ENABLE_AUTO_DR = registerBooleanPreference("nautical_enable_auto_dr", false).makeProfile();
 	public final CommonPreference<Boolean> NAUTICAL_SHOW_WINDY_TILES = registerBooleanPreference("nautical_show_windy_tiles", false).makeProfile();
 	public final CommonPreference<Boolean> NAUTICAL_SHOW_OPENMETEO_TILES = registerBooleanPreference("nautical_show_openmeteo_tiles", false).makeProfile();
 	public final CommonPreference<Boolean> NAUTICAL_SHOW_SMHI_TILES = registerBooleanPreference("nautical_show_smhi_tiles", false).makeProfile();
 	public final CommonPreference<Boolean> NAUTICAL_SHOW_NOAA_TILES = registerBooleanPreference("nautical_show_noaa_tiles", false).makeProfile();
 	public final CommonPreference<Boolean> NAUTICAL_SHOW_PMTILES = registerBooleanPreference("nautical_show_pmtiles", false).makeProfile();
-	public final CommonPreference<Boolean> NAUTICAL_SHOW_POLAR_OVERLAY = registerBooleanPreference("nautical_show_polar_overlay", true).makeProfile();
-	public final CommonPreference<Boolean> NAUTICAL_SHOW_DEPTH_PROFILE = registerBooleanPreference("nautical_show_depth_profile", true).makeProfile();
-	public final CommonPreference<Boolean> NAUTICAL_SHOW_RADAR_OVERLAY = registerBooleanPreference("nautical_show_radar_overlay", false).makeProfile();
-	public final CommonPreference<Boolean> NAUTICAL_SHOW_CLEARANCE_BADGES = registerBooleanPreference("nautical_show_clearance_badges", true).makeProfile();
-	public final CommonPreference<Float> NAUTICAL_SENSOR_FALLBACK_TIMEOUT = registerFloatPreference("nautical_sensor_fallback_timeout", 3.0f).makeProfile();
-	public final CommonPreference<Boolean> NAUTICAL_WET_SCREEN_VOLUME_KEYS = registerBooleanPreference("nautical_wet_screen_volume_keys", true).makeProfile();
 	public final CommonPreference<Boolean> NAUTICAL_LOCK_TOUCH_DURING_MANEUVERS = registerBooleanPreference("nautical_lock_touch_during_maneuvers", false).makeProfile();
 	public final CommonPreference<Integer> NAUTICAL_RASTER_CHARTS_OPACITY = registerIntPreference("nautical_raster_charts_opacity", 255).makeProfile();
 	public final CommonPreference<Boolean> NAUTICAL_HEAVY_WEATHER_MODE = registerBooleanPreference("nautical_heavy_weather_mode", false).makeProfile();
@@ -3762,15 +3748,12 @@ public class OsmandSettings {
 	public final CommonPreference<Boolean> NAUTICAL_ALLOW_UNCHECKSUMMED_NMEA = registerBooleanPreference("nautical_allow_unchecksummed_nmea", false);
 
 	// Missing AIS Tracking Details
-	public final CommonPreference<Float> NAUTICAL_VESSEL_LENGTH = registerFloatPreference("nautical_vessel_length", 10.0f).makeProfile();
-	public final CommonPreference<Float> NAUTICAL_ANCHOR_RODE_DEPLOYED_METERS = registerFloatPreference("nautical_anchor_rode_deployed_meters", 0.0f).makeProfile();
 	public final CommonPreference<Integer> NAUTICAL_AIS_OBJ_LOST_TIMEOUT = registerIntPreference("nautical_ais_obj_lost_timeout", 7).makeProfile();
 	public final CommonPreference<Integer> NAUTICAL_AIS_SHIP_LOST_TIMEOUT = registerIntPreference("nautical_ais_ship_lost_timeout", 4).makeProfile();
 	public final CommonPreference<Integer> NAUTICAL_AIS_CPA_WARNING_TIME = registerIntPreference("nautical_ais_cpa_warning_time", 0).makeProfile();
 	public final CommonPreference<Float> NAUTICAL_AIS_CPA_WARNING_DISTANCE = registerFloatPreference("nautical_ais_cpa_warning_distance", 1.0f).makeProfile();
 	public final CommonPreference<Integer> NAUTICAL_AIS_OWN_MMSI = registerIntPreference("nautical_ais_own_mmsi", 0).makeProfile();
 	public final CommonPreference<Boolean> NAUTICAL_AIS_DISPLAY_OWN_POSITION = registerBooleanPreference("nautical_ais_display_own_position", false).makeProfile();
-	public final CommonPreference<Float> NAUTICAL_GUARD_ZONE_RADIUS = registerFloatPreference("nautical_guard_zone_radius", 1.0f).makeProfile();
 
 	// Maneuver & Strategy Parameters
 	public final CommonPreference<Float> NAUTICAL_MED_MOORING_VESSEL_LENGTH = registerFloatPreference("nautical_med_mooring_vessel_length", 12.0f).makeProfile();

@@ -42,13 +42,6 @@ class AlarmPriorityManager(
         startMonitoring()
     }
 
-    fun snoozeAudioOnly(notificationKey: String, durationMs: Long = 120_000L) {
-        log.info("AlarmPriorityManager: Muting audio only for $notificationKey for ${durationMs}ms")
-        mapKeyToAlarmType(notificationKey)?.let { type ->
-            NauticalAudioArbiter.getInstance(app).muteAlarm(type, durationMs)
-        }
-    }
-
     fun snoozeAlarm(notificationKey: String, durationMs: Long = 300_000L) {
         val expiry = System.currentTimeMillis() + durationMs
         snoozedAlarms[notificationKey] = expiry
@@ -80,24 +73,17 @@ class AlarmPriorityManager(
         return true
     }
 
-    fun clearAlarmSnooze(notificationKey: String) {
-        snoozedAlarms.remove(notificationKey)
-        refreshActiveNotifications()
-    }
-
     private fun mapKeyToAlarmType(key: String): net.osmand.plus.plugins.nautical.audio.AlarmType? {
         val lower = key.lowercase(Locale.US)
         return when {
             lower.contains("mob") -> net.osmand.plus.plugins.nautical.audio.AlarmType.MOB
-            lower.contains("sart") -> net.osmand.plus.plugins.nautical.audio.AlarmType.AIS_SART
-            lower.contains("dsc") -> net.osmand.plus.plugins.nautical.audio.AlarmType.DSC_DISTRESS
+            lower.contains("watchdog") -> net.osmand.plus.plugins.nautical.audio.AlarmType.SOLO_WATCHDOG
             lower.contains("collision") -> net.osmand.plus.plugins.nautical.audio.AlarmType.COLLISION_DANGER
             lower.contains("anchor") -> net.osmand.plus.plugins.nautical.audio.AlarmType.ANCHOR_DRIFT
-            lower.contains("watchdog") -> net.osmand.plus.plugins.nautical.audio.AlarmType.SOLO_WATCHDOG
-            lower.contains("depth") || lower.contains("shallow") -> net.osmand.plus.plugins.nautical.audio.AlarmType.SHALLOW_WATER
-            lower.contains("hazard") || lower.contains("navtex") -> net.osmand.plus.plugins.nautical.audio.AlarmType.MAP_HAZARD
-            lower.contains("battery") || lower.contains("actuator") -> net.osmand.plus.plugins.nautical.audio.AlarmType.ACTUATOR_OVERLOAD
+            lower.contains("battery") -> net.osmand.plus.plugins.nautical.audio.AlarmType.ACTUATOR_OVERLOAD
             lower.contains("xte") -> net.osmand.plus.plugins.nautical.audio.AlarmType.XTE_NAVIGATION
+            lower.contains("actuator") -> net.osmand.plus.plugins.nautical.audio.AlarmType.ACTUATOR_OVERLOAD
+            lower.contains("hazard") || lower.contains("navtex") || lower.contains("depth") -> net.osmand.plus.plugins.nautical.audio.AlarmType.MAP_HAZARD
             else -> null
         }
     }
@@ -223,7 +209,6 @@ class AlarmPriorityManager(
                 _isCollisionAlarmActive.value = false
                 _threatDetails.value = null
                 NauticalAudioArbiter.getInstance(app).stopAlarm(net.osmand.plus.plugins.nautical.audio.AlarmType.COLLISION_DANGER)
-                NauticalAudioArbiter.getInstance(app).stopAisProximityModulation()
             }
             return
         }
@@ -234,7 +219,6 @@ class AlarmPriorityManager(
         val isThreat = cpa > 0.0 && cpa < cpaThreshold && tcpa <= tcpaThreshold && tcpa > 0.0
 
         if (isThreat) {
-            NauticalAudioArbiter.getInstance(app).updateAisCollisionProximity(tcpa, cpa)
             if (!_isCollisionAlarmActive.value) {
                 _isCollisionAlarmActive.value = true
                 _threatDetails.value = ThreatInfo(vesselName, cpa, tcpa)
@@ -250,7 +234,6 @@ class AlarmPriorityManager(
                 _threatDetails.value = null
                 log.info("Collision threat cleared.")
                 NauticalAudioArbiter.getInstance(app).stopAlarm(net.osmand.plus.plugins.nautical.audio.AlarmType.COLLISION_DANGER)
-                NauticalAudioArbiter.getInstance(app).stopAisProximityModulation()
             }
         }
     }

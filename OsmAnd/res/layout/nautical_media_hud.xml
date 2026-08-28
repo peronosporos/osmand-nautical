@@ -11,8 +11,8 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:gravity="center"
-        android:text="@string/nautical_no_media_playing"
-        android:textColor="?android:attr/textColorPrimary"
+        android:text="No Media Playing"
+        android:textColor="?attr/text_color_primary_v2"
         android:textStyle="bold"
         android:textSize="14sp" />
 
@@ -33,37 +33,28 @@
 
         <ImageButton
             android:id="@+id/media_prev"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:minWidth="48dp"
-            android:minHeight="48dp"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:src="@drawable/ic_action_undo"
-            app:tint="?attr/icon_color_primary"
-            android:contentDescription="@string/shared_string_previous" />
+            app:tint="?attr/icon_color_primary" />
 
         <ImageButton
             android:id="@+id/media_play"
             android:layout_width="48dp"
             android:layout_height="48dp"
-            android:minWidth="48dp"
-            android:minHeight="48dp"
             android:layout_marginHorizontal="16dp"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:src="@drawable/ic_action_play_dark"
-            app:tint="?attr/icon_color_primary"
-            android:contentDescription="@string/shared_string_play" />
+            app:tint="?attr/icon_color_primary" />
 
         <ImageButton
             android:id="@+id/media_next"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:minWidth="48dp"
-            android:minHeight="48dp"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:src="@drawable/ic_action_replace"
-            app:tint="?attr/icon_color_primary"
-            android:contentDescription="@string/shared_string_next" />
+            app:tint="?attr/icon_color_primary" />
 
     </LinearLayout>
 </LinearLayout>

@@ -644,61 +644,7 @@
         android:inputType="numberDecimal"
         android:dependency="nautical_predictive_steering" />
 
-    <!-- Section 8: Chart Overlays & Performance -->
-    <PreferenceCategory
-        android:key="nautical_chart_overlays_category"
-        android:layout="@layout/preference_category_with_descr"
-        android:title="Chart Overlays &amp; Performance" />
-
-    <net.osmand.plus.settings.preferences.SwitchPreferenceEx
-        android:key="nautical_show_polar_overlay"
-        android:layout="@layout/preference_with_descr"
-        android:title="Polar Rose Target VMG"
-        android:summary="Render dynamic polar target performance rose on vessel marker" />
-
-    <net.osmand.plus.settings.preferences.SwitchPreferenceEx
-        android:key="nautical_show_depth_profile"
-        android:layout="@layout/preference_with_descr"
-        android:title="Forward Depth Clearance Strip"
-        android:summary="Display look-ahead depth and underwater obstacle clearance profile" />
-
-    <net.osmand.plus.settings.preferences.SwitchPreferenceEx
-        android:key="nautical_show_radar_overlay"
-        android:layout="@layout/preference_with_descr"
-        android:title="Marine Radar Scan Layer"
-        android:summary="Display live marine radar sweep overlay with sea/rain clutter controls" />
-
-    <net.osmand.plus.settings.preferences.SwitchPreferenceEx
-        android:key="nautical_show_clearance_badges"
-        android:layout="@layout/preference_with_descr"
-        android:title="Overhead Cable / Bridge Dynamic Clearance"
-        android:summary="Show dynamic tidal and thermal sag clearance badges on overhead structures" />
-
-    <!-- Section 9: NMEA Diagnostics & Fallback -->
-    <PreferenceCategory
-        android:key="nautical_nmea_diagnostics_category"
-        android:layout="@layout/preference_category_with_descr"
-        android:title="NMEA Diagnostics &amp; Fallback" />
-
-    <net.osmand.plus.settings.preferences.ListPreferenceEx
-        android:key="nautical_sensor_fallback_timeout"
-        android:layout="@layout/preference_with_descr"
-        android:title="Telemetry Fallback Watchdog Timeout"
-        android:summary="Timeout before auto-fallback to Android internal GNSS/compass" />
-
-    <!-- Section 10: Cockpit Ergonomics & Wet Screen -->
-    <PreferenceCategory
-        android:key="nautical_cockpit_ergonomics_category"
-        android:layout="@layout/preference_category_with_descr"
-        android:title="Cockpit Ergonomics &amp; Screen Lock" />
-
-    <net.osmand.plus.settings.preferences.SwitchPreferenceEx
-        android:key="nautical_wet_screen_volume_keys"
-        android:layout="@layout/preference_with_descr"
-        android:title="Hardware Volume Keys Zoom / Autopilot Dodge"
-        android:summary="Use physical volume rocker for map zoom &amp; autopilot micro-steer when touch locked" />
-
-    <!-- Section 11: Maintenance & Tools -->
+    <!-- Section 8: Maintenance & Tools -->
     <PreferenceCategory
         android:key="telemetry_widgets_group"
         android:layout="@layout/preference_category_with_descr"

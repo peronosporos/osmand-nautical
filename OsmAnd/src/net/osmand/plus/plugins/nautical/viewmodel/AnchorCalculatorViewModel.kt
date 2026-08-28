@@ -36,18 +36,10 @@ class AnchorCalculatorViewModel(app: OsmandApplication) : ViewModel() {
     private val _anchorLon = MutableStateFlow(settings.NAUTICAL_ANCHOR_LON.get())
     val anchorLon: StateFlow<Double> = _anchorLon.asStateFlow()
 
-    private val _bowRollerHeight = MutableStateFlow(1.5f)
-    val bowRollerHeight: StateFlow<Float> = _bowRollerHeight.asStateFlow()
-
     private val _recommendedRode = MutableStateFlow(0.0)
     val recommendedRode: StateFlow<Double> = _recommendedRode.asStateFlow()
 
     init {
-        updateCalculations()
-    }
-
-    fun setBowRollerHeight(value: Float) {
-        _bowRollerHeight.value = value
         updateCalculations()
     }
 
@@ -96,16 +88,13 @@ class AnchorCalculatorViewModel(app: OsmandApplication) : ViewModel() {
     }
 
     private fun updateCalculations() {
-        val totalEffectiveHeight = _depth.value.toDouble() + _bowRollerHeight.value.toDouble() + _tideRise.value.toDouble() + _freeboard.value.toDouble()
-        val calculatedRode = totalEffectiveHeight * _scopeRatio.value.toDouble()
+        val calculatedRode = AnchorCalculator.calculateRodeLength(
+            _depth.value.toDouble(),
+            _tideRise.value.toDouble(),
+            _freeboard.value.toDouble(),
+            _scopeRatio.value.toDouble(),
+        )
         _recommendedRode.value = calculatedRode
-    }
-
-    fun applyCalculatedRadius() {
-        val vesselLength = settings.NAUTICAL_VESSEL_LENGTH.get().toDouble().coerceAtLeast(10.0)
-        val calculatedRadius = _recommendedRode.value + vesselLength + _safetyMargin.value.toDouble()
-        settings.NAUTICAL_ANCHOR_RADIUS.set(calculatedRadius.toFloat())
-        settings.NAUTICAL_ANCHOR_PREVIEW_RADIUS.set(calculatedRadius.toFloat())
     }
 
     fun dropAnchorAtBow() {

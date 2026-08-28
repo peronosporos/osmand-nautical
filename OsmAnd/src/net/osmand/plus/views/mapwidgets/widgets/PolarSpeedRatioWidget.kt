@@ -30,7 +30,6 @@ class PolarSpeedRatioWidget(
 
     override fun setupView(view: View) {
         super.setupView(view)
-        view.minimumHeight = (48f * view.resources.displayMetrics.density).toInt()
         view.addOnAttachStateChangeListener(
             object : View.OnAttachStateChangeListener {
                 override fun onViewAttachedToWindow(v: View) {
@@ -79,38 +78,13 @@ class PolarSpeedRatioWidget(
         }
         val state = engine.getCurrentState()
 
-        val isNight = NauticalPlugin.isNightVision(app)
-        if (isNight) {
-            view?.findViewById<View>(R.id.widget_bg)?.setBackgroundColor(0xEE120000.toInt())
+        if (state.polarSpeedRatio == null) {
+            setText("--", "%")
+            return
         }
 
-        val twsMs = state.windSpeedTrue ?: 0.0
-        val twsKn = twsMs * 1.94384
-        val twaRad = state.trueWindAngle ?: state.windDirectionApparent ?: 0.0
-        val twaDeg = Math.toDegrees(kotlin.math.abs(twaRad))
-        val isUpwind = twaDeg < 90.0
-
-        // Optimum Target TWA for max Upwind/Downwind VMG
-        val targetTwaDeg = if (isUpwind) 42.0 else 142.0
-        val targetSpeedKn = (state.polarTargetSpeed ?: (twsMs * 0.45)) * 1.94384
-
-        // Reefing Advisory: When current TWS > sailMaxTws
-        val currentReefs = state.reefs ?: 0
-        val reefAdvisory = when {
-            twsKn >= 24.0 && currentReefs < 2 -> "REEF 2"
-            twsKn >= 18.0 && currentReefs < 1 -> "REEF 1"
-            else -> null
-        }
-
-        val ratio = (state.polarSpeedRatio ?: (if (targetSpeedKn > 0.1) ((state.speedThroughWater ?: state.speedOverGround ?: 0.0) * 1.94384 / targetSpeedKn) else null))?.let { it * 100.0 }
-
-        val mainText = if (ratio != null) String.format(Locale.US, "%.0f%%", ratio) else String.format(Locale.US, "%.1fkn", targetSpeedKn)
-        val subText = if (reefAdvisory != null) {
-            reefAdvisory
-        } else {
-            String.format(Locale.US, "TWA %.0f°", targetTwaDeg)
-        }
-
-        setText(mainText, subText)
+        val ratio = state.polarSpeedRatio * 100.0
+        val text = String.format(Locale.US, "%.0f", ratio)
+        setText(text, "%")
     }
 }

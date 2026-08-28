@@ -1,0 +1,164 @@
+package net.osmand.plus.plugins.nautical.mob.viewmodel
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.flow.*
+import net.osmand.data.LatLon
+import net.osmand.plus.OsmAndLocationProvider
+import net.osmand.plus.OsmandApplication
+import net.osmand.plus.plugins.PluginsHelper
+import net.osmand.plus.plugins.nautical.NauticalPlugin
+import net.osmand.plus.plugins.nautical.maneuvers.ManOverboardManeuver
+import net.osmand.plus.plugins.nautical.mob.engine.*
+
+/**
+ * UI State for the MOB interface.
+ */
+data class MobUiState(
+    val isMobActive: Boolean = false,
+    val distanceMeters: Double? = null,
+    val bearingDegrees: Double? = null,
+    val etaSeconds: Double? = null,
+    val mobLocation: LatLon? = null,
+    val state: MobState = MobState.INACTIVE,
+    val isMotoring: Boolean = false,
+    val isUpwind: Boolean = true
+)
+
+/**
+ * ViewModel for Man Overboard functionality.
+ * Coordinates between the engine, state machine, audio alerts, and persistence.
+ */
+class MobViewModel(
+    private val app: OsmandApplication,
+    private val stateMachine: MobStateMachine,
+    private val audioManager: MobAudioAlertManager
+) : ViewModel(), OsmAndLocationProvider.OsmAndLocationListener {
+
+    private val _uiState = MutableStateFlow(MobUiState())
+    val uiState: StateFlow<MobUiState> = _uiState.asStateFlow()
+
+    init {
+        // Observe MarineState for propulsion-aware UI
+        NauticalPlugin.engine?.marineStateFlow
+            ?.onEach { state ->
+                val rpm = state.engineRpm ?: 0.0
+                val twa = state.trueWindAngle ?: 0.0
+                _uiState.update { current ->
+                    current.copy(
+                        isMotoring = rpm > 100 || state.engineState?.lowercase(java.util.Locale.US) == "started",
+                        isUpwind = Math.abs(Math.toDegrees(twa)) < 110.0
+                    )
+                }
+            }
+            ?.launchIn(viewModelScope)
+
+        // Observe state machine changes
+        stateMachine.mobStatus
+            .onEach { status ->
+                val active = status.state == MobState.ACTIVE_EMERGENCY
+                _uiState.update { current ->
+                    current.copy(
+                        isMobActive = active,
+                        distanceMeters = status.returnVector?.distanceMeters,
+                        bearingDegrees = status.returnVector?.bearingDegrees,
+                        etaSeconds = status.returnVector?.estimatedTimeToMarkerSeconds,
+                        mobLocation = status.event?.dropLocation,
+                        state = status.state
+                    )
+                }
+
+                // Unified state update
+                NauticalPlugin.engine?.setMobActive(
+                    active = active,
+                    lat = status.event?.dropLocation?.latitude,
+                    lon = status.event?.dropLocation?.longitude
+                )
+
+                // Handle persistence and audio based on state changes
+                when (status.state) {
+                    MobState.ACTIVE_EMERGENCY -> {
+                        app.settings.NAUTICAL_MOB_ACTIVE.set(true)
+                        audioManager.startAlarm() // Ensure alarm is started on activation or restoration
+                    }
+                    MobState.RESOLVED -> {
+                        app.settings.NAUTICAL_MOB_ACTIVE.set(false)
+                        audioManager.stopAlarm()
+                    }
+                    MobState.INACTIVE -> {
+                        app.settings.NAUTICAL_MOB_ACTIVE.set(false)
+                        audioManager.stopAlarm()
+                    }
+                }
+            }
+            .launchIn(viewModelScope)
+
+        // Register for location updates
+        app.locationProvider.addLocationListener(this)
+    }
+
+    /**
+     * Triggers a new MOB emergency.
+     */
+    fun triggerMob(location: LatLon) {
+        val sog = app.locationProvider.lastKnownLocation?.speed?.toDouble() ?: 0.0
+        val cog = Math.toRadians(app.locationProvider.lastKnownLocation?.bearing?.toDouble() ?: 0.0)
+
+        stateMachine.triggerMob(location, sog, cog)
+        audioManager.startAlarm()
+
+        // SOLAS: Automatically trigger autopilot MOB recovery if connected
+        NauticalPlugin.autopilot?.williamsonTurn()
+    }
+
+    /**
+     * Silences the audio alarm while keeping the emergency active.
+     */
+    fun silenceAlarm() {
+        audioManager.stopAlarm()
+    }
+
+    /**
+     * Clears the MOB event and resets state.
+     */
+    fun clearMob() {
+        stateMachine.cancelMob()
+        // If we were in RESOLVED, one more call to cancelMob moves it to INACTIVE
+        if (stateMachine.mobStatus.value.state == MobState.RESOLVED) {
+            stateMachine.cancelMob()
+        }
+        audioManager.stopAlarm()
+
+        // Abort the maneuver engine to reset autopilot state
+        val mm = PluginsHelper.getPlugin(NauticalPlugin::class.java)?.maneuverManager
+        mm?.abort("MOB Emergency Cancelled")
+    }
+
+    fun requestHeaveTo() {
+        val maneuver = PluginsHelper.getPlugin(NauticalPlugin::class.java)?.maneuverManager?.getManeuverById("man_overboard") as? ManOverboardManeuver
+        maneuver?.executeHeaveTo()
+    }
+
+    fun requestMotorReturn() {
+        val maneuver = PluginsHelper.getPlugin(NauticalPlugin::class.java)?.maneuverManager?.getManeuverById("man_overboard") as? ManOverboardManeuver
+        maneuver?.executeMotorReturn()
+    }
+
+    fun requestHoldHeading() {
+        val maneuver = PluginsHelper.getPlugin(NauticalPlugin::class.java)?.maneuverManager?.getManeuverById("man_overboard") as? ManOverboardManeuver
+        maneuver?.executeHoldHeading()
+    }
+
+    override fun updateLocation(location: net.osmand.Location?) {
+        if (location != null) {
+            val sog = location.speed.toDouble()
+            stateMachine.updateCurrentLocation(LatLon(location.latitude, location.longitude), sog)
+        }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        app.locationProvider.removeLocationListener(this)
+        audioManager.stopAlarm()
+    }
+}

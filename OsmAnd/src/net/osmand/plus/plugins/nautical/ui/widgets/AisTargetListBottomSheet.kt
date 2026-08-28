@@ -33,8 +33,6 @@ import net.osmand.plus.plugins.nautical.engine.MarineStateConstants
 import net.osmand.plus.plugins.nautical.ui.NauticalAisDetailsDialog
 import net.osmand.plus.settings.enums.ThemeUsageContext
 import net.osmand.plus.utils.AndroidUtils
-import net.osmand.shared.extensions.toDegrees
-import net.osmand.shared.util.KMapUtils
 import java.util.Locale
 
 class AisTargetListBottomSheet : BaseBottomSheetDialogFragment() {
@@ -44,18 +42,11 @@ class AisTargetListBottomSheet : BaseBottomSheetDialogFragment() {
     }
 
     private var currentSortMode: AisSortMode = AisSortMode.THREAT_CPA
-    private var searchQuery: String = ""
     private lateinit var adapter: TargetSummaryAdapter
     private var txtTitle: TextView? = null
     private var layoutEmpty: View? = null
     private var rvTargets: RecyclerView? = null
     private var toggleGroup: MaterialButtonToggleGroup? = null
-    private var editSearch: com.google.android.material.textfield.TextInputEditText? = null
-    private var cardMobEmergency: com.google.android.material.card.MaterialCardView? = null
-    private var txtMobEmergencyTitle: TextView? = null
-    private var btnMobSetSarCourse: MaterialButton? = null
-    private var sliderPredictiveHorizon: com.google.android.material.slider.Slider? = null
-    private var txtPredictiveTime: TextView? = null
 
     companion object {
         const val TAG = "AisTargetListBottomSheet"
@@ -76,83 +67,21 @@ class AisTargetListBottomSheet : BaseBottomSheetDialogFragment() {
         layoutEmpty = view.findViewById(R.id.layout_empty_targets)
         rvTargets = view.findViewById(R.id.rv_targets)
         toggleGroup = view.findViewById(R.id.toggle_sort_mode)
-        editSearch = view.findViewById(R.id.edit_search_ais)
-        cardMobEmergency = view.findViewById(R.id.card_mob_emergency)
-        txtMobEmergencyTitle = view.findViewById(R.id.txt_mob_emergency_title)
-        btnMobSetSarCourse = view.findViewById(R.id.btn_mob_set_sar_course)
-        sliderPredictiveHorizon = view.findViewById(R.id.slider_predictive_horizon)
-        txtPredictiveTime = view.findViewById(R.id.txt_predictive_time)
-        val btnToggleVector = view.findViewById<MaterialButton>(R.id.btn_toggle_vector_mode)
-
-        val aisLayer = NauticalPlugin.getInstance()?.aisAisLayer
-        val currentHorizon = aisLayer?.predictiveHorizonMinutes ?: 0
-        sliderPredictiveHorizon?.value = currentHorizon.toFloat()
-        txtPredictiveTime?.text = if (currentHorizon > 0) "Forward Horizon: T +${currentHorizon}m" else "Forward Horizon: Real-time (T +0m)"
-
-        sliderPredictiveHorizon?.addOnChangeListener { _, value, _ ->
-            val minutes = value.toInt()
-            txtPredictiveTime?.text = if (minutes > 0) "Forward Horizon: T +${minutes}m" else "Forward Horizon: Real-time (T +0m)"
-            NauticalPlugin.getInstance()?.aisAisLayer?.predictiveHorizonMinutes = minutes
-            val mapActivity = activity as? MapActivity
-            mapActivity?.mapView?.refreshMap()
-        }
-
-        val updateVectorBtn = {
-            val isRel = aisLayer?.isRelativeMotionVectorMode == true
-            btnToggleVector?.text = if (isRel) "MOTION VECTORS: RELATIVE" else "MOTION VECTORS: TRUE"
-            btnToggleVector?.setIconResource(if (isRel) R.drawable.ic_action_direction_movement else R.drawable.ic_action_navigation_outlined)
-        }
-        updateVectorBtn()
-
-        btnToggleVector?.setOnClickListener {
-            if (aisLayer != null) {
-                aisLayer.isRelativeMotionVectorMode = !aisLayer.isRelativeMotionVectorMode
-                updateVectorBtn()
-                val mapActivity = activity as? MapActivity
-                mapActivity?.mapView?.refreshMap()
-            }
-        }
-
-        val isNightVision = app?.let { NauticalPlugin.isNightVision(it) } ?: false
-        if (isNightVision) {
-            view.setBackgroundColor(0xEE120000.toInt())
-            view.findViewById<View>(R.id.drag_handle)?.setBackgroundColor(0x80FF1744.toInt())
-            txtTitle?.setTextColor(0xFFFF1744.toInt())
-            editSearch?.setTextColor(0xFFFF1744.toInt())
-            editSearch?.setHintTextColor(0x80FF1744.toInt())
-            txtPredictiveTime?.setTextColor(0xFFFF8A80.toInt())
-            sliderPredictiveHorizon?.thumbTintList = ColorStateList.valueOf(0xFFFF1744.toInt())
-            sliderPredictiveHorizon?.trackActiveTintList = ColorStateList.valueOf(0xFFFF1744.toInt())
-            btnToggleVector?.setTextColor(0xFFFF1744.toInt())
-            btnToggleVector?.iconTint = ColorStateList.valueOf(0xFFFF1744.toInt())
-        }
 
         view.findViewById<ImageButton>(R.id.btn_close)?.setOnClickListener {
             dismiss()
         }
 
-        editSearch?.addTextChangedListener(object : android.text.TextWatcher {
-            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-                searchQuery = s?.toString()?.trim() ?: ""
-                refreshTargets()
-            }
-            override fun afterTextChanged(s: android.text.Editable?) {}
-        })
-
         adapter = TargetSummaryAdapter(
             onRowClick = { target ->
                 dismiss()
-                val mapActivity = activity as? MapActivity
                 if (MarineStateConstants.isValidLat(target.lat) && MarineStateConstants.isValidLon(target.lon)) {
+                    val mapActivity = activity as? MapActivity
                     mapActivity?.mapView?.setLatLon(target.lat, target.lon)
                     if ((mapActivity?.mapView?.zoom ?: 0) < 14) {
                         mapActivity?.mapView?.setIntZoom(15)
                     }
                 }
-                val plugin = NauticalPlugin.getInstance()
-                plugin?.aisAisLayer?.setFollowedTarget(target.mmsi)
-                mapActivity?.mapView?.refreshMap()
             },
             onRowLongClick = { target ->
                 if (!parentFragmentManager.isStateSaved) {
@@ -242,16 +171,7 @@ class AisTargetListBottomSheet : BaseBottomSheetDialogFragment() {
 
     private fun refreshTargets() {
         val plugin = NauticalPlugin.getInstance() ?: return
-        val allTargets = plugin.aisManager?.getActiveTargets(currentSortMode) ?: emptyList()
-        val targets = if (searchQuery.isEmpty()) {
-            allTargets
-        } else {
-            allTargets.filter { target ->
-                target.name.contains(searchQuery, ignoreCase = true) ||
-                target.mmsi.toString().contains(searchQuery) ||
-                (target.callSign?.contains(searchQuery, ignoreCase = true) == true)
-            }
-        }
+        val targets = plugin.aisManager?.getActiveTargets(currentSortMode) ?: emptyList()
 
         adapter.submitList(targets)
         val count = targets.size
@@ -259,25 +179,6 @@ class AisTargetListBottomSheet : BaseBottomSheetDialogFragment() {
             "${getString(R.string.nautical_ais_targets_title)} ($count)"
         } else {
             getString(R.string.nautical_ais_targets_title)
-        }
-
-        val mobTarget = allTargets.firstOrNull { it.mmsi in 970000000..974999999 }
-        val ownLoc = app?.locationProvider?.lastKnownLocation
-        if (mobTarget != null && ownLoc != null && MarineStateConstants.isValidLat(mobTarget.lat) && MarineStateConstants.isValidLon(mobTarget.lon)) {
-            cardMobEmergency?.visibility = View.VISIBLE
-            val bearing = (KMapUtils.getBearing(ownLoc.latitude, ownLoc.longitude, mobTarget.lat, mobTarget.lon).toDegrees() + 360.0) % 360.0
-            val distNm = net.osmand.util.MapUtils.getDistance(ownLoc.latitude, ownLoc.longitude, mobTarget.lat, mobTarget.lon) / 1852.0
-            txtMobEmergencyTitle?.text = String.format(Locale.US, "AIS-MOB ACTIVATED: Bearing %.0f° / Distance %.1f NM", bearing, distNm)
-            btnMobSetSarCourse?.setOnClickListener {
-                dismiss()
-                val mapActivity = activity as? MapActivity
-                mapActivity?.mapView?.setLatLon(mobTarget.lat, mobTarget.lon)
-                mapActivity?.mapView?.setIntZoom(16)
-                NauticalPlugin.autopilot?.commandHeading(bearing)
-                app?.showToastMessage("Direct SAR course set to ${mobTarget.name}")
-            }
-        } else {
-            cardMobEmergency?.visibility = View.GONE
         }
 
         if (targets.isEmpty()) {
@@ -347,39 +248,28 @@ class AisTargetListBottomSheet : BaseBottomSheetDialogFragment() {
             val isDanger = item.isDangerous || isThreatCpa
             val isCaution = !isDanger && (((item.cpaNm ?: Double.MAX_VALUE) < 2.0 && (item.tcpaSec ?: -1.0) > 0) || (item.sogKnots > 0.5 && item.rangeMeters < 3704.0))
 
-            val app = context.applicationContext as? net.osmand.plus.OsmandApplication
-            val isNightVision = app?.let { NauticalPlugin.isNightVision(it) } ?: false
-
             when {
                 isDanger -> {
                     txtThreatBadge.text = context.getString(R.string.nautical_threat_danger)
                     txtThreatBadge.setTextColor(Color.WHITE)
-                    val dangerColor = if (isNightVision) 0xFFFF1744.toInt() else ContextCompat.getColor(context, R.color.nautical_status_red)
+                    val dangerColor = ContextCompat.getColor(context, R.color.nautical_status_red)
                     setBadgeBackground(txtThreatBadge, dangerColor)
                     txtCpaTcpa.setTextColor(dangerColor)
                 }
                 isCaution -> {
                     txtThreatBadge.text = context.getString(R.string.nautical_threat_caution)
-                    txtThreatBadge.setTextColor(if (isNightVision) 0xEE120000.toInt() else Color.WHITE)
-                    val cautionColor = if (isNightVision) 0xFFFF8A80.toInt() else ContextCompat.getColor(context, R.color.nautical_status_orange)
+                    txtThreatBadge.setTextColor(Color.WHITE)
+                    val cautionColor = ContextCompat.getColor(context, R.color.nautical_status_orange)
                     setBadgeBackground(txtThreatBadge, cautionColor)
                     txtCpaTcpa.setTextColor(cautionColor)
                 }
                 else -> {
                     txtThreatBadge.text = context.getString(R.string.nautical_threat_safe)
-                    txtThreatBadge.setTextColor(if (isNightVision) 0xFFFF8A80.toInt() else Color.WHITE)
-                    val safeColor = if (isNightVision) 0x80B71C1C.toInt() else ContextCompat.getColor(context, R.color.nautical_status_green)
+                    txtThreatBadge.setTextColor(Color.WHITE)
+                    val safeColor = ContextCompat.getColor(context, R.color.nautical_status_green)
                     setBadgeBackground(txtThreatBadge, safeColor)
-                    txtCpaTcpa.setTextColor(if (isNightVision) 0xFFFF8A80.toInt() else AndroidUtils.getColorFromAttr(context, android.R.attr.textColorPrimary))
+                    txtCpaTcpa.setTextColor(AndroidUtils.getColorFromAttr(context, android.R.attr.textColorPrimary))
                 }
-            }
-
-            if (isNightVision) {
-                (itemView as? androidx.cardview.widget.CardView)?.setCardBackgroundColor(0xEE120000.toInt())
-                txtVesselName.setTextColor(0xFFFF1744.toInt())
-                txtVesselSubtext.setTextColor(0xFFFF8A80.toInt())
-                txtRangeBearing.setTextColor(0xFFFF8A80.toInt())
-                txtSogCog.setTextColor(0xFFFF8A80.toInt())
             }
 
             // 3. Range & Bearing from Own Vessel
