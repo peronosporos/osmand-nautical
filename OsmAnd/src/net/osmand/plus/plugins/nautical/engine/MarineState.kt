@@ -430,6 +430,8 @@ data class MarineState(
     val serverNextPoint: LatLon? = null,
     val vmgTimeToWaypoint: Double? = null, // Seconds
     val sogTimeToWaypoint: Double? = null, // Seconds
+    val activeWaypointPosition: LatLon? = null,
+    val activeWaypointName: String? = null,
     val rhumbLineBearing: Double? = null,
     val rhumbLineDistance: Double? = null,
     val isOffCourse: Boolean = false,
@@ -442,11 +444,14 @@ data class MarineState(
     val cpa: Double? = null, // Meters
     val tcpa: Double? = null, // Seconds
     val threatName: String? = null,
+    val threatLatitude: Double? = null,
+    val threatLongitude: Double? = null,
 
     // MOB State
     val isMobActive: Boolean = false,
     val mobLatitude: Double? = null,
     val mobLongitude: Double? = null,
+    val mobDatumPosition: LatLon? = null,
 
     val isDeadReckoning: Boolean = false,
 

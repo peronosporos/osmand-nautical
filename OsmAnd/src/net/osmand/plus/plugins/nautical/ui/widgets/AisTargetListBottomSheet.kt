@@ -33,6 +33,7 @@ import net.osmand.plus.plugins.nautical.engine.MarineStateConstants
 import net.osmand.plus.plugins.nautical.ui.NauticalAisDetailsDialog
 import net.osmand.plus.settings.enums.ThemeUsageContext
 import net.osmand.plus.utils.AndroidUtils
+import net.osmand.shared.extensions.toDegrees
 import net.osmand.shared.util.KMapUtils
 import java.util.Locale
 
@@ -264,7 +265,7 @@ class AisTargetListBottomSheet : BaseBottomSheetDialogFragment() {
         val ownLoc = app?.locationProvider?.lastKnownLocation
         if (mobTarget != null && ownLoc != null && MarineStateConstants.isValidLat(mobTarget.lat) && MarineStateConstants.isValidLon(mobTarget.lon)) {
             cardMobEmergency?.visibility = View.VISIBLE
-            val bearing = KMapUtils.getBearing(ownLoc.latitude, ownLoc.longitude, mobTarget.lat, mobTarget.lon)
+            val bearing = (KMapUtils.getBearing(ownLoc.latitude, ownLoc.longitude, mobTarget.lat, mobTarget.lon).toDegrees() + 360.0) % 360.0
             val distNm = net.osmand.util.MapUtils.getDistance(ownLoc.latitude, ownLoc.longitude, mobTarget.lat, mobTarget.lon) / 1852.0
             txtMobEmergencyTitle?.text = String.format(Locale.US, "AIS-MOB ACTIVATED: Bearing %.0f° / Distance %.1f NM", bearing, distNm)
             btnMobSetSarCourse?.setOnClickListener {

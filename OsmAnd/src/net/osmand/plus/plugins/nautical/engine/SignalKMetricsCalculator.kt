@@ -45,7 +45,7 @@ class SignalKMetricsCalculator(
         val cog = s.courseOverGroundTrue
         val caps = capabilityManager?.capabilities?.value ?: CapabilityManager.ServerCapabilityMap()
         if (sog != null && cog != null && !caps.hasVmg && !caps.hasDerivedData) {
-            val btw = Math.toRadians(KMapUtils.getBearing(lat, lon, target.first, target.second))
+            val btw = KMapUtils.getBearing(lat, lon, target.first, target.second)
             val rawVmgWp = sog * cos(cog - btw)
             val smoothedVmg = vmgEma.update(rawVmgWp)
             s = s.copy(velocityMadeGood = smoothedVmg)

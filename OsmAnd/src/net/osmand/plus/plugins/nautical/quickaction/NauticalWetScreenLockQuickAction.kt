@@ -35,7 +35,7 @@ class NauticalWetScreenLockQuickAction : QuickAction {
         if (mapActivity.isFinishing || mapActivity.isDestroyed) {
             return
         }
-        mapActivity.mapView?.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
+        mapActivity.layout?.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
         val app = mapActivity.app
         val plugin = PluginsHelper.getPlugin(NauticalPlugin::class.java)
         if (plugin == null) {

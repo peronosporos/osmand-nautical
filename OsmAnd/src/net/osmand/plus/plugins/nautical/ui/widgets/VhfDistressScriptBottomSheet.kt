@@ -21,6 +21,7 @@ import net.osmand.plus.OsmandApplication
 import net.osmand.plus.R
 import net.osmand.plus.base.bottomsheetmenu.BaseBottomSheetItem
 import net.osmand.plus.plugins.nautical.NauticalPlugin
+import net.osmand.shared.extensions.toDegrees
 import java.text.SimpleDateFormat
 import java.util.*
 import kotlin.math.abs
@@ -220,7 +221,7 @@ class VhfDistressScriptBottomSheet : BaseNauticalBottomSheet() {
                 if (distM < nearestDist) {
                     nearestDist = distM
                     nearestName = name
-                    nearestBearing = (net.osmand.shared.util.KMapUtils.getBearing(p.latitude, p.longitude, lat, lon) + 360.0) % 360.0
+                    nearestBearing = (net.osmand.shared.util.KMapUtils.getBearing(p.latitude, p.longitude, lat, lon).toDegrees() + 360.0) % 360.0
                 }
             }
         }

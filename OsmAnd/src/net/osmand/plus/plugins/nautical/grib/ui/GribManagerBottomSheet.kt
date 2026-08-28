@@ -16,6 +16,7 @@ import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.isActive
 import net.osmand.plus.OsmandApplication
 import net.osmand.plus.R
 import net.osmand.plus.plugins.nautical.di.SailingDependencyContainer
@@ -120,6 +121,7 @@ class GribManagerBottomSheet : BottomSheetDialogFragment() {
 
         val layerListener = { _: android.widget.CompoundButton, _: Boolean ->
             map?.refreshMap()
+            Unit
         }
 
         chipWind?.setOnCheckedChangeListener(layerListener)
@@ -211,7 +213,7 @@ class GribManagerBottomSheet : BottomSheetDialogFragment() {
         btnPlayPause?.setIconResource(R.drawable.ic_pause)
         playbackJob?.cancel()
         playbackJob = viewLifecycleOwner.lifecycleScope.launch {
-            while (kotlinx.coroutines.isActive && isPlaying) {
+            while (isActive && isPlaying) {
                 kotlinx.coroutines.delay(playbackDelayMs)
                 val nextIdx = (currentStepIndex + 1) % timeSteps.size
                 applyStep(nextIdx)

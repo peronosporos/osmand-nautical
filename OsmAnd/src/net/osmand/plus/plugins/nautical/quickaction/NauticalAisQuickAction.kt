@@ -34,7 +34,7 @@ class NauticalAisQuickAction : QuickAction {
         if (mapActivity.isFinishing || mapActivity.isDestroyed || mapActivity.supportFragmentManager.isStateSaved) {
             return
         }
-        mapActivity.mapView?.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
+        mapActivity.layout?.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
         val plugin = NauticalPlugin.getInstance()
         if (plugin == null) {
             mapActivity.app.showToastMessage(R.string.nautical_plugin_inactive)

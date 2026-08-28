@@ -487,8 +487,8 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
             val nextWaypoint = e?.getNextWaypoint()
 
             if (state != null && nextWaypoint != null && state.latitude != null && state.longitude != null) {
-                val bearing = KMapUtils.getBearing(state.latitude, state.longitude, nextWaypoint.first, nextWaypoint.second)
-                val bearingDeg = if (bearing < 0) bearing + 360 else bearing
+                val bearingRad = KMapUtils.getBearing(state.latitude, state.longitude, nextWaypoint.first, nextWaypoint.second)
+                val bearingDeg = (Math.toDegrees(bearingRad) + 360.0) % 360.0
                 val msg = app.getString(R.string.nautical_proceeding_to_waypoint, bearingDeg)
                 NauticalAudioArbiter.getInstance(app).dispatchTts(msg, AlarmType.TTS_INSTRUCTION)
             } else {

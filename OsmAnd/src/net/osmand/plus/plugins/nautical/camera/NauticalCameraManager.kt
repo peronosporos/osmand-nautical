@@ -7,6 +7,8 @@ import kotlinx.coroutines.launch
 import net.osmand.data.LatLon
 import net.osmand.plus.OsmandApplication
 import net.osmand.plus.plugins.nautical.NauticalPlugin
+import net.osmand.shared.extensions.toDegrees
+import net.osmand.shared.util.KMapUtils
 import net.osmand.util.MapUtils
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
@@ -28,12 +30,12 @@ class NauticalCameraManager(private val app: OsmandApplication) {
     }
 
     data class CameraTarget(
-        val type: TargetType,
         val name: String,
         val position: LatLon,
         val bearingDeg: Double,
         val distanceNm: Double,
-        val targetTiltDeg: Double
+        val targetTiltDeg: Double,
+        val type: TargetType = TargetType.NONE
     )
 
     fun getCurrentPriorityTarget(): CameraTarget? {
@@ -45,7 +47,7 @@ class NauticalCameraManager(private val app: OsmandApplication) {
         val mobPos = marineState.mobDatumPosition
         if (marineState.isMobActive && mobPos != null) {
             val distM = MapUtils.getDistance(vLat, vLon, mobPos.latitude, mobPos.longitude)
-            val bearing = (MapUtils.calculateAngle(vLat, vLon, mobPos.latitude, mobPos.longitude) + 360.0) % 360.0
+            val bearing = (KMapUtils.getBearing(vLat, vLon, mobPos.latitude, mobPos.longitude).toDegrees() + 360.0) % 360.0
             val tilt = calculateTilt(distM)
             return CameraTarget(
                 type = TargetType.MOB_DATUM,
@@ -65,7 +67,7 @@ class NauticalCameraManager(private val app: OsmandApplication) {
             val targetLon = marineState.threatLongitude
             if (targetLat != null && targetLon != null) {
                 val distM = MapUtils.getDistance(vLat, vLon, targetLat, targetLon)
-                val bearing = (MapUtils.calculateAngle(vLat, vLon, targetLat, targetLon) + 360.0) % 360.0
+                val bearing = (KMapUtils.getBearing(vLat, vLon, targetLat, targetLon).toDegrees() + 360.0) % 360.0
                 val tilt = calculateTilt(distM)
                 return CameraTarget(
                     type = TargetType.AIS_THREAT_CPA,
@@ -82,7 +84,7 @@ class NauticalCameraManager(private val app: OsmandApplication) {
         val activeWp = marineState.activeWaypointPosition
         if (activeWp != null) {
             val distM = MapUtils.getDistance(vLat, vLon, activeWp.latitude, activeWp.longitude)
-            val bearing = (MapUtils.calculateAngle(vLat, vLon, activeWp.latitude, activeWp.longitude) + 360.0) % 360.0
+            val bearing = (KMapUtils.getBearing(vLat, vLon, activeWp.latitude, activeWp.longitude).toDegrees() + 360.0) % 360.0
             val tilt = calculateTilt(distM)
             return CameraTarget(
                 type = TargetType.ACTIVE_WAYPOINT,
@@ -162,10 +164,10 @@ class NauticalCameraManager(private val app: OsmandApplication) {
             return
         }
 
-        val distMeters = net.osmand.util.MapUtils.getDistance(ownLat, ownLon, targetLat, targetLon)
-        val bearing = (net.osmand.util.MapUtils.getBearing(ownLat, ownLon, targetLat, targetLon) + 360.0) % 360.0
+        val distMeters = MapUtils.getDistance(ownLat, ownLon, targetLat, targetLon)
+        val bearing = (KMapUtils.getBearing(ownLat, ownLon, targetLat, targetLon).toDegrees() + 360.0) % 360.0
         val tilt = calculateTilt(distMeters)
-        val target = CameraTarget(label, targetLat, targetLon, bearing, distMeters / 1852.0, tilt)
+        val target = CameraTarget(label, LatLon(targetLat, targetLon), bearing, distMeters / 1852.0, tilt)
 
         scope.launch {
             try {

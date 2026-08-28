@@ -756,7 +756,7 @@ class SignalKEngine(
                 if (next != null && lat != null && lon != null) {
                     val distMeters = KMapUtils.getDistance(lat, lon, next.first, next.second)
                     val distNm = SignalKUnitConverter.metersToNm(distMeters)
-                    val bearing = KMapUtils.getBearing(lat, lon, next.first, next.second)
+                    val bearing = (KMapUtils.getBearing(lat, lon, next.first, next.second).toDegrees() + 360.0) % 360.0
                     nmeaBroadcaster.updateNavigation(
                         hasActiveWaypoint = true,
                         xteNm = 0.0,

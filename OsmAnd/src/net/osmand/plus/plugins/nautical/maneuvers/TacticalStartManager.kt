@@ -8,11 +8,10 @@ import net.osmand.plus.OsmandApplication
 import net.osmand.plus.plugins.nautical.NauticalPlugin
 import net.osmand.plus.plugins.nautical.audio.AlarmType
 import net.osmand.plus.plugins.nautical.audio.NauticalAudioArbiter
+import net.osmand.shared.extensions.toDegrees
 import net.osmand.shared.util.KMapUtils
 import java.util.Locale
-import kotlin.math.abs
-import kotlin.math.roundToInt
-import kotlin.math.sin
+import kotlin.math.*
 
 /**
  * Manages the Tactical Start Line (Port and Starboard pins).
@@ -207,9 +206,9 @@ class TacticalStartManager(private val app: OsmandApplication) {
         val b1p = KMapUtils.getBearing(p1.first, p1.second, lat, lon)
         val d1p = KMapUtils.getDistance(p1.first, p1.second, lat, lon)
         
-        val angle = Math.toRadians(b1p - b12)
+        val angle = b1p - b12
         val xtd = d1p * sin(angle)
-        val atd = d1p * Math.cos(angle)
+        val atd = d1p * cos(angle)
         
         return when {
             atd < 0 -> KMapUtils.getDistance(lat, lon, p1.first, p1.second)
@@ -228,7 +227,7 @@ class TacticalStartManager(private val app: OsmandApplication) {
         val state = NauticalPlugin.engine?.getCurrentState() ?: return null
         val twd = state.windDirectionTrue?.let { Math.toDegrees(it) } ?: return null
         
-        val lineBearing = KMapUtils.getBearing(p1.first, p1.second, p2.first, p2.second)
+        val lineBearing = KMapUtils.getBearing(p1.first, p1.second, p2.first, p2.second).toDegrees()
         val perpendicular = (lineBearing + 90 + 360) % 360
         
         var bias = perpendicular - twd
@@ -273,7 +272,7 @@ class TacticalStartManager(private val app: OsmandApplication) {
         
         val p1 = portPin ?: return null
         val p2 = starboardPin ?: return null
-        val lineBearing = KMapUtils.getBearing(p1.first, p1.second, p2.first, p2.second)
+        val lineBearing = KMapUtils.getBearing(p1.first, p1.second, p2.first, p2.second).toDegrees()
         val linePerp = (lineBearing + 90 + 360) % 360
         
         val vPerp = sog * Math.cos(Math.toRadians(cog - linePerp))

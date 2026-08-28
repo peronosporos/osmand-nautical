@@ -48,7 +48,7 @@ class NauticalTacticalStartPinQuickAction : QuickAction {
 
     override fun execute(mapActivity: MapActivity, params: Bundle?) {
         if (mapActivity.isFinishing || mapActivity.isDestroyed) return
-        mapActivity.mapView?.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
+        mapActivity.layout?.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
         val app = mapActivity.app
         val plugin = NauticalPlugin.getInstance()
         if (plugin == null) {
