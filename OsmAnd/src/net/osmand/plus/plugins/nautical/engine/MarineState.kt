@@ -281,8 +281,6 @@ data class MarineState(
     val rateOfTurn: Double? = null, // Radians/s
     val drift: Double? = null, // m/s
     val setTrue: Double? = null, // Radians (rad)
-    val tidalCurrentSpeed: Double? get() = drift
-    val tidalCurrentDirection: Double? get() = setTrue
     val trueWindAngle: Double? = null, // Radians (rad) (relative to bow)
     val windShift: Double? = null, // Radians (rad)
     val tackAngle: Double? = null, // Radians (rad)
@@ -498,6 +496,12 @@ data class MarineState(
     val timeOfRudderFix: Long = 0,
     val timeOfDriftFix: Long = 0
 ) : Serializable
+
+val MarineState.tidalCurrentSpeed: Double?
+    get() = drift
+
+val MarineState.tidalCurrentDirection: Double?
+    get() = setTrue
 
 val MarineState.hasValidFix: Boolean
     get() {
