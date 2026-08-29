@@ -28,11 +28,6 @@ class SailInventoryFragment : BaseOsmAndFragment() {
         val view = themedInflater.inflate(R.layout.fragment_sail_inventory, container, false)
 
         val toolbar = view.findViewById<Toolbar>(R.id.toolbar)
-        toolbar?.title = getString(R.string.nautical_sail_inventory)
-        toolbar?.setNavigationIcon(R.drawable.ic_arrow_back)
-        toolbar?.setNavigationOnClickListener {
-            requireActivity().onBackPressedDispatcher.onBackPressed()
-        }
         view.findViewById<View>(R.id.close_button)?.setOnClickListener {
             requireActivity().onBackPressedDispatcher.onBackPressed()
         }

@@ -63,11 +63,6 @@ class NauticalChecklistFragment : BaseOsmAndFragment() {
         recyclerView.adapter = adapter
 
         val toolbar = view.findViewById<androidx.appcompat.widget.Toolbar>(R.id.toolbar)
-        toolbar?.title = getString(R.string.nautical_checklists)
-        toolbar?.setNavigationIcon(R.drawable.ic_arrow_back)
-        toolbar?.setNavigationOnClickListener {
-            requireActivity().onBackPressedDispatcher.onBackPressed()
-        }
         view.findViewById<TextView>(R.id.toolbar_title)?.text = getString(R.string.nautical_checklists)
         view.findViewById<View>(R.id.close_button)?.setOnClickListener {
             requireActivity().onBackPressedDispatcher.onBackPressed()

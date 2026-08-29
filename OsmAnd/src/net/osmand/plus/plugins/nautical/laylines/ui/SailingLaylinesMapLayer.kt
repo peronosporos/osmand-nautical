@@ -367,21 +367,6 @@ class SailingLaylinesMapLayer(context: Context) : OsmandMapLayer(context), Share
                 portCache.updatePixels(tileBox)
             }
             canvas.drawPath(portCache.cachedPath, portPaint)
-
-            // Optimum Tack Zone Indicator at Port Tack Point
-            val ptpX = tileBox.getPixXFromLatLon(ptp.latitude, ptp.longitude)
-            val ptpY = tileBox.getPixYFromLatLon(ptp.latitude, ptp.longitude)
-            val diamondSize = (8f + 3f * pulseFactor.coerceAtLeast(0f)) * density
-
-            optimumTackZonePath.reset()
-            optimumTackZonePath.moveTo(ptpX, ptpY - diamondSize)
-            optimumTackZonePath.lineTo(ptpX + diamondSize, ptpY)
-            optimumTackZonePath.lineTo(ptpX, ptpY + diamondSize)
-            optimumTackZonePath.lineTo(ptpX - diamondSize, ptpY)
-            optimumTackZonePath.close()
-
-            canvas.drawPath(optimumTackZonePath, optimumTackPaint)
-            canvas.drawPath(optimumTackZonePath, optimumTackStrokePaint)
         }
 
         // 2. Render Starboard Tack Layline: Boat -> StbdIntersection -> Target
@@ -395,21 +380,6 @@ class SailingLaylinesMapLayer(context: Context) : OsmandMapLayer(context), Share
                 stbdCache.updatePixels(tileBox)
             }
             canvas.drawPath(stbdCache.cachedPath, stbdPaint)
-
-            // Optimum Tack Zone Indicator at Starboard Tack Point
-            val stpX = tileBox.getPixXFromLatLon(stp.latitude, stp.longitude)
-            val stpY = tileBox.getPixYFromLatLon(stp.latitude, stp.longitude)
-            val diamondSize = (8f + 3f * pulseFactor.coerceAtLeast(0f)) * density
-
-            optimumTackZonePath.reset()
-            optimumTackZonePath.moveTo(stpX, stpY - diamondSize)
-            optimumTackZonePath.lineTo(stpX + diamondSize, stpY)
-            optimumTackZonePath.lineTo(stpX, stpY + diamondSize)
-            optimumTackZonePath.lineTo(stpX - diamondSize, stpY)
-            optimumTackZonePath.close()
-
-            canvas.drawPath(optimumTackZonePath, optimumTackPaint)
-            canvas.drawPath(optimumTackZonePath, optimumTackStrokePaint)
         }
 
         // 3. Render Wind Shifts

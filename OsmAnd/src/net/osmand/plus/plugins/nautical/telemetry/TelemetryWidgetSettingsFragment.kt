@@ -38,11 +38,6 @@ class TelemetryWidgetSettingsFragment : BaseOsmAndFragment() {
         loadSettings()
 
         val toolbar = rootView.findViewById<androidx.appcompat.widget.Toolbar>(R.id.toolbar)
-        toolbar?.title = getString(R.string.nautical_telemetry_widget_config)
-        toolbar?.setNavigationIcon(R.drawable.ic_arrow_back)
-        toolbar?.setNavigationOnClickListener {
-            requireActivity().onBackPressedDispatcher.onBackPressed()
-        }
         rootView.findViewById<View>(R.id.close_button)?.setOnClickListener {
             requireActivity().onBackPressedDispatcher.onBackPressed()
         }

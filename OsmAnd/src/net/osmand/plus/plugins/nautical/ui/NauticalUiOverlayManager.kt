@@ -174,10 +174,6 @@ class NauticalUiOverlayManager(private val app: OsmandApplication) {
         this.tacticalHudView = th
         hudManager?.get()?.addHeader(th, priority = 150)
 
-        val hh = HardwareHealthHudHeader(activity)
-        this.healthHudView = hh
-        hudManager?.get()?.addHeader(hh, priority = 400)
-
         val lh = ScreenTouchLockHudView(activity)
         this.screenTouchLockHudView = lh
         hudManager?.get()?.addHeader(lh, priority = 5)

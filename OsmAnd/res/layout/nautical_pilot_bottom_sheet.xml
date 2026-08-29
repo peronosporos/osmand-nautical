@@ -208,7 +208,7 @@
                     android:layout_marginTop="8dp"
                     android:layout_marginBottom="8dp">
 
-                    <!-- Port Step Buttons Column: -10° (56dp x 48dp) and -1° (50dp x 42dp) with red tint -->
+                    <!-- Port Step Buttons Column: -10° and -1° -->
                     <LinearLayout
                         android:id="@+id/left_controls"
                         android:layout_width="wrap_content"
@@ -232,19 +232,19 @@
                             android:text="-10°"
                             android:textSize="15sp"
                             android:textStyle="bold"
-                            android:textColor="#E53935"
-                            app:strokeColor="#E53935"
-                            app:strokeWidth="2dp"
+                            android:textColor="?attr/active_color_primary"
+                            app:strokeColor="?attr/active_color_primary"
+                            app:strokeWidth="1.5dp"
                             app:cornerRadius="8dp"
                             android:contentDescription="-10 degrees" />
 
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/btn_minus_1"
                             style="@style/Widget.Material3.Button.OutlinedButton"
-                            android:layout_width="50dp"
-                            android:layout_height="42dp"
-                            android:minHeight="42dp"
-                            android:minWidth="50dp"
+                            android:layout_width="56dp"
+                            android:layout_height="48dp"
+                            android:minHeight="48dp"
+                            android:minWidth="56dp"
                             android:layout_marginTop="8dp"
                             android:insetLeft="0dp"
                             android:insetTop="0dp"
@@ -252,11 +252,11 @@
                             android:insetBottom="0dp"
                             android:padding="0dp"
                             android:text="-1°"
-                            android:textColor="#E53935"
-                            android:textSize="14sp"
+                            android:textColor="?attr/active_color_primary"
+                            android:textSize="15sp"
                             android:textStyle="bold"
                             app:cornerRadius="8dp"
-                            app:strokeColor="#E53935"
+                            app:strokeColor="?attr/active_color_primary"
                             app:strokeWidth="1.5dp"
                             android:contentDescription="-1 degree" />
                     </LinearLayout>
@@ -289,7 +289,7 @@
                             android:contentDescription="@string/nautical_predictive_steering_active" />
                     </FrameLayout>
 
-                    <!-- Starboard Step Buttons Column: +10° (56dp x 48dp) and +1° (50dp x 42dp) with green tint -->
+                    <!-- Starboard Step Buttons Column: +10° and +1° -->
                     <LinearLayout
                         android:id="@+id/right_controls"
                         android:layout_width="wrap_content"
@@ -313,19 +313,19 @@
                             android:text="+10°"
                             android:textSize="15sp"
                             android:textStyle="bold"
-                            android:textColor="#43A047"
-                            app:strokeColor="#43A047"
-                            app:strokeWidth="2dp"
+                            android:textColor="?attr/active_color_primary"
+                            app:strokeColor="?attr/active_color_primary"
+                            app:strokeWidth="1.5dp"
                             app:cornerRadius="8dp"
                             android:contentDescription="+10 degrees" />
 
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/btn_plus_1"
                             style="@style/Widget.Material3.Button.OutlinedButton"
-                            android:layout_width="50dp"
-                            android:layout_height="42dp"
-                            android:minHeight="42dp"
-                            android:minWidth="50dp"
+                            android:layout_width="56dp"
+                            android:layout_height="48dp"
+                            android:minHeight="48dp"
+                            android:minWidth="56dp"
                             android:layout_marginTop="8dp"
                             android:insetLeft="0dp"
                             android:insetTop="0dp"
@@ -333,11 +333,11 @@
                             android:insetBottom="0dp"
                             android:padding="0dp"
                             android:text="+1°"
-                            android:textColor="#43A047"
-                            android:textSize="14sp"
+                            android:textColor="?attr/active_color_primary"
+                            android:textSize="15sp"
                             android:textStyle="bold"
                             app:cornerRadius="8dp"
-                            app:strokeColor="#43A047"
+                            app:strokeColor="?attr/active_color_primary"
                             app:strokeWidth="1.5dp"
                             android:contentDescription="+1 degree" />
                     </LinearLayout>
@@ -399,10 +399,10 @@
                         android:singleLine="true"
                         android:ellipsize="end"
                         android:text="@string/nautical_tack_port_short"
-                        android:textColor="#E53935"
+                        android:textColor="?attr/active_color_primary"
                         android:textStyle="bold"
                         android:textSize="13sp"
-                        app:strokeColor="#E53935"
+                        app:strokeColor="?attr/active_color_primary"
                         app:strokeWidth="1.5dp"
                         app:cornerRadius="8dp"
                         android:contentDescription="@string/nautical_tack_port" />
@@ -435,10 +435,10 @@
                         android:singleLine="true"
                         android:ellipsize="end"
                         android:text="@string/nautical_tack_stbd_short"
-                        android:textColor="#43A047"
+                        android:textColor="?attr/active_color_primary"
                         android:textStyle="bold"
                         android:textSize="13sp"
-                        app:strokeColor="#43A047"
+                        app:strokeColor="?attr/active_color_primary"
                         app:strokeWidth="1.5dp"
                         app:cornerRadius="8dp"
                         android:contentDescription="@string/nautical_tack_stbd" />

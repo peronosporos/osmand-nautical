@@ -503,7 +503,7 @@ class NauticalMapLayer(context: Context) : OsmandMapLayer(context), SharedPrefer
         }
 
         val state = engine.getCurrentState()
-        if (state.isDeadReckoning && state.latitude != null && state.longitude != null) {
+        if (state.isDeadReckoning && osmandSettings.NAUTICAL_DR_START_TIME.get() != 0L && state.latitude != null && state.longitude != null) {
             val drX = tileBox.getPixXFromLatLon(state.latitude, state.longitude)
             val drY = tileBox.getPixYFromLatLon(state.latitude, state.longitude)
             drawDrIndicator(canvas, drX, drY, isSunlight)

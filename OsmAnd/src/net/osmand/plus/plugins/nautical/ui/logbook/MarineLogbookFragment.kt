@@ -107,11 +107,6 @@ class MarineLogbookFragment : BaseOsmAndFragment() {
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         val view = themedInflater.inflate(R.layout.fragment_marine_logbook, container, false)
         val toolbar = view.findViewById<androidx.appcompat.widget.Toolbar>(R.id.toolbar)
-        toolbar?.title = getString(R.string.nautical_log_entries)
-        toolbar?.setNavigationIcon(R.drawable.ic_arrow_back)
-        toolbar?.setNavigationOnClickListener {
-            requireActivity().onBackPressedDispatcher.onBackPressed()
-        }
         view.findViewById<View>(R.id.close_button)?.setOnClickListener {
             requireActivity().onBackPressedDispatcher.onBackPressed()
         }
