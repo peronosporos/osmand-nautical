@@ -131,8 +131,7 @@ class NauticalAisObjectDrawable(
     }
 
     private fun activateCpaWarning() {
-        val isNight = NauticalPlugin.isNightVision(plugin.application)
-        bitmapColor = if (isNight) 0xFFFF1744.toInt() else Color.RED
+        bitmapColor = Color.RED
     }
 
     private fun deactivateCpaWarning() {
@@ -143,7 +142,7 @@ class NauticalAisObjectDrawable(
 
     private fun selectBitmap(type: AisObjType): Int {
         if (ais.mmsi in 970000000..974999999) {
-            return R.drawable.ic_action_alert
+            return R.drawable.mm_ais_sar
         }
         return when (type) {
             AisObjType.AIS_VESSEL,
@@ -156,18 +155,18 @@ class NauticalAisObjectDrawable(
             AisObjType.AIS_VESSEL_SAR,
             AisObjType.AIS_VESSEL_OTHER,
             AisObjType.AIS_INVALID,
-            -> R.drawable.ic_action_motorboat
-            AisObjType.AIS_LANDSTATION -> R.drawable.ic_action_antenna
-            AisObjType.AIS_AIRPLANE -> R.drawable.ic_action_aircraft
-            AisObjType.AIS_SART -> R.drawable.ic_action_alert
-            AisObjType.AIS_ATON -> R.drawable.ic_action_target
-            AisObjType.AIS_ATON_VIRTUAL -> R.drawable.ic_action_target
+            -> R.drawable.mm_ais_vessel
+            AisObjType.AIS_LANDSTATION -> R.drawable.mm_ais_land
+            AisObjType.AIS_AIRPLANE -> R.drawable.mm_ais_plane
+            AisObjType.AIS_SART -> R.drawable.mm_ais_sar
+            AisObjType.AIS_ATON -> R.drawable.mm_ais_aton
+            AisObjType.AIS_ATON_VIRTUAL -> R.drawable.mm_ais_aton_virt
         }
     }
 
     private fun selectColor(type: AisObjType): Int {
         if (ais.mmsi in 970000000..974999999) {
-            return 0xFFFF1744.toInt()
+            return Color.RED
         }
         return when (type) {
             AisObjType.AIS_VESSEL -> Color.GREEN
@@ -181,7 +180,7 @@ class NauticalAisObjectDrawable(
             AisObjType.AIS_VESSEL_OTHER -> Color.argb(0xff, 0x00, 0xbf, 0xff)
             AisObjType.AIS_LANDSTATION -> Color.argb(0xff, 0x8b, 0x45, 0x13)
             AisObjType.AIS_AIRPLANE -> Color.argb(0xff, 0x93, 0x70, 0xdb)
-            AisObjType.AIS_SART -> 0xFFFF1744.toInt()
+            AisObjType.AIS_SART -> Color.RED
             AisObjType.AIS_ATON, AisObjType.AIS_ATON_VIRTUAL -> Color.argb(0xff, 0xff, 0xa5, 0x00)
             else -> 0
         }
@@ -218,7 +217,7 @@ class NauticalAisObjectDrawable(
         val vesselAtRest = isVesselAtRestWithHysteresis()
         if (ais.isLost(plugin.aisShipLostTimeout.get()) && !vesselAtRest) {
             if (ais.isMovable()) {
-                bitmap = imagesCache.getBitmap(R.drawable.ic_action_cancel)
+                bitmap = imagesCache.getBitmap(R.drawable.mm_ais_vessel_cross)
                 bitmapValid = true
             }
         } else {
@@ -327,7 +326,7 @@ class NauticalAisObjectDrawable(
     ) {
         updateBitmap(paint)
 
-        val lostBitmap = imagesCache.getBitmap(R.drawable.ic_action_cancel)
+        val lostBitmap = imagesCache.getBitmap(R.drawable.mm_ais_vessel_cross)
         val activeBitmap = bitmap
         if ((activeBitmap == null) || (lostBitmap == null)) {
             return
