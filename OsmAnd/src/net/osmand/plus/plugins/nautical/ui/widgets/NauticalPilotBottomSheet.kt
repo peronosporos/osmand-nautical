@@ -157,7 +157,7 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
         val customView = LayoutInflater.from(themedContext).inflate(R.layout.nautical_pilot_bottom_sheet, null)
 
         pilotRoot = customView.findViewById(R.id.pilot_root)
-        bottomSheetHandle = customView.findViewById(R.id.drag_handle)
+        bottomSheetHandle = customView.findViewById(R.id.bottom_sheet_handle)
         txtPilotTitle = customView.findViewById(R.id.txt_pilot_title)
         badgePilotMode = customView.findViewById(R.id.badge_pilot_mode)
         btnSettingsGear = customView.findViewById(R.id.btn_settings_gear)
@@ -166,9 +166,8 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
         stopBtn = customView.findViewById(R.id.btn_mode_stop)
         compassBtn = customView.findViewById(R.id.btn_mode_compass)
         windBtn = customView.findViewById(R.id.btn_mode_wind)
-        val twaBtn = customView.findViewById<MaterialButton>(R.id.btn_mode_twa)
         routeBtn = customView.findViewById(R.id.btn_mode_route)
-        modeButtons = arrayOf(compassBtn, windBtn, twaBtn, routeBtn, stopBtn)
+        modeButtons = arrayOf(compassBtn, windBtn, routeBtn, stopBtn)
 
         steeringCard = customView.findViewById(R.id.steering_card)
         errorLinear = customView.findViewById(R.id.heading_error_linear)
@@ -293,10 +292,6 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
                     R.id.btn_mode_wind -> {
                         autopilot.setAutopilotMode("wind")
                         speakMode("AWA")
-                    }
-                    R.id.btn_mode_twa -> {
-                        autopilot.setAutopilotMode("twa")
-                        speakMode("TWA")
                     }
                     R.id.btn_mode_route -> {
                         if (engine.isFollowingRoute) {
@@ -667,7 +662,6 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
         val targetCheckedId = when (rawMode) {
             "AUTO" -> R.id.btn_mode_compass
             "WIND" -> R.id.btn_mode_wind
-            "TWA" -> R.id.btn_mode_twa
             "TRACK", "ROUTE" -> R.id.btn_mode_route
             "STANDBY" -> R.id.btn_mode_stop
             else -> View.NO_ID
