@@ -1,4 +1,7 @@
 <resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
+    <string name="shared_string_checklist">Checklist</string>
+    <string name="nautical_passage_plan_title">Passage Plan</string>
+    <string name="nautical_screen_touch_lock_title">Wet Screen Touch Lock</string>
     <string name="nautical_no_active_route">No active route found</string>
     <string name="nautical_vessel_systems">Vessel Systems</string>
     <string name="nautical_anchor_windlass_control">Anchor Windlass (Hold to Action)</string>

@@ -66,7 +66,7 @@ class RadarControlBottomSheet : BaseBottomSheetDialogFragment() {
         }
         gainRow.addView(gainLabel)
 
-        val btnAutoGain = MaterialButton(context, null, com.google.android.material.R.attr.borderlessButtonStyle).apply {
+        val btnAutoGain = MaterialButton(context, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
             text = if (autoGain) "MANUAL" else "AUTO"
             minHeight = (48 * resources.displayMetrics.density).toInt()
             setTextColor(if (isNight) 0xFFFF1744.toInt() else 0xFF00E5FF.toInt())

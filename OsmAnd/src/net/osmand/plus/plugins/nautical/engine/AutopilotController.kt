@@ -646,7 +646,7 @@ class AutopilotController(
         val currentTwaDeg = Math.toDegrees(currentTwaRad)
 
         val twsMs = state.windSpeedTrue ?: state.windSpeedApparent ?: 5.0
-        val polarDiagram = NauticalPlugin.getInstance()?.polarDiagram
+        val polarDiagram = NauticalPlugin.getInstance()?.tacticalProcessor?.polarDiagram
         val optTwa = polarDiagram?.getOptimalUpwindVmg(twsMs)?.targetTwaDeg ?: 45.0
         val finalTwa = if (direction == "PORT") -optTwa else optTwa
 

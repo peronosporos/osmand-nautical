@@ -58,7 +58,7 @@ class NauticalNetworkSetupFragment : BaseOsmAndFragment() {
         fun applyTargetAndConnect(host: String, label: String) {
             app.settings.NAUTICAL_SERVER_IP.set(host)
             txtActiveConnection?.text = "Active Target: $host ($label)"
-            NauticalPlugin.engine?.reconnect()
+            NauticalPlugin.getInstance()?.reconnect()
             app.showToastMessage("Configured and connecting to $label ($host)")
         }
 

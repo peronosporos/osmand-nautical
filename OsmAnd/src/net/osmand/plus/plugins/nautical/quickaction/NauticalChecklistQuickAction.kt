@@ -18,7 +18,7 @@ class NauticalChecklistQuickAction : QuickAction {
         @JvmField
         val TYPE: QuickActionType = QuickActionType(NAUTICAL_CHECKLIST_ACTION_ID, "nautical.checklist.open", NauticalChecklistQuickAction::class.java)
             .nameRes(R.string.shared_string_checklist)
-            .iconRes(R.drawable.ic_action_checkmark)
+            .iconRes(R.drawable.ic_action_done)
             .category(QuickActionType.INTERFACE)
     }
 

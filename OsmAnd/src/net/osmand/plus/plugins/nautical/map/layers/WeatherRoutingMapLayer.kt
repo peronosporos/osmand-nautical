@@ -146,7 +146,7 @@ class WeatherRoutingMapLayer(context: Context) : OsmandMapLayer(context) {
     private fun drawSafetyCorridorAndXte(
         canvas: Canvas,
         tileBox: RotatedTileBox,
-        pathPoints: List<net.osmand.data.LatLon>,
+        pathPoints: List<net.osmand.plus.plugins.nautical.routing.model.Waypoint>,
         isNight: Boolean
     ) {
         if (pathPoints.size < 2) return
@@ -174,7 +174,7 @@ class WeatherRoutingMapLayer(context: Context) : OsmandMapLayer(context) {
         // Draw corridor polygon for the first / active leg
         val p1 = pathPoints[0]
         val p2 = pathPoints[1]
-        val bearing = net.osmand.util.MapUtils.calculateAngle(p1.latitude, p1.longitude, p2.latitude, p2.longitude)
+        val bearing = net.osmand.shared.util.KMapUtils.getBearing(p1.latitude, p1.longitude, p2.latitude, p2.longitude)
 
         val p1Left = net.osmand.shared.util.KMapUtils.rhumbDestinationPoint(p1.latitude, p1.longitude, corridorWidthMeters, (bearing - 90.0 + 360.0) % 360.0)
         val p1Right = net.osmand.shared.util.KMapUtils.rhumbDestinationPoint(p1.latitude, p1.longitude, corridorWidthMeters, (bearing + 90.0) % 360.0)
@@ -194,7 +194,7 @@ class WeatherRoutingMapLayer(context: Context) : OsmandMapLayer(context) {
         // Compute XTE if own vessel position is known
         if (ownLoc != null) {
             val distToP1 = net.osmand.util.MapUtils.getDistance(ownLoc.latitude, ownLoc.longitude, p1.latitude, p1.longitude)
-            val bearingToVessel = net.osmand.util.MapUtils.calculateAngle(p1.latitude, p1.longitude, ownLoc.latitude, ownLoc.longitude)
+            val bearingToVessel = net.osmand.shared.util.KMapUtils.getBearing(p1.latitude, p1.longitude, ownLoc.latitude, ownLoc.longitude)
             val angleDiff = Math.toRadians((bearingToVessel - bearing + 360.0) % 360.0)
             val xteMeters = distToP1 * kotlin.math.sin(angleDiff)
 

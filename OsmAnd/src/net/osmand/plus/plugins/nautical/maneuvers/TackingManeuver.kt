@@ -157,10 +157,11 @@ class TackingManeuver(app: OsmandApplication) : ManeuverEngine(app) {
                         msg,
                         5000L,
                         "RESTART",
-                        true
-                    ) {
-                        transitionToExecuting() // Retry the maneuver
-                    }
+                        true,
+                        onConfirm = {
+                            transitionToExecuting() // Retry the maneuver
+                        }
+                    )
                     
                     NauticalPlugin.getInstance()?.speechHelper?.speakAsync(
                         app.getString(R.string.nautical_warn_stalled_in_irons_tts),

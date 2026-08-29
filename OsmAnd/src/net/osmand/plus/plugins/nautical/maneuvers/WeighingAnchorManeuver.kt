@@ -76,10 +76,11 @@ class WeighingAnchorManeuver(app: OsmandApplication) : ManeuverEngine(app) {
             app.getString(R.string.nautical_confirm_helm_to_anchor),
             10000L,
             "AUTO-HELM",
-            false
-        ) {
-            NauticalPlugin.autopilot?.setAutopilotMode("auto")
-        }
+            false,
+            onConfirm = {
+                NauticalPlugin.autopilot?.setAutopilotMode("auto")
+            }
+        )
 
         // Banner prompt for Windlass instead of auto-trigger
         val plugin = NauticalPlugin.getInstance()
@@ -89,10 +90,11 @@ class WeighingAnchorManeuver(app: OsmandApplication) : ManeuverEngine(app) {
                 app.getString(R.string.nautical_weighing_anchor_windlass_up_prompt),
                 0L, // Persistent
                 "RAISE",
-                false
-            ) {
-                NauticalPlugin.engine?.setSwitch("electrical.switches.windlass.up", true)
-            }
+                false,
+                onConfirm = {
+                    NauticalPlugin.engine?.setSwitch("electrical.switches.windlass.up", true)
+                }
+            )
         }
     }
 

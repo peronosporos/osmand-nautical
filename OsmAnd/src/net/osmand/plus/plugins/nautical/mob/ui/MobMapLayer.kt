@@ -71,6 +71,12 @@ class MobMapLayer(context: Context) : OsmandMapLayer(context) {
         pathEffect = DashPathEffect(floatArrayOf(15f, 10f), 0f)
     }
 
+    private val activeLegPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = 0xFF00E5FF.toInt()
+        style = Paint.Style.STROKE
+        strokeWidth = 5f
+    }
+
     private val sarWaypointPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.YELLOW
         style = Paint.Style.FILL

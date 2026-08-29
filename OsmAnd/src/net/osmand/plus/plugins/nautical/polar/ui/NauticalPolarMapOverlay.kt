@@ -5,12 +5,12 @@ import android.graphics.*
 import net.osmand.data.RotatedTileBox
 import net.osmand.plus.OsmandApplication
 import net.osmand.plus.plugins.nautical.NauticalPlugin
-import net.osmand.plus.views.OsmandMapLayer
+import net.osmand.plus.views.layers.base.OsmandMapLayer
 import kotlin.math.*
 
 class NauticalPolarMapOverlay(
     private val context: Context
-) : OsmandMapLayer(), OsmandMapLayer.DrawSettings {
+) : OsmandMapLayer(context) {
 
     private val polarLinePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
@@ -74,7 +74,7 @@ class NauticalPolarMapOverlay(
             (it + hdg) % (2.0 * Math.PI)
         } ?: 0.0
 
-        val polarDiagram = NauticalPlugin.getInstance()?.polarDiagram ?: return
+        val polarDiagram = NauticalPlugin.getInstance()?.tacticalProcessor?.polarDiagram ?: return
 
         // Night vision theme adjustments
         if (isNight) {
