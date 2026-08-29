@@ -201,9 +201,7 @@ public class AisObjectDrawable {
 	}
 
 	private void setColor(boolean vesselAtRest) {
-		if (NauticalPlugin.isNightVision(plugin.getMyApplication())) {
-			this.bitmapColor = Color.RED;
-		} else if (isOwn()) {
+		if (isOwn()) {
 			this.bitmapColor = Color.BLACK; // show own AIS object in black
 		} else if (ais.isLost(getPlugin().getVesselLostTimeoutInMinutes()) && !vesselAtRest) {
 			if (ais.isMovable()) {

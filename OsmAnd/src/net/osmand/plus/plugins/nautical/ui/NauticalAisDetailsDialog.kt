@@ -86,24 +86,6 @@ class NauticalAisDetailsDialog : BaseBottomSheetDialogFragment() {
         val na = getString(R.string.nautical_not_available)
 
         // Header: Icon, Name, MMSI, Call Sign, IMO
-        val app = plugin?.application
-        val isNightVision = app?.let { NauticalPlugin.isNightVision(it) } ?: false
-        if (isNightVision) {
-            view.setBackgroundColor(0xEE120000.toInt())
-            view.findViewById<com.google.android.material.card.MaterialCardView>(R.id.card_vessel_identification)?.apply {
-                setCardBackgroundColor(0xEE120000.toInt())
-                strokeColor = 0x80FF1744.toInt()
-            }
-            view.findViewById<com.google.android.material.card.MaterialCardView>(R.id.card_kinematics_grid)?.apply {
-                setCardBackgroundColor(0xEE120000.toInt())
-                strokeColor = 0x80FF1744.toInt()
-            }
-            view.findViewById<com.google.android.material.card.MaterialCardView>(R.id.card_collision_geometry)?.apply {
-                setCardBackgroundColor(0xEE120000.toInt())
-                strokeColor = 0x80FF1744.toInt()
-            }
-        }
-
         val imgIcon = view.findViewById<ImageView>(R.id.img_vessel_icon)
         val iconRes = selectBitmap(ais.objectClass)
         val iconColor = selectColor(ais.objectClass)
@@ -116,7 +98,6 @@ class NauticalAisDetailsDialog : BaseBottomSheetDialogFragment() {
         val shipName = ais.shipName?.trim()
         val txtShipName = view.findViewById<TextView>(R.id.txt_ship_name)
         txtShipName.text = if (!shipName.isNullOrEmpty()) shipName else "MMSI: ${ais.mmsi}"
-        if (isNightVision) txtShipName.setTextColor(0xFFFF1744.toInt())
 
         val country = getMidCountry(ais.mmsi)
         val mmsiSb = StringBuilder("MMSI: ${ais.mmsi}")
@@ -131,7 +112,6 @@ class NauticalAisDetailsDialog : BaseBottomSheetDialogFragment() {
         }
         val txtMmsi = view.findViewById<TextView>(R.id.txt_mmsi_callsign)
         txtMmsi.text = mmsiSb.toString()
-        if (isNightVision) txtMmsi.setTextColor(0xFFFF8A80.toInt())
 
         val shipType = ais.getShipTypeString()
         val isClassB = ais.msgTypes.any { it in setOf(18, 19, 24) }
@@ -409,10 +389,6 @@ class NauticalAisDetailsDialog : BaseBottomSheetDialogFragment() {
     }
 
     private fun selectColor(type: AisObjType): Int {
-        val isNight = NauticalPlugin.getInstance()?.application?.let { NauticalPlugin.isNightVision(it) } ?: false
-        if (isNight) {
-            return 0xFFFF1744.toInt()
-        }
         return when (type) {
             AisObjType.AIS_VESSEL -> Color.GREEN
             AisObjType.AIS_VESSEL_SPORT -> Color.YELLOW
