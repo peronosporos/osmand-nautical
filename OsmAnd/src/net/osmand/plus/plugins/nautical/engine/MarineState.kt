@@ -430,6 +430,7 @@ data class MarineState(
     val serverNextPoint: LatLon? = null,
     val vmgTimeToWaypoint: Double? = null, // Seconds
     val sogTimeToWaypoint: Double? = null, // Seconds
+    @kotlinx.serialization.Contextual
     val activeWaypointPosition: LatLon? = null,
     val activeWaypointName: String? = null,
     val rhumbLineBearing: Double? = null,
@@ -451,6 +452,7 @@ data class MarineState(
     val isMobActive: Boolean = false,
     val mobLatitude: Double? = null,
     val mobLongitude: Double? = null,
+    @kotlinx.serialization.Contextual
     val mobDatumPosition: LatLon? = null,
 
     val isDeadReckoning: Boolean = false,

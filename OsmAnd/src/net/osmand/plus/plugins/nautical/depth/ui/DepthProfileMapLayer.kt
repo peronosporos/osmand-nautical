@@ -3,16 +3,17 @@ package net.osmand.plus.plugins.nautical.depth.ui
 import android.content.Context
 import android.graphics.*
 import android.view.MotionEvent
+import android.graphics.PointF
 import net.osmand.data.RotatedTileBox
 import net.osmand.plus.OsmandApplication
 import net.osmand.plus.plugins.nautical.NauticalPlugin
 import net.osmand.plus.plugins.nautical.engine.NauticalSafetyEvaluator
-import net.osmand.plus.views.OsmandMapLayer
+import net.osmand.plus.views.layers.base.OsmandMapLayer
 import java.util.Locale
 
 class DepthProfileMapLayer(
     private val context: Context
-) : OsmandMapLayer(), OsmandMapLayer.DrawSettings {
+) : OsmandMapLayer(context) {
 
     private var isExpanded = true
 
@@ -181,8 +182,8 @@ class DepthProfileMapLayer(
         canvas.drawPath(seabedPath, seabedLinePaint)
     }
 
-    override fun onSingleTap(e: MotionEvent, tileBox: RotatedTileBox): Boolean {
-        if (panelRect.contains(e.x, e.y)) {
+    override fun onSingleTap(point: PointF, tileBox: RotatedTileBox): Boolean {
+        if (panelRect.contains(point.x, point.y)) {
             isExpanded = !isExpanded
             return true
         }

@@ -14,6 +14,7 @@ import java.util.PriorityQueue
 import java.util.concurrent.atomic.AtomicReference
 import net.osmand.PlatformUtil
 import net.osmand.plus.OsmandApplication
+import net.osmand.plus.plugins.nautical.NauticalPlugin
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 import java.util.Calendar
@@ -565,7 +566,7 @@ class NauticalAudioArbiter private constructor(private val app: OsmandApplicatio
     private var hasPlayedAdvisoryChime = false
 
     fun updateAisCollisionProximity(tcpaSeconds: Double, cpaNm: Double) {
-        if (isMuted(AlarmType.COLLISION_DANGER) || app.settings.NAUTICAL_AUDIO_MUTED.get()) {
+        if (isMuted(AlarmType.COLLISION_DANGER)) {
             stopAisProximityModulation()
             return
         }

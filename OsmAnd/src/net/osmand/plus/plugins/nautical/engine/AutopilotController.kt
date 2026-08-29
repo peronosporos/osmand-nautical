@@ -647,7 +647,7 @@ class AutopilotController(
 
         val twsMs = state.windSpeedTrue ?: state.windSpeedApparent ?: 5.0
         val polarDiagram = NauticalPlugin.getInstance()?.tacticalProcessor?.polarDiagram
-        val optTwa = polarDiagram?.getOptimalUpwindVmg(twsMs)?.targetTwaDeg ?: 45.0
+        val optTwa = polarDiagram?.getOptimalUpwindTarget(twsMs)?.targetTwaDeg ?: 45.0
         val finalTwa = if (direction == "PORT") -optTwa else optTwa
 
         val deltaTurnDeg = if (direction == "PORT") -kotlin.math.abs(currentTwaDeg - finalTwa).coerceAtLeast(60.0) else kotlin.math.abs(currentTwaDeg - finalTwa).coerceAtLeast(60.0)
@@ -667,7 +667,7 @@ class AutopilotController(
                     direction = direction
                 )
                 net.osmand.plus.plugins.nautical.audio.NauticalAudioArbiter.getInstance(app).dispatchAlarm(
-                    net.osmand.plus.plugins.nautical.audio.AlarmType.MANEUVER_TACTICAL,
+                    net.osmand.plus.plugins.nautical.audio.AlarmType.TACTICAL_TACK,
                     voiceText = "Tack in $sec"
                 )
                 delay(1000L)

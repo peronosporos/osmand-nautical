@@ -233,7 +233,7 @@ class AnchorDriftWatchdog(private val app: OsmandApplication) {
 
                     val dist = net.osmand.util.MapUtils.getDistance(anchorLat, anchorLon, latLon.latitude, latLon.longitude)
                     if (dist <= radiusM * 1.1) {
-                        val bearing = (net.osmand.util.MapUtils.calculateAngle(anchorLat, anchorLon, latLon.latitude, latLon.longitude) + 360.0) % 360.0
+                        val bearing = (net.osmand.shared.util.KMapUtils.getBearing(anchorLat, anchorLon, latLon.latitude, latLon.longitude) + 360.0) % 360.0
                         countShallow++
                         sumBearing += bearing
                         minBearing = if (minBearing == null) bearing else minOf(minBearing, bearing)
@@ -444,8 +444,8 @@ class AnchorDriftWatchdog(private val app: OsmandApplication) {
         val engine = NauticalPlugin.engine
         val state = engine?.getCurrentState()
         val windDeg = state?.windDirectionTrue?.let { Math.toDegrees(it) }
-            ?: state?.windAngleTrue?.let { Math.toDegrees(it) }
-        val currentDeg = state?.currentSetTrue?.let { Math.toDegrees(it) }
+            ?: state?.trueWindAngle?.let { Math.toDegrees(it) }
+        val currentDeg = state?.setTrue?.let { Math.toDegrees(it) }
 
         monitorWindShift(windDeg, state?.windSpeedTrue)
 
