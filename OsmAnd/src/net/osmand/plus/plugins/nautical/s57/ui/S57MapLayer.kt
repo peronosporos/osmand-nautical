@@ -21,13 +21,22 @@ import net.osmand.plus.views.layers.ContextMenuLayer.IContextMenuProvider
 import net.osmand.plus.views.layers.MapSelectionResult
 import net.osmand.plus.views.layers.MapSelectionRules
 import net.osmand.plus.views.layers.base.OsmandMapLayer
+import net.osmand.plus.plugins.nautical.NauticalPlugin
 import kotlinx.coroutines.*
+import kotlin.math.abs
 import kotlin.math.pow
 import kotlin.math.roundToInt
 
 class S57MapLayer(context: Context, private val indexManager: S57SpatialIndex) : OsmandMapLayer(context), IContextMenuProvider {
 
+    private val app = context.applicationContext as OsmandApplication
     private val criticalHazards = setOf("UWTROC", "WRECKS", "OBSTRN", "LIGHTS", "BOYLAT", "BCNLAT", "BOYCAR", "BCNCAR", "BOYSAW", "BCNSAW", "BOYISD")
+
+    private val overheadWarningHaloPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+        strokeWidth = 6f
+        color = Color.MAGENTA
+    }
 
     private val strokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
@@ -286,6 +295,7 @@ class S57MapLayer(context: Context, private val indexManager: S57SpatialIndex) :
 
             val style = pf.style
             val scale = (tileBox.density * (tileBox.zoom / 15f)).coerceAtLeast(1.0f)
+            val isOverheadObstruction = pf.acronym in listOf("BRIDGE", "CBLOHD", "PIPOHD")
             
             for (pg in pf.preparedGeometries) {
                 if (!isGeometryInViewport(pg.geometry, tileBox)) continue
@@ -419,7 +429,7 @@ class S57MapLayer(context: Context, private val indexManager: S57SpatialIndex) :
                             if (pf.acronym in listOf("BRIDGE", "CBLOHD", "PIPOHD")) {
                                 val verclr = pf.attributes["VERCLR"]?.toDoubleOrNull()
                                 if (verclr != null) {
-                                    val pts = (geometry as? S57Geometry.Line)?.points
+                                    val pts = (geometry as? S57Geometry.Line)?.nodes
                                     if (!pts.isNullOrEmpty()) {
                                         val midP = pts[pts.size / 2]
                                         val midX = tileBox.getPixXFromLatLon(midP.latitude, midP.longitude)
@@ -514,7 +524,7 @@ class S57MapLayer(context: Context, private val indexManager: S57SpatialIndex) :
                             }
 
                             val speedSentry = net.osmand.plus.plugins.nautical.engine.NauticalSpeedLimitSentry.getInstance(app)
-                            if (speedSentry.isZoneViolated(pf.featureId)) {
+                            if (speedSentry.isZoneViolated(pf.featureId.toString())) {
                                 speedLimitWarningPaint.color = if (isNight) 0xFFFF1744.toInt() else 0xFFFF9800.toInt()
                                 speedLimitWarningPaint.strokeWidth = 3f * scale
                                 canvas.drawPath(path, speedLimitWarningPaint)
