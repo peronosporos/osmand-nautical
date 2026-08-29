@@ -174,17 +174,18 @@ class AnchorDriftWatchdog(private val app: OsmandApplication) {
 
     fun computeRodeTension(windSpeedMps: Double?, rodeDeployedM: Double?, depthM: Double?): Double {
         val windSpeedKn = (windSpeedMps ?: 0.0) * 1.94384
-        val displacementTons = (app.settings.NAUTICAL_VESSEL_DISPLACEMENT_KG.get().toDouble().takeIf { it > 0.0 } ?: 10000.0) / 1000.0
+        val stateDisplacement = NauticalPlugin.engine?.getCurrentState()?.displacement
+        val displacementTons = (stateDisplacement ?: (app.settings.NAUTICAL_VESSEL_LENGTH.get().toDouble() * 1000.0)).coerceAtLeast(3000.0) / 1000.0
         val depth = depthM ?: 5.0
         val scopeRatio = if (rodeDeployedM != null && depth > 0.5) (rodeDeployedM / depth).coerceAtLeast(1.0) else 5.0
-        val tensionKg = 0.004 * kotlin.math.pow(windSpeedKn, 2.0) * kotlin.math.pow(displacementTons, 2.0 / 3.0) / scopeRatio
+        val tensionKg = 0.004 * Math.pow(windSpeedKn, 2.0) * Math.pow(displacementTons, 2.0 / 3.0) / scopeRatio
 
-        val chainSizeMm = app.settings.NAUTICAL_CHAIN_SIZE_MM.get().toDouble().takeIf { it > 0.0 } ?: 8.0
-        val breakingLoadKg = 55.0 * kotlin.math.pow(chainSizeMm, 2.0)
+        val chainSizeMm = 8.0
+        val breakingLoadKg = 55.0 * Math.pow(chainSizeMm, 2.0)
         val swlThresholdKg = 0.40 * breakingLoadKg
 
         _rodeTensionKg.value = tensionKg
-        _isHighRodeLoad.value = tensionKg > swlThresholdKg && windSpeedKn > 12.0
+        _isHighRodeLoad.value = (tensionKg > swlThresholdKg) && (windSpeedKn > 12.0)
         return tensionKg
     }
 
