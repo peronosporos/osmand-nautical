@@ -99,10 +99,10 @@ class NauticalPolarMapOverlay(
         polarPath.rewind()
         noGoPath.rewind()
 
-        val optimalUpwind = polarDiagram.getOptimalUpwindVmg(twsMs)
-        val optimalDownwind = polarDiagram.getOptimalDownwindVmg(twsMs)
-        val upwindTwaDeg = optimalUpwind?.targetTwaDeg ?: 42.0
-        val downwindTwaDeg = optimalDownwind?.targetTwaDeg ?: 145.0
+        val optimalUpwind = polarDiagram.getOptimalUpwindTarget(twsMs)
+        val optimalDownwind = polarDiagram.getOptimalDownwindTarget(twsMs)
+        val upwindTwaDeg = optimalUpwind.targetTwaDeg
+        val downwindTwaDeg = optimalDownwind.targetTwaDeg
 
         // Build No-Go Zone cone
         val upwindTwaRad = Math.toRadians(upwindTwaDeg)

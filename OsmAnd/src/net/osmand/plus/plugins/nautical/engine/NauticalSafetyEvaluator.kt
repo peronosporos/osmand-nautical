@@ -241,8 +241,8 @@ class NauticalSafetyEvaluator(
         }
         val mastHeight = app.settings.getCustomRenderProperty("mastHeight", "15.0").get().toDoubleOrNull() ?: 15.0
         val safetyMargin = 1.5
-        val tideHeight = state.tideHeight ?: app.settings.NAUTICAL_ANCHOR_TIDE_RISE.get().toDouble()
-        val airTempC = state.outsideAirTemperature?.let {
+        val tideHeight = state.tide?.heightNow ?: app.settings.NAUTICAL_ANCHOR_TIDE_RISE.get().toDouble()
+        val airTempC = state.outsideTemperature?.let {
             if (it > 100.0) it - 273.15 else it
         } ?: 20.0
 

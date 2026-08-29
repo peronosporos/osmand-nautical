@@ -98,11 +98,12 @@ class AnchoringManeuver(app: OsmandApplication) : ManeuverEngine(app) {
                 app.getString(R.string.nautical_confirm_helm_into_wind),
                 10000L,
                 "AUTO-HELM",
-                false
-            ) {
-                NauticalPlugin.autopilot?.setTargetHeading(Math.toDegrees(twd))
-                NauticalPlugin.autopilot?.setAutopilotMode("auto")
-            }
+                false,
+                onConfirm = {
+                    NauticalPlugin.autopilot?.setTargetHeading(Math.toDegrees(twd))
+                    NauticalPlugin.autopilot?.setAutopilotMode("auto")
+                }
+            )
         }
 
         // Task 11: Prompt for Windlass instead of auto-trigger
@@ -112,10 +113,11 @@ class AnchoringManeuver(app: OsmandApplication) : ManeuverEngine(app) {
                 app.getString(R.string.nautical_anchoring_windlass_prompt),
                 0L, // Persistent until used or dismissed
                 "LOWER",
-                false
-            ) {
-                NauticalPlugin.engine?.setSwitch("electrical.switches.windlass.down", true)
-            }
+                false,
+                onConfirm = {
+                    NauticalPlugin.engine?.setSwitch("electrical.switches.windlass.down", true)
+                }
+            )
         }
 
         super.transitionToExecuting()

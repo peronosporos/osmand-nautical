@@ -310,9 +310,9 @@ class SailingLaylinesMapLayer(context: Context) : OsmandMapLayer(context), Share
         // 0. Render +/-7.5° Oscillating Wind Shift Sectors around Port and Starboard Laylines
         portTackPoint?.let { ptp ->
             val distM = net.osmand.util.MapUtils.getDistance(boatLat, boatLon, ptp.latitude, ptp.longitude)
-            val bearingDeg = net.osmand.util.MapUtils.calculateAngle(boatLat, boatLon, ptp.latitude, ptp.longitude)
-            val leftP = net.osmand.util.MapUtils.rhumbDestinationPoint(boatLat, boatLon, distM, bearingDeg - 7.5)
-            val rightP = net.osmand.util.MapUtils.rhumbDestinationPoint(boatLat, boatLon, distM, bearingDeg + 7.5)
+            val bearingDeg = net.osmand.shared.util.KMapUtils.getBearing(boatLat, boatLon, ptp.latitude, ptp.longitude)
+            val leftP = net.osmand.shared.util.KMapUtils.rhumbDestinationPoint(boatLat, boatLon, distM, bearingDeg - 7.5)
+            val rightP = net.osmand.shared.util.KMapUtils.rhumbDestinationPoint(boatLat, boatLon, distM, bearingDeg + 7.5)
 
             val ptpX = tileBox.getPixXFromLatLon(ptp.latitude, ptp.longitude)
             val ptpY = tileBox.getPixYFromLatLon(ptp.latitude, ptp.longitude)
@@ -334,9 +334,9 @@ class SailingLaylinesMapLayer(context: Context) : OsmandMapLayer(context), Share
 
         starboardTackPoint?.let { stp ->
             val distM = net.osmand.util.MapUtils.getDistance(boatLat, boatLon, stp.latitude, stp.longitude)
-            val bearingDeg = net.osmand.util.MapUtils.calculateAngle(boatLat, boatLon, stp.latitude, stp.longitude)
-            val leftS = net.osmand.util.MapUtils.rhumbDestinationPoint(boatLat, boatLon, distM, bearingDeg - 7.5)
-            val rightS = net.osmand.util.MapUtils.rhumbDestinationPoint(boatLat, boatLon, distM, bearingDeg + 7.5)
+            val bearingDeg = net.osmand.shared.util.KMapUtils.getBearing(boatLat, boatLon, stp.latitude, stp.longitude)
+            val leftS = net.osmand.shared.util.KMapUtils.rhumbDestinationPoint(boatLat, boatLon, distM, bearingDeg - 7.5)
+            val rightS = net.osmand.shared.util.KMapUtils.rhumbDestinationPoint(boatLat, boatLon, distM, bearingDeg + 7.5)
 
             val stpX = tileBox.getPixXFromLatLon(stp.latitude, stp.longitude)
             val stpY = tileBox.getPixYFromLatLon(stp.latitude, stp.longitude)

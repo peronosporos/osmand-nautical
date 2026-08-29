@@ -52,10 +52,10 @@ object PassagePlanExportHelper {
                 leg.legNumber,
                 fromStr,
                 toStr,
-                leg.courseTrueDeg,
+                leg.courseToSteerDeg,
                 leg.distanceNm,
-                leg.speedKnots,
-                leg.timeSeconds / 60.0
+                leg.speedOverGroundKn,
+                leg.eteHours * 60.0
             ))
         }
         sb.appendLine("--------------------------------------------------------------------------------")
@@ -64,7 +64,7 @@ object PassagePlanExportHelper {
         sb.appendLine("2. TIDAL WINDOWS & ENVIRONMENTAL CONSTRAINTS")
         sb.appendLine("--------------------------------------------------------------------------------")
         val state = NauticalPlugin.engine?.getCurrentState()
-        val tideHeight = state?.tideHeight ?: app.settings.NAUTICAL_ANCHOR_TIDE_RISE.get().toDouble()
+        val tideHeight = state?.tide?.heightNow ?: app.settings.NAUTICAL_ANCHOR_TIDE_RISE.get().toDouble()
         val currentDrift = state?.drift ?: 0.0
         val currentSet = state?.setTrue?.let { Math.toDegrees(it) } ?: 0.0
         sb.appendLine(String.format(Locale.US, "• Current Chart Datum Tide Height: %.2f m", tideHeight))
@@ -114,7 +114,7 @@ object PassagePlanExportHelper {
         for (leg in route.legs) {
             sb.appendLine(String.format(Locale.US, """    <rtept lat="%.6f" lon="%.6f">""", leg.to.latitude, leg.to.longitude))
             sb.appendLine(String.format(Locale.US, "      <name>WPT %d</name>", leg.legNumber))
-            sb.appendLine(String.format(Locale.US, "      <cmt>Leg %d: %.1f NM @ %03.0f°T</cmt>", leg.legNumber, leg.distanceNm, leg.courseTrueDeg))
+            sb.appendLine(String.format(Locale.US, "      <cmt>Leg %d: %.1f NM @ %03.0f°T</cmt>", leg.legNumber, leg.distanceNm, leg.courseToSteerDeg))
             sb.appendLine("    </rtept>")
         }
         sb.appendLine("  </rte>")

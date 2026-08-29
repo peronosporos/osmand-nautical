@@ -194,8 +194,9 @@ class SignalKDataBroker(private val settings: OsmandSettings? = null) {
                 val isExternalGnssStale = (lastExternalGnssTime > 0L) && ((now - lastExternalGnssTime) > 3000L)
                 val isExternalHeadingStale = (lastExternalHeadingTime > 0L) && ((now - lastExternalHeadingTime) > 3000L)
 
-                if (isExternalGnssStale || isExternalHeadingStale || (current.connectionStatus == ConnectionStatus.CONNECTED && current.timeOfFix > 0L && (now - current.timeOfFix) > 3000L)) {
-                    val app = NauticalPlugin.getInstance()?.app
+                val posTime = current.timestamps["navigation.position"] ?: 0L
+                if (isExternalGnssStale || isExternalHeadingStale || (current.connectionStatus == ConnectionStatus.CONNECTED && posTime > 0L && (now - posTime) > 3000L)) {
+                    val app = NauticalPlugin.getInstance()?.application
                     val internalLoc = app?.locationProvider?.lastKnownLocation
 
                     if (internalLoc != null) {
@@ -206,7 +207,7 @@ class SignalKDataBroker(private val settings: OsmandSettings? = null) {
                                 speedOverGround = (internalLoc.speed.toDouble()).coerceAtLeast(0.0),
                                 courseOverGroundTrue = if (internalLoc.hasBearing()) Math.toRadians(internalLoc.bearing.toDouble()) else st.courseOverGroundTrue,
                                 isInternalSensorFallback = true,
-                                timeOfFix = now
+                                timestamps = st.timestamps + ("navigation.position" to now)
                             )
                         }
 
