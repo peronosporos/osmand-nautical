@@ -7,6 +7,7 @@ import androidx.core.graphics.createBitmap
 import net.osmand.data.RotatedTileBox
 import net.osmand.plus.OsmandApplication
 import net.osmand.plus.R
+import net.osmand.plus.plugins.nautical.AnchorDriftWatchdog
 import net.osmand.plus.plugins.nautical.NauticalPlugin
 import net.osmand.plus.plugins.nautical.anchor.TrackPoint
 import net.osmand.plus.views.layers.base.OsmandMapLayer

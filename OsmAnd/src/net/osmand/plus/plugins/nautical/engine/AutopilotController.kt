@@ -915,6 +915,10 @@ class AutopilotController(
         }
     }
 
+    fun stepTargetHeading(deltaDegrees: Double, reason: String = "Manual Nudge") {
+        dispatchAdjustHeading(deltaDegrees, reason)
+    }
+
     private fun dispatchAutomatedNudge(deltaDegrees: Double) {
         pendingAutomatedDelta += deltaDegrees
         
