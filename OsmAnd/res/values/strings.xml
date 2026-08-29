@@ -1,4 +1,5 @@
 <resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
+    <string name="nautical_no_active_route">No active route found</string>
     <string name="nautical_vessel_systems">Vessel Systems</string>
     <string name="nautical_anchor_windlass_control">Anchor Windlass (Hold to Action)</string>
     <string name="shared_string_play">Play</string>

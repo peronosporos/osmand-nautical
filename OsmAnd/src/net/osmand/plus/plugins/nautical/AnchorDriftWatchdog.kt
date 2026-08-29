@@ -196,7 +196,7 @@ class AnchorDriftWatchdog(private val app: OsmandApplication) {
         }
 
         val draft = app.settings.NAUTICAL_VESSEL_DRAFT.get().toDouble()
-        val keelSafety = app.settings.NAUTICAL_DEPTH_SAFETY_MARGIN.get().toDouble()
+        val keelSafety = app.settings.NAUTICAL_SAFETY_MARGIN.get().toDouble()
         val minSafeDepth = draft + keelSafety
 
         val degRadius = (radiusM / 111320.0) * 1.5

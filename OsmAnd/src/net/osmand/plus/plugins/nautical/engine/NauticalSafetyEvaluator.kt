@@ -481,7 +481,7 @@ class NauticalSafetyEvaluator(
     ): ForwardRouteProfile? {
         if (lat == null || lon == null) return null
         val draft = app.settings.NAUTICAL_VESSEL_DRAFT.get().toDouble()
-        val safetyMargin = app.settings.NAUTICAL_DEPTH_SAFETY_MARGIN.get().toDouble()
+        val safetyMargin = app.settings.NAUTICAL_SAFETY_MARGIN.get().toDouble()
         val marineState = NauticalPlugin.engine?.marineStateFlow?.value
         val tideHeight = marineState?.tide?.heightNow ?: 0.0
 

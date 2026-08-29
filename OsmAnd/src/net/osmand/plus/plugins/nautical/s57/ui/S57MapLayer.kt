@@ -109,7 +109,7 @@ class S57MapLayer(context: Context, private val indexManager: S57SpatialIndex) :
         isCable: Boolean = false
     ) {
         val state = NauticalPlugin.engine?.getCurrentState()
-        val airTempC = state?.outsideAirTemperature?.let {
+        val airTempC = state?.outsideTemperature?.let {
             if (it > 100.0) it - 273.15 else it
         } ?: 20.0
 
@@ -256,7 +256,7 @@ class S57MapLayer(context: Context, private val indexManager: S57SpatialIndex) :
         val shallowDepth = app.settings.getCustomRenderProperty("shallowContour", "2.0").get().toDoubleOrNull() ?: 2.0
 
         val draft = app.settings.NAUTICAL_VESSEL_DRAFT.get().toDouble()
-        val ukc = app.settings.NAUTICAL_DEPTH_SAFETY_MARGIN.get().toDouble()
+        val ukc = app.settings.NAUTICAL_SAFETY_MARGIN.get().toDouble()
         val marineState = net.osmand.plus.plugins.nautical.NauticalPlugin.engine?.marineStateFlow?.value
         val tideHeight = marineState?.tide?.heightNow ?: 0.0
         val effectiveSafetyDepth = (draft + ukc - tideHeight).coerceAtLeast(0.5)

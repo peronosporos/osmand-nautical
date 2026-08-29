@@ -127,10 +127,14 @@ class NauticalRouteSummaryFragment : BaseOsmAndFragment() {
 
                         // Check for shallow water / clearance hazards along route waypoints
                         val plugin = net.osmand.plus.plugins.nautical.NauticalPlugin.getInstance()
-                        val minDepthSafety = plugin?.shallowDepthThreshold?.get()?.toDouble() ?: 3.0
+                        val minDepthSafety = app.settings.NAUTICAL_SAFETY_MARGIN.get().toDouble()
                         val shallowLegs = result.legs.filter { leg ->
                             val s57 = plugin?.s57SpatialIndex
-                            val nearSoundings = s57?.queryObjects(leg.to.latitude, leg.to.longitude, 0.005)
+                            val nearSoundings = s57?.queryFeatures(
+                                leg.to.latitude - 0.005, leg.to.latitude + 0.005,
+                                leg.to.longitude - 0.005, leg.to.longitude + 0.005,
+                                listOf("SOUNDG", "DEPARE")
+                            )
                             nearSoundings?.any { it.acronym == "SOUNDG" || it.acronym == "DEPARE" } ?: false
                         }
 
@@ -231,8 +235,8 @@ class NauticalRouteSummaryFragment : BaseOsmAndFragment() {
 
             // Inwardly integrate current tidal stream vectors (set and drift from MarineState.tidalCurrentSpeed / tidalCurrentDirection)
             val liveState = net.osmand.plus.plugins.nautical.NauticalPlugin.engine?.getCurrentState()
-            val driftMps = liveState?.tidalCurrentSpeed ?: liveState?.drift
-            val setRad = liveState?.tidalCurrentDirection ?: liveState?.setTrue
+            val driftMps = liveState?.drift
+            val setRad = liveState?.setTrue
 
             var effectiveEteHours = leg.eteHours
             if (driftMps != null && setRad != null && driftMps > 0.05) {

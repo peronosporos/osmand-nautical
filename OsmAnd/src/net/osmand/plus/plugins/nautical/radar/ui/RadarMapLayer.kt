@@ -2,17 +2,18 @@ package net.osmand.plus.plugins.nautical.radar.ui
 
 import android.content.Context
 import android.graphics.*
+import android.graphics.PointF
 import android.view.MotionEvent
 import net.osmand.data.RotatedTileBox
 import net.osmand.plus.OsmandApplication
 import net.osmand.plus.activities.MapActivity
 import net.osmand.plus.plugins.nautical.NauticalPlugin
-import net.osmand.plus.views.OsmandMapLayer
+import net.osmand.plus.views.layers.base.OsmandMapLayer
 import net.osmand.plus.views.OsmandMapTileView
 
 class RadarMapLayer(
     private val context: Context
-) : OsmandMapLayer(), OsmandMapLayer.DrawSettings {
+) : OsmandMapLayer(context) {
 
     private val ringPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
@@ -105,8 +106,8 @@ class RadarMapLayer(
         canvas.drawText(label, chipRect.centerX(), chipRect.centerY() + (chipTextPaint.textSize * 0.35f), chipTextPaint)
     }
 
-    override fun onSingleTap(e: MotionEvent, tileBox: RotatedTileBox): Boolean {
-        if (chipRect.contains(e.x, e.y)) {
+    override fun onSingleTap(point: PointF, tileBox: RotatedTileBox): Boolean {
+        if (chipRect.contains(point.x, point.y)) {
             val mapActivity = context as? MapActivity
             if (mapActivity != null && !mapActivity.isFinishing && !mapActivity.isDestroyed) {
                 RadarControlBottomSheet.show(mapActivity.supportFragmentManager)
