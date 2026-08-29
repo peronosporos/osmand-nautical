@@ -138,9 +138,8 @@ class DeadReckoningMapLayer(context: Context) : OsmandMapLayer(context) {
 
     override fun onDraw(canvas: Canvas, tileBox: RotatedTileBox, settings: DrawSettings) {
         val state = drUiState ?: return
-        if (state.source != FixSource.DEAD_RECKONING) return
-
         val app = context.applicationContext as? net.osmand.plus.OsmandApplication ?: return
+        if (state.source != FixSource.DEAD_RECKONING || !app.settings.NAUTICAL_SHOW_DEAD_RECKONING.get()) return
         val isNight = net.osmand.plus.plugins.nautical.NauticalPlugin.isNightVision(app)
         setupPaints(isNight)
 

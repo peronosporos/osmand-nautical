@@ -651,6 +651,24 @@
         android:title="Chart Overlays &amp; Performance" />
 
     <net.osmand.plus.settings.preferences.SwitchPreferenceEx
+        android:key="nautical_show_dead_reckoning"
+        android:layout="@layout/preference_with_descr"
+        android:title="Dead Reckoning (DR) Overlay"
+        android:summary="Show estimated position and future milestones when Signal K data is stale" />
+
+    <net.osmand.plus.settings.preferences.SwitchPreferenceEx
+        android:key="nautical_show_isochrones"
+        android:layout="@layout/preference_with_descr"
+        android:title="Weather Routing Isochrones"
+        android:summary="Show irregular lobes of reachability based on wind forecast" />
+
+    <net.osmand.plus.settings.preferences.SwitchPreferenceEx
+        android:key="nautical_show_anchor_zone"
+        android:layout="@layout/preference_with_descr"
+        android:title="Anchor Swing Zones"
+        android:summary="Show active and preview anchor swing zones around position" />
+
+    <net.osmand.plus.settings.preferences.SwitchPreferenceEx
         android:key="nautical_show_polar_overlay"
         android:layout="@layout/preference_with_descr"
         android:title="Polar Rose Target VMG"

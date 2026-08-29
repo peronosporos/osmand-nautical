@@ -503,13 +503,13 @@ class NauticalMapLayer(context: Context) : OsmandMapLayer(context), SharedPrefer
         }
 
         val state = engine.getCurrentState()
-        if (state.isDeadReckoning && osmandSettings.NAUTICAL_DR_START_TIME.get() != 0L && state.latitude != null && state.longitude != null) {
+        if (state.isDeadReckoning && osmandSettings.NAUTICAL_SHOW_DEAD_RECKONING.get() && osmandSettings.NAUTICAL_DR_START_TIME.get() != 0L && state.latitude != null && state.longitude != null) {
             val drX = tileBox.getPixXFromLatLon(state.latitude, state.longitude)
             val drY = tileBox.getPixYFromLatLon(state.latitude, state.longitude)
             drawDrIndicator(canvas, drX, drY, isSunlight)
         }
 
-        if (state.isochrones.isNotEmpty()) {
+        if (state.isochrones.isNotEmpty() && osmandSettings.NAUTICAL_SHOW_ISOCHRONES.get()) {
             drawIsochrones(canvas, tileBox, state.isochrones)
         }
         if (state.polarTargetSpeed != null) {
@@ -797,7 +797,7 @@ class NauticalMapLayer(context: Context) : OsmandMapLayer(context), SharedPrefer
         val anchorLat = settings.NAUTICAL_ANCHOR_LAT.get()
         val anchorLon = settings.NAUTICAL_ANCHOR_LON.get()
         var anchorRadius = settings.NAUTICAL_ANCHOR_RADIUS.get()
-        if (anchorLat != 0.0) {
+        if (anchorLat != 0.0 && settings.NAUTICAL_SHOW_ANCHOR_ZONE.get()) {
             if (anchorRadius <= 0f) {
                 val depth = settings.NAUTICAL_ANCHOR_DEPTH.get().toDouble()
                 val scopeRatio = settings.NAUTICAL_ANCHOR_SCOPE_RATIO.get().toDouble().coerceAtLeast(1.0)
@@ -1008,16 +1008,7 @@ class NauticalMapLayer(context: Context) : OsmandMapLayer(context), SharedPrefer
     }
 
     private fun drawIsochrones(canvas: Canvas, tileBox: RotatedTileBox, isochrones: List<net.osmand.plus.plugins.nautical.network.SignalKRegion>) {
-        val engine = NauticalPlugin.engine ?: return
-        val lastUpdate = engine.getCurrentState().lastIsochroneTime
-        val ageMs = System.currentTimeMillis() - lastUpdate
-        
-        // Pulse/Fade effect: new isochrones are bright, then settle to 120 alpha
-        val alpha = if (ageMs < 3000) {
-            (120 + 135 * (1.0 - ageMs / 3000.0)).toInt()
-        } else 120
-
-        isochronePaint.alpha = alpha
+        isochronePaint.alpha = 120
         isochrones.forEach { region ->
             val geometry = region.feature.geometry
             val coordinates = geometry["coordinates"] as? List<*> ?: return@forEach

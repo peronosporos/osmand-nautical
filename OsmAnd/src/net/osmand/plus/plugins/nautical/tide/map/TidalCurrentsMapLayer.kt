@@ -159,8 +159,8 @@ class TidalCurrentsMapLayer(context: Context) : OsmandMapLayer(context) {
         val btnW = 56f * density
 
         val centerX = canvas.width / 2f
-        val bottomY = canvas.height - (36f * density)
-        val topY = bottomY - cardH
+        val topY = 48f * density // Top area to avoid bottom sheets
+        val bottomY = topY + cardH
 
         scrubberCardRect.set(centerX - cardW / 2f, topY, centerX + cardW / 2f, bottomY)
         scrubberMinusRect.set(scrubberCardRect.left, topY, scrubberCardRect.left + btnW, bottomY)

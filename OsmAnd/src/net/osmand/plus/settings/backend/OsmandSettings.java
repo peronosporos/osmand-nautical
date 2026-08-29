@@ -3590,6 +3590,9 @@ public class OsmandSettings {
 	public final CommonPreference<Boolean> NAUTICAL_SHOW_LAYLINES = registerBooleanPreference("nautical_show_laylines", true).makeProfile();
 	public final CommonPreference<Boolean> NAUTICAL_SHOW_INFINITE_LAYLINES = registerBooleanPreference("nautical_show_infinite_laylines", false).makeProfile();
 	public final CommonPreference<Boolean> NAUTICAL_SHOW_WIND_SHIFTS = registerBooleanPreference("nautical_show_wind_shifts", true).makeProfile();
+	public final CommonPreference<Boolean> NAUTICAL_SHOW_DEAD_RECKONING = registerBooleanPreference("nautical_show_dead_reckoning", true).makeProfile();
+	public final CommonPreference<Boolean> NAUTICAL_SHOW_ISOCHRONES = registerBooleanPreference("nautical_show_isochrones", true).makeProfile();
+	public final CommonPreference<Boolean> NAUTICAL_SHOW_ANCHOR_ZONE = registerBooleanPreference("nautical_show_anchor_zone", true).makeProfile();
 	public final CommonPreference<Boolean> NAUTICAL_SHOW_TRAJECTORY = registerBooleanPreference("nautical_show_trajectory", true).makeProfile();
 	public final CommonPreference<Integer> NAUTICAL_TRAJECTORY_COLOR = registerIntPreference("nautical_trajectory_color", 0xFFFF00FF).makeProfile(); // MAGENTA
 	public final CommonPreference<Float> NAUTICAL_TRAJECTORY_THICKNESS = registerFloatPreference("nautical_trajectory_thickness", 10.0f).makeProfile();

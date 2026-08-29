@@ -136,18 +136,7 @@
                     app:strokeColor="?attr/active_color_primary"
                     android:contentDescription="@string/nautical_mode_wind" />
 
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btn_mode_twa"
-                    style="@style/Widget.Material3.Button.OutlinedButton"
-                    android:layout_width="0dp"
-                    android:layout_height="44dp"
-                    android:layout_weight="1"
-                    android:padding="0dp"
-                    android:text="TWA"
-                    android:textSize="11sp"
-                    android:textStyle="bold"
-                    app:strokeColor="?attr/active_color_primary"
-                    android:contentDescription="TWA Hold Mode" />
+
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btn_mode_route"

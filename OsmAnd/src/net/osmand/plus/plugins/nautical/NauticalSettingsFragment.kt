@@ -902,6 +902,18 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
     }
 
     private fun setupChartOverlaysCategory() {
+        findPreference<SwitchPreferenceEx>(settings.NAUTICAL_SHOW_DEAD_RECKONING.id)?.apply {
+            isChecked = settings.NAUTICAL_SHOW_DEAD_RECKONING.get()
+        }
+
+        findPreference<SwitchPreferenceEx>(settings.NAUTICAL_SHOW_ISOCHRONES.id)?.apply {
+            isChecked = settings.NAUTICAL_SHOW_ISOCHRONES.get()
+        }
+
+        findPreference<SwitchPreferenceEx>(settings.NAUTICAL_SHOW_ANCHOR_ZONE.id)?.apply {
+            isChecked = settings.NAUTICAL_SHOW_ANCHOR_ZONE.get()
+        }
+
         findPreference<SwitchPreferenceEx>(settings.NAUTICAL_SHOW_POLAR_OVERLAY.id)?.apply {
             setThemedIcon(OsmAndR.drawable.ic_action_sail_boat_dark)
             isChecked = settings.NAUTICAL_SHOW_POLAR_OVERLAY.get()
@@ -1500,9 +1512,12 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
                 settings.NAUTICAL_MOB_AUDIO_GUIDANCE.id,
                 settings.NAUTICAL_LOCK_TOUCH_DURING_MANEUVERS.id,
                 settings.NAUTICAL_SHOW_LAYLINES.id,
-                settings.NAUTICAL_SHOW_INFINITE_LAYLINES.id,
-                settings.NAUTICAL_SHOW_WIND_SHIFTS.id,
-                settings.NAUTICAL_SHOW_TRAJECTORY.id,
+            settings.NAUTICAL_SHOW_INFINITE_LAYLINES.id,
+            settings.NAUTICAL_SHOW_WIND_SHIFTS.id,
+            settings.NAUTICAL_SHOW_DEAD_RECKONING.id,
+            settings.NAUTICAL_SHOW_ISOCHRONES.id,
+            settings.NAUTICAL_SHOW_ANCHOR_ZONE.id,
+            settings.NAUTICAL_SHOW_TRAJECTORY.id,
                 settings.NAUTICAL_SHOW_TIDES.id,
                 settings.NAUTICAL_SHOW_HEADING_LINE.id,
                 settings.NAUTICAL_SHOW_COG_LINE.id,

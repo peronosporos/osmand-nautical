@@ -191,11 +191,11 @@ class SignalKDataBroker(private val settings: OsmandSettings? = null) {
                 val now = System.currentTimeMillis()
                 val current = _marineState.value
 
-                val isExternalGnssStale = (lastExternalGnssTime > 0L) && ((now - lastExternalGnssTime) > 3000L)
-                val isExternalHeadingStale = (lastExternalHeadingTime > 0L) && ((now - lastExternalHeadingTime) > 3000L)
+                val isExternalGnssStale = (lastExternalGnssTime > 0L) && ((now - lastExternalGnssTime) > 10000L)
+                val isExternalHeadingStale = (lastExternalHeadingTime > 0L) && ((now - lastExternalHeadingTime) > 10000L)
 
                 val posTime = current.timestamps["navigation.position"] ?: 0L
-                if (isExternalGnssStale || isExternalHeadingStale || (current.connectionStatus == ConnectionStatus.CONNECTED && posTime > 0L && (now - posTime) > 3000L)) {
+                if (isExternalGnssStale || isExternalHeadingStale || (current.connectionStatus == ConnectionStatus.CONNECTED && posTime > 0L && (now - posTime) > 10000L)) {
                     val app = NauticalPlugin.getInstance()?.application
                     val internalLoc = app?.locationProvider?.lastKnownLocation
 
