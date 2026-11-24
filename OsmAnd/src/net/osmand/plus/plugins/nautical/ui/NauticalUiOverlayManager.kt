@@ -159,7 +159,7 @@ class NauticalUiOverlayManager(private val app: OsmandApplication) {
 
         val wearOsManager = NauticalPlugin.getWearOsManager(activity)
         val hudW = hudManager?.get()
-        val layoutUpdate = { hudW?.updateLayout() }
+        fun layoutUpdate() { hudW?.updateLayout() }
         if (wearOsManager.isWatchMode()) {
             val hb = net.osmand.plus.plugins.nautical.ui.cockpit.HeartbeatPane(activity, wearOsManager)
             this.heartbeatHudView = hb.heartbeatView
