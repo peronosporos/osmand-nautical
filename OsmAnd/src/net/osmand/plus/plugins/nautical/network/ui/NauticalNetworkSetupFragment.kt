@@ -59,7 +59,7 @@ class NauticalNetworkSetupFragment : BaseOsmAndFragment() {
             app.settings.NAUTICAL_SERVER_IP.set(host)
             txtActiveConnection?.text = "Active Target: $host ($label)"
             NauticalPlugin.getInstance()?.reconnect()
-            app.showToastMessage("Configured and connecting to $label ($host)")
+            app.showToastMessage(app.getString(net.osmand.plus.R.string.nautical_toast_configured_connecting, label, host))
         }
 
         // Preset 1: Victron Energy Venus OS

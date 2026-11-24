@@ -76,7 +76,7 @@ class TacticalStartManager(private val app: OsmandApplication) {
         val mins = (durationSeconds / 60.0).roundToInt()
         arbiter.dispatchAlarm(
             AlarmType.RACE_START_COUNTDOWN,
-            voiceText = "$mins minutes to start"
+            voiceText = app.getString(net.osmand.plus.R.string.nautical_voice_minutes_to_start, mins)
         )
 
         timerJob = scope.launch {
@@ -160,12 +160,12 @@ class TacticalStartManager(private val app: OsmandApplication) {
         when (currentSecInt) {
             300, 240, 180, 120 -> {
                 val mins = currentSecInt / 60
-                arbiter.dispatchAlarm(AlarmType.RACE_START_COUNTDOWN, voiceText = "$mins minutes")
+                arbiter.dispatchAlarm(AlarmType.RACE_START_COUNTDOWN, voiceText = app.getString(net.osmand.plus.R.string.nautical_voice_minutes, mins))
                 triggerHapticCountdown(100L)
                 lastAnnouncedSecond = currentSecInt
             }
             60 -> {
-                arbiter.dispatchAlarm(AlarmType.RACE_START_COUNTDOWN, voiceText = "1 minute to start")
+                arbiter.dispatchAlarm(AlarmType.RACE_START_COUNTDOWN, voiceText = app.getString(net.osmand.plus.R.string.nautical_voice_one_minute_to_start))
                 triggerHapticCountdown(200L)
                 lastAnnouncedSecond = currentSecInt
             }
@@ -185,7 +185,7 @@ class TacticalStartManager(private val app: OsmandApplication) {
                 lastAnnouncedSecond = currentSecInt
             }
             0 -> {
-                arbiter.dispatchAlarm(AlarmType.RACE_START_COUNTDOWN, voiceText = "GUN! START!")
+                arbiter.dispatchAlarm(AlarmType.RACE_START_COUNTDOWN, voiceText = app.getString(net.osmand.plus.R.string.nautical_voice_gun_start))
                 triggerHapticCountdown(500L)
                 lastAnnouncedSecond = currentSecInt
             }

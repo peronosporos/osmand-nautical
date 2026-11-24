@@ -110,7 +110,7 @@ class PolarEditorFragment : Fragment() {
             if (::performanceViewModel.isInitialized) {
                 performanceViewModel.refreshPolars()
             }
-            (activity?.application as? net.osmand.plus.OsmandApplication)?.showToastMessage("Refreshing polars from server...")
+            (activity?.application as? net.osmand.plus.OsmandApplication)?.showToastMessage(it.getString(net.osmand.plus.R.string.nautical_toast_polar_refreshing))
         }
     }
 
@@ -118,7 +118,7 @@ class PolarEditorFragment : Fragment() {
         if (!::performanceViewModel.isInitialized) return
         val polars = performanceViewModel.availablePolars.value
         if (polars.isEmpty()) {
-            (activity?.application as? net.osmand.plus.OsmandApplication)?.showToastMessage("No polars available in Signal K.")
+            (activity?.application as? net.osmand.plus.OsmandApplication)?.showToastMessage(it.getString(net.osmand.plus.R.string.nautical_toast_no_polars))
             return
         }
 
@@ -169,7 +169,7 @@ class PolarEditorFragment : Fragment() {
         viewLifecycleOwner.lifecycleScope.launch {
             performanceViewModel.isConnected.collectLatest { connected ->
                 if (!connected) {
-                    (activity?.application as? net.osmand.plus.OsmandApplication)?.showToastMessage("Warning: Performance data repository is offline.")
+                    (activity?.application as? net.osmand.plus.OsmandApplication)?.showToastMessage(it.getString(net.osmand.plus.R.string.nautical_toast_perf_repo_offline))
                 }
             }
         }

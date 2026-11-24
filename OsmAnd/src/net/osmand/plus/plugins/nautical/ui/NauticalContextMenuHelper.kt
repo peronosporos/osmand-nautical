@@ -348,7 +348,7 @@ class NauticalContextMenuHelper(private val app: OsmandApplication) {
                                         isStarboard = true,
                                         label = "PI-1 (${String.format(Locale.US, "%.3f, %.3f", lat, lon)})"
                                     )
-                                    app.showToastMessage("PI Line 1 anchored to point (${String.format(Locale.US, "%.0f°T", cog)})")
+                                    app.showToastMessage(app.getString(net.osmand.plus.R.string.nautical_toast_pi_line_1_anchored, String.format(Locale.US, "%.0f°T", cog)))
                                 }
                                 1 -> {
                                     aisLayer?.piLine2 = NauticalAisLayer.ParallelIndexLine(
@@ -359,12 +359,12 @@ class NauticalContextMenuHelper(private val app: OsmandApplication) {
                                         isStarboard = false,
                                         label = "PI-2 (${String.format(Locale.US, "%.3f, %.3f", lat, lon)})"
                                     )
-                                    app.showToastMessage("PI Line 2 anchored to point (${String.format(Locale.US, "%.0f°T", cog)})")
+                                    app.showToastMessage(app.getString(net.osmand.plus.R.string.nautical_toast_pi_line_2_anchored, String.format(Locale.US, "%.0f°T", cog)))
                                 }
                                 2 -> {
                                     aisLayer?.piLine1 = null
                                     aisLayer?.piLine2 = null
-                                    app.showToastMessage("Parallel Index Lines cleared")
+                                    app.showToastMessage(app.getString(net.osmand.plus.R.string.nautical_toast_pi_lines_cleared))
                                 }
                             }
                             onRequestRefresh()
@@ -398,7 +398,7 @@ class NauticalContextMenuHelper(private val app: OsmandApplication) {
                             app.showToastMessage(msg)
                         },
                         onError = { err ->
-                            app.showToastMessage("Camera Slew: $err")
+                            app.showToastMessage(app.getString(net.osmand.plus.R.string.nautical_toast_camera_slew_error, err))
                         }
                     )
                     true
@@ -565,7 +565,7 @@ class NauticalContextMenuHelper(private val app: OsmandApplication) {
                     val currentPoints = engine?.getRoutePoints()?.toMutableList() ?: mutableListOf()
                     currentPoints.add(Pair(lat, lon))
                     engine?.loadRoute(currentPoints)
-                    app.showToastMessage("Tactical waypoint added (${currentPoints.size} total)")
+                    app.showToastMessage(app.getString(net.osmand.plus.R.string.nautical_toast_tactical_waypoint_added, currentPoints.size))
                     onRequestRefresh()
                     app.osmandMap?.refreshMap()
                     true

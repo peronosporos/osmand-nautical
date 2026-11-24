@@ -213,7 +213,7 @@ class SignalKDataBroker(private val settings: OsmandSettings? = null) {
 
                         if (!isFallbackBannerShown) {
                             isFallbackBannerShown = true
-                            NauticalPlugin.hudManager?.get()?.showBanner("TELEMETRY FALLBACK: INTERNAL SENSORS ACTIVE", 8000L, isWarning = true, priority = 2)
+                            NauticalPlugin.hudManager?.get()?.showBanner(app?.getString(net.osmand.plus.R.string.nautical_banner_telemetry_fallback), 8000L, isWarning = true, priority = 2)
                         }
                     }
                 } else if ((now - lastExternalGnssTime) <= 1500L && isFallbackBannerShown) {

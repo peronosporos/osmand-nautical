@@ -77,3 +77,29 @@ Triage rule: safety/data-corruption → fix now; robustness debt → next phase;
   reconciliation timeout with NonCancellable lock release, gybe-prevention confirm flow,
   insecure-command refusal toast, anchor watchdog debounce (3 fixes + 5 s), median filter,
   windlass overload monitor, anchor sync-from-server logic.
+
+## MOB & AIS review (Phase 1 continued)
+
+- Reviewed `MobStateMachine`, `MobVectorEngine`, `NauticalAisManager`: overall sound.
+  Notes / open items:
+  - MobStateMachine persists inside the StateFlow CAS transform (idempotent upsert, accepted,
+    but a pure-transform refactor is preferable).
+  - Verify sector-search and expanding-square waypoint generation against IAMSAR Vol. III
+    reference geometry before release (Phase 5 checklist item).
+  - AIS buddy list lives in an ad-hoc `SharedPreferences ("nautical_buddies_pref")` instead
+    of OsmandSettings — migrate in Phase 2/3 settings consolidation.
+  - Class-B AIS prune timeout (18 min) is hard-coded next to a configurable base timeout —
+    expose as setting in Phase 3.
+  - `resolveMmsiFromContext` maps UUID contexts to a 31-bit hash — theoretical collision
+    with real MMSIs; acceptable for beta, document it.
+  - CPA/TCPA logic, divergence filter, anchorage filter, out-of-order timestamp guard and
+    evidence-based threat model all verified correct.
+
+## i18n pass (Phase 2, completed 2026-11-24)
+
+- All 39 hard-coded user-facing strings (toasts, HUD banners, spoken prompts incl. tactical
+  start countdown, gybe warning, windlass overload voice) moved to `nautical_*` keys in
+  `strings.xml` with positional format args. Remaining raw `Toast.makeText` in
+  VhfChannelPickerDialog uses a proper resource already — acceptable.
+  Known follow-up: full sweep of dialog titles built with literals (e.g. "Select Active
+  Polar") during the Phase 2 conventions pass.

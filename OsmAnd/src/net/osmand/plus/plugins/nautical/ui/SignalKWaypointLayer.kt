@@ -172,7 +172,7 @@ class SignalKWaypointLayer(private val mapActivity: MapActivity) : OsmandMapLaye
                     try {
                         val response = NauticalPlugin.engine?.getRestService()?.deleteWaypoint(id)
                         if (response?.isSuccessful == true) {
-                            mapActivity.app.showToastMessage("Waypoint deleted")
+                            mapActivity.app.showToastMessage(mapActivity.getString(net.osmand.plus.R.string.nautical_toast_waypoint_deleted))
                             skWaypointsMap = skWaypointsMap.filterKeys { it != id }
                             mapActivity.mapView.refreshMap()
                         }

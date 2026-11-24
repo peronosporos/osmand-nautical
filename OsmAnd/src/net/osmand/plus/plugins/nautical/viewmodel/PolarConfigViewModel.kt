@@ -156,12 +156,12 @@ class PolarConfigViewModel : ViewModel() {
                 val response = service.uploadPolar(polarId, profile)
                 if (response.isSuccessful) {
                     plugin.application.runInUIThread {
-                        plugin.application.showToastMessage("Polar profile uploaded to Signal K")
+                        plugin.application.showToastMessage(plugin.application.getString(net.osmand.plus.R.string.nautical_toast_polar_uploaded))
                     }
                 }
             } catch (e: Exception) {
                 plugin.application.runInUIThread {
-                    plugin.application.showToastMessage("Failed to upload polar")
+                    plugin.application.showToastMessage(plugin.application.getString(net.osmand.plus.R.string.nautical_toast_polar_upload_failed))
                 }
             }
         }

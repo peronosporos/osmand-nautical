@@ -243,7 +243,7 @@ class SignalKDiagnosticsFragment : BaseOsmAndFragment() {
         val clipboard = requireContext().getSystemService(android.content.Context.CLIPBOARD_SERVICE) as? android.content.ClipboardManager
         val clip = android.content.ClipData.newPlainText("SignalK Diagnostic Log", sb.toString())
         clipboard?.setPrimaryClip(clip)
-        app.showToastMessage("Diagnostic log copied to clipboard")
+        app.showToastMessage(app.getString(net.osmand.plus.R.string.nautical_toast_diag_log_copied))
     }
 
     private fun updatePathMetrics(state: MarineState) {

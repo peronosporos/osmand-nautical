@@ -87,7 +87,7 @@ class NauticalModeAutoSwitchManager(
                         lastEvaluatedMode = CockpitHudMode.ANCHOR_MOORED
                         app.runInUIThread {
                             hud?.setHudMode(CockpitHudMode.ANCHOR_MOORED)
-                            NauticalPlugin.hudManager?.get()?.showBanner("STATIONARY IN ANCHORAGE: ANCHOR WATCH READY", 10000L, isWarning = false, priority = 3)
+                            NauticalPlugin.hudManager?.get()?.showBanner(app.getString(net.osmand.plus.R.string.nautical_banner_anchor_watch_ready), 10000L, isWarning = false, priority = 3)
                         }
                     }
                 }

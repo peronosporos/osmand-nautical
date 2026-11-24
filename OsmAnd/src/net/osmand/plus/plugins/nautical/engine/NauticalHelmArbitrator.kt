@@ -99,7 +99,7 @@ class NauticalHelmArbitrator private constructor(private val app: OsmandApplicat
         cancelTimeout()
         val runnable = Runnable {
             app.runInUIThread {
-                app.showToastMessage("Helm Lock Safety Release triggered")
+                app.showToastMessage(app.getString(net.osmand.plus.R.string.nautical_toast_helm_safety_release))
             }
             releaseLock(currentPriority.get())
         }

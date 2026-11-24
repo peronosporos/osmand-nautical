@@ -321,7 +321,7 @@ class NauticalAisDetailsDialog : BaseBottomSheetDialogFragment() {
                     val dist = input.text.toString().toDoubleOrNull()
                     if (dist != null && plugin != null) {
                         plugin.aisCpaWarningDistance.set(dist.toFloat())
-                        plugin.application.showToastMessage("CPA threshold set to $dist NM")
+                        plugin.application.showToastMessage(plugin.application.getString(net.osmand.plus.R.string.nautical_toast_cpa_threshold_set, dist.toString()))
                     }
                 }
                 .setNegativeButton(R.string.shared_string_cancel, null)

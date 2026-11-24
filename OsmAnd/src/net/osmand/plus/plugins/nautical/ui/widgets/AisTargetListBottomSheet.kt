@@ -274,7 +274,7 @@ class AisTargetListBottomSheet : BaseBottomSheetDialogFragment() {
                 mapActivity?.mapView?.setLatLon(mobTarget.lat, mobTarget.lon)
                 mapActivity?.mapView?.setIntZoom(16)
                 NauticalPlugin.autopilot?.commandHeading(bearing)
-                app?.showToastMessage("Direct SAR course set to ${mobTarget.name}")
+                app?.showToastMessage(app.getString(net.osmand.plus.R.string.nautical_toast_sar_course_set, mobTarget.name))
             }
         } else {
             cardMobEmergency?.visibility = View.GONE

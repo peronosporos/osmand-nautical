@@ -50,7 +50,7 @@ class PolarWizardFragment : BaseOsmAndFragment() {
         backBtn.setOnClickListener {
             if (viewModel.wizardState.value == WizardState.INITIAL_CHECK) {
                 viewModel.downloadPolars()
-                (activity?.application as? net.osmand.plus.OsmandApplication)?.showToastMessage("Refreshing Polars...")
+                (activity?.application as? net.osmand.plus.OsmandApplication)?.showToastMessage(it.getString(net.osmand.plus.R.string.nautical_toast_polar_refreshing))
             } else {
                 requireActivity().onBackPressedDispatcher.onBackPressed()
             }

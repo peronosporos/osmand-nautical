@@ -104,7 +104,7 @@ class SignalKServerRoutesFragment : BaseOsmAndFragment() {
                         refreshRoutes()
                     } catch (e: Exception) {
                         log.error("Failed to delete route $id from Signal K server: ${e.message}", e)
-                        app.showToastMessage("Failed to delete route: ${e.message}")
+                        app.showToastMessage(app.getString(net.osmand.plus.R.string.nautical_toast_delete_route_failed, e.message))
                     }
                 }
             }
@@ -130,14 +130,14 @@ class SignalKServerRoutesFragment : BaseOsmAndFragment() {
                         app.showToastMessage(R.string.nautical_navigate_with_osmand)
                     } catch (e: Exception) {
                         log.error("Failed to set navigation waypoints for route $id: ${e.message}", e)
-                        app.showToastMessage("Failed to set route waypoints: ${e.message}")
+                        app.showToastMessage(app.getString(net.osmand.plus.R.string.nautical_toast_set_waypoints_failed, e.message))
                     }
                 } else {
-                    app.showToastMessage("Route contains no valid waypoints")
+                    app.showToastMessage(app.getString(net.osmand.plus.R.string.nautical_toast_route_no_waypoints))
                 }
             } catch (e: Exception) {
                 log.error("Failed to load route $id for navigation: ${e.message}", e)
-                app.showToastMessage("Failed to load route: ${e.message}")
+                app.showToastMessage(app.getString(net.osmand.plus.R.string.nautical_toast_load_route_failed, e.message))
             }
         }
     }

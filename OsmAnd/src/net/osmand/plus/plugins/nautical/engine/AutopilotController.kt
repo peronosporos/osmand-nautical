@@ -484,7 +484,7 @@ class AutopilotController(
                 log.error("Failed to play gybe warning sound: ${e.message}")
             }
             NauticalPlugin.hudManager?.get()?.showBanner(
-                "GYBE PREVENTED - CONFIRM TO GYBE",
+                app.getString(net.osmand.plus.R.string.nautical_banner_gybe_prevented),
                 10000L,
                 label = "CONFIRM GYBE",
                 isWarning = true,
@@ -621,7 +621,7 @@ class AutopilotController(
         } else if (preHeading != null) {
             setTargetHeading(Math.toDegrees(preHeading))
         }
-        NauticalPlugin.hudManager?.get()?.showBanner("Resumed Original Course", 3000L, isWarning = false)
+        NauticalPlugin.hudManager?.get()?.showBanner(app.getString(net.osmand.plus.R.string.nautical_banner_resumed_course), 3000L, isWarning = false)
     }
 
     data class AutoTackState(
@@ -668,13 +668,13 @@ class AutopilotController(
                 )
                 net.osmand.plus.plugins.nautical.audio.NauticalAudioArbiter.getInstance(app).dispatchAlarm(
                     net.osmand.plus.plugins.nautical.audio.AlarmType.TACTICAL_TACK,
-                    voiceText = "Tack in $sec"
+                    voiceText = app.getString(net.osmand.plus.R.string.nautical_voice_tack_in, sec)
                 )
                 delay(1000L)
             }
 
             _autoTackStateFlow.value = _autoTackStateFlow.value.copy(isCountdown = false)
-            NauticalPlugin.hudManager?.get()?.showBanner("Auto-Tacking $direction", 4000L, isWarning = false)
+            NauticalPlugin.hudManager?.get()?.showBanner(app.getString(net.osmand.plus.R.string.nautical_banner_auto_tacking, direction), 4000L, isWarning = false)
 
             // 2. Controlled turn rate (3°/second) through the eye of the wind
             val turnRateDegPerSec = 3.0
@@ -692,7 +692,7 @@ class AutopilotController(
             // 3. Settle at mirrored target TWA
             setTargetWindAngle(finalTwa)
             _autoTackStateFlow.value = AutoTackState(isTacking = false)
-            NauticalPlugin.hudManager?.get()?.showBanner("Auto-Tack Complete: Settled on $direction tack", 4000L, isWarning = false)
+            NauticalPlugin.hudManager?.get()?.showBanner(app.getString(net.osmand.plus.R.string.nautical_banner_auto_tack_complete, direction), 4000L, isWarning = false)
         }
     }
 
@@ -703,7 +703,7 @@ class AutopilotController(
         _autoTackStateFlow.value = AutoTackState(isTacking = false)
         if (tackState.isTacking) {
             setTargetHeading(tackState.originalHeadingDeg)
-            NauticalPlugin.hudManager?.get()?.showBanner("Maneuver Aborted: Returning to ${tackState.originalHeadingDeg.toInt()}°", 4000L, isWarning = true)
+            NauticalPlugin.hudManager?.get()?.showBanner(app.getString(net.osmand.plus.R.string.nautical_banner_maneuver_aborted, tackState.originalHeadingDeg.toInt()), 4000L, isWarning = true)
         }
     }
 

@@ -109,7 +109,7 @@ class PolarRecorderBottomSheet : BaseNauticalBottomSheet() {
 
         btnDownload.setOnClickListener {
             SailingDependencyContainer.performanceRepository?.fetchPolars()
-            NauticalPlugin.getInstance()?.application?.showToastMessage("Syncing active polars from Signal K server...")
+            NauticalPlugin.getInstance()?.application?.showToastMessage(it.getString(net.osmand.plus.R.string.nautical_toast_polars_syncing))
         }
 
         // Observe active polar profile for canvas curve

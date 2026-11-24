@@ -286,7 +286,7 @@ class SignalKOrchestratorFragment : BaseOsmAndFragment() {
         private fun showPolarSelector() {
             val names = availablePolars.keys.toTypedArray()
             if (names.isEmpty()) {
-                getApp()?.showToastMessage("No polars available on server")
+                getApp()?.showToastMessage(getString(net.osmand.plus.R.string.nautical_toast_no_polars))
                 return
             }
             AlertDialog.Builder(requireContext())

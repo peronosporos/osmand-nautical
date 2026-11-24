@@ -141,7 +141,7 @@ class NauticalBuddyListFragment : BaseOsmAndFragment() {
                     NauticalPlugin.getInstance()?.aisManager?.addBuddy(mmsi)
                     app.showToastMessage(getString(R.string.nautical_added_to_buddies, mmsi.toString()))
                 } else {
-                    app.showToastMessage("Invalid MMSI. Please enter a valid 9-digit MMSI.")
+                    app.showToastMessage(app.getString(net.osmand.plus.R.string.nautical_toast_invalid_mmsi))
                 }
             }
             .setNegativeButton(R.string.shared_string_cancel, null)

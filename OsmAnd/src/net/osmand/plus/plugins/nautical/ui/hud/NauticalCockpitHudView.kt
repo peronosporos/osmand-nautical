@@ -148,7 +148,7 @@ class NauticalCockpitHudView @JvmOverloads constructor(
                     remoteServer = net.osmand.plus.plugins.nautical.server.NauticalRemoteServer(app).apply { start() }
                 }
                 val url = remoteServer?.getServerUrl(context) ?: "http://127.0.0.1:8080"
-                NauticalPlugin.hudManager?.get()?.showBanner("REMOTE BERTH MIRROR: $url (Connect crew browser on Wi-Fi)", 12000L, isWarning = false, priority = 3)
+                NauticalPlugin.hudManager?.get()?.showBanner(app.getString(net.osmand.plus.R.string.nautical_banner_remote_berth_mirror, url), 12000L, isWarning = false, priority = 3)
             }
         }
 

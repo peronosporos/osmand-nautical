@@ -144,7 +144,7 @@ class AnchorDriftWatchdog(private val app: OsmandApplication) {
                         _isWindlassOverload.value = true
                         net.osmand.plus.plugins.nautical.audio.NauticalAudioArbiter.getInstance(app).dispatchAlarm(
                             net.osmand.plus.plugins.nautical.audio.AlarmType.ACTUATOR_OVERLOAD,
-                            voiceText = "Anchor snagged, windlass overload"
+                            voiceText = app.getString(net.osmand.plus.R.string.nautical_voice_windlass_overload)
                         )
                     }
                 }

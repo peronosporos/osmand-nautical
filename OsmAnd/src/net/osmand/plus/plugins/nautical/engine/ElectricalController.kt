@@ -72,6 +72,6 @@ class ElectricalController(
 
     fun payoutRodeMeters(meters: Double = 2.0) {
         setSwitchState("electrical.switches.windlass.down", true)
-        app.showToastMessage("Paying out ${meters.toInt()}m rode to release tension")
+        app.showToastMessage(app.getString(net.osmand.plus.R.string.nautical_toast_paying_out_rode, meters.toInt()))
     }
 }
