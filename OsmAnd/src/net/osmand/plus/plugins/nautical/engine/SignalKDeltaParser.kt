@@ -50,7 +50,6 @@ class SignalKDeltaParser(
         try {
             reader.beginObject()
             var context: String? = null
-            var isHello = false
 
             while (reader.hasNext()) {
                 val name = reader.nextName()
@@ -58,17 +57,12 @@ class SignalKDeltaParser(
                     "self" -> {
                         val self = reader.nextString()
                         onSelfIdentity(self)
-                        isHello = true
                     }
                     "context" -> context = reader.nextString()
                     "updates" -> {
-                        if (isHello) {
-                            reader.skipValue()
-                        } else {
-                            val res = processUpdates(reader, context ?: "vessels.self", currentState)
-                            currentState = res.first
-                            if (res.second) stateChanged = true
-                        }
+                        val res = processUpdates(reader, context ?: "vessels.self", currentState)
+                        currentState = res.first
+                        if (res.second) stateChanged = true
                     }
                     else -> reader.skipValue()
                 }
@@ -412,19 +406,21 @@ class SignalKDeltaParser(
         return s.copy(pathMeta = currentMeta)
     }
 
+    /**
+     * Parses a single SignalK value for the self vessel. The per-path timestamp is only
+     * recorded when the value is actually accepted, so malformed updates do not mask
+     * staleness checks with a fresh timestamp.
+     */
     fun parseSelfValue(s: MarineState, path: String, valueObj: Any?, now: Long, source: String?): Pair<MarineState, Boolean> {
-        val newTimestamps = s.timestamps.toMutableMap()
-        newTimestamps[path] = now
-        val stateWithTs = s.copy(timestamps = newTimestamps)
-
-        return when (path) {
-            SignalKPaths.ENV_DEPTH_BELOW_TRANSDUCER -> processDepthBelowTransducer(stateWithTs, valueObj, now)
-            SignalKPaths.NAV_HEADING_TRUE -> processHeadingTrue(stateWithTs, valueObj, now)
-            SignalKPaths.NAV_HEADING_MAG -> processHeadingMag(stateWithTs, valueObj, now)
-            SignalKPaths.NAV_SPEED_OVER_GROUND -> processSog(stateWithTs, valueObj, now)
-            SignalKPaths.NAV_SPEED_THROUGH_WATER -> processStw(stateWithTs, valueObj, now)
-            SignalKPaths.ENV_WIND_ANGLE_APPARENT -> processWindAngleApparent(stateWithTs, valueObj, now)
-            SignalKPaths.ENV_WIND_SPEED_APPARENT -> processWindSpeedApparent(stateWithTs, valueObj, now)
+        val stateWithTs = s
+        val outcome = when (path) {
+            SignalKPaths.ENV_DEPTH_BELOW_TRANSDUCER -> processDepthBelowTransducer(s, valueObj, now)
+            SignalKPaths.NAV_HEADING_TRUE -> processHeadingTrue(s, valueObj, now)
+            SignalKPaths.NAV_HEADING_MAG -> processHeadingMag(s, valueObj, now)
+            SignalKPaths.NAV_SPEED_OVER_GROUND -> processSog(s, valueObj, now)
+            SignalKPaths.NAV_SPEED_THROUGH_WATER -> processStw(s, valueObj, now)
+            SignalKPaths.ENV_WIND_ANGLE_APPARENT -> processWindAngleApparent(s, valueObj, now)
+            SignalKPaths.ENV_WIND_SPEED_APPARENT -> processWindSpeedApparent(s, valueObj, now)
             SignalKPaths.NAV_POSITION -> {
                 var lat: Double? = null
                 var lon: Double? = null
@@ -499,6 +495,11 @@ class SignalKDeltaParser(
                 }
             }
         }
+        return if (outcome.second) {
+            val newTimestamps = outcome.first.timestamps.toMutableMap()
+            newTimestamps[path] = now
+            Pair(outcome.first.copy(timestamps = newTimestamps), true)
+        } else outcome
     }
 
     private fun processDepthBelowTransducer(s: MarineState, valueObj: Any?, now: Long): Pair<MarineState, Boolean> {
@@ -544,7 +545,7 @@ class SignalKDeltaParser(
         return if (MarineStateConstants.isValidSpeed(value)) {
             historyManager.getBuffer(SignalKPaths.NAV_SPEED_THROUGH_WATER).add(Pair(value, now))
             val state = dataBroker.applySpeedThroughWaterUpdate(s, value, now)
-            Pair(state.copy(timeOfSogFix = now), true)
+            Pair(state.copy(timeOfStwFix = now), true)
         } else Pair(s, false)
     }
 

@@ -496,6 +496,7 @@ data class MarineState(
     // Temporal Fix Metadata (Phase 8.0AC)
     val timeOfHeadingFix: Long = 0,
     val timeOfSogFix: Long = 0,
+    val timeOfStwFix: Long = 0,
     val timeOfWindFix: Long = 0,
     val timeOfDepthFix: Long = 0,
     val timeOfAttitudeFix: Long = 0,
