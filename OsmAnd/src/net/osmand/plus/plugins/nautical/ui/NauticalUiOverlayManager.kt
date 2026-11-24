@@ -117,8 +117,8 @@ class NauticalUiOverlayManager(private val app: OsmandApplication) {
         if (forwardWatchHudView?.context == activity) return
         hudManager?.get()?.removeHeader(forwardWatchHudView)
         val pane = net.osmand.plus.plugins.nautical.ui.cockpit.SimpleViewPane(
-            "forward_watch", 10
-        ) { ForwardWatchHudView(it) }
+            "forward_watch", 10, viewProvider = { ForwardWatchHudView(it) }
+        )
         this.forwardWatchHudView = pane.buildView(activity) as ForwardWatchHudView
         hudManager?.get()?.cockpitPaneHost?.register(pane)
     }
@@ -127,8 +127,8 @@ class NauticalUiOverlayManager(private val app: OsmandApplication) {
         if (environmentHud?.context == activity) return
         hudManager?.get()?.removeHeader(environmentHud)
         val pane = net.osmand.plus.plugins.nautical.ui.cockpit.SimpleViewPane(
-            "environment", 350
-        ) { NauticalEnvironmentWidgetView(it) }
+            "environment", 350, viewProvider = { NauticalEnvironmentWidgetView(it) }
+        )
         this.environmentHud = pane.buildView(activity) as NauticalEnvironmentWidgetView
         hudManager?.get()?.cockpitPaneHost?.register(pane)
     }
@@ -137,8 +137,8 @@ class NauticalUiOverlayManager(private val app: OsmandApplication) {
         if (watchScheduleHudView?.context == activity) return
         hudManager?.get()?.removeHeader(watchScheduleHudView)
         val pane = net.osmand.plus.plugins.nautical.ui.cockpit.SimpleViewPane(
-            "watch_schedule", 500
-        ) { WatchScheduleHudView(it) }
+            "watch_schedule", 500, viewProvider = { WatchScheduleHudView(it) }
+        )
         this.watchScheduleHudView = pane.buildView(activity) as WatchScheduleHudView
         hudManager?.get()?.cockpitPaneHost?.register(pane)
     }
