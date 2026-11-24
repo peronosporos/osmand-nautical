@@ -116,25 +116,31 @@ class NauticalUiOverlayManager(private val app: OsmandApplication) {
     fun initForwardWatchSystem(activity: MapActivity, hudManager: WeakReference<NauticalHudManager>?) {
         if (forwardWatchHudView?.context == activity) return
         hudManager?.get()?.removeHeader(forwardWatchHudView)
-        val hud = ForwardWatchHudView(activity)
-        this.forwardWatchHudView = hud
-        hudManager?.get()?.addHeader(hud, priority = 10)
+        val pane = net.osmand.plus.plugins.nautical.ui.cockpit.SimpleViewPane(
+            "forward_watch", 10
+        ) { ForwardWatchHudView(it) }
+        this.forwardWatchHudView = pane.buildView(activity) as ForwardWatchHudView
+        hudManager?.get()?.cockpitPaneHost?.register(pane)
     }
 
     fun initEnvironmentSystem(activity: MapActivity, hudManager: WeakReference<NauticalHudManager>?) {
         if (environmentHud?.context == activity) return
         hudManager?.get()?.removeHeader(environmentHud)
-        val hud = NauticalEnvironmentWidgetView(activity)
-        this.environmentHud = hud
-        hudManager?.get()?.addHeader(hud, priority = 350)
+        val pane = net.osmand.plus.plugins.nautical.ui.cockpit.SimpleViewPane(
+            "environment", 350
+        ) { NauticalEnvironmentWidgetView(it) }
+        this.environmentHud = pane.buildView(activity) as NauticalEnvironmentWidgetView
+        hudManager?.get()?.cockpitPaneHost?.register(pane)
     }
 
     fun initWatchScheduleSystem(activity: MapActivity, hudManager: WeakReference<NauticalHudManager>?) {
         if (watchScheduleHudView?.context == activity) return
         hudManager?.get()?.removeHeader(watchScheduleHudView)
-        val hud = WatchScheduleHudView(activity)
-        this.watchScheduleHudView = hud
-        hudManager?.get()?.addHeader(hud, priority = 500)
+        val pane = net.osmand.plus.plugins.nautical.ui.cockpit.SimpleViewPane(
+            "watch_schedule", 500
+        ) { WatchScheduleHudView(it) }
+        this.watchScheduleHudView = pane.buildView(activity) as WatchScheduleHudView
+        hudManager?.get()?.cockpitPaneHost?.register(pane)
     }
 
     fun initWorkflowSystem(
@@ -224,18 +230,9 @@ class NauticalUiOverlayManager(private val app: OsmandApplication) {
         onNavtexVmCreated(viewModel)
 
         hudManager?.get()?.removeHeader(navtexHudView)
-        val hud = NavtexHudView(activity)
-        this.navtexHudView = hud
-        hudManager?.get()?.addHeader(hud, priority = 200)
-
-        activity.lifecycleScope.launch {
-            activity.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                viewModel.uiState.collect { state ->
-                    hud.updateState(state)
-                    controller.navtexLayer.updateState(state)
-                }
-            }
-        }
+        val pane = net.osmand.plus.plugins.nautical.ui.cockpit.NavtexPane(activity, controller, viewModel)
+        this.navtexHudView = pane.hudView
+        hudManager?.get()?.cockpitPaneHost?.register(pane)
     }
 
     fun initLaylineSystem(
@@ -272,18 +269,9 @@ class NauticalUiOverlayManager(private val app: OsmandApplication) {
         onDrVmCreated(viewModel)
 
         hudManager?.get()?.removeHeader(drHeaderView)
-        val header = DrWarningHeaderView(activity)
-        this.drHeaderView = header
-        hudManager?.get()?.addHeader(header, priority = 100)
-
-        activity.lifecycleScope.launch {
-            activity.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                viewModel.uiState.collect { state ->
-                    header.updateState(state)
-                    controller.drLayer.updateState(state)
-                }
-            }
-        }
+        val pane = net.osmand.plus.plugins.nautical.ui.cockpit.DrWarningPane(activity, controller, viewModel)
+        this.drHeaderView = pane.headerView
+        hudManager?.get()?.cockpitPaneHost?.register(pane)
     }
 
     fun initTacticalHudSystem(activity: MapActivity, hudManager: WeakReference<NauticalHudManager>?) {
@@ -293,21 +281,22 @@ class NauticalUiOverlayManager(private val app: OsmandApplication) {
         hudManager?.get()?.removeHeader(anchorWatchHudView)
         hudManager?.get()?.removeHeader(predictiveSteeringHudView)
 
-        val sl = StartLineHudHeader(activity)
-        this.startLineHudHeader = sl
-        hudManager?.get()?.addHeader(sl, priority = 200)
+        fun pane(id: String, p: Int, build: (MapActivity) -> android.view.View) =
+            net.osmand.plus.plugins.nautical.ui.cockpit.SimpleViewPane(id, p, build)
 
-        val th = TacticsHudHeader(activity)
-        this.tacticsHudHeader = th
-        hudManager?.get()?.addHeader(th, priority = 210)
+        val sl = pane("start_line", 200) { StartLineHudHeader(it) }
+        val th = pane("tactics", 210) { TacticsHudHeader(it) }
+        val aw = pane("anchor_watch", 260) { AnchorWatchHudView(it) }
+        val ps = pane("predictive_steering", 270) { PredictiveSteeringHudView(it) }
 
-        val aw = AnchorWatchHudView(activity)
-        this.anchorWatchHudView = aw
-        hudManager?.get()?.addHeader(aw, priority = 260)
+        this.startLineHudHeader = sl.buildView(activity) as StartLineHudHeader
+        this.tacticsHudHeader = th.buildView(activity) as TacticsHudHeader
+        this.anchorWatchHudView = aw.buildView(activity) as AnchorWatchHudView
+        this.predictiveSteeringHudView = ps.buildView(activity) as PredictiveSteeringHudView
 
-        val ps = PredictiveSteeringHudView(activity)
-        this.predictiveSteeringHudView = ps
-        hudManager?.get()?.addHeader(ps, priority = 270)
+        hudManager?.get()?.cockpitPaneHost?.let { host ->
+            host.register(sl); host.register(th); host.register(aw); host.register(ps)
+        }
     }
 
     fun initMobSystem(
