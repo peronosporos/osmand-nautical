@@ -36,6 +36,7 @@ class CockpitScreenRegistry {
             registry.register(InstrumentsPane(app))
             registry.register(HelmScreen(app))
             registry.register(WatchkeeperScreen(app))
+            registry.register(NavScreen(app))
             return registry
         }
     }

@@ -190,6 +190,11 @@
     <string name="nautical_cockpit_wk_mob_active">MOB ACTIVE</string>
     <string name="nautical_cockpit_wk_mob_clear_state">No active MOB</string>
     <string name="nautical_cockpit_wk_mob_clear">Clear MOB</string>
+    <string name="nautical_cockpit_nav_waypoint">Active waypoint</string>
+    <string name="nautical_cockpit_nav_xte">Cross track error</string>
+    <string name="nautical_cockpit_nav_distance">Distance / bearing to waypoint</string>
+    <string name="nautical_cockpit_nav_eta">Time to waypoint</string>
+    <string name="nautical_cockpit_nav_no_route">No active route</string>
     <!-- Nautical: toasts, banners and voice prompts (i18n pass) -->
     <string name="nautical_toast_configured_connecting">Configured and connecting to %1$s (%2$s)</string>
     <string name="nautical_toast_polar_uploaded">Polar profile uploaded to Signal K</string>
