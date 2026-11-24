@@ -85,9 +85,10 @@ class NauticalUiOverlayManager(private val app: OsmandApplication) {
         if (marineAlarmBannerView?.context == activity) return
         hudManager?.get()?.removeHeader(marineAlarmBannerView)
 
-        val banner = net.osmand.plus.plugins.nautical.ui.widgets.MarineAlarmBannerView(activity, apm)
-        this.marineAlarmBannerView = banner
-        hudManager?.get()?.addHeader(banner, priority = 0)
+        // Cockpit pane (step 2): lifecycle owned by the shell from here on.
+        val pane = net.osmand.plus.plugins.nautical.ui.cockpit.MarineAlarmBannerPane(activity, apm)
+        this.marineAlarmBannerView = pane.bannerView
+        hudManager?.get()?.cockpitPaneHost?.register(pane)
     }
 
     fun initGribTimeScrubberSystem(
@@ -324,25 +325,11 @@ class NauticalUiOverlayManager(private val app: OsmandApplication) {
         onMobVmCreated(viewModel)
 
         hudManager?.get()?.removeHeader(mobHeaderView)
-        val header = MobEmergencyHeaderView(activity)
-        header.setViewModel(viewModel)
-        this.mobHeaderView = header
-        hudManager?.get()?.addHeader(header, priority = 0)
-
-        activity.lifecycleScope.launch {
-            activity.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                viewModel.uiState.collect { state ->
-                    header.updateState(state)
-                    controller.mobLayer.updateState(state)
-
-                    if (state.isMobActive) {
-                        activity.window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-                    } else if (app.settings.USE_SYSTEM_SCREEN_TIMEOUT.get()) {
-                        activity.window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-                    }
-                }
-            }
-        }
+        // Cockpit pane (step 2): mounts at EMERGENCY priority once the host has
+        // a MarineState; collects uiState while STARTED through the pane scope.
+        val pane = net.osmand.plus.plugins.nautical.ui.cockpit.MobEmergencyPane(activity, controller, viewModel)
+        this.mobHeaderView = pane.headerView
+        hudManager?.get()?.cockpitPaneHost?.register(pane)
     }
 
     fun updateHudVisibility(hudManager: WeakReference<NauticalHudManager>?) {

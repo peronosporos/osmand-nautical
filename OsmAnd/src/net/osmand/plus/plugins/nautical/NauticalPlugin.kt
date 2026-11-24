@@ -341,6 +341,10 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
     private var lastConnectionStatus: ConnectionStatus? = null
 
     private val marineStateListener: (MarineState) -> Unit = { state ->
+        // Cockpit shell: evaluate pane requiredWhen on every state flip (additive, step 1)
+        app.runInUIThread {
+            hudManager?.get()?.cockpitPaneHost?.onMarineStateChanged(state)
+        }
         telemetryFilterEngine?.processState(state)
         pluginScope?.launch(Dispatchers.Default) {
             try {

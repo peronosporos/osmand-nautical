@@ -9,8 +9,17 @@ import net.osmand.plus.R
 import net.osmand.plus.activities.MapActivity
 import net.osmand.plus.utils.AndroidUtils
 import net.osmand.plus.plugins.nautical.ui.INauticalHudHeader
+import net.osmand.plus.plugins.nautical.ui.cockpit.CockpitPaneHost
 
 class NauticalHudManager(val activity: MapActivity) {
+    /**
+     * Cockpit shell (additive step 1, see docs/nautical/COCKPIT.md).
+     * No legacy wiring uses it yet; panes migrate onto it one by one.
+     */
+    val cockpitPaneHost: CockpitPaneHost by lazy {
+        CockpitPaneHost(activity, this)
+    }
+
     private var nauticalHudContainer: LinearLayout? = null
     private var topBarListener: View.OnLayoutChangeListener? = null
     private var topWidgetsListener: View.OnLayoutChangeListener? = null
@@ -357,6 +366,7 @@ class NauticalHudManager(val activity: MapActivity) {
         }
         registeredHeaders.clear()
         activeHeader = null
+        cockpitPaneHost.destroy()
         nauticalHudContainer = null
         topBarListener = null
         topWidgetsListener = null
