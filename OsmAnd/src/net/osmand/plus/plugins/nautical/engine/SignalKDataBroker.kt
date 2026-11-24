@@ -369,7 +369,7 @@ class SignalKDataBroker(private val settings: OsmandSettings? = null) {
     fun applySpeedThroughWaterUpdate(state: MarineState, value: Double, now: Long): MarineState {
         lastStwValue = value
         val unreliable = calculateStwReliabilityStatus(state, now)
-        return state.copy(speedThroughWater = value, timeOfSogFix = now, isStwUnreliable = unreliable)
+        return state.copy(speedThroughWater = value, isStwUnreliable = unreliable)
     }
 
     private fun calculateStwReliabilityStatus(state: MarineState, now: Long): Boolean {

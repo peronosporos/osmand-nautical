@@ -846,23 +846,30 @@ class SignalKEngine(
         val sog = loc.speed.toDouble()
         val cog = Math.toRadians(loc.bearing.toDouble())
 
+        // Side effects must stay outside the updateState transform: MutableStateFlow.update
+        // retries the transform on contention, which would duplicate trajectory points and
+        // history buffer entries.
+        addTrajectoryPoint(lat, lon)
+        historyManager.getBuffer("navigation.speedOverGround").add(Pair(sog, now))
+        historyManager.getBuffer("navigation.courseOverGroundTrue").add(Pair(cog, now))
+
         dataBroker.updateState { s ->
             val newTimestamps = s.timestamps.toMutableMap()
             newTimestamps["navigation.position"] = now
             newTimestamps["navigation.speedOverGround"] = now
             newTimestamps["navigation.courseOverGroundTrue"] = now
 
-            addTrajectoryPoint(lat, lon)
-            historyManager.getBuffer("navigation.speedOverGround").add(Pair(sog, now))
-            historyManager.getBuffer("navigation.courseOverGroundTrue").add(Pair(cog, now))
-
-            val stateWithPos = s.copy(
-                latitude = lat,
-                longitude = lon,
-                courseOverGroundTrue = cog,
-                timestamps = newTimestamps
+            dataBroker.applySpeedOverGroundUpdate(
+                s.copy(
+                    latitude = lat,
+                    longitude = lon,
+                    courseOverGroundTrue = cog,
+                    timeOfPositionFix = now,
+                    timestamps = newTimestamps
+                ),
+                sog,
+                now
             )
-            dataBroker.applySpeedOverGroundUpdate(stateWithPos, sog, now)
         }
 
         val finalState = dataBroker.marineState.value
