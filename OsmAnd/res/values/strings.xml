@@ -141,6 +141,7 @@
     <string name="nautical_target_unmuted">Target %1$s unmuted</string>
     <string name="nautical_route_completed">Passage completed. Final waypoint reached.</string>
     <string name="nautical_waypoint_reached">Waypoint reached. Steer to next waypoint.</string>
+    <string name="nautical_insecure_command_warning">Insecure connection: commands to this server are sent unencrypted. Enable HTTPS in the server settings when possible.</string>
     <!-- Nautical: toasts, banners and voice prompts (i18n pass) -->
     <string name="nautical_toast_configured_connecting">Configured and connecting to %1$s (%2$s)</string>
     <string name="nautical_toast_polar_uploaded">Polar profile uploaded to Signal K</string>

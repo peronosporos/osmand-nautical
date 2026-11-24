@@ -36,6 +36,7 @@ class AutopilotController(
     private val activeCalls = java.util.concurrent.CopyOnWriteArrayList<Call>()
     private var lastCommandTime = 0L
     private val commandLockMs = 1500L
+    private var insecureCommandWarningShown = false
     private var lastServoCommandTime = 0L
     private val servoRateLimitMs = 300L
     private val controllerScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
@@ -1563,14 +1564,19 @@ class AutopilotController(
                      cleanHost.endsWith(".lan", ignoreCase = true) ||
                      (cleanHost.startsWith("172.") && cleanHost.split(".").getOrNull(1)?.toIntOrNull() in 16..31)
 
-        if (!url.startsWith("https") && !isLocal) {
-            log.warn("Nautical: Refusing to send command over insecure HTTP to public IP: $url")
-            if (showToast) {
-                app.runInUIThread {
-                    showPersistentError(R.string.nautical_error_insecure_connection)
-                }
+        // Usability-first policy: helm commands are ALWAYS sent so the boat keeps working
+        // off-the-shelf. For plaintext HTTP to a public host we warn once per session instead
+        // of blocking, because a refused helm command at sea is worse than an unencrypted one.
+        if (!url.startsWith("https") && !isLocal && !insecureCommandWarningShown) {
+            insecureCommandWarningShown = true
+            log.warn("Nautical: Sending helm command over insecure HTTP to public host: $url")
+            app.runInUIThread {
+                NauticalPlugin.hudManager?.get()?.showBanner(
+                    app.getString(R.string.nautical_insecure_command_warning),
+                    8000L,
+                    isWarning = true,
+                )
             }
-            return
         }
 
         val requestBuilder = Request.Builder().url(url).put(payload.toRequestBody(JSON))

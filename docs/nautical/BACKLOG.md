@@ -3,6 +3,19 @@
 Ranked defect & debt backlog produced by the Phase 0 audit (2026-11-24).
 Triage rule: safety/data-corruption → fix now; robustness debt → next phase; polish → later.
 
+## Decision log (owner, 2026-11-24)
+
+- North-star vision: transition from MVP/proof-of-concept to a **full replacement for all
+  cockpit screens** (autopilot, instruments, VHF, chartplotter). Bold structural shifts are
+  welcome where justified, not just small fixes.
+- UX architecture: dual-track kept for now; the owner asked for a proposal — see
+  `docs/nautical/` plan. Decision pending.
+- Wear OS: maintain, no expansion.
+- Upstream PR: deliberately deferred; do not optimise for it yet.
+- Helm commands over plaintext HTTP: **usability wins**. Commands are always sent; a
+  once-per-session warning banner informs the user instead of a refused command.
+  (Implemented: insecureCommandWarningShown in AutopilotController.)
+
 ## Review order (Phase 0.2, risk-ranked)
 
 1. `engine/` data path — largely reviewed; 6 correctness bugs fixed (delta parser x3,
