@@ -50,7 +50,10 @@ formalising it removes the redundancy without throwing away working UI.
    without device/emulator builds and CI compile checks run in minutes, not 20.
 3. **Replay-first regression harness**: promote the existing `replay/` package to the
    golden-master test (record real SignalK sessions, assert end state), giving every
-   engine change a sea-trial equivalent in CI.
+   engine change a sea-trial equivalent in CI. **Status: v1 landed** —
+   `RecordedSignalSessions` + `SignalKSessionReplayTest` replay a recorded delta
+   passage through the live engine and pin the golden end state (position, velocity,
+   depth rejection, wind, STW staleness split, self-identity, AIS capture).
 4. **Instrument-grade data pipeline**: single coherent staleness/fallback policy
    (external → internal GPS → DR) implemented once in the broker, consumed by all panes.
 
