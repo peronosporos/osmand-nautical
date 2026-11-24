@@ -55,3 +55,10 @@ Triage rule: safety/data-corruption → fix now; robustness debt → next phase;
   STW overwriting SOG fix time (parser level).
 - 2026-11-24 (c464afe): broker STW still masking SOG staleness; duplicated trajectory/history
   side effects in GPS-fallback CAS transform; missing `timeOfPositionFix` in GPS fallback.
+- Phase 1.1 connection review: fixed zombie reconnect (old `OkHttpSignalKConnection`
+  objects could keep their internal backoff loop alive after `startEngine` replaced them,
+  producing duplicate parallel WebSockets); reset manager retry counter when a retry finds
+  the connection already re-established; watchdog loop no longer logs normal shutdown as
+  an error (CancellationException rethrown before generic catch).
+  Open (backlog): `OkHttpSignalKConnection.WATCHDOG_TIMEOUT_MS` (5 s) is hard-coded while the
+  app-level watchdog timeout is a setting — should follow the same setting in Phase 3.

@@ -128,9 +128,10 @@ class SignalKSessionManager(
                         }
                     }
                     onUpdatePulse()
+                } catch (e: CancellationException) {
+                    throw e
                 } catch (e: Exception) {
                     log.error("Watchdog loop error: ${e.message}")
-                    if (e is CancellationException) throw e
                 }
             }
         }

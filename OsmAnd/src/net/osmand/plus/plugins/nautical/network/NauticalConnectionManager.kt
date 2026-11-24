@@ -137,9 +137,15 @@ class NauticalConnectionManager(
         if (currentConn != null && (currentConn.isConnected() || currentConn.isConnecting())) {
             if (currentConn.url == wsUrl) {
                 log.info("SignalK: Already connected or connecting to $wsUrl. Skipping.")
+                retryAttempt = 0
                 return
             }
             log.info("SignalK: Host changed from ${currentConn.url} to $wsUrl. Reconnecting...")
+            currentConn.disconnect()
+        } else if (currentConn != null) {
+            // The previous connection object is idle but may still hold a scheduled
+            // internal backoff reconnect. Disconnect it so replacing it below cannot
+            // leave a zombie WebSocket reconnecting in parallel.
             currentConn.disconnect()
         }
 
