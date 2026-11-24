@@ -106,6 +106,15 @@ android {
 		legacy {
 			jniLibs.srcDirs = ["libc++"]
 		}
+
+		test {
+			// build-common.gradle compiles the whole 'src' folder into the main
+			// source set, so unit tests must live outside src/ to avoid being
+			// compiled with the (dependency-less) main classpath. Keep them in
+			// test/unit/java only; test/java holds instrumented tests that need
+			// Espresso and cannot compile on the unit-test classpath.
+			java.srcDirs = ["test/unit/java"]
+		}
 	}
 
 	buildFeatures {
