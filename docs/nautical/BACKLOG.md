@@ -62,3 +62,18 @@ Triage rule: safety/data-corruption → fix now; robustness debt → next phase;
   an error (CancellationException rethrown before generic catch).
   Open (backlog): `OkHttpSignalKConnection.WATCHDOG_TIMEOUT_MS` (5 s) is hard-coded while the
   app-level watchdog timeout is a setting — should follow the same setting in Phase 3.
+
+## Autopilot & safety review (Phase 1 continued)
+
+- 2026-11-24: commandTack used `autopilotHeadingSet` (radians) as degrees when a target
+  heading was already set, sending the helm to a nonsense heading on tack — fixed with a
+  rad->deg conversion.
+- 2026-11-24: executePut's plaintext-guard was self-defeating: `isLocal` was also true
+  whenever TLS was disabled or trust-all enabled, so autopilot commands and credentials
+  were silently sent over plaintext HTTP to public hosts. Guard now keys on genuine
+  local/private addresses only.
+- Reviewed without action: helm arbitration priority scheme (standby using emergency
+  priority blocks accidental standby during MOB — intentional), command throttling,
+  reconciliation timeout with NonCancellable lock release, gybe-prevention confirm flow,
+  insecure-command refusal toast, anchor watchdog debounce (3 fixes + 5 s), median filter,
+  windlass overload monitor, anchor sync-from-server logic.

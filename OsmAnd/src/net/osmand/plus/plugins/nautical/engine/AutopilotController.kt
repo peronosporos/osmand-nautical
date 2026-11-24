@@ -1150,9 +1150,12 @@ class AutopilotController(
             }
             "compass", "auto", "heading" -> {
                 val stateObj = NauticalPlugin.engine?.getCurrentState()
-                val currentHdg = targetHeadingMag.value 
-                    ?: stateObj?.headingMagnetic?.let { Math.toDegrees(it) } 
-                    ?: stateObj?.headingTrue?.let { Math.toDegrees(it) } 
+                // autopilotHeadingSet is stored in radians (MarineState), while the other
+                // candidates are also converted to degrees: keep the unit consistent or a
+                // tack while a heading is already set sends the helm to a nonsense target.
+                val currentHdg = (targetHeadingMag.value?.let { Math.toDegrees(it) }
+                    ?: stateObj?.headingMagnetic?.let { Math.toDegrees(it) }
+                    ?: stateObj?.headingTrue?.let { Math.toDegrees(it) })
                     ?: 0.0
                 val tackAngle = app.settings.NAUTICAL_LAYLINES_TACK_ANGLE.get().toDouble().coerceIn(60.0, 120.0)
                 val delta = if (isPort) -tackAngle else tackAngle
@@ -1548,15 +1551,17 @@ class AutopilotController(
     fun executePut(url: String, payload: String, successToastRes: Int?, showToast: Boolean, priority: Boolean = false, retryCount: Int = 0) {
         val rawIp = (if (serverIp.isNotEmpty()) serverIp else app.settings.NAUTICAL_SERVER_IP.get())?.trim() ?: ""
         val cleanHost = rawIp.substringAfter("://").substringBefore("/").substringBefore(":")
-        val isLocal = cleanHost.startsWith("127.") || 
+        // Only genuine local/private hosts may receive plaintext helm commands.
+        // Security-sensitive settings (trust-all, secure-off) must NOT relax this guard:
+        // previously `isLocal` was also true whenever TLS was disabled, which silently
+        // sent autopilot commands and credentials in clear text to public hosts.
+        val isLocal = cleanHost.startsWith("127.") ||
                      cleanHost.equals("localhost", ignoreCase = true) ||
                      cleanHost.startsWith("192.168.") ||
                      cleanHost.startsWith("10.") ||
                      cleanHost.endsWith(".local", ignoreCase = true) ||
                      cleanHost.endsWith(".lan", ignoreCase = true) ||
-                     (cleanHost.startsWith("172.") && cleanHost.split(".").getOrNull(1)?.toIntOrNull() in 16..31) ||
-                     app.settings.NAUTICAL_TRUST_ALL_CERTIFICATES.get() ||
-                     !app.settings.NAUTICAL_USE_SECURE_CONNECTION.get()
+                     (cleanHost.startsWith("172.") && cleanHost.split(".").getOrNull(1)?.toIntOrNull() in 16..31)
 
         if (!url.startsWith("https") && !isLocal) {
             log.warn("Nautical: Refusing to send command over insecure HTTP to public IP: $url")
