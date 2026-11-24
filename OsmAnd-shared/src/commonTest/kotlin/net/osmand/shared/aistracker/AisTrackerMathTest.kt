@@ -39,15 +39,31 @@ class AisTrackerMathTest {
     }
 
     @Test
-    fun testDivergingCourses() {
-        val own = AisLocation(0.0, 0.0, 5f, 0f) // North
-        val other = AisLocation(0.01, 0.0, 5f, 180f) // South, starting ahead
-        
-        // They are moving away from each other
+    fun testConvergingCourses() {
+        // Head-on closing: own west heading east, other east heading west.
+        val own = AisLocation(0.0, 0.0, 5f, 90f)
+        val other = AisLocation(0.0, 2.0 / 60.0, 5f, 270f) // ~2 NM east
+
+        val tcpa = AisTrackerMath.getTcpa(own, other)
+        // Each vessel covers 5 m/s = 9.719 kn; closing rate 19.438 kn over 2 NM.
+        assertTrue(tcpa > 0.1 && tcpa < 0.11, "TCPA should be ~0.103 h for head-on closing, was $tcpa")
+
+        val result = AisCpa()
+        AisTrackerMath.getCpa(own, other, result)
+        assertTrue(result.valid, "CPA should be valid for head-on closing")
+        assertEquals(0.0, result.cpa.toDouble(), 0.05, "Head-on CPA should be near zero, was ${result.cpa}")
+    }
+
+    @Test
+    fun testDivergingCourses() {        // Own is north of other and heading north, other is south of own and heading south:
+        // the separation grows, so this is a genuinely diverging scenario.
+        val own = AisLocation(0.01, 0.0, 5f, 0f) // North of other, moving North
+        val other = AisLocation(0.0, 0.0, 5f, 180f) // South of own, moving South
+
         val tcpa = AisTrackerMath.getTcpa(own, other)
         assertEquals(
-            tcpa,
             AisObjectConstants.INVALID_TCPA,
+            tcpa,
             "Diverging courses should return INVALID_TCPA"
         )
     }

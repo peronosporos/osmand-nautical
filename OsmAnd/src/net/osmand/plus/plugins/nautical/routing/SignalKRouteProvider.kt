@@ -1,6 +1,7 @@
 package net.osmand.plus.plugins.nautical.routing
 
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeoutOrNull
 import net.osmand.plus.plugins.nautical.NauticalPlugin
 import net.osmand.plus.routing.RouteCalculationParams
 import net.osmand.plus.routing.RouteCalculationResult
@@ -18,6 +19,9 @@ class SignalKRouteProvider private constructor() {
     private val log = PlatformUtil.getLog(SignalKRouteProvider::class.java)
 
     companion object {
+        /** Upper bound for the remote SignalK routing round-trip. */
+        private const val ROUTE_TIMEOUT_MS = 60_000L
+
         @Volatile
         private var instance: SignalKRouteProvider? = null
 
@@ -51,24 +55,40 @@ class SignalKRouteProvider private constructor() {
                         "start" to mapOf("lat" to start.latitude, "lon" to start.longitude),
                         "destination" to mapOf("lat" to end.latitude, "lon" to end.longitude)
                     )
-                    
-                    val response = restService.triggerPluginCalculation(pluginId, body)
-                    if (response.isSuccessful) {
-                        engine.refreshResources()
-                        val routes = engine.fetchRoutesFromServer()
-                        if (!routes.isNullOrEmpty()) {
-                            val skRoute = routes.values.firstOrNull()
-                            if (skRoute != null) {
-                                val gpx = convertToGpx(skRoute)
-                                params.gpxFile = gpx
-                                val builder = GPXRouteParamsBuilder(gpx, params.ctx.settings)
-                                builder.setCalculateOsmAndRoute(false)
-                                params.gpxRoute = builder.build(params.ctx)
-                                
-                                // Recalculate using GPX logic
-                                return@runBlocking RouteProvider().calculateRouteImpl(params)
+
+                    // Bound the whole remote round-trip: an unresponsive SignalK server
+                    // must never hang the routing thread indefinitely.
+                    var timedOut = false
+                    val skRoute = try {
+                        withTimeoutOrNull(ROUTE_TIMEOUT_MS) {
+                            val response = restService.triggerPluginCalculation(pluginId, body)
+                            val routes = if (response.isSuccessful) {
+                                engine.refreshResources()
+                                engine.fetchRoutesFromServer()
+                            } else {
+                                null
                             }
+                            routes?.values?.firstOrNull()
+                        } ?: run {
+                            timedOut = true
+                            null
                         }
+                    } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
+                        timedOut = true
+                        null
+                    }
+                    if (skRoute != null) {
+                        val gpx = convertToGpx(skRoute)
+                        params.gpxFile = gpx
+                        val builder = GPXRouteParamsBuilder(gpx, params.ctx.settings)
+                        builder.setCalculateOsmAndRoute(false)
+                        params.gpxRoute = builder.build(params.ctx)
+
+                        // Recalculate using GPX logic
+                        return@runBlocking RouteProvider().calculateRouteImpl(params)
+                    }
+                    if (timedOut) {
+                        return@runBlocking fallback(params, "SignalK routing timed out after ${ROUTE_TIMEOUT_MS / 1000}s")
                     }
                 }
                 fallback(params, "No SignalK routing plugin found or calculation failed")

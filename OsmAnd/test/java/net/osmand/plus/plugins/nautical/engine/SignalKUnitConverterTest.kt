@@ -1,6 +1,7 @@
 package net.osmand.plus.plugins.nautical.engine
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class SignalKUnitConverterTest {
@@ -45,6 +46,7 @@ class SignalKUnitConverterTest {
 
     @Test
     fun testEdgeCases() {
-        assertEquals(Double.NaN, SignalKUnitConverter.msToKnots(Double.NaN), 0.0)
+        // assertEquals with a delta always fails for NaN, so assert NaN propagation explicitly.
+        assertTrue(SignalKUnitConverter.msToKnots(Double.NaN).isNaN())
     }
 }

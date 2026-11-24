@@ -168,7 +168,8 @@ android {
 	buildTypes {
 		debug {
 			signingConfig = signingConfigs.development
-			applicationIdSuffix = ".nautical" // Forces the final package to be net.osmand.plus.nautical
+			// No applicationIdSuffix: androidFull already sets net.osmand.plus.nautical.
+			// Adding a suffix here produced net.osmand.plus.nautical.nautical in debug builds.
 		}
 		release {
 			signingConfig signingConfigs.publishing
