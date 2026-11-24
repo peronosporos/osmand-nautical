@@ -161,6 +161,18 @@
     <string name="nautical_cockpit_pane_vhf">VHF</string>
     <string name="nautical_cockpit_pane_watchkeeper">Watchkeeper</string>
     <string name="nautical_cockpit_pane_emergency">Emergency</string>
+    <string name="nautical_cockpit_helm_heading">Heading</string>
+    <string name="nautical_cockpit_helm_target">Autopilot target</string>
+    <string name="nautical_cockpit_helm_rudder">Rudder</string>
+    <string name="nautical_cockpit_helm_mode">Autopilot</string>
+    <string name="nautical_cockpit_helm_mode_value">Autopilot: %1$s</string>
+    <string name="nautical_cockpit_helm_engage">Engage</string>
+    <string name="nautical_cockpit_helm_standby">Standby</string>
+    <string name="nautical_cockpit_helm_tack_port">Auto-tack port</string>
+    <string name="nautical_cockpit_helm_tack_stbd">Auto-tack stbd</string>
+    <string name="nautical_cockpit_helm_abort_tack">Abort tack</string>
+    <string name="nautical_cockpit_helm_tack_countdown">Tacking in %1$d s</string>
+    <string name="nautical_cockpit_helm_tack_turning">Tacking: %1$s</string>
     <!-- Nautical: toasts, banners and voice prompts (i18n pass) -->
     <string name="nautical_toast_configured_connecting">Configured and connecting to %1$s (%2$s)</string>
     <string name="nautical_toast_polar_uploaded">Polar profile uploaded to Signal K</string>

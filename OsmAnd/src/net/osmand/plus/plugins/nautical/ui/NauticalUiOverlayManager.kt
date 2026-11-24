@@ -167,13 +167,13 @@ class NauticalUiOverlayManager(private val app: OsmandApplication) {
             return
         }
 
-        val wh = net.osmand.plus.plugins.nautical.ui.cockpit.WorkflowProposalPane(activity, workflowEng, layoutUpdate)
+        val wh = net.osmand.plus.plugins.nautical.ui.cockpit.WorkflowProposalPane(activity, workflowEng, ::layoutUpdate)
         this.workflowHeaderView = wh.headerView
 
-        val th = net.osmand.plus.plugins.nautical.ui.cockpit.TacticalStripPane(activity, workflowEng, layoutUpdate)
+        val th = net.osmand.plus.plugins.nautical.ui.cockpit.TacticalStripPane(activity, workflowEng, ::layoutUpdate)
         this.tacticalHudView = th.stripView
 
-        val lh = net.osmand.plus.plugins.nautical.ui.cockpit.ScreenTouchLockPane(activity, workflowManager, layoutUpdate)
+        val lh = net.osmand.plus.plugins.nautical.ui.cockpit.ScreenTouchLockPane(activity, workflowManager, ::layoutUpdate)
         this.screenTouchLockHudView = lh.lockView
 
         hudW?.cockpitPaneHost?.let { host ->

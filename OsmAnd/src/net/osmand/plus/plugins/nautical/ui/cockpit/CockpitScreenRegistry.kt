@@ -34,6 +34,7 @@ class CockpitScreenRegistry {
         fun createDefault(app: OsmandApplication): CockpitScreenRegistry {
             val registry = CockpitScreenRegistry()
             registry.register(InstrumentsPane(app))
+            registry.register(HelmScreen(app))
             return registry
         }
     }
