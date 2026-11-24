@@ -26,7 +26,7 @@ class NauticalLogicTest {
 		assertEquals(15.0, e.update(20.0), 1e-9)
 		var v = 0.0
 		repeat(20) { v = e.update(20.0) }
-		assertTrue(v > 19.9, "EMA should converge to 20, was $v")
+		assertTrue("EMA should converge to 20, was $v", v > 19.9)
 	}
 
 	@Test
@@ -34,7 +34,7 @@ class NauticalLogicTest {
 		val a = AngleEMA(1.0) // alpha = 1 -> passthrough of latest value
 		a.update(Math.toRadians(355.0))
 		val deg = Math.toDegrees(a.update(Math.toRadians(5.0)))
-		assertTrue(deg in 0.0..360.0, "normalized out of range: $deg")
+		assertTrue("normalized out of range: $deg", deg in 0.0..360.0)
 		assertEquals(5.0, deg, 1e-6)
 	}
 
@@ -44,7 +44,7 @@ class NauticalLogicTest {
 		val a = AngleEMA(0.5)
 		a.update(350.0 * PI / 180.0)
 		val mid = Math.toDegrees(a.update(10.0 * PI / 180.0))
-		assertEquals(0.0, mid, 0.5, "smoothed angle across north should be ~0 deg, was $mid")
+		assertEquals("smoothed angle across north should be ~0 deg, was $mid", 0.0, mid, 0.5)
 	}
 
 	@Test

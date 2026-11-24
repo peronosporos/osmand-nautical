@@ -3,6 +3,7 @@ package net.osmand.plus.plugins.nautical.repository
 import app.cash.turbine.test
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
+import net.osmand.plus.plugins.nautical.engine.SignalKDataBroker
 import okhttp3.OkHttpClient
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
@@ -22,7 +23,7 @@ class SignalKRepositoryTest {
         server = MockWebServer()
         server.start()
         val baseUrl = server.url("/").toString()
-        repository = SailingPerformanceRepository(OkHttpClient(), baseUrl)
+        repository = SailingPerformanceRepository(SignalKDataBroker(), OkHttpClient(), baseUrl)
     }
 
     @After
