@@ -10,29 +10,46 @@ jobs:
   unit-tests:
     name: Unit tests (JDK 17)
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout source with submodules
+        uses: actions/checkout@v4
+        with:
+          submodules: 'recursive'
+          path: android
+
+      - name: Checkout OsmAnd resources
+        uses: actions/checkout@v4
+        with:
+          repository: osmandapp/OsmAnd-resources
+          path: resources
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
-          distribution: temurin
+          distribution: 'zulu'
           java-version: '17'
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
+      - name: Grant execute permission for gradlew
+        working-directory: ./android
+        run: chmod +x gradlew
 
       - name: Gradle cache
         uses: gradle/actions/setup-gradle@v4
 
-      - name: OsmAnd-shared JVM tests (AIS math, KMP common tests)
+      - name: OsmAnd-shared JVM tests (AIS math scenario tests)
+        working-directory: ./android
+        env:
+          _JAVA_OPTIONS: "-Xmx4g"
+          GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx4g -Dorg.gradle.workers.max=2"
         run: ./gradlew :OsmAnd-shared:jvmTest --no-daemon
 
-      - name: OsmAnd unit tests (Nautical plugin tests)
-        run: ./gradlew :OsmAnd:testAndroidFullLegacyDebugUnitTest --no-daemon
-
-      - name: Compile the OsmAnd app (checks the Nautical plugin Kotlin sources)
-        run: ./gradlew :OsmAnd:assembleAndroidFullLegacyDebug --no-daemon
+      - name: OsmAnd unit tests (Nautical plugin: engine, converter, EMA/CircularBuffer)
+        working-directory: ./android
+        env:
+          _JAVA_OPTIONS: "-Xmx4g"
+          GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx4g -Dorg.gradle.workers.max=2"
+        run: ./gradlew :OsmAnd:testAndroidFullLegacyArm64DebugUnitTest --no-daemon
 
       - name: Upload test reports on failure
         if: failure()
@@ -40,5 +57,5 @@ jobs:
         with:
           name: test-reports
           path: |
-            OsmAnd/build/reports/tests/**
-            OsmAnd-shared/build/test-results/**
+            android/OsmAnd/build/reports/tests/**
+            android/OsmAnd-shared/build/test-results/**
