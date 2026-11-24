@@ -40,7 +40,7 @@ class TideEngineTest {
     @Test
     fun testCalculation() {
         val m2 = HarmonicConstituent("M2", 1.0, 0.0, 28.9841042)
-        val station = TideStation("1", "Test", 0.0, 0.0, 0, listOf(m2))
+        val station = TideStation("1", "Test", 0.0, 0.0, 0, constituents = listOf(m2))
         val engine = TideCalculationEngine()
         
         // At t=0, cos(0) = 1, so height = 1.0
@@ -56,7 +56,7 @@ class TideEngineTest {
     @Test
     fun testPrediction() {
         val m2 = HarmonicConstituent("M2", 1.0, 0.0, 28.9841042)
-        val station = TideStation("1", "Test", 0.0, 0.0, 0, listOf(m2))
+        val station = TideStation("1", "Test", 0.0, 0.0, 0, constituents = listOf(m2))
         val engine = TideCalculationEngine()
         
         val predictions = engine.predictTides(station, 0L)

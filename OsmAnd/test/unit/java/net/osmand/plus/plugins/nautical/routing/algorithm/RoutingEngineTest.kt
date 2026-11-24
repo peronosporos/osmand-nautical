@@ -2,11 +2,14 @@ package net.osmand.plus.plugins.nautical.routing.algorithm
 
 import io.mockk.every
 import io.mockk.mockk
+import kotlinx.coroutines.runBlocking
 import net.osmand.plus.plugins.nautical.grib.parser.GribInterpolationEngine
 import net.osmand.plus.plugins.nautical.grib.parser.WindVector
+import net.osmand.plus.plugins.nautical.hazard.engine.SafetyCorridorChecker
 import net.osmand.plus.plugins.nautical.network.PolarProfile
 import net.osmand.plus.plugins.nautical.routing.model.RoutingRequest
 import net.osmand.plus.plugins.nautical.routing.model.Waypoint
+import net.osmand.plus.plugins.nautical.s57.S57SpatialIndex
 import org.junit.Assert.*
 import org.junit.Test
 
@@ -15,7 +18,9 @@ class RoutingEngineTest {
     @Test
     fun testCalculateRoute() {
         val gribEngine = mockk<GribInterpolationEngine>()
-        val engine = IsochroneRoutingEngine(gribEngine)
+        val s57Index = mockk<S57SpatialIndex>(relaxed = true)
+        val safetyChecker = mockk<SafetyCorridorChecker>(relaxed = true)
+        val engine = IsochroneRoutingEngine(gribEngine, s57Index, safetyChecker)
 
         val polar = PolarProfile(
             name = "Test Polar",
@@ -34,7 +39,7 @@ class RoutingEngineTest {
 
         every { gribEngine.getWindVector(any(), any(), any()) } returns WindVector(5.0, 0.0)
 
-        val result = engine.calculateRoute(request)
+        val result = runBlocking { engine.calculateRoute(request) }
 
         assertNotNull("Result should not be null", result)
         assertTrue("Path should contain at least 2 points", result!!.path.size >= 2)

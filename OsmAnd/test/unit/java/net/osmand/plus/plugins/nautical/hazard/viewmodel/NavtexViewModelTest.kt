@@ -54,7 +54,7 @@ class NavtexViewModelTest {
     @Test
     fun testProximityFiltering() = runTest {
         val msg1 = NavtexMessage("1", 'A', NavtexSubject.NAVTEX_WARNING, 1, 0, "", 
-            coordinates = net.osmand.data.LatLon(10.0, 10.0))
+            points = listOf(net.osmand.data.LatLon(10.0, 10.0)))
         messagesFlow.value = listOf(msg1)
 
         val loc = mockk<Location>()

@@ -6,6 +6,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.*
+import net.osmand.plus.OsmandApplication
 import net.osmand.plus.plugins.nautical.dr.engine.FixSource
 import net.osmand.plus.plugins.nautical.network.LivePerformanceData
 import net.osmand.plus.plugins.nautical.repository.SailingPerformanceRepository
@@ -35,7 +36,8 @@ class DeadReckoningViewModelTest {
         val flow = MutableStateFlow(LivePerformanceData(latitude = 50.0, longitude = 0.0))
         every { repo.livePerformanceData } returns flow
         
-        val viewModel = DeadReckoningViewModel(repo)
+        val app = mockk<OsmandApplication>(relaxed = true)
+        val viewModel = DeadReckoningViewModel(app, repo)
         
         // Advance until onEach is triggered
         testDispatcher.scheduler.advanceUntilIdle()
@@ -52,7 +54,8 @@ class DeadReckoningViewModelTest {
         val flow = MutableStateFlow(LivePerformanceData(latitude = 50.0, longitude = 0.0, timestamp = now))
         every { repo.livePerformanceData } returns flow
         
-        val viewModel = DeadReckoningViewModel(repo)
+        val app = mockk<OsmandApplication>(relaxed = true)
+        val viewModel = DeadReckoningViewModel(app, repo)
         testDispatcher.scheduler.advanceUntilIdle()
         assertEquals(FixSource.GPS, viewModel.uiState.value.source)
 

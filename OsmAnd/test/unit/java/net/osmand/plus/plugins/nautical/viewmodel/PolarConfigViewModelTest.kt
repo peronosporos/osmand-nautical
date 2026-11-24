@@ -19,8 +19,10 @@ class PolarConfigViewModelTest {
         val cells = viewModel.heatmapCells.value
         val cell8_50 = cells.find { it.tws == 8.0 && it.twa == 50.0 }
         assertNotNull(cell8_50)
-        assertTrue("Cell (8, 50) should have samples", (cell8_50?.sampleCount ?: 0) > 0)
-        assertEquals(6.0, cell8_50?.averageSpeed ?: 0.0, 0.01)
+        assertTrue("Cell (8, 50) should have samples", (cell8_50?.sampleCount ?: 0.0) > 0)
+        assertNotNull(cell8_50)
+        val avg = cell8_50?.averageSpeed ?: 0.0
+        assertEquals(6.0, avg, 0.01)
 
         // Record point in the middle of 4 cells (TWS 9, TWA 55)
         // Neighbors: (8,50), (10,50), (8,60), (10,60)
@@ -32,8 +34,10 @@ class PolarConfigViewModelTest {
         
         val cell10_60 = cells.find { it.tws == 10.0 && it.twa == 60.0 }
         assertNotNull(cell10_60)
-        assertTrue("Cell (10, 60) should have received weight", (cell10_60?.sampleCount ?: 0) > 0)
-        assertEquals(10.0, cell10_60?.averageSpeed ?: 0.0, 0.1)
+        assertTrue("Cell (10, 60) should have received weight", (cell10_60?.sampleCount ?: 0.0) > 0)
+        assertNotNull(cell10_60)
+        val avg10 = cell10_60?.averageSpeed ?: 0.0
+        assertEquals(10.0, avg10, 0.1)
     }
 
     @Test
@@ -44,6 +48,6 @@ class PolarConfigViewModelTest {
         viewModel.recordDataPoint(8.1, 51.0, 7.0)
         
         val cell8_50 = viewModel.heatmapCells.value.find { it.tws == 8.0 && it.twa == 50.0 }
-        assertTrue("Nearby point should update closest cell", (cell8_50?.sampleCount ?: 0) > 0)
+        assertTrue("Nearby point should update closest cell", (cell8_50?.sampleCount ?: 0.0) > 0)
     }
 }
