@@ -158,63 +158,26 @@ class NauticalUiOverlayManager(private val app: OsmandApplication) {
         hudManager?.get()?.removeHeader(screenTouchLockHudView)
 
         val wearOsManager = NauticalPlugin.getWearOsManager(activity)
+        val hudW = hudManager?.get()
+        val layoutUpdate = { hudW?.updateLayout() }
         if (wearOsManager.isWatchMode()) {
-            val hb = HeartbeatHudView(activity)
-            this.heartbeatHudView = hb
-            hudManager?.get()?.addHeader(hb, priority = 50)
-
-            wearOsManager.isAmbientMode.onEach { ambient ->
-                app.runInUIThread {
-                    hb.setAmbientMode(ambient)
-                }
-            }.launchIn(activity.lifecycleScope)
-
+            val hb = net.osmand.plus.plugins.nautical.ui.cockpit.HeartbeatPane(activity, wearOsManager)
+            this.heartbeatHudView = hb.heartbeatView
+            hudW?.cockpitPaneHost?.register(hb)
             return
         }
 
-        val wh = WorkflowHeaderView(activity)
-        wh.setEngine(workflowEng)
-        this.workflowHeaderView = wh
-        hudManager?.get()?.addHeader(wh, priority = 300)
+        val wh = net.osmand.plus.plugins.nautical.ui.cockpit.WorkflowProposalPane(activity, workflowEng, layoutUpdate)
+        this.workflowHeaderView = wh.headerView
 
-        val th = TacticalHudView(activity)
-        this.tacticalHudView = th
-        hudManager?.get()?.addHeader(th, priority = 150)
+        val th = net.osmand.plus.plugins.nautical.ui.cockpit.TacticalStripPane(activity, workflowEng, layoutUpdate)
+        this.tacticalHudView = th.stripView
 
-        val lh = ScreenTouchLockHudView(activity)
-        this.screenTouchLockHudView = lh
-        hudManager?.get()?.addHeader(lh, priority = 5)
+        val lh = net.osmand.plus.plugins.nautical.ui.cockpit.ScreenTouchLockPane(activity, workflowManager, layoutUpdate)
+        this.screenTouchLockHudView = lh.lockView
 
-        activity.lifecycleScope.launch {
-            activity.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                launch {
-                    workflowEng.currentWorkflow.collect { state ->
-                        th.isVisible = (state == SailingWorkflowState.CLOSE_QUARTERS)
-                        hudManager?.get()?.updateLayout()
-                    }
-                }
-                launch {
-                    workflowEng.pendingWorkflowFlow.collect { state ->
-                        if (state != null) {
-                            wh.showProposal(state)
-                        } else {
-                            wh.isVisible = false
-                        }
-                        hudManager?.get()?.updateLayout()
-                    }
-                }
-                launch {
-                    workflowManager?.getScreenTouchLockManager()?.isTouchLockActive?.collect { locked ->
-                        lh.setLocked(locked)
-                        hudManager?.get()?.updateLayout()
-                    }
-                }
-                launch {
-                    workflowManager?.getScreenTouchLockManager()?.unlockProgress?.collect { progress ->
-                        lh.setUnlockProgress(progress)
-                    }
-                }
-            }
+        hudW?.cockpitPaneHost?.let { host ->
+            host.register(wh); host.register(th); host.register(lh)
         }
     }
 
