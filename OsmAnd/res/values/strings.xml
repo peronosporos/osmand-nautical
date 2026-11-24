@@ -142,6 +142,25 @@
     <string name="nautical_route_completed">Passage completed. Final waypoint reached.</string>
     <string name="nautical_waypoint_reached">Waypoint reached. Steer to next waypoint.</string>
     <string name="nautical_insecure_command_warning">Insecure connection: commands to this server are sent unencrypted. Enable HTTPS in the server settings when possible.</string>
+    <string name="nautical_cockpit_label">Cockpit</string>
+    <string name="nautical_cockpit_value_pending">--</string>
+    <string name="nautical_cockpit_sog_label">Speed over ground</string>
+    <string name="nautical_cockpit_cog_label">Course over ground</string>
+    <string name="nautical_cockpit_depth_label">Depth below keel</string>
+    <string name="nautical_cockpit_wind_label">Apparent wind speed</string>
+    <string name="nautical_cockpit_connection">Signal K: %1$s</string>
+    <string name="nautical_cockpit_conn_connected">connected</string>
+    <string name="nautical_cockpit_conn_connecting">connecting</string>
+    <string name="nautical_cockpit_conn_stale">stale</string>
+    <string name="nautical_cockpit_conn_disconnected">disconnected</string>
+    <string name="nautical_cockpit_conn_unauthorized">unauthorized</string>
+    <string name="nautical_cockpit_mob_banner">MOB EMERGENCY ACTIVE</string>
+    <string name="nautical_cockpit_pane_instruments">Instruments</string>
+    <string name="nautical_cockpit_pane_helm">Helm</string>
+    <string name="nautical_cockpit_pane_nav">Nav</string>
+    <string name="nautical_cockpit_pane_vhf">VHF</string>
+    <string name="nautical_cockpit_pane_watchkeeper">Watchkeeper</string>
+    <string name="nautical_cockpit_pane_emergency">Emergency</string>
     <!-- Nautical: toasts, banners and voice prompts (i18n pass) -->
     <string name="nautical_toast_configured_connecting">Configured and connecting to %1$s (%2$s)</string>
     <string name="nautical_toast_polar_uploaded">Polar profile uploaded to Signal K</string>

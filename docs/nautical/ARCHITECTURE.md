@@ -57,6 +57,24 @@ formalising it removes the redundancy without throwing away working UI.
 4. **Instrument-grade data pipeline**: single coherent staleness/fallback policy
    (external → internal GPS → DR) implemented once in the broker, consumed by all panes.
 
+## Status (2026-11-24)
+
+The Cockpit surface now has two complementary contracts:
+
+- **HUD-header pane contract** (step 1, COCKPIT.md): `CockpitPane` +
+  `CockpitPaneHost`, mounted inside the map activity via `NauticalHudManager`
+  priority arbitration, with `MobEmergencyPane`, `DrWarningPane`, `NavtexPane`,
+  `MarineAlarmBannerPane`, `WorkflowPane` and `SimpleViewPane` adapters.
+- **Full-screen shell** (step 4, COCKPIT.md): `CockpitScreen` +
+  `CockpitScreenRegistry` + `CockpitShellActivity` — a standalone full-screen
+  cockpit (screen-on, page selector, MOB emergency strip), piloted by the
+  `InstrumentsPane` (SOG/COG/depth/AWS big readouts, night-vision aware).
+  Entry point: the "Cockpit" map quick action. Registry unit-tested
+  (`CockpitScreenRegistryTest`).
+
+**Next migrations**: Helm page (autopilot controls, from the tactical HUD),
+Watchkeeper (anchor watch + alarms), Nav (route/XTE strip), VHF.
+
 ## Constraints honored
 
 - Wear OS: maintain (no expansion).

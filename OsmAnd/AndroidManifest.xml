@@ -1173,6 +1173,14 @@
 			android:stopWithTask="false">
 		</service>
 
+		<activity
+			android:label="@string/nautical_cockpit_label"
+			android:name="net.osmand.plus.plugins.nautical.ui.cockpit.CockpitShellActivity"
+			android:exported="false"
+			android:configChanges="orientation|screenSize|keyboardHidden"
+			android:theme="@style/OsmandLightTheme.NoActionbar">
+		</activity>
+
 		<service android:name="net.osmand.aidl.OsmandAidlService" android:exported="true" >
 			<intent-filter>
 				<action android:name="net.osmand.aidl.OsmandAidlService"/>
