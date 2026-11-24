@@ -1,0 +1,227 @@
+package net.osmand.plus.plugins.nautical.ui.cockpit
+
+import android.content.Context
+import android.graphics.Typeface
+import android.util.TypedValue
+import android.view.Gravity
+import android.view.View
+import android.view.ViewGroup
+import android.widget.Button
+import android.widget.LinearLayout
+import android.widget.TextView
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
+import net.osmand.plus.OsmandApplication
+import net.osmand.plus.R
+import net.osmand.plus.plugins.nautical.AnchorDriftWatchdog
+import net.osmand.plus.plugins.nautical.NauticalPlugin
+import net.osmand.plus.plugins.nautical.engine.MarineState
+import net.osmand.util.MapUtils
+import java.util.Locale
+import kotlin.math.atan2
+import kotlin.math.cos
+import kotlin.math.sin
+
+/**
+ * Watchkeeper page of the Cockpit shell: everything the anchor/mob watch needs
+ * at a glance while off watch — anchor stage (SAFE/CAUTION/CRITICAL_DRAG with
+ * color), distance/bearing to the anchor, rode tension and advisories, plus the
+ * live MOB section (distance/bearing to casualty, silence/clear controls).
+ *
+ * Read-mostly by design: the dramatic actions (weigh anchor, reset position)
+ * keep their confirmation-gated HUD/map surfaces; this page broadcasts state.
+ */
+class WatchkeeperScreen(private val app: OsmandApplication) : CockpitScreen {
+
+    override val paneId: CockpitScreenId = CockpitScreenId.WATCHKEEPER
+
+    private var scope: CoroutineScope? = null
+
+    private lateinit var stageValue: TextView
+    private lateinit var distanceValue: TextView
+    private lateinit var rodeValue: TextView
+    private lateinit var advisoryValue: TextView
+    private lateinit var mobValue: TextView
+    private lateinit var mobButton: Button
+
+    override fun onCreateView(context: Context, parent: ViewGroup): View {
+        val night = NauticalPlugin.isNightVision(app)
+        val bg = if (night) 0xFF101010.toInt() else 0xFFF5F5F5.toInt()
+        val fg = if (night) 0xFFDDDDDD.toInt() else 0xFF202020.toInt()
+        val accent = if (night) 0xFFFF6E00.toInt() else 0xFF0B57D0.toInt()
+
+        val column = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(24), dp(16), dp(24), dp(16))
+            setBackgroundColor(bg)
+        }
+
+        fun label(textRes: Int): TextView = TextView(context).apply {
+            setText(textRes)
+            setTextColor(fg)
+            alpha = 0.7f
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
+        }
+
+        fun value(textSizeSp: Float, color: Int): TextView = TextView(context).apply {
+            text = app.getString(R.string.nautical_cockpit_value_pending)
+            setTextColor(color)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, textSizeSp)
+            typeface = Typeface.DEFAULT_BOLD
+        }
+
+        stageValue = value(32f, accent)
+        distanceValue = value(32f, accent)
+        rodeValue = value(20f, fg)
+        advisoryValue = TextView(context).apply {
+            setTextColor(fg)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 15f)
+            alpha = 0.9f
+        }
+        mobValue = value(24f, 0xFFFF1744.toInt())
+
+        column.addView(label(R.string.nautical_cockpit_wk_stage))
+        column.addView(stageValue)
+        column.addView(label(R.string.nautical_cockpit_wk_distance))
+        column.addView(distanceValue)
+        column.addView(label(R.string.nautical_cockpit_wk_rode))
+        column.addView(rodeValue)
+        column.addView(label(R.string.nautical_cockpit_wk_advisories))
+        column.addView(advisoryValue)
+
+        column.addView(label(R.string.nautical_cockpit_wk_mob))
+        column.addView(mobValue)
+
+        mobButton = Button(context).apply {
+            setText(R.string.nautical_cockpit_wk_mob_clear)
+            setTextColor(fg)
+            setBackgroundColor(if (night) 0xFF303030.toInt() else 0xFFDDDDDD.toInt())
+            isAllCaps = false
+            setOnClickListener {
+                val mob = mobViewModel() ?: return@setOnClickListener
+                clearMob(mob)
+            }
+        }
+        column.addView(mobButton, LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT
+        ))
+
+        return column
+    }
+
+    override fun onStart() {
+        val engine = NauticalPlugin.engine ?: return
+        scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
+        scope?.launch {
+            engine.marineStateFlow.collect { state -> render(state) }
+        }
+        val watchdog = NauticalPlugin.getInstance()?.anchorWatchdog ?: return
+        scope?.launch {
+            watchdog.driftStage.collect { stage -> renderStage(stage) }
+        }
+        scope?.launch {
+            watchdog.rodeTensionKg.collect { kg ->
+                rodeValue.text = String.format(Locale.US, "%.0f kg", kg)
+            }
+        }
+        val mob = mobViewModel() ?: return
+        scope?.launch {
+            mob.uiState.collect { state -> renderMob(state.isMobActive) }
+        }
+    }
+
+    override fun onStop() {
+        scope?.cancel()
+        scope = null
+    }
+
+    private fun render(state: MarineState) {
+        val anchorLat = app.settings.NAUTICAL_ANCHOR_LAT.get()
+        val anchorLon = app.settings.NAUTICAL_ANCHOR_LON.get()
+        val armed = anchorLat != 0.0
+        val lat = state.latitude
+        val lon = state.longitude
+        if (!armed || lat == null || lon == null) {
+            distanceValue.text = if (armed) {
+                app.getString(R.string.nautical_cockpit_value_pending)
+            } else {
+                app.getString(R.string.nautical_cockpit_wk_disarmed)
+            }
+        } else {
+            val distM = MapUtils.getDistance(anchorLat, anchorLon, lat, lon)
+            val bearing = initialBearingDeg(lat, lon, anchorLat, anchorLon)
+            distanceValue.text = String.format(Locale.US, "%.0f m / %.0f°", distM, bearing)
+        }
+
+        val advisories = mutableListOf<String>()
+        val watchdog = NauticalPlugin.getInstance()?.anchorWatchdog
+        if (watchdog != null) {
+            if (watchdog.isHighRodeLoad.value) {
+                advisories.add(app.getString(R.string.nautical_cockpit_wk_adv_high_load))
+            }
+            if (watchdog.isChafeAdvisoryActive.value) {
+                advisories.add(app.getString(R.string.nautical_cockpit_wk_adv_chafe))
+            }
+            if (watchdog.isWindShiftBreakoutRisk.value) {
+                val delta = watchdog.windShiftDeltaDeg.value
+                advisories.add(
+                    app.getString(R.string.nautical_cockpit_wk_adv_windshift, String.format(Locale.US, "%.0f°", delta))
+                )
+            }
+            val quadrant = watchdog.shallowHazardQuadrant.value
+            if (quadrant != null) {
+                advisories.add(app.getString(R.string.nautical_cockpit_wk_adv_shallow, quadrant))
+            }
+        }
+        advisoryValue.text = if (advisories.isEmpty()) {
+            app.getString(R.string.nautical_cockpit_wk_adv_none)
+        } else {
+            advisories.joinToString(separator = " · ")
+        }
+    }
+
+    private fun renderStage(stage: AnchorDriftWatchdog.AnchorDriftStage) {
+        val (textRes, color) = when (stage) {
+            AnchorDriftWatchdog.AnchorDriftStage.SAFE ->
+                R.string.nautical_cockpit_wk_stage_safe to 0xFF2E7D32.toInt()
+            AnchorDriftWatchdog.AnchorDriftStage.CAUTION ->
+                R.string.nautical_cockpit_wk_stage_caution to 0xFFF9A825.toInt()
+            AnchorDriftWatchdog.AnchorDriftStage.CRITICAL_DRAG ->
+                R.string.nautical_cockpit_wk_stage_drag to 0xFFFF1744.toInt()
+        }
+        stageValue.setText(textRes)
+        stageValue.setTextColor(color)
+    }
+
+    private fun renderMob(active: Boolean) {
+        if (active) {
+            mobValue.text = app.getString(R.string.nautical_cockpit_wk_mob_active)
+            mobButton.visibility = View.VISIBLE
+        } else {
+            mobValue.text = app.getString(R.string.nautical_cockpit_wk_mob_clear_state)
+            mobButton.visibility = View.GONE
+        }
+    }
+
+    private fun clearMob(mob: net.osmand.plus.plugins.nautical.mob.viewmodel.MobViewModel) {
+        mob.silenceAlarm()
+        mob.clearMob()
+    }
+
+    private fun mobViewModel() = NauticalPlugin.getInstance()?.mobViewModel
+
+    /** Great-circle initial bearing from vessel to anchor, degrees [0, 360). */
+    private fun initialBearingDeg(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
+        val phi1 = Math.toRadians(lat1)
+        val phi2 = Math.toRadians(lat2)
+        val dLon = Math.toRadians(lon2 - lon1)
+        val y = sin(dLon) * cos(phi2)
+        val x = cos(phi1) * sin(phi2) - sin(phi1) * cos(phi2) * cos(dLon)
+        return (Math.toDegrees(atan2(y, x)) + 360.0) % 360.0
+    }
+
+    private fun dp(v: Int): Int = (v * app.resources.displayMetrics.density).toInt()
+}

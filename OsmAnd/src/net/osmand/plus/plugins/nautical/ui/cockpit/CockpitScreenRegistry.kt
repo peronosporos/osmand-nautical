@@ -35,6 +35,7 @@ class CockpitScreenRegistry {
             val registry = CockpitScreenRegistry()
             registry.register(InstrumentsPane(app))
             registry.register(HelmScreen(app))
+            registry.register(WatchkeeperScreen(app))
             return registry
         }
     }

@@ -173,6 +173,23 @@
     <string name="nautical_cockpit_helm_abort_tack">Abort tack</string>
     <string name="nautical_cockpit_helm_tack_countdown">Tacking in %1$d s</string>
     <string name="nautical_cockpit_helm_tack_turning">Tacking: %1$s</string>
+    <string name="nautical_cockpit_wk_stage">Anchor watch</string>
+    <string name="nautical_cockpit_wk_stage_safe">SAFE</string>
+    <string name="nautical_cockpit_wk_stage_caution">CAUTION: near swing limit</string>
+    <string name="nautical_cockpit_wk_stage_drag">CRITICAL DRAG</string>
+    <string name="nautical_cockpit_wk_distance">Distance / bearing to anchor</string>
+    <string name="nautical_cockpit_wk_rode">Rode tension</string>
+    <string name="nautical_cockpit_wk_advisories">Advisories</string>
+    <string name="nautical_cockpit_wk_adv_none">None</string>
+    <string name="nautical_cockpit_wk_adv_high_load">High rode load</string>
+    <string name="nautical_cockpit_wk_adv_chafe">Chafe advisory</string>
+    <string name="nautical_cockpit_wk_adv_windshift">Wind shift %1$s</string>
+    <string name="nautical_cockpit_wk_adv_shallow">Shallow hazard %1$s</string>
+    <string name="nautical_cockpit_wk_disarmed">Anchor not set</string>
+    <string name="nautical_cockpit_wk_mob">Man overboard</string>
+    <string name="nautical_cockpit_wk_mob_active">MOB ACTIVE</string>
+    <string name="nautical_cockpit_wk_mob_clear_state">No active MOB</string>
+    <string name="nautical_cockpit_wk_mob_clear">Clear MOB</string>
     <!-- Nautical: toasts, banners and voice prompts (i18n pass) -->
     <string name="nautical_toast_configured_connecting">Configured and connecting to %1$s (%2$s)</string>
     <string name="nautical_toast_polar_uploaded">Polar profile uploaded to Signal K</string>
