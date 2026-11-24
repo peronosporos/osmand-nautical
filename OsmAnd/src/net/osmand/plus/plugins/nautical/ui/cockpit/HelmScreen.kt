@@ -233,7 +233,7 @@ class HelmScreen(private val app: OsmandApplication) : CockpitScreen {
         )
     }
 
-    private fun autopilot() = NauticalPlugin.getInstance()?.autopilot
+    private fun autopilot() = NauticalPlugin.autopilot
 
     private fun dp(v: Int): Int = (v * app.resources.displayMetrics.density).toInt()
 }
