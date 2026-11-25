@@ -96,4 +96,5 @@ public class QuickActionIds {
 	public static final int NAUTICAL_PASSAGE_PLAN_ACTION_ID = 103;
 	public static final int NAUTICAL_WET_SCREEN_ACTION_ID = 104;
 	public static final int NAUTICAL_COCKPIT_ACTION_ID = 105;
+	public static final int NAUTICAL_TOOL_CENTER_ACTION_ID = 106;
 }

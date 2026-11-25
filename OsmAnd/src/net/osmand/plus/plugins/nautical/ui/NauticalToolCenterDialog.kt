@@ -114,6 +114,14 @@ class NauticalToolCenterDialog : BaseMaterialBottomSheetDialogFragment() {
             ToolItem(getString(R.string.nautical_signalk_diagnostics_title), R.drawable.ic_action_info_dark) {
                 BaseSettingsFragment.showInstance(requireActivity(), SettingsScreenType.NAUTICAL_SIGNALK_DIAGNOSTICS)
                 dismiss()
+            },
+            ToolItem(getString(R.string.nautical_systems_group), R.drawable.ic_action_settings) {
+                net.osmand.plus.plugins.nautical.ui.widgets.NauticalSystemsBottomSheet.show(parentFragmentManager)
+                dismiss()
+            },
+            ToolItem(getString(R.string.nautical_cockpit_label), R.drawable.ic_action_obd_speed) {
+                startActivity(android.content.Intent(requireContext(), net.osmand.plus.plugins.nautical.ui.cockpit.CockpitShellActivity::class.java))
+                dismiss()
             }
         )
 

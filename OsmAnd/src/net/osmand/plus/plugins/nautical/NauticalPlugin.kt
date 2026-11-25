@@ -73,6 +73,7 @@ import net.osmand.plus.plugins.nautical.quickaction.NauticalAnchorQuickAction
 import net.osmand.plus.plugins.nautical.quickaction.NauticalAutopilotQuickAction
 import net.osmand.plus.plugins.nautical.quickaction.NauticalChecklistQuickAction
 import net.osmand.plus.plugins.nautical.quickaction.NauticalCockpitQuickAction
+import net.osmand.plus.plugins.nautical.quickaction.NauticalToolCenterQuickAction
 import net.osmand.plus.plugins.nautical.quickaction.NauticalLaylinesQuickAction
 import net.osmand.plus.plugins.nautical.quickaction.NauticalMasterTelemetryQuickAction
 import net.osmand.plus.plugins.nautical.quickaction.NauticalMobQuickAction
@@ -1609,6 +1610,7 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
             NauticalPassagePlanQuickAction.TYPE,
             NauticalWetScreenLockQuickAction.TYPE,
             NauticalCockpitQuickAction.TYPE
+            NauticalToolCenterQuickAction.TYPE
         )
     }
 
