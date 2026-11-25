@@ -120,14 +120,14 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
                     "nautical_server_routes" -> getString(OsmAndR.string.nautical_server_routes_desc)
                     "nautical_server_charts" -> getString(OsmAndR.string.nautical_server_charts_desc)
                     "nautical_module_logbook" -> getString(OsmAndR.string.nautical_logbook_sync_msg)
-                    "nautical_module_vhf" -> "Connect to VHF radio backend"
+                    "nautical_module_vhf" -> getString(OsmAndR.string.nautical_vhf_backend_desc)
                     "sailing_performance" -> getString(OsmAndR.string.wizard_polar_title)
                     else -> ""
                 }
                 
                 pref.summary = when {
-                    !connected -> "$baseSummary (${getString(OsmAndR.string.nautical_offline_status)})"
-                    !hasCap -> "$baseSummary (Plugin missing: $guidance)"
+                    !connected -> getString(OsmAndR.string.nautical_settings_offline_summary_fmt, baseSummary, getString(OsmAndR.string.nautical_offline_status))
+                    !hasCap -> getString(OsmAndR.string.nautical_settings_plugin_missing_fmt, baseSummary, guidance)
                     else -> baseSummary
                 }
             }
@@ -213,7 +213,7 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
             NauticalPlugin.getInstance()?.s57SpatialIndex?.let { index ->
                 lifecycleScope.launch {
                     index.indexingStatus.collectLatest { status ->
-                        summary = status
+                        summary = status.localized(app)
                     }
                 }
             }
@@ -737,7 +737,7 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
 
         findPreference<ListPreferenceEx>(settings.NAUTICAL_WAVE_BIAS_SENSITIVITY.id)?.apply {
             setThemedIcon(OsmAndR.drawable.ic_action_settings)
-            entries = arrayOf("Low (20%)", "Medium (50%)", "High (80%)")
+            entries = arrayOf(getString(OsmAndR.string.nautical_wave_bias_low), getString(OsmAndR.string.nautical_wave_bias_medium), getString(OsmAndR.string.nautical_wave_bias_high))
             entryValues = arrayOf("20", "50", "80")
             val current = settings.NAUTICAL_WAVE_BIAS_SENSITIVITY.get()
             value = current.toString()
@@ -890,11 +890,11 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
         findPreference<ListPreferenceEx>(settings.NAUTICAL_LOGBOOK_INTERVAL.id)?.apply {
             setThemedIcon(OsmAndR.drawable.ic_action_time)
             val values = arrayOf(0, 15, 30, 60, 120, 240, 360, 1440)
-            entries = values.map { if (it == 0) "Immediate (Event-based)" else "$it min" }.toTypedArray()
+            entries = values.map { if (it == 0) getString(OsmAndR.string.nautical_log_interval_immediate) else getString(OsmAndR.string.nautical_log_interval_min_fmt, it) }.toTypedArray()
             entryValues = values.map { it.toString() }.toTypedArray()
             val current = settings.NAUTICAL_LOGBOOK_INTERVAL.get()
             value = current.toString()
-            summary = if (current == 0) "Immediate (Event-based)" else "$current min"
+            summary = if (current == 0) getString(OsmAndR.string.nautical_log_interval_immediate) else getString(OsmAndR.string.nautical_log_interval_min_fmt, current)
         }
         
         findPreference<Preference>("nautical_module_logbook")?.apply {
@@ -1388,7 +1388,7 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
 
                 settings.NAUTICAL_TRAJECTORY_COLOR.id -> {
                     val listPref = preference as? ListPreferenceEx
-                    preference.summary = listPref?.entries?.getOrNull(listPref.entryValues.indexOf(newString)) ?: "Custom"
+                    preference.summary = listPref?.entries?.getOrNull(listPref.entryValues.indexOf(newString)) ?: getString(OsmAndR.string.nautical_settings_custom)
                     onPreferenceChanged(key)
                 }
                 settings.NAUTICAL_TRAJECTORY_THICKNESS.id -> {
@@ -1441,8 +1441,8 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
                 settings.NAUTICAL_LOGBOOK_INTERVAL.id -> {
                     val interval = newString.toIntOrNull() ?: 0
                     preference.summary = when (interval) {
-                        0 -> "Immediate (Event-based)"
-                        else -> "$newString min"
+                        0 -> getString(OsmAndR.string.nautical_log_interval_immediate)
+                        else -> getString(OsmAndR.string.nautical_log_interval_min_fmt, interval)
                     }
                     onPreferenceChanged(key)
                 }

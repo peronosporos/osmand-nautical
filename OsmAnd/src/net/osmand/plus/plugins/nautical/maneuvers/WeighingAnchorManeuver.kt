@@ -41,7 +41,7 @@ class WeighingAnchorManeuver(app: OsmandApplication) : ManeuverEngine(app) {
         }
 
         if (dropLat == 0.0 || dropLon == 0.0) {
-            val msg = "No anchor drop point set"
+            val msg = app.getString(R.string.nautical_error_no_anchor_drop)
             transitionToAborted(msg)
             return false
         }

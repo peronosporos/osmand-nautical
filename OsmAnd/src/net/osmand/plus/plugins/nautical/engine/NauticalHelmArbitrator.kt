@@ -54,7 +54,7 @@ class NauticalHelmArbitrator private constructor(private val app: OsmandApplicat
             resetTimeout()
         } else {
             // Rejected: higher priority already active
-            val msg = "Helm Locked by $activeManeuverName"
+            val msg = app.getString(R.string.nautical_helm_locked_fmt, activeManeuverName)
             notifyRejection(msg)
             throw HelmLockedException(currentPriority.get(), msg)
         }

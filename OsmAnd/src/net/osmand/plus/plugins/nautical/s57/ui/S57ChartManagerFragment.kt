@@ -45,7 +45,7 @@ class S57ChartManagerFragment : BaseOsmAndFragment() {
         viewLifecycleOwner.lifecycleScope.launch {
             val plugin = NauticalPlugin.getInstance()
             plugin?.s57SpatialIndex?.indexingStatus?.collect { status ->
-                txtCoverageStats.text = getString(R.string.nautical_s57_status_fmt, status)
+                txtCoverageStats.text = getString(R.string.nautical_s57_status_fmt, status.localized(app))
                 refreshCharts()
             }
         }
@@ -72,9 +72,13 @@ class S57ChartManagerFragment : BaseOsmAndFragment() {
             emptyView.visibility = if (encFiles.isEmpty()) View.VISIBLE else View.GONE
             
             val area = calculateTotalAreaNm(boundsMap.values)
-            val status = plugin?.s57SpatialIndex?.indexingStatus?.value ?: ""
-            txtCoverageStats.text = String.format(Locale.US, "Indexed: %d | Coverage: %.1f sq NM\n%s", 
-                boundsMap.size, area, status)
+            val status = plugin?.s57SpatialIndex?.indexingStatus?.value
+            txtCoverageStats.text = getString(
+                R.string.nautical_s57_coverage_fmt,
+                boundsMap.size,
+                String.format(Locale.US, "%.1f", area),
+                status?.localized(app) ?: ""
+            )
         }
     }
 

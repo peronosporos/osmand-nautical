@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
 import net.osmand.PlatformUtil
 import net.osmand.plus.OsmandApplication
+import net.osmand.plus.R
 import net.osmand.plus.plugins.nautical.s63.bridge.S63BridgeStream
 
 /**
@@ -19,14 +20,14 @@ class S57SpatialIndex(private val app: OsmandApplication) {
     
     private val sqliteHelper = S57SqliteHelper(app)
 
-    private val _indexingStatus = MutableStateFlow("Idle")
-    val indexingStatus: StateFlow<String> = _indexingStatus.asStateFlow()
+    private val _indexingStatus = MutableStateFlow(S57IndexStatus(S57IndexStatus.Kind.IDLE))
+    val indexingStatus: StateFlow<S57IndexStatus> = _indexingStatus.asStateFlow()
     
     suspend fun indexCharts() = withContext(Dispatchers.IO) {
         val encDir = app.getAppPath("nautical/enc")
         if (!encDir.exists()) {
             encDir.mkdirs()
-            _indexingStatus.value = "No charts found"
+            _indexingStatus.value = S57IndexStatus(S57IndexStatus.Kind.NO_CHARTS)
             return@withContext
         }
 
@@ -34,7 +35,7 @@ class S57SpatialIndex(private val app: OsmandApplication) {
             val up = name.uppercase()
             up.endsWith(".000") || up.endsWith(".031") || up.endsWith(".ENC")
         } ?: run {
-             _indexingStatus.value = "No charts found"
+             _indexingStatus.value = S57IndexStatus(S57IndexStatus.Kind.NO_CHARTS)
              return@withContext
         }
         
@@ -42,10 +43,10 @@ class S57SpatialIndex(private val app: OsmandApplication) {
         
         for ((index, file) in sortedFiles.withIndex()) {
             val lastModified = file.lastModified()
-            _indexingStatus.value = "Checking ${index + 1}/${sortedFiles.size}: ${file.name}"
+            _indexingStatus.value = S57IndexStatus(S57IndexStatus.Kind.CHECKING, index + 1, sortedFiles.size, file.name)
             if (!sqliteHelper.isFileUpToDate(file.absolutePath, lastModified)) {
                 try {
-                    _indexingStatus.value = "Indexing ${index + 1}/${sortedFiles.size}: ${file.name}"
+                    _indexingStatus.value = S57IndexStatus(S57IndexStatus.Kind.INDEXING, index + 1, sortedFiles.size, file.name)
                     log.info("Indexing S-63/S-57 chart: ${file.name} (Changed or New)")
                     val stream = S63BridgeStream.open(file, app)
                     if (stream != null) {
@@ -60,7 +61,7 @@ class S57SpatialIndex(private val app: OsmandApplication) {
                 log.debug("Chart up-to-date in persistent index: ${file.name}")
             }
         }
-        _indexingStatus.value = "Up to date (${sortedFiles.size} charts)"
+        _indexingStatus.value = S57IndexStatus(S57IndexStatus.Kind.UP_TO_DATE, chartCount = sortedFiles.size)
     }
 
     /**
@@ -98,5 +99,26 @@ class S57SpatialIndex(private val app: OsmandApplication) {
      */
     fun close() {
         sqliteHelper.close()
+    }
+}
+
+/**
+ * Structured indexing status; presentation text is produced by [localized] in the UI layer's locale.
+ */
+data class S57IndexStatus(
+    val kind: Kind,
+    val fileIndex: Int = 0,
+    val totalFiles: Int = 0,
+    val fileName: String? = null,
+    val chartCount: Int = 0
+) {
+    enum class Kind { IDLE, NO_CHARTS, CHECKING, INDEXING, UP_TO_DATE }
+
+    fun localized(app: net.osmand.plus.OsmandApplication): String = when (kind) {
+        Kind.IDLE -> app.getString(R.string.nautical_s57_status_idle)
+        Kind.NO_CHARTS -> app.getString(R.string.nautical_s57_status_no_charts)
+        Kind.CHECKING -> app.getString(R.string.nautical_s57_status_checking_fmt, fileIndex, totalFiles, fileName ?: "")
+        Kind.INDEXING -> app.getString(R.string.nautical_s57_status_indexing_fmt, fileIndex, totalFiles, fileName ?: "")
+        Kind.UP_TO_DATE -> app.getString(R.string.nautical_s57_status_up_to_date_fmt, chartCount)
     }
 }

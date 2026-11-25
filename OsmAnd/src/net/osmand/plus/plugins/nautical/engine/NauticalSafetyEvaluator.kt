@@ -73,7 +73,7 @@ class NauticalSafetyEvaluator(
         val marcul = features.firstOrNull { it.acronym in listOf("MARCUL", "FSHRES") }
         if (marcul != null) {
             violatedAquacultureFeatureId = marcul.id
-            val msg = "HAZARD: Aquaculture / Marine Farm Boundary (MARCUL)"
+            val msg = app.getString(R.string.nautical_hazard_aquaculture)
             notifications["safety.aquaculture.hazard"] = SignalKNotification(
                 message = msg,
                 state = NotificationState.ALARM
@@ -92,7 +92,7 @@ class NauticalSafetyEvaluator(
         val insrct = features.firstOrNull { it.acronym == "INSRCT" }
         val loa = app.settings.getCustomRenderProperty("vesselLength", "12.0").get().toDoubleOrNull() ?: 12.0
         if (insrct != null && loa > 20.0) {
-            val msg = "COLREGS Rule 10(d): Inshore Traffic Zone Transit Advisory (>20m LOA)"
+            val msg = app.getString(R.string.nautical_advisory_itz)
             notifications["safety.itz.advisory"] = SignalKNotification(
                 message = msg,
                 state = NotificationState.WARN
@@ -127,7 +127,7 @@ class NauticalSafetyEvaluator(
 
         if (militaryZone != null) {
             violatedMilitaryAreaFeatureId = militaryZone.id
-            val msg = "HAZARD: Active Military Firing / Practice Area (MIPARE)"
+            val msg = app.getString(R.string.nautical_hazard_military)
             notifications["safety.military.hazard"] = SignalKNotification(
                 message = msg,
                 state = NotificationState.ALARM
@@ -161,7 +161,7 @@ class NauticalSafetyEvaluator(
         if (hazards.isNotEmpty()) {
             val first = hazards.first()
             violatedSubmarineHazardFeatureId = first.id
-            val msg = "PROHIBITED ANCHORAGE: Submarine Cable / Pipeline Hazard"
+            val msg = app.getString(R.string.nautical_hazard_submarine)
             notifications["safety.submarine.hazard"] = SignalKNotification(
                 message = msg,
                 state = NotificationState.ALARM
@@ -211,7 +211,7 @@ class NauticalSafetyEvaluator(
 
         violatedTssFeatureId = foundViolationId
         if (foundViolationId != null && laneOrient != null) {
-            val msg = "TSS VIOLATION: Opposing Lane Flow (Lane: ${laneOrient.toInt()}°, COG: ${cogDeg.toInt()}°)"
+            val msg = app.getString(R.string.nautical_hazard_tss_fmt, laneOrient.toInt(), cogDeg.toInt())
             notifications["safety.tss.violation"] = SignalKNotification(
                 message = msg,
                 state = NotificationState.ALARM

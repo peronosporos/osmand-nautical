@@ -116,7 +116,7 @@ class TelemetryChartView @JvmOverloads constructor(
         }
 
         if (samples.size < 2) {
-            val msg = "No historical data available"
+            val msg = context.getString(R.string.nautical_no_historical_data)
             val textWidth = textPaint.measureText(msg)
             canvas.drawText(msg, (w - textWidth) / 2f, h / 2f, textPaint)
             return
