@@ -94,7 +94,7 @@ class GribTimeScrubberView @JvmOverloads constructor(
         }
 
         statusBadgeView = TextView(context).apply {
-            text = "GRIB FORECAST"
+            text = context.getString(R.string.nautical_grib_forecast_title)
             setTextColor(0xFF00E5FF.toInt())
             textSize = 10.5f
             typeface = android.graphics.Typeface.DEFAULT_BOLD
@@ -116,7 +116,7 @@ class GribTimeScrubberView @JvmOverloads constructor(
             setTextColor(Color.WHITE)
             textSize = 13.5f
             typeface = android.graphics.Typeface.DEFAULT_BOLD
-            text = "Loading forecast..."
+            text = context.getString(R.string.nautical_grib_loading)
         }
         topRow.addView(timeLabelView)
 
@@ -224,7 +224,7 @@ class GribTimeScrubberView @JvmOverloads constructor(
             timeSeekBar.max = (timeSteps.size - 1).coerceAtLeast(0)
             applyStep(currentStepIndex.coerceIn(0, timeSeekBar.max))
         } else {
-            timeLabelView.text = "No GRIB steps available"
+            timeLabelView.text = context.getString(R.string.nautical_grib_no_steps)
         }
     }
 

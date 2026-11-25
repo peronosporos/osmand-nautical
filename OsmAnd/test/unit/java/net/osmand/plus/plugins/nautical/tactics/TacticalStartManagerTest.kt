@@ -137,7 +137,8 @@ class TacticalStartManagerTest {
         assertEquals(0.0, squareBias!!, 0.5)
 
         val neutralAdvantage = startManager.getFavoredEndAdvantage(boatLengthMeters = 10.0)
-        assertEquals("Square Line (Neutral)", neutralAdvantage)
+        assertNotNull(neutralAdvantage)
+        assertNull(neutralAdvantage!!.isStarboardFavored)
 
         // Wind shifted right (TWD = 170° -> wind coming from 170°, bias is +10°)
         val stateStarboardFavored = MarineState(windDirectionTrue = Math.toRadians(170.0))
@@ -149,7 +150,7 @@ class TacticalStartManagerTest {
 
         val stbAdvantage = startManager.getFavoredEndAdvantage(boatLengthMeters = 10.0)
         assertNotNull(stbAdvantage)
-        assertTrue("Should favor Starboard", stbAdvantage!!.contains("Favored: Starboard"))
+        assertTrue("Should favor Starboard", stbAdvantage!!.isStarboardFavored == true)
 
         // Wind shifted left (TWD = 190° -> wind coming from 190°, bias is -10°)
         val statePortFavored = MarineState(windDirectionTrue = Math.toRadians(190.0))
@@ -161,7 +162,7 @@ class TacticalStartManagerTest {
 
         val portAdvantage = startManager.getFavoredEndAdvantage(boatLengthMeters = 10.0)
         assertNotNull(portAdvantage)
-        assertTrue("Should favor Port", portAdvantage!!.contains("Favored: Port"))
+        assertTrue("Should favor Port", portAdvantage!!.isStarboardFavored == false)
     }
 
     @Test

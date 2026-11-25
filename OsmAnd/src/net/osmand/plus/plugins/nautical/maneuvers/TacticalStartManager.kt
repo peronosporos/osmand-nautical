@@ -241,23 +241,30 @@ class TacticalStartManager(private val app: OsmandApplication) {
      * Calculates favored end advantage in degrees and boat lengths (BL).
      * e.g. "Favored: Starboard (+4.2° / +3.5 BL)" or "Favored: Port (+2.8° / +2.1 BL)".
      */
-    fun getFavoredEndAdvantage(boatLengthMeters: Double = 10.0): String? {
+    fun getFavoredEndAdvantage(boatLengthMeters: Double = 10.0): FavoredEndAdvantage? {
         val bias = getLineBias() ?: return null
         val p1 = portPin ?: return null
         val p2 = starboardPin ?: return null
         val lineLengthMeters = KMapUtils.getDistance(p1.first, p1.second, p2.first, p2.second)
 
         if (abs(bias) < 0.5) {
-            return "Square Line (Neutral)"
+            return FavoredEndAdvantage(isStarboardFavored = null, biasDeg = abs(bias), boatLengthsAdvantage = 0.0)
         }
 
         val biasRad = Math.toRadians(abs(bias))
         val distanceAdvantageMeters = lineLengthMeters * sin(biasRad)
         val blAdvantage = distanceAdvantageMeters / boatLengthMeters.coerceAtLeast(1.0)
 
-        val favoredEnd = if (bias > 0) "Starboard" else "Port"
-        return String.format(Locale.US, "Favored: %s (+%.1f° / +%.1f BL)", favoredEnd, abs(bias), blAdvantage)
+        return FavoredEndAdvantage(isStarboardFavored = bias > 0, biasDeg = abs(bias), boatLengthsAdvantage = blAdvantage)
     }
+
+    /** Structured favored-end result; presentation strings live in the UI layer. */
+    data class FavoredEndAdvantage(
+        /** null means the line is square (neutral). */
+        val isStarboardFavored: Boolean?,
+        val biasDeg: Double,
+        val boatLengthsAdvantage: Double
+    )
 
     /**
      * Calculates Time to Burn in seconds.

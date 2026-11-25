@@ -107,33 +107,33 @@ class AnchorWatchHudView @JvmOverloads constructor(
 
             val radiusStr = if (isOverload) {
                 txtRadius.setTextColor(0xFFFF1744.toInt())
-                "⚠ ANCHOR SNAGGED / OVERLOAD"
+                context.getString(R.string.nautical_anchor_snag_overload)
             } else if (isWindShiftRisk) {
                 txtRadius.setTextColor(0xFFFF1744.toInt())
-                "⚠ HIGH BREAKOUT RISK: Rapid ${windShiftDelta.toInt()}° Wind Shift"
+                context.getString(R.string.nautical_anchor_breakout_risk_fmt, windShiftDelta.toInt())
             } else if (isChafeActive) {
                 txtRadius.setTextColor(0xFFFF1744.toInt())
-                "⚠ CHAFE ADVISORY ($surgeCycles cycles)"
+                context.getString(R.string.nautical_anchor_chafe_fmt, surgeCycles)
             } else if (shallowQuad != null) {
                 txtRadius.setTextColor(0xFFFF1744.toInt())
-                "Shallow water in $shallowQuad swing quadrant"
+                context.getString(R.string.nautical_anchor_shallow_quadrant_fmt, shallowQuad)
             } else {
                 radius?.let {
                     val (v, u) = SignalKUnitConverter.formatValue(app, app.settings, it.toDouble(), "Radius")
-                    "Radius: $v $u"
-                } ?: "Not Set"
+                    context.getString(R.string.nautical_anchor_radius_fmt, v, u)
+                } ?: context.getString(R.string.nautical_anchor_not_set)
             }
             txtRadius.text = radiusStr
 
             if (isOverload) {
-                btnResetAnchorPos.text = "Pay Out 2m"
+                btnResetAnchorPos.text = context.getString(R.string.nautical_anchor_pay_out_2m)
                 btnResetAnchorPos.setOnClickListener {
                     NauticalPlugin.electrical?.payoutRodeMeters(2.0)
                     plugin.anchorWatchdog?.clearWindlassOverload()
                     update()
                 }
             } else if (isChafeActive) {
-                btnResetAnchorPos.text = "Reset Chafe"
+                btnResetAnchorPos.text = context.getString(R.string.nautical_anchor_reset_chafe)
                 btnResetAnchorPos.setOnClickListener {
                     plugin.anchorWatchdog?.resetChafeCycleCounter()
                     update()
@@ -153,16 +153,16 @@ class AnchorWatchHudView @JvmOverloads constructor(
             val rodeStr = if (deployed != null) {
                 val ft = (deployed * 3.28084).toInt()
                 val isScopeOk = deployed >= minRodeRequired
-                val scopeBadge = if (isScopeOk) "[SCOPE OK]" else "[INSUFFICIENT RODE]"
+                val scopeBadge = if (isScopeOk) context.getString(R.string.nautical_anchor_scope_ok) else context.getString(R.string.nautical_anchor_scope_insufficient)
                 if (isHighLoad) {
-                    "Rode: ${deployed.toInt()}m/${ft}ft $scopeBadge ⚠ HIGH LOAD (${tension.toInt()}kg)"
+                    context.getString(R.string.nautical_anchor_rode_high_fmt, deployed.toInt(), ft, scopeBadge, tension.toInt())
                 } else {
-                    "Rode: ${deployed.toInt()}m/${ft}ft $scopeBadge"
+                    context.getString(R.string.nautical_anchor_rode_fmt, deployed.toInt(), ft, scopeBadge)
                 }
             } else if (isHighLoad) {
-                "⚠ HIGH RODE LOAD (${tension.toInt()}kg)"
+                context.getString(R.string.nautical_anchor_rode_high_only_fmt, tension.toInt())
             } else {
-                "Rode: ---"
+                context.getString(R.string.nautical_anchor_rode_none)
             }
             txtRode.text = rodeStr
             if (isHighLoad || (deployed != null && deployed < minRodeRequired)) {

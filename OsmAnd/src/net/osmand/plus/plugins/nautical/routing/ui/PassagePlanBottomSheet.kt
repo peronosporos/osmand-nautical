@@ -63,8 +63,8 @@ class PassagePlanBottomSheet : BaseNauticalBottomSheet() {
                     txtEmpty.visibility = View.GONE
                     rvLegs.visibility = View.VISIBLE
                     cardDepthProfile.visibility = View.VISIBLE
-                    txtTotalDist.text = String.format(Locale.US, "Total: %.1f NM", result.totalDistanceNm)
-                    txtTotalTime.text = String.format(Locale.US, "Total ETE: %.1f h", result.totalTimeHours)
+                    txtTotalDist.text = getString(R.string.nautical_pp_total_dist_fmt, String.format(Locale.US, "%.1f", result.totalDistanceNm))
+                    txtTotalTime.text = getString(R.string.nautical_route_total_ete_fmt, String.format(Locale.US, "%.1f", result.totalTimeHours))
 
                     depthProfileView.setRouteData(result.legs, draft, margin)
 
@@ -82,9 +82,9 @@ class PassagePlanBottomSheet : BaseNauticalBottomSheet() {
                     txtEmpty.visibility = View.VISIBLE
                     rvLegs.visibility = View.GONE
                     cardDepthProfile.visibility = View.GONE
-                    txtTotalDist.text = "Total: -- NM"
-                    txtTotalTime.text = "Total ETE: -- h"
-                    txtTacksGybes.text = "Tacks: 0 • Gybes: 0"
+                    txtTotalDist.text = getString(R.string.nautical_pp_total_dist_empty)
+                    txtTotalTime.text = getString(R.string.nautical_route_total_ete_empty)
+                    txtTacksGybes.text = getString(R.string.nautical_route_summary_tacks, 0, 0)
                     legAdapter.submitList(emptyList())
                     btnActivateAutopilot.isEnabled = false
                     btnSkipWaypoint.isEnabled = false
@@ -188,19 +188,19 @@ class PassagePlanBottomSheet : BaseNauticalBottomSheet() {
         private val txtEte: TextView = view.findViewById(R.id.txt_leg_ete)
 
         fun bind(leg: PassagePlanLeg) {
-            txtTitle.text = String.format(Locale.US, "Leg %d: WP %d → WP %d", leg.legNumber, leg.legNumber, leg.legNumber + 1)
+            txtTitle.text = txtTitle.context.getString(R.string.nautical_leg_title_fmt, leg.legNumber, leg.legNumber, leg.legNumber + 1)
             txtDist.text = String.format(Locale.US, "%.1f NM", leg.distanceNm)
 
             val twaDeg = leg.windAngleRad?.let { Math.toDegrees(it).toInt() } ?: 45
-            txtCtsTwa.text = String.format(Locale.US, "CTS: %03d° • TWA: %d°", leg.courseToSteerDeg.toInt(), twaDeg)
+            txtCtsTwa.text = txtCtsTwa.context.getString(R.string.nautical_leg_cts_twa_fmt, leg.courseToSteerDeg.toInt(), twaDeg)
 
             val windKn = leg.windSpeedMs?.let { it * 1.94384 } ?: 15.0
-            txtWind.text = String.format(Locale.US, "Wind: %.1f kn", windKn)
+            txtWind.text = txtWind.context.getString(R.string.nautical_leg_wind_fmt, String.format(Locale.US, "%.1f", windKn))
 
             // Dynamic depth estimation along leg
             val estDepth = 4.0f + (kotlin.math.sin((leg.legNumber % 5) * 0.6) * 12.0).toFloat()
             val isSafe = estDepth >= 2.5f
-            txtDepth.text = String.format(Locale.US, "Depth: > %.1f m (%s)", estDepth, if (isSafe) "Safe" else "Shallow Warning")
+            txtDepth.text = txtDepth.context.getString(R.string.nautical_pp_depth_fmt, String.format(Locale.US, "%.1f", estDepth), txtDepth.context.getString(if (isSafe) R.string.nautical_depth_safe else R.string.nautical_depth_shallow_warning))
             txtDepth.setTextColor(
                 androidx.core.content.ContextCompat.getColor(
                     itemView.context,
@@ -209,7 +209,7 @@ class PassagePlanBottomSheet : BaseNauticalBottomSheet() {
             )
 
             val eteMin = (leg.eteHours * 60).toInt()
-            txtEte.text = String.format(Locale.US, "ETE: %d min", eteMin)
+            txtEte.text = txtEte.context.getString(R.string.nautical_leg_ete_fmt, eteMin)
         }
     }
 }

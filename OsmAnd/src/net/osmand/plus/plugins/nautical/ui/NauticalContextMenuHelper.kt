@@ -322,17 +322,17 @@ class NauticalContextMenuHelper(private val app: OsmandApplication) {
         // Set Parallel Index (PI) Line action
         adapter.addItem(
             ContextMenuItem("nautical_set_pi_line").apply {
-                title = "Set Parallel Index (PI) Line"
+                title = app.getString(R.string.nautical_ctx_pi_line_title)
                 icon = R.drawable.ic_action_ruler
                 applyNauticalStyle()
                 setListener { _, _, _, _ ->
                     val options = arrayOf(
-                        "Anchor to PI Line 1 (Starboard)",
-                        "Anchor to PI Line 2 (Port)",
-                        "Clear Active PI Lines"
+                        app.getString(R.string.nautical_ctx_pi_option_1),
+                        app.getString(R.string.nautical_ctx_pi_option_2),
+                        app.getString(R.string.nautical_ctx_pi_clear)
                     )
                     androidx.appcompat.app.AlertDialog.Builder(mapActivity)
-                        .setTitle("Parallel Index (PI) Lines")
+                        .setTitle(R.string.nautical_ctx_pi_dialog_title)
                         .setItems(options) { _, which ->
                             val plugin = net.osmand.plus.plugins.PluginsHelper.getPlugin(NauticalPlugin::class.java)
                             val aisLayer = plugin?.aisAisLayer
@@ -380,7 +380,7 @@ class NauticalContextMenuHelper(private val app: OsmandApplication) {
         // Slew Camera to Point action
         adapter.addItem(
             ContextMenuItem("nautical_slew_camera").apply {
-                title = "Slew Camera to Point (PTZ/FLIR)"
+                title = app.getString(R.string.nautical_ctx_slew_camera)
                 icon = R.drawable.ic_action_device_camera
                 applyNauticalStyle()
                 setListener { _, _, _, _ ->

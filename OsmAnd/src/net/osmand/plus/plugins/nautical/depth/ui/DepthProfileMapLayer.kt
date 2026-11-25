@@ -6,6 +6,7 @@ import android.view.MotionEvent
 import android.graphics.PointF
 import net.osmand.data.RotatedTileBox
 import net.osmand.plus.OsmandApplication
+import net.osmand.plus.R
 import net.osmand.plus.plugins.nautical.NauticalPlugin
 import net.osmand.plus.plugins.nautical.engine.NauticalSafetyEvaluator
 import net.osmand.plus.views.layers.base.OsmandMapLayer
@@ -130,7 +131,7 @@ class DepthProfileMapLayer(
         textPaint.textSize = 11f * density
         subTextPaint.textSize = 10f * density
         val minClr = String.format(Locale.US, "%.1fm", profile.minClearanceMeters)
-        val title = "FORWARD DEPTH PROFILE (1.0 NM)"
+        val title = context.getString(R.string.nautical_depth_profile_title)
         canvas.drawText(title, panelRect.left + 12f * density, panelRect.top + 16f * density, textPaint)
 
         val clrText = "Min Clearance: $minClr"

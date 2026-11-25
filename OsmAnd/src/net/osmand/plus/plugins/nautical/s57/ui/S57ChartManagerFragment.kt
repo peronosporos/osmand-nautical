@@ -45,7 +45,7 @@ class S57ChartManagerFragment : BaseOsmAndFragment() {
         viewLifecycleOwner.lifecycleScope.launch {
             val plugin = NauticalPlugin.getInstance()
             plugin?.s57SpatialIndex?.indexingStatus?.collect { status ->
-                txtCoverageStats.text = "Status: $status"
+                txtCoverageStats.text = getString(R.string.nautical_s57_status_fmt, status)
                 refreshCharts()
             }
         }

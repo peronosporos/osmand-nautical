@@ -80,11 +80,11 @@ class NauticalTechnicalStatsFragment : BaseOsmAndFragment() {
         }
         
         val flagInput = EditText(context).apply {
-            hint = "Flag (e.g. USA)"
+            hint = getString(R.string.nautical_tech_hint_flag)
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_CHARACTERS
         }
         val portInput = EditText(context).apply {
-            hint = "Home Port"
+            hint = getString(R.string.nautical_tech_hint_home_port)
             inputType = InputType.TYPE_CLASS_TEXT
         }
         

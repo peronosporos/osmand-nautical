@@ -235,22 +235,23 @@ class NauticalElectricalDashboardBottomSheet : BaseNauticalBottomSheet() {
         private val txtEta: TextView? = view.findViewById(R.id.txt_battery_eta)
 
         fun bind(engine: Engine) {
-            val engineName = if (engine.instance == "0") "Port Engine" else if (engine.instance == "1") "Stbd Engine" else "Engine ${engine.instance}"
+            val ctxt = itemView.context
+            val engineName = if (engine.instance == "0") ctxt.getString(R.string.nautical_engine_port) else if (engine.instance == "1") ctxt.getString(R.string.nautical_engine_starboard) else ctxt.getString(R.string.nautical_engine_instance_fmt, engine.instance)
             txtName.text = engineName
-            txtType?.text = "PROPULSION"
+            txtType?.text = ctxt.getString(R.string.nautical_engine_propulsion)
 
             val rpm = (engine.revolutions ?: 0.0) * 60.0
-            txtVolt.text = String.format(Locale.US, "%.0f RPM", rpm)
+            txtVolt.text = ctxt.getString(R.string.nautical_engine_rpm_fmt, rpm.toInt())
 
             val tempC = engine.coolantTemperature?.let { if (it > 150) it - 273.15 else it } ?: 80.0
             txtSoc.text = String.format(Locale.US, "%.0f°C", tempC)
             pbSoc?.progress = ((tempC / 120.0) * 100).toInt().coerceIn(0, 100)
 
             val bar = (engine.oilPressure ?: 350000.0) / 100000.0
-            txtCurrent.text = String.format(Locale.US, "Oil %.1f bar", bar)
+            txtCurrent.text = ctxt.getString(R.string.nautical_engine_oil_fmt, String.format(Locale.US, "%.1f", bar))
 
             val altV = engine.alternatorVoltage ?: 14.2
-            txtEta?.text = String.format(Locale.US, "Alt %.1f V", altV)
+            txtEta?.text = ctxt.getString(R.string.nautical_engine_alt_fmt, String.format(Locale.US, "%.1f", altV))
 
             val app = itemView.context.applicationContext as? net.osmand.plus.OsmandApplication
             val isNightVision = app?.let { NauticalPlugin.isNightVision(it) } ?: false

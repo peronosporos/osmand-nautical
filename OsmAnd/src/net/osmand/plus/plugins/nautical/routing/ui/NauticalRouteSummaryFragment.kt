@@ -112,12 +112,12 @@ class NauticalRouteSummaryFragment : BaseOsmAndFragment() {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.optimalRoute.collectLatest { result ->
                     btnCreatePlan.isEnabled = true
-                    btnCreatePlan.text = "Create Passage Plan / New Marine Route"
+                    btnCreatePlan.text = getString(R.string.nautical_route_create_plan)
                     if (result != null && result.legs.isNotEmpty()) {
                         emptyLayout.visibility = View.GONE
                         recyclerView.visibility = View.VISIBLE
-                        totalDistText.text = String.format(Locale.US, "Total Dist: %.1f NM", result.totalDistanceNm)
-                        totalTimeText.text = String.format(Locale.US, "Total ETE: %.1f h", result.totalTimeHours)
+                        totalDistText.text = getString(R.string.nautical_route_total_dist_fmt, String.format(Locale.US, "%.1f", result.totalDistanceNm))
+                        totalTimeText.text = getString(R.string.nautical_route_total_ete_fmt, String.format(Locale.US, "%.1f", result.totalTimeHours))
                         val liveState = net.osmand.plus.plugins.nautical.NauticalPlugin.engine?.getCurrentState()
                         val twd = liveState?.windDirectionTrue ?: liveState?.windDirectionApparent ?: 0.0
                         val (tacks, gybes) = net.osmand.plus.plugins.nautical.routing.NauticalWeatherRoutingEngine.countTacksAndGybes(result.legs, Math.toDegrees(twd))
@@ -141,11 +141,10 @@ class NauticalRouteSummaryFragment : BaseOsmAndFragment() {
                         if (shallowLegs.isNotEmpty()) {
                             cardHazardWarning?.visibility = View.VISIBLE
                             val legsListStr = shallowLegs.joinToString(", ") { "Leg ${it.legNumber}" }
-                            txtHazardDetails?.text = String.format(
-                                Locale.US,
-                                "Shallow water contour proximity detected on %s (< %.1fm threshold). Maintain active echo depth sounding.",
+                            txtHazardDetails?.text = getString(
+                                R.string.nautical_route_shallow_hazard_fmt,
                                 legsListStr,
-                                minDepthSafety
+                                String.format(Locale.US, "%.1f", minDepthSafety)
                             )
                         } else {
                             cardHazardWarning?.visibility = View.GONE
@@ -154,8 +153,8 @@ class NauticalRouteSummaryFragment : BaseOsmAndFragment() {
                         emptyLayout.visibility = View.VISIBLE
                         recyclerView.visibility = View.GONE
                         cardHazardWarning?.visibility = View.GONE
-                        totalDistText.text = "Total Dist: -- NM"
-                        totalTimeText.text = "Total ETE: -- h"
+                        totalDistText.text = getString(R.string.nautical_route_total_dist_empty)
+                        totalTimeText.text = getString(R.string.nautical_route_total_ete_empty)
                         txtTacksGybes?.visibility = View.GONE
                         adapter.submitList(emptyList())
                     }
@@ -222,16 +221,16 @@ class NauticalRouteSummaryFragment : BaseOsmAndFragment() {
         private val ete: TextView = view.findViewById(R.id.txt_leg_ete)
 
         fun bind(leg: PassagePlanLeg) {
-            title.text = String.format(Locale.US, "Leg %d: WP %d → WP %d", leg.legNumber, leg.legNumber, leg.legNumber + 1)
+            title.text = title.context.getString(R.string.nautical_leg_title_fmt, leg.legNumber, leg.legNumber, leg.legNumber + 1)
             dist.text = String.format(Locale.US, "%.1f NM", leg.distanceNm)
 
             val twaDeg = leg.windAngleRad?.let { Math.toDegrees(it).toInt() } ?: 45
-            ctsTwa.text = String.format(Locale.US, "CTS: %03d° • TWA: %d°", leg.courseToSteerDeg.toInt(), twaDeg)
+            ctsTwa.text = ctsTwa.context.getString(R.string.nautical_leg_cts_twa_fmt, leg.courseToSteerDeg.toInt(), twaDeg)
 
             val windKn = leg.windSpeedMs?.let { it * 1.94384 } ?: 15.0
-            wind.text = String.format(Locale.US, "Wind: %.1f kn", windKn)
+            wind.text = wind.context.getString(R.string.nautical_leg_wind_fmt, String.format(Locale.US, "%.1f", windKn))
 
-            depth.text = "Depth: > 4.5 m (Safe)"
+            depth.text = depth.context.getString(R.string.nautical_leg_depth_safe)
 
             // Inwardly integrate current tidal stream vectors (set and drift from MarineState.tidalCurrentSpeed / tidalCurrentDirection)
             val liveState = net.osmand.plus.plugins.nautical.NauticalPlugin.engine?.getCurrentState()
@@ -249,13 +248,13 @@ class NauticalRouteSummaryFragment : BaseOsmAndFragment() {
 
                 tidalDrift?.visibility = View.VISIBLE
                 val sign = if (currentProjKn >= 0) "+" else ""
-                tidalDrift?.text = String.format(Locale.US, "%s%.1f kn Current", sign, currentProjKn)
+                tidalDrift?.text = tidalDrift!!.context.getString(R.string.nautical_current_fmt, sign, String.format(Locale.US, "%.1f", currentProjKn))
             } else {
                 tidalDrift?.visibility = View.GONE
             }
 
             val eteMin = (effectiveEteHours * 60).toInt()
-            ete.text = String.format(Locale.US, "ETE: %d min", eteMin)
+            ete.text = ete.context.getString(R.string.nautical_leg_ete_fmt, eteMin)
         }
     }
 }

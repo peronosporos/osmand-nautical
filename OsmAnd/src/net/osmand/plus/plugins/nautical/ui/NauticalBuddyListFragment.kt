@@ -107,7 +107,7 @@ class NauticalBuddyListFragment : BaseOsmAndFragment() {
             showManualMmsiDialog()
             return
         }
-        val names = aisObjects.map { it.shipName ?: "MMSI: ${it.mmsi}" }.toTypedArray()
+        val names = aisObjects.map { it.shipName ?: getString(R.string.nautical_mmsi_fmt, it.mmsi) }.toTypedArray()
         
         AlertDialog.Builder(context)
             .setTitle(R.string.nautical_add_to_buddies)
@@ -127,7 +127,7 @@ class NauticalBuddyListFragment : BaseOsmAndFragment() {
     private fun showManualMmsiDialog() {
         val context = context ?: return
         val input = EditText(context).apply {
-            hint = "Enter 9-digit MMSI"
+            hint = getString(R.string.nautical_buddy_hint_mmsi)
             inputType = InputType.TYPE_CLASS_NUMBER
         }
         
@@ -173,8 +173,8 @@ class NauticalBuddyListFragment : BaseOsmAndFragment() {
                 }
                 val distNm = ownLoc.distanceTo(targetLoc) / 1852.0
                 val bearingDeg = (ownLoc.bearingTo(targetLoc) + 360f) % 360f
-                val type = ais.getShipTypeString().ifEmpty { "Vessel" }
-                holder.txtDesc.text = String.format(java.util.Locale.US, "Range: %.2f nm • %03.0f° | %s", distNm, bearingDeg, type)
+                val type = ais.getShipTypeString().ifEmpty { ctx.getString(R.string.nautical_vessel_generic) }
+                holder.txtDesc.text = ctx.getString(R.string.nautical_buddy_range_fmt, String.format(java.util.Locale.US, "%.2f", distNm), String.format(java.util.Locale.US, "%03.0f", bearingDeg), type)
             } else if (ais != null) {
                 holder.txtDesc.text = ctx.getString(R.string.nautical_buddy_type_status, ais.getShipTypeString(), ais.getNavStatusString())
             } else {

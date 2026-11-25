@@ -135,7 +135,7 @@ class PolarRecorderBottomSheet : BaseNauticalBottomSheet() {
                         }
                         polarCanvas.smoothedPoints = curvePoints
                     } else {
-                        txtActiveProfile.text = "Profile: Standard Monohull"
+                        txtActiveProfile.text = getString(R.string.nautical_polar_profile_standard)
                     }
                 }
             }

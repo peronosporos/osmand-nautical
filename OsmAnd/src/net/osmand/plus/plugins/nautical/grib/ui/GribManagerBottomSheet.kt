@@ -199,7 +199,7 @@ class GribManagerBottomSheet : BottomSheetDialogFragment() {
             playbackSeekBar?.max = (timeSteps.size - 1).coerceAtLeast(0)
             applyStep(currentStepIndex.coerceIn(0, (timeSteps.size - 1).coerceAtLeast(0)))
         } else {
-            txtPlaybackTime?.text = "No forecast steps"
+            txtPlaybackTime?.text = getString(R.string.nautical_grib_no_steps_short)
         }
     }
 

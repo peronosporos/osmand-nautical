@@ -148,11 +148,11 @@ class S63PermitViewModel(
                     }
                     store.savePermits(permitsMap)
 
-                    val summary = "Imported ${validPermits.size} valid permits, ${expiredPermits.size} expired, $errorCount errors"
+                    val summary = app.getString(R.string.nautical_s63_import_summary_fmt, validPermits.size, expiredPermits.size, errorCount)
                     _uiState.value = _uiState.value.copy(
                         loadedCellCount = store.getLoadedCellCount(),
                         toastMessage = summary,
-                        errorMessage = if (errorCount > 0) "$errorCount permit lines failed checksum/formatting" else null
+                        errorMessage = if (errorCount > 0) app.getString(R.string.nautical_s63_errors_fmt, errorCount) else null
                     )
                 } else {
                     val detail = if (expiredPermits.isNotEmpty()) {

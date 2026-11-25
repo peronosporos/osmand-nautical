@@ -124,7 +124,12 @@ class StartLineHudHeader @JvmOverloads constructor(
 
         val dist = manager.getDistanceToLine(lat, lon) ?: 0.0
         val time = manager.getTimeToBurn(lat, lon) ?: 0.0
-        val advantage = manager.getFavoredEndAdvantage() ?: "Line Bias: --"
+        val advantage = manager.getFavoredEndAdvantage()?.let { fav ->
+            if (fav.isStarboardFavored == null) context.getString(R.string.nautical_start_square_line) else {
+                val end = context.getString(if (fav.isStarboardFavored == true) R.string.nautical_start_starboard else R.string.nautical_start_port)
+                context.getString(R.string.nautical_start_favored_fmt, end, String.format(Locale.US, "%.1f", fav.biasDeg), String.format(Locale.US, "%.1f", fav.boatLengthsAdvantage))
+            }
+        } ?: context.getString(R.string.nautical_start_line_bias_none)
 
         // Format Race Countdown Timer
         val remainingSec = manager.remainingSeconds.value
@@ -139,16 +144,16 @@ class StartLineHudHeader @JvmOverloads constructor(
             timerLabel.setTextColor(if (isNightVision) 0xFFFF1744.toInt() else 0xFFFFFFFF.toInt())
         }
 
-        distLabel.text = String.format(Locale.US, "Dist: %.0fm", dist)
+        distLabel.text = context.getString(R.string.nautical_start_dist_fmt, String.format(Locale.US, "%.0f", dist))
 
         if (abs(time) > 3600) {
-            timeLabel.text = "Burn: --:--"
+            timeLabel.text = context.getString(R.string.nautical_start_burn_none)
         } else {
             val absBurn = abs(time).toInt()
             val bMins = absBurn / 60
             val bSecs = absBurn % 60
             val sign = if (time < 0) "-" else "+"
-            timeLabel.text = String.format(Locale.US, "Burn: %s%02d:%02d", sign, bMins, bSecs)
+            timeLabel.text = context.getString(R.string.nautical_start_burn_fmt, sign, bMins, bSecs)
         }
 
         biasLabel.text = advantage

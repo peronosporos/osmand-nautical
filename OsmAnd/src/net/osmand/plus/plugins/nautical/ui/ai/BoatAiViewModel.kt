@@ -85,7 +85,7 @@ class BoatAiViewModel(
             }.onFailure { e ->
                 val errorMsg = e.message ?: app.getString(R.string.nautical_ai_server_error)
                 _error.value = errorMsg
-                _messages.value = _messages.value + ChatMessage(text = "Error: $errorMsg", isBot = true, isError = true)
+                _messages.value = _messages.value + ChatMessage(text = app.getString(R.string.nautical_ai_error_fmt, errorMsg), isBot = true, isError = true)
             }
             _isLoading.value = false
         }
