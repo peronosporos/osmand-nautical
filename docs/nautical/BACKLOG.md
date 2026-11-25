@@ -116,3 +116,25 @@ Triage rule: safety/data-corruption → fix now; robustness debt → next phase;
   VhfChannelPickerDialog uses a proper resource already — acceptable.
   Known follow-up: full sweep of dialog titles built with literals (e.g. "Select Active
   Polar") during the Phase 2 conventions pass.
+
+## Dead code audit (2026-11-25, completed)
+
+Reachability audit of all 346 nautical source files against live entry points
+(plugin API, quick actions, settings framework FQCN registrations, manifest,
+widget framework). Findings and resolution, per user decision:
+
+- Deleted 7 zero-reference files (WebSocket client, network setup fragment,
+  sparkline/mini-rose views, WindManeuverHelper, DriftVectorCalculator) plus
+  3 duplicates (SignalKOrchestratorFragment, NauticalConfirmDialog,
+  ConfigurePolarsDialogFragment) — ~950 lines removed. SQLiteExtensions
+  restored after CI caught that NavtexRepository uses its extension function:
+  audit scans must include extension-function imports, not only type symbols.
+- Wired up as reachable features: Radar/Depth-profile/Polar map layers
+  (settings toggles, NauticalLayerManager), mode auto-switch cluster
+  (NauticalModeAutoSwitchManager + NauticalCockpitHudView as the Cockpit
+  context strip, fed by engine state), Nautical Tool Center (new quick action
+  id 106; also revives NauticalSystemsBottomSheet and cross-links to Cockpit),
+  NauticalRemoteServer (lazy-start via the strip's QR button).
+- Kept dormant: NauticalSetupWizardDialog (onboarding design pending).
+- Caveat: layer toggles apply at layer registration (map restart); reactive
+  re-registration on preference change is a follow-up.
