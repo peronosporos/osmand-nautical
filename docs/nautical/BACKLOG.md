@@ -288,3 +288,31 @@ this decision: the backend poll error string is now localized
   author-native ("Τζάιμπας" etc.). Those pre-existing translations win;
   the 88 duplicated keys were removed from nautical_strings.xml (el).
   es/de/fr had no overlaps.
+
+## Session log 2026-11-26 (midday): Greek terminology fact-check pass
+
+- User-reported: "Τζάιμπας" is not a Greek word (fabricated transliteration
+  of "gybe"). Fact-checked terminology against published Greek sailing
+  glossaries (PASIDI.gr Anglo-Hellenic sailing lexicon, Power Marine
+  nautical dictionary, Boatfinder.gr seamanship articles, nautilia.gr
+  forum usage): gybe = υποστροφή (vernacular τσίμα / πότζα per forum
+  usage), tack = τακ (accepted vernacular), boom = μάτσα, anchor drag =
+  σύρσις/ξεσύρσιμο άγκυρας, those were already correct.
+- Fixed 13 "τζάιμπ*" occurrences in values-el/strings.xml plus the
+  vessel-type summary: all now use υποστροφή / υποστροφές. Layline ready
+  hint retains vernacular "πότζα" in parentheses (documented usage).
+- Fixed "leeway" translated as έκπτωση: Greek seamanship sources use
+  παρέκκλιση; 5 entries corrected (manual angle, coefficient, desc,
+  med-mooring warning), keeping the English term in parentheses for
+  cross-checking with instrument manuals.
+- Fixed "Solo Watchdog Timeout" mistranslation (ΤΕΛΟΣ ΧΡΟΝΟΥ ΦΥΛΑΚΑ
+  ΜΟΝΑΧΙΚΟΥ used the wrong noun) to ΛΗΞΗ ΧΡΟΝΟΥ ΜΟΝΑΧΙΚΗΣ ΒΑΡΔΙΑΣ
+  (solo watch = μοναχική βάρδια).
+- German: 2 occurrences of Rettungsmanoever corrected to
+  Rettungsmanöver in values-de/nautical_strings.xml.
+- Remaining caveat: values-el/strings.xml carries ~1480 machine-sourced
+  nautical strings; this pass fixed every hit found by systematic
+  transliteration/term scans plus targeted verification of the
+  sailing-maneuver, anchoring, leeway and alarm vocabularies. Full
+  native-speaker review of all four locales remains recommended for
+  safety-critical terms.

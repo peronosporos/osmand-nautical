@@ -10,8 +10,8 @@
     <string name="nautical_alarm_acknowledged">Alarme bestätigt</string>
     <string name="nautical_alarm_collision_fmt">AIS-KOLLISIONSRISIKO: %1$s (CPA %2$s NM in %3$dm)</string>
     <string name="nautical_alarm_collision_immediate_fmt">AIS-KOLLISIONSRISIKO: %1$s (Unmittelbare Kollisionsgefahr!)</string>
-    <string name="nautical_alarm_mob_msg">MOB-Alarm aktiv! Sofortiges Rettungsmanoever erforderlich.</string>
-    <string name="nautical_alarm_mob_msg_fmt">%1$s! Sofortiges Rettungsmanoever erforderlich.</string>
+    <string name="nautical_alarm_mob_msg">MOB-Alarm aktiv! Sofortiges Rettungsmanöver erforderlich.</string>
+    <string name="nautical_alarm_mob_msg_fmt">%1$s! Sofortiges Rettungsmanöver erforderlich.</string>
     <string name="nautical_alarm_snooze">SNOOZE (2 Min.)</string>
     <string name="nautical_alarm_title_anchor">ANKER-DRIFT-ALARM</string>
     <string name="nautical_alarm_title_collision">AIS-KOLLISIONSRISIKO</string>

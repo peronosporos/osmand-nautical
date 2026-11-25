@@ -14,7 +14,7 @@
     <string name="nautical_alarm_title_collision">ΚΙΝΔΥΝΟΣ ΣΥΓΚΡΟΥΣΗΣ AIS</string>
     <string name="nautical_alarm_title_mob">ΑΝΘΡΩΠΟΣ ΣΤΗ ΘΑΛΑΣΣΑ (MOB)</string>
     <string name="nautical_alarm_title_shallow">ΡΗΧΟ ΒΑΘΟΣ</string>
-    <string name="nautical_alarm_title_watchdog">ΤΕΛΟΣ ΧΡΟΝΟΥ ΦΥΛΑΚΑ ΜΟΝΑΧΙΚΟΥ</string>
+    <string name="nautical_alarm_title_watchdog">ΛΗΞΗ ΧΡΟΝΟΥ ΜΟΝΑΧΙΚΗΣ ΒΑΡΔΙΑΣ</string>
     <string name="nautical_alarm_vessel_dangerous">Επικίνδυνο Σκάφος</string>
     <string name="nautical_checklist_all_verified">ΟΛΑ ΕΠΑΛΗΘΕΥΘΗΚΑΝ</string>
     <string name="nautical_checklist_incomplete">ΑΝΕΠΙΤΕΛΕΣ</string>
