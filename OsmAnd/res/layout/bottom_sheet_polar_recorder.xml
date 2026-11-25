@@ -82,7 +82,7 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="0 samples recorded"
+                        android:text="@string/nautical_polar_samples_placeholder"
                         android:textSize="13sp"
                         android:textColor="?android:attr/textColorSecondary" />
 
@@ -90,7 +90,7 @@
                         android:id="@+id/txt_polar_active_profile"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Active: Standard Monohull"
+                        android:text="@string/nautical_polar_profile_standard"
                         android:textSize="13sp"
                         android:textStyle="bold"
                         android:textColor="?attr/colorAccent" />

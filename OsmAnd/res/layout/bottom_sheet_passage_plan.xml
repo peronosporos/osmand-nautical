@@ -36,7 +36,7 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="Total: -- NM"
+                        android:text="@string/nautical_pp_total_dist_empty"
                         android:textStyle="bold"
                         android:textSize="13sp"
                         android:textColor="?attr/colorAccent" />
@@ -46,7 +46,7 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="Total ETE: -- h"
+                        android:text="@string/nautical_route_total_ete_empty"
                         android:textSize="13sp"
                         android:textColor="?android:attr/textColorSecondary" />
 
@@ -54,7 +54,7 @@
                         android:id="@+id/txt_plan_tacks_gybes"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Tacks: 0 • Gybes: 0"
+                        android:text="@string/nautical_route_summary_tacks"
                         android:textSize="12sp"
                         android:textColor="?android:attr/textColorSecondary" />
                 </LinearLayout>
@@ -89,7 +89,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
-            android:text="Waypoint Sequence &amp; Nav Legs"
+            android:text="@string/nautical_pp_section_title"
             android:textAppearance="@style/TextAppearance.AppCompat.Small"
             android:textStyle="bold"
             android:textColor="?attr/colorAccent" />
@@ -109,7 +109,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
             android:gravity="center"
-            android:text="No active passage plan calculated. Generate an optimal weather route first."
+            android:text="@string/nautical_pp_empty_hint"
             android:textColor="?android:attr/textColorSecondary"
             android:visibility="gone" />
 
