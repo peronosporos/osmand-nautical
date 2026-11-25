@@ -160,12 +160,20 @@ settings XML, cockpit shell, and OsmAnd-convention conformance.
   includes were outside the scan corpus, since fixed) and restored.
 
 ### Remaining debt (queued, not fixed this pass)
-- i18n breadth: ~100+ user-visible literal strings across ~18 files. Worst
-  known: SignalKServerChartsFragment (error/empty states, 7),
-  SignalKServerRoutesFragment (11), NauticalChecklistDialogFragment (15),
-  PolarWizardFragment (15), SensorHealthBottomSheet (13), checklist dialogs,
-  cockpit strings (~80). A dedicated pass needed; SignalK path constants in
-  engine files are NOT user-visible and must not be "fixed".
+- i18n breadth: RESOLVED in the 2026-11-25 breadth pass (extended into
+  2026-11-25 follow-up session): ~180 user-visible literals externalized across
+  24 Kotlin files + 2 layouts (server charts/routes, sensor health, VHF,
+  diagnostics, polar wizard, checklist, alarm banner, AIS lists/details, VHF
+  picker, notifications, route summary, passage plan, anchor HUD, start-line
+  header, tactical manager (structured FavoredEndAdvantage + test update),
+  buddy list, technical stats, electrical dashboard, polar recorder, S57/S63,
+  GRIB, BoatAI, depth profile layer, context menu). Known remaining:
+  NauticalSettingsFragment (8 literals), S57SpatialIndex raw-English status
+  strings (displayed via nautical_s57_status_fmt), gauge placeholder texts in
+  nautical_cockpit_hud_strip.xml and electrical layout (runtime-bound, left as-is),
+  plus assorted Toast/ASCII fragments: ~15 toast strings (PolarEditorFragment,
+  AIS details, waypoint layer, network setup). SignalK path constants in engine
+  files are NOT user-visible and must not be "fixed".
 - Accessibility breadth: ~10 more layouts with icon-only controls still missing
   descriptions (AIS details cards, compass wizard, boat AI chat, maneuvers
   sheet, checklist dialog, telemetry tiles).
@@ -178,3 +186,15 @@ settings XML, cockpit shell, and OsmAnd-convention conformance.
   reactive re-registration on preference change.
 - OsmAnd-native widget/hud deep review (widget ids vs WidgetRegistry labels,
   quick action categories) still to be done systematically.
+
+## Session log 2026-11-25 (afternoon): i18n breadth pass
+
+- Four commits: d60835c (batch 1, 8 files, incl. removal of the fake "42 ms"
+  server-latency value shown while connected, replaced with "--" until real
+  round-trip telemetry is wired), d93e9c9 (compile fix: charts ViewHolder
+  getString scope + batch 2 alarm banner/CPA/VHF/notifications), 10e087f
+  (batch 3 routing/anchor/start-line/engines/GRIB/S57/S63/BoatAI/context menu
+  + TacticalStartManager structured refactor), 258d832 (batch 4 layouts).
+- All validated by green Nautical Unit Tests; Remote Marine Compiler green on
+  d93e9c9 (first fully-built APK of this session), later runs in progress at
+  time of writing.
