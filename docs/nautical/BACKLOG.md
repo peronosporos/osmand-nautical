@@ -114,8 +114,12 @@ Triage rule: safety/data-corruption → fix now; robustness debt → next phase;
   start countdown, gybe warning, windlass overload voice) moved to `nautical_*` keys in
   `strings.xml` with positional format args. Remaining raw `Toast.makeText` in
   VhfChannelPickerDialog uses a proper resource already — acceptable.
-  Known follow-up: full sweep of dialog titles built with literals (e.g. "Select Active
-  Polar") during the Phase 2 conventions pass.
+  Follow-up (2026-11-25 conventions pass, efb6840): complete — "Select Polar
+  Profile" plus every remaining literal dialog title/message externalized; all
+  42 plain androidx AlertDialog.Builder call sites across 22 files converted
+  to MaterialAlertDialogBuilder (core OsmAnd convention; zero plain builders
+  remain in nautical); direct Toast.makeText replaced with
+  app.showToastMessage (VHF picker invalid-channel, touch-guard unlock).
 
 ## Dead code audit (2026-11-25, completed)
 
@@ -214,3 +218,16 @@ settings XML, cockpit shell, and OsmAnd-convention conformance.
 - 5e5d564: a11y sweep — decorative icons nulled, a11y labels resourced.
 - CI: unit tests and full APK (Remote Marine Compiler) green on 01ac2e5;
   5e5d564 unit tests green at time of writing, APK in flight.
+
+## Session log 2026-11-25 (night): themed-style conventions pass
+
+- efb6840: MaterialAlertDialogBuilder everywhere (42 sites / 22 files),
+  literal dialog strings externalized ("Select Polar Profile", CPA threshold
+  prompt + hint, waypoint/route delete confirmations, Route Actions menu),
+  toasts unified via app.showToastMessage. rescan found no remaining plain
+  AlertDialog.Builder or direct literal Toast in the nautical plugin.
+- CI: Nautical Unit Tests and Remote Marine Compiler (full APK) both green on
+  efb6840.
+
+With this, the agreed roadmap from the i18n breadth pass is fully closed:
+i18n (breadth + tail) done, a11y sweep done, themed-style conventions done.
