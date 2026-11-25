@@ -112,7 +112,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="Progress: 0 / 6 (0%)"
+            tools:text="Progress: 0 / 6 (0%)"
             android:textAppearance="@style/TextAppearance.AppCompat.Caption"
             android:textColor="?android:attr/textColorSecondary"
             android:textStyle="bold" />
@@ -121,7 +121,7 @@
             android:id="@+id/txt_checklist_status"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="INCOMPLETE"
+            android:text="@string/nautical_checklist_incomplete"
             android:textAppearance="@style/TextAppearance.AppCompat.Caption"
             android:textColor="@color/text_color_negative"
             android:textStyle="bold" />

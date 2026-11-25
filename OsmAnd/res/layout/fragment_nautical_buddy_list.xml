@@ -91,7 +91,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
                 android:gravity="center"
-                android:text="No AIS buddies tracked. Add nearby vessels to your watch list, or configure your fleet."
+                android:text="@string/nautical_buddy_empty_hint"
                 android:textAppearance="@style/TextAppearance.AppCompat.Medium"
                 android:textColor="?android:attr/textColorSecondary" />
 

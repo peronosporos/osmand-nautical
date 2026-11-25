@@ -39,7 +39,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="4dp"
-                    android:text="Engine: Isochrone / Winga Marine Weather Router"
+                    android:text="@string/nautical_wr_engine_desc"
                     android:textAppearance="@style/TextAppearance.AppCompat.Caption"
                     android:textColor="?android:attr/textColorSecondary" />
             </LinearLayout>
@@ -215,7 +215,7 @@
                         android:id="@+id/txt_weighting_value"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Balanced (50%)"
+                        android:text="@string/nautical_wr_weighting_default"
                         android:textSize="12sp"
                         android:textColor="?android:attr/textColorSecondary" />
                 </LinearLayout>

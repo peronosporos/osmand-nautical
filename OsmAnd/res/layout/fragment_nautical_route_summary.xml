@@ -96,7 +96,7 @@
                         android:id="@+id/txt_hazard_details_text"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="Critical sounding alert: Leg crosses depth area &lt; 2.5m near shallow water contours."
+                        android:text="@string/nautical_rs_hazard_default"
                         android:textAppearance="@style/TextAppearance.AppCompat.Caption"
                         android:textColor="?android:attr/textColorPrimary" />
                 </LinearLayout>
@@ -173,7 +173,7 @@
                     android:layout_height="48dp"
                     android:minHeight="48dp"
                     android:layout_marginTop="8dp"
-                    android:text="EXPORT PASSAGE PLAN"
+                    android:text="@string/nautical_rs_export_btn"
                     android:textSize="12sp"
                     android:textStyle="bold"
                     app:icon="@drawable/ic_action_export"
@@ -186,7 +186,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="8dp"
-            android:text="Passage Legs Breakdown"
+            android:text="@string/nautical_rs_legs_title"
             android:textAppearance="@style/TextAppearance.AppCompat.Caption"
             android:textColor="?android:attr/textColorSecondary"
             android:textStyle="bold" />
@@ -212,7 +212,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
-                android:text="No Active Passage Plan"
+                android:text="@string/nautical_rs_no_plan"
                 android:textAppearance="@style/TextAppearance.AppCompat.Large"
                 android:textColor="?android:attr/textColorPrimary"
                 android:textStyle="bold" />
@@ -222,7 +222,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
                 android:gravity="center"
-                android:text="Create a marine route to compute courses to steer, tidal current offsets, layline angles, and leg-by-leg passage schedules."
+                android:text="@string/nautical_rs_no_plan_desc"
                 android:textAppearance="@style/TextAppearance.AppCompat.Medium"
                 android:textColor="?android:attr/textColorSecondary" />
 
@@ -232,7 +232,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="20dp"
-                android:text="Create Passage Plan / New Marine Route"
+                android:text="@string/nautical_route_create_plan"
                 app:icon="@drawable/ic_action_add_no_bg" />
 
         </LinearLayout>
