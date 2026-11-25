@@ -61,9 +61,9 @@ class SignalKServerRoutesFragment : BaseOsmAndFragment() {
             if (engine == null) {
                 adapter.submitList(emptyList())
                 emptyLayout?.visibility = View.VISIBLE
-                txtTitle?.text = "Signal K Server Disconnected"
-                txtDesc?.text = "Unable to connect to Signal K server at $serverIp:$serverPort. Please verify connection settings."
-                btnPrimary?.text = "Retry Connection"
+                txtTitle?.text = getString(R.string.nautical_server_disconnected)
+                txtDesc?.text = getString(R.string.nautical_server_unable_connect_routes_fmt, serverIp, serverPort)
+                btnPrimary?.text = getString(R.string.nautical_server_retry_connection)
                 btnPrimary?.setOnClickListener { refreshRoutes() }
                 btnSecondary?.visibility = View.VISIBLE
                 return@launch
@@ -77,7 +77,7 @@ class SignalKServerRoutesFragment : BaseOsmAndFragment() {
                     adapter.submitList(emptyList())
                     emptyLayout?.visibility = View.VISIBLE
                     txtTitle?.text = getString(R.string.nautical_server_no_routes_title)
-                    txtDesc?.text = "No routes found on the Signal K server. Create routes in OsmAnd or upload them to your server using the Resource Manager."
+                    txtDesc?.text = getString(R.string.nautical_server_routes_empty)
                     btnPrimary?.text = getString(R.string.nautical_server_refresh_btn)
                     btnPrimary?.setOnClickListener { refreshRoutes() }
                     btnSecondary?.visibility = View.VISIBLE
@@ -85,9 +85,9 @@ class SignalKServerRoutesFragment : BaseOsmAndFragment() {
             } catch (_: Exception) {
                 adapter.submitList(emptyList())
                 emptyLayout?.visibility = View.VISIBLE
-                txtTitle?.text = "Connection Failed"
-                txtDesc?.text = "Could not fetch routes from $serverIp:$serverPort. Check connection."
-                btnPrimary?.text = "Retry"
+                txtTitle?.text = getString(R.string.nautical_server_connection_failed)
+                txtDesc?.text = getString(R.string.nautical_server_routes_failed_fmt, serverIp, serverPort)
+                btnPrimary?.text = getString(R.string.nautical_server_retry)
                 btnPrimary?.setOnClickListener { refreshRoutes() }
                 btnSecondary?.visibility = View.VISIBLE
             }

@@ -140,12 +140,12 @@ class NauticalChecklistDialogFragment : BottomSheetDialogFragment() {
         val pct = if (total > 0) (checked * 100) / total else 0
 
         progressBar.progress = pct
-        txtProgress.text = "Progress: $checked / $total ($pct%)"
+        txtProgress.text = getString(R.string.nautical_checklist_progress_fmt, checked, total, pct)
         if (pct == 100) {
-            txtStatus.text = "ALL VERIFIED"
+            txtStatus.text = getString(R.string.nautical_checklist_all_verified)
             txtStatus.setTextColor(0xFF43A047.toInt())
         } else {
-            txtStatus.text = "INCOMPLETE"
+            txtStatus.text = getString(R.string.nautical_checklist_incomplete)
             txtStatus.setTextColor(0xFFE53935.toInt())
         }
     }

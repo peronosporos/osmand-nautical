@@ -72,7 +72,7 @@ class SignalKDiagnosticsFragment : BaseOsmAndFragment() {
         }
 
         val rateView = TextView(requireContext()).apply {
-            text = "Stream: 0.0 Hz"
+            text = getString(R.string.nautical_diag_stream_fmt, 0.0)
             textSize = 13f
             typeface = android.graphics.Typeface.MONOSPACE
             layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
@@ -82,18 +82,18 @@ class SignalKDiagnosticsFragment : BaseOsmAndFragment() {
         toolbar.addView(rateView)
 
         val btnPause = MaterialButton(requireContext(), null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
-            text = "Pause"
+            text = getString(R.string.shared_string_pause)
             minHeight = (48 * resources.displayMetrics.density).toInt()
             setTextColor(if (isNightVision) 0xFFFF1744.toInt() else 0xFF00E5FF.toInt())
             setOnClickListener {
                 isStreamPaused = !isStreamPaused
-                text = if (isStreamPaused) "Resume" else "Pause"
+                text = getString(if (isStreamPaused) R.string.shared_string_resume else R.string.shared_string_pause)
             }
         }
         toolbar.addView(btnPause)
 
         val btnExport = MaterialButton(requireContext(), null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
-            text = "Export Log"
+            text = getString(R.string.nautical_diag_export_log)
             minHeight = (48 * resources.displayMetrics.density).toInt()
             setTextColor(if (isNightVision) 0xFFFF1744.toInt() else 0xFF00E5FF.toInt())
             setOnClickListener {
@@ -155,7 +155,7 @@ class SignalKDiagnosticsFragment : BaseOsmAndFragment() {
             setTextColor(fg)
             val pad = (6 * resources.displayMetrics.density).toInt()
             setPadding(pad, pad, pad, pad)
-            text = "Connecting to live Signal K stream..."
+            text = getString(R.string.nautical_diag_connecting)
         }
         txtTerminal = terminal
         root.addView(terminal)
@@ -205,7 +205,7 @@ class SignalKDiagnosticsFragment : BaseOsmAndFragment() {
             currentPacketHz = totalPacketCountInSecond / dt
             totalPacketCountInSecond = 0
             lastPacketSecTime = now
-            txtPacketRate?.text = String.format(Locale.US, "Stream: %.1f Hz", currentPacketHz)
+            txtPacketRate?.text = getString(R.string.nautical_diag_stream_fmt, String.format(Locale.US, "%.1f", currentPacketHz).toDouble())
         }
 
         if (isStreamPaused) return

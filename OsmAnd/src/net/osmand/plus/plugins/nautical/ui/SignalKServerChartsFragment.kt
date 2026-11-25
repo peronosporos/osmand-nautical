@@ -78,9 +78,9 @@ class SignalKServerChartsFragment : BaseOsmAndFragment() {
             if (rest == null) {
                 adapter.submitList(emptyList())
                 emptyLayout?.visibility = View.VISIBLE
-                txtTitle?.text = "Signal K Server Disconnected"
-                txtDesc?.text = "Unable to connect to Signal K server at $serverIp:$serverPort. Please verify server IP and connection settings."
-                btnPrimary?.text = "Retry Connection"
+                txtTitle?.text = getString(R.string.nautical_server_disconnected)
+                txtDesc?.text = getString(R.string.nautical_server_unable_connect_fmt, serverIp, serverPort)
+                btnPrimary?.text = getString(R.string.nautical_server_retry_connection)
                 btnPrimary?.setOnClickListener { refreshCharts() }
                 btnSecondary?.visibility = View.VISIBLE
                 return@launch
@@ -95,7 +95,7 @@ class SignalKServerChartsFragment : BaseOsmAndFragment() {
                     adapter.submitList(emptyList())
                     emptyLayout?.visibility = View.VISIBLE
                     txtTitle?.text = getString(R.string.nautical_server_no_charts_title)
-                    txtDesc?.text = "No chart layers available on the Signal K server. Upload marine charts using the Signal K Server Resource Manager (@signalk/charts-plugin)."
+                    txtDesc?.text = getString(R.string.nautical_server_charts_empty)
                     btnPrimary?.text = getString(R.string.nautical_server_refresh_btn)
                     btnPrimary?.setOnClickListener { refreshCharts() }
                     btnSecondary?.visibility = View.VISIBLE
@@ -103,9 +103,9 @@ class SignalKServerChartsFragment : BaseOsmAndFragment() {
             } catch (_: Exception) {
                 adapter.submitList(emptyList())
                 emptyLayout?.visibility = View.VISIBLE
-                txtTitle?.text = "Connection Failed"
-                txtDesc?.text = "Could not retrieve chart layers from $serverIp:$serverPort. Check network connection."
-                btnPrimary?.text = "Retry"
+                txtTitle?.text = getString(R.string.nautical_server_connection_failed)
+                txtDesc?.text = getString(R.string.nautical_server_charts_failed_fmt, serverIp, serverPort)
+                btnPrimary?.text = getString(R.string.nautical_server_retry)
                 btnPrimary?.setOnClickListener { refreshCharts() }
                 btnSecondary?.visibility = View.VISIBLE
             }
@@ -172,7 +172,12 @@ class SignalKServerChartsFragment : BaseOsmAndFragment() {
 
         fun bind(chart: SignalKChart, onEnable: (SignalKChart) -> Unit, onDelete: (SignalKChart) -> Unit) {
             txtName.text = chart.name ?: chart.identifier
-            txtDesc.text = "${chart.type ?: "Raster"} | MinZ:${chart.minzoom ?: 0} MaxZ:${chart.maxzoom ?: 18}"
+            txtDesc.text = getString(
+                R.string.nautical_server_charts_meta_fmt,
+                chart.type ?: getString(R.string.nautical_server_charts_raster),
+                chart.minzoom ?: 0,
+                chart.maxzoom ?: 18
+            )
             btnEnable.setOnClickListener { onEnable(chart) }
             btnDelete.setOnClickListener { onDelete(chart) }
         }

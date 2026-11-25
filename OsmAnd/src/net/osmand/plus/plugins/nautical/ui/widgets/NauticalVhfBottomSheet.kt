@@ -74,7 +74,7 @@ class NauticalVhfBottomSheet : BaseNauticalBottomSheet() {
                 .setItems(items) { _, which ->
                     val (num, _) = ALL_VHF_CHANNELS[which]
                     NauticalPlugin.engine?.sendDelta("communication.vhf.channel", num)
-                    txtActiveChannel.text = "CH $num"
+                    txtActiveChannel.text = getString(R.string.nautical_vhf_ch_fmt, num)
                     txtDesignation.text = getChannelDesignation(num)
                 }
                 .setNegativeButton(R.string.shared_string_cancel, null)
@@ -104,18 +104,18 @@ class NauticalVhfBottomSheet : BaseNauticalBottomSheet() {
                 vhfManager.status.collectLatest { status ->
                     when (status) {
                         VhfStatus.LIVE -> {
-                            btnLiveAudio.text = "Stop Audio"
-                            txtStatus.text = "Status: Live Audio Stream Active"
+                            btnLiveAudio.text = getString(R.string.nautical_vhf_stop_audio)
+                            txtStatus.text = getString(R.string.nautical_vhf_status_live)
                             txtStatus.setTextColor(androidx.core.content.ContextCompat.getColor(themedCtx, R.color.color_ok))
                         }
                         VhfStatus.REPLAYING -> {
-                            btnLiveAudio.text = "Live Stream"
-                            txtStatus.text = "Status: Replaying Recorded Transmission"
+                            btnLiveAudio.text = getString(R.string.nautical_vhf_live_stream)
+                            txtStatus.text = getString(R.string.nautical_vhf_status_replay)
                             txtStatus.setTextColor(androidx.core.content.ContextCompat.getColor(themedCtx, R.color.color_warning))
                         }
                         VhfStatus.IDLE -> {
-                            btnLiveAudio.text = "Live Stream"
-                            txtStatus.text = "Status: Standby / Ready"
+                            btnLiveAudio.text = getString(R.string.nautical_vhf_live_stream)
+                            txtStatus.text = getString(R.string.nautical_vhf_status_standby)
                             txtStatus.setTextColor(androidx.core.content.ContextCompat.getColor(themedCtx, R.color.text_color_secondary_light))
                         }
                     }
@@ -133,7 +133,7 @@ class NauticalVhfBottomSheet : BaseNauticalBottomSheet() {
         viewLifecycleOwner.lifecycleScope.launch {
             NauticalPlugin.engine?.marineStateFlow?.collectLatest { state ->
                 val ch = state.vhfChannel ?: "16"
-                txtActiveChannel.text = "CH $ch"
+                txtActiveChannel.text = getString(R.string.nautical_vhf_ch_fmt, ch)
                 txtDesignation.text = getChannelDesignation(ch)
             }
         }

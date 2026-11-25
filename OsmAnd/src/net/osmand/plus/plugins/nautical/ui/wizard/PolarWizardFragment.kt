@@ -75,38 +75,38 @@ class PolarWizardFragment : BaseOsmAndFragment() {
         val root = view as? ViewGroup
         when (state) {
             WizardState.INITIAL_CHECK -> {
-                statusText.text = "Step 1: Calibration & Safety Check"
-                recommendationText.text = "Ensure the vessel is stationary and sensors (Compass, Wind) are calibrated. Accurate sensor data is critical for generating reliable polar curves."
+                statusText.text = getString(R.string.nautical_polar_wizard_step1_title)
+                recommendationText.text = getString(R.string.nautical_polar_wizard_step1_desc)
                 progressIndicator.progress = 20
-                nextBtn.text = "Start Setup"
-                backBtn.text = "Download Existing"
+                nextBtn.text = getString(R.string.nautical_polar_wizard_start_setup)
+                backBtn.text = getString(R.string.nautical_polar_wizard_download_existing)
                 heatmapView?.visibility = View.GONE
             }
             WizardState.PROFILE_SETUP -> {
-                statusText.text = "Step 2: Profile Configuration"
-                recommendationText.text = "Define your current sail plan (e.g. 'Main + Genoa'). Note that different sail configurations require separate polar profiles."
+                statusText.text = getString(R.string.nautical_polar_wizard_step2_title)
+                recommendationText.text = getString(R.string.nautical_polar_wizard_step2_desc)
                 progressIndicator.progress = 40
-                nextBtn.text = "Engage Logging"
+                nextBtn.text = getString(R.string.nautical_polar_wizard_engage_logging)
                 heatmapView?.visibility = View.GONE
             }
             WizardState.ACTIVE_LOGGING -> {
-                statusText.text = "Step 3: Recording Polar Data"
-                recommendationText.text = "Sail on all points of wind at various speeds. The heatmap below shows your coverage. Aim for green cells in all sectors."
+                statusText.text = getString(R.string.nautical_polar_wizard_step3_title)
+                recommendationText.text = getString(R.string.nautical_polar_wizard_step3_desc)
                 progressIndicator.progress = 60
-                nextBtn.text = "Review Points"
+                nextBtn.text = getString(R.string.nautical_polar_wizard_review_points)
                 ensureHeatmap(root)
                 heatmapView?.visibility = View.VISIBLE
             }
             WizardState.REVIEW_AND_SMOOTH -> {
-                statusText.text = "Step 4: Review and Smoothing"
-                recommendationText.text = "The recorded points are being smoothed into a polar curve. Verify if this matches your expected vessel performance."
+                statusText.text = getString(R.string.nautical_polar_wizard_step4_title)
+                recommendationText.text = getString(R.string.nautical_polar_wizard_step4_desc)
                 progressIndicator.progress = 80
-                nextBtn.text = "Save to Server"
+                nextBtn.text = getString(R.string.nautical_polar_wizard_save_to_server)
                 heatmapView?.visibility = View.GONE
             }
             WizardState.SAVING -> {
-                statusText.text = "Finalizing..."
-                recommendationText.text = "Syncing your new polar profile with the Signal K server..."
+                statusText.text = getString(R.string.nautical_polar_wizard_finalizing)
+                recommendationText.text = getString(R.string.nautical_polar_wizard_syncing)
                 progressIndicator.progress = 100
                 nextBtn.isEnabled = false
                 heatmapView?.visibility = View.GONE

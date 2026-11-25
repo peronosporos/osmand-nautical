@@ -99,7 +99,7 @@ class SensorHealthBottomSheet : BaseNauticalBottomSheet() {
         val hdopStr = state.gnss?.horizontalDilution?.let { String.format(Locale.US, "%.1f", it) } ?: "--"
         val satsStr = state.gnss?.satellites?.toString() ?: "--"
         val gpsLatencyStr = if (gpsAgeMs >= 0) "${gpsAgeMs}ms" else "--"
-        txtGpsDetails.text = "Position: $posStr\nHDOP: $hdopStr • Satellites: $satsStr • Latency: $gpsLatencyStr"
+        txtGpsDetails.text = getString(R.string.nautical_sh_gps_details_fmt, posStr, hdopStr, satsStr, gpsLatencyStr)
 
         // 2. Heading / Compass
         val hdgAgeMs = if (state.timeOfHeadingFix > 0) now - state.timeOfHeadingFix else -1L
@@ -110,7 +110,7 @@ class SensorHealthBottomSheet : BaseNauticalBottomSheet() {
         val hdgMagStr = state.headingMagnetic?.let { String.format(Locale.US, "%03.1f°", Math.toDegrees(it)) } ?: "--"
         val rotStr = state.rateOfTurn?.let { String.format(Locale.US, "%.1f °/min", it * 60.0) } ?: "--"
         val hdgRateStr = if (hdgAgeMs in 0..2000) "10.0 Hz" else if (hdgAgeMs > 0) "< 1.0 Hz" else "--"
-        txtCompassDetails.text = "Heading True: $hdgTrueStr • Magnetic: $hdgMagStr\nRate of Turn: $rotStr • Rate: $hdgRateStr"
+        txtCompassDetails.text = getString(R.string.nautical_sh_compass_details_fmt, hdgTrueStr, hdgMagStr, rotStr, hdgRateStr)
 
         // 3. Depth Sounder
         val depthAgeMs = if (state.timeOfDepthFix > 0) now - state.timeOfDepthFix else -1L
@@ -120,7 +120,7 @@ class SensorHealthBottomSheet : BaseNauticalBottomSheet() {
         val depthXdrStr = state.depthBelowTransducer?.let { String.format(Locale.US, "%.2f m", it) } ?: "--"
         val depthKeelStr = state.depthBelowKeel?.let { String.format(Locale.US, "%.2f m", it) } ?: "--"
         val waterTempStr = state.waterTemperature?.let { String.format(Locale.US, "%.1f°C", it - 273.15) } ?: "--"
-        txtDepthDetails.text = "Depth below Transducer: $depthXdrStr\nKeel Clearance: $depthKeelStr • Water Temp: $waterTempStr"
+        txtDepthDetails.text = getString(R.string.nautical_sh_depth_details_fmt, depthXdrStr, depthKeelStr, waterTempStr)
 
         // 4. Wind Anemometer
         val windAgeMs = if (state.timeOfWindFix > 0) now - state.timeOfWindFix else -1L
@@ -131,7 +131,7 @@ class SensorHealthBottomSheet : BaseNauticalBottomSheet() {
         val awaDegStr = state.windDirectionApparent?.let { String.format(Locale.US, "%03d°", ((Math.toDegrees(it) + 360.0) % 360.0).toInt()) } ?: "--"
         val twsKnStr = state.windSpeedTrue?.let { String.format(Locale.US, "%.1f kn", SignalKUnitConverter.msToKnots(it)) } ?: "--"
         val twdDegStr = state.windDirectionTrue?.let { String.format(Locale.US, "%03d°", ((Math.toDegrees(it) + 360.0) % 360.0).toInt()) } ?: "--"
-        txtWindDetails.text = "Apparent Wind: $awsKnStr @ $awaDegStr\nTrue Wind: $twsKnStr @ $twdDegStr"
+        txtWindDetails.text = getString(R.string.nautical_sh_wind_details_fmt, awsKnStr, awaDegStr, twsKnStr, twdDegStr)
 
         // 5. AIS Feed
         val aisManager = NauticalPlugin.getInstance()?.aisManager
@@ -144,7 +144,12 @@ class SensorHealthBottomSheet : BaseNauticalBottomSheet() {
 
         badgeAis.text = if (isAisActive) "OK" else "STANDBY"
         badgeAis.setTextColor(ContextCompat.getColor(requireContext(), if (isAisActive) R.color.color_ok else R.color.color_warning))
-        txtAisDetails.text = "Active Targets in Range: $aisCount\nDangerous CPA Targets: $dangerousAisCount • Feed: ${if (isAisActive) "Active" else "Standby"}"
+        txtAisDetails.text = getString(
+                R.string.nautical_sh_ais_details_fmt,
+                aisCount,
+                dangerousAisCount,
+                getString(if (isAisActive) R.string.nautical_sh_feed_active else R.string.nautical_sh_feed_standby)
+            )
 
         // 6. Signal K / Server Multiplexer
         val serverIp = app.settings.NAUTICAL_SERVER_IP.get()
@@ -153,36 +158,38 @@ class SensorHealthBottomSheet : BaseNauticalBottomSheet() {
 
         when (state.connectionStatus) {
             ConnectionStatus.CONNECTED -> {
-                badgeServer.text = "CONNECTED"
+                badgeServer.text = getString(R.string.nautical_cockpit_conn_connected).uppercase()
                 badgeServer.setTextColor(ContextCompat.getColor(requireContext(), R.color.color_ok))
             }
             ConnectionStatus.CONNECTING -> {
-                badgeServer.text = "CONNECTING"
+                badgeServer.text = getString(R.string.nautical_cockpit_conn_connecting).uppercase()
                 badgeServer.setTextColor(ContextCompat.getColor(requireContext(), R.color.color_warning))
             }
             ConnectionStatus.STALE -> {
-                badgeServer.text = "STALE"
+                badgeServer.text = getString(R.string.nautical_cockpit_conn_stale).uppercase()
                 badgeServer.setTextColor(ContextCompat.getColor(requireContext(), R.color.color_warning))
             }
             ConnectionStatus.DISCONNECTED, ConnectionStatus.UNAUTHORIZED -> {
-                badgeServer.text = "OFFLINE"
+                badgeServer.text = getString(R.string.nautical_cockpit_conn_disconnected).uppercase()
                 badgeServer.setTextColor(ContextCompat.getColor(requireContext(), R.color.text_color_negative))
             }
         }
-        val serverLatency = if (state.connectionStatus == ConnectionStatus.CONNECTED) "42 ms" else "--"
-        txtServerDetails.text = "Endpoint: $endpoint\nRound-Trip Latency: $serverLatency • Protocol: Signal K / WebSocket"
+        // Real round-trip latency telemetry is not wired yet; never show a
+        // fabricated number to the operator.
+        val serverLatency = "--"
+        txtServerDetails.text = getString(R.string.nautical_sh_server_details_fmt, endpoint, serverLatency)
     }
 
     private fun setHealthBadge(badge: TextView, ageMs: Long, hasValue: Boolean) {
         val ctx = context ?: return
         if (!hasValue || ageMs < 0 || ageMs > 5000) {
-            badge.text = "LOST / OFFLINE"
+            badge.text = getString(R.string.nautical_sh_badge_lost)
             badge.setTextColor(ContextCompat.getColor(ctx, R.color.text_color_negative))
         } else if (ageMs > 2000) {
-            badge.text = "DELAYED (${ageMs / 1000}s)"
+            badge.text = getString(R.string.nautical_sh_badge_delayed_fmt, ageMs / 1000)
             badge.setTextColor(ContextCompat.getColor(ctx, R.color.color_warning))
         } else {
-            badge.text = "OK (${ageMs}ms)"
+            badge.text = getString(R.string.nautical_sh_badge_ok_fmt, ageMs)
             badge.setTextColor(ContextCompat.getColor(ctx, R.color.color_ok))
         }
     }
