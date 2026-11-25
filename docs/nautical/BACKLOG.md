@@ -316,3 +316,48 @@ this decision: the backend poll error string is now localized
   sailing-maneuver, anchoring, leeway and alarm vocabularies. Full
   native-speaker review of all four locales remains recommended for
   safety-critical terms.
+
+## Session log 2026-11-26 (afternoon): UI/UX audit + honesty batch 1
+
+Full audit of the nautical UI surfaces (58 layouts, 389 Kotlin files;
+focus on pilot sheet, polar workflow, VHF, advanced settings, cockpit).
+Batch 1 (landed this commit) fixes operator-honesty and i18n defects:
+
+- PolarRecorderBottomSheet: "Stop & Save" showed a success toast but the
+  recorded points lived only in the fragment and were silently discarded
+  on dismiss. Now: points and recording flag live in a process-level
+  PolarScatterStore (survives sheet dismissal, resumes on reopen), and
+  save writes a real CSV (twa_deg,boatspeed_kn) to app external files,
+  toasting the actual file name. Sample recording used the APPARENT wind
+  angle mislabeled as TWA; now uses MarineState.trueWindAngle. Recording
+  toasts were hardcoded English; resourced (el/es/de/fr too).
+- NauticalVhfBottomSheet: removed the "25W/1W" and "DUAL WATCH" toggles.
+  They sent communication.vhf.power / .dualWatch deltas the receive-only
+  backend ignores — controls pretending to command a radio we cannot
+  command (same principle as the standing receive-only decision).
+- Pilot sheet: maneuver confirmation labels ("Target: X°", "SLIDE TO
+  ...") were hardcoded and untranslatable; resourced with 4-locale
+  translations. Touch-lock toggle state was session-local (resets on
+  every sheet open); now persists to
+  NAUTICAL_LOCK_TOUCH_DURING_MANEUVERS. STOP button double-fired
+  (own listener + toggle-group listener both called stopNavigation and
+  speakMode twice); dedicated listener removed.
+- NauticalAdvancedSettingsBottomSheet: tab labels ("Tuning", "Limits",
+  "Env", "Pypilot") hardcoded; resourced with translations.
+- PolarConfigViewModel: wizard recommendation texts were hardcoded
+  English strings; recommendation flow now emits resource IDs
+  (formatted via app context), fragment localizes on display.
+
+Known remaining UX findings (next batches):
+- Polar wizard still auto-skips steps with fabricated metadata
+  (setEngineOff(true)/setSensorsCalibrated(true)/profile
+  "OsmAnd-Polar-1" hardwired in handleNext) — the wizard collects no
+  user data and uploads a zero-filled heatmap to the server,
+  potentially overwriting a real polar. Remove or wire real inputs.
+- PolarConfigViewModel.downloadPolars downloads then discards the body.
+- VHF channel designations ("Coast Guard Maritime Safety Broadcasts",
+  "Marine VHF Channel %s") remain hardcoded English in code.
+- Pilot sheet badge uses btn_active_light + white text regardless of
+  nightMode; updateUi restyles it on every telemetry tick.
+- 14 secondary maneuver buttons are individually referenced and wired;
+  a data-driven list would shrink the sheet.

@@ -55,8 +55,8 @@ class PolarConfigViewModel : ViewModel() {
     private val _qualityScore = MutableStateFlow(0)
     val qualityScore: StateFlow<Int> = _qualityScore.asStateFlow()
 
-    private val _recommendation = MutableStateFlow("Ensure engine is off and instruments are calibrated.")
-    val recommendation: StateFlow<String> = _recommendation.asStateFlow()
+    private val _recommendation = MutableStateFlow(net.osmand.plus.R.string.nautical_polar_wizard_step1_desc)
+    val recommendation: StateFlow<Int> = _recommendation.asStateFlow()
 
     init {
         initHeatmap()
@@ -84,7 +84,7 @@ class PolarConfigViewModel : ViewModel() {
 
     private fun checkPrerequisites() {
         if (_engineOff.value && _sensorsCalibrated.value) {
-            _recommendation.value = "Prerequisites met. Ready to set profile metadata."
+            _recommendation.value = net.osmand.plus.R.string.nautical_polar_wizard_prerequisites_met
         }
     }
 
@@ -229,10 +229,11 @@ class PolarConfigViewModel : ViewModel() {
             .filter { it.sampleCount < 3 }
             .minByOrNull { abs(it.tws - currentTws) + abs(it.twa - currentTwa) }
 
-        if (emptyCell != null) {
-            _recommendation.value = "Adjust TWA to ${emptyCell.twa.toInt()}° to fill TWS ${emptyCell.tws}"
+        val app = net.osmand.plus.plugins.nautical.NauticalPlugin.getInstance()?.application
+        if (emptyCell != null && app != null) {
+            _recommendation.value = app.getString(net.osmand.plus.R.string.nautical_polar_wizard_adjust_fmt, emptyCell.twa.toInt(), emptyCell.tws)
         } else {
-            _recommendation.value = "All primary polar cells populated. Great sailing!"
+            _recommendation.value = net.osmand.plus.R.string.nautical_polar_wizard_all_cells
         }
     }
 }

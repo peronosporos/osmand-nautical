@@ -70,38 +70,7 @@
                     android:textColor="?android:attr/textColorPrimary"
                     android:gravity="center" />
 
-                <!-- Badges Row: Power, Dual Watch, Status -->
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center"
-                    android:layout_marginTop="12dp">
 
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btn_vhf_power_toggle"
-                        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                        android:layout_width="wrap_content"
-                        android:layout_height="48dp"
-                        android:minHeight="48dp"
-                        android:text="@string/nautical_vhf_25w_high"
-                        android:textSize="12sp"
-                        android:paddingStart="12dp"
-                        android:paddingEnd="12dp"
-                        android:layout_marginEnd="8dp" />
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btn_vhf_dual_watch_toggle"
-                        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                        android:layout_width="wrap_content"
-                        android:layout_height="48dp"
-                        android:minHeight="48dp"
-                        android:text="@string/nautical_vhf_dual_watch_off"
-                        android:textSize="12sp"
-                        android:paddingStart="12dp"
-                        android:paddingEnd="12dp" />
-
-                </LinearLayout>
 
                 <TextView
                     android:id="@+id/txt_vhf_reception_status"

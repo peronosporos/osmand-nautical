@@ -252,6 +252,7 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
 
         lockBtn.setOnClickListener {
             isCourseLocked = !isCourseLocked
+            app.settings.NAUTICAL_LOCK_TOUCH_DURING_MANEUVERS.set(isCourseLocked)
             updateLockButton()
             val msgRes = if (isCourseLocked) R.string.nautical_touch_lock_active else R.string.nautical_lock_course
             app.showToastMessage(msgRes)
@@ -267,13 +268,8 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
             it.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
         }
 
-        // Mode Switcher Listeners
-        stopBtn.setOnClickListener {
-            autopilot.stopNavigation()
-            speakMode("STANDBY")
-            it.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
-            syncUiWithState()
-        }
+        // stopBtn is handled by modeToggleGroup.addOnButtonCheckedListener below
+        // (a dedicated listener would double-fire stopNavigation + speakMode).
 
         btnDisengageStandby.setOnClickListener {
             autopilot.stopNavigation()
@@ -573,10 +569,10 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
     private fun updateEmbeddedTargetDisplay() {
         val target = pendingTargetHeading
         if (target != null) {
-            txtManeuverTargetDeg.text = String.format(Locale.US, "Target: %d°", target)
-            embeddedSlideConfirm.label = String.format(Locale.US, "SLIDE TO %s (%d°)", pendingManeuverTitle.uppercase(Locale.US), target)
+            txtManeuverTargetDeg.text = app.getString(R.string.nautical_pilot_target_fmt, target)
+            embeddedSlideConfirm.label = app.getString(R.string.nautical_pilot_slide_to_fmt, pendingManeuverTitle.uppercase(Locale.US), target)
         } else {
-            embeddedSlideConfirm.label = String.format(Locale.US, "SLIDE TO %s", pendingManeuverTitle.uppercase(Locale.US))
+            embeddedSlideConfirm.label = app.getString(R.string.nautical_pilot_slide_to, pendingManeuverTitle.uppercase(Locale.US))
         }
     }
 

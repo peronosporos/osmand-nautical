@@ -177,4 +177,19 @@
     <string name="nautical_vhf_url_missing">La URL del backend VHF no está configurada.</string>
     <string name="nautical_vhf_widget_label">Mando VHF</string>
     <string name="nautical_vhf_working_ch_fmt">VHF %1$s</string>
+    <string name="nautical_pilot_target_fmt">Objetivo: %1$d°</string>
+    <string name="nautical_pilot_slide_to_fmt">DESLIZA PARA %1$s (%2$d°)</string>
+    <string name="nautical_pilot_slide_to">DESLIZA PARA %1$s</string>
+    <string name="nautical_polar_rec_toast_started">Grabación de rendimiento polar iniciada</string>
+    <string name="nautical_polar_rec_toast_paused">Grabación polar en pausa</string>
+    <string name="nautical_polar_saved_local_fmt">Muestras polares guardadas en %1$s</string>
+    <string name="nautical_advanced_tab_tuning">Ajuste</string>
+    <string name="nautical_advanced_tab_limits">Límites</string>
+    <string name="nautical_advanced_tab_env">Entorno</string>
+    <string name="nautical_advanced_tab_pypilot">Pypilot</string>
+    <string name="nautical_polar_wizard_prerequisites_met">Prerrequisitos cumplidos. Listo para configurar los metadatos del perfil.</string>
+    <string name="nautical_polar_wizard_adjust_fmt">Ajusta el TWA a %1$d° para cubrir TWS %2$s</string>
+    <string name="nautical_polar_wizard_all_cells">Todas las celdas polares primarias están completas. ¡Buen viento!</string>
+    <string name="nautical_polar_save_failed">Grabación polar fallida</string>
+
 </resources>

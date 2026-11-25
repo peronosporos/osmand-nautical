@@ -177,4 +177,19 @@
     <string name="nautical_vhf_url_missing">Die VHF-Backend-URL ist nicht konfiguriert.</string>
     <string name="nautical_vhf_widget_label">VHF-Befehl</string>
     <string name="nautical_vhf_working_ch_fmt">VHF %1$s</string>
+    <string name="nautical_pilot_target_fmt">Ziel: %1$d°</string>
+    <string name="nautical_pilot_slide_to_fmt">ZIEHEN FÜR %1$s (%2$d°)</string>
+    <string name="nautical_pilot_slide_to">ZIEHEN FÜR %1$s</string>
+    <string name="nautical_polar_rec_toast_started">Polar-Leistungsprotokollierung gestartet</string>
+    <string name="nautical_polar_rec_toast_paused">Polar-Aufzeichnung pausiert</string>
+    <string name="nautical_polar_saved_local_fmt">Polardaten gespeichert in %1$s</string>
+    <string name="nautical_advanced_tab_tuning">Feineinstellung</string>
+    <string name="nautical_advanced_tab_limits">Grenzwerte</string>
+    <string name="nautical_advanced_tab_env">Umgebung</string>
+    <string name="nautical_advanced_tab_pypilot">Pypilot</string>
+    <string name="nautical_polar_wizard_prerequisites_met">Voraussetzungen erfüllt. Bereit zur Profilmetadata.</string>
+    <string name="nautical_polar_wizard_adjust_fmt">TWA auf %1$d° ändern, um TWS %2$s zu füllen</string>
+    <string name="nautical_polar_wizard_all_cells">Alle primären Polartzellen sind gefüllt. Gute Fahrt!</string>
+    <string name="nautical_polar_save_failed">Polar konnte nicht gespeichert werden</string>
+
 </resources>

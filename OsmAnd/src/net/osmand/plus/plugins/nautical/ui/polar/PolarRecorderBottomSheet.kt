@@ -21,10 +21,21 @@ import net.osmand.plus.plugins.nautical.ui.widgets.BaseNauticalBottomSheet
 import java.util.Locale
 import kotlin.math.abs
 
+/**
+ * Process-level store so recorded scatter points and the recording flag
+ * survive dismissing the sheet (previously the "save" toasted success while
+ * the data was silently discarded with the fragment).
+ */
+internal object PolarScatterStore {
+    var isRecording = false
+    val points = mutableListOf<Pair<Double, Double>>()
+    const val MAX_POINTS = 500
+}
+
 class PolarRecorderBottomSheet : BaseNauticalBottomSheet() {
 
     private var isRecording = false
-    private val recordedScatterPoints = mutableListOf<Pair<Double, Double>>()
+    private val recordedScatterPoints = PolarScatterStore.points
     private var showScatterOverlay = true
 
     override fun createMenuItems(savedInstanceState: Bundle?) {
@@ -96,15 +107,17 @@ class PolarRecorderBottomSheet : BaseNauticalBottomSheet() {
 
         btnToggleRec.setOnClickListener {
             isRecording = !isRecording
+            PolarScatterStore.isRecording = isRecording
             updateRecordingUi()
-            val msg = if (isRecording) "Polar performance recording started" else "Recording paused"
-            NauticalPlugin.getInstance()?.application?.showToastMessage(msg)
+            val msgRes = if (isRecording) R.string.nautical_polar_rec_toast_started else R.string.nautical_polar_rec_toast_paused
+            NauticalPlugin.getInstance()?.application?.showToastMessage(msgRes)
         }
 
         btnStopAndSave.setOnClickListener {
             isRecording = false
+            PolarScatterStore.isRecording = false
             updateRecordingUi()
-            NauticalPlugin.getInstance()?.application?.showToastMessage(R.string.nautical_polar_saved_success)
+            saveScatterToCsv()
         }
 
         btnDownload.setOnClickListener {
@@ -145,12 +158,12 @@ class PolarRecorderBottomSheet : BaseNauticalBottomSheet() {
         viewLifecycleOwner.lifecycleScope.launch {
             NauticalPlugin.engine?.marineStateFlow?.collectLatest { state ->
                 if (isRecording) {
-                    val twa = state.windDirectionApparent?.let { Math.toDegrees(it) }
+                    val twa = state.trueWindAngle?.let { Math.toDegrees(it) } // TRUE wind angle (was AWA)
                     val sog = state.speedOverGround?.let { it * 1.94384 } // m/s to knots
                     if (twa != null && sog != null && sog > 0.5) {
                         val boundedTwa = abs(twa % 360.0).let { if (it > 180.0) 360.0 - it else it }
                         recordedScatterPoints.add(Pair(boundedTwa, sog))
-                        if (recordedScatterPoints.size > 500) {
+                        if (recordedScatterPoints.size > PolarScatterStore.MAX_POINTS) {
                             recordedScatterPoints.removeAt(0)
                         }
                         txtSampleCount.text = getString(R.string.nautical_polar_samples_count, recordedScatterPoints.size)
@@ -162,8 +175,28 @@ class PolarRecorderBottomSheet : BaseNauticalBottomSheet() {
             }
         }
 
+        isRecording = PolarScatterStore.isRecording
         updateRecordingUi()
         items.add(BaseBottomSheetItem.Builder().setCustomView(customView).create())
+    }
+
+    private fun saveScatterToCsv() {
+        val app = NauticalPlugin.getInstance()?.application ?: return
+        if (recordedScatterPoints.isEmpty()) {
+            app.showToastMessage(R.string.nautical_polar_save_failed)
+            return
+        }
+        try {
+            val dir = app.getExternalFilesDir(null) ?: app.filesDir
+            val stamp = java.text.SimpleDateFormat("yyyyMMdd_HHmmss", java.util.Locale.US).format(java.util.Date())
+            val file = java.io.File(dir, "polar_scatter_$stamp.csv")
+            file.writeText("twa_deg,boatspeed_kn\n" +
+                recordedScatterPoints.joinToString("\n") { "%.1f,%.2f".format(java.util.Locale.US, it.first, it.second) })
+            app.showToastMessage(app.getString(R.string.nautical_polar_saved_local_fmt, file.name))
+        } catch (e: Exception) {
+            net.osmand.PlatformUtil.getLog(PolarRecorderBottomSheet::class.java).error("Nautical: polar scatter save failed: ${e.message}")
+            app.showToastMessage(R.string.nautical_polar_save_failed)
+        }
     }
 
     companion object {

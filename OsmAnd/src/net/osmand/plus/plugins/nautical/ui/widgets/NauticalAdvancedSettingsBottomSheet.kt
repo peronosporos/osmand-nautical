@@ -95,12 +95,12 @@ class NauticalAdvancedSettingsBottomSheet : BaseNauticalBottomSheet() {
         val containerEnv = customView.findViewById<View>(R.id.container_env)
         val containerPypilot = customView.findViewById<View>(R.id.container_pypilot)
 
-        tabLayout.addTab(tabLayout.newTab().setText("Tuning"))
-        tabLayout.addTab(tabLayout.newTab().setText("Limits"))
-        tabLayout.addTab(tabLayout.newTab().setText("Env"))
+        tabLayout.addTab(tabLayout.newTab().setText(R.string.nautical_advanced_tab_tuning))
+        tabLayout.addTab(tabLayout.newTab().setText(R.string.nautical_advanced_tab_limits))
+        tabLayout.addTab(tabLayout.newTab().setText(R.string.nautical_advanced_tab_env))
 
         if (plugin.capabilityManager?.capabilities?.value?.hasAutopilot == true) {
-            tabLayout.addTab(tabLayout.newTab().setText("Pypilot"))
+            tabLayout.addTab(tabLayout.newTab().setText(R.string.nautical_advanced_tab_pypilot))
         }
 
         tabLayout.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {

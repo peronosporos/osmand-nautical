@@ -32,9 +32,6 @@ class NauticalVhfBottomSheet : BaseNauticalBottomSheet() {
         NauticalPlugin.getInstance()?.vhfManager?.playReplay(item)
     }
 
-    private var isHighPower = true
-    private var isDualWatch = false
-
     override fun createMenuItems(savedInstanceState: Bundle?) {
         addTitleItem(getString(R.string.nautical_vhf_title))
 
@@ -44,8 +41,6 @@ class NauticalVhfBottomSheet : BaseNauticalBottomSheet() {
         val txtActiveChannel = customView.findViewById<TextView>(R.id.txt_vhf_active_channel)
         val txtDesignation = customView.findViewById<TextView>(R.id.txt_vhf_channel_designation)
         val txtStatus = customView.findViewById<TextView>(R.id.txt_vhf_reception_status)
-        val btnPower = customView.findViewById<MaterialButton>(R.id.btn_vhf_power_toggle)
-        val btnDualWatch = customView.findViewById<MaterialButton>(R.id.btn_vhf_dual_watch_toggle)
         val btnLiveAudio = customView.findViewById<MaterialButton>(R.id.btn_toggle_live_audio)
         val btnSelectChannel = customView.findViewById<MaterialButton>(R.id.btn_select_channel)
         val btnDistressScript = customView.findViewById<MaterialButton>(R.id.btn_vhf_distress_script)
@@ -80,18 +75,6 @@ class NauticalVhfBottomSheet : BaseNauticalBottomSheet() {
                 }
                 .setNegativeButton(R.string.shared_string_cancel, null)
                 .show()
-        }
-
-        btnPower.setOnClickListener {
-            isHighPower = !isHighPower
-            btnPower.text = if (isHighPower) "25W HIGH" else "1W LOW"
-            NauticalPlugin.engine?.sendDelta("communication.vhf.power", if (isHighPower) "25W" else "1W")
-        }
-
-        btnDualWatch.setOnClickListener {
-            isDualWatch = !isDualWatch
-            btnDualWatch.text = if (isDualWatch) "DUAL WATCH: ON (CH 16)" else "DUAL WATCH: OFF"
-            NauticalPlugin.engine?.sendDelta("communication.vhf.dualWatch", isDualWatch)
         }
 
         btnLiveAudio.setOnClickListener {
