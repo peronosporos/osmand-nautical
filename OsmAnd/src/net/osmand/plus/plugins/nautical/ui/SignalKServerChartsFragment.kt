@@ -172,9 +172,10 @@ class SignalKServerChartsFragment : BaseOsmAndFragment() {
 
         fun bind(chart: SignalKChart, onEnable: (SignalKChart) -> Unit, onDelete: (SignalKChart) -> Unit) {
             txtName.text = chart.name ?: chart.identifier
-            txtDesc.text = getString(
+            val ctx = txtDesc.context
+            txtDesc.text = ctx.getString(
                 R.string.nautical_server_charts_meta_fmt,
-                chart.type ?: getString(R.string.nautical_server_charts_raster),
+                chart.type ?: ctx.getString(R.string.nautical_server_charts_raster),
                 chart.minzoom ?: 0,
                 chart.maxzoom ?: 18
             )

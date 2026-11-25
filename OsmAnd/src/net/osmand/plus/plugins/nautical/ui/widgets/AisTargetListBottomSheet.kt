@@ -412,14 +412,14 @@ class AisTargetListBottomSheet : BaseBottomSheetDialogFragment() {
                             if (m > 0) "${h}h ${m}m" else "${h}h"
                         }
                     }
-                    txtCpaTcpa.text = "CPA: $cpaStr in $tcpaStr"
+                    txtCpaTcpa.text = txtCpaTcpa.context.getString(R.string.nautical_cpa_in_fmt, cpaStr, tcpaStr)
                 } else if (tcpaSec != null && tcpaSec <= 0) {
-                    txtCpaTcpa.text = "CPA: $cpaStr (Past)"
+                    txtCpaTcpa.text = txtCpaTcpa.context.getString(R.string.nautical_cpa_past_fmt, cpaStr)
                 } else {
-                    txtCpaTcpa.text = "CPA: $cpaStr"
+                    txtCpaTcpa.text = txtCpaTcpa.context.getString(R.string.nautical_cpa_fmt, cpaStr)
                 }
             } else {
-                txtCpaTcpa.text = "CPA: --"
+                txtCpaTcpa.text = txtCpaTcpa.context.getString(R.string.nautical_cpa_none)
             }
 
             // 6. Quick Mute Toggle Button

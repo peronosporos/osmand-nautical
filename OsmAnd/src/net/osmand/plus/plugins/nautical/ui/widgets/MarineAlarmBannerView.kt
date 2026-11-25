@@ -255,7 +255,7 @@ class MarineAlarmBannerView @JvmOverloads constructor(
 
         // SNOOZE (2m) Button (48dp minimum touch target)
         snoozeButton = TextView(context).apply {
-            text = "SNOOZE (2m)"
+            text = context.getString(R.string.nautical_alarm_snooze)
             setTextColor(Color.WHITE)
             textSize = 12f
             typeface = android.graphics.Typeface.DEFAULT_BOLD
@@ -291,7 +291,7 @@ class MarineAlarmBannerView @JvmOverloads constructor(
 
         // ACKNOWLEDGE Button (48dp minimum touch target)
         ackButton = TextView(context).apply {
-            text = "ACKNOWLEDGE"
+            text = context.getString(R.string.nautical_alarm_acknowledge)
             setTextColor(Color.WHITE)
             textSize = 12f
             typeface = android.graphics.Typeface.DEFAULT_BOLD
@@ -447,12 +447,12 @@ class MarineAlarmBannerView @JvmOverloads constructor(
 
             val msg = mobNotification?.message?.takeIf { it.isNotEmpty() }
                 ?: context.getString(R.string.nautical_mob_label).let {
-                    if (it.isNotEmpty() && !it.startsWith("nautical_")) "$it! Immediate rescue maneuver required." else "MOB alert active! Immediate rescue maneuver required."
+                    if (it.isNotEmpty() && !it.startsWith("nautical_")) context.getString(R.string.nautical_alarm_mob_msg_fmt, it) else context.getString(R.string.nautical_alarm_mob_msg)
                 }
 
             return ActiveAlarmInfo(
                 key = SignalKPaths.NOTIFICATIONS_MOB,
-                title = "MAN OVERBOARD (MOB)",
+                title = context.getString(R.string.nautical_alarm_title_mob),
                 message = msg,
                 location = loc,
                 priority = 1
@@ -463,15 +463,15 @@ class MarineAlarmBannerView @JvmOverloads constructor(
         val isCollision = apm.isCollisionAlarmActive.value || apm.activeCriticalNotifications.value.containsKey(SignalKPaths.NOTIFICATIONS_COLLISION_RISK)
         if (isCollision && !apm.isAlarmSnoozed(SignalKPaths.NOTIFICATIONS_COLLISION_RISK) && !apm.isAlarmSnoozed("collision") && !apm.isAlarmSnoozed("collision_danger")) {
             val threat = apm.threatDetails.value
-            val vesselName = threat?.vesselName ?: state?.threatName ?: "Dangerous Vessel"
+            val vesselName = threat?.vesselName ?: state?.threatName ?: context.getString(R.string.nautical_alarm_vessel_dangerous)
             val cpaNm = threat?.cpaNm ?: 0.0
             val tcpaSec = threat?.tcpaSeconds ?: 0.0
             val tcpaMin = (tcpaSec / 60.0).toInt().coerceAtLeast(1)
 
             val desc = if (cpaNm > 0.0 && tcpaSec > 0.0) {
-                "AIS COLLISION RISK: $vesselName (CPA ${String.format(Locale.US, "%.1f", cpaNm)} NM in ${tcpaMin}m)"
+                context.getString(R.string.nautical_alarm_collision_fmt, vesselName, String.format(Locale.US, "%.1f", cpaNm), tcpaMin)
             } else {
-                "AIS COLLISION RISK: $vesselName (Immediate collision danger!)"
+                context.getString(R.string.nautical_alarm_collision_immediate_fmt, vesselName)
             }
 
             // Find target vessel location
@@ -483,7 +483,7 @@ class MarineAlarmBannerView @JvmOverloads constructor(
 
             return ActiveAlarmInfo(
                 key = SignalKPaths.NOTIFICATIONS_COLLISION_RISK,
-                title = "AIS COLLISION RISK",
+                title = context.getString(R.string.nautical_alarm_title_collision),
                 message = desc,
                 location = targetPos,
                 priority = 2
@@ -510,15 +510,15 @@ class MarineAlarmBannerView @JvmOverloads constructor(
 
             when {
                 lowerKey.contains("depth") -> {
-                    title = "SHALLOW WATER DEPTH"
+                    title = context.getString(R.string.nautical_alarm_title_shallow)
                     location = ownLoc?.let { LatLon(it.latitude, it.longitude) }
                 }
                 lowerKey.contains("watchdog") -> {
-                    title = "SOLO WATCHDOG TIMEOUT"
+                    title = context.getString(R.string.nautical_alarm_title_watchdog)
                     location = ownLoc?.let { LatLon(it.latitude, it.longitude) }
                 }
                 lowerKey.contains("anchor") -> {
-                    title = "ANCHOR DRAG ALARM"
+                    title = context.getString(R.string.nautical_alarm_title_anchor)
                     val anchor = state?.anchor
                     val aLat = anchor?.latitude ?: anchor?.position?.latitude
                     val aLon = anchor?.longitude ?: anchor?.position?.longitude

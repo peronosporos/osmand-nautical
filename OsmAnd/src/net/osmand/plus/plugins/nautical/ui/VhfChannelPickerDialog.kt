@@ -58,7 +58,7 @@ class VhfChannelPickerDialog : DialogFragment() {
         // 1. Facility Presets (if detected in S-57 area)
         if (facilityChannels.isNotEmpty()) {
             val lblFacility = TextView(requireContext()).apply {
-                text = "Port & Facility Channels"
+                text = getString(R.string.nautical_vhf_facility_channels)
                 textSize = 12f
                 setTextColor(if (isNightVision) 0xFFFF8A80.toInt() else 0xFF666666.toInt())
                 setPadding(0, 0, 0, (4f * density).toInt())
@@ -71,7 +71,7 @@ class VhfChannelPickerDialog : DialogFragment() {
             }
             for (ch in facilityChannels.take(4)) {
                 val btn = MaterialButton(requireContext(), null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
-                    text = "Ch $ch"
+                    text = getString(R.string.nautical_vhf_ch_shortcode_fmt, ch)
                     minHeight = (48f * density).toInt()
                     textSize = 13f
                     val lp = LinearLayout.LayoutParams(0, (48f * density).toInt(), 1f).apply {
@@ -95,7 +95,7 @@ class VhfChannelPickerDialog : DialogFragment() {
 
         // 2. Standard Marine Presets Grid
         val lblPresets = TextView(requireContext()).apply {
-            text = "Quick Presets"
+            text = getString(R.string.nautical_vhf_quick_presets)
             textSize = 12f
             setTextColor(if (isNightVision) 0xFFFF8A80.toInt() else 0xFF666666.toInt())
             setPadding(0, 0, 0, (4f * density).toInt())

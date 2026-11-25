@@ -221,7 +221,7 @@ class NauticalCockpitHudView @JvmOverloads constructor(
 
     fun setVhfWorkingChannel(channel: String?) {
         if (!channel.isNullOrEmpty()) {
-            chipVhfChannel.text = "VHF $channel"
+            chipVhfChannel.text = chipVhfChannel.context.getString(R.string.nautical_vhf_working_ch_fmt, channel)
             chipVhfChannel.visibility = View.VISIBLE
         } else {
             chipVhfChannel.visibility = View.GONE

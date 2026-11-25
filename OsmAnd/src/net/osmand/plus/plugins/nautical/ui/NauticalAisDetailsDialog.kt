@@ -175,7 +175,7 @@ class NauticalAisDetailsDialog : BaseBottomSheetDialogFragment() {
             txtCpa.backgroundTintList = ColorStateList.valueOf(chipBgColor)
             txtCpa.setTextColor(Color.WHITE)
         } else {
-            txtCpa.text = "CPA: $na"
+            txtCpa.text = txtCpa.context.getString(R.string.nautical_cpa_fmt, na)
             txtCpa.background = null
             txtCpa.setTextColor(net.osmand.plus.utils.AndroidUtils.getColorFromAttr(requireContext(), android.R.attr.textColorSecondary))
         }
