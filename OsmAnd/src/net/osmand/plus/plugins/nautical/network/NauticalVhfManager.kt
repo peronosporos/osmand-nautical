@@ -134,7 +134,7 @@ class NauticalVhfManager(private val app: OsmandApplication) {
                         }
                     }
                 } else {
-                    _errorFlow.value = "Backend error: ${response.code}"
+                    _errorFlow.value = app.getString(R.string.nautical_vhf_backend_error_fmt, response.code)
                 }
             }
         } catch (e: Exception) {

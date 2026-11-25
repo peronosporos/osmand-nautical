@@ -231,3 +231,28 @@ settings XML, cockpit shell, and OsmAnd-convention conformance.
 
 With this, the agreed roadmap from the i18n breadth pass is fully closed:
 i18n (breadth + tail) done, a11y sweep done, themed-style conventions done.
+
+## Standing decision: VHF DSC / hailing scope (2026-11-25/26)
+
+Accepted proposal verdict after backend inspection (user pre-approved
+autonomous decision): **the VHF feature stays receive-only.** The connected
+backend exposes only GET /api/recordings (audio + transcripts), a live audio
+stream and replay; there is no DSC message source and no transmit path.
+Fabricating a DSC call log or transmit UI would present fake data to the
+operator, which this fork does not do (same principle as the removed
+fabricated 42 ms server-latency value). Hailing support remains limited to
+channel presets in the picker (Ch 16/13/12/14/06/72). If a future backend
+surfaces /api/dsc or similar, revisit then. The only user-visible change from
+this decision: the backend poll error string is now localized
+(nautical_vhf_backend_error_fmt).
+
+## Session log 2026-11-26 (early): layout-literal round 2 + VHF scope decision
+
+- 518108d: 44 real-text layout literals resourced across 9 layouts (AIS
+  target list MOB banner/SAR button, raster blend controls, sensor health
+  headers and initial detail lines, weather routing labels, AIS details
+  section, logbook stats, buddy empty hint, route summary empty/hazard/export
+  texts); checklist dynamic Progress line converted to tools:text.
+- This commit: VHF receive-only standing decision recorded; backend error
+  string localized.
+- CI: unit tests and full APK green on 518108d.

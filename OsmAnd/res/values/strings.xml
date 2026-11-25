@@ -1173,6 +1173,7 @@
     <string name="nautical_rs_legs_title">Passage Legs Breakdown</string>
     <string name="nautical_rs_no_plan">No Active Passage Plan</string>
     <string name="nautical_rs_no_plan_desc">Create a marine route to compute courses to steer, tidal current offsets, layline angles, and leg-by-leg passage schedules.</string>
+    <string name="nautical_vhf_backend_error_fmt">Backend error: %1$d</string>
     <string name="nautical_bridge_clearance_title">Bridge Clearance Badges</string>
     <string name="nautical_plugin_name">OsmAnd Nautical</string>
     <string name="grib_file_info_format">%1$s - %2$d KB</string>
