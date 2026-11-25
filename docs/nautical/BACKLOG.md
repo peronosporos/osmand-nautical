@@ -138,3 +138,42 @@ widget framework). Findings and resolution, per user decision:
 - Kept dormant: NauticalSetupWizardDialog (onboarding design pending).
 - Caveat: layer toggles apply at layer registration (map restart); reactive
   re-registration on preference change is a follow-up.
+
+## UI/UX audit (2026-11-25)
+
+Scope: all 61 nautical layouts, 159 UI-bearing Kotlin files, quick actions,
+settings XML, cockpit shell, and OsmAnd-convention conformance.
+
+### Fixed immediately (batch 1+2)
+- Dark-theme blindness in the full-screen Cockpit (shell + 5 pages keyed palette
+  only off night vision). New `CockpitScreenTheme.isDark()` also honors the app
+  theme via `DayNightHelper.isNightMode(ThemeUsageContext.APP)`.
+- i18n: radar control sheet (9 literals), Tool Center items (Sail Inventory,
+  Polar Manager) moved to resources; a11y strings added.
+- Accessibility: contentDescription added to interactive icon-only controls in
+  master telemetry, telemetry grid/item, reorder item, settings item, anchor
+  HUD, buddy list (drag handles, delete, settings, close, anchor icon).
+- System-bar insets: Cockpit shell now fits system windows (gesture nav,
+  notches).
+- 4 orphan layouts removed (network setup, data bottom sheet, pilot telemetry
+  grid, reefs control item).
+
+### Remaining debt (queued, not fixed this pass)
+- i18n breadth: ~100+ user-visible literal strings across ~18 files. Worst
+  known: SignalKServerChartsFragment (error/empty states, 7),
+  SignalKServerRoutesFragment (11), NauticalChecklistDialogFragment (15),
+  PolarWizardFragment (15), SensorHealthBottomSheet (13), checklist dialogs,
+  cockpit strings (~80). A dedicated pass needed; SignalK path constants in
+  engine files are NOT user-visible and must not be "fixed".
+- Accessibility breadth: ~10 more layouts with icon-only controls still missing
+  descriptions (AIS details cards, compass wizard, boat AI chat, maneuvers
+  sheet, checklist dialog, telemetry tiles).
+- Conventions: several sheets build titles/bodies programmatically with hard
+  colors instead of themed styles; `getThemedContext` used in only 12 of 63 ui/
+  files. HUD layouts carry a handful of hard-coded colors (start-line,
+  MFD, cockpit strip, AIS details) — safe under night vision but not under
+  pure app dark theme.
+- Layer toggles need map restart (registration-time gating); follow-up:
+  reactive re-registration on preference change.
+- OsmAnd-native widget/hud deep review (widget ids vs WidgetRegistry labels,
+  quick action categories) still to be done systematically.

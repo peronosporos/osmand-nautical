@@ -54,6 +54,9 @@ class CockpitShellActivity : AppCompatActivity() {
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setBackgroundColor(bg)
+            // Full-screen cockpit: keep pages clear of system bars
+            // (gesture nav, notches) without extra inset plumbing.
+            fitsSystemWindows = true
         }
 
         // MOB emergency strip: hidden by default, shown with maximum contrast on isMobActive.

@@ -14,7 +14,7 @@
         android:layout_height="24dp"
         android:src="@drawable/ic_action_item_move"
         android:layout_marginEnd="8dp"
-        tools:ignore="ContentDescription" />
+        tools:ignore="ContentDescription"  android:contentDescription="@string/nautical_a11y_drag_handle"/>
 
     <ImageView
         android:id="@+id/icon"
@@ -37,6 +37,6 @@
         android:layout_height="24dp"
         android:src="@drawable/ic_action_delete_dark"
         android:padding="4dp"
-        tools:ignore="ContentDescription" />
+        tools:ignore="ContentDescription"  android:contentDescription="@string/shared_string_delete"/>
 
 </LinearLayout>

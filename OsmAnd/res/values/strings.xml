@@ -940,6 +940,8 @@
     <string name="nautical_radar_rain_fmt">Rain Clutter: %1$s</string>
     <string name="nautical_radar_opacity_fmt">Layer Opacity: %1$s</string>
     <string name="nautical_polar_manager">Polar Manager</string>
+    <string name="nautical_a11y_drag_handle">Drag handle</string>
+    <string name="nautical_a11y_toggle_visibility">Toggle visibility</string>
     <string name="nautical_bridge_clearance_title">Bridge Clearance Badges</string>
     <string name="nautical_plugin_name">OsmAnd Nautical</string>
     <string name="grib_file_info_format">%1$s - %2$d KB</string>
