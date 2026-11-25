@@ -87,7 +87,7 @@ class NauticalToolCenterDialog : BaseMaterialBottomSheetDialogFragment() {
                 BaseSettingsFragment.showInstance(requireActivity(), SettingsScreenType.AIS_SETTINGS)
                 dismiss()
             },
-            ToolItem("Sail Inventory", R.drawable.ic_action_sail_boat_dark) {
+            ToolItem(getString(R.string.nautical_sail_inventory_title), R.drawable.ic_action_sail_boat_dark) {
                 BaseSettingsFragment.showInstance(requireActivity(), SettingsScreenType.SAIL_INVENTORY)
                 dismiss()
             },
@@ -95,7 +95,7 @@ class NauticalToolCenterDialog : BaseMaterialBottomSheetDialogFragment() {
                 net.osmand.plus.views.mapwidgets.widgets.NauticalCompassWizardDialog.show(this)
                 dismiss()
             },
-            ToolItem("Polar Manager", R.drawable.ic_action_settings) {
+            ToolItem(getString(R.string.nautical_polar_manager), R.drawable.ic_action_settings) {
                 BaseSettingsFragment.showInstance(requireActivity(), SettingsScreenType.SAILING_PERFORMANCE_SETTINGS)
                 dismiss()
             },

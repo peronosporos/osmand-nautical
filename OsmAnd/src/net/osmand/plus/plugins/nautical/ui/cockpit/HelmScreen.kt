@@ -42,7 +42,7 @@ class HelmScreen(private val app: OsmandApplication) : CockpitScreen {
     private lateinit var tackBanner: TextView
 
     override fun onCreateView(context: Context, parent: ViewGroup): View {
-        val night = NauticalPlugin.isNightVision(app)
+        val night = CockpitScreenTheme.isDark(app)
         val bg = if (night) 0xFF101010.toInt() else 0xFFF5F5F5.toInt()
         val fg = if (night) 0xFFDDDDDD.toInt() else 0xFF202020.toInt()
         val accent = if (night) 0xFFFF6E00.toInt() else 0xFF0B57D0.toInt()

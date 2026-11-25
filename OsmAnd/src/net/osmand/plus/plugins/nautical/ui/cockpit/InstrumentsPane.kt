@@ -43,7 +43,7 @@ class InstrumentsPane(private val app: OsmandApplication) : CockpitScreen {
     private lateinit var connectionValue: TextView
 
     override fun onCreateView(context: Context, parent: ViewGroup): View {
-        val night = NauticalPlugin.isNightVision(app)
+        val night = CockpitScreenTheme.isDark(app)
         val bg = if (night) NIGHT_BG else DAY_BG
         val fg = if (night) NIGHT_FG else DAY_FG
         val accent = if (night) NIGHT_ACCENT else DAY_ACCENT
@@ -109,7 +109,7 @@ class InstrumentsPane(private val app: OsmandApplication) : CockpitScreen {
     }
 
     private fun render(state: MarineState) {
-        val night = NauticalPlugin.isNightVision(app)
+        val night = CockpitScreenTheme.isDark(app)
         val accent = if (night) NIGHT_ACCENT else DAY_ACCENT
         val staleColor = if (night) 0xFFF9A825.toInt() else 0xFF795548.toInt()
         val staleMark = app.getString(R.string.nautical_cockpit_stale)

@@ -931,6 +931,15 @@
     <string name="nautical_polar_target_vmg">Polar Rose &amp; Target VMG</string>
     <string name="nautical_forward_depth_clearance_title">Forward Depth Clearance</string>
     <string name="nautical_radar_overlay">Radar Overlay</string>
+    <string name="nautical_radar_controls_title">Marine Radar Controls</string>
+    <string name="nautical_radar_gain_fmt">Gain: %1$s</string>
+    <string name="nautical_radar_gain_auto_fmt">Gain: AUTO (%1$s)</string>
+    <string name="nautical_radar_mode_auto">AUTO</string>
+    <string name="nautical_radar_mode_manual">MANUAL</string>
+    <string name="nautical_radar_sea_fmt">Sea Clutter: %1$s</string>
+    <string name="nautical_radar_rain_fmt">Rain Clutter: %1$s</string>
+    <string name="nautical_radar_opacity_fmt">Layer Opacity: %1$s</string>
+    <string name="nautical_polar_manager">Polar Manager</string>
     <string name="nautical_bridge_clearance_title">Bridge Clearance Badges</string>
     <string name="nautical_plugin_name">OsmAnd Nautical</string>
     <string name="grib_file_info_format">%1$s - %2$d KB</string>

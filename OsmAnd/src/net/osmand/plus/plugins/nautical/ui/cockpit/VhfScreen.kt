@@ -37,7 +37,7 @@ class VhfScreen(private val app: OsmandApplication) : CockpitScreen {
     private var listContainer: LinearLayout? = null
 
     override fun onCreateView(context: Context, parent: ViewGroup): View {
-        val night = NauticalPlugin.isNightVision(app)
+        val night = CockpitScreenTheme.isDark(app)
         val bg = if (night) 0xFF101010.toInt() else 0xFFF5F5F5.toInt()
         val fg = if (night) 0xFFDDDDDD.toInt() else 0xFF202020.toInt()
 
@@ -84,7 +84,7 @@ class VhfScreen(private val app: OsmandApplication) : CockpitScreen {
 
     private fun renderTargets() {
         val container = listContainer ?: return
-        val night = NauticalPlugin.isNightVision(app)
+        val night = CockpitScreenTheme.isDark(app)
         val fg = if (night) 0xFFDDDDDD.toInt() else 0xFF202020.toInt()
         val targets = NauticalPlugin.getInstance()
             ?.aisManager

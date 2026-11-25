@@ -41,7 +41,7 @@ class RadarControlBottomSheet : BaseBottomSheetDialogFragment() {
 
         // Title
         val titleView = TextView(context).apply {
-            text = "Marine Radar Controls"
+            text = getString(R.string.nautical_radar_controls_title)
             textSize = 18f
             typeface = android.graphics.Typeface.DEFAULT_BOLD
             setTextColor(if (isNight) 0xFFFF1744.toInt() else 0xFF212121.toInt())
@@ -51,6 +51,11 @@ class RadarControlBottomSheet : BaseBottomSheetDialogFragment() {
         root.addView(titleView)
 
         // 1. Gain Control (Auto / Manual)
+        fun gainText(v: Int, auto: Boolean): String = getString(
+            if (auto) R.string.nautical_radar_gain_auto_fmt else R.string.nautical_radar_gain_fmt,
+            "$v%"
+        )
+
         val autoGain = app.settings.NAUTICAL_RADAR_AUTO_GAIN.get()
         val gainVal = app.settings.NAUTICAL_RADAR_GAIN.get()
 
@@ -60,14 +65,14 @@ class RadarControlBottomSheet : BaseBottomSheetDialogFragment() {
             layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
         }
         val gainLabel = TextView(context).apply {
-            text = "Gain: ${if (autoGain) "AUTO ($gainVal%)" else "$gainVal%"}"
+            text = gainText(gainVal, autoGain)
             layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
             setTextColor(if (isNight) 0xFFFF8A80.toInt() else 0xFF424242.toInt())
         }
         gainRow.addView(gainLabel)
 
         val btnAutoGain = MaterialButton(context, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
-            text = if (autoGain) "MANUAL" else "AUTO"
+            text = getString(if (autoGain) R.string.nautical_radar_mode_manual else R.string.nautical_radar_mode_auto)
             minHeight = (48 * resources.displayMetrics.density).toInt()
             setTextColor(if (isNight) 0xFFFF1744.toInt() else 0xFF00E5FF.toInt())
         }
@@ -89,7 +94,7 @@ class RadarControlBottomSheet : BaseBottomSheetDialogFragment() {
             addOnChangeListener { _, value, _ ->
                 val v = value.toInt()
                 app.settings.NAUTICAL_RADAR_GAIN.set(v)
-                gainLabel.text = "Gain: $v%"
+                gainLabel.text = gainText(v, app.settings.NAUTICAL_RADAR_AUTO_GAIN.get())
                 app.osmandMap?.refreshMap()
             }
         }
@@ -98,17 +103,17 @@ class RadarControlBottomSheet : BaseBottomSheetDialogFragment() {
         btnAutoGain.setOnClickListener {
             val nextAuto = !app.settings.NAUTICAL_RADAR_AUTO_GAIN.get()
             app.settings.NAUTICAL_RADAR_AUTO_GAIN.set(nextAuto)
-            btnAutoGain.text = if (nextAuto) "MANUAL" else "AUTO"
+            btnAutoGain.text = getString(if (nextAuto) R.string.nautical_radar_mode_manual else R.string.nautical_radar_mode_auto)
             sliderGain.isEnabled = !nextAuto
             val currentG = app.settings.NAUTICAL_RADAR_GAIN.get()
-            gainLabel.text = "Gain: ${if (nextAuto) "AUTO ($currentG%)" else "$currentG%"}"
+            gainLabel.text = gainText(currentG, nextAuto)
             app.osmandMap?.refreshMap()
         }
 
         // 2. Sea Clutter (0-100%)
         val seaVal = app.settings.NAUTICAL_RADAR_SEA_CLUTTER.get()
         val seaLabel = TextView(context).apply {
-            text = "Sea Clutter: $seaVal%"
+            text = getString(R.string.nautical_radar_sea_fmt, "$seaVal%")
             setTextColor(if (isNight) 0xFFFF8A80.toInt() else 0xFF424242.toInt())
         }
         root.addView(seaLabel)
@@ -127,7 +132,7 @@ class RadarControlBottomSheet : BaseBottomSheetDialogFragment() {
             addOnChangeListener { _, value, _ ->
                 val v = value.toInt()
                 app.settings.NAUTICAL_RADAR_SEA_CLUTTER.set(v)
-                seaLabel.text = "Sea Clutter: $v%"
+                seaLabel.text = getString(R.string.nautical_radar_sea_fmt, "$v%")
                 app.osmandMap?.refreshMap()
             }
         }
@@ -136,7 +141,7 @@ class RadarControlBottomSheet : BaseBottomSheetDialogFragment() {
         // 3. Rain Clutter (0-100%)
         val rainVal = app.settings.NAUTICAL_RADAR_RAIN_CLUTTER.get()
         val rainLabel = TextView(context).apply {
-            text = "Rain Clutter: $rainVal%"
+            text = getString(R.string.nautical_radar_rain_fmt, "$rainVal%")
             setTextColor(if (isNight) 0xFFFF8A80.toInt() else 0xFF424242.toInt())
         }
         root.addView(rainLabel)
@@ -155,7 +160,7 @@ class RadarControlBottomSheet : BaseBottomSheetDialogFragment() {
             addOnChangeListener { _, value, _ ->
                 val v = value.toInt()
                 app.settings.NAUTICAL_RADAR_RAIN_CLUTTER.set(v)
-                rainLabel.text = "Rain Clutter: $v%"
+                rainLabel.text = getString(R.string.nautical_radar_rain_fmt, "$v%")
                 app.osmandMap?.refreshMap()
             }
         }
@@ -164,7 +169,7 @@ class RadarControlBottomSheet : BaseBottomSheetDialogFragment() {
         // 4. Layer Opacity (20-100%)
         val opacityVal = app.settings.NAUTICAL_RADAR_OPACITY.get()
         val opacityLabel = TextView(context).apply {
-            text = "Layer Opacity: $opacityVal%"
+            text = getString(R.string.nautical_radar_opacity_fmt, "$opacityVal%")
             setTextColor(if (isNight) 0xFFFF8A80.toInt() else 0xFF424242.toInt())
         }
         root.addView(opacityLabel)
@@ -183,7 +188,7 @@ class RadarControlBottomSheet : BaseBottomSheetDialogFragment() {
             addOnChangeListener { _, value, _ ->
                 val v = value.toInt()
                 app.settings.NAUTICAL_RADAR_OPACITY.set(v)
-                opacityLabel.text = "Layer Opacity: $v%"
+                opacityLabel.text = getString(R.string.nautical_radar_opacity_fmt, "$v%")
                 app.osmandMap?.refreshMap()
             }
         }

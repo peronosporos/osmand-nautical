@@ -40,7 +40,7 @@ class NavScreen(private val app: OsmandApplication) : CockpitScreen {
     private lateinit var etaValue: TextView
 
     override fun onCreateView(context: Context, parent: ViewGroup): View {
-        val night = NauticalPlugin.isNightVision(app)
+        val night = CockpitScreenTheme.isDark(app)
         val bg = if (night) 0xFF101010.toInt() else 0xFFF5F5F5.toInt()
         val fg = if (night) 0xFFDDDDDD.toInt() else 0xFF202020.toInt()
         val accent = if (night) 0xFFFF6E00.toInt() else 0xFF0B57D0.toInt()
@@ -118,7 +118,7 @@ class NavScreen(private val app: OsmandApplication) : CockpitScreen {
             var text = String.format(Locale.US, "%.1f nm / %.0f°", distNm, bearing)
             if (state.isGpsStale()) {
                 text = "$text (${app.getString(R.string.nautical_cockpit_stale)})"
-                distValue.setTextColor(if (NauticalPlugin.isNightVision(app)) 0xFFF9A825.toInt() else 0xFF795548.toInt())
+                distValue.setTextColor(if (CockpitScreenTheme.isDark(app)) 0xFFF9A825.toInt() else 0xFF795548.toInt())
             }
             distValue.text = text
         } else {

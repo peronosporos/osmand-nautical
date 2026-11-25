@@ -47,7 +47,7 @@ class CockpitShellActivity : AppCompatActivity() {
 
         registry = CockpitScreenRegistry.createDefault(app)
 
-        val night = NauticalPlugin.isNightVision(app)
+        val night = CockpitScreenTheme.isDark(app)
         val bg = if (night) 0xFF101010.toInt() else 0xFFF5F5F5.toInt()
         val fg = if (night) 0xFFDDDDDD.toInt() else 0xFF202020.toInt()
 
@@ -80,7 +80,7 @@ class CockpitShellActivity : AppCompatActivity() {
         val engine = NauticalPlugin.engine
         if (app.settings.NAUTICAL_COCKPIT_MODE_STRIP_ENABLED.get() && engine?.dataBroker != null) {
             val strip = NauticalCockpitHudView(this)
-            strip.applyNightVision(NauticalPlugin.isNightVision(app))
+            strip.applyNightVision(CockpitScreenTheme.isDark(app))
             root.addView(
                 strip,
                 LinearLayout.LayoutParams(
