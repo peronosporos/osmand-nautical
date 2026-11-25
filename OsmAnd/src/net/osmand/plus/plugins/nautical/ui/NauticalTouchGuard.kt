@@ -29,7 +29,7 @@ class NauticalTouchGuard(
         onUnlock?.invoke()
         
         val context = view.context
-        Toast.makeText(context, context.getString(R.string.nautical_control_unlocked), Toast.LENGTH_SHORT).show()
+        (context.applicationContext as? net.osmand.plus.OsmandApplication)?.showToastMessage(context.getString(R.string.nautical_control_unlocked))
         
         // Use a more robust way to trigger the view's own touch handling
         // by resetting the state and letting the next MOVE/UP events pass through

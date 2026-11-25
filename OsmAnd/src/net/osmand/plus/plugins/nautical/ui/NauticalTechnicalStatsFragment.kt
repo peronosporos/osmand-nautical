@@ -12,6 +12,7 @@ import androidx.appcompat.app.AlertDialog
 import android.widget.EditText
 import android.text.InputType
 import androidx.lifecycle.lifecycleScope
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import net.osmand.plus.R
@@ -91,7 +92,7 @@ class NauticalTechnicalStatsFragment : BaseOsmAndFragment() {
         layout.addView(flagInput)
         layout.addView(portInput)
         
-        AlertDialog.Builder(context)
+        MaterialAlertDialogBuilder(context)
             .setTitle(R.string.nautical_vessel_flag_port)
             .setView(layout)
             .setPositiveButton(R.string.shared_string_save) { _, _ ->
@@ -124,7 +125,7 @@ class NauticalTechnicalStatsFragment : BaseOsmAndFragment() {
         layout.addView(lengthInput)
         layout.addView(beamInput)
         
-        AlertDialog.Builder(context)
+        MaterialAlertDialogBuilder(context)
             .setTitle(R.string.nautical_vessel_dimensions)
             .setView(layout)
             .setPositiveButton(R.string.shared_string_save) { _, _ ->
@@ -145,7 +146,7 @@ class NauticalTechnicalStatsFragment : BaseOsmAndFragment() {
             inputType = if (path == "mmsi") InputType.TYPE_CLASS_NUMBER else InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
         }
         
-        AlertDialog.Builder(context)
+        MaterialAlertDialogBuilder(context)
             .setTitle(label)
             .setView(input)
             .setPositiveButton(R.string.shared_string_save) { _, _ ->

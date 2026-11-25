@@ -15,6 +15,7 @@ import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -108,7 +109,7 @@ class MarineRasterManagerFragment : BaseOsmAndFragment() {
     }
 
     private fun showDeleteDialog(file: File) {
-        AlertDialog.Builder(requireContext())
+        MaterialAlertDialogBuilder(requireContext())
             .setTitle(R.string.raster_manager_title)
             .setMessage(R.string.raster_delete_confirm)
             .setPositiveButton(R.string.shared_string_delete) { _, _ ->

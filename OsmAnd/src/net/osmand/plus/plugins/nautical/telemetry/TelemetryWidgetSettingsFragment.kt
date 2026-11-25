@@ -11,6 +11,7 @@ import androidx.appcompat.app.AlertDialog
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import net.osmand.plus.R
 import net.osmand.plus.base.BaseOsmAndFragment
 import net.osmand.plus.utils.AndroidUtils
@@ -268,7 +269,7 @@ class TelemetryWidgetSettingsFragment : BaseOsmAndFragment() {
 
         updateList(chipAll)
 
-        dialog = AlertDialog.Builder(themedCtx)
+        dialog = MaterialAlertDialogBuilder(themedCtx)
             .setView(dialogView)
             .setNegativeButton(R.string.shared_string_cancel, null)
             .create()

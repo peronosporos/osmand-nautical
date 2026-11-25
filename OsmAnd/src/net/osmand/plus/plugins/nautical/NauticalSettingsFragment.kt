@@ -11,6 +11,7 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.preference.Preference
 import androidx.preference.PreferenceCategory
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import net.osmand.plus.R as OsmAndR
@@ -453,7 +454,7 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
         discoveryManager = manager
         manager.startDiscovery()
 
-        val builder = AlertDialog.Builder(requireContext())
+        val builder = MaterialAlertDialogBuilder(requireContext())
         builder.setTitle(OsmAndR.string.nautical_discovery_searching)
         
         val adapter = android.widget.ArrayAdapter<String>(requireContext(), android.R.layout.simple_list_item_1)
@@ -1043,7 +1044,7 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
                 return true
             }
             "nautical_clear_data" -> {
-                AlertDialog.Builder(requireContext())
+                MaterialAlertDialogBuilder(requireContext())
                     .setTitle(OsmAndR.string.nautical_clear_marine_data)
                     .setMessage(OsmAndR.string.nautical_clear_data_confirm)
                     .setPositiveButton(OsmAndR.string.shared_string_delete) { _, _ ->

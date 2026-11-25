@@ -14,6 +14,7 @@ import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import net.osmand.plus.R
@@ -90,7 +91,7 @@ class NauticalBuddyListFragment : BaseOsmAndFragment() {
     }
 
     private fun confirmDeleteBuddy(mmsi: Int) {
-        AlertDialog.Builder(requireContext())
+        MaterialAlertDialogBuilder(requireContext())
             .setMessage(getString(R.string.nautical_buddy_delete_confirm, mmsi))
             .setPositiveButton(R.string.shared_string_delete) { _, _ ->
                 NauticalPlugin.getInstance()?.aisManager?.removeBuddy(mmsi)
@@ -109,7 +110,7 @@ class NauticalBuddyListFragment : BaseOsmAndFragment() {
         }
         val names = aisObjects.map { it.shipName ?: getString(R.string.nautical_mmsi_fmt, it.mmsi) }.toTypedArray()
         
-        AlertDialog.Builder(context)
+        MaterialAlertDialogBuilder(context)
             .setTitle(R.string.nautical_add_to_buddies)
             .setItems(names) { _, which ->
                 val selected = aisObjects[which]
@@ -131,7 +132,7 @@ class NauticalBuddyListFragment : BaseOsmAndFragment() {
             inputType = InputType.TYPE_CLASS_NUMBER
         }
         
-        AlertDialog.Builder(context)
+        MaterialAlertDialogBuilder(context)
             .setTitle(R.string.nautical_add_to_buddies)
             .setView(input)
             .setPositiveButton(R.string.shared_string_add) { _, _ ->

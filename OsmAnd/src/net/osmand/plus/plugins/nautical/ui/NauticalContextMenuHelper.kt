@@ -4,6 +4,7 @@ import android.content.Intent
 import android.net.Uri
 import androidx.appcompat.app.AlertDialog
 import androidx.lifecycle.lifecycleScope
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.launchIn
@@ -144,7 +145,7 @@ class NauticalContextMenuHelper(private val app: OsmandApplication) {
                     setListener { uiAdapter, _, item, _ ->
                         val options = arrayOf<CharSequence>("2", "5", "10", "20", "30", "60")
                         val isNight = app.daynightHelper.isNightMode(app.settings.APPLICATION_MODE.get(), ThemeUsageContext.OVER_MAP)
-                        AlertDialog.Builder(mapActivity, if (isNight) R.style.OsmandDarkTheme else R.style.OsmandLightTheme)
+                        MaterialAlertDialogBuilder(mapActivity, if (isNight) R.style.OsmandDarkTheme else R.style.OsmandLightTheme)
                             .setTitle(R.string.nautical_look_ahead_time)
                             .setItems(options) { _, which ->
                                 val mins = options[which].toString().toInt()
@@ -331,7 +332,7 @@ class NauticalContextMenuHelper(private val app: OsmandApplication) {
                         app.getString(R.string.nautical_ctx_pi_option_2),
                         app.getString(R.string.nautical_ctx_pi_clear)
                     )
-                    androidx.appcompat.app.AlertDialog.Builder(mapActivity)
+                    MaterialAlertDialogBuilder(mapActivity)
                         .setTitle(R.string.nautical_ctx_pi_dialog_title)
                         .setItems(options) { _, which ->
                             val plugin = net.osmand.plus.plugins.PluginsHelper.getPlugin(NauticalPlugin::class.java)
@@ -433,7 +434,7 @@ class NauticalContextMenuHelper(private val app: OsmandApplication) {
                             mapActivity.getString(R.string.nautical_pin_update_location),
                             mapActivity.getString(R.string.nautical_pin_clear_action)
                         )
-                        androidx.appcompat.app.AlertDialog.Builder(mapActivity)
+                        MaterialAlertDialogBuilder(mapActivity)
                             .setTitle(R.string.nautical_pin_options_title)
                             .setItems(options) { _, which ->
                                 if (which == 0) {
@@ -474,7 +475,7 @@ class NauticalContextMenuHelper(private val app: OsmandApplication) {
                             mapActivity.getString(R.string.nautical_pin_update_location),
                             mapActivity.getString(R.string.nautical_pin_clear_action)
                         )
-                        androidx.appcompat.app.AlertDialog.Builder(mapActivity)
+                        MaterialAlertDialogBuilder(mapActivity)
                             .setTitle(R.string.nautical_pin_options_title)
                             .setItems(options) { _, which ->
                                 if (which == 0) {
@@ -539,7 +540,7 @@ class NauticalContextMenuHelper(private val app: OsmandApplication) {
                             "Electronic Bearing Line & Variable Range Marker:\n\n• Range: %.2f NM (%.0f meters)\n• Bearing: %03.1f° True (%03.1f° Magnetic)",
                             distNm, distMeters, trueBearing, magBearing
                         )
-                        androidx.appcompat.app.AlertDialog.Builder(mapActivity)
+                        MaterialAlertDialogBuilder(mapActivity)
                             .setTitle(R.string.nautical_ebl_vrm)
                             .setMessage(msg)
                             .setPositiveButton(R.string.shared_string_ok, null)
@@ -617,7 +618,7 @@ class NauticalContextMenuHelper(private val app: OsmandApplication) {
                         app.getString(R.string.nautical_autopilot_mode_wind)
                     )
                     val values = arrayOf("standby", "track", "wind")
-                    AlertDialog.Builder(mapActivity)
+                    MaterialAlertDialogBuilder(mapActivity)
                         .setTitle(R.string.nautical_autopilot)
                         .setItems(options) { _, which ->
                             autopilot?.setAutopilotMode(values[which])
@@ -786,15 +787,15 @@ class NauticalContextMenuHelper(private val app: OsmandApplication) {
                             val ids = routes.keys.toTypedArray()
 
                             app.runInUIThread {
-                                AlertDialog.Builder(mapActivity)
+                                MaterialAlertDialogBuilder(mapActivity)
                                     .setTitle(R.string.nautical_select_server_route)
                                     .setItems(names) { _, which: Int ->
                                         val routeId = ids[which]
                                         val selectedRoute = routes[routeId]
 
-                                        AlertDialog.Builder(mapActivity)
-                                            .setTitle(selectedRoute?.name ?: "Route Actions")
-                                            .setItems(arrayOf("Load Route", "Update with Active", "Delete from Server")) { _, actionIdx ->
+                                        MaterialAlertDialogBuilder(mapActivity)
+                                            .setTitle(selectedRoute?.name ?: app.getString(R.string.nautical_route_actions))
+                                            .setItems(arrayOf(app.getString(R.string.nautical_route_action_load), app.getString(R.string.nautical_route_action_update), app.getString(R.string.nautical_route_action_delete))) { _, actionIdx ->
                                                 pluginScope.launch {
                                                     when (actionIdx) {
                                                         0 -> {
@@ -841,7 +842,7 @@ class NauticalContextMenuHelper(private val app: OsmandApplication) {
                         if (!charts.isNullOrEmpty()) {
                             val names = charts.values.map { (it.name ?: it.identifier) as CharSequence }.toTypedArray()
                             app.runInUIThread {
-                                AlertDialog.Builder(mapActivity)
+                                MaterialAlertDialogBuilder(mapActivity)
                                     .setTitle(R.string.nautical_server_charts)
                                     .setItems(names) { _, which ->
                                         val chart = charts.values.toList()[which]
@@ -1007,7 +1008,7 @@ class NauticalContextMenuHelper(private val app: OsmandApplication) {
                             loadSelection(items[0].second)
                         } else if (items.size > 1) {
                             val names = items.map { it.first as CharSequence }.toTypedArray()
-                            AlertDialog.Builder(mapActivity)
+                            MaterialAlertDialogBuilder(mapActivity)
                                 .setTitle(R.string.nautical_select_route_from_gpx)
                                 .setItems(names) { _, which: Int ->
                                     loadSelection(items[which].second)

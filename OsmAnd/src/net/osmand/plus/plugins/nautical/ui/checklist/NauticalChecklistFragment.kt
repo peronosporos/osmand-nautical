@@ -16,6 +16,7 @@ import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import net.osmand.plus.R
@@ -138,7 +139,7 @@ class NauticalChecklistFragment : BaseOsmAndFragment() {
             hint = getString(R.string.nautical_checklist_name)
         }
         
-        AlertDialog.Builder(requireContext())
+        MaterialAlertDialogBuilder(requireContext())
             .setTitle(R.string.nautical_new_checklist)
             .setView(input)
             .setPositiveButton(R.string.shared_string_add) { _, _ ->
@@ -163,7 +164,7 @@ class NauticalChecklistFragment : BaseOsmAndFragment() {
             hint = getString(R.string.nautical_item_title)
         }
         
-        AlertDialog.Builder(requireContext())
+        MaterialAlertDialogBuilder(requireContext())
             .setTitle(R.string.nautical_add_item)
             .setView(input)
             .setPositiveButton(R.string.shared_string_add) { _, _ ->
@@ -184,7 +185,7 @@ class NauticalChecklistFragment : BaseOsmAndFragment() {
     }
 
     private fun showDeleteChecklistDialog(checklistId: String) {
-        AlertDialog.Builder(requireContext())
+        MaterialAlertDialogBuilder(requireContext())
             .setMessage(R.string.nautical_delete_checklist_confirm)
             .setPositiveButton(R.string.shared_string_delete) { _, _ ->
                 localChecklists.remove(checklistId)
@@ -199,7 +200,7 @@ class NauticalChecklistFragment : BaseOsmAndFragment() {
     }
 
     private fun showDeleteItemDialog(checklistId: String, checklist: SignalKChecklist, itemIndex: Int) {
-        AlertDialog.Builder(requireContext())
+        MaterialAlertDialogBuilder(requireContext())
             .setMessage(R.string.nautical_delete_item_confirm)
             .setPositiveButton(R.string.shared_string_delete) { _, _ ->
                 val updatedItems = checklist.items.toMutableList()

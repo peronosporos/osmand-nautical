@@ -11,6 +11,7 @@ import androidx.core.view.AccessibilityDelegateCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.accessibility.AccessibilityNodeInfoCompat
 import androidx.core.view.isVisible
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.*
 import net.osmand.PlatformUtil
 import net.osmand.plus.R
@@ -219,7 +220,7 @@ class TacticalHudView @JvmOverloads constructor(
         val contexts = VesselContext.entries
         val items = contexts.map { it.name.replace("_", " ") }.toTypedArray()
         
-        androidx.appcompat.app.AlertDialog.Builder(mapActivity)
+        MaterialAlertDialogBuilder(mapActivity)
             .setTitle(R.string.nautical_vessel_context_label)
             .setItems(items) { _, which ->
                 val selected = contexts[which]

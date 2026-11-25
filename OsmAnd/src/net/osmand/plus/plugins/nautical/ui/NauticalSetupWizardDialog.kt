@@ -7,6 +7,7 @@ import android.view.ViewGroup
 import android.widget.*
 import androidx.appcompat.app.AlertDialog
 import androidx.lifecycle.lifecycleScope
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import net.osmand.plus.R
@@ -148,7 +149,7 @@ class NauticalSetupWizardDialog : BaseMaterialBottomSheetDialogFragment() {
         val manager = SignalKDiscoveryManager(requireContext())
         manager.startDiscovery()
 
-        val builder = AlertDialog.Builder(requireContext())
+        val builder = MaterialAlertDialogBuilder(requireContext())
         builder.setTitle(R.string.nautical_discovery_searching)
 
         val adapter = ArrayAdapter<String>(requireContext(), android.R.layout.simple_list_item_1)

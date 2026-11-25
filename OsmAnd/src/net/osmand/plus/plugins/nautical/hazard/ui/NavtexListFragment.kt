@@ -10,6 +10,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.launch
 import net.osmand.plus.R
 import net.osmand.plus.base.BaseOsmAndFragment
@@ -81,7 +82,7 @@ class NavtexListFragment : BaseOsmAndFragment() {
             getString(R.string.navtex_max_distance)
         )
 
-        androidx.appcompat.app.AlertDialog.Builder(requireContext())
+        MaterialAlertDialogBuilder(requireContext())
             .setTitle(R.string.navtex_details_group)
             .setItems(items) { _, which ->
                 when (which) {
@@ -100,7 +101,7 @@ class NavtexListFragment : BaseOsmAndFragment() {
         val subjects = NavtexSubject.entries.toTypedArray()
         val names = subjects.map { it.name.replace("_", " ") }.toTypedArray()
         
-        androidx.appcompat.app.AlertDialog.Builder(requireContext())
+        MaterialAlertDialogBuilder(requireContext())
             .setTitle(R.string.navtex_subject_filter)
             .setItems(names) { _, which ->
                 viewModel.setSubjectFilter(subjects[which])
@@ -115,7 +116,7 @@ class NavtexListFragment : BaseOsmAndFragment() {
         val distances = arrayOf("10 km", "50 km", "100 km", "500 km", "Any")
         val values = arrayOf(10.0, 50.0, 100.0, 500.0, null)
         
-        androidx.appcompat.app.AlertDialog.Builder(requireContext())
+        MaterialAlertDialogBuilder(requireContext())
             .setTitle(R.string.navtex_max_distance)
             .setItems(distances) { _, which ->
                 viewModel.setMaxDistance(values[which])

@@ -12,6 +12,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.createSavedStateHandle
 import androidx.lifecycle.lifecycleScope
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.button.MaterialButtonToggleGroup
 import kotlinx.coroutines.flow.collectLatest
@@ -169,7 +170,7 @@ class NmeaPlaybackControlBottomSheet : BaseMaterialBottomSheetDialogFragment() {
         }
 
         val names = files.map { it.name }.toTypedArray()
-        androidx.appcompat.app.AlertDialog.Builder(requireContext())
+        MaterialAlertDialogBuilder(requireContext())
             .setTitle(R.string.nautical_replay_select_file)
             .setItems(names) { _, which ->
                 viewModel.startPlayback(files[which])

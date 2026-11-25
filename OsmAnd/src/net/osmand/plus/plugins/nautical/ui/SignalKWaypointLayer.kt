@@ -1,5 +1,6 @@
 package net.osmand.plus.plugins.nautical.ui
 
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import android.graphics.*
 import kotlinx.coroutines.*
 import net.osmand.data.LatLon
@@ -165,8 +166,8 @@ class SignalKWaypointLayer(private val mapActivity: MapActivity) : OsmandMapLaye
     }
 
     private fun confirmDeleteWaypoint(id: String, name: String) {
-        androidx.appcompat.app.AlertDialog.Builder(mapActivity)
-            .setMessage("Are you sure you want to delete waypoint '$name' from server?")
+        MaterialAlertDialogBuilder(mapActivity)
+            .setMessage(mapActivity.getString(R.string.nautical_confirm_delete_waypoint_fmt, name))
             .setPositiveButton(R.string.shared_string_delete) { _, _ ->
                 layerScope.launch {
                     try {

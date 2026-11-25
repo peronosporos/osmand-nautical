@@ -8,6 +8,7 @@ import android.view.View
 import android.widget.*
 import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.DialogFragment
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.button.MaterialButton
 import net.osmand.plus.R
 import net.osmand.plus.plugins.nautical.NauticalPlugin
@@ -163,7 +164,7 @@ class VhfChannelPickerDialog : DialogFragment() {
         input.hint = getString(R.string.nautical_vhf_picker_hint)
         mainLayout.addView(input)
 
-        val dialog = AlertDialog.Builder(requireContext())
+        val dialog = MaterialAlertDialogBuilder(requireContext())
             .setTitle(R.string.nautical_vhf_picker_title)
             .setView(mainLayout)
             .setPositiveButton(R.string.shared_string_set) { _, _ ->
@@ -171,7 +172,7 @@ class VhfChannelPickerDialog : DialogFragment() {
                 if (validateChannel(channel)) {
                     tuneChannel(channel)
                 } else {
-                    context?.let { Toast.makeText(it, getString(R.string.nautical_vhf_error_invalid), Toast.LENGTH_SHORT).show() }
+                    app?.showToastMessage(R.string.nautical_vhf_error_invalid)
                 }
             }
             .setNegativeButton(R.string.shared_string_cancel, null)

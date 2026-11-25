@@ -10,6 +10,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.lifecycle.lifecycleScope
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
@@ -377,7 +378,7 @@ class GribManagerBottomSheet : BottomSheetDialogFragment() {
             }
             
             holder.deleteBtn.setOnClickListener {
-                androidx.appcompat.app.AlertDialog.Builder(requireContext())
+                MaterialAlertDialogBuilder(requireContext())
                     .setTitle(R.string.shared_string_delete)
                     .setMessage(getString(R.string.nautical_delete_grib_confirm, file.name))
                     .setPositiveButton(R.string.shared_string_yes) { _, _ ->

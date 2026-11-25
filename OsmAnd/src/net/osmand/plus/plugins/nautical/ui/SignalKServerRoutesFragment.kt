@@ -11,6 +11,7 @@ import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.button.MaterialButton
 import kotlinx.coroutines.launch
 import net.osmand.PlatformUtil
@@ -95,8 +96,8 @@ class SignalKServerRoutesFragment : BaseOsmAndFragment() {
     }
 
     private fun confirmDeleteRoute(id: String, route: SignalKRoute) {
-        AlertDialog.Builder(requireContext())
-            .setMessage("Are you sure you want to delete route '${route.name ?: id}' from Signal K server?")
+        MaterialAlertDialogBuilder(requireContext())
+            .setMessage(getString(R.string.nautical_confirm_delete_route_fmt, route.name ?: id))
             .setPositiveButton(R.string.shared_string_delete) { _, _ ->
                 lifecycleScope.launch {
                     try {

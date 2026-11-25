@@ -10,6 +10,7 @@ import android.widget.TextView
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import net.osmand.plus.R
@@ -123,8 +124,8 @@ class PolarEditorFragment : Fragment() {
         }
 
         val names = polars.keys.toTypedArray()
-        androidx.appcompat.app.AlertDialog.Builder(requireContext())
-            .setTitle("Select Polar Profile")
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(R.string.nautical_polar_select_profile)
             .setItems(names) { _, which ->
                 performanceViewModel.switchActivePolar(names[which])
             }
@@ -190,7 +191,7 @@ class PolarEditorFragment : Fragment() {
             "$tws ${getString(R.string.nautical_unit_knots)}$suffix"
         }.toTypedArray()
         
-        androidx.appcompat.app.AlertDialog.Builder(requireContext())
+        MaterialAlertDialogBuilder(requireContext())
             .setTitle(R.string.nautical_tws)
             .setItems(names) { _, which ->
                 viewModel.setSelectedTws(twsOptions[which])

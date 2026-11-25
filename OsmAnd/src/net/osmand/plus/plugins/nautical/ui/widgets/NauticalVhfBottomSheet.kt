@@ -12,6 +12,7 @@ import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.button.MaterialButton
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -69,7 +70,7 @@ class NauticalVhfBottomSheet : BaseNauticalBottomSheet() {
 
         btnSelectChannel.setOnClickListener {
             val items = ALL_VHF_CHANNELS.map { "CH ${it.first} • ${it.second}" }.toTypedArray()
-            androidx.appcompat.app.AlertDialog.Builder(requireContext())
+            MaterialAlertDialogBuilder(requireContext())
                 .setTitle(R.string.nautical_vhf_title)
                 .setItems(items) { _, which ->
                     val (num, _) = ALL_VHF_CHANNELS[which]

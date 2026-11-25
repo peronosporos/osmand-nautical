@@ -14,6 +14,7 @@ import com.google.android.material.button.MaterialButton
 import com.google.android.material.button.MaterialButtonToggleGroup
 import com.google.android.material.textfield.TextInputEditText
 import androidx.lifecycle.repeatOnLifecycle
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
@@ -265,7 +266,7 @@ class AnchorWatchDialogFragment : BaseMaterialBottomSheetDialogFragment() {
         }
 
         btnDisarmAnchor?.setOnClickListener {
-            androidx.appcompat.app.AlertDialog.Builder(requireContext())
+            MaterialAlertDialogBuilder(requireContext())
                 .setTitle(R.string.nautical_disarm_anchor_watch)
                 .setMessage(R.string.nautical_confirm_disarm_anchor)
                 .setPositiveButton(R.string.shared_string_yes) { _, _ ->

@@ -11,6 +11,7 @@ import android.widget.TextView
 import androidx.appcompat.view.ContextThemeWrapper
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.github.mikephil.charting.charts.LineChart
 import com.github.mikephil.charting.data.Entry
 import com.github.mikephil.charting.data.LineData
@@ -335,7 +336,7 @@ class NauticalAdvancedSettingsBottomSheet : BaseNauticalBottomSheet() {
         customView.findViewById<Button>(R.id.btn_stop_rudder_calib)?.setOnClickListener { autopilot.stopPypilotCalibration("rudder") }
         customView.findViewById<Button>(R.id.btn_select_pypilot_profile)?.setOnClickListener {
             val profiles = arrayOf("Default", "Slow", "Heavy", "Racing")
-            androidx.appcompat.app.AlertDialog.Builder(requireContext()).setTitle(R.string.nautical_pypilot_profile)
+            MaterialAlertDialogBuilder(requireContext()).setTitle(R.string.nautical_pypilot_profile)
                 .setItems(profiles) { _, which -> autopilot.setPypilotProfile(profiles[which]) }.show()
         }
 

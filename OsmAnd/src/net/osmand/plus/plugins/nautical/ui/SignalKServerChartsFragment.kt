@@ -13,6 +13,7 @@ import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.button.MaterialButton
 import kotlinx.coroutines.launch
 import net.osmand.plus.R
@@ -113,7 +114,7 @@ class SignalKServerChartsFragment : BaseOsmAndFragment() {
     }
 
     private fun confirmDeleteChart(chart: SignalKChart) {
-        AlertDialog.Builder(requireContext())
+        MaterialAlertDialogBuilder(requireContext())
             .setMessage(getString(R.string.nautical_chart_delete_confirm, chart.name ?: chart.identifier))
             .setPositiveButton(R.string.shared_string_delete) { _, _ ->
                 lifecycleScope.launch {

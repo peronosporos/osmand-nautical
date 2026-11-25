@@ -10,6 +10,7 @@ import android.widget.Button
 import android.widget.FrameLayout
 import android.widget.TextView
 import androidx.core.view.isVisible
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import net.osmand.plus.R
 import net.osmand.plus.plugins.nautical.mob.viewmodel.MobUiState
 import net.osmand.plus.plugins.nautical.mob.viewmodel.MobViewModel
@@ -156,7 +157,7 @@ class MobEmergencyHeaderView @JvmOverloads constructor(
             context.getString(R.string.nautical_scharnow_turn)
         )
 
-        androidx.appcompat.app.AlertDialog.Builder(context)
+        MaterialAlertDialogBuilder(context)
             .setTitle(R.string.nautical_sar_maneuvers)
             .setItems(options) { _, which ->
                 when (which) {

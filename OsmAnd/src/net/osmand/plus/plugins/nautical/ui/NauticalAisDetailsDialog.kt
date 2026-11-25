@@ -17,6 +17,7 @@ import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.button.MaterialButton
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.launch
@@ -309,13 +310,13 @@ class NauticalAisDetailsDialog : BaseBottomSheetDialogFragment() {
         view.findViewById<MaterialButton>(R.id.btn_set_cpa_alarm).setOnClickListener {
             val ctx = requireContext()
             val input = android.widget.EditText(ctx).apply {
-                hint = "Distance in NM"
+                hint = ctx.getString(R.string.nautical_cpa_threshold_hint)
                 inputType = android.text.InputType.TYPE_CLASS_NUMBER or android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL
                 setText(plugin?.aisCpaWarningDistance?.get()?.toString() ?: "1.0")
             }
-            androidx.appcompat.app.AlertDialog.Builder(ctx)
+            MaterialAlertDialogBuilder(ctx)
                 .setTitle(R.string.nautical_set_cpa_alarm)
-                .setMessage("Enter CPA alert threshold for ${ais.shipName ?: "MMSI ${ais.mmsi}"}:")
+                .setMessage(ctx.getString(R.string.nautical_cpa_threshold_msg_fmt, ais.shipName ?: ctx.getString(R.string.nautical_mmsi_fmt, ais.mmsi)))
                 .setView(input)
                 .setPositiveButton(R.string.shared_string_save) { _, _ ->
                     val dist = input.text.toString().toDoubleOrNull()

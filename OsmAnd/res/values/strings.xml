@@ -1127,6 +1127,15 @@
     <string name="nautical_a11y_voice_input">Voice Input</string>
     <string name="nautical_a11y_mode_switch_lock">Auto Mode Switch Lock</string>
     <string name="nautical_a11y_berth_qr">Remote Web Berth Display QR</string>
+    <string name="nautical_polar_select_profile">Select Polar Profile</string>
+    <string name="nautical_confirm_delete_waypoint_fmt">Are you sure you want to delete waypoint \'%1$s\' from server?</string>
+    <string name="nautical_confirm_delete_route_fmt">Are you sure you want to delete route \'%1$s\' from Signal K server?</string>
+    <string name="nautical_cpa_threshold_msg_fmt">Enter CPA alert threshold for %1$s:</string>
+    <string name="nautical_cpa_threshold_hint">Distance in NM</string>
+    <string name="nautical_route_actions">Route Actions</string>
+    <string name="nautical_route_action_load">Load Route</string>
+    <string name="nautical_route_action_update">Update with Active</string>
+    <string name="nautical_route_action_delete">Delete from Server</string>
     <string name="nautical_bridge_clearance_title">Bridge Clearance Badges</string>
     <string name="nautical_plugin_name">OsmAnd Nautical</string>
     <string name="grib_file_info_format">%1$s - %2$d KB</string>
