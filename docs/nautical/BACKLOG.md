@@ -168,15 +168,19 @@ settings XML, cockpit shell, and OsmAnd-convention conformance.
   header, tactical manager (structured FavoredEndAdvantage + test update),
   buddy list, technical stats, electrical dashboard, polar recorder, S57/S63,
   GRIB, BoatAI, depth profile layer, context menu). Known remaining:
-  NauticalSettingsFragment (8 literals), S57SpatialIndex raw-English status
-  strings (displayed via nautical_s57_status_fmt), gauge placeholder texts in
+  gauge placeholder texts in
   nautical_cockpit_hud_strip.xml and electrical layout (runtime-bound, left as-is),
   plus assorted Toast/ASCII fragments: ~15 toast strings (PolarEditorFragment,
   AIS details, waypoint layer, network setup). SignalK path constants in engine
   files are NOT user-visible and must not be "fixed".
-- Accessibility breadth: ~10 more layouts with icon-only controls still missing
-  descriptions (AIS details cards, compass wizard, boat AI chat, maneuvers
-  sheet, checklist dialog, telemetry tiles).
+- Accessibility breadth: RESOLVED in the 2026-11-25 a11y sweep: 11 decorative
+  ImageViews marked contentDescription="@null" (sensor health, compass/setup
+  wizards, telemetry settings, steering HUD, touch lock) and 24 hardcoded
+  contentDescription labels across 12 layouts moved to nautical_a11y_*
+  resources (GRIB scrubber, AIS details, SAR config, logbook, buddy list,
+  route summary, AIS target card, VHF transmission, BoatAI voice input,
+  cockpit strip). Icon-only interactive controls had been covered by earlier
+  batches; a full rescan found no remaining unlabeled icon widgets.
 - Conventions: several sheets build titles/bodies programmatically with hard
   colors instead of themed styles; `getThemedContext` used in only 12 of 63 ui/
   files. HUD layouts carry a handful of hard-coded colors (start-line,
@@ -198,3 +202,15 @@ settings XML, cockpit shell, and OsmAnd-convention conformance.
 - All validated by green Nautical Unit Tests; Remote Marine Compiler green on
   d93e9c9 (first fully-built APK of this session), later runs in progress at
   time of writing.
+
+## Session log 2026-11-25 (evening): i18n tail + a11y sweep
+
+- 01ac2e5: i18n tail — NauticalSettingsFragment (8 literals: summaries,
+  wave-bias/logbook-interval entries), NauticalSafetyEvaluator hazard and
+  advisory messages incl. TTS-spoken TSS/MARCUL/MIPARE/submarine-cable alerts,
+  helm-arbitrator rejection reason, weighing-anchor abort reason, metric graph
+  empty state; S57SpatialIndex indexingStatus became a structured
+  S57IndexStatus with localized() (S57 manager + settings consumers updated).
+- 5e5d564: a11y sweep — decorative icons nulled, a11y labels resourced.
+- CI: unit tests and full APK (Remote Marine Compiler) green on 01ac2e5;
+  5e5d564 unit tests green at time of writing, APK in flight.
