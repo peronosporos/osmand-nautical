@@ -19,6 +19,7 @@ import net.osmand.plus.R
 import net.osmand.plus.plugins.nautical.AnchorDriftWatchdog
 import net.osmand.plus.plugins.nautical.NauticalPlugin
 import net.osmand.plus.plugins.nautical.engine.MarineState
+import net.osmand.plus.plugins.nautical.engine.isGpsStale
 import net.osmand.util.MapUtils
 import java.util.Locale
 import kotlin.math.atan2
@@ -153,7 +154,12 @@ class WatchkeeperScreen(private val app: OsmandApplication) : CockpitScreen {
         } else {
             val distM = MapUtils.getDistance(anchorLat, anchorLon, lat, lon)
             val bearing = initialBearingDeg(lat, lon, anchorLat, anchorLon)
-            distanceValue.text = String.format(Locale.US, "%.0f m / %.0f°", distM, bearing)
+            var text = String.format(Locale.US, "%.0f m / %.0f°", distM, bearing)
+            if (state.isGpsStale()) {
+                text = "$text (${app.getString(R.string.nautical_cockpit_stale)})"
+                distanceValue.setTextColor(if (NauticalPlugin.isNightVision(app)) 0xFFF9A825.toInt() else 0xFF795548.toInt())
+            }
+            distanceValue.text = text
         }
 
         val advisories = mutableListOf<String>()

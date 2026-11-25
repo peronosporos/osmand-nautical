@@ -16,6 +16,7 @@ import net.osmand.plus.OsmandApplication
 import net.osmand.plus.R
 import net.osmand.plus.plugins.nautical.NauticalPlugin
 import net.osmand.plus.plugins.nautical.engine.MarineState
+import net.osmand.plus.plugins.nautical.engine.isGpsStale
 import net.osmand.plus.plugins.nautical.engine.SignalKUnitConverter
 import java.util.Locale
 import kotlin.math.atan2
@@ -114,7 +115,12 @@ class NavScreen(private val app: OsmandApplication) : CockpitScreen {
                 net.osmand.util.MapUtils.getDistance(lat, lon, position.latitude, position.longitude)
             )
             val bearing = initialBearingDeg(lat, lon, position.latitude, position.longitude)
-            distValue.text = String.format(Locale.US, "%.1f nm / %.0f°", distNm, bearing)
+            var text = String.format(Locale.US, "%.1f nm / %.0f°", distNm, bearing)
+            if (state.isGpsStale()) {
+                text = "$text (${app.getString(R.string.nautical_cockpit_stale)})"
+                distValue.setTextColor(if (NauticalPlugin.isNightVision(app)) 0xFFF9A825.toInt() else 0xFF795548.toInt())
+            }
+            distValue.text = text
         } else {
             distValue.text = app.getString(R.string.nautical_cockpit_value_pending)
         }
