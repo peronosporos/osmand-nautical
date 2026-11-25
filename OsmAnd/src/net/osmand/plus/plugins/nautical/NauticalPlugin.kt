@@ -1609,7 +1609,7 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
             NauticalChecklistQuickAction.TYPE,
             NauticalPassagePlanQuickAction.TYPE,
             NauticalWetScreenLockQuickAction.TYPE,
-            NauticalCockpitQuickAction.TYPE
+            NauticalCockpitQuickAction.TYPE,
             NauticalToolCenterQuickAction.TYPE
         )
     }
