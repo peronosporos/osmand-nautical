@@ -155,8 +155,9 @@ settings XML, cockpit shell, and OsmAnd-convention conformance.
   HUD, buddy list (drag handles, delete, settings, close, anchor icon).
 - System-bar insets: Cockpit shell now fits system windows (gesture nav,
   notches).
-- 4 orphan layouts removed (network setup, data bottom sheet, pilot telemetry
-  grid, reefs control item).
+- 3 orphan layouts removed (network setup, data bottom sheet, reefs control
+  item). Pilot telemetry grid was initially misdetected as orphan (resource
+  includes were outside the scan corpus, since fixed) and restored.
 
 ### Remaining debt (queued, not fixed this pass)
 - i18n breadth: ~100+ user-visible literal strings across ~18 files. Worst
