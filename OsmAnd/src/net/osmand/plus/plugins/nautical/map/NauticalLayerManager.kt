@@ -13,6 +13,9 @@ import net.osmand.plus.plugins.nautical.raster.SignalKRasterLayer
 import net.osmand.plus.plugins.nautical.s57.S57SpatialIndex
 import net.osmand.plus.plugins.nautical.tide.map.TidalCurrentsMapLayer
 import net.osmand.plus.plugins.nautical.ui.NauticalAisLayer
+import net.osmand.plus.plugins.nautical.depth.ui.DepthProfileMapLayer
+import net.osmand.plus.plugins.nautical.polar.ui.NauticalPolarMapOverlay
+import net.osmand.plus.plugins.nautical.radar.ui.RadarMapLayer
 import net.osmand.plus.plugins.nautical.ui.SignalKLogbookLayer
 import net.osmand.plus.plugins.nautical.ui.SignalKWaypointLayer
 import net.osmand.plus.plugins.nautical.view.SignalKTideLayer
@@ -38,6 +41,12 @@ class NauticalLayerManager(
     var skRasterLayer: SignalKRasterLayer? = null
         internal set
     var skLogbookLayer: SignalKLogbookLayer? = null
+        internal set
+    var radarLayer: RadarMapLayer? = null
+        internal set
+    var depthProfileLayer: DepthProfileMapLayer? = null
+        internal set
+    var polarOverlayLayer: NauticalPolarMapOverlay? = null
         internal set
     var skWaypointLayer: SignalKWaypointLayer? = null
         internal set
@@ -98,6 +107,33 @@ class NauticalLayerManager(
             mapView.addLayer(vhfPoiLayer!!, 3.30f)
         } else if (!mapView.layers.contains(vhfPoiLayer!!)) {
             mapView.addLayer(vhfPoiLayer!!, 3.30f)
+        }
+
+        if (app.settings.NAUTICAL_RADAR_ENABLED.get()) {
+            if (radarLayer == null) {
+                radarLayer = RadarMapLayer(mapActivity)
+                mapView.addLayer(radarLayer!!, 4.40f)
+            } else if (!mapView.layers.contains(radarLayer!!)) {
+                mapView.addLayer(radarLayer!!, 4.40f)
+            }
+        }
+
+        if (app.settings.NAUTICAL_DEPTH_PROFILE_ENABLED.get()) {
+            if (depthProfileLayer == null) {
+                depthProfileLayer = DepthProfileMapLayer(mapActivity)
+                mapView.addLayer(depthProfileLayer!!, 4.40f)
+            } else if (!mapView.layers.contains(depthProfileLayer!!)) {
+                mapView.addLayer(depthProfileLayer!!, 4.40f)
+            }
+        }
+
+        if (app.settings.NAUTICAL_POLAR_OVERLAY_ENABLED.get()) {
+            if (polarOverlayLayer == null) {
+                polarOverlayLayer = NauticalPolarMapOverlay(mapActivity)
+                mapView.addLayer(polarOverlayLayer!!, 4.40f)
+            } else if (!mapView.layers.contains(polarOverlayLayer!!)) {
+                mapView.addLayer(polarOverlayLayer!!, 4.40f)
+            }
         }
 
         if (aisAisLayer == null) {

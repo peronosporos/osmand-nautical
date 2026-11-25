@@ -43,6 +43,24 @@
         android:summary="Track nearby vessels via AIS" />
 
     <net.osmand.plus.settings.preferences.SwitchPreferenceEx
+        android:key="nautical_radar_enabled"
+        android:layout="@layout/preference_with_descr"
+        android:title="Radar Overlay"
+        android:summary="Range rings, spokes and gain chip around own vessel" />
+
+    <net.osmand.plus.settings.preferences.SwitchPreferenceEx
+        android:key="nautical_depth_profile_enabled"
+        android:layout="@layout/preference_with_descr"
+        android:title="Depth Profile"
+        android:summary="Forward depth profile panel with hazard pins" />
+
+    <net.osmand.plus.settings.preferences.SwitchPreferenceEx
+        android:key="nautical_polar_overlay_enabled"
+        android:layout="@layout/preference_with_descr"
+        android:title="Polar Overlay"
+        android:summary="Live polar diagram, no-go zones and VMG targets around own vessel" />
+
+    <net.osmand.plus.settings.preferences.SwitchPreferenceEx
         android:key="nautical_module_tides"
         android:layout="@layout/preference_with_descr"
         android:title="Tide Predictions"

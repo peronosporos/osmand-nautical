@@ -3669,6 +3669,9 @@ public class OsmandSettings {
 	public final CommonPreference<Integer> NAUTICAL_RADAR_SEA_CLUTTER = registerIntPreference("nautical_radar_sea_clutter", 20).makeProfile();
 	public final CommonPreference<Integer> NAUTICAL_RADAR_RAIN_CLUTTER = registerIntPreference("nautical_radar_rain_clutter", 15).makeProfile();
 	public final CommonPreference<Integer> NAUTICAL_RADAR_OPACITY = registerIntPreference("nautical_radar_opacity", 80).makeProfile();
+	public final CommonPreference<Boolean> NAUTICAL_RADAR_ENABLED = registerBooleanPreference("nautical_radar_enabled", false).makeProfile();
+	public final CommonPreference<Boolean> NAUTICAL_DEPTH_PROFILE_ENABLED = registerBooleanPreference("nautical_depth_profile_enabled", true).makeProfile();
+	public final CommonPreference<Boolean> NAUTICAL_POLAR_OVERLAY_ENABLED = registerBooleanPreference("nautical_polar_overlay_enabled", false).makeProfile();
 	public final CommonPreference<Integer> NAUTICAL_DEPTH_UNITS = registerIntPreference("nautical_depth_units", 0).makeProfile();
 	public final CommonPreference<Boolean> NAUTICAL_DYNAMIC_TIDE_DEPTH_ENABLED = registerBooleanPreference("nautical_dynamic_tide_depth_enabled", true).makeProfile();
 	public final CommonPreference<Boolean> NAUTICAL_ENABLE_AUTO_DR = registerBooleanPreference("nautical_enable_auto_dr", false).makeProfile();

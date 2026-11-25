@@ -175,6 +175,9 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
     private fun setupModulesCategory() {
         val modules = listOf(
             settings.NAUTICAL_AIS_ENABLED,
+            settings.NAUTICAL_RADAR_ENABLED,
+            settings.NAUTICAL_DEPTH_PROFILE_ENABLED,
+            settings.NAUTICAL_POLAR_OVERLAY_ENABLED,
             settings.NAUTICAL_MODULE_TIDES,
             settings.NAUTICAL_MODULE_GRIB,
             settings.NAUTICAL_VHF_ENABLED,
