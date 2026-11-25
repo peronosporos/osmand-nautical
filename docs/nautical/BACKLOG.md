@@ -256,3 +256,30 @@ this decision: the backend poll error string is now localized
 - This commit: VHF receive-only standing decision recorded; backend error
   string localized.
 - CI: unit tests and full APK green on 518108d.
+
+## Session log 2026-11-26 (morning): translation seeding (el, es, de, fr)
+
+- Curated operator-critical subset of 176 nautical_* strings translated to
+  Greek, Spanish, German and French in new files
+  OsmAnd/res/values-{el,es,de,fr}/nautical_strings.xml. Default locale
+  strings.xml was already the single source of truth from the i18n passes, so
+  these files only override translated keys.
+- Curated-subset strategy: quality control in a safety-critical domain beats
+  blanket machine coverage. The 176 keys cover alarms (shallow water,
+  accidental gybe, anchor, actuator), MOB/CPA/leeway, hazards, VHF UI,
+  sensor-health badges and details, checklists, cockpit labels and the Polar
+  wizard. The remaining ~1650 keys fall back to English automatically
+  (resource system fallback); they can be translated incrementally later
+  without any code change.
+- Constants kept deliberately universal across all locales: MAYDAY,
+  PAN-PAN, SECURITE, DSC/MOB/MOB-AIS/AIS-SAR, channel names (Ch 16) and
+  SignalK path-like tokens — standard maritime radio usage.
+- All format specifiers (%1$s, %d, %%) are asserted preserved positionally
+  against the English defaults; apostrophes escaped per Android resource
+  rules (French had a raw-apostrophe batch caught in validation).
+- Caveat recorded: translations are careful seed quality, not native
+  review. Native-speaker review is recommended for safety-critical radio
+  terminology before relying on non-English UI under distress conditions
+  (see next steps below).
+- Next step candidates: native-speaker review checklist for el/es/de/fr
+  radio terminology; dark-theme visual pass on a CI-built APK.
