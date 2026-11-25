@@ -17,6 +17,9 @@ import net.osmand.plus.R
 import net.osmand.plus.plugins.nautical.NauticalPlugin
 import net.osmand.plus.plugins.nautical.engine.ConnectionStatus
 import net.osmand.plus.plugins.nautical.engine.MarineState
+import net.osmand.plus.plugins.nautical.engine.isDepthStale
+import net.osmand.plus.plugins.nautical.engine.isSogStale
+import net.osmand.plus.plugins.nautical.engine.isWindStale
 import net.osmand.plus.plugins.nautical.engine.SignalKUnitConverter
 import java.util.Locale
 
@@ -106,21 +109,51 @@ class InstrumentsPane(private val app: OsmandApplication) : CockpitScreen {
     }
 
     private fun render(state: MarineState) {
+        val night = NauticalPlugin.isNightVision(app)
+        val accent = if (night) NIGHT_ACCENT else DAY_ACCENT
+        val staleColor = if (night) 0xFFF9A825.toInt() else 0xFF795548.toInt()
+        val staleMark = app.getString(R.string.nautical_cockpit_stale)
+
+        fun setValue(view: TextView, text: String?, stale: Boolean) {
+            if (text == null) {
+                view.text = app.getString(R.string.nautical_cockpit_value_pending)
+                view.setTextColor(accent)
+            } else if (stale) {
+                view.text = "$text ($staleMark)"
+                view.setTextColor(staleColor)
+            } else {
+                view.text = text
+                view.setTextColor(accent)
+            }
+        }
+
         val sogKn = state.speedOverGround?.let { SignalKUnitConverter.msToKnots(it) }
-        sogValue.text = sogKn?.let { String.format(Locale.US, "%.1f kn", it) }
-            ?: app.getString(R.string.nautical_cockpit_value_pending)
+        setValue(
+            sogValue,
+            sogKn?.let { String.format(Locale.US, "%.1f kn", it) },
+            state.isSogStale()
+        )
 
         val cogDeg = state.courseOverGroundTrue?.let { SignalKUnitConverter.radToDeg(it) }
-        cogValue.text = cogDeg?.let { String.format(Locale.US, "%.0f°", (it + 360.0) % 360.0) }
-            ?: app.getString(R.string.nautical_cockpit_value_pending)
+        setValue(
+            cogValue,
+            cogDeg?.let { String.format(Locale.US, "%.0f°", (it + 360.0) % 360.0) },
+            state.isSogStale()
+        )
 
         val depthM = state.depthBelowKeel ?: state.depthBelowTransducer
-        depthValue.text = depthM?.let { String.format(Locale.US, "%.1f m", it) }
-            ?: app.getString(R.string.nautical_cockpit_value_pending)
+        setValue(
+            depthValue,
+            depthM?.let { String.format(Locale.US, "%.1f m", it) },
+            state.isDepthStale()
+        )
 
         val awsKn = state.windSpeedApparent?.let { SignalKUnitConverter.msToKnots(it) }
-        windValue.text = awsKn?.let { String.format(Locale.US, "%.1f kn", it) }
-            ?: app.getString(R.string.nautical_cockpit_value_pending)
+        setValue(
+            windValue,
+            awsKn?.let { String.format(Locale.US, "%.1f kn", it) },
+            state.isWindStale()
+        )
 
         connectionValue.text = app.getString(R.string.nautical_cockpit_connection, statusLabel(state))
     }

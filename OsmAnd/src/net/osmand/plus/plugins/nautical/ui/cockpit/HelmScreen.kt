@@ -18,6 +18,7 @@ import net.osmand.plus.OsmandApplication
 import net.osmand.plus.R
 import net.osmand.plus.plugins.nautical.NauticalPlugin
 import net.osmand.plus.plugins.nautical.engine.MarineState
+import net.osmand.plus.plugins.nautical.engine.isHeadingStale
 import net.osmand.plus.plugins.nautical.engine.SignalKUnitConverter
 import java.util.Locale
 
@@ -209,7 +210,8 @@ class HelmScreen(private val app: OsmandApplication) : CockpitScreen {
     private fun render(state: MarineState) {
         val hdg = state.headingTrue
         hdgValue.text = hdg?.let {
-            String.format(Locale.US, "%.0f°", (SignalKUnitConverter.radToDeg(it) + 360.0) % 360.0)
+            val t = String.format(Locale.US, "%.0f°", (SignalKUnitConverter.radToDeg(it) + 360.0) % 360.0)
+            if (state.isHeadingStale()) "$t (${app.getString(R.string.nautical_cockpit_stale)})" else t
         } ?: app.getString(R.string.nautical_cockpit_value_pending)
 
         val target = state.autopilotHeadingSet ?: state.targetHeading

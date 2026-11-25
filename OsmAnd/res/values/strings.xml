@@ -144,6 +144,7 @@
     <string name="nautical_insecure_command_warning">Insecure connection: commands to this server are sent unencrypted. Enable HTTPS in the server settings when possible.</string>
     <string name="nautical_cockpit_label">Cockpit</string>
     <string name="nautical_cockpit_value_pending">--</string>
+    <string name="nautical_cockpit_stale">stale</string>
     <string name="nautical_cockpit_sog_label">Speed over ground</string>
     <string name="nautical_cockpit_cog_label">Course over ground</string>
     <string name="nautical_cockpit_depth_label">Depth below keel</string>
