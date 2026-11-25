@@ -61,6 +61,12 @@
         android:summary="Live polar diagram, no-go zones and VMG targets around own vessel" />
 
     <net.osmand.plus.settings.preferences.SwitchPreferenceEx
+        android:key="nautical_cockpit_mode_strip_enabled"
+        android:layout="@layout/preference_with_descr"
+        android:title="Cockpit Context Strip"
+        android:summary="Auto-switching passage/motoring/anchor mode strip in the full-screen cockpit" />
+
+    <net.osmand.plus.settings.preferences.SwitchPreferenceEx
         android:key="nautical_module_tides"
         android:layout="@layout/preference_with_descr"
         android:title="Tide Predictions"

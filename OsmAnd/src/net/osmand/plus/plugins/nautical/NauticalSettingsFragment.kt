@@ -178,6 +178,7 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
             settings.NAUTICAL_RADAR_ENABLED,
             settings.NAUTICAL_DEPTH_PROFILE_ENABLED,
             settings.NAUTICAL_POLAR_OVERLAY_ENABLED,
+            settings.NAUTICAL_COCKPIT_MODE_STRIP_ENABLED,
             settings.NAUTICAL_MODULE_TIDES,
             settings.NAUTICAL_MODULE_GRIB,
             settings.NAUTICAL_VHF_ENABLED,

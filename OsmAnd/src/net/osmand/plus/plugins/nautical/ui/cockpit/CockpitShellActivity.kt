@@ -16,6 +16,8 @@ import kotlinx.coroutines.launch
 import net.osmand.plus.OsmandApplication
 import net.osmand.plus.R
 import net.osmand.plus.plugins.nautical.NauticalPlugin
+import net.osmand.plus.plugins.nautical.engine.NauticalModeAutoSwitchManager
+import net.osmand.plus.plugins.nautical.ui.hud.NauticalCockpitHudView
 
 /**
  * The Cockpit shell: a single full-screen surface that mounts one cockpit pane at a
@@ -35,6 +37,8 @@ class CockpitShellActivity : AppCompatActivity() {
     private lateinit var mobBanner: TextView
 
     private var currentPane: CockpitScreen? = null
+    private var modeStrip: NauticalCockpitHudView? = null
+    private var modeSwitchManager: NauticalModeAutoSwitchManager? = null
     private var mobBannerShown = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -71,6 +75,24 @@ class CockpitShellActivity : AppCompatActivity() {
                 LinearLayout.LayoutParams.WRAP_CONTENT
             )
         )
+
+        // Context mode strip: auto-switching PASSAGE/MOTORING/ANCHOR profile
+        val engine = NauticalPlugin.engine
+        if (app.settings.NAUTICAL_COCKPIT_MODE_STRIP_ENABLED.get() && engine?.dataBroker != null) {
+            val strip = NauticalCockpitHudView(this)
+            strip.applyNightVision(NauticalPlugin.isNightVision(app))
+            root.addView(
+                strip,
+                LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                )
+            )
+            modeStrip = strip
+            modeSwitchManager = NauticalModeAutoSwitchManager(app, engine.dataBroker!!).also {
+                it.attachHudView(strip)
+            }
+        }
 
         paneHost = FrameLayout(this)
         root.addView(
@@ -117,6 +139,7 @@ class CockpitShellActivity : AppCompatActivity() {
             val engine = NauticalPlugin.engine
             engine?.marineStateFlow?.collect { state ->
                 if (state.isMobActive) showMobBanner() else hideMobBanner()
+                modeStrip?.updateTelemetry(state, app)
             }
         }
 
@@ -128,6 +151,9 @@ class CockpitShellActivity : AppCompatActivity() {
     override fun onDestroy() {
         currentPane?.onStop()
         currentPane = null
+        modeSwitchManager?.stop()
+        modeSwitchManager = null
+        modeStrip = null
         super.onDestroy()
     }
 
