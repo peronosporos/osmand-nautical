@@ -55,8 +55,13 @@ class PolarConfigViewModel : ViewModel() {
     private val _qualityScore = MutableStateFlow(0)
     val qualityScore: StateFlow<Int> = _qualityScore.asStateFlow()
 
-    private val _recommendation = MutableStateFlow(net.osmand.plus.R.string.nautical_polar_wizard_step1_desc)
-    val recommendation: StateFlow<Int> = _recommendation.asStateFlow()
+    // Pre-localized strings (resolved via plugin application at emit time so
+    // the fragment can display them without a resources context of its own).
+    private val _recommendation = MutableStateFlow(localize(net.osmand.plus.R.string.nautical_polar_wizard_step1_desc))
+    val recommendation: StateFlow<String> = _recommendation.asStateFlow()
+
+    private fun localize(resId: Int): String =
+        net.osmand.plus.plugins.nautical.NauticalPlugin.getInstance()?.application?.getString(resId) ?: ""
 
     init {
         initHeatmap()
@@ -84,7 +89,7 @@ class PolarConfigViewModel : ViewModel() {
 
     private fun checkPrerequisites() {
         if (_engineOff.value && _sensorsCalibrated.value) {
-            _recommendation.value = net.osmand.plus.R.string.nautical_polar_wizard_prerequisites_met
+            _recommendation.value = localize(net.osmand.plus.R.string.nautical_polar_wizard_prerequisites_met)
         }
     }
 
@@ -229,11 +234,12 @@ class PolarConfigViewModel : ViewModel() {
             .filter { it.sampleCount < 3 }
             .minByOrNull { abs(it.tws - currentTws) + abs(it.twa - currentTwa) }
 
-        val app = net.osmand.plus.plugins.nautical.NauticalPlugin.getInstance()?.application
-        if (emptyCell != null && app != null) {
-            _recommendation.value = app.getString(net.osmand.plus.R.string.nautical_polar_wizard_adjust_fmt, emptyCell.twa.toInt(), emptyCell.tws)
-        } else {
-            _recommendation.value = net.osmand.plus.R.string.nautical_polar_wizard_all_cells
+        val localized = when {
+            emptyCell == null -> localize(net.osmand.plus.R.string.nautical_polar_wizard_all_cells)
+            else -> net.osmand.plus.plugins.nautical.NauticalPlugin.getInstance()?.application
+                ?.getString(net.osmand.plus.R.string.nautical_polar_wizard_adjust_fmt, emptyCell.twa.toInt(), emptyCell.tws)
+                ?: ""
         }
+        _recommendation.value = localized
     }
 }

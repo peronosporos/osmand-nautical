@@ -63,8 +63,8 @@ class PolarWizardFragment : BaseOsmAndFragment() {
         }
 
         viewLifecycleOwner.lifecycleScope.launch {
-            viewModel.recommendation.collectLatest { resId ->
-                recommendationText.text = getString(resId)
+            viewModel.recommendation.collectLatest { rec ->
+                if (rec.isNotEmpty()) recommendationText.text = rec
             }
         }
 
