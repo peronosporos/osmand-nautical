@@ -63,7 +63,7 @@
                 android:src="@drawable/ic_action_play_dark"
                 app:tint="?attr/colorAccent"
                 android:background="?attr/selectableItemBackgroundBorderless"
-                android:contentDescription="Play Audio" />
+                android:contentDescription="@string/nautical_a11y_play_audio" />
         </LinearLayout>
 
         <!-- Time info -->

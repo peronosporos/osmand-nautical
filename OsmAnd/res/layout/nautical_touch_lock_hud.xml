@@ -22,6 +22,7 @@
                 android:progress="0"
                 android:max="100" />
             <ImageView
+            android:contentDescription="@null"
                 android:id="@+id/img_touch_lock"
                 android:layout_width="24dp"
                 android:layout_height="24dp"

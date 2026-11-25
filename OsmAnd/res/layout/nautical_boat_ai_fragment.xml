@@ -54,7 +54,7 @@
             android:layout_width="48dp"
             android:layout_height="48dp"
             android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="Voice Input"
+            android:contentDescription="@string/nautical_a11y_voice_input"
             android:src="@drawable/ic_action_micro_dark"
             app:tint="?attr/icon_color_secondary" />
 

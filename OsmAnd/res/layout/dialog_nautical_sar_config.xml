@@ -91,7 +91,7 @@
                 android:textSize="13sp"
                 android:textStyle="bold"
                 app:cornerRadius="8dp"
-                android:contentDescription="Decrease Track Spacing by 0.5 NM" />
+                android:contentDescription="@string/nautical_a11y_sar_spacing_minus" />
 
             <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/input_track_spacing"
@@ -120,7 +120,7 @@
                 android:textSize="13sp"
                 android:textStyle="bold"
                 app:cornerRadius="8dp"
-                android:contentDescription="Increase Track Spacing by 0.5 NM" />
+                android:contentDescription="@string/nautical_a11y_sar_spacing_plus" />
         </LinearLayout>
 
         <!-- Iterations / Search Radius with Stepper Buttons -->
@@ -145,7 +145,7 @@
                 android:textSize="13sp"
                 android:textStyle="bold"
                 app:cornerRadius="8dp"
-                android:contentDescription="Decrease Radius / Iterations by 1.0" />
+                android:contentDescription="@string/nautical_a11y_sar_radius_minus" />
 
             <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/input_iterations_radius"
@@ -174,7 +174,7 @@
                 android:textSize="13sp"
                 android:textStyle="bold"
                 app:cornerRadius="8dp"
-                android:contentDescription="Increase Radius / Iterations by 1.0" />
+                android:contentDescription="@string/nautical_a11y_sar_radius_plus" />
         </LinearLayout>
 
         <LinearLayout

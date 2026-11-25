@@ -167,7 +167,7 @@
                             android:textSize="12sp"
                             android:textStyle="bold"
                             app:cornerRadius="8dp"
-                            android:contentDescription="Step back 3 hours" />
+                            android:contentDescription="@string/nautical_a11y_grib_step_back" />
 
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/btn_grib_play_pause"
@@ -181,7 +181,7 @@
                             app:icon="@drawable/ic_play_dark"
                             app:iconGravity="textStart"
                             app:cornerRadius="24dp"
-                            android:contentDescription="Play/Pause forecast loop" />
+                            android:contentDescription="@string/nautical_a11y_grib_play_pause" />
 
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/btn_grib_step_next"
@@ -195,7 +195,7 @@
                             android:textSize="12sp"
                             android:textStyle="bold"
                             app:cornerRadius="8dp"
-                            android:contentDescription="Step forward 3 hours" />
+                            android:contentDescription="@string/nautical_a11y_grib_step_forward" />
 
                         <SeekBar
                             android:id="@+id/grib_playback_seekbar"

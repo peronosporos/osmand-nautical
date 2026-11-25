@@ -23,7 +23,7 @@
         android:background="?attr/selectableItemBackgroundBorderless"
         android:src="@drawable/ic_action_item_move"
         app:tint="?android:attr/textColorSecondary"
-        android:contentDescription="Reorder item drag handle" />
+        android:contentDescription="@string/nautical_a11y_drag_handle" />
 
     <!-- Metric Title and Category Badge -->
     <LinearLayout

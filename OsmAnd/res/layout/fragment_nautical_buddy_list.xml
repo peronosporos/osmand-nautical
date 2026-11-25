@@ -83,7 +83,7 @@
                 android:layout_height="64dp"
                 android:src="@drawable/ic_action_group_list"
                 app:tint="?attr/active_color_primary"
-                android:contentDescription="AIS Buddies" />
+                android:contentDescription="@string/nautical_a11y_buddies" />
 
             <TextView
                 android:id="@+id/txt_empty_list"

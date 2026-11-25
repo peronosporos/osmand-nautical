@@ -46,7 +46,7 @@
                         android:layout_width="24dp"
                         android:layout_height="24dp"
                         android:layout_marginEnd="10dp"
-                        android:contentDescription="Hazard Warning"
+                        android:contentDescription="@string/nautical_a11y_hazard_warning"
                         android:src="@drawable/ic_action_alert"
                         app:tint="@color/color_warning" />
 
@@ -66,7 +66,7 @@
                         android:layout_height="32dp"
                         android:padding="4dp"
                         android:background="?attr/selectableItemBackgroundBorderless"
-                        android:contentDescription="Expand Hazard Details"
+                        android:contentDescription="@string/nautical_a11y_expand_hazard"
                         android:src="@drawable/ic_action_arrow_drop_down"
                         app:tint="?attr/icon_color_primary" />
                 </LinearLayout>
@@ -206,7 +206,7 @@
                 android:layout_height="64dp"
                 android:src="@drawable/ic_action_sail_boat_dark"
                 app:tint="?attr/active_color_primary"
-                android:contentDescription="Route Icon" />
+                android:contentDescription="@string/nautical_a11y_route_icon" />
 
             <TextView
                 android:layout_width="wrap_content"

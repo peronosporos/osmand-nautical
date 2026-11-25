@@ -111,7 +111,7 @@
                 app:icon="@drawable/ic_action_lock_open"
                 app:iconSize="18dp"
                 app:iconTint="?attr/icon_color_primary"
-                android:contentDescription="Auto Mode Switch Lock" />
+                android:contentDescription="@string/nautical_a11y_mode_switch_lock" />
 
             <!-- Remote Web Display QR / Pairing Button -->
             <com.google.android.material.button.MaterialButton
@@ -124,7 +124,7 @@
                 app:icon="@drawable/ic_action_qrcode"
                 app:iconSize="18dp"
                 app:iconTint="?attr/icon_color_primary"
-                android:contentDescription="Remote Web Berth Display QR" />
+                android:contentDescription="@string/nautical_a11y_berth_qr" />
         </LinearLayout>
 
         <!-- Mode 1: PASSAGE / SAILING STRIP -->

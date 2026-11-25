@@ -80,7 +80,7 @@
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:src="@drawable/ic_action_volume_up"
                 app:tint="?attr/icon_color_primary"
-                android:contentDescription="Mute / Unmute target alerts" />
+                android:contentDescription="@string/nautical_a11y_mute_target" />
 
         </LinearLayout>
 
