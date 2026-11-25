@@ -15,10 +15,11 @@ import net.osmand.plus.plugins.nautical.s63.bridge.S63BridgeStream
  * High-level spatial index for S-57 features.
  * Delegates directly to persistent SQLite storage to ensure memory efficiency.
  */
-class S57SpatialIndex(private val app: OsmandApplication) {
+class S57SpatialIndex(
+    private val app: OsmandApplication,
+    private val sqliteHelper: S57SqliteHelper = S57SqliteHelper(app)
+) {
     private val log = PlatformUtil.getLog(S57SpatialIndex::class.java)
-    
-    private val sqliteHelper = S57SqliteHelper(app)
 
     private val _indexingStatus = MutableStateFlow(S57IndexStatus(S57IndexStatus.Kind.IDLE))
     val indexingStatus: StateFlow<S57IndexStatus> = _indexingStatus.asStateFlow()
