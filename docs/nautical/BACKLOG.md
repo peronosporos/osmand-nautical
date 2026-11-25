@@ -283,3 +283,8 @@ this decision: the backend poll error string is now localized
   (see next steps below).
 - Next step candidates: native-speaker review checklist for el/es/de/fr
   radio terminology; dark-theme visual pass on a CI-built APK.
+- Follow-up fix (first CI run failed on duplicate resources): values-el/
+  strings.xml already carried 88 curated Greek translations, apparently
+  author-native ("Τζάιμπας" etc.). Those pre-existing translations win;
+  the 88 duplicated keys were removed from nautical_strings.xml (el).
+  es/de/fr had no overlaps.
