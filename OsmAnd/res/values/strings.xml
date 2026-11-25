@@ -195,6 +195,10 @@
     <string name="nautical_cockpit_nav_distance">Distance / bearing to waypoint</string>
     <string name="nautical_cockpit_nav_eta">Time to waypoint</string>
     <string name="nautical_cockpit_nav_no_route">No active route</string>
+    <string name="nautical_cockpit_vhf_none">No AIS targets</string>
+    <string name="nautical_cockpit_vhf_threat">CPA %1$s nm</string>
+    <string name="nautical_cockpit_vhf_caution">Caution</string>
+    <string name="nautical_cockpit_vhf_clear">Clear</string>
     <!-- Nautical: toasts, banners and voice prompts (i18n pass) -->
     <string name="nautical_toast_configured_connecting">Configured and connecting to %1$s (%2$s)</string>
     <string name="nautical_toast_polar_uploaded">Polar profile uploaded to Signal K</string>
