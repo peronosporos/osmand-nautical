@@ -6,6 +6,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
 import androidx.appcompat.widget.Toolbar
+import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.lifecycle.lifecycleScope
@@ -146,9 +147,9 @@ class NavtexListFragment : BaseOsmAndFragment() {
             
             holder.priority.text = msg.subject.label(holder.itemView.context)
             val color = when (msg.subject) {
-                NavtexSubject.SEARCH_AND_RESCUE -> 0xFFD32F2F.toInt()
-                NavtexSubject.METEOROLOGICAL_WARNING -> 0xFFF57C00.toInt()
-                else -> 0xFF1976D2.toInt()
+                NavtexSubject.SEARCH_AND_RESCUE -> ContextCompat.getColor(holder.itemView.context, R.color.nautical_status_red)
+                NavtexSubject.METEOROLOGICAL_WARNING -> ContextCompat.getColor(holder.itemView.context, R.color.nautical_status_orange)
+                else -> ContextCompat.getColor(holder.itemView.context, R.color.nautical_status_blue)
             }
             holder.priority.setBackgroundColor(color)
         }

@@ -93,7 +93,7 @@ class NauticalSwitchPanelFragment : BaseOsmAndFragment() {
                 }
 
                 sortedCategories.forEach { cat ->
-                    itemsList.add(SwitchItem.Header(cat))
+                    itemsList.add(SwitchItem.Header(localizeCategory(cat)))
                     categorized[cat]?.sortedBy { it.first }?.forEach { (path, swState) ->
                         val isPending = state.timestamps.containsKey("pending.electrical.switches.$path.state") || 
                                        state.timestamps.containsKey("pending.electrical.switches.$path.dimmingLevel")
@@ -122,6 +122,14 @@ class NauticalSwitchPanelFragment : BaseOsmAndFragment() {
             key.contains("cabin") || key.contains("salon") || key.contains("galley") || key.contains("fridge") || key.contains("refrigerator") || key.contains("freezer") || key.contains("water_heater") || key.contains("heater") || key.contains("light") -> "Domestic & Cabin"
             else -> "Auxiliary Power & Relays"
         }
+    }
+
+    private fun localizeCategory(cat: String): String = when (cat) {
+        "Navigation & Deck Lighting" -> getString(R.string.nautical_switch_cat_lighting)
+        "Bilge & Pumps" -> getString(R.string.nautical_switch_cat_pumps)
+        "Deck & Ground Tackle" -> getString(R.string.nautical_switch_cat_ground)
+        "Domestic & Cabin" -> getString(R.string.nautical_switch_cat_domestic)
+        else -> getString(R.string.nautical_switch_cat_auxiliary)
     }
 
     private fun <T> updateEnergyControls(container: LinearLayout?, items: Map<String, T>, onModeChange: (String, String) -> Unit) {

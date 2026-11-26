@@ -30,7 +30,7 @@
         android:id="@+id/listening_text"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Listening..."
+        android:text="@string/nautical_ai_listening"
         android:textColor="?attr/colorAccent"
         android:visibility="gone"
         app:layout_constraintBottom_toTopOf="@+id/input_container"

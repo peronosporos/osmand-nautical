@@ -185,7 +185,7 @@ class NauticalBuddyListFragment : BaseOsmAndFragment() {
             }
             
             holder.icon.setImageResource(R.drawable.ic_action_favorite)
-            holder.icon.setColorFilter(android.graphics.Color.rgb(255, 215, 0))
+            holder.icon.setColorFilter(androidx.core.content.ContextCompat.getColor(ctx, R.color.nautical_ais_buddy_gold))
             holder.secondaryIcon.setImageResource(R.drawable.ic_action_delete_dark)
             holder.secondaryIcon.visibility = View.VISIBLE
             holder.secondaryIcon.setOnClickListener { onDelete(mmsi) }

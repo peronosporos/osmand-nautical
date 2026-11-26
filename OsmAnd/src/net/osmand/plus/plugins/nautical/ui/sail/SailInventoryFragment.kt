@@ -84,16 +84,16 @@ class SailInventoryFragment : BaseOsmAndFragment() {
     private fun getDefaultSailInventory(currentReefs: Int): List<Sail> {
         return listOf(
             // Mainsail
-            Sail("main_full", "Full Mainsail", "Mainsail", active = true, area = 1.00, reefs = currentReefs, maxReefs = 3),
+            Sail("main_full", getString(R.string.nautical_sail_name_main_full), "Mainsail", active = true, area = 1.00, reefs = currentReefs, maxReefs = 3),
             // Headsails
-            Sail("headsail_genoa", "Genoa (140%)", "Genoa", active = true, area = 1.40, reefs = 0, maxReefs = 0),
-            Sail("headsail_jib", "Working Jib (100%)", "Working Jib", active = false, area = 1.00, reefs = 0, maxReefs = 0),
-            Sail("headsail_staysail", "Solent / Staysail (75%)", "Staysail", active = false, area = 0.75, reefs = 0, maxReefs = 0),
-            Sail("headsail_storm_jib", "Storm Jib (30%)", "Storm Jib", active = false, area = 0.30, reefs = 0, maxReefs = 0),
+            Sail("headsail_genoa", getString(R.string.nautical_sail_name_genoa), "Genoa", active = true, area = 1.40, reefs = 0, maxReefs = 0),
+            Sail("headsail_jib", getString(R.string.nautical_sail_name_jib), "Working Jib", active = false, area = 1.00, reefs = 0, maxReefs = 0),
+            Sail("headsail_staysail", getString(R.string.nautical_sail_name_staysail), "Staysail", active = false, area = 0.75, reefs = 0, maxReefs = 0),
+            Sail("headsail_storm_jib", getString(R.string.nautical_sail_name_storm_jib), "Storm Jib", active = false, area = 0.30, reefs = 0, maxReefs = 0),
             // Downwind / Reaching
-            Sail("downwind_code_zero", "Code Zero", "Code Zero", active = false, area = 1.50, reefs = 0, maxReefs = 0),
-            Sail("downwind_asym_spin", "Asymmetric Spinnaker", "Asymmetric Spinnaker", active = false, area = 1.80, reefs = 0, maxReefs = 0),
-            Sail("downwind_sym_spin", "Symmetrical Spinnaker", "Symmetrical Spinnaker", active = false, area = 1.80, reefs = 0, maxReefs = 0)
+            Sail("downwind_code_zero", getString(R.string.nautical_sail_name_code_zero), "Code Zero", active = false, area = 1.50, reefs = 0, maxReefs = 0),
+            Sail("downwind_asym_spin", getString(R.string.nautical_sail_name_asym_spin), "Asymmetric Spinnaker", active = false, area = 1.80, reefs = 0, maxReefs = 0),
+            Sail("downwind_sym_spin", getString(R.string.nautical_sail_name_sym_spin), "Symmetrical Spinnaker", active = false, area = 1.80, reefs = 0, maxReefs = 0)
         )
     }
 

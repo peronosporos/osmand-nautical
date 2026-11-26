@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import net.osmand.plus.R
 import net.osmand.plus.base.BaseOsmAndFragment
+import androidx.core.content.ContextCompat
 import net.osmand.plus.plugins.nautical.NauticalPlugin
 import java.util.Locale
 
@@ -57,14 +58,14 @@ class NauticalGnssStatusFragment : BaseOsmAndFragment() {
     private fun updateView(root: View, state: net.osmand.plus.plugins.nautical.engine.MarineState) {
         val isNightVision = NauticalPlugin.isNightVision(app)
         if (isNightVision) {
-            root.setBackgroundColor(0xEE120000.toInt())
-            root.findViewById<View>(R.id.stats_container)?.setBackgroundColor(0xEE120000.toInt())
+            root.setBackgroundColor(ContextCompat.getColor(requireContext(), R.color.nautical_night_vision_bg))
+            root.findViewById<View>(R.id.stats_container)?.setBackgroundColor(ContextCompat.getColor(requireContext(), R.color.nautical_night_vision_bg))
         }
 
         val title = root.findViewById<TextView>(R.id.txt_vessel_title)
         title?.text = getString(R.string.nautical_gnss_quality)
         if (isNightVision) {
-            title?.setTextColor(0xFFFF1744.toInt())
+            title?.setTextColor(ContextCompat.getColor(requireContext(), R.color.nautical_night_vision_primary))
         }
         
         val gnss = state.gnss ?: net.osmand.plus.plugins.nautical.engine.GnssState()
@@ -73,16 +74,17 @@ class NauticalGnssStatusFragment : BaseOsmAndFragment() {
         val ageSec = if (posTs > 0L) ((now - posTs) / 1000.0).coerceAtLeast(0.0) else -1.0
         val isStale = ageSec < 0 || ageSec > 5.0
 
-        val ageStr = if (ageSec >= 0) String.format(Locale.US, "%.1fs", ageSec) else "N/A"
+        val naStr = getString(R.string.nautical_not_available)
+        val ageStr = if (ageSec >= 0) String.format(Locale.US, "%.1fs", ageSec) else naStr
         val rateStr = String.format(Locale.US, "%.1f Hz", posHzRate)
         
         val grid = root.findViewById<View?>(R.id.grid_identity)
-        fillCell(grid, 11, R.drawable.ic_action_device_location, "Method", gnss.method ?: "N/A", isNightVision, false)
-        fillCell(grid, 12, R.drawable.ic_action_info, "Satellites", (gnss.satellites ?: 0).toString(), isNightVision, false)
-        fillCell(grid, 13, R.drawable.ic_action_info, "Integrity", gnss.integrity ?: "N/A", isNightVision, false)
-        fillCell(grid, 21, R.drawable.ic_action_settings, "HDOP / VDOP", "${gnss.horizontalDilution ?: "--"}/${gnss.verticalDilution ?: "--"}", isNightVision, false)
-        fillCell(grid, 22, R.drawable.ic_action_speed, "Rate / Drops", "$rateStr ($posDropouts)", isNightVision, false)
-        fillCell(grid, 23, R.drawable.ic_action_time, "Age", ageStr, isNightVision, isStale)
+        fillCell(grid, 11, R.drawable.ic_action_device_location, getString(R.string.nautical_gnss_method), gnss.method ?: naStr, isNightVision, false)
+        fillCell(grid, 12, R.drawable.ic_action_info, getString(R.string.nautical_gnss_satellites), (gnss.satellites ?: 0).toString(), isNightVision, false)
+        fillCell(grid, 13, R.drawable.ic_action_info, getString(R.string.nautical_gnss_integrity), gnss.integrity ?: naStr, isNightVision, false)
+        fillCell(grid, 21, R.drawable.ic_action_settings, getString(R.string.nautical_gnss_hdop) + " / " + getString(R.string.nautical_gnss_vdop), "${gnss.horizontalDilution ?: "--"}/${gnss.verticalDilution ?: "--"}", isNightVision, false)
+        fillCell(grid, 22, R.drawable.ic_action_speed, getString(R.string.nautical_gnss_rate_drops), "$rateStr ($posDropouts)", isNightVision, false)
+        fillCell(grid, 23, R.drawable.ic_action_time, getString(R.string.nautical_gnss_age), ageStr, isNightVision, isStale)
 
         // Hide other grids as we reuse the stats layout
         root.findViewById<View>(R.id.grid_systems)?.visibility = View.GONE
@@ -137,9 +139,11 @@ class NauticalGnssStatusFragment : BaseOsmAndFragment() {
         valTxt?.text = value
 
         if (isNightVision) {
-            icon?.setColorFilter(if (isStale) 0x80FF1744.toInt() else 0xFFFF1744.toInt())
-            lbl?.setTextColor(0xFFFF8A80.toInt())
-            valTxt?.setTextColor(if (isStale) 0x80FF1744.toInt() else 0xFFFF1744.toInt())
+            val primary = ContextCompat.getColor(root.context, R.color.nautical_night_vision_primary)
+            val muted = ContextCompat.getColor(root.context, R.color.nautical_night_vision_muted)
+            icon?.setColorFilter(if (isStale) muted else primary)
+            lbl?.setTextColor(ContextCompat.getColor(root.context, R.color.nautical_night_vision_data))
+            valTxt?.setTextColor(if (isStale) muted else primary)
         }
     }
 }

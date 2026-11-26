@@ -679,6 +679,10 @@
 	<color name="nautical_night_vision_recording">#FFB71C1C</color>
 	<color name="nautical_night_vision_recording_idle">#FF8B0000</color>
 	<color name="nautical_polar_cell_empty">#FF333333</color>
+	<color name="nautical_diag_terminal_bg">#FF212121</color>
+	<color name="nautical_diag_terminal_fg">#FF00E676</color>
+	<color name="nautical_diag_accent">#FF00E5FF</color>
+	<color name="nautical_diag_rate_text">#FF37474F</color>
 	<color name="nautical_ais_buddy_gold">#FFD700</color>
 	<color name="nautical_ais_danger_bg">#33FF0000</color>
 	<color name="nautical_ais_danger_icon">#FF0000</color>

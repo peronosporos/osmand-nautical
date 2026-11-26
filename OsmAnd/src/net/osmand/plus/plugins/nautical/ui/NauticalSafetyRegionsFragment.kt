@@ -58,8 +58,8 @@ class NauticalSafetyRegionsFragment : BaseOsmAndFragment() {
 
         fun bind(region: SignalKRegion) {
             val props = region.feature.properties
-            txtTitle.text = props["name"]?.toString() ?: props["title"]?.toString() ?: "Unnamed Area"
-            txtDesc.text = props["description"]?.toString() ?: props["category"]?.toString() ?: "Restricted Region"
+            txtTitle.text = props["name"]?.toString() ?: props["title"]?.toString() ?: itemView.context.getString(R.string.nautical_region_unnamed)
+            txtDesc.text = props["description"]?.toString() ?: props["category"]?.toString() ?: itemView.context.getString(R.string.nautical_region_restricted)
         }
     }
 }

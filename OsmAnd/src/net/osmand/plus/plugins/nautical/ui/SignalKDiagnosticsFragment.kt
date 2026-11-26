@@ -59,7 +59,7 @@ class SignalKDiagnosticsFragment : BaseOsmAndFragment() {
 
         val isNightVision = NauticalPlugin.isNightVision(app)
         if (isNightVision) {
-            root.setBackgroundColor(0xEE120000.toInt())
+            root.setBackgroundColor(ContextCompat.getColor(requireContext(), R.color.nautical_night_vision_bg))
         }
 
         // 1. Control Toolbar (Rate Hz, Pause/Resume, Export Log)
@@ -76,7 +76,7 @@ class SignalKDiagnosticsFragment : BaseOsmAndFragment() {
             textSize = 13f
             typeface = android.graphics.Typeface.MONOSPACE
             layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
-            setTextColor(if (isNightVision) 0xFFFF8A80.toInt() else 0xFF37474F.toInt())
+            setTextColor(ContextCompat.getColor(requireContext(), if (isNightVision) R.color.nautical_night_vision_data else R.color.nautical_diag_rate_text))
         }
         txtPacketRate = rateView
         toolbar.addView(rateView)
@@ -84,7 +84,7 @@ class SignalKDiagnosticsFragment : BaseOsmAndFragment() {
         val btnPause = MaterialButton(requireContext(), null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
             text = getString(R.string.shared_string_pause)
             minHeight = (48 * resources.displayMetrics.density).toInt()
-            setTextColor(if (isNightVision) 0xFFFF1744.toInt() else 0xFF00E5FF.toInt())
+            setTextColor(ContextCompat.getColor(requireContext(), if (isNightVision) R.color.nautical_night_vision_primary else R.color.nautical_diag_accent))
             setOnClickListener {
                 isStreamPaused = !isStreamPaused
                 text = getString(if (isStreamPaused) R.string.shared_string_resume else R.string.shared_string_pause)
@@ -95,7 +95,7 @@ class SignalKDiagnosticsFragment : BaseOsmAndFragment() {
         val btnExport = MaterialButton(requireContext(), null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
             text = getString(R.string.nautical_diag_export_log)
             minHeight = (48 * resources.displayMetrics.density).toInt()
-            setTextColor(if (isNightVision) 0xFFFF1744.toInt() else 0xFF00E5FF.toInt())
+            setTextColor(ContextCompat.getColor(requireContext(), if (isNightVision) R.color.nautical_night_vision_primary else R.color.nautical_diag_accent))
             setOnClickListener {
                 exportDiagnosticLog()
             }
@@ -114,11 +114,11 @@ class SignalKDiagnosticsFragment : BaseOsmAndFragment() {
         }
 
         val categories = listOf(
-            SignalKDataBroker.PacketCategory.ALL to "All",
-            SignalKDataBroker.PacketCategory.NAVIGATION to "Navigation",
-            SignalKDataBroker.PacketCategory.ENGINES_TANKS to "Engines/Tanks",
-            SignalKDataBroker.PacketCategory.ALARMS_AIS to "Alarms/AIS",
-            SignalKDataBroker.PacketCategory.ERRORS to "Errors"
+            SignalKDataBroker.PacketCategory.ALL to getString(R.string.shared_string_all),
+            SignalKDataBroker.PacketCategory.NAVIGATION to getString(R.string.nautical_diag_cat_navigation),
+            SignalKDataBroker.PacketCategory.ENGINES_TANKS to getString(R.string.nautical_diag_cat_engines_tanks),
+            SignalKDataBroker.PacketCategory.ALARMS_AIS to getString(R.string.nautical_diag_cat_alarms_ais),
+            SignalKDataBroker.PacketCategory.ERRORS to getString(R.string.nautical_diag_cat_errors)
         )
 
         categories.forEachIndexed { index, (cat, title) ->
@@ -128,7 +128,7 @@ class SignalKDiagnosticsFragment : BaseOsmAndFragment() {
                 isChecked = (index == 0)
                 minHeight = (48 * resources.displayMetrics.density).toInt()
                 if (isNightVision) {
-                    setTextColor(0xFFFF8A80.toInt())
+                    setTextColor(ContextCompat.getColor(requireContext(), R.color.nautical_night_vision_data))
                     setChipBackgroundColorResource(R.color.nautical_night_vision_surface)
                 }
                 setOnCheckedChangeListener { _, isChecked ->
@@ -149,10 +149,10 @@ class SignalKDiagnosticsFragment : BaseOsmAndFragment() {
             textSize = 11f
             setLines(6)
             maxLines = 6
-            val bg = if (isNightVision) 0xCC1A0000.toInt() else 0xFF212121.toInt()
-            setBackgroundColor(bg)
-            val fg = if (isNightVision) 0xFFFF8A80.toInt() else 0xFF00E676.toInt()
-            setTextColor(fg)
+            val bg = if (isNightVision) R.color.nautical_night_vision_surface else R.color.nautical_diag_terminal_bg
+            setBackgroundColor(ContextCompat.getColor(requireContext(), bg))
+            val fg = if (isNightVision) R.color.nautical_night_vision_data else R.color.nautical_diag_terminal_fg
+            setTextColor(ContextCompat.getColor(requireContext(), fg))
             val pad = (6 * resources.displayMetrics.density).toInt()
             setPadding(pad, pad, pad, pad)
             text = getString(R.string.nautical_diag_connecting)
@@ -164,7 +164,7 @@ class SignalKDiagnosticsFragment : BaseOsmAndFragment() {
         val recyclerView = RecyclerView(requireContext()).apply {
             layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f)
             if (isNightVision) {
-                setBackgroundColor(0xEE120000.toInt())
+                setBackgroundColor(ContextCompat.getColor(requireContext(), R.color.nautical_night_vision_bg))
             }
         }
         root.addView(recyclerView)
@@ -228,7 +228,7 @@ class SignalKDiagnosticsFragment : BaseOsmAndFragment() {
             val prefix = if (p.isError) "[ERR]" else "[NMEA]"
             sb.append(timeStr).append(" ").append(prefix).append(" ").append(p.path).append(" = ").append(p.value).append("\n")
         }
-        txtTerminal?.text = if (sb.isNotEmpty()) sb.toString().trimEnd() else "Waiting for packets in selected filter..."
+        txtTerminal?.text = if (sb.isNotEmpty()) sb.toString().trimEnd() else getString(R.string.nautical_diag_waiting_packets)
     }
 
     private fun exportDiagnosticLog() {
@@ -281,15 +281,15 @@ class SignalKDiagnosticsFragment : BaseOsmAndFragment() {
 
         // 1. Real-time Telemetry Path Counters (Hz rate, last update age, dropouts)
         val standardPaths = listOf(
-            "navigation.position" to "GNSS Position (Lat/Lon)",
-            "navigation.speedOverGround" to "Speed Over Ground (SOG)",
-            "navigation.courseOverGroundTrue" to "Course Over Ground (COG)",
-            "navigation.headingTrue" to "Heading (HDG)",
-            "environment.wind.speedApparent" to "Apparent Wind Speed (AWS)",
-            "environment.wind.angleApparent" to "Apparent Wind Angle (AWA)",
-            "environment.depth.belowTransducer" to "Depth Below Transducer (DBT)",
-            "steering.rudderAngle" to "Rudder Angle",
-            "propulsion.main.revolutions" to "Engine RPM"
+            "navigation.position" to getString(R.string.nautical_diag_path_position),
+            "navigation.speedOverGround" to getString(R.string.nautical_diag_path_sog),
+            "navigation.courseOverGroundTrue" to getString(R.string.nautical_diag_path_cog),
+            "navigation.headingTrue" to getString(R.string.nautical_diag_path_hdg),
+            "environment.wind.speedApparent" to getString(R.string.nautical_diag_path_aws),
+            "environment.wind.angleApparent" to getString(R.string.nautical_diag_path_awa),
+            "environment.depth.belowTransducer" to getString(R.string.nautical_diag_path_dbt),
+            "steering.rudderAngle" to getString(R.string.nautical_diag_path_rudder),
+            "propulsion.main.revolutions" to getString(R.string.nautical_diag_path_rpm)
         )
 
         standardPaths.forEach { (path, label) ->
@@ -301,9 +301,9 @@ class SignalKDiagnosticsFragment : BaseOsmAndFragment() {
             val hasData = ageSec >= 0
 
             val desc = if (hasData) {
-                String.format(Locale.US, "Rate: %.1f Hz • Age: %.1fs • Dropouts: %d", hz, ageSec, dropouts)
+                getString(R.string.nautical_diag_rate_fmt, hz, ageSec, dropouts)
             } else {
-                "No telemetry received (Inactive)"
+                getString(R.string.nautical_diag_no_telemetry)
             }
 
             items.add(
@@ -319,16 +319,16 @@ class SignalKDiagnosticsFragment : BaseOsmAndFragment() {
 
         // 2. Server Capability Plugins
         if (caps != null) {
-            items.add(DiagnosticItem("Polar Performance", caps.hasPolarPerformance, "Used for VMG and target speed. Install signalk-polar-performance."))
-            items.add(DiagnosticItem("Autopilot Control", caps.hasAutopilot, "Enables Pilot UI. Requires pypilot or signalk-autopilot."))
-            items.add(DiagnosticItem("Marine Logbook", caps.hasLogging, "Server-side trip logging. Install signalk-logbook."))
-            items.add(DiagnosticItem("Tide Predictions", caps.hasSignalKTides, "Tidal heights and stations. Install signalk-tides."))
-            items.add(DiagnosticItem("GRIB Weather", caps.hasGrib, "Weather overlays. Install signalk-grib-weather-provider."))
-            items.add(DiagnosticItem("AIS Prioritization", caps.hasAisPrioritizer, "Smart AIS target pruning and CPA offloading."))
-            items.add(DiagnosticItem("Digital Switching", caps.hasDigitalSwitching, "Electrical panel control for switches."))
-            items.add(DiagnosticItem("Environment Sensors", caps.hasEnvironmentSensors, "Pressure, humidity, and air temperature data."))
-            items.add(DiagnosticItem("Forward Watch", caps.hasForwardWatch, "Hazard detection for depths and obstructions."))
-            items.add(DiagnosticItem("Collision Risk", caps.hasAdvancedSafety, "Server-side CPA/TCPA alarm generation."))
+            items.add(DiagnosticItem(getString(R.string.nautical_diag_cap_polar), caps.hasPolarPerformance, getString(R.string.nautical_diag_cap_polar_desc)))
+            items.add(DiagnosticItem(getString(R.string.nautical_diag_cap_autopilot), caps.hasAutopilot, getString(R.string.nautical_diag_cap_autopilot_desc)))
+            items.add(DiagnosticItem(getString(R.string.nautical_diag_cap_logbook), caps.hasLogging, getString(R.string.nautical_diag_cap_logbook_desc)))
+            items.add(DiagnosticItem(getString(R.string.nautical_diag_cap_tides), caps.hasSignalKTides, getString(R.string.nautical_diag_cap_tides_desc)))
+            items.add(DiagnosticItem(getString(R.string.nautical_diag_cap_grib), caps.hasGrib, getString(R.string.nautical_diag_cap_grib_desc)))
+            items.add(DiagnosticItem(getString(R.string.nautical_diag_cap_ais), caps.hasAisPrioritizer, getString(R.string.nautical_diag_cap_ais_desc)))
+            items.add(DiagnosticItem(getString(R.string.nautical_diag_cap_digital), caps.hasDigitalSwitching, getString(R.string.nautical_diag_cap_digital_desc)))
+            items.add(DiagnosticItem(getString(R.string.nautical_diag_cap_envsensors), caps.hasEnvironmentSensors, getString(R.string.nautical_diag_cap_envsensors_desc)))
+            items.add(DiagnosticItem(getString(R.string.nautical_diag_cap_forwardwatch), caps.hasForwardWatch, getString(R.string.nautical_diag_cap_forwardwatch_desc)))
+            items.add(DiagnosticItem(getString(R.string.nautical_diag_cap_collision), caps.hasAdvancedSafety, getString(R.string.nautical_diag_cap_collision_desc)))
         }
 
         return items
@@ -362,22 +362,23 @@ class SignalKDiagnosticsFragment : BaseOsmAndFragment() {
             holder.description.text = if (item.isTelemetryPath) {
                 item.guidance
             } else if (item.active) {
-                "Active / Configured"
+                holder.itemView.context.getString(R.string.nautical_diag_active_configured)
             } else {
                 item.guidance
             }
 
             if (isNightVision) {
-                holder.itemView.setBackgroundColor(0xEE120000.toInt())
-                holder.title.setTextColor(0xFFFF1744.toInt())
+                val nCtx = holder.itemView.context
+                holder.itemView.setBackgroundColor(ContextCompat.getColor(nCtx, R.color.nautical_night_vision_bg))
+                holder.title.setTextColor(ContextCompat.getColor(nCtx, R.color.nautical_night_vision_primary))
                 if (item.isStale) {
-                    holder.description.setTextColor(0x80FF1744.toInt())
-                    holder.icon.setColorFilter(0x80FF1744.toInt())
+                    holder.description.setTextColor(ContextCompat.getColor(nCtx, R.color.nautical_night_vision_muted))
+                    holder.icon.setColorFilter(ContextCompat.getColor(nCtx, R.color.nautical_night_vision_muted))
                 } else {
-                    holder.description.setTextColor(0xFFFF8A80.toInt())
-                    holder.icon.setColorFilter(0xFFFF1744.toInt())
+                    holder.description.setTextColor(ContextCompat.getColor(nCtx, R.color.nautical_night_vision_data))
+                    holder.icon.setColorFilter(ContextCompat.getColor(nCtx, R.color.nautical_night_vision_primary))
                 }
-                holder.secondaryIcon.setColorFilter(0xFFFF8A80.toInt())
+                holder.secondaryIcon.setColorFilter(ContextCompat.getColor(nCtx, R.color.nautical_night_vision_data))
             } else {
                 val colorRes = if (item.active) R.color.nautical_status_green else R.color.nautical_status_red
                 holder.description.setTextColor(ContextCompat.getColor(holder.itemView.context, colorRes))

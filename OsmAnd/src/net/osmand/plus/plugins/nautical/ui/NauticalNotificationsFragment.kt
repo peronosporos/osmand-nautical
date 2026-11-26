@@ -13,6 +13,8 @@ import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.button.MaterialButton
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import androidx.core.content.ContextCompat
+import net.osmand.plus.OsmandApplication
 import net.osmand.plus.R
 import net.osmand.plus.base.BaseOsmAndFragment
 import net.osmand.plus.plugins.nautical.NauticalPlugin
@@ -77,15 +79,24 @@ class NauticalNotificationsFragment : BaseOsmAndFragment() {
         fun bind(entry: Map.Entry<String, SignalKNotification>, onAcknowledge: (String) -> Unit) {
             val path = entry.key
             val notif = entry.value
+            val ctx = itemView.context
             txtMessage.text = notif.message
-            txtState.text = notif.state.name
-            
+            txtState.text = when (notif.state) {
+                NotificationState.EMERGENCY -> ctx.getString(R.string.nautical_notification_state_emergency)
+                NotificationState.ALARM -> ctx.getString(R.string.nautical_notification_state_alarm)
+                NotificationState.WARN, NotificationState.ALERT -> ctx.getString(R.string.nautical_notification_state_warning)
+                else -> ctx.getString(R.string.shared_string_normal)
+            }
+
+            val app = ctx.applicationContext as? OsmandApplication
+            val isNight = app?.let { NauticalPlugin.isNightVision(it) } ?: false
             val color = when (notif.state) {
-                NotificationState.EMERGENCY -> 0xFFFF0000.toInt()
-                NotificationState.ALARM -> 0xFFFF8800.toInt()
-                NotificationState.WARN -> 0xFFFFFF00.toInt()
-                NotificationState.ALERT -> 0xFF00AAFF.toInt()
-                else -> 0xFF888888.toInt()
+                NotificationState.EMERGENCY -> ContextCompat.getColor(ctx, if (isNight) R.color.nautical_night_vision_primary else R.color.nautical_status_red)
+                NotificationState.ALARM -> ContextCompat.getColor(ctx, if (isNight) R.color.nautical_night_vision_primary else R.color.nautical_status_orange)
+                NotificationState.WARN -> ContextCompat.getColor(ctx, if (isNight) R.color.nautical_night_vision_data else R.color.nautical_status_yellow)
+                NotificationState.ALERT -> ContextCompat.getColor(ctx, if (isNight) R.color.nautical_night_vision_data else R.color.nautical_status_blue)
+                else -> if (isNight) ContextCompat.getColor(ctx, R.color.nautical_night_vision_muted)
+                    else net.osmand.plus.utils.AndroidUtils.getColorFromAttr(ctx, android.R.attr.textColorSecondary)
             }
             txtState.setTextColor(color)
             
