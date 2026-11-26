@@ -60,6 +60,9 @@ class TideCalculationEngine {
         val nu: Double     // Nodal correction angle nu (deg)
         val nup: Double    // Schureman nu' (deg)
         val nupp: Double   // Schureman nu'' (deg)
+        // Kotlin note: @get:JvmName avoids a JVM signature clash with the
+        // lowercase lunar perigee p (both would map to getP()).
+        @get:JvmName("getSchuremanP")
         val P: Double      // Schureman P = p - xi (deg)
 
         init {
