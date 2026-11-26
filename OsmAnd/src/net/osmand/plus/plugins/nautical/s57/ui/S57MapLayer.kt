@@ -1,5 +1,7 @@
 package net.osmand.plus.plugins.nautical.s57.ui
 
+import androidx.core.content.ContextCompat
+import net.osmand.plus.R
 import android.content.Context
 import android.graphics.*
 import android.util.LruCache
@@ -36,7 +38,7 @@ class S57MapLayer(context: Context, private val indexManager: S57SpatialIndex) :
     private val overheadWarningHaloPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
         strokeWidth = 6f
-        color = Color.MAGENTA
+        color = ContextCompat.getColor(context, R.color.nautical_s57_overhead_warning)
     }
 
     private val strokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -46,7 +48,7 @@ class S57MapLayer(context: Context, private val indexManager: S57SpatialIndex) :
         style = Paint.Style.FILL
     }
     private val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.BLACK
+        color = ContextCompat.getColor(context, R.color.nautical_day_black)
         textAlign = Paint.Align.CENTER
         typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
     }
@@ -91,7 +93,7 @@ class S57MapLayer(context: Context, private val indexManager: S57SpatialIndex) :
         style = Paint.Style.FILL
     }
     private val clearanceBadgeTextPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.WHITE
+        color = ContextCompat.getColor(context, R.color.nautical_map_text)
         textSize = 18f
         typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
         textAlign = Paint.Align.CENTER
@@ -126,10 +128,10 @@ class S57MapLayer(context: Context, private val indexManager: S57SpatialIndex) :
         val isSafe = realTimeClearance > (mastHeight + safetyMargin)
 
         clearanceBadgeBgPaint.color = when {
-            isNight && isSafe -> 0xDD1B5E20.toInt()
-            isNight && !isSafe -> 0xEEB71C1C.toInt()
-            isSafe -> 0xEE2E7D32.toInt()
-            else -> 0xEED32F2F.toInt()
+            isNight && isSafe -> ContextCompat.getColor(context, R.color.nautical_s57_safe_fill_night)
+            isNight && !isSafe -> ContextCompat.getColor(context, R.color.nautical_s57_unsafe_fill_night)
+            isSafe -> ContextCompat.getColor(context, R.color.nautical_s57_safe_fill_day)
+            else -> ContextCompat.getColor(context, R.color.nautical_s57_unsafe_fill_day)
         }
 
         clearanceBadgeTextPaint.textSize = 11f * scale
@@ -252,7 +254,7 @@ class S57MapLayer(context: Context, private val indexManager: S57SpatialIndex) :
         val mode = app.settings.NAUTICAL_DISPLAY_MODE.get()
         val isNight = net.osmand.plus.plugins.nautical.NauticalPlugin.isNightVision(app) || (mode == net.osmand.plus.settings.enums.NauticalDisplayMode.DARK)
         val isSunlight = mode == net.osmand.plus.settings.enums.NauticalDisplayMode.SUNLIGHT
-        textPaint.color = if (isNight) 0xFFFF8A80.toInt() else Color.BLACK
+        textPaint.color = if (isNight) ContextCompat.getColor(context, R.color.nautical_night_vision_data) else ContextCompat.getColor(context, R.color.nautical_day_black)
         
         val safetyDepth = app.settings.getCustomRenderProperty("safetyContour", "5.0").get().toDoubleOrNull() ?: 5.0
         val shallowDepth = app.settings.getCustomRenderProperty("shallowContour", "2.0").get().toDoubleOrNull() ?: 2.0
@@ -323,19 +325,19 @@ class S57MapLayer(context: Context, private val indexManager: S57SpatialIndex) :
                             val (textColor, alphaVal, isBold) = when {
                                 isNight -> {
                                     val isShallow = depth <= safetyDepth
-                                    val c = if (isShallow) 0xFFFF1744.toInt() else 0xFFFF8A80.toInt()
+                                    val c = if (isShallow) ContextCompat.getColor(context, R.color.nautical_night_vision_primary) else ContextCompat.getColor(context, R.color.nautical_night_vision_data)
                                     Triple(c, 255, isShallow)
                                 }
                                 depth <= safetyDepth -> {
-                                    val c = 0xFFD32F2F.toInt()
+                                    val c = ContextCompat.getColor(context, R.color.nautical_day_red_deep)
                                     Triple(c, 255, true)
                                 }
                                 depth <= safetyDepth * 2.0 -> {
-                                    val c = 0xFF37474F.toInt()
+                                    val c = ContextCompat.getColor(context, R.color.nautical_day_slate)
                                     Triple(c, 230, isSunlight)
                                 }
                                 else -> {
-                                    val c = 0xFF607D8B.toInt()
+                                    val c = ContextCompat.getColor(context, R.color.nautical_day_slate_light)
                                     Triple(c, 153, false)
                                 }
                             }
@@ -350,7 +352,7 @@ class S57MapLayer(context: Context, private val indexManager: S57SpatialIndex) :
                             soundingSubscriptPaint.textSize = subTextSize
                             soundingSubscriptPaint.typeface = if (isBold) Typeface.create(Typeface.DEFAULT, Typeface.BOLD) else Typeface.DEFAULT
 
-                            val haloColor = if (isNight) 0xEE120000.toInt() else Color.WHITE
+                            val haloColor = if (isNight) ContextCompat.getColor(context, R.color.nautical_night_vision_bg) else ContextCompat.getColor(context, R.color.nautical_map_text)
                             val haloAlpha = (alphaVal * 0.85f).toInt()
 
                             soundingHaloPaint.color = haloColor
@@ -447,7 +449,7 @@ class S57MapLayer(context: Context, private val indexManager: S57SpatialIndex) :
                             val aquaHazardId = NauticalPlugin.getInstance()?.safetyEvaluator?.violatedAquacultureFeatureId
                             if ((tssViolatedId != null && pf.featureId == tssViolatedId) || (subHazardId != null && pf.featureId == subHazardId) || (milHazardId != null && pf.featureId == milHazardId) || (aquaHazardId != null && pf.featureId == aquaHazardId)) {
                                 val isAqua = (aquaHazardId != null && pf.featureId == aquaHazardId)
-                                speedLimitWarningPaint.color = if (isAqua) (if (isNight) 0xFFFF1744.toInt() else 0xFFFFA000.toInt()) else (if (isNight) 0xFFFF1744.toInt() else 0xFFE53935.toInt())
+                                speedLimitWarningPaint.color = if (isAqua) (if (isNight) ContextCompat.getColor(context, R.color.nautical_night_vision_primary) else ContextCompat.getColor(context, R.color.nautical_day_amber_dark)) else (if (isNight) ContextCompat.getColor(context, R.color.nautical_night_vision_primary) else ContextCompat.getColor(context, R.color.nautical_day_red_vivid))
                                 speedLimitWarningPaint.strokeWidth = 4f * scale
                                 canvas.drawPath(path, speedLimitWarningPaint)
                             }
@@ -477,7 +479,7 @@ class S57MapLayer(context: Context, private val indexManager: S57SpatialIndex) :
                             val aquaHazardId = NauticalPlugin.getInstance()?.safetyEvaluator?.violatedAquacultureFeatureId
                             if ((tssViolatedId != null && pf.featureId == tssViolatedId) || (subHazardId != null && pf.featureId == subHazardId) || (milHazardId != null && pf.featureId == milHazardId) || (aquaHazardId != null && pf.featureId == aquaHazardId)) {
                                 val isAqua = (aquaHazardId != null && pf.featureId == aquaHazardId)
-                                speedLimitWarningPaint.color = if (isAqua) (if (isNight) 0xFFFF1744.toInt() else 0xFFFFA000.toInt()) else (if (isNight) 0xFFFF1744.toInt() else 0xFFE53935.toInt())
+                                speedLimitWarningPaint.color = if (isAqua) (if (isNight) ContextCompat.getColor(context, R.color.nautical_night_vision_primary) else ContextCompat.getColor(context, R.color.nautical_day_amber_dark)) else (if (isNight) ContextCompat.getColor(context, R.color.nautical_night_vision_primary) else ContextCompat.getColor(context, R.color.nautical_day_red_vivid))
                                 speedLimitWarningPaint.strokeWidth = 4f * scale
                                 canvas.drawPath(path, speedLimitWarningPaint)
                             }
@@ -486,20 +488,20 @@ class S57MapLayer(context: Context, private val indexManager: S57SpatialIndex) :
                                 val (areaFill, areaStroke) = when {
                                     drval1 < 2.0 -> {
                                         // Very Shallow (< 2m): High hazard crimson tint
-                                        val f = if (isNight) 0x35FF1744.toInt() else 0x40B71C1C.toInt()
-                                        val s = if (isNight) 0xFFFF1744.toInt() else 0xFFB71C1C.toInt()
+                                        val f = if (isNight) ContextCompat.getColor(context, R.color.nautical_night_vision_red_dim_35) else ContextCompat.getColor(context, R.color.nautical_night_vision_crimson_dim_40)
+                                        val s = if (isNight) ContextCompat.getColor(context, R.color.nautical_night_vision_primary) else ContextCompat.getColor(context, R.color.nautical_night_vision_recording)
                                         Pair(f, s)
                                     }
                                     drval1 < effectiveSafetyDepth -> {
                                         // Shallow (< Effective Safety Depth): Tinted shallow water fill
-                                        val f = if (isNight) 0x20FF1744.toInt() else 0x2000BCD4.toInt()
-                                        val s = if (isNight) 0x80FF1744.toInt() else 0xFF00BCD4.toInt()
+                                        val f = if (isNight) ContextCompat.getColor(context, R.color.nautical_night_vision_red_dim_20) else ContextCompat.getColor(context, R.color.nautical_day_cyan_dim_20)
+                                        val s = if (isNight) ContextCompat.getColor(context, R.color.nautical_night_vision_muted) else ContextCompat.getColor(context, R.color.nautical_day_cyan_solid)
                                         Pair(f, s)
                                     }
                                     else -> {
                                         // Safe Deep (> Effective Safety Depth): Translucent/clear fill
-                                        val f = if (isNight) 0x08FF1744.toInt() else 0x00000000.toInt()
-                                        val s = if (isNight) 0x40FF1744.toInt() else 0x3000BCD4.toInt()
+                                        val f = if (isNight) ContextCompat.getColor(context, R.color.nautical_night_vision_red_dim_08) else ContextCompat.getColor(context, R.color.nautical_map_transparent)
+                                        val s = if (isNight) ContextCompat.getColor(context, R.color.nautical_night_vision_red_dim_40) else ContextCompat.getColor(context, R.color.nautical_day_cyan_dim_30)
                                         Pair(f, s)
                                     }
                                 }
@@ -527,7 +529,7 @@ class S57MapLayer(context: Context, private val indexManager: S57SpatialIndex) :
 
                             val speedSentry = net.osmand.plus.plugins.nautical.engine.NauticalSpeedLimitSentry.getInstance(app)
                             if (speedSentry.isZoneViolated(pf.featureId.toString())) {
-                                speedLimitWarningPaint.color = if (isNight) 0xFFFF1744.toInt() else 0xFFFF9800.toInt()
+                                speedLimitWarningPaint.color = if (isNight) ContextCompat.getColor(context, R.color.nautical_night_vision_primary) else ContextCompat.getColor(context, R.color.nautical_day_amber)
                                 speedLimitWarningPaint.strokeWidth = 3f * scale
                                 canvas.drawPath(path, speedLimitWarningPaint)
                             }
@@ -771,46 +773,46 @@ class S57MapLayer(context: Context, private val indexManager: S57SpatialIndex) :
         if (isNight) {
             when {
                 isRed -> {
-                    sectorFillPaint.color = 0x25FF1744.toInt()
-                    sectorStrokePaint.color = 0xFFFF1744.toInt()
+                    sectorFillPaint.color = ContextCompat.getColor(context, R.color.nautical_night_vision_red_dim_25)
+                    sectorStrokePaint.color = ContextCompat.getColor(context, R.color.nautical_night_vision_primary)
                     sectorStrokePaint.pathEffect = null
                 }
                 isGreen -> {
-                    sectorFillPaint.color = 0x1580B71C.toInt()
-                    sectorStrokePaint.color = 0xFFFF5252.toInt()
+                    sectorFillPaint.color = ContextCompat.getColor(context, R.color.nautical_night_vision_crimson_pale_dim_15)
+                    sectorStrokePaint.color = ContextCompat.getColor(context, R.color.nautical_night_vision_secondary)
                     sectorStrokePaint.pathEffect = DashPathEffect(floatArrayOf(8f, 6f), 0f)
                 }
                 isYellow -> {
-                    sectorFillPaint.color = 0x18FF8A80.toInt()
-                    sectorStrokePaint.color = 0xFFFF8A80.toInt()
+                    sectorFillPaint.color = ContextCompat.getColor(context, R.color.nautical_night_vision_data_dim_18)
+                    sectorStrokePaint.color = ContextCompat.getColor(context, R.color.nautical_night_vision_data)
                     sectorStrokePaint.pathEffect = DashPathEffect(floatArrayOf(16f, 6f, 4f, 6f), 0f)
                 }
                 else -> { // White
-                    sectorFillPaint.color = 0x12FF1744.toInt()
-                    sectorStrokePaint.color = 0x80B71C1C.toInt()
+                    sectorFillPaint.color = ContextCompat.getColor(context, R.color.nautical_night_vision_red_dim_12)
+                    sectorStrokePaint.color = ContextCompat.getColor(context, R.color.nautical_night_vision_stroke)
                     sectorStrokePaint.pathEffect = DashPathEffect(floatArrayOf(12f, 8f), 0f)
                 }
             }
         } else {
             when {
                 isRed -> {
-                    sectorFillPaint.color = 0x25FF1744.toInt()
-                    sectorStrokePaint.color = 0xFFFF1744.toInt()
+                    sectorFillPaint.color = ContextCompat.getColor(context, R.color.nautical_night_vision_red_dim_25)
+                    sectorStrokePaint.color = ContextCompat.getColor(context, R.color.nautical_night_vision_primary)
                     sectorStrokePaint.pathEffect = null
                 }
                 isGreen -> {
-                    sectorFillPaint.color = 0x2500E676.toInt()
-                    sectorStrokePaint.color = 0xFF00E676.toInt()
+                    sectorFillPaint.color = ContextCompat.getColor(context, R.color.nautical_race_green_dim_25)
+                    sectorStrokePaint.color = ContextCompat.getColor(context, R.color.nautical_race_green)
                     sectorStrokePaint.pathEffect = null
                 }
                 isYellow -> {
-                    sectorFillPaint.color = 0x25FFD600.toInt()
-                    sectorStrokePaint.color = 0xFFFFD600.toInt()
+                    sectorFillPaint.color = ContextCompat.getColor(context, R.color.nautical_day_amber_bright_dim_25)
+                    sectorStrokePaint.color = ContextCompat.getColor(context, R.color.nautical_day_amber_bright)
                     sectorStrokePaint.pathEffect = DashPathEffect(floatArrayOf(14f, 6f), 0f)
                 }
                 else -> { // White
-                    sectorFillPaint.color = 0x20FFFFFF.toInt()
-                    sectorStrokePaint.color = 0xCCFFFFFF.toInt()
+                    sectorFillPaint.color = ContextCompat.getColor(context, R.color.nautical_day_white_dim_20)
+                    sectorStrokePaint.color = ContextCompat.getColor(context, R.color.nautical_day_white_dim_cc)
                     sectorStrokePaint.pathEffect = DashPathEffect(floatArrayOf(12f, 8f), 0f)
                 }
             }

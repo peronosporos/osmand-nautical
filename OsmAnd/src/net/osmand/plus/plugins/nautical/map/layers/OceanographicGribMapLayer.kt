@@ -1,5 +1,7 @@
 package net.osmand.plus.plugins.nautical.map.layers
 
+import androidx.core.content.ContextCompat
+import net.osmand.plus.R
 import android.content.Context
 import android.graphics.*
 import kotlinx.coroutines.*
@@ -23,20 +25,20 @@ import androidx.core.graphics.withTranslation
 class OceanographicGribMapLayer(context: Context) : OsmandMapLayer(context) {
 
     private val isobarPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = 0xFF555555.toInt() // Dark gray for isobars
+        color = ContextCompat.getColor(context, R.color.nautical_day_gray) // Dark gray for isobars
         style = Paint.Style.STROKE
         strokeWidth = 2.5f
     }
 
     private val troughPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = 0xFFFF7043.toInt() // Accent highlight for steep pressure gradients / troughs
+        color = ContextCompat.getColor(context, R.color.nautical_day_coral) // Accent highlight for steep pressure gradients / troughs
         style = Paint.Style.STROKE
         strokeWidth = 5f
         strokeCap = Paint.Cap.ROUND
     }
 
     private val wavePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = 0xFF2196F3.toInt() // Blue for wave vectors
+        color = ContextCompat.getColor(context, R.color.nautical_day_blue) // Blue for wave vectors
         style = Paint.Style.STROKE
         strokeWidth = 3f
     }
@@ -54,14 +56,14 @@ class OceanographicGribMapLayer(context: Context) : OsmandMapLayer(context) {
         style = Paint.Style.FILL
     }
     private val currentLabelBgPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.WHITE
+        color = ContextCompat.getColor(context, R.color.nautical_map_text)
         alpha = 200
         style = Paint.Style.FILL
     }
     private val currentLabelRect = RectF()
 
     private val labelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.DKGRAY
+        color = ContextCompat.getColor(context, R.color.nautical_day_gray_dark)
         textSize = 24f
         textAlign = Paint.Align.CENTER
         typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
@@ -69,7 +71,7 @@ class OceanographicGribMapLayer(context: Context) : OsmandMapLayer(context) {
     }
 
     private val warningPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.RED
+        color = ContextCompat.getColor(context, R.color.nautical_map_icon_alert)
         textSize = 40f
         textAlign = Paint.Align.CENTER
         typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
@@ -77,13 +79,13 @@ class OceanographicGribMapLayer(context: Context) : OsmandMapLayer(context) {
     }
 
     private val warningBgPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.YELLOW
+        color = ContextCompat.getColor(context, R.color.nautical_day_yellow)
         alpha = 200
         style = Paint.Style.FILL
     }
 
     private val labelBgPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.WHITE
+        color = ContextCompat.getColor(context, R.color.nautical_map_text)
         alpha = 180
         style = Paint.Style.FILL
     }
@@ -236,28 +238,28 @@ class OceanographicGribMapLayer(context: Context) : OsmandMapLayer(context) {
 
     private fun applyThemePaints(isNight: Boolean) {
         if (isNight) {
-            isobarPaint.color = 0x80B71C1C.toInt() // Deep monochromatic red for isobars
-            troughPaint.color = 0xFFFF1744.toInt() // High-contrast red accent for steep pressure gradients
+            isobarPaint.color = ContextCompat.getColor(context, R.color.nautical_night_vision_stroke) // Deep monochromatic red for isobars
+            troughPaint.color = ContextCompat.getColor(context, R.color.nautical_night_vision_primary) // High-contrast red accent for steep pressure gradients
             troughPaint.alpha = 200
-            labelPaint.color = 0xFFFF8A80.toInt() // Data readout token
-            labelBgPaint.color = 0xEE120000.toInt() // Translucent deep red/black
-            wavePaint.color = 0xFFFF1744.toInt()
-            currentLabelBgPaint.color = 0xEE120000.toInt()
-            warningBgPaint.color = 0xEE120000.toInt()
-            warningPaint.color = 0xFFFF1744.toInt()
+            labelPaint.color = ContextCompat.getColor(context, R.color.nautical_night_vision_data) // Data readout token
+            labelBgPaint.color = ContextCompat.getColor(context, R.color.nautical_night_vision_bg) // Translucent deep red/black
+            wavePaint.color = ContextCompat.getColor(context, R.color.nautical_night_vision_primary)
+            currentLabelBgPaint.color = ContextCompat.getColor(context, R.color.nautical_night_vision_bg)
+            warningBgPaint.color = ContextCompat.getColor(context, R.color.nautical_night_vision_bg)
+            warningPaint.color = ContextCompat.getColor(context, R.color.nautical_night_vision_primary)
         } else {
-            isobarPaint.color = 0xFF555555.toInt() // Dark gray for isobars
-            troughPaint.color = 0xFFFF7043.toInt() // Coral/amber accent for steep pressure gradients
+            isobarPaint.color = ContextCompat.getColor(context, R.color.nautical_day_gray) // Dark gray for isobars
+            troughPaint.color = ContextCompat.getColor(context, R.color.nautical_day_coral) // Coral/amber accent for steep pressure gradients
             troughPaint.alpha = 180
-            labelPaint.color = Color.DKGRAY
-            labelBgPaint.color = Color.WHITE
+            labelPaint.color = ContextCompat.getColor(context, R.color.nautical_day_gray_dark)
+            labelBgPaint.color = ContextCompat.getColor(context, R.color.nautical_map_text)
             labelBgPaint.alpha = 180
-            wavePaint.color = 0xFF2196F3.toInt()
-            currentLabelBgPaint.color = Color.WHITE
+            wavePaint.color = ContextCompat.getColor(context, R.color.nautical_day_blue)
+            currentLabelBgPaint.color = ContextCompat.getColor(context, R.color.nautical_map_text)
             currentLabelBgPaint.alpha = 200
-            warningBgPaint.color = Color.YELLOW
+            warningBgPaint.color = ContextCompat.getColor(context, R.color.nautical_day_yellow)
             warningBgPaint.alpha = 200
-            warningPaint.color = Color.RED
+            warningPaint.color = ContextCompat.getColor(context, R.color.nautical_map_icon_alert)
         }
     }
 
@@ -313,15 +315,15 @@ class OceanographicGribMapLayer(context: Context) : OsmandMapLayer(context) {
 
                         val color = if (isNight) {
                             when {
-                                speedKn < 1.0 -> 0xFF8B0000.toInt() // Dark red
-                                speedKn <= 2.5 -> 0xFFB71C1C.toInt() // Crimson red
-                                else -> 0xFFFF5252.toInt() // Bright red
+                                speedKn < 1.0 -> ContextCompat.getColor(context, R.color.nautical_night_vision_recording_idle) // Dark red
+                                speedKn <= 2.5 -> ContextCompat.getColor(context, R.color.nautical_night_vision_recording) // Crimson red
+                                else -> ContextCompat.getColor(context, R.color.nautical_night_vision_secondary) // Bright red
                             }
                         } else {
                             when {
-                                speedKn < 1.0 -> 0xFF0288D1.toInt() // Cyan/Blue
-                                speedKn <= 2.5 -> 0xFFF57C00.toInt() // Amber
-                                else -> 0xFFD32F2F.toInt() // Red
+                                speedKn < 1.0 -> ContextCompat.getColor(context, R.color.nautical_day_blue_deep) // Cyan/Blue
+                                speedKn <= 2.5 -> ContextCompat.getColor(context, R.color.nautical_day_orange) // Amber
+                                else -> ContextCompat.getColor(context, R.color.nautical_day_red_deep) // Red
                             }
                         }
 
@@ -373,7 +375,7 @@ class OceanographicGribMapLayer(context: Context) : OsmandMapLayer(context) {
                                 labelY + textHeight / 2f + 2f
                             )
                             canvas.drawRoundRect(currentLabelRect, 4f, 4f, currentLabelBgPaint)
-                            currentLabelPaint.color = if (isNight) 0xFFFF1744.toInt() else color
+                            currentLabelPaint.color = if (isNight) ContextCompat.getColor(context, R.color.nautical_night_vision_primary) else color
                             canvas.drawText(labelText, labelX, labelY + textHeight * 0.35f, currentLabelPaint)
                         }
                     }

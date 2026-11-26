@@ -1,5 +1,7 @@
 package net.osmand.plus.plugins.nautical.dr.ui
 
+import androidx.core.content.ContextCompat
+import net.osmand.plus.R
 import android.content.Context
 import android.graphics.*
 import kotlin.math.abs
@@ -19,7 +21,7 @@ class DeadReckoningMapLayer(context: Context) : OsmandMapLayer(context) {
 
     private var drUiState: DrUiState? = null
 
-    private val colorAmber = 0xFFFF9800.toInt()
+    private val colorAmber = ContextCompat.getColor(context, R.color.nautical_day_amber)
 
     private val amberPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = colorAmber
@@ -66,7 +68,7 @@ class DeadReckoningMapLayer(context: Context) : OsmandMapLayer(context) {
     }
 
     private val badgeBgPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = 0xFF263238.toInt() // Dark blue-gray badge
+        color = ContextCompat.getColor(context, R.color.nautical_day_chip_bg_dark) // Dark blue-gray badge
         alpha = 220
         style = Paint.Style.FILL
     }
@@ -78,7 +80,7 @@ class DeadReckoningMapLayer(context: Context) : OsmandMapLayer(context) {
     }
 
     private val badgeTextPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.WHITE
+        color = ContextCompat.getColor(context, R.color.nautical_map_text)
         textSize = 20f
         textAlign = Paint.Align.CENTER
         typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
@@ -95,8 +97,8 @@ class DeadReckoningMapLayer(context: Context) : OsmandMapLayer(context) {
 
     private fun setupPaints(isNight: Boolean) {
         if (isNight) {
-            val redColor = 0xFFFF1744.toInt()
-            val redLight = 0xFFFF8A80.toInt()
+            val redColor = ContextCompat.getColor(context, R.color.nautical_night_vision_primary)
+            val redLight = ContextCompat.getColor(context, R.color.nautical_night_vision_data)
             
             amberPaint.color = redColor
             dashedAmberPaint.color = redColor
@@ -105,12 +107,12 @@ class DeadReckoningMapLayer(context: Context) : OsmandMapLayer(context) {
             fillPaint.color = redColor
             fillPaint.alpha = 40
             
-            uncertaintyFillPaint.color = 0x20FF1744.toInt()
-            uncertaintyStrokePaint.color = 0x80FF1744.toInt()
+            uncertaintyFillPaint.color = ContextCompat.getColor(context, R.color.nautical_night_vision_red_dim_20)
+            uncertaintyStrokePaint.color = ContextCompat.getColor(context, R.color.nautical_night_vision_muted)
             
             milestonePointPaint.color = redColor
             
-            badgeBgPaint.color = 0xEE120000.toInt()
+            badgeBgPaint.color = ContextCompat.getColor(context, R.color.nautical_night_vision_bg)
             badgeStrokePaint.color = redColor
             badgeTextPaint.color = redLight
         } else {
@@ -129,10 +131,10 @@ class DeadReckoningMapLayer(context: Context) : OsmandMapLayer(context) {
             
             milestonePointPaint.color = colorAmber
             
-            badgeBgPaint.color = 0xFF263238.toInt()
+            badgeBgPaint.color = ContextCompat.getColor(context, R.color.nautical_day_chip_bg_dark)
             badgeBgPaint.alpha = 220
             badgeStrokePaint.color = colorAmber
-            badgeTextPaint.color = Color.WHITE
+            badgeTextPaint.color = ContextCompat.getColor(context, R.color.nautical_map_text)
         }
     }
 

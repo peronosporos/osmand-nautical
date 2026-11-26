@@ -1,5 +1,7 @@
 package net.osmand.plus.plugins.nautical.mob.ui
 
+import androidx.core.content.ContextCompat
+import net.osmand.plus.R
 import android.content.Context
 import android.graphics.*
 import kotlin.math.abs
@@ -21,87 +23,87 @@ class MobMapLayer(context: Context) : OsmandMapLayer(context) {
     private var mobUiState: MobUiState? = null
 
     private val markerPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.RED
+        color = ContextCompat.getColor(context, R.color.nautical_map_icon_alert)
         style = Paint.Style.STROKE
         strokeWidth = 4f
     }
 
     private val fillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.RED
+        color = ContextCompat.getColor(context, R.color.nautical_map_icon_alert)
         alpha = 90
         style = Paint.Style.FILL
     }
 
     private val driftingDatumPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = 0xFFFF9800.toInt() // Amber
+        color = ContextCompat.getColor(context, R.color.nautical_day_amber) // Amber
         style = Paint.Style.STROKE
         strokeWidth = 4f
     }
 
     private val driftingDatumFillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = 0xFFFF9800.toInt()
+        color = ContextCompat.getColor(context, R.color.nautical_day_amber)
         alpha = 90
         style = Paint.Style.FILL
     }
 
     private val driftLinePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = 0xFFFF9800.toInt()
+        color = ContextCompat.getColor(context, R.color.nautical_day_amber)
         style = Paint.Style.STROKE
         strokeWidth = 2.5f
         pathEffect = DashPathEffect(floatArrayOf(10f, 10f), 0f)
     }
 
     private val searchUncertaintyFillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = 0xFFFF9800.toInt()
+        color = ContextCompat.getColor(context, R.color.nautical_day_amber)
         alpha = 30
         style = Paint.Style.FILL
     }
 
     private val searchUncertaintyStrokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = 0xFFFF9800.toInt()
+        color = ContextCompat.getColor(context, R.color.nautical_day_amber)
         alpha = 140
         style = Paint.Style.STROKE
         strokeWidth = 1.5f
     }
 
     private val patternPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.YELLOW
+        color = ContextCompat.getColor(context, R.color.nautical_day_yellow)
         style = Paint.Style.STROKE
         strokeWidth = 3.5f
         pathEffect = DashPathEffect(floatArrayOf(15f, 10f), 0f)
     }
 
     private val activeLegPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = 0xFF00E5FF.toInt()
+        color = ContextCompat.getColor(context, R.color.nautical_race_cyan)
         style = Paint.Style.STROKE
         strokeWidth = 5f
     }
 
     private val sarWaypointPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.YELLOW
+        color = ContextCompat.getColor(context, R.color.nautical_day_yellow)
         style = Paint.Style.FILL
     }
 
     private val sarWaypointBgPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = 0xDD212121.toInt()
+        color = ContextCompat.getColor(context, R.color.nautical_day_chip_bg)
         style = Paint.Style.FILL
     }
 
     private val sarWaypointStrokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.YELLOW
+        color = ContextCompat.getColor(context, R.color.nautical_day_yellow)
         style = Paint.Style.STROKE
         strokeWidth = 1.5f
     }
 
     private val sarWaypointTextPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.WHITE
+        color = ContextCompat.getColor(context, R.color.nautical_map_text)
         textSize = 18f
         textAlign = Paint.Align.CENTER
         typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
     }
 
     private val linePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.RED
+        color = ContextCompat.getColor(context, R.color.nautical_map_icon_alert)
         style = Paint.Style.STROKE
         strokeWidth = 6f
         pathEffect = DashPathEffect(floatArrayOf(20f, 10f), 0f)
@@ -110,7 +112,7 @@ class MobMapLayer(context: Context) : OsmandMapLayer(context) {
     private val pulsingCirclePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
         strokeWidth = 2.5f
-        color = Color.RED
+        color = ContextCompat.getColor(context, R.color.nautical_map_icon_alert)
     }
 
     private val patternPath = Path()
@@ -127,9 +129,9 @@ class MobMapLayer(context: Context) : OsmandMapLayer(context) {
 
     private fun setupPaints(isNight: Boolean) {
         if (isNight) {
-            val brightRed = 0xFFFF1744.toInt()
-            val vibrantRed = 0xFFFF5252.toInt()
-            val lightRed = 0xFFFF8A80.toInt()
+            val brightRed = ContextCompat.getColor(context, R.color.nautical_night_vision_primary)
+            val vibrantRed = ContextCompat.getColor(context, R.color.nautical_night_vision_secondary)
+            val lightRed = ContextCompat.getColor(context, R.color.nautical_night_vision_data)
 
             markerPaint.color = brightRed
             fillPaint.color = brightRed
@@ -141,43 +143,43 @@ class MobMapLayer(context: Context) : OsmandMapLayer(context) {
 
             driftLinePaint.color = vibrantRed
 
-            searchUncertaintyFillPaint.color = 0x25B71C1C.toInt()
-            searchUncertaintyStrokePaint.color = 0x80FF1744.toInt()
+            searchUncertaintyFillPaint.color = ContextCompat.getColor(context, R.color.nautical_night_vision_crimson_dim_25)
+            searchUncertaintyStrokePaint.color = ContextCompat.getColor(context, R.color.nautical_night_vision_muted)
 
             patternPaint.color = brightRed
             activeLegPaint.color = brightRed
             sarWaypointPaint.color = lightRed
-            sarWaypointBgPaint.color = 0xEE120000.toInt()
+            sarWaypointBgPaint.color = ContextCompat.getColor(context, R.color.nautical_night_vision_bg)
             sarWaypointStrokePaint.color = brightRed
             sarWaypointTextPaint.color = lightRed
 
             linePaint.color = brightRed
             pulsingCirclePaint.color = brightRed
         } else {
-            markerPaint.color = Color.RED
-            fillPaint.color = Color.RED
+            markerPaint.color = ContextCompat.getColor(context, R.color.nautical_map_icon_alert)
+            fillPaint.color = ContextCompat.getColor(context, R.color.nautical_map_icon_alert)
             fillPaint.alpha = 90
 
-            driftingDatumPaint.color = 0xFFFF9800.toInt()
-            driftingDatumFillPaint.color = 0xFFFF9800.toInt()
+            driftingDatumPaint.color = ContextCompat.getColor(context, R.color.nautical_day_amber)
+            driftingDatumFillPaint.color = ContextCompat.getColor(context, R.color.nautical_day_amber)
             driftingDatumFillPaint.alpha = 90
 
-            driftLinePaint.color = 0xFFFF9800.toInt()
+            driftLinePaint.color = ContextCompat.getColor(context, R.color.nautical_day_amber)
 
-            searchUncertaintyFillPaint.color = 0xFFFF9800.toInt()
+            searchUncertaintyFillPaint.color = ContextCompat.getColor(context, R.color.nautical_day_amber)
             searchUncertaintyFillPaint.alpha = 30
-            searchUncertaintyStrokePaint.color = 0xFFFF9800.toInt()
+            searchUncertaintyStrokePaint.color = ContextCompat.getColor(context, R.color.nautical_day_amber)
             searchUncertaintyStrokePaint.alpha = 140
 
-            patternPaint.color = Color.YELLOW
-            activeLegPaint.color = 0xFF00E5FF.toInt()
-            sarWaypointPaint.color = Color.YELLOW
-            sarWaypointBgPaint.color = 0xDD212121.toInt()
-            sarWaypointStrokePaint.color = Color.YELLOW
-            sarWaypointTextPaint.color = Color.WHITE
+            patternPaint.color = ContextCompat.getColor(context, R.color.nautical_day_yellow)
+            activeLegPaint.color = ContextCompat.getColor(context, R.color.nautical_race_cyan)
+            sarWaypointPaint.color = ContextCompat.getColor(context, R.color.nautical_day_yellow)
+            sarWaypointBgPaint.color = ContextCompat.getColor(context, R.color.nautical_day_chip_bg)
+            sarWaypointStrokePaint.color = ContextCompat.getColor(context, R.color.nautical_day_yellow)
+            sarWaypointTextPaint.color = ContextCompat.getColor(context, R.color.nautical_map_text)
 
-            linePaint.color = Color.RED
-            pulsingCirclePaint.color = Color.RED
+            linePaint.color = ContextCompat.getColor(context, R.color.nautical_map_icon_alert)
+            pulsingCirclePaint.color = ContextCompat.getColor(context, R.color.nautical_map_icon_alert)
         }
     }
 

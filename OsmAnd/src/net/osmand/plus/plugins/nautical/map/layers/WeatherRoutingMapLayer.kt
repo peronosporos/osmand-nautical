@@ -1,11 +1,12 @@
 package net.osmand.plus.plugins.nautical.map.layers
 
+import androidx.core.content.ContextCompat
+import net.osmand.plus.R
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Path
-import androidx.core.graphics.toColorInt
 import net.osmand.data.RotatedTileBox
 import net.osmand.plus.plugins.nautical.hazard.engine.SafetyCorridorChecker
 import net.osmand.plus.plugins.nautical.NauticalPlugin
@@ -22,7 +23,7 @@ class WeatherRoutingMapLayer(context: Context) : OsmandMapLayer(context) {
     }
 
     private val isochronePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = "#4000BCD4".toColorInt()
+        color = ContextCompat.getColor(context, R.color.nautical_day_cyan_dim_40)
         style = Paint.Style.STROKE
         strokeWidth = 3f
     }
@@ -102,7 +103,7 @@ class WeatherRoutingMapLayer(context: Context) : OsmandMapLayer(context) {
         val isNight = NauticalPlugin.isNightVision(app)
 
         // 1. Draw Isochrone Rings (Project center LatLon on every frame)
-        isochronePaint.color = if (isNight) 0x40FF1744.toInt() else "#4000BCD4".toColorInt()
+        isochronePaint.color = if (isNight) ContextCompat.getColor(context, R.color.nautical_night_vision_red_dim_40) else ContextCompat.getColor(context, R.color.nautical_day_cyan_dim_40)
         val start = pathPoints.first()
         val startX = tileBox.getPixXFromLatLon(start.latitude, start.longitude)
         val startY = tileBox.getPixYFromLatLon(start.latitude, start.longitude)
@@ -131,13 +132,13 @@ class WeatherRoutingMapLayer(context: Context) : OsmandMapLayer(context) {
         drawSafetyCorridorAndXte(canvas, tileBox, pathPoints, isNight)
 
         // Draw optimal route
-        routePaint.color = if (isNight) 0xFFFF1744.toInt() else "#4CAF50".toColorInt()
+        routePaint.color = if (isNight) ContextCompat.getColor(context, R.color.nautical_night_vision_primary) else ContextCompat.getColor(context, R.color.nautical_day_green_soft)
         routePaint.strokeWidth = 8f
         canvas.drawPath(routePath, routePaint)
 
         // Draw hazardous segments
         if (!hazardousPath.isEmpty) {
-            routePaint.color = if (isNight) 0xFFFF5252.toInt() else Color.RED
+            routePaint.color = if (isNight) ContextCompat.getColor(context, R.color.nautical_night_vision_secondary) else ContextCompat.getColor(context, R.color.nautical_map_icon_alert)
             routePaint.strokeWidth = 12f
             canvas.drawPath(hazardousPath, routePaint)
         }
@@ -156,19 +157,19 @@ class WeatherRoutingMapLayer(context: Context) : OsmandMapLayer(context) {
         val corridorWidthMeters = 50.0
 
         if (isNight) {
-            corridorFillPaint.color = 0x12FF1744.toInt()
-            corridorPaint.color = 0x60FF1744.toInt()
-            chevronPaint.color = 0xFFFF5252.toInt()
-            badgeBgPaint.color = 0xEE120000.toInt()
-            badgeStrokePaint.color = 0xFFFF1744.toInt()
-            badgeTextPaint.color = 0xFFFF8A80.toInt()
+            corridorFillPaint.color = ContextCompat.getColor(context, R.color.nautical_night_vision_red_dim_12)
+            corridorPaint.color = ContextCompat.getColor(context, R.color.nautical_night_vision_red_dim_60)
+            chevronPaint.color = ContextCompat.getColor(context, R.color.nautical_night_vision_secondary)
+            badgeBgPaint.color = ContextCompat.getColor(context, R.color.nautical_night_vision_bg)
+            badgeStrokePaint.color = ContextCompat.getColor(context, R.color.nautical_night_vision_primary)
+            badgeTextPaint.color = ContextCompat.getColor(context, R.color.nautical_night_vision_data)
         } else {
-            corridorFillPaint.color = 0x144CAF50.toInt()
-            corridorPaint.color = 0x604CAF50.toInt()
-            chevronPaint.color = 0xFF00E5FF.toInt()
-            badgeBgPaint.color = 0xDD212121.toInt()
-            badgeStrokePaint.color = 0xFF00E5FF.toInt()
-            badgeTextPaint.color = Color.WHITE
+            corridorFillPaint.color = ContextCompat.getColor(context, R.color.nautical_day_green_soft_dim_14)
+            corridorPaint.color = ContextCompat.getColor(context, R.color.nautical_day_green_soft_dim_60)
+            chevronPaint.color = ContextCompat.getColor(context, R.color.nautical_race_cyan)
+            badgeBgPaint.color = ContextCompat.getColor(context, R.color.nautical_day_chip_bg)
+            badgeStrokePaint.color = ContextCompat.getColor(context, R.color.nautical_race_cyan)
+            badgeTextPaint.color = ContextCompat.getColor(context, R.color.nautical_map_text)
         }
 
         // Draw corridor polygon for the first / active leg

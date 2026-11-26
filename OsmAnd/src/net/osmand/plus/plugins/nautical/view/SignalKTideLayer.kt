@@ -1,5 +1,7 @@
 package net.osmand.plus.plugins.nautical.view
 
+import androidx.core.content.ContextCompat
+import net.osmand.plus.R
 import android.content.Context
 import android.graphics.*
 import android.os.Bundle
@@ -29,7 +31,7 @@ class SignalKTideLayer(context: Context) : OsmandMapLayer(context) {
     }
     
     private val bgPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.BLACK
+        color = ContextCompat.getColor(context, R.color.nautical_day_black)
         alpha = 160
         style = Paint.Style.FILL
     }
@@ -47,8 +49,8 @@ class SignalKTideLayer(context: Context) : OsmandMapLayer(context) {
         val vesselTide = marineState?.tide
 
         val isNight = NauticalPlugin.isNightVision(app)
-        textPaint.color = if (isNight) 0xFFFF8A80.toInt() else Color.WHITE
-        bgPaint.color = if (isNight) 0xEE120000.toInt() else 0xCC000000.toInt()
+        textPaint.color = if (isNight) ContextCompat.getColor(context, R.color.nautical_night_vision_data) else ContextCompat.getColor(context, R.color.nautical_map_text)
+        bgPaint.color = if (isNight) ContextCompat.getColor(context, R.color.nautical_night_vision_bg) else ContextCompat.getColor(context, R.color.nautical_day_black_dim_cc)
 
         // Signal K Stations
         stations.values.forEach { station ->
@@ -69,7 +71,7 @@ class SignalKTideLayer(context: Context) : OsmandMapLayer(context) {
     }
 
     private fun drawStationIcon(canvas: Canvas, x: Float, y: Float, station: SignalKTideStation, vesselTide: net.osmand.plus.plugins.nautical.engine.TideState?, isNight: Boolean) {
-        val color = if (isNight) 0xFFFF1744.toInt() else Color.CYAN
+        val color = if (isNight) ContextCompat.getColor(context, R.color.nautical_night_vision_primary) else ContextCompat.getColor(context, R.color.nautical_day_signal_cyan)
         paint.color = color
         paint.style = Paint.Style.STROKE
         paint.strokeWidth = 3f
@@ -101,7 +103,7 @@ class SignalKTideLayer(context: Context) : OsmandMapLayer(context) {
 
     private fun drawTrendArrow(canvas: Canvas, x: Float, y: Float, rising: Boolean, isNight: Boolean) {
         val arrowPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = if (isNight) 0xFFFF1744.toInt() else Color.GREEN
+            color = if (isNight) ContextCompat.getColor(context, R.color.nautical_night_vision_primary) else ContextCompat.getColor(context, R.color.nautical_day_green_signal)
             style = Paint.Style.FILL
         }
         val path = Path()

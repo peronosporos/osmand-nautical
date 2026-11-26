@@ -1,5 +1,6 @@
 package net.osmand.plus.plugins.nautical.depth.ui
 
+import androidx.core.content.ContextCompat
 import android.content.Context
 import android.graphics.*
 import android.view.MotionEvent
@@ -20,47 +21,47 @@ class DepthProfileMapLayer(
 
     private val bgPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.FILL
-        color = 0xEE1A2327.toInt()
+        color = ContextCompat.getColor(context, R.color.nautical_depth_panel_bg)
     }
 
     private val borderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
         strokeWidth = 2f
-        color = 0xFF00E5FF.toInt()
+        color = ContextCompat.getColor(context, R.color.nautical_race_cyan)
     }
 
     private val seabedPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.FILL
-        color = 0x8037474F.toInt()
+        color = ContextCompat.getColor(context, R.color.nautical_day_slate_dim_80)
     }
 
     private val seabedLinePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
         strokeWidth = 3f
-        color = 0xFF00BCD4.toInt()
+        color = ContextCompat.getColor(context, R.color.nautical_day_cyan_solid)
     }
 
     private val dangerCeilingPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
         strokeWidth = 2.5f
         pathEffect = DashPathEffect(floatArrayOf(10f, 6f), 0f)
-        color = 0xFFFF1744.toInt()
+        color = ContextCompat.getColor(context, R.color.nautical_night_vision_primary)
     }
 
     private val hazardPinPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.FILL
-        color = 0xFFFF1744.toInt()
+        color = ContextCompat.getColor(context, R.color.nautical_night_vision_primary)
     }
 
     private val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         textSize = 22f
-        color = Color.WHITE
+        color = ContextCompat.getColor(context, R.color.nautical_map_text)
         typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
     }
 
     private val subTextPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         textSize = 18f
-        color = 0xFFB0BEC5.toInt()
+        color = ContextCompat.getColor(context, R.color.nautical_race_dim)
     }
 
     private val panelRect = RectF()
@@ -109,19 +110,19 @@ class DepthProfileMapLayer(
 
         // Night vision theme styling
         if (isNight) {
-            bgPaint.color = 0xEE120000.toInt()
-            borderPaint.color = 0xFFFF1744.toInt()
-            seabedPaint.color = 0x40B71C1C.toInt()
-            seabedLinePaint.color = 0xFFFF8A80.toInt()
-            textPaint.color = 0xFFFF8A80.toInt()
-            subTextPaint.color = 0xFFFFCDD2.toInt()
+            bgPaint.color = ContextCompat.getColor(context, R.color.nautical_night_vision_bg)
+            borderPaint.color = ContextCompat.getColor(context, R.color.nautical_night_vision_primary)
+            seabedPaint.color = ContextCompat.getColor(context, R.color.nautical_night_vision_crimson_dim_40)
+            seabedLinePaint.color = ContextCompat.getColor(context, R.color.nautical_night_vision_data)
+            textPaint.color = ContextCompat.getColor(context, R.color.nautical_night_vision_data)
+            subTextPaint.color = ContextCompat.getColor(context, R.color.nautical_night_vision_pale)
         } else {
-            bgPaint.color = 0xEE1A2327.toInt()
-            borderPaint.color = 0xFF00E5FF.toInt()
-            seabedPaint.color = 0x8037474F.toInt()
-            seabedLinePaint.color = 0xFF00BCD4.toInt()
-            textPaint.color = Color.WHITE
-            subTextPaint.color = 0xFFB0BEC5.toInt()
+            bgPaint.color = ContextCompat.getColor(context, R.color.nautical_depth_panel_bg)
+            borderPaint.color = ContextCompat.getColor(context, R.color.nautical_race_cyan)
+            seabedPaint.color = ContextCompat.getColor(context, R.color.nautical_day_slate_dim_80)
+            seabedLinePaint.color = ContextCompat.getColor(context, R.color.nautical_day_cyan_solid)
+            textPaint.color = ContextCompat.getColor(context, R.color.nautical_map_text)
+            subTextPaint.color = ContextCompat.getColor(context, R.color.nautical_race_dim)
         }
 
         canvas.drawRoundRect(panelRect, 8f * density, 8f * density, bgPaint)

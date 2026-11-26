@@ -1,5 +1,7 @@
 package net.osmand.plus.plugins.nautical.radar.ui
 
+import androidx.core.content.ContextCompat
+import net.osmand.plus.R
 import android.content.Context
 import android.graphics.*
 import android.graphics.PointF
@@ -18,13 +20,13 @@ class RadarMapLayer(
     private val ringPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
         strokeWidth = 2f
-        color = 0x8000E5FF.toInt()
+        color = ContextCompat.getColor(context, R.color.nautical_race_cyan_dim_80)
     }
 
     private val spokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
         strokeWidth = 1.5f
-        color = 0x4000E5FF.toInt()
+        color = ContextCompat.getColor(context, R.color.nautical_race_cyan_dim_40)
     }
 
     private val sweepPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -33,18 +35,18 @@ class RadarMapLayer(
 
     private val chipBgPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.FILL
-        color = 0xDD212121.toInt()
+        color = ContextCompat.getColor(context, R.color.nautical_day_chip_bg)
     }
 
     private val chipStrokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
         strokeWidth = 1.5f
-        color = 0xFF00E5FF.toInt()
+        color = ContextCompat.getColor(context, R.color.nautical_race_cyan)
     }
 
     private val chipTextPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         textSize = 24f
-        color = Color.WHITE
+        color = ContextCompat.getColor(context, R.color.nautical_map_text)
         typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
         textAlign = Paint.Align.CENTER
     }
@@ -69,8 +71,8 @@ class RadarMapLayer(
         val nmToMeters = 1852.0
         val ringsNm = floatArrayOf(0.5f, 1.0f, 2.0f)
 
-        ringPaint.color = if (isNight) 0x60FF1744.toInt() else 0x6000E5FF.toInt()
-        spokePaint.color = if (isNight) 0x30FF1744.toInt() else 0x3000E5FF.toInt()
+        ringPaint.color = if (isNight) ContextCompat.getColor(context, R.color.nautical_night_vision_red_dim_60) else ContextCompat.getColor(context, R.color.nautical_race_cyan_dim_60)
+        spokePaint.color = if (isNight) ContextCompat.getColor(context, R.color.nautical_night_vision_red_dim_30) else ContextCompat.getColor(context, R.color.nautical_race_cyan_dim_30)
         ringPaint.alpha = (ringPaint.alpha * opacity).toInt()
         spokePaint.alpha = (spokePaint.alpha * opacity).toInt()
 
@@ -93,9 +95,9 @@ class RadarMapLayer(
 
         chipRect.set(chipX, chipY, chipX + chipW, chipY + chipH)
 
-        chipBgPaint.color = if (isNight) 0xEE120000.toInt() else 0xDD212121.toInt()
-        chipStrokePaint.color = if (isNight) 0xFFFF1744.toInt() else 0xFF00E5FF.toInt()
-        chipTextPaint.color = if (isNight) 0xFFFF8A80.toInt() else Color.WHITE
+        chipBgPaint.color = if (isNight) ContextCompat.getColor(context, R.color.nautical_night_vision_bg) else ContextCompat.getColor(context, R.color.nautical_day_chip_bg)
+        chipStrokePaint.color = if (isNight) ContextCompat.getColor(context, R.color.nautical_night_vision_primary) else ContextCompat.getColor(context, R.color.nautical_race_cyan)
+        chipTextPaint.color = if (isNight) ContextCompat.getColor(context, R.color.nautical_night_vision_data) else ContextCompat.getColor(context, R.color.nautical_map_text)
         chipTextPaint.textSize = 12f * density
 
         canvas.drawRoundRect(chipRect, 8f * density, 8f * density, chipBgPaint)

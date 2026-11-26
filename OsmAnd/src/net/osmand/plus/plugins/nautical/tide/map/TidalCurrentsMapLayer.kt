@@ -1,5 +1,6 @@
 package net.osmand.plus.plugins.nautical.tide.map
 
+import androidx.core.content.ContextCompat
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Color
@@ -33,41 +34,41 @@ class TidalCurrentsMapLayer(context: Context) : OsmandMapLayer(context) {
     }
 
     private val badgeBgPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = 0xDD212121.toInt()
+        color = ContextCompat.getColor(context, R.color.nautical_day_chip_bg)
         style = Paint.Style.FILL
     }
 
     private val badgeStrokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.CYAN
+        color = ContextCompat.getColor(context, R.color.nautical_day_signal_cyan)
         style = Paint.Style.STROKE
         strokeWidth = 1.5f
     }
 
     private val badgeTextPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.WHITE
+        color = ContextCompat.getColor(context, R.color.nautical_map_text)
         textSize = 18f
         textAlign = Paint.Align.CENTER
         typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
     }
 
     private val scrubberCardBgPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = 0xEE263238.toInt()
+        color = ContextCompat.getColor(context, R.color.nautical_day_card_bg)
         style = Paint.Style.FILL
     }
 
     private val scrubberCardStrokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = 0xFF00E5FF.toInt()
+        color = ContextCompat.getColor(context, R.color.nautical_race_cyan)
         style = Paint.Style.STROKE
         strokeWidth = 1.5f
     }
 
     private val scrubberButtonBgPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = 0x8037474F.toInt()
+        color = ContextCompat.getColor(context, R.color.nautical_day_slate_dim_80)
         style = Paint.Style.FILL
     }
 
     private val scrubberTextPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.WHITE
+        color = ContextCompat.getColor(context, R.color.nautical_map_text)
         textSize = 20f
         textAlign = Paint.Align.CENTER
         typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
@@ -104,25 +105,25 @@ class TidalCurrentsMapLayer(context: Context) : OsmandMapLayer(context) {
 
     private fun setupPaints(isNight: Boolean) {
         if (isNight) {
-            val redColor = 0xFFFF1744.toInt()
-            val redLight = 0xFFFF8A80.toInt()
-            badgeBgPaint.color = 0xEE120000.toInt()
+            val redColor = ContextCompat.getColor(context, R.color.nautical_night_vision_primary)
+            val redLight = ContextCompat.getColor(context, R.color.nautical_night_vision_data)
+            badgeBgPaint.color = ContextCompat.getColor(context, R.color.nautical_night_vision_bg)
             badgeStrokePaint.color = redColor
             badgeTextPaint.color = redLight
 
-            scrubberCardBgPaint.color = 0xEE120000.toInt()
+            scrubberCardBgPaint.color = ContextCompat.getColor(context, R.color.nautical_night_vision_bg)
             scrubberCardStrokePaint.color = redColor
-            scrubberButtonBgPaint.color = 0x80B71C1C.toInt()
+            scrubberButtonBgPaint.color = ContextCompat.getColor(context, R.color.nautical_night_vision_stroke)
             scrubberTextPaint.color = redLight
         } else {
-            badgeBgPaint.color = 0xDD212121.toInt()
-            badgeStrokePaint.color = Color.CYAN
-            badgeTextPaint.color = Color.WHITE
+            badgeBgPaint.color = ContextCompat.getColor(context, R.color.nautical_day_chip_bg)
+            badgeStrokePaint.color = ContextCompat.getColor(context, R.color.nautical_day_signal_cyan)
+            badgeTextPaint.color = ContextCompat.getColor(context, R.color.nautical_map_text)
 
-            scrubberCardBgPaint.color = 0xEE263238.toInt()
-            scrubberCardStrokePaint.color = 0xFF00E5FF.toInt()
-            scrubberButtonBgPaint.color = 0x8037474F.toInt()
-            scrubberTextPaint.color = Color.WHITE
+            scrubberCardBgPaint.color = ContextCompat.getColor(context, R.color.nautical_day_card_bg)
+            scrubberCardStrokePaint.color = ContextCompat.getColor(context, R.color.nautical_race_cyan)
+            scrubberButtonBgPaint.color = ContextCompat.getColor(context, R.color.nautical_day_slate_dim_80)
+            scrubberTextPaint.color = ContextCompat.getColor(context, R.color.nautical_map_text)
         }
     }
 
@@ -265,16 +266,16 @@ class TidalCurrentsMapLayer(context: Context) : OsmandMapLayer(context) {
         val speedKnots = speed * 1.94384
         if (isNight) {
             arrowPaint.color = when {
-                speedKnots > 2.5 -> 0xFFFF1744.toInt() // Vibrant deep red
-                speedKnots > 1.0 -> 0xFFD50000.toInt() // Mid deep red
-                else -> 0xFF8B0000.toInt() // Dark red
+                speedKnots > 2.5 -> ContextCompat.getColor(context, R.color.nautical_night_vision_primary) // Vibrant deep red
+                speedKnots > 1.0 -> ContextCompat.getColor(context, R.color.nautical_day_red_dark) // Mid deep red
+                else -> ContextCompat.getColor(context, R.color.nautical_night_vision_recording_idle) // Dark red
             }
-            badgeStrokePaint.color = 0xFFFF1744.toInt()
+            badgeStrokePaint.color = ContextCompat.getColor(context, R.color.nautical_night_vision_primary)
         } else {
             arrowPaint.color = when {
-                speedKnots > 2.5 -> 0xFFFF1744.toInt() // Red for fast tidal currents
-                speedKnots > 1.0 -> 0xFFFFD600.toInt() // Amber for moderate currents
-                else -> 0xFF00E5FF.toInt() // Cyan for gentle currents
+                speedKnots > 2.5 -> ContextCompat.getColor(context, R.color.nautical_night_vision_primary) // Red for fast tidal currents
+                speedKnots > 1.0 -> ContextCompat.getColor(context, R.color.nautical_day_amber_bright) // Amber for moderate currents
+                else -> ContextCompat.getColor(context, R.color.nautical_race_cyan) // Cyan for gentle currents
             }
             badgeStrokePaint.color = arrowPaint.color
         }

@@ -1,5 +1,7 @@
 package net.osmand.plus.plugins.nautical.laylines.ui
 
+import androidx.core.content.ContextCompat
+import net.osmand.plus.R
 import android.content.Context
 import android.content.SharedPreferences
 import android.graphics.*
@@ -9,7 +11,6 @@ import net.osmand.plus.plugins.nautical.NauticalPlugin
 import net.osmand.plus.plugins.nautical.engine.SignalKPaths
 import net.osmand.plus.plugins.nautical.laylines.viewmodel.LaylineUiState
 import net.osmand.plus.views.layers.base.OsmandMapLayer
-import androidx.core.graphics.toColorInt
 import kotlin.math.abs
 
 /**
@@ -34,12 +35,12 @@ class SailingLaylinesMapLayer(context: Context) : OsmandMapLayer(context), Share
     }
 
     private val portConePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = 0x30FF1744.toInt() // Subtle red port header sector (#30FF1744)
+        color = ContextCompat.getColor(context, R.color.nautical_night_vision_red_dim_30) // Subtle red port header sector (#30FF1744)
         style = Paint.Style.FILL
     }
 
     private val stbdConePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = 0x3000E676.toInt() // Subtle green starboard lift sector (#3000E676)
+        color = ContextCompat.getColor(context, R.color.nautical_race_green_dim_30) // Subtle green starboard lift sector (#3000E676)
         style = Paint.Style.FILL
     }
 
@@ -129,9 +130,9 @@ class SailingLaylinesMapLayer(context: Context) : OsmandMapLayer(context), Share
     private val stbdCache = LaylineCache()
 
     // Colors
-    private val colorFetchable = "#4CAF50".toColorInt() // Green
-    private val colorTackRequired = "#F44336".toColorInt() // Red
-    private val colorWindShift = "#8000BCD4".toColorInt() // Semi-transparent Cyan
+    private val colorFetchable = ContextCompat.getColor(context, R.color.nautical_day_green_soft) // Green
+    private val colorTackRequired = ContextCompat.getColor(context, R.color.nautical_day_red_material) // Red
+    private val colorWindShift = ContextCompat.getColor(context, R.color.nautical_day_cyan_dim_80) // Semi-transparent Cyan
 
     private var cachedSweepAngle = 0f
     private var cachedStartOfMaxGapPlusGap = 0f
@@ -199,25 +200,25 @@ class SailingLaylinesMapLayer(context: Context) : OsmandMapLayer(context), Share
 
     private val windShiftConePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.FILL
-        color = 0x2000BCD4.toInt()
+        color = ContextCompat.getColor(context, R.color.nautical_day_cyan_dim_20)
     }
 
     private val windShiftConeStrokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
         strokeWidth = 1.5f
-        color = 0x8000BCD4.toInt()
+        color = ContextCompat.getColor(context, R.color.nautical_day_cyan_dim_80)
         pathEffect = DashPathEffect(floatArrayOf(8f, 6f), 0f)
     }
 
     private val optimumTackPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.FILL
-        color = 0x8000E5FF.toInt()
+        color = ContextCompat.getColor(context, R.color.nautical_race_cyan_dim_80)
     }
 
     private val optimumTackStrokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
         strokeWidth = 2.5f
-        color = Color.WHITE
+        color = ContextCompat.getColor(context, R.color.nautical_map_text)
     }
 
     private val portWindShiftConePath = Path()
@@ -228,19 +229,19 @@ class SailingLaylinesMapLayer(context: Context) : OsmandMapLayer(context), Share
         val pathEffect = if (isFetchable) null else dashedEffect
         
         if (isNight) {
-            portPaint.color = 0xFFFF1744.toInt() // Bright red for Port tack (#FFFF1744)
+            portPaint.color = ContextCompat.getColor(context, R.color.nautical_night_vision_primary) // Bright red for Port tack (#FFFF1744)
             portPaint.pathEffect = pathEffect
-            stbdPaint.color = 0xCCB71C1C.toInt() // Deep muted crimson for Starboard tack (#CCB71C1C)
+            stbdPaint.color = ContextCompat.getColor(context, R.color.nautical_night_vision_crimson_dim_cc) // Deep muted crimson for Starboard tack (#CCB71C1C)
             stbdPaint.pathEffect = pathEffect
 
-            portConePaint.color = 0x15FF1744.toInt()
-            stbdConePaint.color = 0x15FF1744.toInt()
-            windShiftPaint.color = 0x30FF1744.toInt()
+            portConePaint.color = ContextCompat.getColor(context, R.color.nautical_night_vision_red_dim_15)
+            stbdConePaint.color = ContextCompat.getColor(context, R.color.nautical_night_vision_red_dim_15)
+            windShiftPaint.color = ContextCompat.getColor(context, R.color.nautical_night_vision_red_dim_30)
 
-            windShiftConePaint.color = 0x15FF1744.toInt()
-            windShiftConeStrokePaint.color = 0x80FF1744.toInt()
-            optimumTackPaint.color = 0xCCFF1744.toInt()
-            optimumTackStrokePaint.color = 0xFFFF8A80.toInt()
+            windShiftConePaint.color = ContextCompat.getColor(context, R.color.nautical_night_vision_red_dim_15)
+            windShiftConeStrokePaint.color = ContextCompat.getColor(context, R.color.nautical_night_vision_muted)
+            optimumTackPaint.color = ContextCompat.getColor(context, R.color.nautical_night_vision_red_dim_cc)
+            optimumTackStrokePaint.color = ContextCompat.getColor(context, R.color.nautical_night_vision_data)
         } else {
             val baseColor = if (isFetchable) colorFetchable else colorTackRequired
             portPaint.color = baseColor
@@ -248,14 +249,14 @@ class SailingLaylinesMapLayer(context: Context) : OsmandMapLayer(context), Share
             stbdPaint.color = baseColor
             stbdPaint.pathEffect = pathEffect
 
-            portConePaint.color = 0x2000BCD4.toInt()
-            stbdConePaint.color = 0x2000BCD4.toInt()
+            portConePaint.color = ContextCompat.getColor(context, R.color.nautical_day_cyan_dim_20)
+            stbdConePaint.color = ContextCompat.getColor(context, R.color.nautical_day_cyan_dim_20)
             windShiftPaint.color = colorWindShift
 
-            windShiftConePaint.color = 0x2000BCD4.toInt()
-            windShiftConeStrokePaint.color = 0x8000BCD4.toInt()
-            optimumTackPaint.color = 0x8000E5FF.toInt()
-            optimumTackStrokePaint.color = Color.WHITE
+            windShiftConePaint.color = ContextCompat.getColor(context, R.color.nautical_day_cyan_dim_20)
+            windShiftConeStrokePaint.color = ContextCompat.getColor(context, R.color.nautical_day_cyan_dim_80)
+            optimumTackPaint.color = ContextCompat.getColor(context, R.color.nautical_race_cyan_dim_80)
+            optimumTackStrokePaint.color = ContextCompat.getColor(context, R.color.nautical_map_text)
         }
     }
 

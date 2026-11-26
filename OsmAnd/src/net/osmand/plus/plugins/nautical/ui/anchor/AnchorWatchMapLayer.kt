@@ -25,43 +25,43 @@ class AnchorWatchMapLayer(context: Context) : OsmandMapLayer(context) {
     private val alarmBoundaryPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
         strokeWidth = 4f
-        color = Color.RED
+        color = ContextCompat.getColor(context, R.color.nautical_map_anchor_zone)
         pathEffect = DashPathEffect(floatArrayOf(20f, 10f), 0f)
     }
 
     private val alarmBoundaryFillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.FILL
-        color = Color.RED
+        color = ContextCompat.getColor(context, R.color.nautical_map_anchor_zone)
         alpha = 25 // Semi-transparent red alarm zone
     }
 
     private val safeSwingPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
         strokeWidth = 3f
-        color = 0xFF43A047.toInt() // Green for safe swing zone
+        color = ContextCompat.getColor(context, R.color.nautical_day_green_safe) // Green for safe swing zone
         pathEffect = DashPathEffect(floatArrayOf(14f, 8f), 0f)
     }
 
     private val safeSwingFillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.FILL
-        color = 0xFF43A047.toInt()
+        color = ContextCompat.getColor(context, R.color.nautical_day_green_safe)
         alpha = 20
     }
 
     private val dropPinBgPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.FILL
-        color = 0xDD121212.toInt()
+        color = ContextCompat.getColor(context, R.color.nautical_anchor_watch_pin_bg_day)
     }
 
     private val dropPinStrokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
         strokeWidth = 2.5f
-        color = Color.WHITE
+        color = ContextCompat.getColor(context, R.color.nautical_map_text)
     }
 
     private val dropPinCenterPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.FILL
-        color = 0xFFFF1744.toInt()
+        color = ContextCompat.getColor(context, R.color.nautical_night_vision_primary)
     }
 
     private val snailTrailPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -92,17 +92,17 @@ class AnchorWatchMapLayer(context: Context) : OsmandMapLayer(context) {
 
     private val snailTrailPointPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.FILL
-        color = 0xFF00E5FF.toInt()
+        color = ContextCompat.getColor(context, R.color.nautical_race_cyan)
     }
 
     private val shallowHazardArcPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
         strokeWidth = 6f
-        color = 0xFFFF1744.toInt()
+        color = ContextCompat.getColor(context, R.color.nautical_night_vision_primary)
     }
     private val shallowHazardArcFillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.FILL
-        color = 0x40FF1744.toInt()
+        color = ContextCompat.getColor(context, R.color.nautical_night_vision_red_dim_40)
     }
     private val shallowHazardArcRect = RectF()
 
@@ -110,7 +110,7 @@ class AnchorWatchMapLayer(context: Context) : OsmandMapLayer(context) {
         style = Paint.Style.STROKE
         strokeWidth = 2f
         pathEffect = DashPathEffect(floatArrayOf(8f, 6f), 0f)
-        color = 0xFF00E5FF.toInt()
+        color = ContextCompat.getColor(context, R.color.nautical_race_cyan)
     }
 
     var playbackMinuteOffset: Int? = null
@@ -141,13 +141,13 @@ class AnchorWatchMapLayer(context: Context) : OsmandMapLayer(context) {
 
     private val windShiftConePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.FILL
-        color = 0x35FF1744.toInt()
+        color = ContextCompat.getColor(context, R.color.nautical_night_vision_red_dim_35)
     }
     private val windShiftConeStrokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
         strokeWidth = 2.5f
         pathEffect = DashPathEffect(floatArrayOf(12f, 8f), 0f)
-        color = 0xFFFF1744.toInt()
+        color = ContextCompat.getColor(context, R.color.nautical_night_vision_primary)
     }
     private val windShiftConePath = Path()
     private val windShiftConeRect = RectF()
@@ -169,43 +169,43 @@ class AnchorWatchMapLayer(context: Context) : OsmandMapLayer(context) {
 
     private fun setupPaints(isNight: Boolean) {
         if (isNight) {
-            alarmBoundaryPaint.color = 0xFFFF1744.toInt()
-            alarmBoundaryFillPaint.color = 0x30FF1744.toInt()
+            alarmBoundaryPaint.color = ContextCompat.getColor(context, R.color.nautical_night_vision_primary)
+            alarmBoundaryFillPaint.color = ContextCompat.getColor(context, R.color.nautical_night_vision_red_dim_30)
 
-            safeSwingPaint.color = 0x80B71C1C.toInt()
-            safeSwingFillPaint.color = 0x208B0000.toInt()
+            safeSwingPaint.color = ContextCompat.getColor(context, R.color.nautical_night_vision_stroke)
+            safeSwingFillPaint.color = ContextCompat.getColor(context, R.color.nautical_night_vision_dark_dim_20)
 
-            dropPinBgPaint.color = 0xDD120000.toInt()
-            dropPinStrokePaint.color = 0xFFFF8A80.toInt()
-            dropPinCenterPaint.color = 0xFFFF1744.toInt()
+            dropPinBgPaint.color = ContextCompat.getColor(context, R.color.nautical_night_vision_bg_dim_dd)
+            dropPinStrokePaint.color = ContextCompat.getColor(context, R.color.nautical_night_vision_data)
+            dropPinCenterPaint.color = ContextCompat.getColor(context, R.color.nautical_night_vision_primary)
 
-            snailTrailPaint.color = 0x60FF1744.toInt()
-            snailTrailPointPaint.color = 0xFFFF1744.toInt()
+            snailTrailPaint.color = ContextCompat.getColor(context, R.color.nautical_night_vision_red_dim_60)
+            snailTrailPointPaint.color = ContextCompat.getColor(context, R.color.nautical_night_vision_primary)
 
-            driftConeStrokePaint.color = 0xFFFF1744.toInt()
-            driftConeFillPaint.color = 0x25FF1744.toInt()
-            driftMilestonePaint.color = 0xFFFF8A80.toInt()
-            driftMilestoneTickPaint.color = 0xFFFF1744.toInt()
+            driftConeStrokePaint.color = ContextCompat.getColor(context, R.color.nautical_night_vision_primary)
+            driftConeFillPaint.color = ContextCompat.getColor(context, R.color.nautical_night_vision_red_dim_25)
+            driftMilestonePaint.color = ContextCompat.getColor(context, R.color.nautical_night_vision_data)
+            driftMilestoneTickPaint.color = ContextCompat.getColor(context, R.color.nautical_night_vision_primary)
         } else {
-            alarmBoundaryPaint.color = Color.RED
-            alarmBoundaryFillPaint.color = Color.RED
+            alarmBoundaryPaint.color = ContextCompat.getColor(context, R.color.nautical_map_anchor_zone)
+            alarmBoundaryFillPaint.color = ContextCompat.getColor(context, R.color.nautical_map_anchor_zone)
             alarmBoundaryFillPaint.alpha = 25
 
-            safeSwingPaint.color = 0xFF43A047.toInt()
-            safeSwingFillPaint.color = 0xFF43A047.toInt()
+            safeSwingPaint.color = ContextCompat.getColor(context, R.color.nautical_day_green_safe)
+            safeSwingFillPaint.color = ContextCompat.getColor(context, R.color.nautical_day_green_safe)
             safeSwingFillPaint.alpha = 20
 
-            dropPinBgPaint.color = 0xDD121212.toInt()
-            dropPinStrokePaint.color = Color.WHITE
-            dropPinCenterPaint.color = 0xFFFF1744.toInt()
+            dropPinBgPaint.color = ContextCompat.getColor(context, R.color.nautical_anchor_watch_pin_bg_day)
+            dropPinStrokePaint.color = ContextCompat.getColor(context, R.color.nautical_map_text)
+            dropPinCenterPaint.color = ContextCompat.getColor(context, R.color.nautical_night_vision_primary)
 
-            snailTrailPaint.color = Color.WHITE
-            snailTrailPointPaint.color = 0xFF00E5FF.toInt()
+            snailTrailPaint.color = ContextCompat.getColor(context, R.color.nautical_map_text)
+            snailTrailPointPaint.color = ContextCompat.getColor(context, R.color.nautical_race_cyan)
 
-            driftConeStrokePaint.color = 0xFFD32F2F.toInt()
-            driftConeFillPaint.color = 0x25D32F2F.toInt()
-            driftMilestonePaint.color = 0xFFD32F2F.toInt()
-            driftMilestoneTickPaint.color = 0xFFD32F2F.toInt()
+            driftConeStrokePaint.color = ContextCompat.getColor(context, R.color.nautical_day_red_deep)
+            driftConeFillPaint.color = ContextCompat.getColor(context, R.color.nautical_day_red_deep_dim_25)
+            driftMilestonePaint.color = ContextCompat.getColor(context, R.color.nautical_day_red_deep)
+            driftMilestoneTickPaint.color = ContextCompat.getColor(context, R.color.nautical_day_red_deep)
         }
     }
 
@@ -271,8 +271,8 @@ class AnchorWatchMapLayer(context: Context) : OsmandMapLayer(context) {
         val startAngle = (swingAngleDeg - 90.0 - tileBox.rotate - sweepHalf).toFloat()
         val sweepAngle = sweepHalf * 2f
 
-        windShiftConePaint.color = if (isNight) 0x35FF1744.toInt() else 0x40E53935.toInt()
-        windShiftConeStrokePaint.color = if (isNight) 0xFFFF1744.toInt() else 0xFFD32F2F.toInt()
+        windShiftConePaint.color = if (isNight) ContextCompat.getColor(context, R.color.nautical_night_vision_red_dim_35) else ContextCompat.getColor(context, R.color.nautical_day_red_vivid_dim_40)
+        windShiftConeStrokePaint.color = if (isNight) ContextCompat.getColor(context, R.color.nautical_night_vision_primary) else ContextCompat.getColor(context, R.color.nautical_day_red_deep)
 
         windShiftConePath.rewind()
         windShiftConePath.moveTo(cx, cy)
@@ -363,11 +363,11 @@ class AnchorWatchMapLayer(context: Context) : OsmandMapLayer(context) {
 
         if (isPreview) {
             if (isNight) {
-                safeSwingPaint.color = 0x80FF5252.toInt()
-                safeSwingFillPaint.color = 0x20B71C1C.toInt()
+                safeSwingPaint.color = ContextCompat.getColor(context, R.color.nautical_day_red_bright_dim_80)
+                safeSwingFillPaint.color = ContextCompat.getColor(context, R.color.nautical_night_vision_crimson_dim_20)
             } else {
-                safeSwingPaint.color = Color.BLUE
-                safeSwingFillPaint.color = Color.BLUE
+                safeSwingPaint.color = ContextCompat.getColor(context, R.color.nautical_anchor_watch_gps_lost)
+                safeSwingFillPaint.color = ContextCompat.getColor(context, R.color.nautical_anchor_watch_gps_lost)
                 safeSwingFillPaint.alpha = 15
             }
             canvas.drawCircle(centerX, centerY, pixRadius, safeSwingFillPaint)
@@ -396,7 +396,7 @@ class AnchorWatchMapLayer(context: Context) : OsmandMapLayer(context) {
         }
 
         // 3. Draw Anchor Hook Confidence Ring (8m holding confidence ring around anchor drop position)
-        confidenceRingPaint.color = if (isNight) 0x80FF8A80.toInt() else 0x8000E5FF.toInt()
+        confidenceRingPaint.color = if (isNight) ContextCompat.getColor(context, R.color.nautical_night_vision_data_dim_80) else ContextCompat.getColor(context, R.color.nautical_race_cyan_dim_80)
         val confPixRadius = (8.0 * tileBox.getPixDensity()).toFloat().coerceAtLeast(12f)
         canvas.drawCircle(centerX, centerY, confPixRadius, confidenceRingPaint)
 
@@ -436,9 +436,9 @@ class AnchorWatchMapLayer(context: Context) : OsmandMapLayer(context) {
 
             // Gradient heat mapping: Green (stable), Amber (creep), Crimson (breakout)
             val segmentColor = when {
-                dist > radius -> if (isNight) 0xFFFF1744.toInt() else 0xFFE53935.toInt() // Crimson: Active breakout
-                dist > radius * 0.75 -> if (isNight) 0xFFFF5252.toInt() else 0xFFFFB300.toInt() // Amber: Suspicious elongation
-                else -> if (isNight) 0x80FF8A80.toInt() else 0xFF43A047.toInt() // Green: Stable oscillation
+                dist > radius -> if (isNight) ContextCompat.getColor(context, R.color.nautical_night_vision_primary) else ContextCompat.getColor(context, R.color.nautical_day_red_vivid) // Crimson: Active breakout
+                dist > radius * 0.75 -> if (isNight) ContextCompat.getColor(context, R.color.nautical_night_vision_secondary) else ContextCompat.getColor(context, R.color.nautical_day_amber_deep) // Amber: Suspicious elongation
+                else -> if (isNight) ContextCompat.getColor(context, R.color.nautical_night_vision_data_dim_80) else ContextCompat.getColor(context, R.color.nautical_day_green_safe) // Green: Stable oscillation
             }
 
             snailTrailPaint.color = segmentColor
@@ -450,7 +450,7 @@ class AnchorWatchMapLayer(context: Context) : OsmandMapLayer(context) {
         if (last != null && (currentTime - last.timestamp <= maxAge)) {
             val lx = tileBox.getPixXFromLatLon(last.latLon.latitude, last.latLon.longitude)
             val ly = tileBox.getPixYFromLatLon(last.latLon.latitude, last.latLon.longitude)
-            snailTrailPointPaint.color = if (isNight) 0xFFFF1744.toInt() else 0xFF00E5FF.toInt()
+            snailTrailPointPaint.color = if (isNight) ContextCompat.getColor(context, R.color.nautical_night_vision_primary) else ContextCompat.getColor(context, R.color.nautical_race_cyan)
             canvas.drawCircle(lx, ly, 4f * tileBox.density, snailTrailPointPaint)
         }
     }
@@ -482,8 +482,8 @@ class AnchorWatchMapLayer(context: Context) : OsmandMapLayer(context) {
         val gy = tileBox.getPixYFromLatLon(targetPt.latLon.latitude, targetPt.latLon.longitude)
         val density = tileBox.density
 
-        ghostVesselPaint.color = if (isNight) 0x60FF8A80.toInt() else 0x6000E5FF.toInt()
-        ghostVesselStrokePaint.color = if (isNight) 0xFFFF1744.toInt() else 0xFF00B0FF.toInt()
+        ghostVesselPaint.color = if (isNight) ContextCompat.getColor(context, R.color.nautical_night_vision_data_dim_60) else ContextCompat.getColor(context, R.color.nautical_race_cyan_dim_60)
+        ghostVesselStrokePaint.color = if (isNight) ContextCompat.getColor(context, R.color.nautical_night_vision_primary) else ContextCompat.getColor(context, R.color.nautical_day_blue_bright)
 
         // Draw Ghost Vessel Silhouette
         val vSize = 14f * density
@@ -504,7 +504,7 @@ class AnchorWatchMapLayer(context: Context) : OsmandMapLayer(context) {
         val wx = gx + (windLen * kotlin.math.sin(windRad)).toFloat()
         val wy = gy - (windLen * kotlin.math.cos(windRad)).toFloat()
 
-        ghostWindArrowPaint.color = if (isNight) 0xFFFF1744.toInt() else 0xFF00E5FF.toInt()
+        ghostWindArrowPaint.color = if (isNight) ContextCompat.getColor(context, R.color.nautical_night_vision_primary) else ContextCompat.getColor(context, R.color.nautical_race_cyan)
         ghostArrowHeadPaint.color = ghostWindArrowPaint.color
         canvas.drawLine(gx, gy, wx, wy, ghostWindArrowPaint)
 
@@ -526,7 +526,7 @@ class AnchorWatchMapLayer(context: Context) : OsmandMapLayer(context) {
         val cx = gx + (curLen * kotlin.math.sin(curRad)).toFloat()
         val cy = gy - (curLen * kotlin.math.cos(curRad)).toFloat()
 
-        ghostTideArrowPaint.color = if (isNight) 0xFFFF8A80.toInt() else 0xFFFFB300.toInt()
+        ghostTideArrowPaint.color = if (isNight) ContextCompat.getColor(context, R.color.nautical_night_vision_data) else ContextCompat.getColor(context, R.color.nautical_day_amber_deep)
         ghostArrowHeadPaint.color = ghostTideArrowPaint.color
         canvas.drawLine(gx, gy, cx, cy, ghostTideArrowPaint)
 
