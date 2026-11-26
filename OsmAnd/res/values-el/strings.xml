@@ -6267,6 +6267,12 @@
     <string name="nautical_alarm_collision_no_data_fmt">Κίνδυνος σύγκρουσης AIS: %1$s (μη διαθέσιμο CPA)</string>
     <string name="nautical_no_sails_found">Δεν βρέθηκαν ιστία στο απόθεμα</string>
     <string name="nautical_calculating_weather_route">Υπολογισμός βέλτιστης μετεωρολογικής διαδρομής…</string>
+    <string name="nautical_routing_status_idle">Σε αναμονή</string>
+    <string name="nautical_routing_status_starting">Υπολογισμός Μετεωρολογικής Διαδρομής…</string>
+    <string name="nautical_routing_status_step_fmt">Υπολογισμός: Βήμα %1$d/%2$d</string>
+    <string name="nautical_routing_status_done">Η βέλτιστη διαδρομή υπολογίστηκε</string>
+    <string name="nautical_routing_status_failed">Αποτυχία δρομολόγησης / πρόσκρουση σε ξηρά</string>
+    <string name="nautical_routing_status_error_fmt">Σφάλμα: %1$s</string>
     <string name="nautical_view_buddies">Προβολή Φίλων</string>
     <string name="nautical_added_to_buddies">Προστέθηκε το %1$s στους Φίλους AIS</string>
     <string name="nautical_removed_from_buddies">Αφαιρέθηκε το %1$s από τους Φίλους</string>

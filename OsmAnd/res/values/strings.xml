@@ -366,6 +366,12 @@
     <string name="nautical_alarm_collision_no_data_fmt">AIS collision risk: %1$s (CPA data unavailable)</string>
     <string name="nautical_no_sails_found">No sails found in inventory</string>
     <string name="nautical_calculating_weather_route">Calculating optimal weather route…</string>
+    <string name="nautical_routing_status_idle">Idle</string>
+    <string name="nautical_routing_status_starting">Calculating Weather Route…</string>
+    <string name="nautical_routing_status_step_fmt">Calculating: Step %1$d/%2$d</string>
+    <string name="nautical_routing_status_done">Optimal Route Calculated</string>
+    <string name="nautical_routing_status_failed">Routing Failed / Land Collision</string>
+    <string name="nautical_routing_status_error_fmt">Error: %1$s</string>
     <string name="nautical_view_buddies">View Buddies</string>
     <string name="nautical_added_to_buddies">Added %1$s to AIS Buddies</string>
     <string name="nautical_removed_from_buddies">Removed %1$s from Buddies</string>

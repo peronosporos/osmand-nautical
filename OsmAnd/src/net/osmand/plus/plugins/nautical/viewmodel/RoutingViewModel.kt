@@ -11,6 +11,8 @@ import net.osmand.plus.plugins.nautical.grib.parser.GribInterpolationEngine
 import net.osmand.plus.plugins.nautical.routing.algorithm.IsochroneRoutingEngine
 import net.osmand.plus.plugins.nautical.routing.model.OptimalRouteResult
 import net.osmand.plus.plugins.nautical.routing.model.RoutingRequest
+import net.osmand.plus.OsmandApplication
+import net.osmand.plus.R
 import net.osmand.plus.plugins.nautical.s57.S57SpatialIndex
 
 class RoutingViewModel : ViewModel() {
@@ -18,8 +20,8 @@ class RoutingViewModel : ViewModel() {
     private val _optimalRoute = MutableStateFlow<OptimalRouteResult?>(null)
     val optimalRoute: StateFlow<OptimalRouteResult?> = _optimalRoute.asStateFlow()
 
-    private val _routingStatus = MutableStateFlow("Idle")
-    val routingStatus: StateFlow<String> = _routingStatus.asStateFlow()
+    private val _routingStatus = MutableStateFlow<RoutingStatus>(RoutingStatus.Idle)
+    val routingStatus: StateFlow<RoutingStatus> = _routingStatus.asStateFlow()
 
     fun calculateWeatherRoute(
         request: RoutingRequest,
@@ -28,7 +30,7 @@ class RoutingViewModel : ViewModel() {
         safetyManager: net.osmand.plus.plugins.nautical.engine.NauticalSafetyManager,
     ) {
         val draft = safetyManager.getVesselDraft()
-        _routingStatus.value = "Calculating Weather Route..."
+        _routingStatus.value = RoutingStatus.Starting
         viewModelScope.launch {
             try {
                 val safetyChecker = net.osmand.plus.plugins.nautical.hazard.engine.SafetyCorridorChecker(
@@ -53,18 +55,41 @@ class RoutingViewModel : ViewModel() {
                     liveState?.setTrue, 
                     liveState?.drift,
                     onProgress = { step, total ->
-                        _routingStatus.value = "Calculating: Step $step/$total"
+                        _routingStatus.value = RoutingStatus.Calculating(step, total)
                     }
                 )
                 if (result != null) {
                     _optimalRoute.value = result
-                    _routingStatus.value = "Optimal Route Calculated"
+                    _routingStatus.value = RoutingStatus.Done
                 } else {
-                    _routingStatus.value = "Routing Failed / Land Collision"
+                    _routingStatus.value = RoutingStatus.Failed
                 }
             } catch (e: Exception) {
-                _routingStatus.value = "Error: ${e.message}"
+                _routingStatus.value = RoutingStatus.Error(e.message)
             }
         }
     }
+}
+
+/**
+ * Routing calculation status as a typed state; the raw display text is resolved
+ * against localized resources at the presentation layer via [displayText].
+ */
+sealed class RoutingStatus {
+    object Idle : RoutingStatus()
+    object Starting : RoutingStatus()
+    data class Calculating(val step: Int, val total: Int) : RoutingStatus()
+    object Done : RoutingStatus()
+    object Failed : RoutingStatus()
+    data class Error(val message: String?) : RoutingStatus()
+}
+
+fun RoutingStatus.displayText(app: OsmandApplication): String = when (this) {
+    is RoutingStatus.Idle -> app.getString(R.string.nautical_routing_status_idle)
+    is RoutingStatus.Starting -> app.getString(R.string.nautical_routing_status_starting)
+    is RoutingStatus.Calculating -> app.getString(R.string.nautical_routing_status_step_fmt, step, total)
+    is RoutingStatus.Done -> app.getString(R.string.nautical_routing_status_done)
+    is RoutingStatus.Failed -> app.getString(R.string.nautical_routing_status_failed)
+    is RoutingStatus.Error -> app.getString(R.string.nautical_routing_status_error_fmt,
+        message ?: app.getString(R.string.nautical_not_available))
 }

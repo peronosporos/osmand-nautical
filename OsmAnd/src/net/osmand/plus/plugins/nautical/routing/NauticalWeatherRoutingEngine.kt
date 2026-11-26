@@ -24,7 +24,9 @@ import net.osmand.plus.plugins.nautical.routing.model.OptimalRouteResult
 import net.osmand.plus.plugins.nautical.routing.model.RoutingRequest
 import net.osmand.plus.plugins.nautical.routing.model.Waypoint
 import net.osmand.plus.plugins.nautical.s57.S57SpatialIndex
+import net.osmand.plus.plugins.nautical.viewmodel.RoutingStatus
 import net.osmand.plus.plugins.nautical.viewmodel.RoutingViewModel
+import net.osmand.plus.plugins.nautical.viewmodel.displayText
 import net.osmand.plus.settings.fragments.BaseSettingsFragment
 import net.osmand.plus.settings.fragments.SettingsScreenType
 import kotlin.math.*
@@ -126,8 +128,8 @@ class NauticalWeatherRoutingEngine(private val app: OsmandApplication) {
 
             routingViewModel.routingStatus.onEach { status ->
                 app.runInUIThread {
-                    if (status != "Idle" && !status.startsWith("Calculating:")) {
-                        app.showToastMessage(status)
+                    if (status !is RoutingStatus.Idle && status !is RoutingStatus.Calculating) {
+                        app.showToastMessage(status.displayText(app))
                     }
                 }
             }.launchIn(scope)

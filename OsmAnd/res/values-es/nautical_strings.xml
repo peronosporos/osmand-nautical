@@ -891,4 +891,15 @@
     <string name="nautical_manage_buddies">Gestionar amigos</string>
     <string name="nautical_navtex_target">NAVTEX: %1$s</string>
     <string name="nautical_own_vessel_profile">Perfil del propio buque</string>
+    <string name="nautical_routing_status_idle">En espera</string>
+    <string name="nautical_routing_status_starting">Calculando ruta meteorológica…</string>
+    <string name="nautical_routing_status_step_fmt">Calculando: paso %1$d/%2$d</string>
+    <string name="nautical_routing_status_done">Ruta óptima calculada</string>
+    <string name="nautical_routing_status_failed">Fallo de ruta / colisión con tierra</string>
+    <string name="nautical_routing_status_error_fmt">Error: %1$s</string>
+    <string name="nautical_weather_routing_title">Configuración de ruta meteorológica</string>
+    <string name="nautical_routing_failed">Falló el cálculo de la ruta meteorológica</string>
+    <string name="nautical_routing_using_live_wind">Calculando ruta con telemetría de viento en directo — sin pronóstico GRIB cargado</string>
+    <string name="nautical_routing_no_wind_data">La ruta meteorológica requiere datos de viento GRIB o telemetría de viento en directo</string>
+    <string name="nautical_calculating_weather_route">Calculando la ruta meteorológica óptima…</string>
 </resources>

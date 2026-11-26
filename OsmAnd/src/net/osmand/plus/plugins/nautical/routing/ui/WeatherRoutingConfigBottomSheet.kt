@@ -27,7 +27,9 @@ import net.osmand.plus.plugins.nautical.routing.model.RoutingRequest
 import net.osmand.plus.plugins.nautical.routing.model.Waypoint
 import net.osmand.plus.plugins.nautical.s57.S57SpatialIndex
 import net.osmand.plus.plugins.nautical.ui.widgets.BaseNauticalBottomSheet
+import net.osmand.plus.plugins.nautical.viewmodel.RoutingStatus
 import net.osmand.plus.plugins.nautical.viewmodel.RoutingViewModel
+import net.osmand.plus.plugins.nautical.viewmodel.displayText
 import java.util.Locale
 import kotlin.math.cos
 import kotlin.math.sin
@@ -157,19 +159,23 @@ class WeatherRoutingConfigBottomSheet : BaseNauticalBottomSheet() {
 
         viewLifecycleOwner.lifecycleScope.launch {
             viewModel.routingStatus.collectLatest { status ->
-                txtProgressMsg.text = status
-                if (status == "Optimal Route Calculated") {
-                    layoutProgress.visibility = View.GONE
-                    btnCalculate.isEnabled = true
-                    if (isAdded && !parentFragmentManager.isStateSaved) {
-                        dismissAllowingStateLoss()
-                        PassagePlanBottomSheet.show(parentFragmentManager)
+                txtProgressMsg.text = status.displayText(app)
+                when (status) {
+                    RoutingStatus.Done -> {
+                        layoutProgress.visibility = View.GONE
+                        btnCalculate.isEnabled = true
+                        if (isAdded && !parentFragmentManager.isStateSaved) {
+                            dismissAllowingStateLoss()
+                            PassagePlanBottomSheet.show(parentFragmentManager)
+                        }
                     }
-                } else if (status.startsWith("Calculating")) {
-                    layoutProgress.visibility = View.VISIBLE
-                    btnCalculate.isEnabled = false
-                } else {
-                    btnCalculate.isEnabled = true
+                    RoutingStatus.Starting, is RoutingStatus.Calculating -> {
+                        layoutProgress.visibility = View.VISIBLE
+                        btnCalculate.isEnabled = false
+                    }
+                    else -> {
+                        btnCalculate.isEnabled = true
+                    }
                 }
             }
         }
