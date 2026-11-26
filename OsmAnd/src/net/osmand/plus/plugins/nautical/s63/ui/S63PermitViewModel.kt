@@ -143,7 +143,7 @@ class S63PermitViewModel(
                     validPermits.forEach {
                         permitsMap[it.cellName] = S63PermitGenerator.PermitInfo(
                             cellKey = it.keyHex,
-                            cellKey2 = it.keyHex2,
+                            cellKey2 = it.key2Hex,
                             expiryDate = it.expiryDate
                         )
                     }
