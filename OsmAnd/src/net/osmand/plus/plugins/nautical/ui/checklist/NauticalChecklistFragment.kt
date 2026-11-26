@@ -93,7 +93,7 @@ class NauticalChecklistFragment : BaseOsmAndFragment() {
         localChecklists.clear()
         localChecklists["pre_departure"] = SignalKChecklist(
             name = getString(R.string.nautical_checklist_pre_departure),
-            description = "Pre-departure safety and navigation systems check",
+            description = getString(R.string.nautical_checklist_desc_pre_departure),
             items = listOf(
                 SignalKChecklistItem(getString(R.string.nautical_chk_bilge), getItemState("chk_pre_1")),
                 SignalKChecklistItem(getString(R.string.nautical_chk_vhf), getItemState("chk_pre_2")),
@@ -104,7 +104,7 @@ class NauticalChecklistFragment : BaseOsmAndFragment() {
         )
         localChecklists["heavy_weather"] = SignalKChecklist(
             name = getString(R.string.nautical_checklist_heavy_weather),
-            description = "Rough conditions and storm preparation",
+            description = getString(R.string.nautical_checklist_desc_heavy_weather),
             items = listOf(
                 SignalKChecklistItem(getString(R.string.nautical_chk_hatches), getItemState("chk_hw_1")),
                 SignalKChecklistItem(getString(R.string.nautical_chk_jacklines), getItemState("chk_hw_2")),
@@ -114,7 +114,7 @@ class NauticalChecklistFragment : BaseOsmAndFragment() {
         )
         localChecklists["night_watch"] = SignalKChecklist(
             name = getString(R.string.nautical_checklist_night_watch),
-            description = "Night sailing and watch handover",
+            description = getString(R.string.nautical_checklist_desc_night_watch),
             items = listOf(
                 SignalKChecklistItem(getString(R.string.nautical_chk_nav_lights), getItemState("chk_nw_1")),
                 SignalKChecklistItem(getString(R.string.nautical_chk_cpa_alarm), getItemState("chk_nw_2")),
@@ -124,7 +124,7 @@ class NauticalChecklistFragment : BaseOsmAndFragment() {
         )
         localChecklists["docking_anchoring"] = SignalKChecklist(
             name = getString(R.string.nautical_checklist_docking_anchoring),
-            description = "Arrival, docking and anchoring protocol",
+            description = getString(R.string.nautical_checklist_desc_docking_anchoring),
             items = listOf(
                 SignalKChecklistItem(getString(R.string.nautical_chk_fenders), getItemState("chk_da_1")),
                 SignalKChecklistItem(getString(R.string.nautical_chk_windlass), getItemState("chk_da_2")),
@@ -138,7 +138,7 @@ class NauticalChecklistFragment : BaseOsmAndFragment() {
         val input = EditText(requireContext()).apply {
             hint = getString(R.string.nautical_checklist_name)
         }
-        
+
         MaterialAlertDialogBuilder(requireContext())
             .setTitle(R.string.nautical_new_checklist)
             .setView(input)
@@ -163,7 +163,7 @@ class NauticalChecklistFragment : BaseOsmAndFragment() {
         val input = EditText(requireContext()).apply {
             hint = getString(R.string.nautical_item_title)
         }
-        
+
         MaterialAlertDialogBuilder(requireContext())
             .setTitle(R.string.nautical_add_item)
             .setView(input)
@@ -223,7 +223,7 @@ class NauticalChecklistFragment : BaseOsmAndFragment() {
         if (itemIndex !in updatedItems.indices) return
         val item = updatedItems[itemIndex]
         val newState = if (isChecked) "completed" else "pending"
-        
+
         if (item.state == newState) return
 
         updatedItems[itemIndex] = item.copy(state = newState)
@@ -298,7 +298,7 @@ class NauticalChecklistFragment : BaseOsmAndFragment() {
                 is ChecklistListItem.Item -> {
                     val h = holder as ItemViewHolder
                     h.title.text = item.item.title
-                    
+
                     h.checkbox.setOnCheckedChangeListener(null)
                     h.checkbox.isChecked = item.item.state == "completed"
                     h.checkbox.setOnCheckedChangeListener { _, isChecked ->

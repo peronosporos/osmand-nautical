@@ -34,31 +34,38 @@ data class ChecklistItem(
 class NauticalChecklistDialogFragment : BottomSheetDialogFragment() {
 
     private var currentType = ChecklistType.PRE_DEPARTURE
-    private val preDepartureItems = mutableListOf(
-        ChecklistItem("Bilges inspected & pumps operational"),
-        ChecklistItem("Engine oil, coolant & transmission fluid checked"),
-        ChecklistItem("Raw water strainer clear & seacocks open"),
-        ChecklistItem("Standing & running rigging inspected"),
-        ChecklistItem("Steering gear & emergency tiller verified"),
-        ChecklistItem("EPIRB, flares & safety gear within expiry")
-    )
 
-    private val heavyWeatherItems = mutableListOf(
-        ChecklistItem("Companionway boards & deck hatches dogged shut"),
-        ChecklistItem("Jacklines rigged on port & starboard decks"),
-        ChecklistItem("Reefing lines reeved & storm sails prepared"),
-        ChecklistItem("Loose cabin gear & galley items lashed down"),
-        ChecklistItem("Bilge high-water alarms tested & operational"),
-        ChecklistItem("Lifejackets & tethers donned by all watchkeepers")
-    )
+    // Built lazily in onCreateView (after attach) so items can be resourced
+    // via getString() instead of hardcoded English.
+    private lateinit var preDepartureItems: MutableList<ChecklistItem>
+    private lateinit var heavyWeatherItems: MutableList<ChecklistItem>
+    private lateinit var watchHandoverItems: MutableList<ChecklistItem>
 
-    private val watchHandoverItems = mutableListOf(
-        ChecklistItem("3-hour Barometer trend & squall risks noted"),
-        ChecklistItem("AIS & Radar targets / closest CPA reviewed"),
-        ChecklistItem("Navigation lights, battery SOC & engine temps checked"),
-        ChecklistItem("Logbook updated with lat/lon, log & weather observations"),
-        ChecklistItem("Standing orders & course changes acknowledged")
-    )
+    private fun initChecklistItems() {
+        preDepartureItems = mutableListOf(
+            ChecklistItem(getString(R.string.nautical_chk_item_bilge_pumps)),
+            ChecklistItem(getString(R.string.nautical_chk_item_fluids)),
+            ChecklistItem(getString(R.string.nautical_chk_item_strainer)),
+            ChecklistItem(getString(R.string.nautical_chk_item_rigging)),
+            ChecklistItem(getString(R.string.nautical_chk_item_steering)),
+            ChecklistItem(getString(R.string.nautical_chk_item_epirb))
+        )
+        heavyWeatherItems = mutableListOf(
+            ChecklistItem(getString(R.string.nautical_chk_item_hatches_dogged)),
+            ChecklistItem(getString(R.string.nautical_chk_item_jacklines_rigged)),
+            ChecklistItem(getString(R.string.nautical_chk_item_reefing)),
+            ChecklistItem(getString(R.string.nautical_chk_item_lash)),
+            ChecklistItem(getString(R.string.nautical_chk_item_bilge_alarms)),
+            ChecklistItem(getString(R.string.nautical_chk_item_lifejackets))
+        )
+        watchHandoverItems = mutableListOf(
+            ChecklistItem(getString(R.string.nautical_chk_item_baro_trend)),
+            ChecklistItem(getString(R.string.nautical_chk_item_cpa_review)),
+            ChecklistItem(getString(R.string.nautical_chk_item_nav_battery)),
+            ChecklistItem(getString(R.string.nautical_chk_item_logbook)),
+            ChecklistItem(getString(R.string.nautical_chk_item_orders))
+        )
+    }
 
     private lateinit var adapter: ChecklistAdapter
     private lateinit var progressBar: ProgressBar
@@ -68,6 +75,7 @@ class NauticalChecklistDialogFragment : BottomSheetDialogFragment() {
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         val view = inflater.inflate(R.layout.dialog_nautical_checklist, container, false)
         val app = requireActivity().application as OsmandApplication
+        initChecklistItems()
 
         view.findViewById<View>(R.id.btn_close_checklist)?.setOnClickListener { dismiss() }
 
@@ -106,9 +114,15 @@ class NauticalChecklistDialogFragment : BottomSheetDialogFragment() {
             val total = getCurrentItems().size
             val checked = getCurrentItems().count { it.isChecked }
             val timeStr = SimpleDateFormat("HH:mm 'UTC'", Locale.US).format(Date())
-            val typeStr = currentType.name.replace('_', ' ')
-            val logEntry = "CHECKLIST LOGGED: $typeStr ($checked/$total complete at $timeStr)"
-            
+            val typeStr = getString(
+                when (currentType) {
+                    ChecklistType.PRE_DEPARTURE -> R.string.nautical_checklist_type_pre_departure
+                    ChecklistType.HEAVY_WEATHER -> R.string.nautical_checklist_type_heavy_weather
+                    ChecklistType.WATCH_HANDOVER -> R.string.nautical_checklist_type_watch_handover
+                }
+            )
+            val logEntry = getString(R.string.nautical_checklist_logged_fmt, typeStr, checked, total, timeStr)
+
             NauticalPlugin.hudManager?.get()?.showBanner(logEntry, 8000L, isWarning = false, priority = 3)
             app.showToastMessage(logEntry)
             dismiss()
