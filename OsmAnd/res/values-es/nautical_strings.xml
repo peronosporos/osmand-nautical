@@ -117,6 +117,7 @@
     <string name="nautical_vessel_generic">Buque</string>
     <string name="nautical_ais_call_sign_fmt">Distintivo de llamada: %1$s</string>
     <string name="nautical_sail_efficiency_none">Eficiencia de superficie vélica: --</string>
+    <string name="nautical_signalk_waypoint">Waypoint de SignalK</string>
     <string name="nautical_vhf_06_inter">06 INTERBUQUES</string>
     <string name="nautical_vhf_09_call">09 LLAMADA</string>
     <string name="nautical_vhf_13_safety">13 SEGURIDAD</string>

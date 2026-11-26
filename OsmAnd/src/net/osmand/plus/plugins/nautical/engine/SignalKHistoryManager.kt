@@ -188,8 +188,12 @@ class SignalKHistoryManager(
                         }
 
                         val tSize = dis.readInt()
-                        repeat(tSize) {
-                            trajectoryBuffer.add(TrajectoryPoint(dis.readDouble(), dis.readDouble(), TemporalUtils.now()))
+                        val loadTime = TemporalUtils.now()
+                        repeat(tSize) { i ->
+                            // v2 files carry no per-point time; spread a monotonic estimate backwards
+                            // (5 s stride = addTrajectoryPoint minimum interval) instead of stamping
+                            // every point "now", which destroyed chronological order.
+                            trajectoryBuffer.add(TrajectoryPoint(dis.readDouble(), dis.readDouble(), loadTime - (tSize - 1 - i) * 5000L))
                         }
                         return@withContext
                     }
@@ -281,7 +285,8 @@ class SignalKHistoryManager(
                 ObjectInputStream(file.inputStream()).use { ois ->
                     val data = ois.readObject()
                     if (data is Collection<*>) {
-                        data.forEach { item ->
+                        val now = TemporalUtils.now()
+                        data.forEachIndexed { i, item ->
                             when {
                                 fileName == "trajectory_buffer.dat" && item is Pair<*, *> -> {
                                     @Suppress("UNCHECKED_CAST")
@@ -293,7 +298,10 @@ class SignalKHistoryManager(
                                 }
                                 item is Double -> {
                                     @Suppress("UNCHECKED_CAST")
-                                    action(Pair(item, TemporalUtils.now()) as T)
+                                    // Legacy single-value entries carry no time; spread a monotonic
+                                    // estimate backwards so chart order survives instead of every
+                                    // sample sharing the load instant.
+                                    action(Pair(item, now - (data.size - 1 - i) * 1000L) as T)
                                 }
                             }
                         }
@@ -347,8 +355,17 @@ class SignalKHistoryManager(
         load<Pair<Double, Long>>("battery_current_buffer.dat") { getBuffer("electrical.batteries.0.current").add(it) }
         load<Pair<Double, Long>>("solar_current_buffer.dat") { getBuffer("electrical.solar.0.current").add(it) }
         load<Pair<Double, Long>>("twd_buffer.dat") { getBuffer("navigation.trueWindDirection").add(it) }
-        load<Pair<Double, Double>>("trajectory_buffer.dat") { 
-            trajectoryBuffer.add(TrajectoryPoint(it.first, it.second, TemporalUtils.now())) 
+        // Legacy trajectory pairs carry no time; stamp a backwards spread (5 s stride,
+        // matching addTrajectoryPoint's minimum interval) so order is preserved:
+        // oldest point farthest in the past, newest at load time.
+        val trajPairs = ArrayList<Pair<Double, Double>>()
+        load<Pair<Double, Double>>("trajectory_buffer.dat") { trajPairs.add(it) }
+        if (trajPairs.isNotEmpty()) {
+            val now = TemporalUtils.now()
+            trajPairs.forEachIndexed { i, p ->
+                trajectoryBuffer.add(TrajectoryPoint(p.first, p.second, now - (trajPairs.size - 1 - i) * 5000L))
+            }
+            log.info("Nautical: Migrated ${trajPairs.size} legacy trajectory points with estimated timestamps.")
         }
     }
 }

@@ -48,39 +48,46 @@ class SignalKResourceManager(
 
     private val knownMarkerIdMap = mutableMapOf<Pair<Double, Double>, String>()
 
+    // Kept as a field so stopSync can unregister it; previously each startSync() call
+    // (engine refresh + watchdog restart) stacked another permanent listener.
+    private var mapMarkersListener: net.osmand.plus.mapmarkers.MapMarkersHelper.MapMarkerChangedListener? = null
+
     fun startSync() {
+        // Idempotent: unregister listeners from any previous start before re-registering.
+        stopSync()
         syncJob?.cancel()
         app.targetPointsHelper.addPointListener(targetPointListener)
-        
-        // Task 2: Two-way sync for Map Markers
-        app.mapMarkersHelper.addListener(
-            object : net.osmand.plus.mapmarkers.MapMarkersHelper.MapMarkerChangedListener {
-                override fun onMapMarkerChanged(marker: net.osmand.plus.mapmarkers.MapMarker) {
-                    // If added and not from server, push it.
-                    // Simplified: push all changes as potential additions if they have a name.
-                    scope.launch {
-                        pushWaypointToServer(marker.point.latitude, marker.point.longitude, marker.onlyName)?.let { id ->
-                            knownMarkerIdMap[marker.point.latitude to marker.point.longitude] = id
-                        }
-                    }
-                }
 
-                override fun onMapMarkersChanged() {
-                    // TASK-03.6: Detect deletions by comparing local list with last known positions
-                    val currentMarkers = app.mapMarkersHelper.mapMarkers
-                    val currentPositions = currentMarkers.asSequence().map { it.point.latitude to it.point.longitude }.toSet()
-                    
-                    val deleted = knownMarkerIdMap.keys.filter { it !in currentPositions }
-                    deleted.forEach { pos ->
-                        knownMarkerIdMap[pos]?.let { skId ->
-                            log.info("Nautical: Marker at $pos removed locally. Syncing deletion to Signal K.")
-                            scope.launch { deleteWaypointFromServer(skId) }
-                        }
-                        knownMarkerIdMap.remove(pos)
+        val markersListener = object : net.osmand.plus.mapmarkers.MapMarkersHelper.MapMarkerChangedListener {
+            override fun onMapMarkerChanged(marker: net.osmand.plus.mapmarkers.MapMarker) {
+                // Only push genuinely new markers; pushing known positions created
+                // duplicate waypoints on the server on every rename/selection change.
+                val pos = marker.point.latitude to marker.point.longitude
+                if (knownMarkerIdMap.containsKey(pos)) return
+                scope.launch {
+                    pushWaypointToServer(marker.point.latitude, marker.point.longitude, marker.onlyName)?.let { id ->
+                        knownMarkerIdMap[pos] = id
                     }
                 }
-            },
-        )
+            }
+
+            override fun onMapMarkersChanged() {
+                // TASK-03.6: Detect deletions by comparing local list with last known positions
+                val currentMarkers = app.mapMarkersHelper.mapMarkers
+                val currentPositions = currentMarkers.asSequence().map { it.point.latitude to it.point.longitude }.toSet()
+
+                val deleted = knownMarkerIdMap.keys.filter { it !in currentPositions }
+                deleted.forEach { pos ->
+                    knownMarkerIdMap[pos]?.let { skId ->
+                        log.info("Nautical: Marker at $pos removed locally. Syncing deletion to Signal K.")
+                        scope.launch { deleteWaypointFromServer(skId) }
+                    }
+                    knownMarkerIdMap.remove(pos)
+                }
+            }
+        }
+        mapMarkersListener = markersListener
+        app.mapMarkersHelper.addListener(markersListener)
 
         syncJob = scope.launch {
             while (isActive) {
@@ -105,6 +112,8 @@ class SignalKResourceManager(
 
     fun stopSync() {
         app.targetPointsHelper.removePointListener(targetPointListener)
+        mapMarkersListener?.let { app.mapMarkersHelper.removeListener(it) }
+        mapMarkersListener = null
         syncJob?.cancel()
         syncJob = null
     }
@@ -254,16 +263,29 @@ class SignalKResourceManager(
             val notes = response.body() ?: return@withContext
             val repository = NauticalPlugin.getInstance()?.logbookRepository ?: return@withContext
             
+            var imported = 0
             notes.forEach { (uuid, note) ->
-                val timestamp = note.timestamp?.let { 
-                    // Simplified parsing - real implementation would use kotlinx-datetime
-                    System.currentTimeMillis() 
-                } ?: System.currentTimeMillis()
-                
+                // Dedupe: this loop runs every 60 s; never re-insert an already-imported note.
+                if (repository.getEntryByUuid(uuid) != null) return@forEach
+
+                // A note without a server position must not fabricate a fix at (0, 0) (Null Island);
+                // it also hides a size<2 crash that previously aborted the whole sync cycle.
+                val coords = note.position?.coordinates
+                if (coords == null || coords.size < 2) {
+                    log.warn("SignalK note $uuid has no position; skipped")
+                    return@forEach
+                }
+
+                // Use the note's own timestamp; fall back to sync time only when absent/unparseable.
+                val timestamp = note.timestamp
+                    ?.let { TemporalUtils.parseIso8601(it) }
+                    ?.takeIf { it > 0 }
+                    ?: System.currentTimeMillis()
+
                 val entry = LogbookEntry(
                     timestamp = timestamp,
-                    latitude = note.position?.coordinates?.get(1) ?: 0.0,
-                    longitude = note.position?.coordinates?.get(0) ?: 0.0,
+                    latitude = coords[1],
+                    longitude = coords[0],
                     sog = null, cog = null, heading = null,
                     tws = null, twa = null, twd = null,
                     pressure = null, waterDepth = null, waterTemp = null,
@@ -272,9 +294,10 @@ class SignalKResourceManager(
                     serverUuid = uuid
                 )
                 repository.insertEntry(entry)
+                imported++
             }
 
-            log.info("Synced ${notes.size} notes from SignalK to Logbook")
+            log.info("Imported $imported new notes from SignalK to Logbook (server reports ${notes.size})")
         }
     }
 
@@ -332,13 +355,15 @@ class SignalKResourceManager(
         waypoints.forEach { (id, wp) ->
             val lon = wp.feature.geometry.coordinates[0]
             val lat = wp.feature.geometry.coordinates[1]
-            val name = wp.name ?: "SignalK Waypoint"
-            
+            val name = wp.name ?: app.getString(net.osmand.plus.R.string.nautical_signalk_waypoint)
+
+            // Register before adding so the change listener treats server markers as known
+            // (previously the add fired the listener and pushed a duplicate back to the server).
+            knownMarkerIdMap[lat to lon] = id
             val existing = activeMarkers.find { (it.point.latitude == lat) && (it.point.longitude == lon) }
             if (existing == null) {
                 markersHelper.addMapMarker(LatLon(lat, lon), PointDescription(PointDescription.POINT_TYPE_MAP_MARKER, name), name)
             }
-            knownMarkerIdMap[lat to lon] = id
         }
     }
 

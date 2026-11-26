@@ -89,7 +89,12 @@ class SignalKSessionManager(
                             onConnectionLost?.invoke()
                         }
                     } else if (elapsed > watchdogTimeoutMs / 2) {
-                        previouslyDisconnected = false
+                        if (previouslyDisconnected) {
+                            // Data resumed but is older than fresh; still report restored
+                            // so the lost-connection banner clears and STALE (not DISCONNECTED) shows.
+                            previouslyDisconnected = false
+                            onConnectionRestored?.invoke()
+                        }
                         if (dataBroker.marineState.value.connectionStatus != ConnectionStatus.STALE) {
                             dataBroker.updateState { it.copy(connectionStatus = ConnectionStatus.STALE) }
                             onNotifyListeners(dataBroker.marineState.value)

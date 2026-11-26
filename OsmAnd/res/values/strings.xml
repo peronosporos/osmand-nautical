@@ -343,6 +343,7 @@
     <string name="nautical_sail_furled">Furled</string>
     <string name="nautical_sail_efficiency_label">Sail Area Efficiency: %1$d%%</string>
     <string name="nautical_sail_efficiency_none">Sail Area Efficiency: --</string>
+    <string name="nautical_signalk_waypoint">SignalK Waypoint</string>
     <string name="nautical_no_sails_found">No sails found in inventory</string>
     <string name="nautical_calculating_weather_route">Calculating optimal weather route…</string>
     <string name="nautical_view_buddies">View Buddies</string>
