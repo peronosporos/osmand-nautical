@@ -100,8 +100,16 @@ class NauticalSetupWizardDialog : BaseMaterialBottomSheetDialogFragment() {
                 updateButtons()
             } else {
                 // Save everything and finish
-                val selectedType = VesselType.valueOf(vesselTypeSpinner.text.toString())
-                val selectedNmea = net.osmand.plus.settings.enums.NmeaSource.valueOf(nmeaSourceSpinner.text.toString())
+                val typedType = vesselTypeSpinner.text.toString().trim()
+                val selectedType = runCatching { VesselType.valueOf(typedType) }.getOrNull()
+                    ?: settings.NAUTICAL_VESSEL_TYPE.get().also {
+                        app.showToastMessage(R.string.shared_string_invalid_value)
+                    }
+                val typedNmea = nmeaSourceSpinner.text.toString().trim()
+                val selectedNmea = runCatching { net.osmand.plus.settings.enums.NmeaSource.valueOf(typedNmea) }.getOrNull()
+                    ?: settings.NAUTICAL_NMEA_SOURCE.get().also {
+                        app.showToastMessage(R.string.shared_string_invalid_value)
+                    }
                 val draft = vesselDraftEdit.text.toString().toFloatOrNull() ?: 2.0f
                 val airDraft = vesselAirDraftEdit.text.toString().toFloatOrNull() ?: 15.0f
                 val mmsi = vesselMmsiEdit.text.toString().toIntOrNull() ?: 0
@@ -183,7 +191,7 @@ class NauticalSetupWizardDialog : BaseMaterialBottomSheetDialogFragment() {
 
     private fun testConnection(ip: String, port: String, secure: Boolean, token: String) {
         if (ip.isBlank()) {
-            app.showToastMessage(R.string.nautical_server_ip_desc)
+            app.showToastMessage(R.string.nautical_wizard_err_empty_ip)
             return
         }
 
@@ -202,14 +210,14 @@ class NauticalSetupWizardDialog : BaseMaterialBottomSheetDialogFragment() {
                 val restService = SignalKRestService.create(baseUrl, client)
                 
                 if (restService == null) {
-                    app.showToastMessage(getString(R.string.nautical_connection_test_failed, "Invalid URL (check IP/Port)"))
+                    app.showToastMessage(getString(R.string.nautical_connection_test_failed, getString(R.string.nautical_wizard_err_invalid_url)))
                     return@launch
                 }
 
                 val response = try {
                     restService.getVesselSelf()
                 } catch (e: Exception) {
-                    app.showToastMessage(getString(R.string.nautical_connection_test_failed, e.localizedMessage ?: "Network Error"))
+                    app.showToastMessage(getString(R.string.nautical_connection_test_failed, e.localizedMessage ?: getString(R.string.nautical_wizard_err_network)))
                     return@launch
                 }
 
@@ -217,14 +225,14 @@ class NauticalSetupWizardDialog : BaseMaterialBottomSheetDialogFragment() {
                     app.showToastMessage(R.string.nautical_connection_test_success)
                 } else {
                     val errorMsg = when(response.code()) {
-                        401 -> "Unauthorized (check Token)"
-                        404 -> "Signal K Not Found"
+                        401 -> getString(R.string.nautical_wizard_err_unauthorized)
+                        404 -> getString(R.string.nautical_wizard_err_not_found)
                         else -> "HTTP ${response.code()}"
                     }
                     app.showToastMessage(getString(R.string.nautical_connection_test_failed, errorMsg))
                 }
             } catch (e: Exception) {
-                app.showToastMessage(getString(R.string.nautical_connection_test_failed, e.message ?: "Unknown Error"))
+                app.showToastMessage(getString(R.string.nautical_connection_test_failed, e.message ?: getString(R.string.nautical_wizard_err_unknown)))
             }
         }
     }

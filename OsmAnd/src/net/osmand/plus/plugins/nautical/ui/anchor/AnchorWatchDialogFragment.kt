@@ -254,7 +254,7 @@ class AnchorWatchDialogFragment : BaseMaterialBottomSheetDialogFragment() {
         sliderPlayback?.addOnChangeListener { _, value, _ ->
             val minAgo = (60 - value.toInt())
             anchorMapLayer?.playbackMinuteOffset = value.toInt()
-            txtPlaybackTime?.text = if (minAgo == 0) "Track History: Live (Now)" else "Track History: T -${minAgo}m"
+            txtPlaybackTime?.text = if (minAgo == 0) getString(R.string.nautical_anchor_track_history_live) else getString(R.string.nautical_anchor_track_history_fmt, minAgo)
             app.osmandMap?.mapView?.refreshMap()
         }
 
@@ -309,7 +309,7 @@ class AnchorWatchDialogFragment : BaseMaterialBottomSheetDialogFragment() {
                         layoutSkInfo?.visibility = if (caps?.hasChainCounter == true || caps?.hasWindlassControl == true) View.VISIBLE else View.GONE
                         
                         if (caps?.hasChainCounter == true && state.rodeDeployed != null) {
-                            txtRodeDeployed?.text = String.format(Locale.US, "Rode Deployed: %.1f m", state.rodeDeployed)
+                            txtRodeDeployed?.text = String.format(Locale.US, getString(R.string.nautical_rode_deployed_fmt), state.rodeDeployed)
                         } else {
                             txtRodeDeployed?.text = getString(R.string.nautical_chain_counter_offline)
                         }

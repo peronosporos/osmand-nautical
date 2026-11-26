@@ -27,6 +27,14 @@
     <string name="nautical_chafe_ok">CHAFE: OK</string>
     <string name="nautical_rode_deployed_placeholder">Rode Deployed: -- m</string>
     <string name="nautical_anchor_track_history_live">Track History: Live (Now)</string>
+    <string name="nautical_rode_deployed_fmt">Rode Deployed: %1$.1f m</string>
+    <string name="nautical_anchor_track_history_fmt">Track History: T -%1$dm</string>
+    <string name="nautical_wizard_err_empty_ip">Enter the server IP address</string>
+    <string name="nautical_wizard_err_invalid_url">Invalid URL (check IP/Port)</string>
+    <string name="nautical_wizard_err_unauthorized">Unauthorized (check token)</string>
+    <string name="nautical_wizard_err_not_found">Signal K server not found</string>
+    <string name="nautical_wizard_err_network">Network error</string>
+    <string name="nautical_wizard_err_unknown">Unknown error</string>
     <string name="nautical_preview_adjust_map">Preview &amp; Adjust on Map</string>
     <string name="nautical_anchor_cable_prohibited">⚠ PROHIBITED: Submarine Cable / Pipeline within swing radius</string>
     <string name="nautical_status_sailing">SAILING</string>

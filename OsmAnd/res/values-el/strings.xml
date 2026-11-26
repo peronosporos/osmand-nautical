@@ -6036,6 +6036,14 @@
     <string name="nautical_windlass_down">ΠΟΝΤΙΣΗ ΑΓΚΥΡΑΣ</string>
     <string name="nautical_windlass_up">ΑΝΕΛΚΥΣΗ ΑΓΚΥΡΑΣ</string>
     <string name="nautical_anchor_track_history_live">Ιστορικό Στίγματος: Σε πραγματικό χρόνο</string>
+    <string name="nautical_rode_deployed_fmt">Ποντισμένο Έκταμα: %1$.1f m</string>
+    <string name="nautical_anchor_track_history_fmt">Ιστορικό Στίγματος: T -%1$d λ</string>
+    <string name="nautical_wizard_err_empty_ip">Εισαγάγετε τη διεύθυνση IP του διακομιστή</string>
+    <string name="nautical_wizard_err_invalid_url">Μη έγκυρο URL (ελέγξτε IP/Θύρα)</string>
+    <string name="nautical_wizard_err_unauthorized">Μη εξουσιοδοτημένο (ελέγξτε το token)</string>
+    <string name="nautical_wizard_err_not_found">Ο διακομιστής Signal K δεν βρέθηκε</string>
+    <string name="nautical_wizard_err_network">Σφάλμα δικτύου</string>
+    <string name="nautical_wizard_err_unknown">Άγνωστο σφάλμα</string>
     <string name="nautical_preview_adjust_map">Προεπισκόπηση &amp; Ρύθμιση στον Χάρτη</string>
     <string name="nautical_anchor_cable_prohibited">⚠ ΑΠΑΓΟΡΕΥΕΤΑΙ Η ΑΓΚΥΡΟΒΟΛΙΑ: Υποβρύχιο καλώδιο / αγωγός εντός ακτίνας</string>
     <string name="nautical_status_sailing">ΥΠΟ ΙΣΤΙΑ</string>
