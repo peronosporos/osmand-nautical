@@ -22,6 +22,8 @@ import net.osmand.plus.plugins.nautical.NauticalPlugin
 import net.osmand.plus.plugins.nautical.network.NauticalVhfManager
 import net.osmand.plus.plugins.nautical.network.VhfStatus
 import net.osmand.plus.plugins.nautical.network.VhfTransmission
+import net.osmand.plus.plugins.nautical.ui.NauticalColorResolver
+import net.osmand.plus.plugins.nautical.ui.NauticalSemanticColor
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -90,17 +92,17 @@ class NauticalVhfBottomSheet : BaseNauticalBottomSheet() {
                         VhfStatus.LIVE -> {
                             btnLiveAudio.text = getString(R.string.nautical_vhf_stop_audio)
                             txtStatus.text = getString(R.string.nautical_vhf_status_live)
-                            txtStatus.setTextColor(androidx.core.content.ContextCompat.getColor(themedCtx, R.color.color_ok))
+                            txtStatus.setTextColor(NauticalColorResolver.getColor(themedCtx, NauticalSemanticColor.STATUS_OK))
                         }
                         VhfStatus.REPLAYING -> {
                             btnLiveAudio.text = getString(R.string.nautical_vhf_live_stream)
                             txtStatus.text = getString(R.string.nautical_vhf_status_replay)
-                            txtStatus.setTextColor(androidx.core.content.ContextCompat.getColor(themedCtx, R.color.color_warning))
+                            txtStatus.setTextColor(NauticalColorResolver.getColor(themedCtx, NauticalSemanticColor.STATUS_WARNING))
                         }
                         VhfStatus.IDLE -> {
                             btnLiveAudio.text = getString(R.string.nautical_vhf_live_stream)
                             txtStatus.text = getString(R.string.nautical_vhf_status_standby)
-                            txtStatus.setTextColor(androidx.core.content.ContextCompat.getColor(themedCtx, R.color.text_color_secondary_light))
+                            txtStatus.setTextColor(NauticalColorResolver.getColor(themedCtx, NauticalSemanticColor.SECONDARY))
                         }
                     }
                 }
@@ -116,9 +118,15 @@ class NauticalVhfBottomSheet : BaseNauticalBottomSheet() {
 
         viewLifecycleOwner.lifecycleScope.launch {
             NauticalPlugin.engine?.marineStateFlow?.collectLatest { state ->
-                val ch = state.vhfChannel ?: "16"
-                txtActiveChannel.text = getString(R.string.nautical_vhf_ch_fmt, ch)
-                txtDesignation.text = getChannelDesignation(ch)
+                val ch = state.vhfChannel
+                if (ch != null) {
+                    txtActiveChannel.text = getString(R.string.nautical_vhf_ch_fmt, ch)
+                    txtDesignation.text = getChannelDesignation(ch)
+                } else {
+                    // No VHF telemetry: honest n/a, not an invented CH 16.
+                    txtActiveChannel.text = getString(R.string.nautical_not_available)
+                    txtDesignation.text = getString(R.string.nautical_not_available)
+                }
             }
         }
 
@@ -247,7 +255,12 @@ class NauticalVhfBottomSheet : BaseNauticalBottomSheet() {
             
             val dateStr = timeFmt.format(Date(item.timestamp))
             val agoSec = (System.currentTimeMillis() - item.timestamp) / 1000
-            val agoStr = if (agoSec < 60) "${agoSec}s ago" else "${agoSec / 60}m ago"
+            val c = itemView.context
+            val agoStr = if (agoSec < 60) {
+                c.getString(R.string.nautical_seconds_ago_fmt, agoSec)
+            } else {
+                c.getString(R.string.nautical_minutes_ago_fmt, agoSec / 60)
+            }
             txtTime.text = "$dateStr ($agoStr)"
 
             if (item.durationSec > 0) {

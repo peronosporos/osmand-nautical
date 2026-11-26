@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:layout_marginBottom="8dp"
@@ -25,7 +26,7 @@
                 android:id="@+id/txt_transmission_badge"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="CH 16"
+                tools:text="CH 16"
                 android:textSize="11sp"
                 android:textStyle="bold"
                 android:textColor="@color/color_warning"
@@ -40,7 +41,7 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="Broadcast"
+                tools:text="Broadcast"
                 android:textAppearance="@style/TextAppearance.AppCompat.Small"
                 android:textStyle="bold"
                 android:textColor="?android:attr/textColorPrimary" />
@@ -49,7 +50,7 @@
                 android:id="@+id/txt_transmission_duration"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="0:08"
+                tools:text="0:08"
                 android:textSize="11sp"
                 android:textStyle="bold"
                 android:textColor="?android:attr/textColorSecondary"
@@ -72,7 +73,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
-            android:text="14:22:05 (15s ago)"
+            tools:text="14:22:05 (15s ago)"
             android:textAppearance="@style/TextAppearance.AppCompat.Caption"
             android:textColor="?android:attr/textColorSecondary" />
 
@@ -82,7 +83,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="6dp"
-            android:text="Transcription text..."
+            tools:text="Transcription text..."
             android:textSize="12sp"
             android:textColor="?android:attr/textColorPrimary"
             android:visibility="gone" />

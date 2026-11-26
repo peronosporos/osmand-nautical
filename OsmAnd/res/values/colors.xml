@@ -669,6 +669,10 @@
 	<color name="nautical_metric_cat_env">#3949AB</color>
 	<color name="nautical_metric_cat_vessel">#F57C00</color>
 	<color name="nautical_metric_cat_power">#D89B00</color>
+	<color name="nautical_ais_buddy_gold">#FFD700</color>
+	<color name="nautical_ais_danger_bg">#33FF0000</color>
+	<color name="nautical_ais_danger_icon">#FF0000</color>
+	<color name="nautical_ais_danger_text">#FF4444</color>
 	<color name="nautical_status_blue">#3498DB</color>
 	<color name="nautical_status_bg_active">#E3F2FD</color>
 	<color name="nautical_status_bg_emergency">#FFCDD2</color>

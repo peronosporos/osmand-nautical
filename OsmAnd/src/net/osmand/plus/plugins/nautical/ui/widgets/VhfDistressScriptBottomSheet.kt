@@ -8,11 +8,11 @@ import android.speech.tts.TextToSpeech
 import android.view.LayoutInflater
 import android.view.View
 import android.widget.TextView
+import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentManager
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.button.MaterialButtonToggleGroup
-import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -55,9 +55,9 @@ class VhfDistressScriptBottomSheet : BaseNauticalBottomSheet() {
 
     override fun createMenuItems(savedInstanceState: Bundle?) {
         val title = when (callType) {
-            CallType.MAYDAY -> "MAYDAY Distress Script"
-            CallType.PAN_PAN -> "PAN-PAN Urgency Script"
-            CallType.SECURITE -> "SECURITE Safety Script"
+            CallType.MAYDAY -> getString(R.string.nautical_vhf_mayday_script_title)
+            CallType.PAN_PAN -> getString(R.string.nautical_vhf_pan_pan_script_title)
+            CallType.SECURITE -> getString(R.string.nautical_vhf_securite_script_title)
         }
         addTitleItem(title)
 
@@ -89,10 +89,20 @@ class VhfDistressScriptBottomSheet : BaseNauticalBottomSheet() {
             }
         }
 
-        chipGroupNature.setOnCheckedStateChangeListener { group, checkedIds ->
+        chipGroupNature.setOnCheckedStateChangeListener { _, checkedIds ->
             if (checkedIds.isNotEmpty()) {
-                val chip = group.findViewById<Chip>(checkedIds[0])
-                natureOfDistress = chip?.text?.toString()?.uppercase(Locale.US) ?: "SINKING"
+                // Chip labels are localized, but the spoken distress script is
+                // canonical English (GMDSS): map the chip id to the phrase.
+                natureOfDistress = when (checkedIds[0]) {
+                    R.id.chip_sinking -> "SINKING / FLOODING"
+                    R.id.chip_fire -> "FIRE / EXPLOSION"
+                    R.id.chip_grounding -> "GROUNDING"
+                    R.id.chip_collision -> "COLLISION"
+                    R.id.chip_mob -> "MAN OVERBOARD"
+                    R.id.chip_adrift -> "DISABLED / ADRIFT"
+                    R.id.chip_medical -> "MEDICAL EMERGENCY"
+                    else -> "SINKING / FLOODING"
+                }
                 updateScript()
             }
         }
@@ -136,19 +146,19 @@ class VhfDistressScriptBottomSheet : BaseNauticalBottomSheet() {
         val app = activity?.application as? OsmandApplication
         val isNightVision = app?.let { NauticalPlugin.isNightVision(it) } ?: false
         if (isNightVision) {
-            customView.setBackgroundColor(0xEE120000.toInt())
-            customView.findViewById<View>(R.id.drag_handle)?.setBackgroundColor(0x80FF1744.toInt())
-            customView.findViewById<TextView>(R.id.txt_nature_label)?.setTextColor(0xFFFF1744.toInt())
-            customView.findViewById<TextView>(R.id.txt_pob_label)?.setTextColor(0xFFFF8A80.toInt())
-            txtPobCount.setTextColor(0xFFFF1744.toInt())
+            customView.setBackgroundColor(ContextCompat.getColor(themedCtx, R.color.nautical_night_vision_bg))
+            customView.findViewById<View>(R.id.drag_handle)?.setBackgroundColor(ContextCompat.getColor(themedCtx, R.color.nautical_night_vision_muted))
+            customView.findViewById<TextView>(R.id.txt_nature_label)?.setTextColor(ContextCompat.getColor(themedCtx, R.color.nautical_night_vision_primary))
+            customView.findViewById<TextView>(R.id.txt_pob_label)?.setTextColor(ContextCompat.getColor(themedCtx, R.color.nautical_night_vision_data))
+            txtPobCount.setTextColor(ContextCompat.getColor(themedCtx, R.color.nautical_night_vision_primary))
             customView.findViewById<com.google.android.material.card.MaterialCardView>(R.id.card_distress_script)?.apply {
-                setCardBackgroundColor(0xEE120000.toInt())
-                strokeColor = 0xFFFF1744.toInt()
+                setCardBackgroundColor(ContextCompat.getColor(themedCtx, R.color.nautical_night_vision_bg))
+                strokeColor = ContextCompat.getColor(themedCtx, R.color.nautical_night_vision_primary)
             }
-            scriptTextView.setTextColor(0xFFFF1744.toInt())
-            btnCopyScript.setTextColor(0xFFFF1744.toInt())
-            btnCopyScript.strokeColor = android.content.res.ColorStateList.valueOf(0xFFFF1744.toInt())
-            btnSpeakScript.backgroundTintList = android.content.res.ColorStateList.valueOf(0xFFB71C1C.toInt())
+            scriptTextView.setTextColor(ContextCompat.getColor(themedCtx, R.color.nautical_night_vision_primary))
+            btnCopyScript.setTextColor(ContextCompat.getColor(themedCtx, R.color.nautical_night_vision_primary))
+            btnCopyScript.strokeColor = android.content.res.ColorStateList.valueOf(ContextCompat.getColor(themedCtx, R.color.nautical_night_vision_primary))
+            btnSpeakScript.backgroundTintList = android.content.res.ColorStateList.valueOf(ContextCompat.getColor(themedCtx, R.color.nautical_status_text_emergency))
         }
 
         updateScript()

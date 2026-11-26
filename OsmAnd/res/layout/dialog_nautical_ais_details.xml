@@ -67,7 +67,7 @@
                                 android:layout_height="20dp"
                                 android:layout_marginStart="6dp"
                                 android:src="@drawable/ic_action_favorite"
-                                app:tint="#FFD700"
+                                app:tint="@color/nautical_ais_buddy_gold"
                                 android:visibility="gone"
                                 android:contentDescription="@string/nautical_a11y_buddy_star" />
                         </LinearLayout>
@@ -103,7 +103,7 @@
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:gravity="center_vertical"
-            android:background="#33FF0000"
+            android:background="@color/nautical_ais_danger_bg"
             android:padding="12dp"
             android:layout_marginTop="10dp"
             android:visibility="gone">
@@ -112,7 +112,7 @@
                 android:layout_width="24dp"
                 android:layout_height="24dp"
                 android:src="@drawable/ic_action_alert"
-                app:tint="#FFFF0000"
+                app:tint="@color/nautical_ais_danger_icon"
                 android:layout_marginEnd="8dp"
                 android:contentDescription="@string/nautical_a11y_collision_warning" />
 
@@ -121,7 +121,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="@string/nautical_ais_danger_warning"
-                android:textColor="#FFFF4444"
+                android:textColor="@color/nautical_ais_danger_text"
                 android:textStyle="bold"
                 android:textSize="14sp" />
         </LinearLayout>

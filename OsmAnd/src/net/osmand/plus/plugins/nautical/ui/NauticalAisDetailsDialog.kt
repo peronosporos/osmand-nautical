@@ -98,18 +98,18 @@ class NauticalAisDetailsDialog : BaseBottomSheetDialogFragment() {
 
         val shipName = ais.shipName?.trim()
         val txtShipName = view.findViewById<TextView>(R.id.txt_ship_name)
-        txtShipName.text = if (!shipName.isNullOrEmpty()) shipName else "MMSI: ${ais.mmsi}"
+        txtShipName.text = if (!shipName.isNullOrEmpty()) shipName else getString(R.string.nautical_ais_details_mmsi, ais.mmsi)
 
         val country = getMidCountry(ais.mmsi)
-        val mmsiSb = StringBuilder("MMSI: ${ais.mmsi}")
+        val mmsiSb = StringBuilder(getString(R.string.nautical_ais_details_mmsi, ais.mmsi))
         if (!ais.callSign.isNullOrEmpty()) {
-            mmsiSb.append(" • Call: ").append(ais.callSign)
+            mmsiSb.append(" • ").append(getString(R.string.nautical_ais_details_callsign, ais.callSign))
         }
         if (!country.isNullOrEmpty()) {
-            mmsiSb.append(" • Flag: ").append(country)
+            mmsiSb.append(" • ").append(getString(R.string.nautical_ais_details_flag_fmt, country))
         }
         if (ais.imo != 0) {
-            mmsiSb.append(" • IMO: ").append(ais.imo)
+            mmsiSb.append(" • ").append(getString(R.string.nautical_ais_details_imo, ais.imo.toString()))
         }
         val txtMmsi = view.findViewById<TextView>(R.id.txt_mmsi_callsign)
         txtMmsi.text = mmsiSb.toString()
@@ -125,22 +125,22 @@ class NauticalAisDetailsDialog : BaseBottomSheetDialogFragment() {
         if (isDanger && ais.cpa.valid) {
             cpaWarningLayout.visibility = View.VISIBLE
             val tcpaMin = ais.cpa.tcpa * 60.0
-            txtCpaWarning.text = String.format(Locale.US, "COLLISION WARNING: CPA %.2f nm in %.1f min", ais.cpa.cpa, tcpaMin)
+            txtCpaWarning.text = getString(R.string.nautical_ais_collision_warning_fmt, ais.cpa.cpa, tcpaMin)
         } else {
             cpaWarningLayout.visibility = View.GONE
         }
 
         // Metrics Grid
-        val sogStr = if (ais.sog != AisObjectConstants.INVALID_SOG) String.format(Locale.US, "SOG: %.1f kn", ais.sog) else "SOG: $na"
+        val sogStr = if (ais.sog != AisObjectConstants.INVALID_SOG) getString(R.string.nautical_ais_details_sog, String.format(Locale.US, "%.1f kn", ais.sog)) else getString(R.string.nautical_ais_details_sog, na)
         view.findViewById<TextView>(R.id.txt_sog).text = sogStr
 
-        val cogStr = if (ais.cog != AisObjectConstants.INVALID_COG) String.format(Locale.US, "COG: %.0f°", ais.cog) else "COG: $na"
+        val cogStr = if (ais.cog != AisObjectConstants.INVALID_COG) getString(R.string.nautical_ais_details_cog, String.format(Locale.US, "%.0f°", ais.cog)) else getString(R.string.nautical_ais_details_cog, na)
         view.findViewById<TextView>(R.id.txt_cog).text = cogStr
 
-        val hdgStr = if (ais.heading != AisObjectConstants.INVALID_HEADING) String.format(Locale.US, "HDG: %d°", ais.heading) else "HDG: $na"
+        val hdgStr = if (ais.heading != AisObjectConstants.INVALID_HEADING) getString(R.string.nautical_ais_details_hdg, String.format(Locale.US, "%d°", ais.heading)) else getString(R.string.nautical_ais_details_hdg, na)
         view.findViewById<TextView>(R.id.txt_heading).text = hdgStr
 
-        val rotStr = if (ais.rot != AisObjectConstants.INVALID_ROT && ais.rot != 0.0) String.format(Locale.US, "ROT: %.1f°/m", ais.rot) else "ROT: $na"
+        val rotStr = if (ais.rot != AisObjectConstants.INVALID_ROT && ais.rot != 0.0) getString(R.string.nautical_ais_details_rot, String.format(Locale.US, "%.1f°/m", ais.rot)) else getString(R.string.nautical_ais_details_rot, na)
         view.findViewById<TextView>(R.id.txt_rot).text = rotStr
 
         // Range and Bearing from own ship
@@ -164,13 +164,13 @@ class NauticalAisDetailsDialog : BaseBottomSheetDialogFragment() {
         if (ais.cpa.valid) {
             val cpaNm = ais.cpa.cpa
             val tcpaMin = ais.cpa.tcpa * 60.0
-            txtCpa.text = String.format(Locale.US, "CPA: %.2f NM • TCPA: %.1f min", cpaNm, tcpaMin)
+            txtCpa.text = getString(R.string.nautical_ais_cpa_tcpa_fmt, cpaNm, tcpaMin)
 
             // Background chip: red <0.5 NM, amber 0.5-1.5 NM, green >1.5 NM
             val chipBgColor = when {
-                cpaNm < 0.5 -> Color.parseColor("#D32F2F")
-                cpaNm <= 1.5 -> Color.parseColor("#F57C00")
-                else -> Color.parseColor("#2E7D32")
+                cpaNm < 0.5 -> ContextCompat.getColor(requireContext(), R.color.nautical_status_red)
+                cpaNm <= 1.5 -> ContextCompat.getColor(requireContext(), R.color.nautical_status_orange)
+                else -> ContextCompat.getColor(requireContext(), R.color.nautical_status_green)
             }
             txtCpa.setBackgroundResource(R.drawable.btn_active_light)
             txtCpa.backgroundTintList = ColorStateList.valueOf(chipBgColor)
@@ -249,7 +249,7 @@ class NauticalAisDetailsDialog : BaseBottomSheetDialogFragment() {
         fun updateBuddyUi(buddy: Boolean) {
             if (buddy) {
                 imgBuddyStar?.setImageResource(R.drawable.ic_action_favorite)
-                imgBuddyStar?.setColorFilter(Color.parseColor("#FFD700"), PorterDuff.Mode.SRC_IN)
+                imgBuddyStar?.setColorFilter(ContextCompat.getColor(requireContext(), R.color.nautical_ais_buddy_gold), PorterDuff.Mode.SRC_IN)
                 btnBuddy?.setText(R.string.nautical_remove_from_buddies)
                 btnBuddy?.setIconResource(R.drawable.ic_action_favorite)
             } else {

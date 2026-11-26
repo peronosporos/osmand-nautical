@@ -1,6 +1,7 @@
 package net.osmand.plus.plugins.nautical.ui.widgets
 
 import android.os.Bundle
+import androidx.core.content.ContextCompat
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -44,11 +45,11 @@ class NauticalElectricalDashboardBottomSheet : BaseNauticalBottomSheet() {
         val app = requireActivity().application as net.osmand.plus.OsmandApplication
         val isNightVision = NauticalPlugin.isNightVision(app)
         if (isNightVision) {
-            customView.setBackgroundColor(0xEE120000.toInt())
-            customView.findViewById<View>(R.id.drag_handle)?.setBackgroundColor(0x80FF1744.toInt())
+            customView.setBackgroundColor(ContextCompat.getColor(themedCtx, R.color.nautical_night_vision_bg))
+            customView.findViewById<View>(R.id.drag_handle)?.setBackgroundColor(ContextCompat.getColor(themedCtx, R.color.nautical_night_vision_muted))
             customView.findViewById<com.google.android.material.card.MaterialCardView>(R.id.card_power_matrix)?.apply {
-                setCardBackgroundColor(0xEE120000.toInt())
-                strokeColor = 0xFFFF1744.toInt()
+                setCardBackgroundColor(ContextCompat.getColor(themedCtx, R.color.nautical_night_vision_bg))
+                strokeColor = ContextCompat.getColor(themedCtx, R.color.nautical_night_vision_primary)
             }
         }
 
@@ -128,13 +129,13 @@ class NauticalElectricalDashboardBottomSheet : BaseNauticalBottomSheet() {
                 }
 
                 if (isNightVision) {
-                    txtSoc?.setTextColor(0xFFFF1744.toInt())
-                    txtNetFlow?.setTextColor(0xFFFF8A80.toInt())
-                    txtCharge?.setTextColor(0xFFFF8A80.toInt())
-                    cardAutonomy?.setCardBackgroundColor(0xEE120000.toInt())
-                    cardAutonomy?.strokeColor = 0xFFFF1744.toInt()
-                    txtAutonomyTitle?.setTextColor(0xFFFF1744.toInt())
-                    txtAutonomyDetails?.setTextColor(0xFFFF8A80.toInt())
+                    txtSoc?.setTextColor(ContextCompat.getColor(themedCtx, R.color.nautical_night_vision_primary))
+                    txtNetFlow?.setTextColor(ContextCompat.getColor(themedCtx, R.color.nautical_night_vision_data))
+                    txtCharge?.setTextColor(ContextCompat.getColor(themedCtx, R.color.nautical_night_vision_data))
+                    cardAutonomy?.setCardBackgroundColor(ContextCompat.getColor(themedCtx, R.color.nautical_night_vision_bg))
+                    cardAutonomy?.strokeColor = ContextCompat.getColor(themedCtx, R.color.nautical_night_vision_primary)
+                    txtAutonomyTitle?.setTextColor(ContextCompat.getColor(themedCtx, R.color.nautical_night_vision_primary))
+                    txtAutonomyDetails?.setTextColor(ContextCompat.getColor(themedCtx, R.color.nautical_night_vision_data))
                 }
 
                 // 2. Engines & Mechanical — live data only; the old code rendered
@@ -239,13 +240,13 @@ class NauticalElectricalDashboardBottomSheet : BaseNauticalBottomSheet() {
             val app = itemView.context.applicationContext as? net.osmand.plus.OsmandApplication
             val isNightVision = app?.let { NauticalPlugin.isNightVision(it) } ?: false
             if (isNightVision) {
-                (itemView as? androidx.cardview.widget.CardView)?.setCardBackgroundColor(0xEE120000.toInt())
-                txtName.setTextColor(0xFFFF8A80.toInt())
-                txtType?.setTextColor(0xFFFF8A80.toInt())
-                txtVolt.setTextColor(0xFFFF1744.toInt())
-                txtSoc.setTextColor(0xFFFF1744.toInt())
-                txtCurrent.setTextColor(0xFFFF8A80.toInt())
-                txtEta?.setTextColor(0xFFFF8A80.toInt())
+                (itemView as? androidx.cardview.widget.CardView)?.setCardBackgroundColor(ContextCompat.getColor(itemView.context, R.color.nautical_night_vision_bg))
+                txtName.setTextColor(ContextCompat.getColor(itemView.context, R.color.nautical_night_vision_data))
+                txtType?.setTextColor(ContextCompat.getColor(itemView.context, R.color.nautical_night_vision_data))
+                txtVolt.setTextColor(ContextCompat.getColor(itemView.context, R.color.nautical_night_vision_primary))
+                txtSoc.setTextColor(ContextCompat.getColor(itemView.context, R.color.nautical_night_vision_primary))
+                txtCurrent.setTextColor(ContextCompat.getColor(itemView.context, R.color.nautical_night_vision_data))
+                txtEta?.setTextColor(ContextCompat.getColor(itemView.context, R.color.nautical_night_vision_data))
             }
         }
     }
@@ -342,13 +343,13 @@ class NauticalElectricalDashboardBottomSheet : BaseNauticalBottomSheet() {
             val app = itemView.context.applicationContext as? net.osmand.plus.OsmandApplication
             val isNightVision = app?.let { NauticalPlugin.isNightVision(it) } ?: false
             if (isNightVision) {
-                (itemView as? androidx.cardview.widget.CardView)?.setCardBackgroundColor(0xEE120000.toInt())
-                txtName.setTextColor(0xFFFF8A80.toInt())
-                txtType?.setTextColor(0xFFFF8A80.toInt())
-                txtVolt.setTextColor(0xFFFF1744.toInt())
-                txtCurrent.setTextColor(0xFFFF8A80.toInt())
-                txtEta?.setTextColor(0xFFFF8A80.toInt())
-                cellText?.setTextColor(0xFFFF8A80.toInt())
+                (itemView as? androidx.cardview.widget.CardView)?.setCardBackgroundColor(ContextCompat.getColor(itemView.context, R.color.nautical_night_vision_bg))
+                txtName.setTextColor(ContextCompat.getColor(itemView.context, R.color.nautical_night_vision_data))
+                txtType?.setTextColor(ContextCompat.getColor(itemView.context, R.color.nautical_night_vision_data))
+                txtVolt.setTextColor(ContextCompat.getColor(itemView.context, R.color.nautical_night_vision_primary))
+                txtCurrent.setTextColor(ContextCompat.getColor(itemView.context, R.color.nautical_night_vision_data))
+                txtEta?.setTextColor(ContextCompat.getColor(itemView.context, R.color.nautical_night_vision_data))
+                cellText?.setTextColor(ContextCompat.getColor(itemView.context, R.color.nautical_night_vision_data))
             }
         }
 
@@ -415,7 +416,7 @@ class NauticalElectricalDashboardBottomSheet : BaseNauticalBottomSheet() {
             }
 
             if (isLowFuelWarning || isHighWasteWarning) {
-                txtPercent.setTextColor(0xFFFF1744.toInt())
+                txtPercent.setTextColor(ContextCompat.getColor(itemView.context, R.color.nautical_status_red))
             } else {
                 txtPercent.setTextColor(percentDefaultColor)
             }
@@ -436,9 +437,9 @@ class NauticalElectricalDashboardBottomSheet : BaseNauticalBottomSheet() {
             val app = itemView.context.applicationContext as? net.osmand.plus.OsmandApplication
             val isNightVision = app?.let { NauticalPlugin.isNightVision(it) } ?: false
             if (isNightVision) {
-                txtName.setTextColor(0xFFFF8A80.toInt())
+                txtName.setTextColor(ContextCompat.getColor(itemView.context, R.color.nautical_night_vision_data))
                 if (!isLowFuelWarning && !isHighWasteWarning) {
-                    txtPercent.setTextColor(0xFFFF8A80.toInt())
+                    txtPercent.setTextColor(ContextCompat.getColor(itemView.context, R.color.nautical_night_vision_data))
                 }
             }
         }
@@ -679,7 +680,7 @@ class NauticalElectricalDashboardBottomSheet : BaseNauticalBottomSheet() {
             val app = itemView.context.applicationContext as? net.osmand.plus.OsmandApplication
             val isNightVision = app?.let { NauticalPlugin.isNightVision(it) } ?: false
             if (isNightVision) {
-                txtName.setTextColor(0xFFFF1744.toInt())
+                txtName.setTextColor(ContextCompat.getColor(itemView.context, R.color.nautical_night_vision_primary))
             }
         }
     }

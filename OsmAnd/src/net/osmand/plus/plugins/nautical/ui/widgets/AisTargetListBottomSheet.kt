@@ -127,16 +127,16 @@ class AisTargetListBottomSheet : BaseBottomSheetDialogFragment() {
 
         val isNightVision = app?.let { NauticalPlugin.isNightVision(it) } ?: false
         if (isNightVision) {
-            view.setBackgroundColor(0xEE120000.toInt())
-            view.findViewById<View>(R.id.drag_handle)?.setBackgroundColor(0x80FF1744.toInt())
-            txtTitle?.setTextColor(0xFFFF1744.toInt())
-            editSearch?.setTextColor(0xFFFF1744.toInt())
-            editSearch?.setHintTextColor(0x80FF1744.toInt())
-            txtPredictiveTime?.setTextColor(0xFFFF8A80.toInt())
-            sliderPredictiveHorizon?.thumbTintList = ColorStateList.valueOf(0xFFFF1744.toInt())
-            sliderPredictiveHorizon?.trackActiveTintList = ColorStateList.valueOf(0xFFFF1744.toInt())
-            btnToggleVector?.setTextColor(0xFFFF1744.toInt())
-            btnToggleVector?.iconTint = ColorStateList.valueOf(0xFFFF1744.toInt())
+            view.setBackgroundColor(ContextCompat.getColor(view.context, R.color.nautical_night_vision_bg))
+            view.findViewById<View>(R.id.drag_handle)?.setBackgroundColor(ContextCompat.getColor(view.context, R.color.nautical_night_vision_muted))
+            txtTitle?.setTextColor(ContextCompat.getColor(view.context, R.color.nautical_night_vision_primary))
+            editSearch?.setTextColor(ContextCompat.getColor(view.context, R.color.nautical_night_vision_primary))
+            editSearch?.setHintTextColor(ContextCompat.getColor(view.context, R.color.nautical_night_vision_muted))
+            txtPredictiveTime?.setTextColor(ContextCompat.getColor(view.context, R.color.nautical_night_vision_data))
+            sliderPredictiveHorizon?.thumbTintList = ColorStateList.valueOf(ContextCompat.getColor(view.context, R.color.nautical_night_vision_primary))
+            sliderPredictiveHorizon?.trackActiveTintList = ColorStateList.valueOf(ContextCompat.getColor(view.context, R.color.nautical_night_vision_primary))
+            btnToggleVector?.setTextColor(ContextCompat.getColor(view.context, R.color.nautical_night_vision_primary))
+            btnToggleVector?.iconTint = ColorStateList.valueOf(ContextCompat.getColor(view.context, R.color.nautical_night_vision_primary))
         }
 
         view.findViewById<ImageButton>(R.id.btn_close)?.setOnClickListener {
@@ -287,7 +287,7 @@ class AisTargetListBottomSheet : BaseBottomSheetDialogFragment() {
             cardMobEmergency?.visibility = View.VISIBLE
             val bearing = (KMapUtils.getBearing(ownLoc.latitude, ownLoc.longitude, mobTarget.lat, mobTarget.lon).toDegrees() + 360.0) % 360.0
             val distNm = net.osmand.util.MapUtils.getDistance(ownLoc.latitude, ownLoc.longitude, mobTarget.lat, mobTarget.lon) / 1852.0
-            txtMobEmergencyTitle?.text = String.format(Locale.US, "AIS-MOB ACTIVATED: Bearing %.0f° / Distance %.1f NM", bearing, distNm)
+            txtMobEmergencyTitle?.text = getString(R.string.nautical_ais_mob_activated_fmt, bearing, distNm)
             btnMobSetSarCourse?.setOnClickListener {
                 dismiss()
                 val mapActivity = activity as? MapActivity
@@ -374,32 +374,32 @@ class AisTargetListBottomSheet : BaseBottomSheetDialogFragment() {
                 isDanger -> {
                     txtThreatBadge.text = context.getString(R.string.nautical_threat_danger)
                     txtThreatBadge.setTextColor(Color.WHITE)
-                    val dangerColor = if (isNightVision) 0xFFFF1744.toInt() else ContextCompat.getColor(context, R.color.nautical_status_red)
+                    val dangerColor = if (isNightVision) ContextCompat.getColor(context, R.color.nautical_night_vision_primary) else ContextCompat.getColor(context, R.color.nautical_status_red)
                     setBadgeBackground(txtThreatBadge, dangerColor)
                     txtCpaTcpa.setTextColor(dangerColor)
                 }
                 isCaution -> {
                     txtThreatBadge.text = context.getString(R.string.nautical_threat_caution)
-                    txtThreatBadge.setTextColor(if (isNightVision) 0xEE120000.toInt() else Color.WHITE)
-                    val cautionColor = if (isNightVision) 0xFFFF8A80.toInt() else ContextCompat.getColor(context, R.color.nautical_status_orange)
+                    txtThreatBadge.setTextColor(if (isNightVision) ContextCompat.getColor(context, R.color.nautical_night_vision_bg) else Color.WHITE)
+                    val cautionColor = if (isNightVision) ContextCompat.getColor(context, R.color.nautical_night_vision_data) else ContextCompat.getColor(context, R.color.nautical_status_orange)
                     setBadgeBackground(txtThreatBadge, cautionColor)
                     txtCpaTcpa.setTextColor(cautionColor)
                 }
                 else -> {
                     txtThreatBadge.text = context.getString(R.string.nautical_threat_safe)
-                    txtThreatBadge.setTextColor(if (isNightVision) 0xFFFF8A80.toInt() else Color.WHITE)
-                    val safeColor = if (isNightVision) 0x80B71C1C.toInt() else ContextCompat.getColor(context, R.color.nautical_status_green)
+                    txtThreatBadge.setTextColor(if (isNightVision) ContextCompat.getColor(context, R.color.nautical_night_vision_data) else Color.WHITE)
+                    val safeColor = if (isNightVision) ContextCompat.getColor(context, R.color.nautical_night_vision_stroke) else ContextCompat.getColor(context, R.color.nautical_status_green)
                     setBadgeBackground(txtThreatBadge, safeColor)
-                    txtCpaTcpa.setTextColor(if (isNightVision) 0xFFFF8A80.toInt() else AndroidUtils.getColorFromAttr(context, android.R.attr.textColorPrimary))
+                    txtCpaTcpa.setTextColor(if (isNightVision) ContextCompat.getColor(context, R.color.nautical_night_vision_data) else AndroidUtils.getColorFromAttr(context, android.R.attr.textColorPrimary))
                 }
             }
 
             if (isNightVision) {
-                (itemView as? androidx.cardview.widget.CardView)?.setCardBackgroundColor(0xEE120000.toInt())
-                txtVesselName.setTextColor(0xFFFF1744.toInt())
-                txtVesselSubtext.setTextColor(0xFFFF8A80.toInt())
-                txtRangeBearing.setTextColor(0xFFFF8A80.toInt())
-                txtSogCog.setTextColor(0xFFFF8A80.toInt())
+                (itemView as? androidx.cardview.widget.CardView)?.setCardBackgroundColor(ContextCompat.getColor(context, R.color.nautical_night_vision_bg))
+                txtVesselName.setTextColor(ContextCompat.getColor(context, R.color.nautical_night_vision_primary))
+                txtVesselSubtext.setTextColor(ContextCompat.getColor(context, R.color.nautical_night_vision_data))
+                txtRangeBearing.setTextColor(ContextCompat.getColor(context, R.color.nautical_night_vision_data))
+                txtSogCog.setTextColor(ContextCompat.getColor(context, R.color.nautical_night_vision_data))
             }
 
             // 3. Range & Bearing from Own Vessel

@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/card_target"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
@@ -40,7 +41,7 @@
                 android:textSize="11sp"
                 android:textStyle="bold"
                 android:textColor="@android:color/white"
-                android:text="SAFE" />
+                tools:text="SAFE" />
 
             <!-- Vessel Name & Subtitle Info -->
             <LinearLayout
@@ -109,7 +110,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Range / BRG"
+                    android:text="@string/nautical_ais_range_brg_label"
                     android:textSize="11sp"
                     android:textColor="?android:attr/textColorSecondary" />
 
@@ -133,7 +134,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="SOG / COG"
+                    android:text="@string/nautical_ais_sog_cog_label"
                     android:textSize="11sp"
                     android:textColor="?android:attr/textColorSecondary" />
 
@@ -158,7 +159,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="CPA / TCPA"
+                    android:text="@string/nautical_ais_cpa_tcpa_label"
                     android:textSize="11sp"
                     android:textColor="?android:attr/textColorSecondary" />
 
