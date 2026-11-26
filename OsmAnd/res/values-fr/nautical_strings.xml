@@ -1224,6 +1224,7 @@
     <string name="nautical_tech_reefs_fmt">Prises de ris: %1$s</string>
     <string name="nautical_tech_sats_fmt">Sats: %1$s</string>
     <string name="nautical_tech_source_fmt">Source: %1$s</string>
+    <string name="nautical_sk_connection_lost">Connexion Signal K perdue</string>
     <string name="nautical_actuator_overload_window_sec">Fenêtre de surcharge de l\'actionneur (s)</string>
     <string name="nautical_ais_cpa_warning_distance">Distance d\'alerte de collision (CPA)</string>
     <string name="nautical_ais_cpa_warning_time">Délai d\'alerte de collision (TCPA)</string>

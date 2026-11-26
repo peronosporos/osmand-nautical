@@ -470,7 +470,9 @@ class NauticalAdvancedSettingsBottomSheet : BaseNauticalBottomSheet() {
 
         val primaryColor = ContextCompat.getColor(requireContext(), if (nightMode) R.color.nautical_status_blue else R.color.color_ok)
         val secondaryColor = ContextCompat.getColor(requireContext(), R.color.nautical_status_red)
-        val textColor = if (nightMode) Color.WHITE else Color.BLACK
+        val textColor = net.osmand.plus.utils.ColorUtilities.getPrimaryTextColor(
+            requireActivity().application as net.osmand.plus.OsmandApplication, nightMode
+        )
 
         // The series plot the SIMULATED heading response and rudder angle of the
         // PID preview, not a measured "heading error" — label them honestly.

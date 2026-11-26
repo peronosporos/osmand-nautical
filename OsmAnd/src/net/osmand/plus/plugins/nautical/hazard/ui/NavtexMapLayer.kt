@@ -5,6 +5,7 @@ import kotlin.math.min
 import kotlin.math.max
 import net.osmand.data.RotatedTileBox
 import net.osmand.plus.activities.MapActivity
+import net.osmand.plus.R
 import net.osmand.plus.plugins.nautical.hazard.engine.NavtexMessage
 import net.osmand.plus.plugins.nautical.hazard.engine.NavtexSubject
 import net.osmand.plus.plugins.nautical.hazard.viewmodel.NavtexUiState
@@ -14,6 +15,7 @@ import net.osmand.plus.views.layers.MapSelectionResult
 import net.osmand.plus.views.layers.MapSelectionRules
 import net.osmand.plus.views.layers.ContextMenuLayer.IContextMenuProvider
 import net.osmand.plus.views.layers.base.OsmandMapLayer
+import androidx.core.content.ContextCompat
 import androidx.core.graphics.withClip
 import net.osmand.util.MapUtils
 
@@ -27,7 +29,7 @@ class NavtexMapLayer(private val activity: MapActivity) : OsmandMapLayer(activit
     
     private val strokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
-        color = Color.WHITE
+        color = ContextCompat.getColor(activity, R.color.nautical_navtex_accent_day)
         strokeWidth = 2f
     }
 
@@ -37,19 +39,19 @@ class NavtexMapLayer(private val activity: MapActivity) : OsmandMapLayer(activit
     }
 
     private val badgePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.WHITE
+        color = ContextCompat.getColor(activity, R.color.nautical_navtex_accent_day)
         textSize = 24f
         textAlign = Paint.Align.CENTER
         typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
     }
 
     private val polygonFillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = 0x30FF5252.toInt() // #30FF5252
+        color = ContextCompat.getColor(activity, R.color.nautical_navtex_zone_fill_day)
         style = Paint.Style.FILL
     }
 
     private val polygonStrokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = 0xFFFF5252.toInt() // #FFFF5252
+        color = ContextCompat.getColor(activity, R.color.nautical_navtex_zone_stroke_day)
         style = Paint.Style.STROKE
         strokeWidth = 3f
     }
@@ -69,17 +71,17 @@ class NavtexMapLayer(private val activity: MapActivity) : OsmandMapLayer(activit
 
     private fun setupPaints(isNight: Boolean) {
         if (isNight) {
-            polygonFillPaint.color = 0x25B71C1C.toInt() // Translucent deep red (#25B71C1C)
-            polygonStrokePaint.color = 0xCCFF1744.toInt() // Monochromatic red border (#CCFF1744)
-            hatchPaint.color = 0x80FF1744.toInt() // Deep red hatch lines (#80FF1744)
-            badgePaint.color = 0xFFFF8A80.toInt() // Monochromatic light red (#FF8A80)
-            strokePaint.color = 0xFFFF8A80.toInt()
+            polygonFillPaint.color = ContextCompat.getColor(activity, R.color.nautical_navtex_zone_fill_night)
+            polygonStrokePaint.color = ContextCompat.getColor(activity, R.color.nautical_navtex_zone_stroke_night)
+            hatchPaint.color = ContextCompat.getColor(activity, R.color.nautical_navtex_hatch_night)
+            badgePaint.color = ContextCompat.getColor(activity, R.color.nautical_navtex_accent_night)
+            strokePaint.color = ContextCompat.getColor(activity, R.color.nautical_navtex_accent_night)
         } else {
-            polygonFillPaint.color = 0x30FF5252.toInt()
-            polygonStrokePaint.color = 0xFFFF5252.toInt()
-            hatchPaint.color = 0xFFFF5252.toInt()
-            badgePaint.color = Color.WHITE
-            strokePaint.color = Color.WHITE
+            polygonFillPaint.color = ContextCompat.getColor(activity, R.color.nautical_navtex_zone_fill_day)
+            polygonStrokePaint.color = ContextCompat.getColor(activity, R.color.nautical_navtex_zone_stroke_day)
+            hatchPaint.color = ContextCompat.getColor(activity, R.color.nautical_navtex_zone_stroke_day)
+            badgePaint.color = ContextCompat.getColor(activity, R.color.nautical_navtex_accent_day)
+            strokePaint.color = ContextCompat.getColor(activity, R.color.nautical_navtex_accent_day)
         }
     }
 
@@ -172,7 +174,7 @@ class NavtexMapLayer(private val activity: MapActivity) : OsmandMapLayer(activit
 
         // Colorblind Accessibility: Hatching for urgent areas
         if (msg.isUrgent) {
-            val baseColor = if (isNight) 0x80FF1744.toInt() else 0xFFFF5252.toInt()
+            val baseColor = if (isNight) ContextCompat.getColor(activity, R.color.nautical_navtex_hatch_night) else ContextCompat.getColor(activity, R.color.nautical_navtex_zone_stroke_day)
             drawHatching(canvas, polygonPath, baseColor, scale)
         }
 
@@ -201,12 +203,12 @@ class NavtexMapLayer(private val activity: MapActivity) : OsmandMapLayer(activit
     private fun drawWarningMarker(canvas: Canvas, x: Float, y: Float, isUrgent: Boolean, isNight: Boolean, scale: Float) {
         markerPaint.style = Paint.Style.FILL
         markerPaint.color = if (isUrgent) {
-            if (isNight) 0xFFFF1744.toInt() else Color.RED
+            if (isNight) ContextCompat.getColor(activity, R.color.nautical_navtex_marker_urgent_night) else ContextCompat.getColor(activity, R.color.nautical_navtex_marker_urgent_day)
         } else {
-            if (isNight) 0xFFD50000.toInt() else 0xFFFF8F00.toInt()
+            if (isNight) ContextCompat.getColor(activity, R.color.nautical_navtex_marker_caution_night) else ContextCompat.getColor(activity, R.color.nautical_navtex_marker_caution_day)
         }
-        
-        strokePaint.color = if (isNight) 0xFFFF8A80.toInt() else Color.WHITE
+
+        strokePaint.color = if (isNight) ContextCompat.getColor(activity, R.color.nautical_navtex_accent_night) else ContextCompat.getColor(activity, R.color.nautical_navtex_accent_day)
         strokePaint.strokeWidth = 2f * scale
         
         val size = 20f * scale
@@ -222,7 +224,7 @@ class NavtexMapLayer(private val activity: MapActivity) : OsmandMapLayer(activit
         // Colorblind Accessibility: Badge icon for urgent markers
         if (isUrgent) {
             badgePaint.textSize = 18f * scale
-            badgePaint.color = if (isNight) 0xFFFF8A80.toInt() else Color.YELLOW
+            badgePaint.color = if (isNight) ContextCompat.getColor(activity, R.color.nautical_navtex_accent_night) else ContextCompat.getColor(activity, R.color.nautical_navtex_badge_urgent_day)
             canvas.drawText("!", x, y + size * 0.7f, badgePaint)
         }
     }

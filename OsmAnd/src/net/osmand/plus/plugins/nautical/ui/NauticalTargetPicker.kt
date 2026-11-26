@@ -205,7 +205,7 @@ class NauticalTargetPicker : BottomSheetDialogFragment() {
 
             val shipName = resolvedAis.shipName?.trim()
             val titleView = TextView(context).apply {
-                text = if (!shipName.isNullOrEmpty()) shipName else "MMSI: ${resolvedAis.mmsi}"
+                text = if (!shipName.isNullOrEmpty()) shipName else getString(R.string.nautical_mmsi_fmt, resolvedAis.mmsi.toString())
                 textSize = 15f
                 setTypeface(null, android.graphics.Typeface.BOLD)
             }
@@ -244,7 +244,7 @@ class NauticalTargetPicker : BottomSheetDialogFragment() {
                 val distNm = ownLoc.distanceTo(targetLoc) / 1852.0
                 val bearingDeg = (ownLoc.bearingTo(targetLoc) + 360f) % 360f
                 val distView = TextView(context).apply {
-                    text = String.format(Locale.US, "%.1fnm • %03.0f°", distNm, bearingDeg)
+                    text = getString(R.string.nautical_ais_range_bearing, String.format(Locale.US, "%.1fnm", distNm), String.format(Locale.US, "%03.0f°", bearingDeg))
                     textSize = 13f
                     setTypeface(null, android.graphics.Typeface.BOLD)
                 }
@@ -263,10 +263,10 @@ class NauticalTargetPicker : BottomSheetDialogFragment() {
             if (target.cpa.valid) {
                 val isDanger = checkDanger(target, plugin)
                 val cpaView = TextView(context).apply {
-                    text = String.format(Locale.US, "CPA %.1fnm", target.cpa.cpa)
+                    text = getString(R.string.nautical_cockpit_vhf_threat, String.format(Locale.US, "%.1f", target.cpa.cpa))
                     textSize = 11f
                     if (isDanger) {
-                        setTextColor(Color.RED)
+                        setTextColor(ContextCompat.getColor(requireContext(), R.color.nautical_ais_danger_icon))
                         setTypeface(null, android.graphics.Typeface.BOLD)
                     } else {
                         setTextColor(ColorUtilities.getSecondaryTextColor(requireActivity().application as OsmandApplication, false))
@@ -323,25 +323,27 @@ class NauticalTargetPicker : BottomSheetDialogFragment() {
         }
     }
 
+    // AIS type color scheme shared with the map drawable and details dialog.
     private fun selectColor(type: AisObjType): Int {
         val app = requireActivity().application as? OsmandApplication
         if (app != null && NauticalPlugin.isNightVision(app)) {
             return ContextCompat.getColor(requireContext(), R.color.nautical_night_vision_primary)
         }
+        fun c(resId: Int) = ContextCompat.getColor(requireContext(), resId)
         return when (type) {
-            AisObjType.AIS_VESSEL -> Color.GREEN
-            AisObjType.AIS_VESSEL_SPORT -> Color.YELLOW
-            AisObjType.AIS_VESSEL_FAST -> Color.BLUE
-            AisObjType.AIS_VESSEL_PASSENGER -> Color.CYAN
-            AisObjType.AIS_VESSEL_FREIGHT -> Color.GRAY
-            AisObjType.AIS_VESSEL_COMMERCIAL -> Color.LTGRAY
-            AisObjType.AIS_VESSEL_AUTHORITIES -> Color.argb(0xff, 0x55, 0x6b, 0x2f)
-            AisObjType.AIS_VESSEL_SAR -> Color.argb(0xff, 0xfa, 0x80, 0x72)
-            AisObjType.AIS_VESSEL_OTHER -> Color.argb(0xff, 0x00, 0xbf, 0xff)
-            AisObjType.AIS_LANDSTATION -> Color.argb(0xff, 0x8b, 0x45, 0x13)
-            AisObjType.AIS_AIRPLANE -> Color.argb(0xff, 0x93, 0x70, 0xdb)
-            AisObjType.AIS_SART -> Color.RED
-            AisObjType.AIS_ATON, AisObjType.AIS_ATON_VIRTUAL -> Color.argb(0xff, 0xff, 0xa5, 0x00)
+            AisObjType.AIS_VESSEL -> c(R.color.nautical_ais_type_vessel)
+            AisObjType.AIS_VESSEL_SPORT -> c(R.color.nautical_ais_type_sport)
+            AisObjType.AIS_VESSEL_FAST -> c(R.color.nautical_ais_type_fast)
+            AisObjType.AIS_VESSEL_PASSENGER -> c(R.color.nautical_ais_type_passenger)
+            AisObjType.AIS_VESSEL_FREIGHT -> c(R.color.nautical_ais_type_freight)
+            AisObjType.AIS_VESSEL_COMMERCIAL -> c(R.color.nautical_ais_type_commercial)
+            AisObjType.AIS_VESSEL_AUTHORITIES -> c(R.color.nautical_ais_type_authorities)
+            AisObjType.AIS_VESSEL_SAR -> c(R.color.nautical_ais_type_sar_vessel)
+            AisObjType.AIS_VESSEL_OTHER -> c(R.color.nautical_ais_type_other)
+            AisObjType.AIS_LANDSTATION -> c(R.color.nautical_ais_type_land)
+            AisObjType.AIS_AIRPLANE -> c(R.color.nautical_ais_type_airplane)
+            AisObjType.AIS_SART -> c(R.color.nautical_ais_type_sart)
+            AisObjType.AIS_ATON, AisObjType.AIS_ATON_VIRTUAL -> c(R.color.nautical_ais_type_aton)
             else -> 0
         }
     }

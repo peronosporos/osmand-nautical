@@ -1224,6 +1224,7 @@
     <string name="nautical_tech_reefs_fmt">Reffs: %1$s</string>
     <string name="nautical_tech_sats_fmt">Sat.: %1$s</string>
     <string name="nautical_tech_source_fmt">Quelle: %1$s</string>
+    <string name="nautical_sk_connection_lost">Signal-K-Verbindung verloren</string>
     <string name="nautical_actuator_overload_window_sec">Überlastfenster des Stellantriebs (s)</string>
     <string name="nautical_ais_cpa_warning_distance">Kollisionswarnabstand (CPA)</string>
     <string name="nautical_ais_cpa_warning_time">Kollisionswarnzeit (TCPA)</string>

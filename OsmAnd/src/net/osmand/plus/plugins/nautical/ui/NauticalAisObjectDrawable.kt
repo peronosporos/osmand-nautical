@@ -64,7 +64,7 @@ class NauticalAisObjectDrawable(
     private val badgeCache = java.util.Collections.synchronizedMap(mutableMapOf<Int, Bitmap>())
     
     private val badgePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.MAGENTA
+        color = androidx.core.content.ContextCompat.getColor(plugin.application, R.color.nautical_ais_virtual_badge)
         typeface = Typeface.DEFAULT_BOLD
     }
 
@@ -131,11 +131,13 @@ class NauticalAisObjectDrawable(
     }
 
     private fun activateCpaWarning() {
-        bitmapColor = Color.RED
+        bitmapColor = androidx.core.content.ContextCompat.getColor(plugin.application, R.color.nautical_ais_danger_icon)
     }
 
     private fun deactivateCpaWarning() {
-        if (bitmapColor == Color.RED || bitmapColor == 0xFFFF1744.toInt()) {
+        val dangerRed = androidx.core.content.ContextCompat.getColor(plugin.application, R.color.nautical_ais_danger_icon)
+        val nightPrimary = androidx.core.content.ContextCompat.getColor(plugin.application, R.color.nautical_night_vision_primary)
+        if (bitmapColor == dangerRed || bitmapColor == nightPrimary) {
             setColor(isVesselAtRestWithHysteresis())
         }
     }
@@ -164,24 +166,26 @@ class NauticalAisObjectDrawable(
         }
     }
 
+    // AIS type color scheme shared with the target picker and details dialog.
     private fun selectColor(type: AisObjType): Int {
+        fun c(resId: Int) = androidx.core.content.ContextCompat.getColor(plugin.application, resId)
         if (ais.mmsi in 970000000..974999999) {
-            return Color.RED
+            return c(R.color.nautical_ais_type_sart)
         }
         return when (type) {
-            AisObjType.AIS_VESSEL -> Color.GREEN
-            AisObjType.AIS_VESSEL_SPORT -> Color.YELLOW
-            AisObjType.AIS_VESSEL_FAST -> Color.BLUE
-            AisObjType.AIS_VESSEL_PASSENGER -> Color.CYAN
-            AisObjType.AIS_VESSEL_FREIGHT -> Color.GRAY
-            AisObjType.AIS_VESSEL_COMMERCIAL -> Color.LTGRAY
-            AisObjType.AIS_VESSEL_AUTHORITIES -> Color.argb(0xff, 0x55, 0x6b, 0x2f)
-            AisObjType.AIS_VESSEL_SAR -> Color.argb(0xff, 0xfa, 0x80, 0x72)
-            AisObjType.AIS_VESSEL_OTHER -> Color.argb(0xff, 0x00, 0xbf, 0xff)
-            AisObjType.AIS_LANDSTATION -> Color.argb(0xff, 0x8b, 0x45, 0x13)
-            AisObjType.AIS_AIRPLANE -> Color.argb(0xff, 0x93, 0x70, 0xdb)
-            AisObjType.AIS_SART -> Color.RED
-            AisObjType.AIS_ATON, AisObjType.AIS_ATON_VIRTUAL -> Color.argb(0xff, 0xff, 0xa5, 0x00)
+            AisObjType.AIS_VESSEL -> c(R.color.nautical_ais_type_vessel)
+            AisObjType.AIS_VESSEL_SPORT -> c(R.color.nautical_ais_type_sport)
+            AisObjType.AIS_VESSEL_FAST -> c(R.color.nautical_ais_type_fast)
+            AisObjType.AIS_VESSEL_PASSENGER -> c(R.color.nautical_ais_type_passenger)
+            AisObjType.AIS_VESSEL_FREIGHT -> c(R.color.nautical_ais_type_freight)
+            AisObjType.AIS_VESSEL_COMMERCIAL -> c(R.color.nautical_ais_type_commercial)
+            AisObjType.AIS_VESSEL_AUTHORITIES -> c(R.color.nautical_ais_type_authorities)
+            AisObjType.AIS_VESSEL_SAR -> c(R.color.nautical_ais_type_sar_vessel)
+            AisObjType.AIS_VESSEL_OTHER -> c(R.color.nautical_ais_type_other)
+            AisObjType.AIS_LANDSTATION -> c(R.color.nautical_ais_type_land)
+            AisObjType.AIS_AIRPLANE -> c(R.color.nautical_ais_type_airplane)
+            AisObjType.AIS_SART -> c(R.color.nautical_ais_type_sart)
+            AisObjType.AIS_ATON, AisObjType.AIS_ATON_VIRTUAL -> c(R.color.nautical_ais_type_aton)
             else -> 0
         }
     }
@@ -251,13 +255,16 @@ class NauticalAisObjectDrawable(
             val isSart = ais.objectClass == AisObjType.AIS_SART
             val isDanger = hasCpaWarning || checkCpaWarning() || threatLevel >= 3
             val isCaution = threatLevel in 1..2
+            val nightPrimary = androidx.core.content.ContextCompat.getColor(plugin.application, R.color.nautical_night_vision_primary)
+            val nightData = androidx.core.content.ContextCompat.getColor(plugin.application, R.color.nautical_night_vision_data)
+            val nightMuted = androidx.core.content.ContextCompat.getColor(plugin.application, R.color.nautical_night_vision_stroke)
 
             bitmapColor = when {
-                isSart || isDanger -> 0xFFFF1744.toInt() // Bold monochromatic red
-                isCaution -> 0xFFFF8A80.toInt() // Monochromatic light red
-                ownObject -> 0xFFFF1744.toInt()
-                isBuddy() -> 0xFFFF8A80.toInt()
-                else -> 0x80B71C1C.toInt() // Muted dark red outline for safe targets
+                isSart || isDanger -> nightPrimary // Bold monochromatic red
+                isCaution -> nightData // Monochromatic light red
+                ownObject -> nightPrimary
+                isBuddy() -> nightData
+                else -> nightMuted // Muted dark red outline for safe targets
             }
             alpha = if (caps?.hasAisPrioritizer == true && threatLevel == 0 && !ownObject && !hasCpaWarning && !checkCpaWarning()) {
                 150
@@ -267,19 +274,20 @@ class NauticalAisObjectDrawable(
             return
         }
 
+        val dangerRed = androidx.core.content.ContextCompat.getColor(plugin.application, R.color.nautical_ais_danger_icon)
         if (hasCpaWarning || checkCpaWarning()) {
-            bitmapColor = Color.RED
+            bitmapColor = dangerRed
         } else if (ownObject) {
-            bitmapColor = Color.BLACK
+            bitmapColor = androidx.core.content.ContextCompat.getColor(plugin.application, R.color.nautical_ais_own_vessel)
         } else if (isBuddy()) {
-            bitmapColor = Color.rgb(255, 215, 0) // Gold
+            bitmapColor = androidx.core.content.ContextCompat.getColor(plugin.application, R.color.nautical_ais_buddy_gold) // Gold
         } else if (isRemote) {
-            bitmapColor = Color.rgb(173, 216, 230) // LightBlue (APRS/HAM)
+            bitmapColor = androidx.core.content.ContextCompat.getColor(plugin.application, R.color.nautical_ais_remote) // LightBlue (APRS/HAM)
         } else if (caps?.hasAisPrioritizer == true && threatLevel > 0) {
             bitmapColor = when {
-                threatLevel >= 3 -> Color.RED
-                threatLevel == 2 -> Color.rgb(255, 140, 0) // DarkOrange
-                else -> Color.YELLOW
+                threatLevel >= 3 -> dangerRed
+                threatLevel == 2 -> androidx.core.content.ContextCompat.getColor(plugin.application, R.color.nautical_ais_threat_medium) // DarkOrange
+                else -> androidx.core.content.ContextCompat.getColor(plugin.application, R.color.nautical_ais_threat_low)
             }
         } else if (ais.isLost(plugin.aisShipLostTimeout.get()) && !vesselAtRest) {
             if (ais.isMovable()) {
@@ -351,7 +359,7 @@ class NauticalAisObjectDrawable(
             .setLineId(ais.mmsi)
             .setBaseOrder(baseOrder + 10)
             .setIsHidden(true)
-            .setFillColor(NativeUtilities.createFColorARGB(0xFF000000.toInt()))
+            .setFillColor(NativeUtilities.createFColorARGB(Color.BLACK))
             .setPoints(QVectorPointI(2))
             .setLineWidth(6.0)
         directionLine = lineBuilder.buildAndAddToCollection(vectorLinesCollection)
@@ -359,7 +367,7 @@ class NauticalAisObjectDrawable(
         val shapeLineBuilder = VectorLineBuilder()
             .setLineId(Int.MIN_VALUE + ais.mmsi)
             .setBaseOrder(baseOrder + 5)
-            .setFillColor(NativeUtilities.createFColorARGB(Color.DKGRAY))
+            .setFillColor(NativeUtilities.createFColorARGB(androidx.core.content.ContextCompat.getColor(plugin.application, R.color.nautical_ais_rest_outline)))
             .setPoints(QVectorPointI(2))
             .setLineWidth(4.0)
         shapeLine = shapeLineBuilder.buildAndAddToCollection(vectorLinesCollection)
@@ -406,7 +414,7 @@ class NauticalAisObjectDrawable(
             lostMarker?.setOnMapSurfaceIconDirection(SwigUtilities.getOnSurfaceIconKey(1), rotation)
         }
 
-        var colorToModulate = if (bitmapColor == 0) 0xFFFFFFFF.toInt() else bitmapColor
+        var colorToModulate = if (bitmapColor == 0) Color.WHITE else bitmapColor
         if (alpha < 255) {
             colorToModulate = (colorToModulate and 0x00FFFFFF) or (alpha shl 24)
         }
@@ -457,7 +465,7 @@ class NauticalAisObjectDrawable(
 
             if (drawShape) {
                 shapeLine?.fillColor = NativeUtilities.createFColorARGB(
-                    if (bitmapColor == 0) Color.DKGRAY else bitmapColor,
+                    if (bitmapColor == 0) androidx.core.content.ContextCompat.getColor(plugin.application, R.color.nautical_ais_rest_outline) else bitmapColor,
                 )
                 shapeLine?.points = getShapePoints(pos)
                 shapeLine?.setIsHidden(false)
@@ -582,8 +590,8 @@ class NauticalAisObjectDrawable(
 
     private fun drawCircle(locationX: Float, locationY: Float, paint: Paint, canvas: Canvas) {
         val isNight = NauticalPlugin.isNightVision(plugin.application)
-        val outerColor = if (isNight) 0x80B71C1C.toInt() else Color.DKGRAY
-        val innerColor = if (isNight) (if (bitmapColor != 0) bitmapColor else 0xFFFF1744.toInt()) else bitmapColor
+        val outerColor = if (isNight) androidx.core.content.ContextCompat.getColor(plugin.application, R.color.nautical_night_vision_stroke) else androidx.core.content.ContextCompat.getColor(plugin.application, R.color.nautical_ais_rest_outline)
+        val innerColor = if (isNight) (if (bitmapColor != 0) bitmapColor else androidx.core.content.ContextCompat.getColor(plugin.application, R.color.nautical_night_vision_primary)) else bitmapColor
         circlePaint.color = outerColor
         canvas.drawCircle(locationX, locationY, 22.0f, circlePaint)
         circlePaint.color = innerColor

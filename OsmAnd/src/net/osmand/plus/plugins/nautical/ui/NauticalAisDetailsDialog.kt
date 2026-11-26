@@ -274,7 +274,7 @@ class NauticalAisDetailsDialog : BaseBottomSheetDialogFragment() {
                 aisManager?.addBuddy(ais.mmsi) ?: true
             }
             updateBuddyUi(newBuddyState)
-            val vesselName = ais.shipName?.trim().takeIf { !it.isNullOrEmpty() } ?: "MMSI ${ais.mmsi}"
+            val vesselName = ais.shipName?.trim().takeIf { !it.isNullOrEmpty() } ?: getString(R.string.nautical_mmsi_fmt, ais.mmsi.toString())
             if (newBuddyState) {
                 plugin?.application?.showToastMessage(getString(R.string.nautical_added_to_buddies, vesselName))
             } else {
@@ -389,21 +389,23 @@ class NauticalAisDetailsDialog : BaseBottomSheetDialogFragment() {
         }
     }
 
+    // AIS type color scheme shared with the map drawable and target picker.
     private fun selectColor(type: AisObjType): Int {
+        fun c(resId: Int) = ContextCompat.getColor(requireContext(), resId)
         return when (type) {
-            AisObjType.AIS_VESSEL -> Color.GREEN
-            AisObjType.AIS_VESSEL_SPORT -> Color.YELLOW
-            AisObjType.AIS_VESSEL_FAST -> Color.BLUE
-            AisObjType.AIS_VESSEL_PASSENGER -> Color.CYAN
-            AisObjType.AIS_VESSEL_FREIGHT -> Color.GRAY
-            AisObjType.AIS_VESSEL_COMMERCIAL -> Color.LTGRAY
-            AisObjType.AIS_VESSEL_AUTHORITIES -> Color.argb(0xff, 0x55, 0x6b, 0x2f)
-            AisObjType.AIS_VESSEL_SAR -> Color.argb(0xff, 0xfa, 0x80, 0x72)
-            AisObjType.AIS_VESSEL_OTHER -> Color.argb(0xff, 0x00, 0xbf, 0xff)
-            AisObjType.AIS_LANDSTATION -> Color.argb(0xff, 0x8b, 0x45, 0x13)
-            AisObjType.AIS_AIRPLANE -> Color.argb(0xff, 0x93, 0x70, 0xdb)
-            AisObjType.AIS_SART -> Color.RED
-            AisObjType.AIS_ATON, AisObjType.AIS_ATON_VIRTUAL -> Color.argb(0xff, 0xff, 0xa5, 0x00)
+            AisObjType.AIS_VESSEL -> c(R.color.nautical_ais_type_vessel)
+            AisObjType.AIS_VESSEL_SPORT -> c(R.color.nautical_ais_type_sport)
+            AisObjType.AIS_VESSEL_FAST -> c(R.color.nautical_ais_type_fast)
+            AisObjType.AIS_VESSEL_PASSENGER -> c(R.color.nautical_ais_type_passenger)
+            AisObjType.AIS_VESSEL_FREIGHT -> c(R.color.nautical_ais_type_freight)
+            AisObjType.AIS_VESSEL_COMMERCIAL -> c(R.color.nautical_ais_type_commercial)
+            AisObjType.AIS_VESSEL_AUTHORITIES -> c(R.color.nautical_ais_type_authorities)
+            AisObjType.AIS_VESSEL_SAR -> c(R.color.nautical_ais_type_sar_vessel)
+            AisObjType.AIS_VESSEL_OTHER -> c(R.color.nautical_ais_type_other)
+            AisObjType.AIS_LANDSTATION -> c(R.color.nautical_ais_type_land)
+            AisObjType.AIS_AIRPLANE -> c(R.color.nautical_ais_type_airplane)
+            AisObjType.AIS_SART -> c(R.color.nautical_ais_type_sart)
+            AisObjType.AIS_ATON, AisObjType.AIS_ATON_VIRTUAL -> c(R.color.nautical_ais_type_aton)
             else -> 0
         }
     }

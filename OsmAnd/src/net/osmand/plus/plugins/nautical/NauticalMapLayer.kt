@@ -57,7 +57,8 @@ class NauticalMapLayer(context: Context) : OsmandMapLayer(context), SharedPrefer
     }
 
     private val cmgPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.rgb(0, 255, 255) // Cyan for CMG
+        // Placeholder: color is re-resolved from NauticalColorResolver on every frame.
+        color = Color.rgb(0, 255, 255)
         style = Paint.Style.STROKE
         alpha = 220
     }
@@ -68,7 +69,8 @@ class NauticalMapLayer(context: Context) : OsmandMapLayer(context), SharedPrefer
     }
 
     private val targetHeadingPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.rgb(255, 165, 0) // Orange
+        // Placeholder: color is re-resolved from NauticalColorResolver on every frame.
+        color = Color.rgb(255, 165, 0)
         style = Paint.Style.STROKE
         alpha = 200
     }
@@ -80,14 +82,14 @@ class NauticalMapLayer(context: Context) : OsmandMapLayer(context), SharedPrefer
     }
 
     private val corridorPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.LTGRAY
+        color = ContextCompat.getColor(context, R.color.nautical_map_corridor)
         style = Paint.Style.STROKE
         alpha = 60
         pathEffect = DashPathEffect(floatArrayOf(10f, 10f), 0f)
     }
 
     private val laylinePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.MAGENTA
+        color = ContextCompat.getColor(context, R.color.nautical_map_layline)
         style = Paint.Style.STROKE
         alpha = 160
     }
@@ -100,7 +102,7 @@ class NauticalMapLayer(context: Context) : OsmandMapLayer(context), SharedPrefer
     }
 
     private val startLinePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.rgb(255, 215, 0)
+        color = ContextCompat.getColor(context, R.color.nautical_map_start_line)
         style = Paint.Style.STROKE
         strokeWidth = 5f
         pathEffect = DashPathEffect(floatArrayOf(15f, 10f), 0f)
@@ -113,19 +115,19 @@ class NauticalMapLayer(context: Context) : OsmandMapLayer(context), SharedPrefer
     }
 
     private val backingVectorPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.WHITE
+        color = ContextCompat.getColor(context, R.color.nautical_map_vector_stroke)
         style = Paint.Style.STROKE
         alpha = 180
     }
 
     private val steeringWormPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.rgb(0, 255, 255) // Cyan
+        color = ContextCompat.getColor(context, R.color.nautical_map_steering_worm)
         style = Paint.Style.STROKE
         alpha = 180
     }
 
     private val isochronePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.rgb(255, 140, 0) // Dark Orange
+        color = ContextCompat.getColor(context, R.color.nautical_map_isochrone)
         style = Paint.Style.STROKE
         strokeWidth = 2f
         alpha = 120
@@ -144,12 +146,12 @@ class NauticalMapLayer(context: Context) : OsmandMapLayer(context), SharedPrefer
     }
 
     private val warningBgPaint = Paint().apply {
-        color = Color.RED
+        color = ContextCompat.getColor(context, R.color.nautical_map_alert_bg)
         alpha = 220
     }
 
     private val drPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.rgb(255, 140, 0) // Dark Orange for DR
+        color = ContextCompat.getColor(context, R.color.nautical_map_dr)
         style = Paint.Style.STROKE
         strokeWidth = 4f
         pathEffect = DashPathEffect(floatArrayOf(15f, 10f), 0f)
@@ -486,14 +488,16 @@ class NauticalMapLayer(context: Context) : OsmandMapLayer(context), SharedPrefer
                     it.alpha = if (isCloseQuarters) 120 else 255
                     it.draw(canvas)
                 } ?: run {
-                    trailPaint.color = Color.RED
+                    val oldColor = trailPaint.color
+                    val oldStyle = trailPaint.style
+                    trailPaint.color = ContextCompat.getColor(context, R.color.nautical_map_icon_alert)
                     trailPaint.style = Paint.Style.FILL
                     val oldAlpha = trailPaint.alpha
                     if (isCloseQuarters) trailPaint.alpha = 120
                     canvas.drawCircle(x, y, 20f, trailPaint)
                     trailPaint.alpha = oldAlpha
-                    trailPaint.style = Paint.Style.STROKE
-                    trailPaint.color = Color.MAGENTA
+                    trailPaint.style = oldStyle
+                    trailPaint.color = oldColor
                 }
             }
         }
@@ -527,6 +531,8 @@ class NauticalMapLayer(context: Context) : OsmandMapLayer(context), SharedPrefer
         val startX = tileBox.getPixXFromLatLon(lat, lon)
         val startY = tileBox.getPixYFromLatLon(lat, lon)
 
+        // Deliberate pure white on the black Wear OS ambient (OLED) screen;
+        // not themed so the low-bit ambient rendering stays maximally readable.
         val ambientPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = Color.WHITE
             style = Paint.Style.STROKE
@@ -554,7 +560,7 @@ class NauticalMapLayer(context: Context) : OsmandMapLayer(context), SharedPrefer
 
     private fun drawDrIndicator(canvas: Canvas, x: Float, y: Float, isSunlight: Boolean) {
         val density = context.resources.displayMetrics.density
-        drPaint.color = if (isSunlight) Color.BLACK else Color.rgb(255, 140, 0)
+        drPaint.color = if (isSunlight) Color.BLACK else ContextCompat.getColor(context, R.color.nautical_map_dr)
         drPaint.strokeWidth = 3f * density
         
         // Industry Standard DR Symbol: Circle around position with cross
@@ -591,7 +597,7 @@ class NauticalMapLayer(context: Context) : OsmandMapLayer(context), SharedPrefer
         val oldSize = warningPaint.textSize
         val oldFakeBold = warningPaint.isFakeBoldText
         
-        warningPaint.color = Color.WHITE
+        warningPaint.color = ContextCompat.getColor(context, R.color.nautical_map_alert_text)
         warningPaint.textSize = 70f
         warningPaint.isFakeBoldText = true
         
@@ -603,7 +609,7 @@ class NauticalMapLayer(context: Context) : OsmandMapLayer(context), SharedPrefer
     }
 
     private val slipAnglePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.CYAN
+        color = ContextCompat.getColor(context, R.color.nautical_map_slip_angle)
         strokeWidth = 4f
         style = Paint.Style.STROKE
         pathEffect = DashPathEffect(floatArrayOf(10f, 10f), 0f)
@@ -611,10 +617,10 @@ class NauticalMapLayer(context: Context) : OsmandMapLayer(context), SharedPrefer
     }
 
     private val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.WHITE
+        color = ContextCompat.getColor(context, R.color.nautical_map_text)
         textSize = 32f
         textAlign = Paint.Align.CENTER
-        setShadowLayer(5f, 0f, 0f, Color.BLACK)
+        setShadowLayer(5f, 0f, 0f, ContextCompat.getColor(context, R.color.nautical_map_text_shadow))
     }
 
     private fun drawVesselProjections(
@@ -782,10 +788,10 @@ class NauticalMapLayer(context: Context) : OsmandMapLayer(context), SharedPrefer
 
         plugin?.tacticalStartManager?.let { start ->
             start.portPin?.let { p ->
-                drawPin(canvas, tileBox, p.first, p.second, "P", Color.RED, isSunlight)
+                drawPin(canvas, tileBox, p.first, p.second, "P", ContextCompat.getColor(context, R.color.nautical_map_start_pin_port), isSunlight)
             }
             start.starboardPin?.let { s ->
-                drawPin(canvas, tileBox, s.first, s.second, "S", Color.GREEN, isSunlight)
+                drawPin(canvas, tileBox, s.first, s.second, "S", ContextCompat.getColor(context, R.color.nautical_map_start_pin_starboard), isSunlight)
             }
             val p = start.portPin
             val s = start.starboardPin
@@ -847,7 +853,7 @@ class NauticalMapLayer(context: Context) : OsmandMapLayer(context), SharedPrefer
                      val px = tileBox.getPixXFromLatLon(aLat, aLon)
                      val py = tileBox.getPixYFromLatLon(aLat, aLon)
                      icon.setBounds((px - size / 2).toInt(), (py - size / 2).toInt(), (px + size / 2).toInt(), (py + size / 2).toInt())
-                     icon.setTint(if (isSunlight) Color.BLACK else Color.RED)
+                     icon.setTint(if (isSunlight) Color.BLACK else ContextCompat.getColor(context, R.color.nautical_map_icon_alert))
                      icon.draw(canvas)
                  }
              }
@@ -862,7 +868,7 @@ class NauticalMapLayer(context: Context) : OsmandMapLayer(context), SharedPrefer
                 val left = tileBox.pixWidth - size - margin
                 val top = tileBox.pixHeight - size - margin
                 icon.setBounds(left, top, left + size, top + size)
-                icon.setTint(if (isSunlight) Color.BLACK else Color.RED)
+                icon.setTint(if (isSunlight) Color.BLACK else ContextCompat.getColor(context, R.color.nautical_map_icon_alert))
                 icon.draw(canvas)
             }
         }
@@ -877,7 +883,7 @@ class NauticalMapLayer(context: Context) : OsmandMapLayer(context), SharedPrefer
                     val px = tileBox.getPixXFromLatLon(dLat, dLon)
                     val py = tileBox.getPixYFromLatLon(dLat, dLon)
                     icon.setBounds((px - size / 2).toInt(), (py - size / 2).toInt(), (px + size / 2).toInt(), (py + size / 2).toInt())
-                    icon.setTint(if (isSunlight) Color.BLACK else Color.rgb(255, 215, 0))
+                    icon.setTint(if (isSunlight) Color.BLACK else ContextCompat.getColor(context, R.color.nautical_map_icon_gold))
                     icon.draw(canvas)
                 }
             }
@@ -890,7 +896,7 @@ class NauticalMapLayer(context: Context) : OsmandMapLayer(context), SharedPrefer
         val py = tileBox.getPixYFromLatLon(lat, lon)
         pinPaint.color = if (isSunlight) Color.BLACK else color
         canvas.drawCircle(px, py, 15f, pinPaint)
-        pinPaint.color = if (isSunlight) Color.BLACK else Color.WHITE
+        pinPaint.color = if (isSunlight) Color.BLACK else ContextCompat.getColor(context, R.color.nautical_map_text)
         canvas.drawText(label, px, py - 25f, pinPaint)
     }
 
@@ -899,7 +905,7 @@ class NauticalMapLayer(context: Context) : OsmandMapLayer(context), SharedPrefer
         val py = tileBox.getPixYFromLatLon(pLat, pLon)
         val sx = tileBox.getPixXFromLatLon(sLat, sLon)
         val sy = tileBox.getPixYFromLatLon(sLat, sLon)
-        startLinePaint.color = if (isSunlight) Color.BLACK else Color.rgb(255, 215, 0)
+        startLinePaint.color = if (isSunlight) Color.BLACK else ContextCompat.getColor(context, R.color.nautical_map_start_line)
         canvas.drawLine(px, py, sx, sy, startLinePaint)
     }
 
@@ -919,7 +925,7 @@ class NauticalMapLayer(context: Context) : OsmandMapLayer(context), SharedPrefer
         val py = tileBox.getPixYFromLatLon(lat, lon)
         val pixelsPerMeter = getPixelsPerMeter(tileBox, lat, lon)
         val radiusPx = (radiusMeters * pixelsPerMeter).toFloat()
-        anchorZonePaint.color = if (isSunlight) Color.BLACK else Color.RED
+        anchorZonePaint.color = if (isSunlight) Color.BLACK else ContextCompat.getColor(context, R.color.nautical_map_anchor_zone)
         canvas.drawCircle(px, py, radiusPx, anchorZonePaint)
         canvas.drawCircle(px, py, 10f, anchorZonePaint)
     }
@@ -929,7 +935,7 @@ class NauticalMapLayer(context: Context) : OsmandMapLayer(context), SharedPrefer
         val py = tileBox.getPixYFromLatLon(lat, lon)
         val pixelsPerMeter = getPixelsPerMeter(tileBox, lat, lon)
         val radiusPx = (radiusMeters * pixelsPerMeter).toFloat()
-        anchorZonePaint.color = if (isSunlight) Color.BLACK else Color.YELLOW
+        anchorZonePaint.color = if (isSunlight) Color.BLACK else ContextCompat.getColor(context, R.color.nautical_map_anchor_zone_preview)
         anchorZonePaint.style = Paint.Style.STROKE
         anchorZonePaint.strokeWidth = 5f
         canvas.drawCircle(px, py, radiusPx, anchorZonePaint)
@@ -955,7 +961,7 @@ class NauticalMapLayer(context: Context) : OsmandMapLayer(context), SharedPrefer
             curHdg += rot * dt
             wormPath.lineTo(tileBox.getPixXFromLatLon(curLat, curLon), tileBox.getPixYFromLatLon(curLat, curLon))
         }
-        steeringWormPaint.color = if (isSunlight) Color.BLACK else Color.rgb(0, 255, 255)
+        steeringWormPaint.color = if (isSunlight) Color.BLACK else ContextCompat.getColor(context, R.color.nautical_map_steering_worm)
         canvas.drawPath(wormPath, steeringWormPaint)
     }
 
@@ -1079,7 +1085,7 @@ class NauticalMapLayer(context: Context) : OsmandMapLayer(context), SharedPrefer
             
             polarPerformancePaint.style = Paint.Style.STROKE
             polarPerformancePaint.alpha = 60
-            polarPerformancePaint.color = Color.GRAY
+            polarPerformancePaint.color = ContextCompat.getColor(context, R.color.nautical_polar_curve)
             canvas.drawPath(polarPath, polarPerformancePaint)
         }
 
@@ -1089,12 +1095,12 @@ class NauticalMapLayer(context: Context) : OsmandMapLayer(context), SharedPrefer
 
         polarPerformancePaint.style = Paint.Style.STROKE
         polarPerformancePaint.alpha = 100
-        polarPerformancePaint.color = Color.WHITE
+        polarPerformancePaint.color = ContextCompat.getColor(context, R.color.nautical_polar_target)
         canvas.drawCircle(centerX, centerY, targetRadius, polarPerformancePaint)
         
         val ratio = if (targetSpeed > 0) currentSpeed / targetSpeed else 0.0
         polarPerformancePaint.alpha = 255
-        polarPerformancePaint.color = if (ratio >= 0.98) Color.CYAN else if (ratio >= 0.90) Color.GREEN else if (ratio >= 0.8) Color.YELLOW else Color.RED
+        polarPerformancePaint.color = if (ratio >= 0.98) ContextCompat.getColor(context, R.color.nautical_polar_excellent) else if (ratio >= 0.90) ContextCompat.getColor(context, R.color.nautical_polar_good) else if (ratio >= 0.8) ContextCompat.getColor(context, R.color.nautical_polar_fair) else ContextCompat.getColor(context, R.color.nautical_polar_poor)
         polarPerformancePaint.strokeWidth = 4f * density
         canvas.drawCircle(centerX, centerY, currentRadius, polarPerformancePaint)
     }
