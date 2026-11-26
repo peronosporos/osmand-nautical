@@ -7,6 +7,7 @@ import net.osmand.plus.plugins.nautical.network.DeltaMessage
 import net.osmand.plus.plugins.nautical.network.LivePerformanceData
 import net.osmand.plus.plugins.nautical.network.Update
 import net.osmand.plus.plugins.nautical.network.Value
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Lightweight NMEA 0183 parser that maps standard sentences to Signal K-style DeltaMessages.
@@ -23,13 +24,18 @@ class NmeaSentenceParser(private val app: OsmandApplication) {
         "II" to 5   // Integrated Instrumentation
     )
     
-    private val lastTalkerByPath = mutableMapOf<String, String>()
+    // injectSentence() can execute on caller contexts, so the talker arbitration state
+    // must be safe against concurrent access from outside the single channel worker.
+    private val lastTalkerByPath = ConcurrentHashMap<String, String>()
 
     fun parse(sentence: String): DeltaMessage? {
         if ((!sentence.startsWith("$") && !sentence.startsWith("!")) || !sentence.contains("*")) return null
         
         val content = sentence.substring(1, sentence.indexOf("*"))
-        val providedChecksum = sentence.substringAfter("*", "")
+        // BufferedReader.readLine() strips only "\n": TCP/Bluetooth lines keep a trailing
+        // "\r", which used to make the checksum ("7A\r") unparseable and silently dropped
+        // every CRLF-terminated sentence from those transports.
+        val providedChecksum = sentence.substringAfter("*", "").trim()
         
         if (!validateChecksum(content, providedChecksum)) return null
 
@@ -95,7 +101,9 @@ class NmeaSentenceParser(private val app: OsmandApplication) {
         
         val values = mutableListOf<Value>()
         
-        if (shouldProcess(LivePerformanceData.PATH_SOG, talker)) {
+        if (parts[2] == "A" && shouldProcess(LivePerformanceData.PATH_SOG, talker)) {
+            // Gate on the RMC validity flag: with "V" the receiver warns the fix is
+            // not reliable and any SOG left in the field may be stale.
             parts[7].toDoubleOrNull()?.let { knots ->
                 val sogMs = knots * 0.514444
                 if (MarineStateConstants.isValidSpeed(sogMs)) {
@@ -104,9 +112,10 @@ class NmeaSentenceParser(private val app: OsmandApplication) {
             }
         }
         
-        if (shouldProcess(LivePerformanceData.PATH_COG, talker)) {
+        if (parts[2] == "A" && shouldProcess(LivePerformanceData.PATH_COG, talker)) {
             parts[8].toDoubleOrNull()?.let { cog ->
-                if (!cog.isNaN()) {
+                // Reject the 360 "not available" sentinel and out-of-range values.
+                if (cog >= 0.0 && cog < 360.0) {
                     values.add(Value(LivePerformanceData.PATH_COG, Math.toRadians(cog)))
                 }
             }
@@ -121,7 +130,7 @@ class NmeaSentenceParser(private val app: OsmandApplication) {
         }
 
         // Magnetic Variation: $--RMC,...,x.x,a,m*hh
-        if (parts.size >= 12 && shouldProcess(LivePerformanceData.PATH_MAG_VARIATION, talker)) {
+        if (parts[2] == "A" && parts.size >= 12 && shouldProcess(LivePerformanceData.PATH_MAG_VARIATION, talker)) {
             parts[10].toDoubleOrNull()?.let { varDeg ->
                 val varRad = Math.toRadians(if (parts[11] == "W") -varDeg else varDeg)
                 values.add(Value(LivePerformanceData.PATH_MAG_VARIATION, varRad))
@@ -144,7 +153,7 @@ class NmeaSentenceParser(private val app: OsmandApplication) {
         }
 
         // HDG Variation: $--HDG,x.x,x.x,a,x.x,a*hh
-        if (type == "HDG" && parts.size >= 5) {
+        if (type == "HDG" && parts.size >= 6) {
             parts[4].toDoubleOrNull()?.let { varDeg ->
                 val varRad = Math.toRadians(if (parts[5] == "W") -varDeg else varDeg)
                 values.add(Value(LivePerformanceData.PATH_MAG_VARIATION, varRad))
@@ -417,7 +426,10 @@ class NmeaSentenceParser(private val app: OsmandApplication) {
         val xteNm = parts[3].toDoubleOrNull() ?: return emptyList()
         val dir = parts[4]
         val xteMeters = xteNm * 1852.0
-        val signedXte = if (dir.equals("L", ignoreCase = true)) -xteMeters else xteMeters
+        // The L/R field is the direction TO STEER: steering left means the vessel sits
+        // starboard of track. The engine's convention is signed XTE with starboard
+        // positive (SignalKMetricsCalculator), so L => positive and R => negative.
+        val signedXte = if (dir.equals("L", ignoreCase = true)) xteMeters else -xteMeters
         return listOf(Value(SignalKPaths.NAV_XTE, signedXte))
     }
 
@@ -439,7 +451,9 @@ class NmeaSentenceParser(private val app: OsmandApplication) {
         parts[3].toDoubleOrNull()?.let { xteNm ->
             val dir = parts[4]
             val xteMeters = xteNm * 1852.0
-            val signedXte = if (dir.equals("L", ignoreCase = true)) -xteMeters else xteMeters
+            // Steer direction is "TO STEER": L => vessel starboard of track => positive
+            // XTE in the engine's sign convention (see parseXTE).
+            val signedXte = if (dir.equals("L", ignoreCase = true)) xteMeters else -xteMeters
             values.add(Value(SignalKPaths.NAV_XTE, signedXte))
         }
 
@@ -461,8 +475,9 @@ class NmeaSentenceParser(private val app: OsmandApplication) {
         if (parts.size >= 15) {
             parts[13].toDoubleOrNull()?.let { steerDeg ->
                 val rad = Math.toRadians(steerDeg)
+                // The heading to steer is an autopilot command, not a measured vessel
+                // heading; mapping it onto PATH_HEADING_TRUE would fabricate a heading.
                 values.add(Value(SignalKPaths.STEERING_AUTOPILOT_TARGET_HDG_TRUE, rad))
-                values.add(Value(LivePerformanceData.PATH_HEADING_TRUE, rad))
             }
         }
 
@@ -482,7 +497,9 @@ class NmeaSentenceParser(private val app: OsmandApplication) {
         parts[2].toDoubleOrNull()?.let { xteNm ->
             val dir = parts[3]
             val xteMeters = xteNm * 1852.0
-            val signedXte = if (dir.equals("L", ignoreCase = true)) -xteMeters else xteMeters
+            // Steer direction is "TO STEER": L => vessel starboard of track => positive
+            // XTE in the engine's sign convention (see parseXTE).
+            val signedXte = if (dir.equals("L", ignoreCase = true)) xteMeters else -xteMeters
             values.add(Value(SignalKPaths.NAV_XTE, signedXte))
         }
 

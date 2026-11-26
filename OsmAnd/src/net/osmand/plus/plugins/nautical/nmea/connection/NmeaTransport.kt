@@ -6,7 +6,14 @@ import kotlinx.coroutines.flow.StateFlow
 interface NmeaTransport {
     val connectionState: StateFlow<ConnectionState>
     val dataStream: Flow<String>
-    
+
+    /**
+     * Stable identity of the physical device behind this transport, or null when the
+     * transport is not tied to pluggable hardware. The multiplexer uses it to avoid
+     * stacking duplicate clients for the same USB device.
+     */
+    val deviceId: String? get() = null
+
     fun connect()
     fun disconnect()
     

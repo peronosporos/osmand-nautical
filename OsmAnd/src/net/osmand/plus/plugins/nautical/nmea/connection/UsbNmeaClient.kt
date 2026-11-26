@@ -31,7 +31,13 @@ class UsbNmeaClient(
     private val log = PlatformUtil.getLog(UsbNmeaClient::class.java)
     private val usbManager = context.getSystemService(Context.USB_SERVICE) as UsbManager
 
+    /** Stable identity (device name) so the multiplexer can retire duplicate clients. */
+    override val deviceId: String?
+        get() = device.deviceName
+
     private var connection: UsbDeviceConnection? = null
+    private var controlInterface: UsbInterface? = null
+    private var controlInterfaceIndex = 0
     private val claimedInterfaces = mutableListOf<UsbInterface>()
     private var endpointIn: UsbEndpoint? = null
     private var receiverRegistered = false
@@ -40,7 +46,10 @@ class UsbNmeaClient(
 
     companion object {
         private const val ACTION_USB_PERMISSION = "net.osmand.plus.USB_PERMISSION"
-        
+
+        // Garbage streamed without a newline terminator must not grow the line buffer forever.
+        private const val MAX_LINE_BUFFER_CHARS = 4096
+
         // USB-Serial Control Commands (CDC-ACM style)
         private const val SET_LINE_CODING = 0x20
         private const val SET_CONTROL_LINE_STATE = 0x22
@@ -51,14 +60,18 @@ class UsbNmeaClient(
             val action = intent.action
             if (ACTION_USB_PERMISSION == action) {
                 synchronized(this) {
-                    val usbDevice: UsbDevice? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    val extraDevice: UsbDevice? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                         intent.getParcelableExtra(UsbManager.EXTRA_DEVICE, UsbDevice::class.java)
                     } else {
                         @Suppress("DEPRECATION")
                         intent.getParcelableExtra(UsbManager.EXTRA_DEVICE)
                     }
+                    // All UsbNmeaClient instances share the same permission action, so a
+                    // grant for ANOTHER device can arrive here. Ignore it and stay
+                    // registered until the decision for OUR device comes in.
+                    if (extraDevice?.deviceName != device.deviceName) return
                     if (intent.getBooleanExtra(UsbManager.EXTRA_PERMISSION_GRANTED, false)) {
-                        usbDevice?.let { superConnect() }
+                        superConnect()
                     } else {
                         log.error("USB permission denied for device ${device.deviceName}")
                         disconnect()
@@ -138,7 +151,13 @@ class UsbNmeaClient(
                     val length = conn.bulkTransfer(epIn, buffer, buffer.size, 1000)
                     if (length > 0) {
                         lineBuffer.append(String(buffer, 0, length, Charsets.US_ASCII))
-                        
+                        // A device streaming garbage without newlines would otherwise
+                        // grow this buffer without bound.
+                        if (lineBuffer.length > MAX_LINE_BUFFER_CHARS) {
+                            log.error("USB NMEA line exceeded $MAX_LINE_BUFFER_CHARS chars without a newline; discarding buffer.")
+                            lineBuffer.setLength(0)
+                        }
+
                         var lineEnd = lineBuffer.indexOf("\n")
                         while (lineEnd != -1) {
                             val line = lineBuffer.substring(0, lineEnd).trim()
@@ -160,7 +179,24 @@ class UsbNmeaClient(
 
     private fun setupUsb(): Boolean {
         connection = usbManager.openDevice(device) ?: return false
-        
+
+        // CDC-ACM control interface (class 2): line coding control transfers must be
+        // addressed to this interface. Adapters exposing only a data interface (vendor
+        // chips such as FTDI/CP210x/CH340 need vendor-specific setup instead) fall back
+        // to interface index 0 in setBaudRate. The index is used instead of
+        // UsbInterface.id because that getter needs API 27.
+        for (i in 0 until device.interfaceCount) {
+            val iface = device.getInterface(i)
+            if (iface.interfaceClass == UsbConstants.USB_CLASS_COMM) {
+                if (connection?.claimInterface(iface, true) == true) {
+                    claimedInterfaces.add(iface)
+                    controlInterface = iface
+                    controlInterfaceIndex = i
+                    break
+                }
+            }
+        }
+
         // Find communication interface and bulk input endpoint
         for (i in 0 until device.interfaceCount) {
             val iface = device.getInterface(i)
@@ -205,8 +241,18 @@ class UsbNmeaClient(
             0x08  // 8 data bits
         )
         
-        conn.controlTransfer(0x21, SET_LINE_CODING, 0, 0, lineCoding, lineCoding.size, 500)
-        conn.controlTransfer(0x21, SET_CONTROL_LINE_STATE, 0x03, 0, null, 0, 500) // DTR + RTS
+        // wIndex must name the CDC control interface when one exists; control transfers
+        // silently do nothing on chips that need a vendor-specific protocol, so the
+        // return values are checked and failures reported honestly in the log.
+        val wIndex = if (controlInterface != null) controlInterfaceIndex else 0
+        val codingResult = conn.controlTransfer(0x21, SET_LINE_CODING, 0, wIndex, lineCoding, lineCoding.size, 500)
+        if (codingResult < 0) {
+            log.error("USB line coding for $baud baud was NOT accepted by the device; expect garbled data unless the adapter already runs at this baud.")
+        }
+        val lineStateResult = conn.controlTransfer(0x21, SET_CONTROL_LINE_STATE, 0x03, wIndex, null, 0, 500) // DTR + RTS
+        if (lineStateResult < 0) {
+            log.warn("USB DTR/RTS control line state was not accepted by the device.")
+        }
     }
 
     private fun teardownUsb() {
@@ -221,6 +267,8 @@ class UsbNmeaClient(
             log.error("USB NMEA teardown error: ${e.message}", e)
         }
         connection = null
+        controlInterface = null
+        controlInterfaceIndex = 0
         claimedInterfaces.clear()
         endpointIn = null
     }

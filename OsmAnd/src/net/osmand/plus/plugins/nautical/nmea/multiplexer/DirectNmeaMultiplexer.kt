@@ -124,7 +124,22 @@ class DirectNmeaMultiplexer(
         log.info("NMEA Multiplexer: Starting transport ${client.javaClass.simpleName}")
         scope.launch {
             mutex.withLock {
+                // stopAll() cancels the worker and closes the sentence channel; a
+                // subsequent source switch must resurrect the pipeline, or every
+                // sentence send would silently throw into the closed channel and
+                // no transport data would ever reach processing again.
+                if (sentenceChannel.isClosedForSend) startWorker()
                 if (activeClients.contains(client)) return@withLock
+                // A re-attach creates a new client object for a device that may still
+                // have an active transport; retire the previous instance instead of
+                // stacking duplicate connection jobs on the same hardware.
+                val duplicateDeviceId = client.deviceId
+                if (duplicateDeviceId != null) {
+                    activeClients.filter { it.deviceId == duplicateDeviceId }.forEach { previous ->
+                        log.info("NMEA Multiplexer: replacing stale transport for device $duplicateDeviceId")
+                        removeClientLocked(previous)
+                    }
+                }
                 activeClients.add(client)
                 
                 collectionJobs[client] = scope.launch {
@@ -169,17 +184,39 @@ class DirectNmeaMultiplexer(
         }
     }
 
+    /**
+     * Caller must hold [mutex]. Cancels the client's jobs and drops it from all
+     * tracking structures.
+     */
+    private fun removeClientLocked(client: NmeaTransport) {
+        client.disconnect()
+        collectionJobs[client]?.cancel()
+        collectionJobs.remove(client)
+        statusJobs[client]?.cancel()
+        statusJobs.remove(client)
+        activeClients.remove(client)
+        transportBuffers.remove(client)
+    }
+
     fun stop(client: NmeaTransport) {
         log.info("NMEA Multiplexer: Stopping transport ${client.javaClass.simpleName}")
         scope.launch {
             mutex.withLock {
-                client.disconnect()
-                collectionJobs[client]?.cancel()
-                collectionJobs.remove(client)
-                statusJobs[client]?.cancel()
-                statusJobs.remove(client)
-                activeClients.remove(client)
-                transportBuffers.remove(client)
+                removeClientLocked(client)
+                _isConnected.value = activeClients.any { it.connectionState.value == ConnectionState.CONNECTED }
+            }
+        }
+    }
+
+    /**
+     * Retires every active transport bound to the given physical device id
+     * (e.g. a USB device that was just unplugged).
+     */
+    fun stopMatchingDevice(deviceId: String) {
+        log.info("NMEA Multiplexer: Stopping transports for device $deviceId")
+        scope.launch {
+            mutex.withLock {
+                activeClients.filter { it.deviceId == deviceId }.forEach { removeClientLocked(it) }
                 _isConnected.value = activeClients.any { it.connectionState.value == ConnectionState.CONNECTED }
             }
         }

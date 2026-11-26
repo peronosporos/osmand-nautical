@@ -128,6 +128,11 @@ object SailingDependencyContainer {
 
     // Legacy support for DirectNmeaMultiplexer access if needed before full refactor
     fun getNmeaMultiplexer(app: OsmandApplication, scope: CoroutineScope? = null, navtexRepo: NavtexRepository? = null): DirectNmeaMultiplexer {
-        return _nmeaMultiplexer ?: DirectNmeaMultiplexer(app, SailingDataAggregator(), scope ?: CoroutineScope(Dispatchers.Default), navtexRepo = navtexRepo)
+        _nmeaMultiplexer?.let { return it }
+        // This instance is NOT cached: transports started on it stay invisible to every
+        // consumer that reads SailingDependencyContainer.nmeaMultiplexer. Warn loudly
+        // because it normally means initialize() has not run (or teardown() did).
+        log.warn("getNmeaMultiplexer called before initialize(): creating an UNCACHED multiplexer; NMEA transports started on it will be invisible to other components.")
+        return DirectNmeaMultiplexer(app, SailingDataAggregator(), scope ?: CoroutineScope(Dispatchers.Default), navtexRepo = navtexRepo)
     }
 }

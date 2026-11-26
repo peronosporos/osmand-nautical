@@ -20,7 +20,13 @@ class NmeaBroadcaster(private val defaultPort: Int = 10110) {
 
     private val log = PlatformUtil.getLog(NmeaBroadcaster::class.java)
 
+    companion object {
+        private const val SOCKET_RETRY_INTERVAL_MS = 10_000L
+    }
+
     private var socket: DatagramSocket? = null
+    @Volatile
+    private var lastSocketRetryAt = 0L
     private var broadcastAddress: InetAddress = InetAddress.getByName("255.255.255.255")
     private var port: Int = defaultPort
 
@@ -33,11 +39,13 @@ class NmeaBroadcaster(private val defaultPort: Int = 10110) {
     @Volatile
     private var crossTrackErrorNm = 0.0
     @Volatile
+    private var xteValid = true
+    @Volatile
     private var isSteerLeft = false
     @Volatile
     private var bearingToDestTrue = 0.0
     @Volatile
-    private var destWaypointId = "WAYPOINT"
+    private var destWaypointId = "WPT"
     @Volatile
     private var destLat = 0.0
     @Volatile
@@ -54,13 +62,19 @@ class NmeaBroadcaster(private val defaultPort: Int = 10110) {
         loopJob = scope.launch(Dispatchers.IO) {
             while (isActive) {
                 delay(1000L)
+                if (activeNav) {
+                    // initSocket() normally runs only once from start(); retry here so a
+                    // socket that failed to open (or was closed later) gets more chances.
+                    initSocketIfNeeded()
+                }
                 if (activeNav && socket != null && !socket!!.isClosed) {
                     try {
                         val apb = NmeaSentenceGenerator.generateAPB(
                             crossTrackErrorNm = crossTrackErrorNm,
                             isSteerLeft = isSteerLeft,
                             bearingToDestTrue = bearingToDestTrue,
-                            destWaypointId = destWaypointId
+                            destWaypointId = destWaypointId,
+                            xteValid = xteValid
                         )
                         sendSentence(apb)
 
@@ -72,15 +86,20 @@ class NmeaBroadcaster(private val defaultPort: Int = 10110) {
                             destLon = destLon,
                             rangeNm = rangeNm,
                             bearingTrue = bearingToDestTrue,
-                            closingVelocityKnots = closingVelocityKnots
+                            closingVelocityKnots = closingVelocityKnots,
+                            xteValid = xteValid
                         )
                         sendSentence(rmb)
 
-                        val xte = NmeaSentenceGenerator.generateXTE(
-                            crossTrackErrorNm = crossTrackErrorNm,
-                            isSteerLeft = isSteerLeft
-                        )
-                        sendSentence(xte)
+                        if (xteValid) {
+                            // Broadcasting an XTE sentence without real data would be a
+                            // fake on-track report; omit it entirely instead.
+                            val xte = NmeaSentenceGenerator.generateXTE(
+                                crossTrackErrorNm = crossTrackErrorNm,
+                                isSteerLeft = isSteerLeft
+                            )
+                            sendSentence(xte)
+                        }
                     } catch (e: Exception) {
                         log.warn("Error broadcasting NMEA navigation sentences: ${e.message}")
                     }
@@ -92,6 +111,7 @@ class NmeaBroadcaster(private val defaultPort: Int = 10110) {
     fun updateNavigation(
         hasActiveWaypoint: Boolean,
         xteNm: Double,
+        xteValid: Boolean = true,
         steerLeft: Boolean,
         bearingTrue: Double,
         waypointId: String,
@@ -102,6 +122,7 @@ class NmeaBroadcaster(private val defaultPort: Int = 10110) {
     ) {
         activeNav = hasActiveWaypoint
         crossTrackErrorNm = xteNm
+        this.xteValid = xteValid
         isSteerLeft = steerLeft
         bearingToDestTrue = bearingTrue
         destWaypointId = if (waypointId.isNotEmpty()) waypointId else "WPT"
@@ -122,6 +143,15 @@ class NmeaBroadcaster(private val defaultPort: Int = 10110) {
         } catch (e: Exception) {
             log.error("Failed to initialize NMEA UDP broadcast socket", e)
         }
+    }
+
+    private fun initSocketIfNeeded() {
+        val s = socket
+        if (s != null && !s.isClosed) return
+        val now = System.currentTimeMillis()
+        if (now - lastSocketRetryAt < SOCKET_RETRY_INTERVAL_MS) return
+        lastSocketRetryAt = now
+        initSocket()
     }
 
     private fun sendSentence(sentence: String) {

@@ -16,6 +16,13 @@ import net.sf.marineapi.nmea.sentence.AISSentence
 object AisDecoder {
     private val log = PlatformUtil.getLog(AisDecoder::class.java)
 
+    /**
+     * AIS text fields are fixed-width and @-padded, and marine-api trims only
+     * whitespace, so names like "SEA GULL@@@@@@" would otherwise surface verbatim
+     * in vessel lists.
+     */
+    private fun cleanAisText(value: String): String = value.trim('@', ' ').trim()
+
     fun decode(sentence: String): DeltaMessage? {
         try {
             if (!sentence.contains("VDM") && !sentence.contains("VDO")) return null

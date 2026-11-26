@@ -705,6 +705,9 @@ class SignalKEngine(
             val dtwMeters = finalState.distanceToWaypoint ?: KMapUtils.getDistance(lat, lon, targetPoint.latitude, targetPoint.longitude)
             val dtwNm = SignalKUnitConverter.metersToNm(dtwMeters)
             val bearingDeg = (KMapUtils.getBearing(lat, lon, targetPoint.latitude, targetPoint.longitude).toDegrees() + 360.0) % 360.0
+            // XTE is only honest when navigation actually reported it; otherwise the
+            // broadcaster must not pretend the vessel is on track with a fake 0.0.
+            val xteValid = finalState.xteMeters != null || finalState.crossTrackError != null
             val xteMeters = finalState.xteMeters ?: abs(finalState.crossTrackError ?: 0.0)
             val xteNm = SignalKUnitConverter.metersToNm(xteMeters)
             val isSteerLeft = finalState.xteDirection == XteDirection.STARBOARD
@@ -714,6 +717,7 @@ class SignalKEngine(
             nmeaBroadcaster.updateNavigation(
                 hasActiveWaypoint = true,
                 xteNm = xteNm,
+                xteValid = xteValid,
                 steerLeft = isSteerLeft,
                 bearingTrue = bearingDeg,
                 waypointId = wptName,
@@ -763,6 +767,9 @@ class SignalKEngine(
                     nmeaBroadcaster.updateNavigation(
                         hasActiveWaypoint = true,
                         xteNm = 0.0,
+                        // The new leg has not been computed yet: keep the XTE field
+                        // "no data" instead of broadcasting a fake on-track 0.0.
+                        xteValid = false,
                         steerLeft = false,
                         bearingTrue = bearing,
                         // Real waypoint name when the route carries one;

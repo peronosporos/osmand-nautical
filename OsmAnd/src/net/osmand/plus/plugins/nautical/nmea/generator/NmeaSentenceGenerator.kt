@@ -19,12 +19,15 @@ object NmeaSentenceGenerator {
         crossTrackErrorNm: Double,
         isSteerLeft: Boolean,
         bearingToDestTrue: Double,
-        destWaypointId: String
+        destWaypointId: String,
+        xteValid: Boolean = true
     ): String = synchronized(lock) {
         buffer.setLength(0)
         
-        val xte = String.format(Locale.US, "%.3f", abs(crossTrackErrorNm))
-        val steerDir = if (isSteerLeft) "L" else "R"
+        // Per NMEA 0183, an empty cross-track field means "value not available";
+        // emitting a fabricated 0.0 would tell the autopilot the vessel is on track.
+        val xte = if (xteValid) String.format(Locale.US, "%.3f", abs(crossTrackErrorNm)) else ""
+        val steerDir = if (!xteValid) "" else if (isSteerLeft) "L" else "R"
         val bearing = String.format(Locale.US, "%05.1f", (bearingToDestTrue + 360.0) % 360.0)
         val wpt = if (destWaypointId.isNotEmpty()) destWaypointId else "WAYPOINT"
 
@@ -54,12 +57,14 @@ object NmeaSentenceGenerator {
         destLon: Double,
         rangeNm: Double,
         bearingTrue: Double,
-        closingVelocityKnots: Double
+        closingVelocityKnots: Double,
+        xteValid: Boolean = true
     ): String = synchronized(lock) {
         buffer.setLength(0)
 
-        val xte = String.format(Locale.US, "%.3f", abs(crossTrackErrorNm))
-        val steerDir = if (isSteerLeft) "L" else "R"
+        // See generateAPB: "no data" is expressed as an empty field, never as a fake 0.0.
+        val xte = if (xteValid) String.format(Locale.US, "%.3f", abs(crossTrackErrorNm)) else ""
+        val steerDir = if (!xteValid) "" else if (isSteerLeft) "L" else "R"
         val wpt = if (destWaypointId.isNotEmpty()) destWaypointId else "WAYPOINT"
         
         val absLat = abs(destLat)

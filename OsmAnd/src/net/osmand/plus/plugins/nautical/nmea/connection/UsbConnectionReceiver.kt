@@ -9,6 +9,7 @@ import android.os.Build
 import net.osmand.PlatformUtil
 import net.osmand.plus.plugins.nautical.NauticalPlugin
 import net.osmand.plus.plugins.nautical.di.SailingDependencyContainer
+import net.osmand.plus.settings.enums.NmeaSource
 
 /**
  * Receiver that detects physical USB OTG cable plug/unplug events.
@@ -21,6 +22,8 @@ class UsbConnectionReceiver : BroadcastReceiver() {
         val plugin = NauticalPlugin.getInstance() ?: return
         if (!plugin.isActive) return
 
+        val osmandApp = context.applicationContext as net.osmand.plus.OsmandApplication
+
         val device: UsbDevice? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             intent.getParcelableExtra(UsbManager.EXTRA_DEVICE, UsbDevice::class.java)
         } else {
@@ -31,9 +34,11 @@ class UsbConnectionReceiver : BroadcastReceiver() {
         when (intent.action) {
             UsbManager.ACTION_USB_DEVICE_ATTACHED -> {
                 log.info("USB device attached: ${device?.deviceName}")
+                // Only auto-connect when the user actually selected USB as the NMEA
+                // source; attaching hardware must not silently override their choice.
+                if (osmandApp.settings.NAUTICAL_NMEA_SOURCE.get() != NmeaSource.USB) return
                 device?.let { usbDevice ->
                     plugin.pluginScope?.let { scope ->
-                        val osmandApp = context.applicationContext as net.osmand.plus.OsmandApplication
                         val multiplexer = SailingDependencyContainer.getNmeaMultiplexer(osmandApp, scope)
                         val baud = osmandApp.settings.NAUTICAL_NMEA_BAUD_RATE.get()
                         val client = UsbNmeaClient(context, usbDevice, baud, scope)
@@ -43,9 +48,15 @@ class UsbConnectionReceiver : BroadcastReceiver() {
             }
             UsbManager.ACTION_USB_DEVICE_DETACHED -> {
                 log.info("USB device detached: ${device?.deviceName}")
-                // The UsbNmeaClient internal loop will fail and close, 
-                // but we can proactively notify the multiplexer if we track clients by device.
-                // For now, the loop termination in UsbNmeaClient is sufficient.
+                // Each UsbNmeaClient also handles detach internally, but the dead client
+                // would linger in the multiplexer's tracking lists: retire it explicitly
+                // so its jobs are cancelled and a re-attach starts from a clean state.
+                device?.let { usbDevice ->
+                    plugin.pluginScope?.let { scope ->
+                        val multiplexer = SailingDependencyContainer.getNmeaMultiplexer(osmandApp, scope)
+                        multiplexer.stopMatchingDevice(usbDevice.deviceName)
+                    }
+                }
             }
         }
     }

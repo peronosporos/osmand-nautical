@@ -22,6 +22,7 @@ class BluetoothNmeaClient(
 
     companion object {
         private val SPP_UUID: UUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB")
+        private const val SILENCE_TIMEOUT_MS = 5000L
     }
 
     @SuppressLint("MissingPermission")
@@ -29,28 +30,37 @@ class BluetoothNmeaClient(
         withContext(Dispatchers.IO) {
             val adapter = BluetoothAdapter.getDefaultAdapter() ?: throw IOException("Bluetooth not supported")
             val device = adapter.getRemoteDevice(deviceAddress)
-            
+
+            var watchdog: Job? = null
             val completionHandle = coroutineContext.job.invokeOnCompletion {
+                watchdog?.cancel()
                 closeSocket()
             }
             try {
                 val s = device.createRfcommSocketToServiceRecord(SPP_UUID)
                 socket = s
                 s.connect()
-                
+
+                // A blocked readLine() cannot be interrupted by coroutine timeouts, so the
+                // previous withTimeout(5s) was decorative (its catch branch was unreachable).
+                // A real silence watchdog closes the socket instead: the blocked read then
+                // throws and the backoff reconnection in AbstractNmeaTransport takes over.
+                fun armWatchdog(): Job = launch {
+                    delay(SILENCE_TIMEOUT_MS.milliseconds)
+                    log.warn("Bluetooth NMEA silent for ${SILENCE_TIMEOUT_MS / 1000}s; closing socket to self-heal.")
+                    closeSocket()
+                }
+                watchdog = armWatchdog()
+
                 val reader = BufferedReader(InputStreamReader(s.inputStream))
                 while (isActive && isRunning) {
-                    val line = try {
-                        withTimeout(5000L.milliseconds) {
-                            reader.readLine()
-                        }
-                    } catch (_: TimeoutCancellationException) {
-                        log.warn("Bluetooth read timeout (5s). Possible power loss.")
-                        break
-                    } ?: break
+                    val line = reader.readLine() ?: break
+                    watchdog?.cancel()
+                    watchdog = armWatchdog()
                     onSentence(line)
                 }
             } finally {
+                watchdog?.cancel()
                 completionHandle.dispose()
                 closeSocket()
             }
