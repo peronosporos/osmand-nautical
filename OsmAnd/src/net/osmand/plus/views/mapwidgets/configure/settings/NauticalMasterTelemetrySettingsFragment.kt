@@ -185,13 +185,10 @@ class NauticalMasterTelemetrySettingsFragment : BaseSimpleWidgetInfoFragment() {
 
     private fun loadItemsForMode() {
         val pref = getPrefForMode()
-        var itemIdsString = pref.get()
-        if (itemIdsString.isEmpty()) {
-            // Fallback to OsmandSettings defaults or a sane subset if not initialized
-            itemIdsString = "nautical_sog,nautical_cog,nautical_depth_keel,nautical_wind,nautical_vmg"
-            pref.set(itemIdsString)
-        }
-        val itemIds = itemIdsString.split(",").filter { it.isNotEmpty() }
+        // The registered per-mode preference defaults are used directly;
+        // the previous hardcoded fallback silently persisted a stale item set
+        // that did not match the designed defaults on first open.
+        val itemIds = pref.get().split(",").filter { it.isNotEmpty() }
         selectedItems.clear()
         selectedItems.addAll(itemIds.mapNotNull { WidgetType.getById(it) })
     }

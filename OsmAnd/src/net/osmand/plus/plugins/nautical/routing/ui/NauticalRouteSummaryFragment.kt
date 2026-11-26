@@ -5,6 +5,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.lifecycleScope
@@ -18,6 +19,8 @@ import kotlinx.coroutines.launch
 import net.osmand.plus.R
 import net.osmand.plus.base.BaseOsmAndFragment
 import net.osmand.plus.plugins.nautical.routing.model.PassagePlanLeg
+import net.osmand.plus.plugins.nautical.ui.NauticalColorResolver
+import net.osmand.plus.plugins.nautical.ui.NauticalSemanticColor
 import net.osmand.plus.plugins.nautical.viewmodel.RoutingViewModel
 import java.util.Locale
 
@@ -46,7 +49,9 @@ class NauticalRouteSummaryFragment : BaseOsmAndFragment() {
         
         val recyclerView = view.findViewById<RecyclerView>(R.id.legs_recycler_view)
         recyclerView.layoutManager = LinearLayoutManager(context)
-        adapter = LegsAdapter()
+        val vesselDraft: Float = app.settings.NAUTICAL_VESSEL_DRAFT.get()
+        val safetyMargin: Float = app.settings.NAUTICAL_SAFETY_MARGIN.get()
+        adapter = LegsAdapter(vesselDraft, safetyMargin)
         recyclerView.adapter = adapter
 
         val totalDistText = view.findViewById<TextView>(R.id.total_distance)
@@ -131,9 +136,15 @@ class NauticalRouteSummaryFragment : BaseOsmAndFragment() {
                         }
                         adapter.submitList(result.legs)
 
-                        // Check for shallow water / clearance hazards along route waypoints
+                        // Check for real shoal hazards along the route legs: a leg is
+                        // flagged only when a nearby chart feature (sounding or depth
+                        // area) is shoaler than the vessel's required clearance
+                        // (draft + safety margin). The previous check fired on ANY
+                        // sounding in the vicinity, a constant false alarm in
+                        // charted waters.
                         val plugin = net.osmand.plus.plugins.nautical.NauticalPlugin.getInstance()
                         val minDepthSafety = app.settings.NAUTICAL_SAFETY_MARGIN.get().toDouble()
+                        val requiredClearanceM = vesselDraft + minDepthSafety
                         val shallowLegs = result.legs.filter { leg ->
                             val s57 = plugin?.s57SpatialIndex
                             val nearSoundings = s57?.queryFeatures(
@@ -141,16 +152,16 @@ class NauticalRouteSummaryFragment : BaseOsmAndFragment() {
                                 leg.to.longitude - 0.005, leg.to.longitude + 0.005,
                                 listOf("SOUNDG", "DEPARE")
                             )
-                            nearSoundings?.any { it.acronym == "SOUNDG" || it.acronym == "DEPARE" } ?: false
+                            nearSoundings?.any { isShoalFeature(it, requiredClearanceM) } ?: false
                         }
 
                         if (shallowLegs.isNotEmpty()) {
                             cardHazardWarning?.visibility = View.VISIBLE
-                            val legsListStr = shallowLegs.joinToString(", ") { "Leg ${it.legNumber}" }
+                            val legsListStr = shallowLegs.joinToString(", ") { getString(R.string.nautical_route_hazard_leg_fmt, it.legNumber) }
                             txtHazardDetails?.text = getString(
                                 R.string.nautical_route_shallow_hazard_fmt,
                                 legsListStr,
-                                String.format(Locale.US, "%.1f", minDepthSafety)
+                                String.format(Locale.US, "%.1f", requiredClearanceM)
                             )
                         } else {
                             cardHazardWarning?.visibility = View.GONE
@@ -185,19 +196,43 @@ class NauticalRouteSummaryFragment : BaseOsmAndFragment() {
 
         val isNightVision = net.osmand.plus.plugins.nautical.NauticalPlugin.isNightVision(app)
         if (isNightVision) {
-            view.setBackgroundColor(0xEE120000.toInt())
-            btnExportPlan?.setTextColor(0xFFFF1744.toInt())
-            btnExportPlan?.iconTint = android.content.res.ColorStateList.valueOf(0xFFFF1744.toInt())
+            val nightPrimary = ContextCompat.getColor(view.context, R.color.nautical_night_vision_primary)
+            view.setBackgroundColor(ContextCompat.getColor(view.context, R.color.nautical_night_vision_bg))
+            btnExportPlan?.setTextColor(nightPrimary)
+            btnExportPlan?.iconTint = android.content.res.ColorStateList.valueOf(nightPrimary)
         }
 
         return view
     }
 
-    private class LegsAdapter : ListAdapter<PassagePlanLeg, LegViewHolder>(DIFF_CALLBACK) {
+    /**
+     * True when a nearby S-57 chart feature is shoaler than the required
+     * clearance: DEPARE via its DRVAL1 (shallowest depth of the area), or a
+     * SOUNDG point/multi-point depth. Raw chart data only, no fallback.
+     */
+    private fun isShoalFeature(obj: net.osmand.plus.plugins.nautical.s57.S57Object, thresholdM: Double): Boolean {
+        return if (obj.acronym == "DEPARE") {
+            val drval1 = obj.attributes["DRVAL1"]?.toDoubleOrNull() ?: return false
+            drval1 < thresholdM
+        } else {
+            obj.geometries.any { geom ->
+                when (geom) {
+                    is net.osmand.plus.plugins.nautical.s57.S57Geometry.Point -> geom.depth?.let { it < thresholdM } == true
+                    is net.osmand.plus.plugins.nautical.s57.S57Geometry.MultiPoint -> geom.depths.any { it < thresholdM }
+                    else -> false
+                }
+            }
+        }
+    }
+
+    private class LegsAdapter(
+        private val vesselDraftMeters: Float,
+        private val safetyMarginMeters: Float
+    ) : ListAdapter<PassagePlanLeg, LegViewHolder>(DIFF_CALLBACK) {
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): LegViewHolder {
             val view = LayoutInflater.from(parent.context).inflate(R.layout.item_passage_plan_leg, parent, false)
-            return LegViewHolder(view)
+            return LegViewHolder(view, vesselDraftMeters, safetyMarginMeters)
         }
 
         override fun onBindViewHolder(holder: LegViewHolder, position: Int) {
@@ -217,7 +252,11 @@ class NauticalRouteSummaryFragment : BaseOsmAndFragment() {
         }
     }
 
-    private class LegViewHolder(view: View) : RecyclerView.ViewHolder(view) {
+    private class LegViewHolder(
+        view: View,
+        private val vesselDraftMeters: Float,
+        private val safetyMarginMeters: Float
+    ) : RecyclerView.ViewHolder(view) {
         private val title: TextView = view.findViewById(R.id.txt_leg_title)
         private val dist: TextView = view.findViewById(R.id.txt_leg_distance)
         private val ctsTwa: TextView = view.findViewById(R.id.txt_leg_cts_twa)
@@ -230,13 +269,49 @@ class NauticalRouteSummaryFragment : BaseOsmAndFragment() {
             title.text = title.context.getString(R.string.nautical_leg_title_fmt, leg.legNumber, leg.legNumber, leg.legNumber + 1)
             dist.text = String.format(Locale.US, "%.1f NM", leg.distanceNm)
 
-            val twaDeg = leg.windAngleRad?.let { Math.toDegrees(it).toInt() } ?: 45
-            ctsTwa.text = ctsTwa.context.getString(R.string.nautical_leg_cts_twa_fmt, leg.courseToSteerDeg.toInt(), twaDeg)
+            // Same honest pattern as the passage plan sheet: real per-leg
+            // forecast data, CTS-only / hidden rows / localized n/a otherwise
+            // (previously this fabricated TWA 45, wind 15 kn and an
+            // unconditional depth verdict on every leg).
+            val ctsDeg = leg.courseToSteerDeg.toInt()
+            val twaDeg = leg.windAngleRad?.let { Math.toDegrees(it).toInt() }
+            ctsTwa.text = if (twaDeg != null) {
+                ctsTwa.context.getString(R.string.nautical_leg_cts_twa_fmt, ctsDeg, twaDeg)
+            } else {
+                ctsTwa.context.getString(R.string.nautical_leg_cts_only_fmt, ctsDeg)
+            }
 
-            val windKn = leg.windSpeedMs?.let { it * 1.94384 } ?: 15.0
-            wind.text = wind.context.getString(R.string.nautical_leg_wind_fmt, String.format(Locale.US, "%.1f", windKn))
+            val windKn = leg.windSpeedMs?.let { it * 1.94384 }
+            if (windKn == null) {
+                wind.visibility = View.GONE
+            } else {
+                wind.visibility = View.VISIBLE
+                wind.text = wind.context.getString(R.string.nautical_leg_wind_fmt, String.format(Locale.US, "%.1f", windKn))
+            }
 
-            depth.text = depth.context.getString(R.string.nautical_leg_depth_safe)
+            val legMinDepth = leg.minDepthMeters
+            if (legMinDepth == null) {
+                depth.text = depth.context.getString(
+                    R.string.nautical_pp_depth_na_fmt,
+                    depth.context.getString(R.string.nautical_not_available)
+                )
+                depth.setTextColor(
+                    NauticalColorResolver.getColor(itemView.context, NauticalSemanticColor.SECONDARY)
+                )
+            } else {
+                val isSafe = legMinDepth >= (vesselDraftMeters + safetyMarginMeters)
+                depth.text = depth.context.getString(
+                    R.string.nautical_pp_depth_fmt,
+                    String.format(Locale.US, "%.1f", legMinDepth),
+                    depth.context.getString(if (isSafe) R.string.nautical_depth_safe else R.string.nautical_depth_shallow_warning)
+                )
+                depth.setTextColor(
+                    ContextCompat.getColor(
+                        itemView.context,
+                        if (isSafe) R.color.nautical_status_green else R.color.nautical_status_red
+                    )
+                )
+            }
 
             // Inwardly integrate current tidal stream vectors (set and drift from MarineState.tidalCurrentSpeed / tidalCurrentDirection)
             val liveState = net.osmand.plus.plugins.nautical.NauticalPlugin.engine?.getCurrentState()

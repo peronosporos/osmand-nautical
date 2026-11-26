@@ -160,13 +160,16 @@ class NauticalTechnicalStatsFragment : BaseOsmAndFragment() {
     }
 
     private fun updateStats(root: View, state: MarineState) {
+        // Localized not-available marker reused for every missing server value
+        // (previously raw hardcoded "N/A", "OFF", "None" and zero fallbacks).
+        val na = getString(R.string.nautical_not_available)
         root.findViewById<TextView>(R.id.txt_vessel_title)?.text = state.vesselName ?: getString(R.string.nautical_vessel_details)
         root.findViewById<TextView>(R.id.txt_vessel_uuid)?.text = state.vesselUuid ?: ""
 
         // Identity & Design
         val identity = root.findViewById<View?>(R.id.grid_identity)
-        fillCell(identity, 11, R.drawable.ic_action_flag, getString(R.string.nautical_vessel_flag_port), "${state.vesselFlag ?: "N/A"} / ${state.vesselPort ?: "N/A"}")
-        fillCell(identity, 12, R.drawable.ic_action_user, getString(R.string.nautical_vessel_callsign), state.vesselCallSign ?: "N/A")
+        fillCell(identity, 11, R.drawable.ic_action_flag, getString(R.string.nautical_vessel_flag_port), "${state.vesselFlag ?: na} / ${state.vesselPort ?: na}")
+        fillCell(identity, 12, R.drawable.ic_action_user, getString(R.string.nautical_vessel_callsign), state.vesselCallSign ?: na)
         val lenFmt = SignalKUnitConverter.formatValue(requireContext(), app.settings, state.vesselLength, "design.length.overall")
         val beamFmt = SignalKUnitConverter.formatValue(requireContext(), app.settings, state.vesselBeam, "design.beam")
         fillCell(identity, 21, R.drawable.ic_action_length, getString(R.string.nautical_vessel_dimensions), "L:${lenFmt.first}${lenFmt.second}\nB:${beamFmt.first}${beamFmt.second}")
@@ -189,8 +192,8 @@ class NauticalTechnicalStatsFragment : BaseOsmAndFragment() {
         val hasDualEngines = portEngine != null && stbdEngine != null && portEngine != stbdEngine
 
         if (hasDualEngines) {
-            val pGear = portEngine?.transmissionGear ?: "N/A"
-            val sGear = stbdEngine?.transmissionGear ?: "N/A"
+            val pGear = portEngine?.transmissionGear ?: na
+            val sGear = stbdEngine?.transmissionGear ?: na
             val pPressFmt = SignalKUnitConverter.formatValue(requireContext(), app.settings, portEngine?.transmissionPressure, "propulsion.0.transmission.oilPressure")
             val sPressFmt = SignalKUnitConverter.formatValue(requireContext(), app.settings, stbdEngine?.transmissionPressure, "propulsion.1.transmission.oilPressure")
             fillCell(systems, 12, R.drawable.ic_action_settings, getString(R.string.nautical_vessel_transmission_label), "G: P $pGear / S $sGear\nP: ${pPressFmt.first}/${sPressFmt.first}${pPressFmt.second}")
@@ -215,7 +218,7 @@ class NauticalTechnicalStatsFragment : BaseOsmAndFragment() {
         } else {
             val mainEngine = portEngine ?: state.engines.values.firstOrNull()
             val pressFmt = SignalKUnitConverter.formatValue(requireContext(), app.settings, mainEngine?.transmissionPressure ?: state.transmissionPressure, "propulsion.0.transmission.oilPressure")
-            fillCell(systems, 12, R.drawable.ic_action_settings, getString(R.string.nautical_vessel_transmission_label), "G:${mainEngine?.transmissionGear ?: state.transmissionGear ?: "N/A"}\nP:${pressFmt.first}${pressFmt.second}")
+            fillCell(systems, 12, R.drawable.ic_action_settings, getString(R.string.nautical_vessel_transmission_label), "G:${mainEngine?.transmissionGear ?: state.transmissionGear ?: na}\nP:${pressFmt.first}${pressFmt.second}")
 
             val altVFmt = SignalKUnitConverter.formatValue(requireContext(), app.settings, mainEngine?.alternatorVoltage, "propulsion.0.alternator.voltage")
             val altCFmt = SignalKUnitConverter.formatValue(requireContext(), app.settings, mainEngine?.alternatorCurrent, "propulsion.0.alternator.current")
@@ -267,28 +270,28 @@ class NauticalTechnicalStatsFragment : BaseOsmAndFragment() {
         fillCell(power, 11, R.drawable.ic_action_nautical_battery_volt, getString(R.string.nautical_vessel_ac_voltage_label), "${acVFmt.first}${acVFmt.second}\n${acFFmt.first}${acFFmt.second}")
         
         val acCFmt = SignalKUnitConverter.formatValue(requireContext(), app.settings, mainInverter?.acCurrent, "electrical.inverters.0.ac.current")
-        fillCell(power, 12, R.drawable.ic_action_nautical_battery_current, getString(R.string.nautical_vessel_ac_current_label), "${acCFmt.first}${acCFmt.second}\nSrc:${mainInverter?.state ?: "N/A"}")
+        fillCell(power, 12, R.drawable.ic_action_nautical_battery_current, getString(R.string.nautical_vessel_ac_current_label), "${acCFmt.first}${acCFmt.second}\n${getString(R.string.nautical_tech_source_fmt, mainInverter?.state ?: na)}")
         
-        fillCell(power, 13, R.drawable.ic_action_settings, getString(R.string.nautical_vessel_inv_chg), "I:${mainInverter?.state ?: "OFF"}\nC:${mainCharger?.state ?: "OFF"}")
-        fillCell(power, 21, R.drawable.ic_action_sail_boat_dark, getString(R.string.nautical_vessel_sails_label), "Reefs: ${state.reefs ?: 0}")
-        fillCell(power, 22, R.drawable.ic_action_sail_boat_dark, getString(R.string.nautical_vessel_active_plan_label), state.activeSailPlan ?: "N/A")
-        fillCell(power, 23, R.drawable.ic_action_user, getString(R.string.nautical_vessel_crew_label), state.crewNames.joinToString(", ").takeIf { it.isNotEmpty() } ?: "None")
+        fillCell(power, 13, R.drawable.ic_action_settings, getString(R.string.nautical_vessel_inv_chg), "I:${mainInverter?.state ?: na}\nC:${mainCharger?.state ?: na}")
+        fillCell(power, 21, R.drawable.ic_action_sail_boat_dark, getString(R.string.nautical_vessel_sails_label), getString(R.string.nautical_tech_reefs_fmt, state.reefs?.toString() ?: na))
+        fillCell(power, 22, R.drawable.ic_action_sail_boat_dark, getString(R.string.nautical_vessel_active_plan_label), state.activeSailPlan ?: na)
+        fillCell(power, 23, R.drawable.ic_action_user, getString(R.string.nautical_vessel_crew_label), state.crewNames.joinToString(", ").takeIf { it.isNotEmpty() } ?: getString(R.string.shared_string_none))
 
         // Environment & GNSS
         val environment = root.findViewById<View>(R.id.grid_environment)
         val gnss = state.gnss
-        fillCell(environment, 11, R.drawable.ic_action_device_location, getString(R.string.nautical_vessel_gnss_label), "Sats:${gnss?.satellites ?: 0}\nHDOP:${gnss?.horizontalDilution ?: "N/A"}")
+        fillCell(environment, 11, R.drawable.ic_action_device_location, getString(R.string.nautical_vessel_gnss_label), "${getString(R.string.nautical_tech_sats_fmt, gnss?.satellites?.toString() ?: na)}\nHDOP:${gnss?.horizontalDilution ?: na}")
         
         val illumFmt = SignalKUnitConverter.formatValue(requireContext(), app.settings, state.outsideIlluminance, "environment.outside.illuminance")
         fillCell(environment, 12, R.drawable.ic_action_sun, getString(R.string.nautical_vessel_illum_label), "${illumFmt.first}${illumFmt.second}")
         
-        fillCell(environment, 13, R.drawable.ic_action_nautical_water_temp, getString(R.string.nautical_vessel_salinity_label), "${state.waterSalinity ?: "N/A"}‰")
+        fillCell(environment, 13, R.drawable.ic_action_nautical_water_temp, getString(R.string.nautical_vessel_salinity_label), "${state.waterSalinity ?: na}‰")
         
         val dewFmt = SignalKUnitConverter.formatValue(requireContext(), app.settings, state.airDewPoint, "environment.outside.dewPoint")
         fillCell(environment, 21, R.drawable.ic_action_nautical_water_temp, getString(R.string.nautical_vessel_dew_point_label), "${dewFmt.first}${dewFmt.second}")
         
         fillCell(environment, 22, R.drawable.ic_action_nautical_oil_pressure, getString(R.string.nautical_vessel_humidity_label), formatPercent(state.outsideHumidity))
-        fillCell(environment, 23, R.drawable.ic_action_info, getString(R.string.nautical_vessel_status_label), gnss?.integrity ?: "N/A")
+        fillCell(environment, 23, R.drawable.ic_action_info, getString(R.string.nautical_vessel_status_label), gnss?.integrity ?: na)
 
         // Rigging & Loads
         val riggingHeader = root.findViewById<View>(R.id.header_rigging)
@@ -325,9 +328,9 @@ class NauticalTechnicalStatsFragment : BaseOsmAndFragment() {
             fillCell(pypilotGrid, 11, R.drawable.ic_action_nautical_battery_volt, getString(R.string.nautical_pypilot_servo_volt), "${pyVFmt.first}${pyVFmt.second}")
             fillCell(pypilotGrid, 12, R.drawable.ic_action_nautical_battery_current, getString(R.string.nautical_pypilot_servo_curr), "${pyCFmt.first}${pyCFmt.second}")
             fillCell(pypilotGrid, 13, R.drawable.ic_action_nautical_engine_temp, getString(R.string.nautical_pypilot_ctrl_temp), "${pyTFmt.first}${pyTFmt.second}")
-            fillCell(pypilotGrid, 21, R.drawable.ic_action_time, getString(R.string.nautical_pypilot_amp_hours), "${pypilot.ampHours ?: "N/A"}Ah")
-            fillCell(pypilotGrid, 22, R.drawable.ic_action_time, getString(R.string.nautical_vessel_runtime_label), "${pypilot.runtime ?: "N/A"}${getString(R.string.nautical_unit_sec_short)}")
-            fillCell(pypilotGrid, 23, R.drawable.ic_action_info, getString(R.string.nautical_pypilot_engaged), pypilot.engagement ?: "N/A")
+            fillCell(pypilotGrid, 21, R.drawable.ic_action_time, getString(R.string.nautical_pypilot_amp_hours), pypilot.ampHours?.let { "${it}Ah" } ?: na)
+            fillCell(pypilotGrid, 22, R.drawable.ic_action_time, getString(R.string.nautical_vessel_runtime_label), pypilot.runtime?.let { "${it}${getString(R.string.nautical_unit_sec_short)}" } ?: na)
+            fillCell(pypilotGrid, 23, R.drawable.ic_action_info, getString(R.string.nautical_pypilot_engaged), pypilot.engagement ?: na)
         } else {
             pypilotHeader.visibility = View.GONE
             pypilotGrid.visibility = View.GONE
@@ -442,6 +445,6 @@ class NauticalTechnicalStatsFragment : BaseOsmAndFragment() {
     }
 
     private fun formatPercent(value: Double?): String {
-        return if (value != null) String.format(Locale.US, "%.0f%%", value * 100.0) else "N/A"
+        return if (value != null) String.format(Locale.US, "%.0f%%", value * 100.0) else getString(R.string.nautical_not_available)
     }
 }
