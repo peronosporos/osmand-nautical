@@ -355,7 +355,7 @@ class AisTargetListBottomSheet : BaseBottomSheetDialogFragment() {
 
             val subtextSb = StringBuilder("MMSI: ${item.mmsi}")
             if (!item.callSign.isNullOrEmpty()) {
-                subtextSb.append(" • Call: ").append(item.callSign)
+                subtextSb.append(" • ").append(context.getString(R.string.nautical_ais_call_sign_fmt, item.callSign))
             }
             if (item.type.isNotEmpty()) {
                 subtextSb.append(" • ").append(item.type)
@@ -365,7 +365,7 @@ class AisTargetListBottomSheet : BaseBottomSheetDialogFragment() {
             // 2. Threat Status Indicator Badge
             val isThreatCpa = (item.cpaNm ?: Double.MAX_VALUE) < 1.0 && (item.tcpaSec ?: -1.0) > 0
             val isDanger = item.isDangerous || isThreatCpa
-            val isCaution = !isDanger && (((item.cpaNm ?: Double.MAX_VALUE) < 2.0 && (item.tcpaSec ?: -1.0) > 0) || (item.sogKnots > 0.5 && item.rangeMeters < 3704.0))
+            val isCaution = !isDanger && (((item.cpaNm ?: Double.MAX_VALUE) < 2.0 && (item.tcpaSec ?: -1.0) > 0) || (((item.sogKnots ?: 0.0) > 0.5) && item.rangeMeters < 3704.0))
 
             val app = context.applicationContext as? net.osmand.plus.OsmandApplication
             val isNightVision = app?.let { NauticalPlugin.isNightVision(it) } ?: false
@@ -410,8 +410,10 @@ class AisTargetListBottomSheet : BaseBottomSheetDialogFragment() {
                 txtRangeBearing.text = "-- • --"
             }
 
-            // 4. SOG & COG
-            txtSogCog.text = String.format(Locale.US, "%.1f kn • %03.0f°", item.sogKnots, item.cogDeg)
+            // 4. SOG & COG ('--' when the target does not report them; never fake 0.0 kn / 000°)
+            val sogText = item.sogKnots?.let { String.format(Locale.US, "%.1f kn", it) } ?: "--"
+            val cogText = item.cogDeg?.let { String.format(Locale.US, "%03.0f°", it) } ?: "--"
+            txtSogCog.text = "$sogText • $cogText"
 
             // 5. Live CPA & TCPA Readouts (e.g., "CPA: 0.3 NM in 4m 12s")
             val cpaNm = item.cpaNm

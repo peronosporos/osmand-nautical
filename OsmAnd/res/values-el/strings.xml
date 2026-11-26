@@ -6172,6 +6172,7 @@
     <string name="nautical_manage_buddies">Διαχείριση Στόλου / Φίλων Σκαφών</string>
     <string name="nautical_ais_buddies_title">Στόλος / Φίλα Σκάφη (AIS Buddies)</string>
     <string name="nautical_ais_range_bearing">%1$s • %2$s</string>
+    <string name="nautical_ais_call_sign_fmt">Διακριτικό κλήσης: %1$s</string>
     <string name="nautical_signalk_diagnostics_title">Διαγνωστικά Διακομιστή Signal K</string>
     <string name="nautical_signalk_diagnostics_desc">Επιθεώρηση ενεργών δυνατοτήτων, υπηρεσιών και κατάστασης διακομιστή</string>
     <string name="nautical_tank_fuel">Καύσιμα</string>

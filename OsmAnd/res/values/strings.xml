@@ -262,6 +262,7 @@
     <string name="nautical_manage_buddies">Manage Buddies</string>
     <string name="nautical_ais_buddies_title">AIS Buddies</string>
     <string name="nautical_ais_range_bearing">%1$s • %2$s</string>
+    <string name="nautical_ais_call_sign_fmt">Call sign: %1$s</string>
     <string name="nautical_signalk_diagnostics_title">Signal K Server Diagnostics</string>
     <string name="nautical_signalk_diagnostics_desc">Inspect active capabilities, services, and server health</string>
     <string name="nautical_tank_fuel">Fuel</string>

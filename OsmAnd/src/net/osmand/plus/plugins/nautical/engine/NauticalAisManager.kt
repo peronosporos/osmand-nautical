@@ -37,8 +37,8 @@ data class AisTargetSummary(
     val type: String,
     val rangeMeters: Double,
     val bearingDeg: Double,
-    val sogKnots: Double,
-    val cogDeg: Double,
+    val sogKnots: Double?,
+    val cogDeg: Double?,
     val cpaNm: Double?,
     val tcpaSec: Double?,
     val isDangerous: Boolean,
@@ -128,6 +128,9 @@ class NauticalAisManager(private val app: OsmandApplication) : AisDataListener {
         if (intBuddies.isNotEmpty()) {
             NauticalPlugin.engine?.dataBroker?.updateState { it.copy(aisBuddies = intBuddies) }
         }
+        // Restore per-target track toggles so they survive restarts (same prefs file as buddies).
+        val savedTracks = sp.getStringSet("ais_tracks", emptySet()) ?: emptySet()
+        enabledTrackMmsis.addAll(savedTracks.mapNotNull { it.toIntOrNull() })
         startLoops()
         observeCapabilities()
     }
@@ -205,7 +208,6 @@ class NauticalAisManager(private val app: OsmandApplication) : AisDataListener {
 
     fun updateVessel(context: String, updateObj: JSONObject) {
         val numericMmsi = resolveMmsiFromContext(context) ?: return
-        val isNewTarget = !objects.containsKey(numericMmsi)
         val target = objects.getOrPut(numericMmsi) {
             val type = context.substringBefore(".")
             val msgType = when (type) {
@@ -216,7 +218,6 @@ class NauticalAisManager(private val app: OsmandApplication) : AisDataListener {
             }
             AisObject(numericMmsi, msgType, AisObjectConstants.INVALID_LAT, AisObjectConstants.INVALID_LON)
         }
-        val hadPosition = target.position != null
 
         // Source Detection (APRS / Meshtastic)
         val sourceObj = updateObj.optJSONObject("source")
@@ -246,9 +247,6 @@ class NauticalAisManager(private val app: OsmandApplication) : AisDataListener {
                 }
             }
         }
-
-        val hasPosition = target.position != null
-        val isFirstFix = (isNewTarget || !hadPosition) && hasPosition
 
         _aisEvents.tryEmit(AisEvent.Updated(target))
         listeners.forEach { it.onAisObjectReceived(target) }
@@ -501,15 +499,12 @@ class NauticalAisManager(private val app: OsmandApplication) : AisDataListener {
 
     override fun onAisObjectReceived(ais: AisObject) {
         val mmsi = ais.mmsi
-        val hadPosition = objects[mmsi]?.position != null
-        val isNew = !objects.containsKey(mmsi)
         val obj = objects.getOrPut(mmsi) { AisObject(ais) }
         if (obj !== ais) {
             obj.set(ais)
         }
 
         val hasPosition = obj.position != null
-        val isFirstFix = (isNew || !hadPosition) && hasPosition
         if (hasPosition) {
             recordBreadcrumb(mmsi, obj.position!!.latitude, obj.position!!.longitude)
         }
@@ -581,6 +576,7 @@ class NauticalAisManager(private val app: OsmandApplication) : AisDataListener {
         } else {
             enabledTrackMmsis.remove(mmsi)
         }
+        persistTrackMmsis()
         requestThrottledMapRefresh()
     }
 
@@ -592,8 +588,14 @@ class NauticalAisManager(private val app: OsmandApplication) : AisDataListener {
             enabledTrackMmsis.add(mmsi)
             true
         }
+        persistTrackMmsis()
         requestThrottledMapRefresh()
         return newState
+    }
+
+    private fun persistTrackMmsis() {
+        val sp = app.getSharedPreferences("nautical_buddies_pref", Context.MODE_PRIVATE)
+        sp.edit().putStringSet("ais_tracks", enabledTrackMmsis.map { it.toString() }.toSet()).apply()
     }
 
     fun isBuddy(mmsi: Int): Boolean {
@@ -695,8 +697,9 @@ class NauticalAisManager(private val app: OsmandApplication) : AisDataListener {
                 bearingDeg = 0.0
             }
 
-            val sogKnots = if (obj.sog != AisObjectConstants.INVALID_SOG && obj.sog >= 0.0) obj.sog else 0.0
-            val cogDeg = if (obj.cog != AisObjectConstants.INVALID_COG && obj.cog >= 0.0) obj.cog else 0.0
+            // Invalid SOG/COG stay null so the UI shows '--' instead of a fake "0.0 kn / 000°".
+            val sogKnots = if (obj.sog != AisObjectConstants.INVALID_SOG && obj.sog >= 0.0) obj.sog else null
+            val cogDeg = if (obj.cog != AisObjectConstants.INVALID_COG && obj.cog >= 0.0) obj.cog else null
 
             val cpaNm: Double? = if (obj.cpa.valid) obj.cpa.cpa.toDouble() else null
             val tcpaSec: Double? = if (obj.cpa.valid) obj.cpa.tcpa.toDouble() * 3600.0 else null
@@ -707,7 +710,8 @@ class NauticalAisManager(private val app: OsmandApplication) : AisDataListener {
             val isDangerous = extras.hasCpaWarning || (obj.isMovable() && isThreatTimeValid && isThreatDistance && isThreatTime)
 
             val vesselName = obj.shipName?.trim().takeIf { !it.isNullOrEmpty() } ?: "MMSI: ${obj.mmsi}"
-            val shipType = obj.getShipTypeString().takeIf { it.isNotEmpty() && it != "unknown" } ?: "Vessel"
+            val shipType = obj.getShipTypeString().takeIf { it.isNotEmpty() && it != "unknown" }
+                ?: app.getString(R.string.nautical_vessel_generic)
 
             AisTargetSummary(
                 mmsi = obj.mmsi,

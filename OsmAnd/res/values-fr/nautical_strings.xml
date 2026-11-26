@@ -115,6 +115,7 @@
     <string name="nautical_start_starboard">Tribord</string>
     <string name="nautical_start_timer_sync">Ligne de départ synchronisée</string>
     <string name="nautical_vessel_generic">Navire</string>
+    <string name="nautical_ais_call_sign_fmt">Indicatif d\'appel : %1$s</string>
     <string name="nautical_vhf_06_inter">06 INTER-NAVIRE</string>
     <string name="nautical_vhf_09_call">09 APPEL</string>
     <string name="nautical_vhf_13_safety">13 SÉCURITÉ</string>

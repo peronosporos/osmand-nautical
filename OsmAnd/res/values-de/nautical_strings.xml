@@ -115,6 +115,7 @@
     <string name="nautical_start_starboard">Steuerbord</string>
     <string name="nautical_start_timer_sync">Startlinie synchronisiert</string>
     <string name="nautical_vessel_generic">Schiff</string>
+    <string name="nautical_ais_call_sign_fmt">Rufzeichen: %1$s</string>
     <string name="nautical_vhf_06_inter">06 SCHIFF-SCHIFF</string>
     <string name="nautical_vhf_09_call">09 RUF</string>
     <string name="nautical_vhf_13_safety">13 SICHERHEIT</string>

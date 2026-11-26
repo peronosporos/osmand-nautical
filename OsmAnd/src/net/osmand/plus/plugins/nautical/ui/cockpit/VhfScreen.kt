@@ -79,7 +79,7 @@ class VhfScreen(private val app: OsmandApplication) : CockpitScreen {
     private fun isCaution(t: AisTargetSummary): Boolean =
         !isThreat(t) && (
             ((t.cpaNm ?: Double.MAX_VALUE) < 2.0 && (t.tcpaSec ?: -1.0) > 0) ||
-                (t.sogKnots > 0.5 && t.rangeMeters < 3704.0)
+                ((t.sogKnots ?: 0.0) > 0.5 && t.rangeMeters < 3704.0)
             )
 
     private fun renderTargets() {
@@ -148,14 +148,14 @@ class VhfScreen(private val app: OsmandApplication) : CockpitScreen {
     }
 
     private fun buildDetails(t: AisTargetSummary): String {
-        val rangeNm = t.rangeMeters / 1852.0
-        return String.format(
-            Locale.US,
-            "%.1f nm / %.0f° · %s kn",
-            rangeNm,
-            t.bearingDeg,
-            String.format(Locale.US, "%.1f", t.sogKnots)
-        )
+        // Show '--' instead of fabricated range/bearing when own fix is unknown (range = sentinel).
+        val rangeBearing = if (t.rangeMeters < Double.MAX_VALUE / 2) {
+            String.format(Locale.US, "%.1f nm / %.0f°", t.rangeMeters / 1852.0, t.bearingDeg)
+        } else {
+            "--"
+        }
+        val sog = t.sogKnots?.let { String.format(Locale.US, "%.1f kn", it) } ?: "--"
+        return "$rangeBearing · $sog"
     }
 
     private fun verdictLabel(t: AisTargetSummary): String = when {
