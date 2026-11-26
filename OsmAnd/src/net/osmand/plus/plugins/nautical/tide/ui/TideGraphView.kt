@@ -114,6 +114,15 @@ class TideGraphView @JvmOverloads constructor(
     private val tidePath = Path()
     private val timeFormat = SimpleDateFormat("HH:mm", Locale.US)
 
+    // Tide tables are station-local: harmonic stations carry their real UTC
+    // offset in the data, so the graph renders those times in the station zone;
+    // null keeps the device default zone (Signal K, where no offset is known).
+    fun setStationTimezoneOffset(offsetSec: Int?) {
+        timeFormat.timeZone = offsetSec?.let { SimpleTimeZone(it * 1000, "nautical-tide-station") }
+            ?: TimeZone.getDefault()
+        invalidate()
+    }
+
     // Preallocated Draw Data and Geometry Cache
     private class PredictionDrawData(
         val x: Float,

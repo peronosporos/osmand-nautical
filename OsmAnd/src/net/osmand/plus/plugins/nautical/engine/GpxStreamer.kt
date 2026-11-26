@@ -89,7 +89,7 @@ class GpxStreamer(private val app: OsmandApplication) {
         gpx.metadata.time = System.currentTimeMillis()
         gpx.metadata.desc = String.format(
             Locale.US,
-            "Voyage Logbook: %.1f NM sailed • Avg SOG: %.1f kn (Max: %.1f kn) • Tack: %.0f%% Port / %.0f%% Stbd • %d entries",
+            app.getString(R.string.nautical_gpx_logbook_desc_fmt),
             summary.totalDistanceNm,
             summary.avgSogKnots,
             summary.maxSogKnots,
@@ -250,7 +250,7 @@ class GpxStreamer(private val app: OsmandApplication) {
             val pt = WptPt()
             pt.lat = lat
             pt.lon = lon
-            pt.name = if (index == 0) app.getString(R.string.nautical_gpx_start) else "WPT $index"
+            pt.name = if (index == 0) app.getString(R.string.nautical_gpx_start) else "${app.getString(R.string.nautical_gpx_wpt_prefix)} $index"
             route.points.add(pt)
         }
         gpx.routes.add(route)

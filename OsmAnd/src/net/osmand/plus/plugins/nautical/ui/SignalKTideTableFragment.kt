@@ -33,18 +33,30 @@ class SignalKTideTableFragment : BaseOsmAndFragment() {
         val tide = state.tide ?: net.osmand.plus.plugins.nautical.engine.TideState()
         
         val grid = root.findViewById<View?>(R.id.grid_identity)
-        fillCell(grid, 11, R.drawable.ic_action_nautical_water_temp, "Station", tide.stationName ?: "N/A")
-        fillCell(grid, 12, R.drawable.ic_action_altitude, "Height Now", "${tide.heightNow ?: "N/A"}m")
-        fillCell(grid, 13, R.drawable.ic_action_settings, "State", tide.state ?: "N/A")
+        fillCell(grid, 11, R.drawable.ic_action_nautical_water_temp,
+            getString(R.string.nautical_tide_station_label),
+            tide.stationName ?: getString(R.string.nautical_not_available))
+        fillCell(grid, 12, R.drawable.ic_action_altitude,
+            getString(R.string.nautical_tide_height_now),
+            tide.heightNow?.let { "${it}m" } ?: getString(R.string.nautical_not_available))
+        fillCell(grid, 13, R.drawable.ic_action_settings,
+            getString(R.string.nautical_tide_state), tide.state ?: getString(R.string.nautical_not_available))
         
         val nextExtreme = tide.nextExtremeTime?.let {
             val sdf = java.text.SimpleDateFormat("HH:mm", Locale.US)
+            // Vessel-centric Signal K times are absolute instants: rendered in
+            // the device zone, the reference the crew is sailing in.
+            sdf.timeZone = java.util.TimeZone.getDefault()
             sdf.format(Date(it))
-        } ?: "N/A"
+        } ?: getString(R.string.nautical_not_available)
         
-        fillCell(grid, 21, R.drawable.ic_action_time, "Next Extr.", nextExtreme)
-        fillCell(grid, 22, R.drawable.ic_action_altitude, "Next Height", "${tide.nextExtremeHeight ?: "N/A"}m")
-        fillCell(grid, 23, R.drawable.ic_action_settings, "Next Type", tide.nextExtremeType ?: "N/A")
+        fillCell(grid, 21, R.drawable.ic_action_time,
+            getString(R.string.nautical_tide_next_extreme), nextExtreme)
+        fillCell(grid, 22, R.drawable.ic_action_altitude,
+            getString(R.string.nautical_tide_next_height),
+            tide.nextExtremeHeight?.let { "${it}m" } ?: getString(R.string.nautical_not_available))
+        fillCell(grid, 23, R.drawable.ic_action_settings,
+            getString(R.string.nautical_tide_next_type), tide.nextExtremeType ?: getString(R.string.nautical_not_available))
 
         // Hide other grids
         root.findViewById<View>(R.id.grid_systems)?.visibility = View.GONE

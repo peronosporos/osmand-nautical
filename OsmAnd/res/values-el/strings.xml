@@ -6845,6 +6845,7 @@
     <string name="nautical_gpx_logbook_name">Ναυτικό Ημερολόγιο OsmAnd</string>
     <string name="nautical_gpx_trajectory_name">OsmAnd Nautical</string>
     <string name="nautical_gpx_start">Εκκίνηση</string>
+    <string name="nautical_gpx_logbook_desc_fmt">Ημερολόγιο Πλόου: %1$.1f NM πλεύση • Μέση Ταχ. Εν Όψει: %2$.1f κόμβοι (Μέγιστη: %3$.1f) • Τάκ: %4$.0f%% Αριστ. / %5$.0f%% Δεξι. • %6$d εγγραφές</string>
     <string name="nautical_gpx_wpt_prefix">WPT</string>
     <string name="nautical_sar_pattern_name">Μοτίβο SAR</string>
     <string name="nautical_vessel_flag_port">Σημαία/Λιμένας</string>
@@ -7570,6 +7571,12 @@
     <string name="nautical_tide_lat_lon_fmt">Πλάτος: %1$.4f, Μήκος: %2$.4f</string>
     <string name="nautical_tide_source_local">Τοπικά αρμονικά</string>
     <string name="nautical_tide_source_signalk">Signal K</string>
+    <string name="nautical_tide_station_label">Σταθμός</string>
+    <string name="nautical_tide_height_now">Ύψος Τώρα</string>
+    <string name="nautical_tide_state">Κατάσταση</string>
+    <string name="nautical_tide_next_extreme">Επόμ. Ακρ.</string>
+    <string name="nautical_tide_next_height">Επόμ. Ύψος</string>
+    <string name="nautical_tide_next_type">Επόμ. Τύπος</string>
     <string name="nautical_enc_manager">Διαχειριστής Χαρτών ENC S-57</string>
     <string name="nautical_grib_manager">Διαχειριστής Καιρού GRIB</string>
     <string name="nautical_hardware_health">Κατάσταση Υλικού &amp; Στατιστικά NMEA</string>

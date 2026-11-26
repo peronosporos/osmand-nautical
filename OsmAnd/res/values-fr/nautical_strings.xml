@@ -902,4 +902,15 @@
     <string name="nautical_routing_using_live_wind">Calcul de la route avec la télémétrie du vent en direct — aucune prévision GRIB chargée</string>
     <string name="nautical_routing_no_wind_data">Le routage météo nécessite des données de vent GRIB ou la télémétrie du vent en direct</string>
     <string name="nautical_calculating_weather_route">Calcul de la route météo optimale…</string>
+    <string name="nautical_gpx_logbook_desc_fmt">Journal de bord : %1$.1f NM parcourus • SOG moyen : %2$.1f kn (Max : %3$.1f kn) • Virement : %4$.0f%% bâbord / %5$.0f%% tribord • %6$d entrées</string>
+    <string name="nautical_gpx_route_name">Route nautique</string>
+    <string name="nautical_gpx_logbook_name">Journal de bord marin OsmAnd</string>
+    <string name="nautical_gpx_start">Départ</string>
+    <string name="nautical_gpx_wpt_prefix">WP</string>
+    <string name="nautical_tide_station_label">Station</string>
+    <string name="nautical_tide_height_now">Hauteur actuelle</string>
+    <string name="nautical_tide_state">État</string>
+    <string name="nautical_tide_next_extreme">Prochaine extr.</string>
+    <string name="nautical_tide_next_height">Prochaine hauteur</string>
+    <string name="nautical_tide_next_type">Prochain type</string>
 </resources>

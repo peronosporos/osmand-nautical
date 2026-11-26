@@ -902,4 +902,15 @@
     <string name="nautical_routing_using_live_wind">Route wird mit Live-Windtelemetrie berechnet — keine GRIB-Vorhersage geladen</string>
     <string name="nautical_routing_no_wind_data">Wetterrouting erfordert GRIB-Winddaten oder Live-Windtelemetrie</string>
     <string name="nautical_calculating_weather_route">Optimale Wetterroute wird berechnet…</string>
+    <string name="nautical_gpx_logbook_desc_fmt">Logbuch: %1$.1f NM gesegelt • Ø SOG: %2$.1f kn (Max: %3$.1f kn) • Wende: %4$.0f%% Backbord / %5$.0f%% Steuerbord • %6$d Einträge</string>
+    <string name="nautical_gpx_route_name">Nautische Route</string>
+    <string name="nautical_gpx_logbook_name">OsmAnd-Logbuch</string>
+    <string name="nautical_gpx_start">Start</string>
+    <string name="nautical_gpx_wpt_prefix">WPT</string>
+    <string name="nautical_tide_station_label">Station</string>
+    <string name="nautical_tide_height_now">Aktuelle Höhe</string>
+    <string name="nautical_tide_state">Zustand</string>
+    <string name="nautical_tide_next_extreme">Nächstes Extrem</string>
+    <string name="nautical_tide_next_height">Nächste Höhe</string>
+    <string name="nautical_tide_next_type">Nächster Typ</string>
 </resources>

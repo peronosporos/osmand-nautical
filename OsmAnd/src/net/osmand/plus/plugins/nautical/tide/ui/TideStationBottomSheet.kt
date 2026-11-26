@@ -121,6 +121,13 @@ class TideStationBottomSheet : BaseNauticalBottomSheet() {
                         text = getString(R.string.tide_station_title_with_source, station.name, source)
                         visibility = View.VISIBLE
                     }
+                    // Locally imported stations carry their real UTC offset from
+                    // the harmonic data; Signal K stations are mapped with a
+                    // placeholder zero ("usually UTC" - an assumption, not measured
+                    // data), so they stay on the device zone.
+                    graphView?.setStationTimezoneOffset(
+                        station.timezoneOffset.takeIf { station.constituents.isNotEmpty() }
+                    )
                 }
             }
         }

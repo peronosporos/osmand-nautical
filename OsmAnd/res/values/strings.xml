@@ -799,6 +799,7 @@
     <string name="nautical_gpx_logbook_name">OsmAnd Marine Logbook</string>
     <string name="nautical_gpx_trajectory_name">OsmAnd Nautical</string>
     <string name="nautical_gpx_start">Start</string>
+    <string name="nautical_gpx_logbook_desc_fmt">Voyage Logbook: %1$.1f NM sailed • Avg SOG: %2$.1f kn (Max: %3$.1f kn) • Tack: %4$.0f%% Port / %5$.0f%% Stbd • %6$d entries</string>
     <string name="nautical_gpx_wpt_prefix">WPT</string>
     <string name="nautical_sar_pattern_name">SAR Pattern</string>
     <string name="nautical_vessel_flag_port">Flag/Port</string>
@@ -1867,6 +1868,12 @@
     <string name="nautical_tide_lat_lon_fmt">Lat: %1$.4f, Lon: %2$.4f</string>
     <string name="nautical_tide_source_local">Local</string>
     <string name="nautical_tide_source_signalk">Signal K</string>
+    <string name="nautical_tide_station_label">Station</string>
+    <string name="nautical_tide_height_now">Height Now</string>
+    <string name="nautical_tide_state">State</string>
+    <string name="nautical_tide_next_extreme">Next Extr.</string>
+    <string name="nautical_tide_next_height">Next Height</string>
+    <string name="nautical_tide_next_type">Next Type</string>
 	<string name="nautical_enc_manager">S-57 ENC Chart Manager</string>
 	<string name="nautical_grib_manager">GRIB Weather Manager</string>
 	<string name="nautical_hardware_health">Hardware Health &amp; NMEA Stats</string>
