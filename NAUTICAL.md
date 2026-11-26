@@ -77,3 +77,33 @@ The plugin connects to **SignalK** servers via WebSockets.
 - **Magnetic Heading Fallback**: If the server does not provide True Heading, the plugin automatically calculates it using Magnetic Heading and Variation (if available).
 - **Trust all certificates**: Use this option for local boat networks with self-signed certificates.
 - Local calculation engine ensures a "Single Source of Truth" for all displays, even when server data is incomplete.
+
+- Local calculation engine ensures a "Single Source of Truth" for all displays, even when server data is incomplete.
+
+---
+
+## 6. Nautical Settings Organization
+
+Open the plugin settings from **Plugins > Nautical**. The main screen is a compact hub of quick toggles:
+
+- **Display**: vessel context, display mode, heavy weather mode.
+- **Modules**: enable or disable the AIS, radar, depth profile, polar overlay, cockpit strip, tides, GRIB, VHF, logbook, ENC, raster charts, and Navtex modules.
+- **Chart Overlays**: quickly toggle laylines, dead reckoning, isochrones, anchor zone, and overlay layers.
+- **Smart Tools**: Boat AI, notifications, and checklists.
+
+The rest of the settings are grouped into five dedicated screens, reachable under **More settings**:
+
+### Vessel & Maneuvers
+Vessel type (conventional or proa), draft, keel offset, wind alignment, heading reference, autopilot tuning, maneuver parameters, and sailing performance (polars, layline tack angle, leeway, wave bias).
+
+### Safety & Anchor
+Safety margins, XTE and off-course alarms, corridor width and buffer, actuator alarm, MOB audio guidance and interval, arrival radius, look-ahead, safety regions, and the anchor watch configuration.
+
+### AIS, VHF & Navtex
+AIS target display options, the VHF backend, and Navtex station filters.
+
+### Connection & Instruments
+Signal K server address and authentication, NMEA sources (network, Bluetooth, USB), sensor fallback timeout, compass calibration wizard, power management, hardware health, Signal K diagnostics, and the telemetry text widgets configuration.
+
+### Charts & Voyage Data
+ENC, S-63 permits (BYOK), tides, GRIB weather downloads, server routes and charts, raster charts, passage planning, the voyage logbook, and data cleanup.
