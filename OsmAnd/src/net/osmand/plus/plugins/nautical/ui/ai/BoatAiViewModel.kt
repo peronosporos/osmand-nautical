@@ -14,7 +14,7 @@ import net.osmand.plus.plugins.nautical.repository.BoatAiRepository
 
 data class ChatMessage(
     val id: Long = System.nanoTime(),
-    val text: String, 
+    val text: String,
     val isBot: Boolean,
     val isError: Boolean = false
 )
@@ -63,7 +63,7 @@ class BoatAiViewModel(
             val result = repository.sendQuery(query, state)
             result.onSuccess { boatResult ->
                 _messages.value = _messages.value + ChatMessage(text = boatResult.reply, isBot = true)
-                
+
                 // Execute actions and provide granular feedback (Item 16)
                 var successCount = 0
                 boatResult.actions.forEach { action ->
@@ -71,7 +71,7 @@ class BoatAiViewModel(
                         successCount++
                     }
                 }
-                
+
                 if (boatResult.actions.isNotEmpty()) {
                     val feedback = if (successCount == boatResult.actions.size) {
                         app.getString(R.string.nautical_ai_actions_executed, successCount)

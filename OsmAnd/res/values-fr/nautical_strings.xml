@@ -569,4 +569,67 @@
     <string name="nautical_stbd_pin_dropped">Bouée tribord posée à la position actuelle</string>
     <string name="nautical_stbd_pin_title">Bouée de départ tribord</string>
     <string name="nautical_tool_center">Centre d\'outils nautiques</string>
+    <string name="nautical_ai_actions_executed">Action exécutée : %1$d commande(s) envoyée(s) au navire.</string>
+    <string name="nautical_ai_actions_partial">Succès partiel : %1$d commandes sur %2$d envoyées au navire.</string>
+    <string name="nautical_ai_actions_failed">Échec de l\'exécution des commandes du navire. Vérifiez les commandes manuelles.</string>
+    <string name="nautical_ai_stt_unavailable">La reconnaissance vocale n\'est pas disponible sur cet appareil.</string>
+    <string name="nautical_ai_stt_error">Erreur vocale : %1$s</string>
+    <string name="nautical_ai_welcome">Bonjour ! Je suis l\'IA de votre bateau. Interrogez-moi sur l\'état de votre navire.</string>
+    <string name="nautical_ai_no_text">J\'ai traité votre demande, mais le serveur n\'a renvoyé aucun texte.</string>
+    <string name="nautical_ai_connection_error">Désolé, j\'ai des difficultés à me connecter au cerveau du navire.</string>
+    <string name="nautical_ai_server_error">Erreur de connexion. Signal K est-il en cours d\'exécution ?</string>
+    <string name="nautical_ai_error_fmt">Erreur : %1$s</string>
+    <string name="nautical_ai_stt_net_error">Erreur réseau</string>
+    <string name="nautical_ai_stt_net_timeout">Délai réseau dépassé</string>
+    <string name="nautical_ai_stt_no_match">Aucune voix reconnue</string>
+    <string name="nautical_ai_stt_busy">Service occupé</string>
+    <string name="nautical_ai_stt_generic">Erreur de reconnaissance vocale (%1$d)</string>
+    <string name="nautical_ai_rep_no_response">Pas de réponse de l\'IA</string>
+    <string name="nautical_ai_rep_ap_standby">Pilote automatique désengagé. La barre est revenue en Standby (manuel).</string>
+    <string name="nautical_ai_rep_ap_auto_holding">Pilote automatique engagé en mode Compass/Auto, cap maintenu %1$d°.</string>
+    <string name="nautical_ai_rep_ap_auto_pending">Pilote automatique engagé en mode Compass/Auto. Pas encore de données de cap, maintien en attente.</string>
+    <string name="nautical_ai_rep_ap_wind">Pilote automatique passé en mode Wind Vane.</string>
+    <string name="nautical_ai_rep_ap_route">Pilote automatique suit la route active / la trace de navigation.</string>
+    <string name="nautical_ai_rep_ap_heading">Cap cible du pilote automatique réglé sur %1$d°.</string>
+    <string name="nautical_ai_rep_tack_port">Virement automatique vers bâbord lancé.</string>
+    <string name="nautical_ai_rep_tack_starboard">Virement automatique vers tribord lancé.</string>
+    <string name="nautical_ai_lights_nav">Feux de navigation</string>
+    <string name="nautical_ai_lights_anchor">Feu d\'ancre</string>
+    <string name="nautical_ai_lights_cabin">Éclairage cabine/pont</string>
+    <string name="nautical_ai_rep_switch_on">%1$s : ON.</string>
+    <string name="nautical_ai_rep_switch_off">%1$s : OFF.</string>
+    <string name="nautical_ai_rep_no_gps_anchor">Pas de position GPS disponible, la surveillance d\'ancre n\'est PAS armée.</string>
+    <string name="nautical_ai_rep_anchor_armed">Surveillance d\'ancre armée à la position actuelle (rayon %1$dm).</string>
+    <string name="nautical_ai_rep_anchor_disarmed">Surveillance d\'ancre désarmée.</string>
+    <string name="nautical_ai_rep_anchor_status_armed">Surveillance d\'ancre : ARMÉE (Rayon : %1$dm).</string>
+    <string name="nautical_ai_rep_anchor_status_disarmed">Surveillance d\'ancre : DÉSARMÉE.</string>
+    <string name="nautical_ai_rep_wind_true_line">• Vent réel : %1$.1f kn @ %2$d°</string>
+    <string name="nautical_ai_rep_wind_app_line">• Vent apparent : %1$.1f kn @ %2$d° (%3$s)</string>
+    <string name="nautical_ai_rep_wind_offline">Les données de vent sont actuellement hors ligne.</string>
+    <string name="nautical_ai_rep_depth_keel">Profondeur : %1$.1f m sous la quille (%2$.1f m sous la surface). Couloir de sécurité dégagé.</string>
+    <string name="nautical_ai_rep_depth_transducer">Profondeur : %1$.1f m sous le transducteur.</string>
+    <string name="nautical_ai_rep_depth_offline">Les données du sondeur sont actuellement hors ligne.</string>
+    <string name="nautical_ai_rep_sog_stw">• SOG : %1$s | STW : %2$s</string>
+    <string name="nautical_ai_rep_hdg_cog">• Cap : %1$s | COG : %2$s</string>
+    <string name="nautical_ai_rep_polar">• Efficacité polaire : %1$d%%</string>
+    <string name="nautical_ai_rep_nav_offline">Les données de navigation sont actuellement hors ligne.</string>
+    <string name="nautical_ai_rep_electrical">Électrique : le parc de batteries est à %1$.1f V%2$s.</string>
+    <string name="nautical_ai_rep_soc"> (État de charge : %1$d%%)</string>
+    <string name="nautical_ai_rep_electrical_offline">Les données électriques ne sont pas signalées sur le réseau actif.</string>
+    <string name="nautical_ai_rep_alarms_ack">Alarmes actives acquittées.</string>
+    <string name="nautical_ai_rep_alarms_active">Alarmes actives (%1$d) :
+%2$s</string>
+    <string name="nautical_ai_rep_alarms_none">Tous les systèmes de sécurité sont normaux. Aucune alarme active.</string>
+    <string name="nautical_ai_rep_ap_status">Le pilote automatique est actuellement en mode %1$s.</string>
+    <string name="nautical_ai_rep_ap_target"> Cible : %1$d°</string>
+    <string name="nautical_ai_rep_vessel_status">État du navire :
+• SOG : %1$s | HDG : %2$s
+• Vent réel : %3$s
+• Pilote automatique : %4$s
+
+%5$s</string>
+    <string name="nautical_ai_rep_vessel_hint">Vous pouvez interroger le vent, la profondeur, la vitesse ou les batteries, et commander le pilote automatique et les éclairages.</string>
+    <string name="nautical_ai_na">n/d</string>
+    <string name="nautical_ai_kn_fmt">%.1f kn</string>
+    <string name="nautical_ai_deg_fmt">%d°</string>
 </resources>

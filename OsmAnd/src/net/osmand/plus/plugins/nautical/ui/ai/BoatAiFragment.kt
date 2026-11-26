@@ -52,14 +52,14 @@ class BoatAiFragment : BaseOsmAndFragment(), RecognitionListener {
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         val view = themedInflater.inflate(R.layout.nautical_boat_ai_fragment, container, false)
-        
+
         recyclerView = view.findViewById(R.id.recycler_view)
         loadingIndicator = view.findViewById(R.id.loading_indicator)
         listeningText = view.findViewById(R.id.listening_text)
         editQuery = view.findViewById(R.id.edit_query)
         val btnSend: ImageButton = view.findViewById(R.id.btn_send)
         val btnMic: ImageButton = view.findViewById(R.id.btn_mic)
-        
+
         adapter = ChatAdapter()
         recyclerView.layoutManager = LinearLayoutManager(requireContext()).apply {
             stackFromEnd = true
@@ -172,11 +172,11 @@ class BoatAiFragment : BaseOsmAndFragment(), RecognitionListener {
     override fun onError(error: Int) {
         viewModel.setListening(false)
         val errorMsg = when (error) {
-            SpeechRecognizer.ERROR_NETWORK -> "Network Error"
-            SpeechRecognizer.ERROR_NETWORK_TIMEOUT -> "Network Timeout"
-            SpeechRecognizer.ERROR_NO_MATCH -> "No speech recognized"
-            SpeechRecognizer.ERROR_RECOGNIZER_BUSY -> "Service Busy"
-            else -> "Voice recognition error ($error)"
+            SpeechRecognizer.ERROR_NETWORK -> getString(R.string.nautical_ai_stt_net_error)
+            SpeechRecognizer.ERROR_NETWORK_TIMEOUT -> getString(R.string.nautical_ai_stt_net_timeout)
+            SpeechRecognizer.ERROR_NO_MATCH -> getString(R.string.nautical_ai_stt_no_match)
+            SpeechRecognizer.ERROR_RECOGNIZER_BUSY -> getString(R.string.nautical_ai_stt_busy)
+            else -> getString(R.string.nautical_ai_stt_generic, error)
         }
         app.showToastMessage(getString(R.string.nautical_ai_stt_error, errorMsg))
     }
@@ -204,7 +204,7 @@ class BoatAiFragment : BaseOsmAndFragment(), RecognitionListener {
         override fun onBindViewHolder(holder: ChatViewHolder, position: Int) {
             val msg = getItem(position)
             holder.text.text = msg.text
-            
+
             val context = holder.itemView.context
             when {
                 msg.isError -> {

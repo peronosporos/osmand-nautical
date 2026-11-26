@@ -569,4 +569,67 @@
     <string name="nautical_stbd_pin_dropped">Steuerbord-Boje an aktueller Position gesetzt</string>
     <string name="nautical_stbd_pin_title">Steuerbord-Startboje</string>
     <string name="nautical_tool_center">Nautisches Werkzeugzentrum</string>
+    <string name="nautical_ai_actions_executed">Aktion ausgeführt: %1$d Befehl(e) an das Boot gesendet.</string>
+    <string name="nautical_ai_actions_partial">Teilerfolg: %1$d von %2$d Befehlen an das Boot gesendet.</string>
+    <string name="nautical_ai_actions_failed">Bootsbefehle konnten nicht ausgeführt werden. Bitte manuelle Steuerung prüfen.</string>
+    <string name="nautical_ai_stt_unavailable">Spracherkennung ist auf diesem Gerät nicht verfügbar.</string>
+    <string name="nautical_ai_stt_error">Sprachfehler: %1$s</string>
+    <string name="nautical_ai_welcome">Hallo! Ich bin dein Boots-KI-Assistent. Frag mich alles über den Zustand deines Bootes.</string>
+    <string name="nautical_ai_no_text">Ich habe deine Anfrage verarbeitet, aber der Server hat keinen Text zurückgegeben.</string>
+    <string name="nautical_ai_connection_error">Entschuldigung, ich habe Verbindungsprobleme zum Bootssystem.</string>
+    <string name="nautical_ai_server_error">Verbindungsfehler. Läuft Signal K?</string>
+    <string name="nautical_ai_error_fmt">Fehler: %1$s</string>
+    <string name="nautical_ai_stt_net_error">Netzwerkfehler</string>
+    <string name="nautical_ai_stt_net_timeout">Netzwerk-Timeout</string>
+    <string name="nautical_ai_stt_no_match">Keine Spracherkennung</string>
+    <string name="nautical_ai_stt_busy">Dienst belegt</string>
+    <string name="nautical_ai_stt_generic">Spracherkennungsfehler (%1$d)</string>
+    <string name="nautical_ai_rep_no_response">Keine Antwort der KI</string>
+    <string name="nautical_ai_rep_ap_standby">Autopilot ausgekuppelt. Ruder zurück auf Standby (manuell).</string>
+    <string name="nautical_ai_rep_ap_auto_holding">Autopilot im Compass/Auto-Modus gekuppelt, hält %1$d°.</string>
+    <string name="nautical_ai_rep_ap_auto_pending">Autopilot im Compass/Auto-Modus gekuppelt. Noch keine Kursdaten, Halten ausstehend.</string>
+    <string name="nautical_ai_rep_ap_wind">Autopilot in den Windvane-Modus gewechselt.</string>
+    <string name="nautical_ai_rep_ap_route">Autopilot folgt der aktiven Route / Navigationsspur.</string>
+    <string name="nautical_ai_rep_ap_heading">Zielkurs des Autopiloten wird auf %1$d° gesetzt.</string>
+    <string name="nautical_ai_rep_tack_port">Automatische Wende nach Backbord eingeleitet.</string>
+    <string name="nautical_ai_rep_tack_starboard">Automatische Wende nach Steuerbord eingeleitet.</string>
+    <string name="nautical_ai_lights_nav">Navigationslichter</string>
+    <string name="nautical_ai_lights_anchor">Ankerlicht</string>
+    <string name="nautical_ai_lights_cabin">Kabinen-/Decklichter</string>
+    <string name="nautical_ai_rep_switch_on">%1$s: EIN.</string>
+    <string name="nautical_ai_rep_switch_off">%1$s: AUS.</string>
+    <string name="nautical_ai_rep_no_gps_anchor">Kein GPS-Fix verfügbar, Ankerwache NICHT aktiviert.</string>
+    <string name="nautical_ai_rep_anchor_armed">Ankerwache an aktueller Position aktiviert (%1$dm Radius).</string>
+    <string name="nautical_ai_rep_anchor_disarmed">Ankerwache deaktiviert.</string>
+    <string name="nautical_ai_rep_anchor_status_armed">Ankerwache: AKTIV (Radius: %1$dm).</string>
+    <string name="nautical_ai_rep_anchor_status_disarmed">Ankerwache: INAKTIV.</string>
+    <string name="nautical_ai_rep_wind_true_line">• Wahrer Wind: %1$.1f kn @ %2$d°</string>
+    <string name="nautical_ai_rep_wind_app_line">• Scheinbarer Wind: %1$.1f kn @ %2$d° (%3$s)</string>
+    <string name="nautical_ai_rep_wind_offline">Winddaten sind derzeit offline.</string>
+    <string name="nautical_ai_rep_depth_keel">Tiefe: %1$.1f m unter Kiel (%2$.1f m unter der Oberfläche). Sicherheitskorridor frei.</string>
+    <string name="nautical_ai_rep_depth_transducer">Tiefe: %1$.1f m unter dem Geber.</string>
+    <string name="nautical_ai_rep_depth_offline">Echolotdaten sind derzeit offline.</string>
+    <string name="nautical_ai_rep_sog_stw">• SOG: %1$s | STW: %2$s</string>
+    <string name="nautical_ai_rep_hdg_cog">• Kurs: %1$s | COG: %2$s</string>
+    <string name="nautical_ai_rep_polar">• Polar-Effizienz: %1$d%%</string>
+    <string name="nautical_ai_rep_nav_offline">Navigationsdaten sind derzeit offline.</string>
+    <string name="nautical_ai_rep_electrical">Elektrik: Der Batterieblock liegt bei %1$.1f V%2$s.</string>
+    <string name="nautical_ai_rep_soc"> (Ladezustand: %1$d%%)</string>
+    <string name="nautical_ai_rep_electrical_offline">Elektrische Daten werden im aktiven Netzwerk nicht gemeldet.</string>
+    <string name="nautical_ai_rep_alarms_ack">Aktive Alarme bestätigt.</string>
+    <string name="nautical_ai_rep_alarms_active">Aktive Alarme (%1$d):
+%2$s</string>
+    <string name="nautical_ai_rep_alarms_none">Alle Sicherheitssysteme normal. Keine aktiven Alarme.</string>
+    <string name="nautical_ai_rep_ap_status">Der Autopilot ist derzeit im Modus %1$s.</string>
+    <string name="nautical_ai_rep_ap_target"> Ziel: %1$d°</string>
+    <string name="nautical_ai_rep_vessel_status">Schiffsstatus:
+• SOG: %1$s | HDG: %2$s
+• Wahrer Wind: %3$s
+• Autopilot: %4$s
+
+%5$s</string>
+    <string name="nautical_ai_rep_vessel_hint">Du kannst nach Wind, Tiefe, Geschwindigkeit oder Batterien fragen und Autopilot sowie Lichter steuern.</string>
+    <string name="nautical_ai_na">k.A.</string>
+    <string name="nautical_ai_kn_fmt">%.1f kn</string>
+    <string name="nautical_ai_deg_fmt">%d°</string>
 </resources>

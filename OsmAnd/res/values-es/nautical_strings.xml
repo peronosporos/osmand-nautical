@@ -569,4 +569,67 @@
     <string name="nautical_stbd_pin_dropped">Baliza de estribor fijada en la posición actual</string>
     <string name="nautical_stbd_pin_title">Baliza de salida de estribor</string>
     <string name="nautical_tool_center">Centro de herramientas náuticas</string>
+    <string name="nautical_ai_actions_executed">Acción ejecutada: %1$d comando(s) enviados al barco.</string>
+    <string name="nautical_ai_actions_partial">Éxito parcial: %1$d de %2$d comandos enviados al barco.</string>
+    <string name="nautical_ai_actions_failed">No se pudieron ejecutar los comandos del barco. Compruebe los mandos manuales.</string>
+    <string name="nautical_ai_stt_unavailable">El reconocimiento de voz no está disponible en este dispositivo.</string>
+    <string name="nautical_ai_stt_error">Error de voz: %1$s</string>
+    <string name="nautical_ai_welcome">¡Hola! Soy tu IA de embarcación. Pregúntame lo que quieras sobre el estado de tu buque.</string>
+    <string name="nautical_ai_no_text">Procesé tu solicitud, pero el servidor no devolvió texto.</string>
+    <string name="nautical_ai_connection_error">Lo siento, tengo problemas para conectarme al cerebro del barco.</string>
+    <string name="nautical_ai_server_error">Error de conexión. ¿Se está ejecutando Signal K?</string>
+    <string name="nautical_ai_error_fmt">Error: %1$s</string>
+    <string name="nautical_ai_stt_net_error">Error de red</string>
+    <string name="nautical_ai_stt_net_timeout">Tiempo de espera de red agotado</string>
+    <string name="nautical_ai_stt_no_match">No se reconoció voz</string>
+    <string name="nautical_ai_stt_busy">Servicio ocupado</string>
+    <string name="nautical_ai_stt_generic">Error de reconocimiento de voz (%1$d)</string>
+    <string name="nautical_ai_rep_no_response">Sin respuesta de la IA</string>
+    <string name="nautical_ai_rep_ap_standby">Piloto automático desacoplado. El timón volvió a Standby (manual).</string>
+    <string name="nautical_ai_rep_ap_auto_holding">Piloto automático acoplado en modo Compass/Auto manteniendo %1$d°.</string>
+    <string name="nautical_ai_rep_ap_auto_pending">Piloto automático acoplado en modo Compass/Auto. Aún no hay datos de rumbo, mantenimiento pendiente.</string>
+    <string name="nautical_ai_rep_ap_wind">Piloto automático cambiado a modo Wind Vane.</string>
+    <string name="nautical_ai_rep_ap_route">Piloto automático siguiendo la ruta activa / línea de navegación.</string>
+    <string name="nautical_ai_rep_ap_heading">Fijando el rumbo objetivo del piloto automático en %1$d°.</string>
+    <string name="nautical_ai_rep_tack_port">Iniciando virada automática a babor.</string>
+    <string name="nautical_ai_rep_tack_starboard">Iniciando virada automática a estribor.</string>
+    <string name="nautical_ai_lights_nav">Luces de navegación</string>
+    <string name="nautical_ai_lights_anchor">Luz de ancla</string>
+    <string name="nautical_ai_lights_cabin">Luces de cabina/cubierta</string>
+    <string name="nautical_ai_rep_switch_on">%1$s: ON.</string>
+    <string name="nautical_ai_rep_switch_off">%1$s: OFF.</string>
+    <string name="nautical_ai_rep_no_gps_anchor">No hay posición GPS disponible; la vigilancia del ancla NO se activó.</string>
+    <string name="nautical_ai_rep_anchor_armed">Vigilancia del ancla activada en la posición actual (radio de %1$dm).</string>
+    <string name="nautical_ai_rep_anchor_disarmed">Vigilancia del ancla desactivada.</string>
+    <string name="nautical_ai_rep_anchor_status_armed">Vigilancia del ancla: ARMADA (Radio: %1$dm).</string>
+    <string name="nautical_ai_rep_anchor_status_disarmed">Vigilancia del ancla: DESACTIVADA.</string>
+    <string name="nautical_ai_rep_wind_true_line">• Viento real: %1$.1f kn @ %2$d°</string>
+    <string name="nautical_ai_rep_wind_app_line">• Viento aparente: %1$.1f kn @ %2$d° (%3$s)</string>
+    <string name="nautical_ai_rep_wind_offline">Los datos de viento no están disponibles actualmente.</string>
+    <string name="nautical_ai_rep_depth_keel">Profundidad: %1$.1f m bajo la quilla (%2$.1f m bajo la superficie). Corredor de seguridad despejado.</string>
+    <string name="nautical_ai_rep_depth_transducer">Profundidad: %1$.1f m bajo el transductor.</string>
+    <string name="nautical_ai_rep_depth_offline">Los datos de la sonda no están disponibles actualmente.</string>
+    <string name="nautical_ai_rep_sog_stw">• SOG: %1$s | STW: %2$s</string>
+    <string name="nautical_ai_rep_hdg_cog">• Rumbo: %1$s | COG: %2$s</string>
+    <string name="nautical_ai_rep_polar">• Eficiencia polar: %1$d%%</string>
+    <string name="nautical_ai_rep_nav_offline">Los datos de navegación no están disponibles actualmente.</string>
+    <string name="nautical_ai_rep_electrical">Eléctrica: el banco de baterías está a %1$.1f V%2$s.</string>
+    <string name="nautical_ai_rep_soc"> (Estado de carga: %1$d%%)</string>
+    <string name="nautical_ai_rep_electrical_offline">Los datos eléctricos no se informan en la red activa.</string>
+    <string name="nautical_ai_rep_alarms_ack">Alarmas activas reconocidas.</string>
+    <string name="nautical_ai_rep_alarms_active">Alarmas activas (%1$d):
+%2$s</string>
+    <string name="nautical_ai_rep_alarms_none">Todos los sistemas de seguridad están normales. Sin alarmas activas.</string>
+    <string name="nautical_ai_rep_ap_status">El piloto automático está en modo %1$s.</string>
+    <string name="nautical_ai_rep_ap_target"> Objetivo: %1$d°</string>
+    <string name="nautical_ai_rep_vessel_status">Estado del buque:
+• SOG: %1$s | HDG: %2$s
+• Viento real: %3$s
+• Piloto automático: %4$s
+
+%5$s</string>
+    <string name="nautical_ai_rep_vessel_hint">Puedes preguntar por el viento, la profundidad, la velocidad o las baterías, y dar órdenes al piloto automático y a las luces.</string>
+    <string name="nautical_ai_na">n/d</string>
+    <string name="nautical_ai_kn_fmt">%.1f kn</string>
+    <string name="nautical_ai_deg_fmt">%d°</string>
 </resources>

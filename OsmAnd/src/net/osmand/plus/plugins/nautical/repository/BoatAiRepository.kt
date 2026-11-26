@@ -6,6 +6,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import net.osmand.PlatformUtil
 import net.osmand.plus.OsmandApplication
+import net.osmand.plus.R
 import net.osmand.plus.plugins.nautical.NauticalPlugin
 import net.osmand.plus.plugins.nautical.engine.MarineState
 
@@ -40,7 +41,7 @@ class BoatAiRepository(private val app: OsmandApplication) {
                 if (response.isSuccessful) {
                     val respBody = response.body()
                     if (respBody != null) {
-                        val reply = respBody["reply"]?.toString() ?: "No response from AI"
+                        val reply = respBody["reply"]?.toString() ?: app.getString(R.string.nautical_ai_rep_no_response)
                         val cleanReply = if (reply.startsWith("\"") && reply.endsWith("\"") && reply.length >= 2) {
                             try {
                                 gson.fromJson(reply, String::class.java)
@@ -84,26 +85,26 @@ class BoatAiRepository(private val app: OsmandApplication) {
         // 1. Autopilot Mode Commands
         if (q.contains("standby") || q.contains("disengage") || q.contains("pilot off") || q.contains("stop pilot")) {
             actions.add(BoatAiAction(type = "autopilot_mode", value = "standby"))
-            return BoatAiResult("Autopilot disengaged. Helm returned to Standby (Manual).", actions)
+            return BoatAiResult(app.getString(R.string.nautical_ai_rep_ap_standby), actions)
         }
         if (q.contains("auto") || q.contains("compass mode") || q.contains("engage pilot") || q.contains("pilot on")) {
             actions.add(BoatAiAction(type = "autopilot_mode", value = "auto"))
             // Only quote the held heading when it is real; never invent "0°".
             val target = state.headingTrue?.let { Math.toDegrees(it).toInt() }
             val reply = if (target != null) {
-                "Autopilot engaged in Compass/Auto mode holding $target°."
+                String.format(java.util.Locale.US, app.getString(R.string.nautical_ai_rep_ap_auto_holding), target)
             } else {
-                "Autopilot engaged in Compass/Auto mode. No heading data yet; hold pending."
+                app.getString(R.string.nautical_ai_rep_ap_auto_pending)
             }
             return BoatAiResult(reply, actions)
         }
         if (q.contains("wind mode") || q.contains("vane mode") || q.contains("steer wind")) {
             actions.add(BoatAiAction(type = "autopilot_mode", value = "wind"))
-            return BoatAiResult("Autopilot switched to Wind Vane mode.", actions)
+            return BoatAiResult(app.getString(R.string.nautical_ai_rep_ap_wind), actions)
         }
         if (q.contains("track mode") || q.contains("route mode") || q.contains("nav mode")) {
             actions.add(BoatAiAction(type = "autopilot_mode", value = "route"))
-            return BoatAiResult("Autopilot following active route / navigation track.", actions)
+            return BoatAiResult(app.getString(R.string.nautical_ai_rep_ap_route), actions)
         }
 
         // 2. Autopilot Heading Adjustment
@@ -114,35 +115,35 @@ class BoatAiRepository(private val app: OsmandApplication) {
             if (deg != null && deg in 0..360) {
                 val rad = Math.toRadians(deg.toDouble())
                 actions.add(BoatAiAction(type = "autopilot_heading", value = rad))
-                return BoatAiResult("Setting autopilot target heading to $deg°.", actions)
+                return BoatAiResult(String.format(java.util.Locale.US, app.getString(R.string.nautical_ai_rep_ap_heading), deg), actions)
             }
         }
 
         // 3. Tacking / Maneuvers
         if (q.contains("tack port") || q.contains("tack to port")) {
             actions.add(BoatAiAction(type = "autopilot_mode", value = "tack_port"))
-            return BoatAiResult("Initiating auto-tack to Port.", actions)
+            return BoatAiResult(app.getString(R.string.nautical_ai_rep_tack_port), actions)
         }
         if (q.contains("tack star") || q.contains("tack to star")) {
             actions.add(BoatAiAction(type = "autopilot_mode", value = "tack_starboard"))
-            return BoatAiResult("Initiating auto-tack to Starboard.", actions)
+            return BoatAiResult(app.getString(R.string.nautical_ai_rep_tack_starboard), actions)
         }
 
         // 4. Digital Switching / Lights
         if (q.contains("nav light") || q.contains("navigation light")) {
             val turnOn = !q.contains("off")
             actions.add(BoatAiAction(type = "switch", path = "electrical.switches.navigationLights.state", value = turnOn))
-            return BoatAiResult("Navigation lights turned ${if (turnOn) "ON" else "OFF"}.", actions)
+            return BoatAiResult(app.getString(if (turnOn) R.string.nautical_ai_rep_switch_on else R.string.nautical_ai_rep_switch_off, app.getString(R.string.nautical_ai_lights_nav)), actions)
         }
         if (q.contains("anchor light")) {
             val turnOn = !q.contains("off")
             actions.add(BoatAiAction(type = "switch", path = "electrical.switches.anchorLight.state", value = turnOn))
-            return BoatAiResult("Anchor light turned ${if (turnOn) "ON" else "OFF"}.", actions)
+            return BoatAiResult(app.getString(if (turnOn) R.string.nautical_ai_rep_switch_on else R.string.nautical_ai_rep_switch_off, app.getString(R.string.nautical_ai_lights_anchor)), actions)
         }
         if (q.contains("deck light") || q.contains("cabin light")) {
             val turnOn = !q.contains("off")
             actions.add(BoatAiAction(type = "switch", path = "electrical.switches.cabinLights.state", value = turnOn))
-            return BoatAiResult("Cabin/Deck lights turned ${if (turnOn) "ON" else "OFF"}.", actions)
+            return BoatAiResult(app.getString(if (turnOn) R.string.nautical_ai_rep_switch_on else R.string.nautical_ai_rep_switch_off, app.getString(R.string.nautical_ai_lights_cabin)), actions)
         }
 
         // 5. Anchor Controls & Status
@@ -151,23 +152,23 @@ class BoatAiRepository(private val app: OsmandApplication) {
             val lat = state.latitude
             val lon = state.longitude
             if (lat == null || lon == null) {
-                return BoatAiResult("No GPS fix available; anchor watch NOT armed.", actions)
+                return BoatAiResult(app.getString(R.string.nautical_ai_rep_no_gps_anchor), actions)
             }
             actions.add(BoatAiAction(type = "anchor", value = mapOf("latitude" to lat, "longitude" to lon, "radius" to 50.0)))
-            return BoatAiResult("Anchor watch armed at current position (50m radius).", actions)
+            return BoatAiResult(String.format(java.util.Locale.US, app.getString(R.string.nautical_ai_rep_anchor_armed), 50), actions)
         }
         if (q.contains("disarm anchor") || q.contains("raise anchor") || q.contains("clear anchor")) {
             actions.add(BoatAiAction(type = "anchor", path = "disarm", value = "disarm"))
-            return BoatAiResult("Anchor watch disarmed.", actions)
+            return BoatAiResult(app.getString(R.string.nautical_ai_rep_anchor_disarmed), actions)
         }
         if (q.contains("anchor")) {
             val anchorObj = state.anchor ?: state.anchorState
             val armed = anchorObj != null && (anchorObj.latitude != null || anchorObj.position != null || anchorObj.state == "set")
             val reply = if (armed) {
                 val radius = anchorObj?.radius?.toInt() ?: anchorObj?.maxRadius?.toInt() ?: 50
-                "Anchor Watch: ARMED (Radius: ${radius}m)."
+                String.format(java.util.Locale.US, app.getString(R.string.nautical_ai_rep_anchor_status_armed), radius)
             } else {
-                "Anchor Watch: DISARMED."
+                app.getString(R.string.nautical_ai_rep_anchor_status_disarmed)
             }
             return BoatAiResult(reply, actions)
         }
@@ -181,15 +182,15 @@ class BoatAiRepository(private val app: OsmandApplication) {
             val awaKnown = state.windDirectionApparent
             val lines = mutableListOf<String>()
             if (twsKnown != null && twdKnown != null) {
-                lines.add("• True Wind: %.1f kn @ %d°".format(java.util.Locale.US, twsKnown * 1.94384, (Math.toDegrees(twdKnown).toInt() + 360) % 360))
+                lines.add(String.format(java.util.Locale.US, app.getString(R.string.nautical_ai_rep_wind_true_line), twsKnown * 1.94384, (Math.toDegrees(twdKnown).toInt() + 360) % 360))
             }
             if (awsKnown != null && awaKnown != null) {
                 val awaDeg = Math.toDegrees(awaKnown).toInt()
-                val side = if (awaDeg >= 0) "Starboard" else "Port"
-                lines.add("• Apparent Wind: %.1f kn @ %d° (%s)".format(java.util.Locale.US, awsKnown * 1.94384, kotlin.math.abs(awaDeg), side))
+                val side = if (awaDeg >= 0) app.getString(R.string.nautical_starboard_indicator) else app.getString(R.string.nautical_port_indicator)
+                lines.add(String.format(java.util.Locale.US, app.getString(R.string.nautical_ai_rep_wind_app_line), awsKnown * 1.94384, kotlin.math.abs(awaDeg), side))
             }
             val reply = if (lines.isEmpty()) {
-                "Wind data currently offline."
+                app.getString(R.string.nautical_ai_rep_wind_offline)
             } else {
                 lines.joinToString("\n")
             }
@@ -201,11 +202,11 @@ class BoatAiRepository(private val app: OsmandApplication) {
             val dbt = state.depthBelowTransducer ?: state.depthBelowKeel
             val dbk = state.depthBelowKeel
             val reply = if (dbk != null) {
-                "Depth: %.1f m below keel (%.1f m below surface). Safety corridor clear.".format(java.util.Locale.US, dbk, dbt ?: dbk)
+                String.format(java.util.Locale.US, app.getString(R.string.nautical_ai_rep_depth_keel), dbk, dbt ?: dbk)
             } else if (dbt != null) {
-                "Depth: %.1f m below transducer.".format(java.util.Locale.US, dbt)
+                String.format(java.util.Locale.US, app.getString(R.string.nautical_ai_rep_depth_transducer), dbt)
             } else {
-                "Depth sounder data currently offline."
+                app.getString(R.string.nautical_ai_rep_depth_offline)
             }
             return BoatAiResult(reply, actions)
         }
@@ -216,21 +217,22 @@ class BoatAiRepository(private val app: OsmandApplication) {
             val lines = mutableListOf<String>()
             val sogKnown = state.speedOverGround
             val stwKnown = state.speedThroughWater
+            val naStr = app.getString(R.string.nautical_ai_na)
             if (sogKnown != null || stwKnown != null) {
-                val sogStr = if (sogKnown != null) "%.1f kn".format(java.util.Locale.US, sogKnown * 1.94384) else "n/a"
-                val stwStr = if (stwKnown != null) "%.1f kn".format(java.util.Locale.US, stwKnown * 1.94384) else "n/a"
-                lines.add("• SOG: $sogStr | STW: $stwStr")
+                val sogStr = if (sogKnown != null) String.format(java.util.Locale.US, app.getString(R.string.nautical_ai_kn_fmt), sogKnown * 1.94384) else naStr
+                val stwStr = if (stwKnown != null) String.format(java.util.Locale.US, app.getString(R.string.nautical_ai_kn_fmt), stwKnown * 1.94384) else naStr
+                lines.add(String.format(java.util.Locale.US, app.getString(R.string.nautical_ai_rep_sog_stw), sogStr, stwStr))
             }
             val hdgKnown = state.headingTrue
             val cogKnown = state.courseOverGroundTrue
             if (hdgKnown != null || cogKnown != null) {
-                val hdgStr = if (hdgKnown != null) "${(Math.toDegrees(hdgKnown).toInt() + 360) % 360}°" else "n/a"
-                val cogStr = if (cogKnown != null) "${(Math.toDegrees(cogKnown).toInt() + 360) % 360}°" else "n/a"
-                lines.add("• Heading: $hdgStr | COG: $cogStr")
+                val hdgStr = if (hdgKnown != null) String.format(java.util.Locale.US, app.getString(R.string.nautical_ai_deg_fmt), (Math.toDegrees(hdgKnown).toInt() + 360) % 360) else naStr
+                val cogStr = if (cogKnown != null) String.format(java.util.Locale.US, app.getString(R.string.nautical_ai_deg_fmt), (Math.toDegrees(cogKnown).toInt() + 360) % 360) else naStr
+                lines.add(String.format(java.util.Locale.US, app.getString(R.string.nautical_ai_rep_hdg_cog), hdgStr, cogStr))
             }
-            state.polarSpeedRatio?.let { lines.add("• Polar Efficiency: ${(it * 100).toInt()}%") }
+            state.polarSpeedRatio?.let { lines.add(String.format(java.util.Locale.US, app.getString(R.string.nautical_ai_rep_polar), (it * 100).toInt())) }
             val reply = if (lines.isEmpty()) {
-                "Navigation data currently offline."
+                app.getString(R.string.nautical_ai_rep_nav_offline)
             } else {
                 lines.joinToString("\n")
             }
@@ -242,10 +244,10 @@ class BoatAiRepository(private val app: OsmandApplication) {
             val v = state.batteryVoltage
             val soc = state.batterySoc?.let { (it * 100).toInt() }
             val reply = if (v != null) {
-                val socStr = if (soc != null) " (State of Charge: $soc%)" else ""
-                "Electrical: Battery bank is at %.1f V%s.".format(java.util.Locale.US, v, socStr)
+                val socStr = if (soc != null) String.format(java.util.Locale.US, app.getString(R.string.nautical_ai_rep_soc), soc) else ""
+                String.format(java.util.Locale.US, app.getString(R.string.nautical_ai_rep_electrical), v, socStr)
             } else {
-                "Electrical data not reported on active network."
+                app.getString(R.string.nautical_ai_rep_electrical_offline)
             }
             return BoatAiResult(reply, actions)
         }
@@ -256,16 +258,18 @@ class BoatAiRepository(private val app: OsmandApplication) {
                 state.notifications.keys.firstOrNull()?.let { path ->
                     actions.add(BoatAiAction(type = "notification_ack", path = path))
                 }
-                return BoatAiResult("Acknowledged active alarms.", actions)
+                return BoatAiResult(app.getString(R.string.nautical_ai_rep_alarms_ack), actions)
             }
             val activeNotifs = state.notifications.values.filter { it.state != net.osmand.plus.plugins.nautical.engine.NotificationState.NORMAL }
             val reply = if (activeNotifs.isNotEmpty()) {
-                "Active Alarms (%d):\n%s".format(
+                String.format(
+                    java.util.Locale.US,
+                    app.getString(R.string.nautical_ai_rep_alarms_active),
                     activeNotifs.size,
                     activeNotifs.joinToString("\n") { "• ${it.message} [${it.state}]" }
                 )
             } else {
-                "All safety systems normal. No active alarms."
+                app.getString(R.string.nautical_ai_rep_alarms_none)
             }
             return BoatAiResult(reply, actions)
         }
@@ -273,16 +277,21 @@ class BoatAiRepository(private val app: OsmandApplication) {
         // 11. Autopilot Status Query
         if (q.contains("autopilot") || q.contains("pilot")) {
             val mode = state.autopilotState?.uppercase(java.util.Locale.US) ?: "STANDBY"
-            val target = state.targetHeading?.let { " Target: ${(Math.toDegrees(it).toInt() + 360) % 360}°" } ?: ""
-            return BoatAiResult("Autopilot is currently in $mode mode.$target", actions)
+            val target = state.targetHeading?.let { String.format(java.util.Locale.US, app.getString(R.string.nautical_ai_rep_ap_target), (Math.toDegrees(it).toInt() + 360) % 360) } ?: ""
+            return BoatAiResult(String.format(java.util.Locale.US, app.getString(R.string.nautical_ai_rep_ap_status), mode) + target, actions)
         }
 
         // 12. General Status / Vessel Overview
-        val sogKn = (state.speedOverGround ?: 0.0) * 1.94384
-        val hdg = state.headingTrue?.let { (Math.toDegrees(it).toInt() + 360) % 360 } ?: 0
-        val twsKn = (state.windSpeedTrue ?: 0.0) * 1.94384
-        val reply = "Vessel Status:\n• SOG: %.1f kn | HDG: %d°\n• True Wind: %.1f kn\n• Autopilot: %s\n\nYou can ask about wind, depth, speed, batteries, or command the autopilot and lights.".format(
-            java.util.Locale.US, sogKn, hdg, twsKn, state.autopilotState ?: "STANDBY"
+        // Report only live values; never a fabricated 0.0 kn / 0 deg / 0.0 kn reply.
+        val naStr = app.getString(R.string.nautical_ai_na)
+        val sogStr = state.speedOverGround?.let { String.format(java.util.Locale.US, app.getString(R.string.nautical_ai_kn_fmt), it * 1.94384) } ?: naStr
+        val hdgStr = state.headingTrue?.let { String.format(java.util.Locale.US, app.getString(R.string.nautical_ai_deg_fmt), (Math.toDegrees(it).toInt() + 360) % 360) } ?: naStr
+        val twsStr = state.windSpeedTrue?.let { String.format(java.util.Locale.US, app.getString(R.string.nautical_ai_kn_fmt), it * 1.94384) } ?: naStr
+        val reply = String.format(
+            java.util.Locale.US,
+            app.getString(R.string.nautical_ai_rep_vessel_status),
+            sogStr, hdgStr, twsStr, state.autopilotState ?: "STANDBY",
+            app.getString(R.string.nautical_ai_rep_vessel_hint)
         )
         return BoatAiResult(reply, actions)
     }

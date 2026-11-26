@@ -880,6 +880,59 @@
     <string name="nautical_ai_no_text">I processed your request, but the server returned no text.</string>
     <string name="nautical_ai_connection_error">Sorry, I\'m having trouble connecting to the boat\'s brain.</string>
     <string name="nautical_ai_server_error">Connection error. Is Signal K running?</string>
+    <string name="nautical_ai_stt_net_error">Network Error</string>
+    <string name="nautical_ai_stt_net_timeout">Network Timeout</string>
+    <string name="nautical_ai_stt_no_match">No speech recognized</string>
+    <string name="nautical_ai_stt_busy">Service Busy</string>
+    <string name="nautical_ai_stt_generic">Voice recognition error (%1$d)</string>
+    <string name="nautical_ai_rep_no_response">No response from AI</string>
+    <string name="nautical_ai_rep_ap_standby">Autopilot disengaged. Helm returned to Standby (Manual).</string>
+    <string name="nautical_ai_rep_ap_auto_holding">Autopilot engaged in Compass/Auto mode holding %1$d°.</string>
+    <string name="nautical_ai_rep_ap_auto_pending">Autopilot engaged in Compass/Auto mode. No heading data yet; hold pending.</string>
+    <string name="nautical_ai_rep_ap_wind">Autopilot switched to Wind Vane mode.</string>
+    <string name="nautical_ai_rep_ap_route">Autopilot following active route / navigation track.</string>
+    <string name="nautical_ai_rep_ap_heading">Setting autopilot target heading to %1$d°.</string>
+    <string name="nautical_ai_rep_tack_port">Initiating auto-tack to Port.</string>
+    <string name="nautical_ai_rep_tack_starboard">Initiating auto-tack to Starboard.</string>
+    <string name="nautical_ai_lights_nav">Navigation lights</string>
+    <string name="nautical_ai_lights_anchor">Anchor light</string>
+    <string name="nautical_ai_lights_cabin">Cabin/Deck lights</string>
+    <string name="nautical_ai_rep_switch_on">%1$s: ON.</string>
+    <string name="nautical_ai_rep_switch_off">%1$s: OFF.</string>
+    <string name="nautical_ai_rep_no_gps_anchor">No GPS fix available; anchor watch NOT armed.</string>
+    <string name="nautical_ai_rep_anchor_armed">Anchor watch armed at current position (%1$dm radius).</string>
+    <string name="nautical_ai_rep_anchor_disarmed">Anchor watch disarmed.</string>
+    <string name="nautical_ai_rep_anchor_status_armed">Anchor Watch: ARMED (Radius: %1$dm).</string>
+    <string name="nautical_ai_rep_anchor_status_disarmed">Anchor Watch: DISARMED.</string>
+    <string name="nautical_ai_rep_wind_true_line">• True Wind: %1$.1f kn @ %2$d°</string>
+    <string name="nautical_ai_rep_wind_app_line">• Apparent Wind: %1$.1f kn @ %2$d° (%3$s)</string>
+    <string name="nautical_ai_rep_wind_offline">Wind data currently offline.</string>
+    <string name="nautical_ai_rep_depth_keel">Depth: %1$.1f m below keel (%2$.1f m below surface). Safety corridor clear.</string>
+    <string name="nautical_ai_rep_depth_transducer">Depth: %1$.1f m below transducer.</string>
+    <string name="nautical_ai_rep_depth_offline">Depth sounder data currently offline.</string>
+    <string name="nautical_ai_rep_sog_stw">• SOG: %1$s | STW: %2$s</string>
+    <string name="nautical_ai_rep_hdg_cog">• Heading: %1$s | COG: %2$s</string>
+    <string name="nautical_ai_rep_polar">• Polar Efficiency: %1$d%%</string>
+    <string name="nautical_ai_rep_nav_offline">Navigation data currently offline.</string>
+    <string name="nautical_ai_rep_electrical">Electrical: Battery bank is at %1$.1f V%2$s.</string>
+    <string name="nautical_ai_rep_soc"> (State of Charge: %1$d%%)</string>
+    <string name="nautical_ai_rep_electrical_offline">Electrical data not reported on active network.</string>
+    <string name="nautical_ai_rep_alarms_ack">Acknowledged active alarms.</string>
+    <string name="nautical_ai_rep_alarms_active">Active Alarms (%1$d):
+%2$s</string>
+    <string name="nautical_ai_rep_alarms_none">All safety systems normal. No active alarms.</string>
+    <string name="nautical_ai_rep_ap_status">Autopilot is currently in %1$s mode.</string>
+    <string name="nautical_ai_rep_ap_target"> Target: %1$d°</string>
+    <string name="nautical_ai_rep_vessel_status">Vessel Status:
+• SOG: %1$s | HDG: %2$s
+• True Wind: %3$s
+• Autopilot: %4$s
+
+%5$s</string>
+    <string name="nautical_ai_rep_vessel_hint">You can ask about wind, depth, speed, batteries, or command the autopilot and lights.</string>
+    <string name="nautical_ai_na">n/a</string>
+    <string name="nautical_ai_kn_fmt">%.1f kn</string>
+    <string name="nautical_ai_deg_fmt">%d°</string>
     <string name="nautical_technical_identity">Identity</string>
     <string name="nautical_technical_bms">BMS</string>
     <string name="nautical_technical_engine">Engine</string>

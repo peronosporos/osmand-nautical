@@ -6872,6 +6872,60 @@
     <string name="nautical_ai_no_text">Επεξεργάστηκα το αίτημά σας, αλλά ο διακομιστής δεν επέστρεψε κείμενο.</string>
     <string name="nautical_ai_connection_error">Λυπάμαι, υπάρχει πρόβλημα σύνδεσης με το σύστημα του σκάφους.</string>
     <string name="nautical_ai_server_error">Σφάλμα σύνδεσης. Εκτελείται το Signal K;</string>
+    <string name="nautical_ai_error_fmt">Σφάλμα: %1$s</string>
+    <string name="nautical_ai_stt_net_error">Σφάλμα δικτύου</string>
+    <string name="nautical_ai_stt_net_timeout">Λήξη χρονοδιακόπτη δικτύου</string>
+    <string name="nautical_ai_stt_no_match">Δεν αναγνωρίστηκε ομιλία</string>
+    <string name="nautical_ai_stt_busy">Η υπηρεσία είναι απασχολημένη</string>
+    <string name="nautical_ai_stt_generic">Σφάλμα αναγνώρισης φωνής (%1$d)</string>
+    <string name="nautical_ai_rep_no_response">Καμία απάντηση από το AI</string>
+    <string name="nautical_ai_rep_ap_standby">Ο αυτόματος πιλότος απενεργοποιήθηκε. Το τιμόνι επέστρεψε σε Standby (Χειροκίνητα).</string>
+    <string name="nautical_ai_rep_ap_auto_holding">Ο αυτόματος πιλότος ενεργοποιήθηκε σε λειτουργία Compass/Auto με πορεία %1$d°.</string>
+    <string name="nautical_ai_rep_ap_auto_pending">Ο αυτόματος πιλότος ενεργοποιήθηκε σε λειτουργία Compass/Auto. Δεν υπάρχουν ακόμη δεδομένα πορείας, η κράτηση εκκρεμεί.</string>
+    <string name="nautical_ai_rep_ap_wind">Ο αυτόματος πιλότος μεταπήδησε σε λειτουργία Wind Vane.</string>
+    <string name="nautical_ai_rep_ap_route">Ο αυτόματος πιλότος ακολουθεί την ενεργή πορεία / γραμμή πλοήγησης.</string>
+    <string name="nautical_ai_rep_ap_heading">Ορισμός στόχου πορείας αυτόματου πιλότου στα %1$d°.</string>
+    <string name="nautical_ai_rep_tack_port">Έναρξη αυτόματης αλλαγής πλεύσης προς Αριστερά.</string>
+    <string name="nautical_ai_rep_tack_starboard">Έναρξη αυτόματης αλλαγής πλεύσης προς Δεξιά.</string>
+    <string name="nautical_ai_lights_nav">Φώτα πλοήγησης</string>
+    <string name="nautical_ai_lights_anchor">Φως άγκυρας</string>
+    <string name="nautical_ai_lights_cabin">Φώτα καμπίνας/καταστρώματος</string>
+    <string name="nautical_ai_rep_switch_on">%1$s: ON.</string>
+    <string name="nautical_ai_rep_switch_off">%1$s: OFF.</string>
+    <string name="nautical_ai_rep_no_gps_anchor">Δεν υπάρχει διαθέσιμο σήμα GPS, η επιτήρηση άγκυρας ΔΕΝ οπλίστηκε.</string>
+    <string name="nautical_ai_rep_anchor_armed">Η επιτήρηση άγκυρας οπλίστηκε στην τρέχουσα θέση (ακτίνα %1$dm).</string>
+    <string name="nautical_ai_rep_anchor_disarmed">Η επιτήρηση άγκυρας απενεργοποιήθηκε.</string>
+    <string name="nautical_ai_rep_anchor_status_armed">Επιτήρηση Άγκυρας: ΟΠΛΙΣΜΕΝΗ (Ακτίνα: %1$dm).</string>
+    <string name="nautical_ai_rep_anchor_status_disarmed">Επιτήρηση Άγκυρας: ΑΠΕΝΕΡΓΟΠΟΙΗΜΕΝΗ.</string>
+    <string name="nautical_ai_rep_wind_true_line">• Πραγματικός Άνεμος: %1$.1f kn @ %2$d°</string>
+    <string name="nautical_ai_rep_wind_app_line">• Φαινόμενος Άνεμος: %1$.1f kn @ %2$d° (%3$s)</string>
+    <string name="nautical_ai_rep_wind_offline">Τα δεδομένα ανέμου είναι προς το παρόν εκτός σύνδεσης.</string>
+    <string name="nautical_ai_rep_depth_keel">Βάθος: %1$.1f m κάτω από την τρόπιδα (%2$.1f m κάτω από την επιφάνεια). Ο διάδρομος ασφαλείας είναι καθαρός.</string>
+    <string name="nautical_ai_rep_depth_transducer">Βάθος: %1$.1f m κάτω από τον μετατροπέα.</string>
+    <string name="nautical_ai_rep_depth_offline">Τα δεδομένα βυθομέτρου είναι προς το παρόν εκτός σύνδεσης.</string>
+    <string name="nautical_ai_rep_sog_stw">• SOG: %1$s | STW: %2$s</string>
+    <string name="nautical_ai_rep_hdg_cog">• Πορεία: %1$s | COG: %2$s</string>
+    <string name="nautical_ai_rep_polar">• Απόδοση Polar: %1$d%%</string>
+    <string name="nautical_ai_rep_nav_offline">Τα δεδομένα πλοήγησης είναι προς το παρόν εκτός σύνδεσης.</string>
+    <string name="nautical_ai_rep_electrical">Ηλεκτρικά: Η μπαταρία βρίσκεται στα %1$.1f V%2$s.</string>
+    <string name="nautical_ai_rep_soc"> (Φορτίο μπαταρίας: %1$d%%)</string>
+    <string name="nautical_ai_rep_electrical_offline">Τα ηλεκτρικά δεδομένα δεν αναφέρονται στο ενεργό δίκτυο.</string>
+    <string name="nautical_ai_rep_alarms_ack">Έγινε αποδοχή των ενεργών συναγερμών.</string>
+    <string name="nautical_ai_rep_alarms_active">Ενεργοί Συναγερμοί (%1$d):
+%2$s</string>
+    <string name="nautical_ai_rep_alarms_none">Όλα τα συστήματα ασφαλείας είναι φυσιολογικά. Κανένας ενεργός συναγερμός.</string>
+    <string name="nautical_ai_rep_ap_status">Ο αυτόματος πιλότος βρίσκεται σε λειτουργία %1$s.</string>
+    <string name="nautical_ai_rep_ap_target"> Στόχος: %1$d°</string>
+    <string name="nautical_ai_rep_vessel_status">Κατάσταση Σκάφους:
+• SOG: %1$s | HDG: %2$s
+• Πραγματικός Άνεμος: %3$s
+• Αυτόματος Πιλότος: %4$s
+
+%5$s</string>
+    <string name="nautical_ai_rep_vessel_hint">Μπορείτε να ρωτήσετε για τον άνεμο, το βάθος, την ταχύτητα ή τις μπαταρίες, και να δώσετε εντολές στον αυτόματο πιλότο και στα φώτα.</string>
+    <string name="nautical_ai_na">μ/δ</string>
+    <string name="nautical_ai_kn_fmt">%.1f kn</string>
+    <string name="nautical_ai_deg_fmt">%d°</string>
     <string name="nautical_technical_identity">Ταυτότητα</string>
     <string name="nautical_technical_bms">BMS</string>
     <string name="nautical_technical_engine">Μηχανή</string>
