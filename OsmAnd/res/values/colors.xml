@@ -854,5 +854,6 @@
 	<color name="nautical_s57_unsafe_fill_night">#EEB71C1C</color>
 	<color name="nautical_s57_overhead_warning">#FFFF00FF</color>
 	<color name="nautical_depth_panel_bg">#EE1A2327</color>
+	<color name="nautical_mfd_dim">#FF808080</color>
 
 </resources>

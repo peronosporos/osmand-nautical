@@ -126,7 +126,7 @@
 				android:text="-10°"
 				android:textSize="12sp"
 				android:textStyle="bold"
-				android:textColor="#E53935"
+				android:textColor="@color/nautical_day_red_vivid"
 				app:cornerRadius="6dp" />
 
 			<com.google.android.material.button.MaterialButton
@@ -143,7 +143,7 @@
 				android:text="-1°"
 				android:textSize="12sp"
 				android:textStyle="bold"
-				android:textColor="#E53935"
+				android:textColor="@color/nautical_day_red_vivid"
 				app:cornerRadius="6dp" />
 
 			<com.google.android.material.button.MaterialButton
@@ -160,7 +160,7 @@
 				android:text="+1°"
 				android:textSize="12sp"
 				android:textStyle="bold"
-				android:textColor="#43A047"
+				android:textColor="@color/nautical_day_green_safe"
 				app:cornerRadius="6dp" />
 
 			<com.google.android.material.button.MaterialButton
@@ -177,7 +177,7 @@
 				android:text="+10°"
 				android:textSize="12sp"
 				android:textStyle="bold"
-				android:textColor="#43A047"
+				android:textColor="@color/nautical_day_green_safe"
 				app:cornerRadius="6dp" />
 
 			<com.google.android.material.button.MaterialButton
@@ -194,7 +194,7 @@
 				android:text="◀30°"
 				android:textSize="11sp"
 				android:textStyle="bold"
-				android:textColor="#E53935"
+				android:textColor="@color/nautical_day_red_vivid"
 				app:cornerRadius="6dp" />
 
 			<com.google.android.material.button.MaterialButton
@@ -211,7 +211,7 @@
 				android:text="30°▶"
 				android:textSize="11sp"
 				android:textStyle="bold"
-				android:textColor="#43A047"
+				android:textColor="@color/nautical_day_green_safe"
 				app:cornerRadius="6dp" />
 
 			<com.google.android.material.button.MaterialButton
@@ -245,7 +245,7 @@
 				android:text="@string/nautical_pilot_btn_tack_port"
 				android:textSize="10sp"
 				android:textStyle="bold"
-				android:textColor="#E53935"
+				android:textColor="@color/nautical_day_red_vivid"
 				app:cornerRadius="6dp" />
 
 			<com.google.android.material.button.MaterialButton
@@ -262,7 +262,7 @@
 				android:text="@string/nautical_pilot_btn_tack_stbd"
 				android:textSize="10sp"
 				android:textStyle="bold"
-				android:textColor="#43A047"
+				android:textColor="@color/nautical_day_green_safe"
 				app:cornerRadius="6dp" />
 
 			<com.google.android.material.button.MaterialButton
@@ -279,7 +279,7 @@
 				android:text="@string/nautical_pilot_btn_abort"
 				android:textSize="11sp"
 				android:textStyle="bold"
-				android:textColor="#FF1744"
+				android:textColor="@color/nautical_race_red"
 				android:visibility="gone"
 				app:cornerRadius="6dp" />
 		</LinearLayout>

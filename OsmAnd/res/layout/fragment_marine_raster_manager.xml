@@ -44,8 +44,8 @@
                 android:layout_height="wrap_content"
                 android:text="@string/raster_import_btn"
                 app:icon="@drawable/ic_action_import"
-                app:iconTint="#FFFFFF"
-                android:textColor="#FFFFFF"
+                app:iconTint="@android:color/white"
+                android:textColor="@android:color/white"
                 app:backgroundTint="?attr/active_color_primary"
                 app:cornerRadius="8dp" />
         </LinearLayout>

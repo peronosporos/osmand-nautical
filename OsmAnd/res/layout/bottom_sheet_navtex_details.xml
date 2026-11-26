@@ -24,7 +24,7 @@
             android:id="@+id/navtex_detail_id"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:textColor="#757575"
+            android:textColor="?android:attr/textColorSecondary"
             android:textSize="14sp"
             tools:text="ID: OA00" />
 
@@ -33,7 +33,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="16dp"
-            android:textColor="#757575"
+            android:textColor="?android:attr/textColorSecondary"
             android:textSize="14sp"
             tools:text="2026-07-23 17:00" />
     </LinearLayout>
@@ -42,7 +42,7 @@
         android:layout_width="match_parent"
         android:layout_height="1dp"
         android:layout_marginTop="12dp"
-        android:background="#EEEEEE" />
+        android:background="@color/divider_color" />
 
     <ScrollView
         android:layout_width="match_parent"
@@ -53,7 +53,7 @@
             android:id="@+id/navtex_detail_body"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:textColor="#212121"
+            android:textColor="?android:attr/textColorPrimary"
             android:textSize="16sp"
             android:fontFamily="monospace"
             tools:text="ZCZC 37-55N 023-40E NAVIGATIONAL WARNING NNNN" />
