@@ -57,8 +57,9 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
         super.onViewCreated(view, savedInstanceState)
         val isNightVision = NauticalPlugin.isNightVision(app)
         if (isNightVision) {
-            view.setBackgroundColor(0xEE120000.toInt())
-            listView?.setBackgroundColor(0xEE120000.toInt())
+            val nightBg = ContextCompat.getColor(app, OsmAndR.color.nautical_night_vision_bg)
+            view.setBackgroundColor(nightBg)
+            listView?.setBackgroundColor(nightBg)
         }
     }
 
@@ -99,15 +100,17 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
         val connected = plugin?.isSignalKConnected() == true
         val caps = NauticalPlugin.engine?.capabilityManager?.capabilities?.value
         
+        fun installGuidance(pkg: String): String =
+            getString(OsmAndR.string.nautical_guidance_install_plugin_fmt, pkg)
         val needsConnection = mapOf(
-            "nautical_switch_panel" to Pair(caps?.hasDigitalSwitching ?: false, "Install signalk-digital-switching"),
-            "nautical_boat_ai" to Pair(caps?.hasMediaControl ?: false, "Install signalk-ai-bridge"),
+            "nautical_switch_panel" to Pair(caps?.hasDigitalSwitching ?: false, installGuidance("signalk-digital-switching")),
+            "nautical_boat_ai" to Pair(caps?.hasMediaControl ?: false, installGuidance("signalk-ai-bridge")),
             "nautical_notifications" to Pair(true, ""),
-            "nautical_server_routes" to Pair(caps?.hasNavicoSync ?: true, "Check server resources"),
-            "nautical_server_charts" to Pair(caps?.hasCharts ?: true, "Install signalk-charts-plugin"),
-            "nautical_module_logbook" to Pair(caps?.hasLogging ?: false, "Install signalk-logbook"),
-            "nautical_module_vhf" to Pair(caps?.hasNavtex ?: true, "Check backend URL"),
-            "sailing_performance" to Pair(caps?.hasPolarPerformance ?: false, "Install signalk-polar-performance")
+            "nautical_server_routes" to Pair(caps?.hasNavicoSync ?: true, getString(OsmAndR.string.nautical_guidance_check_server_resources)),
+            "nautical_server_charts" to Pair(caps?.hasCharts ?: true, installGuidance("signalk-charts-plugin")),
+            "nautical_module_logbook" to Pair(caps?.hasLogging ?: false, installGuidance("signalk-logbook")),
+            "nautical_module_vhf" to Pair(caps?.hasNavtex ?: true, getString(OsmAndR.string.nautical_guidance_check_backend_url)),
+            "sailing_performance" to Pair(caps?.hasPolarPerformance ?: false, installGuidance("signalk-polar-performance"))
         )
         
         needsConnection.forEach { (key, info) ->
@@ -298,12 +301,14 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
     private fun setupAutopilotTuningCategory() {
         findPreference<ListPreferenceEx>(settings.NAUTICAL_PILOT_SEA_STATE.id)?.apply {
             setThemedIcon(OsmAndR.drawable.ic_action_settings)
+            // Douglas sea state scale 0-9; bare digits carried no meaning for
+            // the user, entries now show the localized WMO scale names.
             val options = (0..9).map { it.toString() }.toTypedArray()
-            entries = options
+            entries = options.map { seaStateLabel(it.toInt()) }.toTypedArray()
             entryValues = options
             val current = settings.NAUTICAL_PILOT_SEA_STATE.get() ?: 3
             value = current.toString()
-            summary = current.toString()
+            summary = seaStateLabel(current)
         }
 
         val tuningPrefs = listOf(
@@ -320,6 +325,27 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
                 setOnBindEditTextListener { it.inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL }
             }
         }
+    }
+
+    /**
+     * Localized Douglas sea state label ("3 - Slight"); the numeric scale
+     * value stays canonical and is what gets persisted.
+     */
+    private fun seaStateLabel(state: Int): String {
+        val nameRes = when (state) {
+            0 -> OsmAndR.string.nautical_sea_state_0
+            1 -> OsmAndR.string.nautical_sea_state_1
+            2 -> OsmAndR.string.nautical_sea_state_2
+            3 -> OsmAndR.string.nautical_sea_state_3
+            4 -> OsmAndR.string.nautical_sea_state_4
+            5 -> OsmAndR.string.nautical_sea_state_5
+            6 -> OsmAndR.string.nautical_sea_state_6
+            7 -> OsmAndR.string.nautical_sea_state_7
+            8 -> OsmAndR.string.nautical_sea_state_8
+            9 -> OsmAndR.string.nautical_sea_state_9
+            else -> OsmAndR.string.nautical_sea_state_9
+        }
+        return getString(OsmAndR.string.nautical_sea_state_fmt, state, getString(nameRes))
     }
 
     private fun setupConnectionCategory() {
@@ -374,7 +400,7 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
             setThemedIcon(OsmAndR.drawable.ic_action_additional_option)
             isEnabled = !WearOsNauticalManager(requireContext()).isWatchMode() || settings.NAUTICAL_FORCE_WATCH_LAYOUT.get()
             if (!isEnabled) {
-                summary = getString(OsmAndR.string.nautical_force_watch_layout_desc) + " (Watch Mode Active)"
+                summary = getString(OsmAndR.string.nautical_force_watch_layout_desc) + " (" + getString(OsmAndR.string.nautical_watch_mode_active) + ")"
             }
         }
 
@@ -940,15 +966,20 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
     private fun setupNmeaDiagnosticsCategory() {
         findPreference<ListPreferenceEx>(settings.NAUTICAL_SENSOR_FALLBACK_TIMEOUT.id)?.apply {
             setThemedIcon(OsmAndR.drawable.ic_action_time)
-            entries = arrayOf("1.5 seconds", "3.0 seconds (Default)", "5.0 seconds", "10.0 seconds")
+            fun secondsLabel(sec: Float, isDefault: Boolean): String = if (isDefault) {
+                getString(OsmAndR.string.nautical_settings_seconds_default_fmt, sec.toString(), getString(OsmAndR.string.shared_string_default))
+            } else {
+                getString(OsmAndR.string.nautical_settings_seconds_fmt, sec.toString())
+            }
+            entries = arrayOf(secondsLabel(1.5f, false), secondsLabel(3.0f, true), secondsLabel(5.0f, false), secondsLabel(10.0f, false))
             entryValues = arrayOf("1.5", "3.0", "5.0", "10.0")
             val current = settings.NAUTICAL_SENSOR_FALLBACK_TIMEOUT.get()
             value = current.toString()
-            summary = "${current}s"
+            summary = secondsLabel(current, current == 3.0f)
             setOnPreferenceChangeListener { _, newValue ->
                 val f = (newValue as? String)?.toFloatOrNull() ?: 3.0f
                 settings.NAUTICAL_SENSOR_FALLBACK_TIMEOUT.set(f)
-                summary = "${f}s"
+                summary = secondsLabel(f, f == 3.0f)
                 true
             }
         }
@@ -1487,7 +1518,7 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
                     return false
                 }
                 settings.NAUTICAL_PILOT_SEA_STATE.id -> {
-                    preference.summary = newString
+                    preference.summary = seaStateLabel(newString.toIntOrNull() ?: 3)
                     onPreferenceChanged(key)
                 }
                 settings.NAUTICAL_ACTIVE_SAIL_PLAN.id -> {

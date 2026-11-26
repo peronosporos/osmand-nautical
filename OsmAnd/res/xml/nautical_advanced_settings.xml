@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:title="Autopilot &amp; Signal Processing">
+    android:title="@string/nautical_autopilot_signal_processing_title">
 
     <PreferenceCategory
-        android:title="Autopilot PID Tuning"
+        android:title="@string/nautical_pid_tuning_category_title"
         android:layout="@layout/preference_category_with_descr">
 
         <net.osmand.plus.settings.preferences.EditTextPreferenceEx
@@ -34,7 +34,7 @@
     </PreferenceCategory>
 
     <PreferenceCategory
-        android:title="Pypilot Advanced PID"
+        android:title="@string/nautical_pypilot_pid_category_title"
         android:layout="@layout/preference_category_with_descr">
 
         <net.osmand.plus.settings.preferences.EditTextPreferenceEx
@@ -146,7 +146,7 @@
     </PreferenceCategory>
 
     <PreferenceCategory
-        android:title="Signal Processing"
+        android:title="@string/nautical_signal_processing_category_title"
         android:layout="@layout/preference_category_with_descr">
 
         <net.osmand.plus.settings.preferences.EditTextPreferenceEx

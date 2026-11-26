@@ -691,6 +691,8 @@
 	<color name="nautical_status_bg_active">#E3F2FD</color>
 	<color name="nautical_status_bg_emergency">#FFCDD2</color>
 	<color name="nautical_status_text_emergency">#B71C1C</color>
+	<color name="nautical_navtex_hud_warning">#FFE65100</color>
+	<color name="nautical_navtex_hud_alert">#FFFF0000</color>
 	<color name="nautical_status_bg_standby">#EEEEEE</color>
 	<color name="nautical_widget_background">#E6000000</color>
 

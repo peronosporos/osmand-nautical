@@ -1699,7 +1699,6 @@
     <string name="nautical_error_requires_active_gps_depth">Requires Active GPS &amp; Depth Fix</string>
     <string name="nautical_stale">Stale</string>
     <string name="nautical_navtex_enabled_title">Enable NAVTEX</string>
-    <string name="nautical_ais_enabled_title">Show AIS Targets</string>
     <string name="nautical_keel_offset">Keel Offset (m)</string>
     <string name="nautical_wind_alignment">Masthead Wind Alignment Offset (°)</string>
     <string name="nautical_stw_unreliable_fallback">STW Unreliable: Falling back to GPS SOG.</string>
@@ -1791,6 +1790,109 @@
     <string name="nautical_tech_reefs_fmt">Reefs: %1$s</string>
     <string name="nautical_tech_sats_fmt">Sats: %1$s</string>
     <string name="nautical_tech_source_fmt">Src: %1$s</string>
+    <string name="nautical_module_ais_title">AIS Tracking</string>
+    <string name="nautical_module_ais_desc">Track nearby vessels via AIS</string>
+    <string name="nautical_radar_enabled_title">Radar Overlay</string>
+    <string name="nautical_radar_enabled_desc">Range rings, spokes and gain chip around own vessel</string>
+    <string name="nautical_depth_profile_enabled_title">Depth Profile</string>
+    <string name="nautical_depth_profile_enabled_desc">Forward depth profile panel with hazard pins</string>
+    <string name="nautical_polar_overlay_enabled_title">Polar Overlay</string>
+    <string name="nautical_polar_overlay_enabled_desc">Live polar diagram, no-go zones and VMG targets around own vessel</string>
+    <string name="nautical_cockpit_mode_strip_enabled_title">Cockpit Context Strip</string>
+    <string name="nautical_cockpit_mode_strip_enabled_desc">Auto-switching passage/motoring/anchor mode strip in the full-screen cockpit</string>
+    <string name="nautical_module_tides_title">Tide Predictions</string>
+    <string name="nautical_module_tides_desc">Display tidal heights and currents on map</string>
+    <string name="nautical_module_grib_title">Weather (GRIB)</string>
+    <string name="nautical_module_grib_desc">Layer weather data from GRIB files or Signal K</string>
+    <string name="nautical_vhf_enabled_title">VHF Integration</string>
+    <string name="nautical_vhf_enabled_desc">Connect to VHF radio backend for history and status</string>
+    <string name="nautical_module_logbook_title">Marine Logbook</string>
+    <string name="nautical_module_logbook_desc">Automated logging of sailing trips</string>
+    <string name="nautical_module_enc_title">ENC (S-57/S-63) Charts</string>
+    <string name="nautical_module_enc_desc">Support for official electronic navigational charts</string>
+    <string name="nautical_module_raster_title">Marine Raster Charts</string>
+    <string name="nautical_module_raster_desc">Support for KAP/MBTiles raster charts</string>
+    <string name="nautical_navtex_enabled_desc">Receive and decode NAVTEX safety messages</string>
+    <string name="nautical_autopilot_signal_processing_title">Autopilot &amp; Signal Processing</string>
+    <string name="nautical_advanced_tuning_desc">Advanced PID tuning, filter sensitivity, and NMEA debug</string>
+    <string name="nautical_vhf_history_view_title">View VHF History</string>
+    <string name="nautical_vhf_history_view_desc">Browse and play back recorded VHF transmissions</string>
+    <string name="nautical_switch_panel_title">Full Electrical Panel</string>
+    <string name="nautical_switch_panel_summary">Comprehensive electrical control and status</string>
+    <string name="nautical_hardware_health_title">Vessel Technical Dashboard</string>
+    <string name="nautical_hardware_health_desc">Detailed vessel identity, dimensions, and system status</string>
+    <string name="nautical_module_boat_ai_title">Boat AI Assistant</string>
+    <string name="nautical_boat_ai_summary">Chat with your vessel via Signal K AI Bridge</string>
+    <string name="nautical_notifications_summary">View and acknowledge Signal K alarms</string>
+    <string name="nautical_checklists_title">Safety Checklists</string>
+    <string name="nautical_checklists_desc">Interactive procedure checklists synced with server</string>
+    <string name="grib_details_group_title">Weather Detail Settings</string>
+    <string name="nautical_active_passage_plan_title">Active Passage Plan</string>
+    <string name="nautical_passage_plan_desc">View leg-by-leg breakdown of calculated route</string>
+    <string name="nautical_open_logbook_desc">View, filter, and export logbook entries</string>
+    <string name="nautical_safety_regions_desc">Active waterway closures and restricted areas</string>
+    <string name="nautical_vessel_category_title">Vessel Profile &amp; Tuning</string>
+    <string name="nautical_keel_offset_desc">Vertical distance between transducer and keel bottom</string>
+    <string name="nautical_wind_transducer_alignment_title">Wind Transducer Alignment</string>
+    <string name="nautical_wind_alignment_desc">Offset in degrees for wind transducer alignment</string>
+    <string name="nautical_autopilot_tuning_category_title">Autopilot Overview</string>
+    <string name="nautical_pilot_sea_state_title">Pilot Sea State</string>
+    <string name="nautical_pilot_sea_state_desc">Autopilot response dampening for wave conditions</string>
+    <string name="nautical_off_course_alarm_title">Off Course Alarm Threshold</string>
+    <string name="nautical_anchor_advanced_category_title">Advanced Anchor Configuration</string>
+    <string name="nautical_anchor_freeboard_title">Anchor Freeboard</string>
+    <string name="nautical_anchor_freeboard_desc">Height of the bow roller above the water</string>
+    <string name="nautical_anchor_watch_dialog_desc">Open Anchor Watch &amp; Drag Alarm dashboard</string>
+    <string name="sail_inventory_desc">Manage sail inventory and active sail plan</string>
+    <string name="sailing_performance_title">Polar File Manager</string>
+    <string name="sailing_performance_desc">Manage polar curves and boat performance data</string>
+    <string name="nautical_wave_nudge_threshold_desc">Minimum wave height (meters) to trigger anticipation</string>
+    <string name="nautical_chart_overlays_category_title">Chart Overlays &amp; Performance</string>
+    <string name="nautical_show_dead_reckoning_title">Dead Reckoning (DR) Overlay</string>
+    <string name="nautical_show_dead_reckoning_desc">Show estimated position and future milestones when Signal K data is stale</string>
+    <string name="nautical_show_isochrones_title">Weather Routing Isochrones</string>
+    <string name="nautical_show_isochrones_desc">Show irregular lobes of reachability based on wind forecast</string>
+    <string name="nautical_show_anchor_zone_title">Anchor Swing Zones</string>
+    <string name="nautical_show_anchor_zone_desc">Show active and preview anchor swing zones around position</string>
+    <string name="nautical_show_polar_overlay_title">Polar Rose Target VMG</string>
+    <string name="nautical_show_polar_overlay_desc">Render dynamic polar target performance rose on vessel marker</string>
+    <string name="nautical_show_depth_profile_title">Forward Depth Clearance Strip</string>
+    <string name="nautical_show_depth_profile_desc">Display look-ahead depth and underwater obstacle clearance profile</string>
+    <string name="nautical_show_radar_overlay_title">Marine Radar Scan Layer</string>
+    <string name="nautical_show_radar_overlay_desc">Display live marine radar sweep overlay with sea/rain clutter controls</string>
+    <string name="nautical_show_clearance_badges_title">Overhead Cable / Bridge Dynamic Clearance</string>
+    <string name="nautical_show_clearance_badges_desc">Show dynamic tidal and thermal sag clearance badges on overhead structures</string>
+    <string name="nautical_nmea_diagnostics_category_title">NMEA Diagnostics &amp; Fallback</string>
+    <string name="nautical_sensor_fallback_timeout_title">Telemetry Fallback Watchdog Timeout</string>
+    <string name="nautical_sensor_fallback_timeout_desc">Timeout before auto-fallback to Android internal GNSS/compass</string>
+    <string name="nautical_cockpit_ergonomics_category_title">Cockpit Ergonomics &amp; Screen Lock</string>
+    <string name="nautical_wet_screen_volume_keys_title">Hardware Volume Keys Zoom / Autopilot Dodge</string>
+    <string name="nautical_wet_screen_volume_keys_desc">Use physical volume rocker for map zoom &amp; autopilot micro-steer when touch locked</string>
+    <string name="telemetry_widgets_group_title">Telemetry (Text Widgets)</string>
+    <string name="nautical_maintenance_category_title">Maintenance &amp; Data Managers</string>
+    <string name="nautical_server_routes_summary">Browse and navigate routes from Signal K server</string>
+    <string name="nautical_server_charts_summary">Browse and enable charts from Signal K server</string>
+    <string name="nautical_replay_manager_desc">Replay NMEA logs or record live data for analysis</string>
+    <string name="nautical_pid_tuning_category_title">Autopilot PID Tuning</string>
+    <string name="nautical_pypilot_pid_category_title">Pypilot Advanced PID</string>
+    <string name="nautical_signal_processing_category_title">Signal Processing</string>
+    <string name="nautical_guidance_install_plugin_fmt">Install %1$s</string>
+    <string name="nautical_guidance_check_server_resources">Check server resources</string>
+    <string name="nautical_guidance_check_backend_url">Check backend URL</string>
+    <string name="nautical_watch_mode_active">Watch mode active</string>
+    <string name="nautical_sea_state_fmt">%1$d · %2$s</string>
+    <string name="nautical_sea_state_0">Calm (glassy)</string>
+    <string name="nautical_sea_state_1">Calm (rippled)</string>
+    <string name="nautical_sea_state_2">Smooth</string>
+    <string name="nautical_sea_state_3">Slight</string>
+    <string name="nautical_sea_state_4">Moderate</string>
+    <string name="nautical_sea_state_5">Rough</string>
+    <string name="nautical_sea_state_6">Very rough</string>
+    <string name="nautical_sea_state_7">High</string>
+    <string name="nautical_sea_state_8">Very high</string>
+    <string name="nautical_sea_state_9">Phenomenal</string>
+    <string name="nautical_settings_seconds_fmt">%1$s s</string>
+    <string name="nautical_settings_seconds_default_fmt">%1$s s (%2$s)</string>
     <string name="nautical_pp_badge_clearance_fmt">Min Keel Clearance: %1$s m (%2$s)</string>
     <string name="nautical_pp_depth_profile_title">Route Depth &amp; Clearance Profile</string>
     <string name="nautical_pp_no_bathymetry">Chart depth data unavailable for this route</string>
@@ -2045,21 +2147,11 @@
 	<string name="dr_banner_time">DR Duration: %1$d s</string>
 	<string name="nautical_sail_plan_desc">Current configuration of sails</string>
 	<string name="nautical_discovery_searching">Searching for Signal K servers...</string>
-	<string name="nautical_discovery_found" translatable="false">Discovered servers</string>
 	<string name="sailing_performance_plugin_name">Advanced Sailing Performance</string>
 	<string name="sailing_performance_plugin_desc">Advanced polar analysis, weather routing, and GRIB integration for nautical navigation.</string>
-	<string name="layer_sailing_laylines" translatable="false">Advanced Sailing Laylines</string>
-	<string name="layer_weather_routing" translatable="false">Weather Routing &amp; Isochrones</string>
-	<string name="routing_status_calculating" translatable="false">Calculating Weather Route...</string>
-	<string name="routing_status_complete" translatable="false">Optimal Route Calculated</string>
-	<string name="routing_status_failed" translatable="false">Routing Failed / Land Collision</string>
-	<string name="grib_status_loading" translatable="false">Loading GRIB Weather Data...</string>
-	<string name="grib_status_ready" translatable="false">GRIB Data Ready</string>
-	<string name="grib_parse_error" translatable="false">Failed to parse GRIB file</string>
-	<string name="editor_title" translatable="false">Interactive Polar Curve Editor</string>
-	<string name="editor_smooth_slider" translatable="false">Smoothing Intensity</string>
-	<string name="editor_save_server" translatable="false">Save to Server</string>
-	<string name="editor_reset" translatable="false">Reset Edits</string>
+	<string name="editor_title">Interactive Polar Curve Editor</string>
+	<string name="editor_smooth_slider">Smoothing Intensity</string>
+	<string name="editor_save_server">Save to Server</string>
 	<string name="wizard_polar_title">Configure &amp; Log Polar Profiles</string>
 	<string name="wizard_step_conditions">Step 1: Conditions Check</string>
 	<string name="wizard_step_metadata">Step 2: Profile &amp; Sail Plan</string>

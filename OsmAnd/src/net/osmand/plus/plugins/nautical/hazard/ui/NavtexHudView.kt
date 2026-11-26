@@ -152,18 +152,18 @@ class NavtexHudView @JvmOverloads constructor(
         badgeView.isVisible = messages.size > 1
         
         val color = if (isHighContrastMode) {
-            0xFF000000.toInt()
+            android.graphics.Color.BLACK
         } else {
             when (msg.subject) {
-                NavtexSubject.SEARCH_AND_RESCUE -> 0xFFB71C1C.toInt()
-                else -> 0xFFE65100.toInt()
+                NavtexSubject.SEARCH_AND_RESCUE -> androidx.core.content.ContextCompat.getColor(context, net.osmand.plus.R.color.nautical_status_text_emergency)
+                else -> androidx.core.content.ContextCompat.getColor(context, net.osmand.plus.R.color.nautical_navtex_hud_warning)
             }
         }
-        
+
         if (isHighContrastMode) {
-            titleView.setTextColor(0xFFFF0000.toInt())
+            titleView.setTextColor(androidx.core.content.ContextCompat.getColor(context, net.osmand.plus.R.color.nautical_navtex_hud_alert))
         } else {
-            titleView.setTextColor(0xFFFFFFFF.toInt())
+            titleView.setTextColor(android.graphics.Color.WHITE)
         }
         
         findViewById<android.view.View?>(R.id.navtex_ticker_container)?.setBackgroundColor(color)
