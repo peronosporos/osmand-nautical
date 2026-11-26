@@ -67,10 +67,15 @@ class NmeaPlaybackEngine(
 
     private var seekByteOffset = 0L
 
+    // Absolute file offset of the most recently read line; lets pause() capture
+    // the resume position synchronously (the loop's finally block runs
+    // asynchronously after cancel(), too late to record it reliably).
+    private val lastReadByteOffset = java.util.concurrent.atomic.AtomicLong(0L)
+
     fun play() {
         if (_playbackState.value == PlaybackState.PLAYING) return
         _playbackState.value = PlaybackState.PLAYING
-        
+
         playbackJob = scope.launch {
             try {
                 replayLoop()
@@ -95,6 +100,9 @@ class NmeaPlaybackEngine(
 
     fun pause() {
         _playbackState.value = PlaybackState.PAUSED
+        // Capture the resume position before cancelling: without this, play()
+        // re-opens the log and restarts from the beginning of the file.
+        seekByteOffset = lastReadByteOffset.get()
         playbackJob?.cancel()
     }
 
@@ -102,6 +110,7 @@ class NmeaPlaybackEngine(
         _playbackState.value = PlaybackState.STOPPED
         playbackJob?.cancel()
         seekByteOffset = 0L
+        lastReadByteOffset.set(0L)
         _progress.value = 0f
     }
 
@@ -128,7 +137,7 @@ class NmeaPlaybackEngine(
                     source.readUtf8Line()
                 }
             }
-            
+
             var lastSentenceTime = -1L
             val timestampRegex = Regex("^\\[(\\d+)]\\s*(.*)")
 
@@ -142,7 +151,11 @@ class NmeaPlaybackEngine(
                 val trimmed = line.trim()
                 if (trimmed.isEmpty()) continue
 
-                val bytesRead = countingSource.bytesRead + seekByteOffset
+                // The skip() above reads through CountingSource, so bytesRead is
+                // already an absolute file offset here; adding seekByteOffset again
+                // would double-count and pin progress at 100% right after a seek.
+                val bytesRead = countingSource.bytesRead
+                lastReadByteOffset.set(bytesRead)
                 _progress.value = (bytesRead.toFloat() / fileSize).coerceIn(0f, 1f)
 
                 val match = timestampRegex.find(trimmed)
@@ -174,7 +187,7 @@ class NmeaPlaybackEngine(
             }
         } finally {
             source.close()
-            if (isActive && countingSource.bytesRead + seekByteOffset >= fileSize) {
+            if (isActive && countingSource.bytesRead >= fileSize) {
                 stop()
             }
         }

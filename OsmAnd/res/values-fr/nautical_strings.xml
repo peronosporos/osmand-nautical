@@ -632,4 +632,12 @@
     <string name="nautical_ai_na">n/d</string>
     <string name="nautical_ai_kn_fmt">%.1f kn</string>
     <string name="nautical_ai_deg_fmt">%d°</string>
+    <string name="logbook_empty">Aucune entrée de journal enregistrée pour le moment.</string>
+    <string name="nautical_no_media">Aucun média</string>
+    <string name="nautical_media_unknown_title">Titre inconnu</string>
+    <string name="nautical_media_unknown_artist">Artiste inconnu</string>
+    <string name="nautical_replay_btn_pause">Pause</string>
+    <string name="nautical_replay_btn_play">Lecture</string>
+    <string name="nautical_replay_recording_format">Enregistrement de la télémétrie NMEA : %1$s</string>
+    <string name="nautical_replay_select_file">Sélectionner le fichier journal NMEA</string>
 </resources>

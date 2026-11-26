@@ -7379,6 +7379,7 @@
     <string name="logbook_export_success">Το ημερολόγιο εξήχθη με επιτυχία</string>
     <string name="logbook_export_failed">Αποτυχία εξαγωγής</string>
     <string name="logbook_empty_state">Δεν βρέθηκαν εγγραφές. Ενεργοποιήστε την καταγραφή στο παρασκήνιο στις ρυθμίσεις.</string>
+    <string name="logbook_empty">Δεν υπάρχουν ακόμη καταγεγραμμένες εγγραφές ημερολογίου.</string>
     <string name="nautical_logbook_sync_server">Συγχρονισμός με Διακομιστή</string>
     <string name="nautical_log_push_title_fmt">Ναυτιλιακό Ημερολόγιο: %1$s</string>
     <string name="nautical_log_push_title">Εγγραφή Ναυτιλιακού Ημερολογίου</string>

@@ -28,9 +28,9 @@ class NauticalMediaPlayerWidget @JvmOverloads constructor(
         prevBtn = findViewById(R.id.media_prev)
         playBtn = findViewById(R.id.media_play)
         nextBtn = findViewById(R.id.media_next)
-        
+
         setBackgroundResource(R.drawable.bg_nautical_hud_panel)
-        
+
         playBtn.setOnClickListener { dispatchMedia("TOGGLE") }
         prevBtn.setOnClickListener { dispatchMedia("PREV") }
         nextBtn.setOnClickListener { dispatchMedia("NEXT") }
@@ -39,7 +39,7 @@ class NauticalMediaPlayerWidget @JvmOverloads constructor(
     private fun dispatchMedia(cmd: String) {
         val plugin = NauticalPlugin.getInstance() ?: return
         val caps = plugin.capabilityManager?.capabilities?.value
-        
+
         if (caps?.hasFusionStereo == true) {
             val control = NauticalPlugin.engine?.controlManager
             when (cmd) {
@@ -59,9 +59,9 @@ class NauticalMediaPlayerWidget @JvmOverloads constructor(
     fun updateState(state: MarineState) {
         val info = state.mediaInfo
         if (info != null) {
-            titleTxt.text = info.title ?: "Unknown Title"
-            artistTxt.text = info.artist ?: "Unknown Artist"
-            
+            titleTxt.text = info.title ?: context.getString(R.string.nautical_media_unknown_title)
+            artistTxt.text = info.artist ?: context.getString(R.string.nautical_media_unknown_artist)
+
             val icon = if (info.playbackState == "playing") R.drawable.ic_pause else R.drawable.ic_play_dark
             playBtn.setImageResource(icon)
         } else {
