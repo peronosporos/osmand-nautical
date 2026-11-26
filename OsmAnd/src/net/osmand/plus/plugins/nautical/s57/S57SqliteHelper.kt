@@ -5,6 +5,7 @@ import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 import net.osmand.data.LatLon
+import net.osmand.util.PlatformUtil
 import org.json.JSONObject
 import androidx.core.database.sqlite.transaction
 import java.io.ByteArrayInputStream
@@ -17,6 +18,8 @@ import java.io.DataOutputStream
  * Uses R-Tree for spatial indexing and compact binary storage for geometries.
  */
 class S57SqliteHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME, null, DATABASE_VERSION) {
+
+    private val log = PlatformUtil.getLog(S57SqliteHelper::class.java)
 
     companion object {
         private const val DATABASE_NAME = "s57_charts.db"
@@ -135,8 +138,8 @@ class S57SqliteHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAM
             reader.forEachFeature { feature ->
                 val rcid = feature.id
                 
-                // Handle Update Instructions
-                if (feature.updateInstruction == 3) { // DELETE
+                // RUIN update instruction: 1 = Insert, 2 = Delete, 3 = Modify
+                if (feature.updateInstruction == 2) { // DELETE
                     deleteFeature(cellName, rcid)
                     return@forEachFeature
                 }
@@ -161,6 +164,10 @@ class S57SqliteHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAM
                     put(COLUMN_RECORD_VERSION, feature.recordVersion)
                 }
                 val rowId = insert(TABLE_FEATURES, null, values)
+                if (rowId == -1L) {
+                    log.error("Failed to insert feature cell=$cellName rcid=$rcid acronym=${feature.acronym}")
+                    return@forEachFeature
+                }
 
                 val bounds = calculateBounds(feature.geometries)
                 val indexValues = ContentValues().apply {
@@ -218,12 +225,21 @@ class S57SqliteHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAM
             args.addAll(acronyms)
         }
 
-        // Handle Antimeridian Wrap for R-Tree (requires two queries or union)
+        // Handle Antimeridian Wrap: split into a west-side range
+        // [lonMin, 180] and an east-side range [-180, lonMax]. Each
+        // lonPart below has exactly ONE lon placeholder, so its arg list
+        // must carry exactly one lon bound (latMin, latMax, lon[,...]).
         val queries = if (lonMin > lonMax) {
-             listOf(
-                 Pair(args.toMutableList().also { it[2] = lonMin.toString(); it[3] = "180.0" }, "AND i.$COLUMN_MIN_LON <= 180.0 AND i.$COLUMN_MAX_LON >= ?"),
-                 Pair(args.toMutableList().also { it[2] = "-180.0"; it[3] = lonMax.toString() }, "AND i.$COLUMN_MIN_LON <= ? AND i.$COLUMN_MAX_LON >= -180.0")
-             )
+            val westArgs = mutableListOf(latMin.toString(), latMax.toString(), lonMin.toString())
+            val eastArgs = mutableListOf(latMin.toString(), latMax.toString(), lonMax.toString())
+            if (!acronyms.isNullOrEmpty()) {
+                westArgs.addAll(acronyms)
+                eastArgs.addAll(acronyms)
+            }
+            listOf(
+                Pair(westArgs, "AND i.$COLUMN_MIN_LON <= 180.0 AND i.$COLUMN_MAX_LON >= ?"),
+                Pair(eastArgs, "AND i.$COLUMN_MIN_LON <= ? AND i.$COLUMN_MAX_LON >= -180.0")
+            )
         } else {
             listOf(Pair(args, "AND i.$COLUMN_MIN_LON <= ? AND i.$COLUMN_MAX_LON >= ?"))
         }
@@ -374,7 +390,7 @@ class S57SqliteHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAM
                 }
             }
         } catch (e: Exception) {
-            // EOF or malformed
+            log.error("Failed to deserialize geometry blob (${data.size} bytes): ${e.message}")
         }
         return geometries
     }

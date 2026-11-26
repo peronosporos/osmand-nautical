@@ -61,8 +61,8 @@ object S57FeatureStylizer {
     }
 
     private fun styleDepthContour(feature: S57Object, safetyContour: Double): S57StyleRule {
-        val valco = feature.attributes["VALCO"]?.toDoubleOrNull() ?: 0.0
-        return if (valco <= safetyContour) {
+        val valdc = feature.attributes["VALDCO"]?.toDoubleOrNull()
+        return if (valdc != null && valdc <= safetyContour) {
             S57StyleRule(strokeWidth = 2.5f, strokeColor = NauticalColor.SAFETY_CONTOUR, priority = 40)
         } else {
             S57StyleRule(strokeWidth = 1f, strokeColor = NauticalColor.DEEP_WATER, priority = 30)
@@ -86,18 +86,22 @@ object S57FeatureStylizer {
     }
 
     private fun styleBuoyLateral(feature: S57Object): S57StyleRule {
+        // COLOUR: 3 = red, 4 = green. MARSYS: 1 = IALA A, 2 = IALA B.
+        // IALA A (default plugin region): port-hand marks are red, starboard
+        // green. IALA B (e.g. US charts) swaps the two colour meanings.
         val colour = feature.attributes["COLOUR"]?.split(",")?.firstOrNull()
+        val isIalaB = feature.attributes["MARSYS"]?.trim() == "2"
         val acronym = feature.acronym
         val symbol = if (acronym == "BOYLAT") {
             when (colour) {
-                "3" -> SymbolId.BUOY_PORT // Red
-                "4" -> SymbolId.BUOY_STARBOARD // Green
+                "3" -> if (isIalaB) SymbolId.BUOY_STARBOARD else SymbolId.BUOY_PORT
+                "4" -> if (isIalaB) SymbolId.BUOY_PORT else SymbolId.BUOY_STARBOARD
                 else -> SymbolId.SPECIAL_PURPOSE
             }
         } else {
             when (colour) {
-                "3" -> SymbolId.BEACON_PORT
-                "4" -> SymbolId.BCN_STARBOARD
+                "3" -> if (isIalaB) SymbolId.BCN_STARBOARD else SymbolId.BEACON_PORT
+                "4" -> if (isIalaB) SymbolId.BEACON_PORT else SymbolId.BCN_STARBOARD
                 else -> SymbolId.SPECIAL_PURPOSE
             }
         }
@@ -143,11 +147,17 @@ object S57FeatureStylizer {
     }
 
     private fun styleObstruction(feature: S57Object): S57StyleRule {
-        val watlev = feature.attributes["WATLEV"] // 1: permanent out of water, 2: always under water, etc.
-        return if (watlev == "2") {
-            S57StyleRule(symbolId = SymbolId.WRECK, priority = 60)
-        } else {
-            S57StyleRule(symbolId = SymbolId.ISOLATED_DANGER, priority = 70)
+        // WATLEV (S-57): 1 = partly submerged at high water, 2 = always dry,
+        // 3 = always under water/submerged, 4 = covers and uncovers,
+        // 5 = awash. An OBSTRN is never a wreck: do not fabricate WRECK
+        // symbology; differentiate by hazard priority only.
+        // Submerged (3) is the most dangerous (hidden); awash (5) next;
+        // dry (2) the least.
+        return when (feature.attributes["WATLEV"]?.trim()) {
+            "3" -> S57StyleRule(symbolId = SymbolId.OBSTRUCTION, priority = 60)
+            "5" -> S57StyleRule(symbolId = SymbolId.OBSTRUCTION, priority = 65)
+            "2" -> S57StyleRule(symbolId = SymbolId.OBSTRUCTION, priority = 75)
+            else -> S57StyleRule(symbolId = SymbolId.OBSTRUCTION, priority = 70)
         }
     }
 }

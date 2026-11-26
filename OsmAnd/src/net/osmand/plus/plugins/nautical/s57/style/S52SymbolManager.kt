@@ -81,6 +81,18 @@ object S52SymbolManager {
                  drawTriangleAt(canvas, x, y - 8f * scale, 2f * scale, true)
                  drawTriangleAt(canvas, x, y - 5f * scale, 2f * scale, true)
             }
+            4 -> { // East: Up, Down (cones base to base)
+                 drawTriangleAt(canvas, x, y - 9f * scale, 2f * scale, true)
+                 drawTriangleAt(canvas, x, y - 6f * scale, 2f * scale, false)
+            }
+            5 -> { // South: Down, Down
+                 drawTriangleAt(canvas, x, y - 9f * scale, 2f * scale, false)
+                 drawTriangleAt(canvas, x, y - 6f * scale, 2f * scale, false)
+            }
+            6 -> { // West: Down, Up (cones point to point)
+                 drawTriangleAt(canvas, x, y - 9f * scale, 2f * scale, false)
+                 drawTriangleAt(canvas, x, y - 6f * scale, 2f * scale, true)
+            }
         }
     }
 

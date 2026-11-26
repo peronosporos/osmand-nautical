@@ -83,19 +83,31 @@ class S57ChartManagerFragment : BaseOsmAndFragment() {
     }
 
     private fun calculateTotalAreaNm(bounds: Collection<DoubleArray>): Double {
-        // Use a grid-based approach to account for overlaps
+        // Grid-based coverage with overlap dedup (0.1 degree cells).
+        // Cell indices use Math.floor: toInt() truncates toward zero and
+        // merges the -0.1..0 band with the 0..0.1 band in the southern and
+        // western hemispheres.
         val grid = mutableSetOf<Pair<Int, Int>>()
         val step = 0.1 // 0.1 degree resolution
-        
+
         bounds.forEach { b ->
-            var lat = b[0]
-            while (lat < b[1]) {
-                var lon = b[2]
-                while (lon < b[3]) {
-                    grid.add((lat / step).toInt() to (lon / step).toInt())
-                    lon += step
+            // b = [latMin, latMax, lonMin, lonMax]; antimeridian-wrapping
+            // cells have lonMin > lonMax and are split into west/east parts
+            val lonRanges = if (b[2] <= b[3]) {
+                listOf(b[2] to b[3])
+            } else {
+                listOf(b[2] to 180.0, -180.0 to b[3])
+            }
+            for ((lonFrom, lonTo) in lonRanges) {
+                var lat = b[0]
+                while (lat < b[1]) {
+                    var lon = lonFrom
+                    while (lon < lonTo) {
+                        grid.add(Math.floor(lat / step).toInt() to Math.floor(lon / step).toInt())
+                        lon += step
+                    }
+                    lat += step
                 }
-                lat += step
             }
         }
         
@@ -123,8 +135,10 @@ class S57ChartManagerFragment : BaseOsmAndFragment() {
             val hasIndex = bounds.containsKey(file.absolutePath)
             
             holder.title.text = file.name
-            holder.info.text = String.format(Locale.US, "Size: %.1f KB | Type: %s", file.length() / 1024.0, if (isS63) "S-63 (Encrypted)" else "S-57")
-            holder.status.text = if (hasIndex) "INDEXED" else "PENDING"
+            // "S-57" / "S-63" are IHO transfer-standard names and stay
+            // untranslated, like other product names
+            holder.info.text = String.format(Locale.US, getString(R.string.nautical_s57_chart_info_fmt), file.length() / 1024.0, if (isS63) "S-63 (Encrypted)" else "S-57")
+            holder.status.text = getString(if (hasIndex) R.string.nautical_s57_status_indexed else R.string.nautical_s57_status_pending)
             holder.status.setTextColor(if (hasIndex) colorGreen else colorOrange)
             
             holder.itemView.setOnClickListener {

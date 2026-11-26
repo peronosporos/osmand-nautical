@@ -526,7 +526,7 @@ class NauticalSafetyEvaluator(
             var hazardDepth: Double? = null
 
             for (f in features) {
-                val d = f.attributes["VALSOU"]?.toDoubleOrNull() ?: f.attributes["VALCO"]?.toDoubleOrNull()
+                val d = f.attributes["VALSOU"]?.toDoubleOrNull() ?: f.attributes["VALDCO"]?.toDoubleOrNull()
                 if (d != null && (sampledDepth == null || d < sampledDepth)) {
                     sampledDepth = d
                 }

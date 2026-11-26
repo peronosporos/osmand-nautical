@@ -14,7 +14,7 @@ data class S57Object(
     val primitiveType: S57PrimitiveType,
     val attributes: Map<String, String> = emptyMap(),
     val geometries: List<S57Geometry> = emptyList(),
-    val updateInstruction: Int = 1, // 1: Insert, 2: Modify, 3: Delete
+    val updateInstruction: Int = 1, // RUIN: 1 = Insert, 2 = Delete, 3 = Modify
     val recordVersion: Int = 1
 )
 

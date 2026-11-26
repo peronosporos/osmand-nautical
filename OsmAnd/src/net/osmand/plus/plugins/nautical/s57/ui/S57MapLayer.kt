@@ -31,6 +31,7 @@ class S57MapLayer(context: Context, private val indexManager: S57SpatialIndex) :
 
     private val app = context.applicationContext as OsmandApplication
     private val criticalHazards = setOf("UWTROC", "WRECKS", "OBSTRN", "LIGHTS", "BOYLAT", "BCNLAT", "BOYCAR", "BCNCAR", "BOYSAW", "BCNSAW", "BOYISD")
+    private val overheadClearanceAcronyms = setOf("BRIDGE", "CBLOHD", "PIPOHD")
 
     private val overheadWarningHaloPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
@@ -111,9 +112,10 @@ class S57MapLayer(context: Context, private val indexManager: S57SpatialIndex) :
         val state = NauticalPlugin.engine?.getCurrentState()
         val airTempC = state?.outsideTemperature?.let {
             if (it > 100.0) it - 273.15 else it
-        } ?: 20.0
-
-        val thermalSagM = if (isCable && airTempC > 25.0) {
+        }
+        // No temperature sensor -> no thermal sag estimate: never fabricate
+        // a 20C reading; realTimeClearance is then simply verclr - tideHeight.
+        val thermalSagM = if (isCable && airTempC != null && airTempC > 25.0) {
             (airTempC - 25.0) * 0.05
         } else {
             0.0
@@ -295,7 +297,7 @@ class S57MapLayer(context: Context, private val indexManager: S57SpatialIndex) :
 
             val style = pf.style
             val scale = (tileBox.density * (tileBox.zoom / 15f)).coerceAtLeast(1.0f)
-            val isOverheadObstruction = pf.acronym in listOf("BRIDGE", "CBLOHD", "PIPOHD")
+            val isOverheadObstruction = pf.acronym in overheadClearanceAcronyms
             
             for (pg in pf.preparedGeometries) {
                 if (!isGeometryInViewport(pg.geometry, tileBox)) continue
@@ -306,7 +308,7 @@ class S57MapLayer(context: Context, private val indexManager: S57SpatialIndex) :
                         val y = tileBox.getPixYFromLatLon(geometry.position.latitude, geometry.position.longitude)
                         
                         if (pf.acronym == "SOUNDG") {
-                            val depth = pg.soundingDepth ?: 0.0
+                            val depth = pg.soundingDepth ?: continue
                             if (depth > safetyDepth * 2.0 && tileBox.zoom < 14) {
                                 continue
                             }
@@ -399,7 +401,7 @@ class S57MapLayer(context: Context, private val indexManager: S57SpatialIndex) :
                                 val pulse = (kotlin.math.sin((System.currentTimeMillis() % 1000L) / 1000.0 * Math.PI * 2.0) * 0.5 + 0.5).toFloat()
                                 canvas.drawCircle(x, y, (16f + 6f * pulse) * scale, overheadWarningHaloPaint)
                             }
-                            if (pf.acronym in listOf("BRIDGE", "CBLOHD", "PIPOHD")) {
+                            if (pf.acronym in overheadClearanceAcronyms) {
                                 val verclr = pf.attributes["VERCLR"]?.toDoubleOrNull()
                                 if (verclr != null) {
                                     val mastH = app.settings.getCustomRenderProperty("mastHeight", "15.0").get().toDoubleOrNull() ?: 15.0
@@ -426,7 +428,7 @@ class S57MapLayer(context: Context, private val indexManager: S57SpatialIndex) :
                                 strokePaint.strokeWidth = style.strokeWidth * scale * (if (isSunlight) 2.0f else 1.0f)
                                 canvas.drawPath(path, strokePaint)
                             }
-                            if (pf.acronym in listOf("BRIDGE", "CBLOHD", "PIPOHD")) {
+                            if (pf.acronym in overheadClearanceAcronyms) {
                                 val verclr = pf.attributes["VERCLR"]?.toDoubleOrNull()
                                 if (verclr != null) {
                                     val pts = (geometry as? S57Geometry.Line)?.nodes
@@ -457,7 +459,7 @@ class S57MapLayer(context: Context, private val indexManager: S57SpatialIndex) :
                             if (isOverheadObstruction) {
                                 canvas.drawPath(path, overheadWarningHaloPaint)
                             }
-                            if (pf.acronym in listOf("BRIDGE", "CBLOHD", "PIPOHD")) {
+                            if (pf.acronym in overheadClearanceAcronyms) {
                                 val verclr = pf.attributes["VERCLR"]?.toDoubleOrNull()
                                 if (verclr != null) {
                                     val p0 = (geometry as? S57Geometry.Area)?.boundaries?.firstOrNull()?.firstOrNull()
@@ -577,8 +579,9 @@ class S57MapLayer(context: Context, private val indexManager: S57SpatialIndex) :
                 var soundingIntPart: String? = null
                 var soundingFracDigit: String? = null
                 
-                if (tileBox.zoom >= 12 && feature.acronym == "SOUNDG" && optimized is S57Geometry.Point) {
-                    val depth = optimized.depth ?: feature.attributes["VALCO"]?.toDoubleOrNull() ?: 0.0
+                val depthValue = optimized.depth
+                if (tileBox.zoom >= 12 && feature.acronym == "SOUNDG" && optimized is S57Geometry.Point && depthValue != null) {
+                    val depth = depthValue
                     soundingDepth = depth
                     val depthUnit = S57FeatureStylizer.DepthUnit.fromIndex(app.settings.NAUTICAL_DEPTH_UNITS.get())
                     val dynamicTide = app.settings.NAUTICAL_DYNAMIC_TIDE_DEPTH_ENABLED.get()
