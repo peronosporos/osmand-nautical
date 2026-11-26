@@ -6252,6 +6252,7 @@
     <string name="nautical_sail_hoisted">Επηρμένο (Βιραρισμένο)</string>
     <string name="nautical_sail_furled">Μαζεμένο (Τυλιγμένο)</string>
     <string name="nautical_sail_efficiency_label">Αποδοτικότητα Επιφάνειας Ιστίων: %1$d%%</string>
+    <string name="nautical_sail_efficiency_none">Αποδοτικότητα Επιφάνειας Ιστίων: --</string>
     <string name="nautical_no_sails_found">Δεν βρέθηκαν ιστία στο απόθεμα</string>
     <string name="nautical_calculating_weather_route">Υπολογισμός βέλτιστης μετεωρολογικής διαδρομής…</string>
     <string name="nautical_view_buddies">Προβολή Φίλων</string>

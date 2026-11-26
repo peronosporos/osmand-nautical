@@ -472,7 +472,7 @@ class SignalKDeltaParser(
                 val v = (valueObj as? Number)?.toDouble() ?: Double.NaN
                 if (!v.isNaN()) {
                     historyManager.getBuffer(path).add(Pair(v, now))
-                    Pair(stateWithTs.copy(courseOverGroundTrue = v, timeOfSogFix = now), true)
+                    Pair(stateWithTs.copy(courseOverGroundTrue = v), true)
                 } else Pair(stateWithTs, false)
             }
             else -> {
@@ -638,8 +638,9 @@ class SignalKDeltaParser(
                         val hObj = valueObj.optJSONObject(i) ?: continue
                         val id = hObj.optString("id", "")
                         val name = hObj.optString("name", app.getString(R.string.nautical_obstacle))
-                        val dist = hObj.optDouble("distance", 0.0)
-                        val bear = hObj.optDouble("bearing", 0.0)
+                        // Missing distance/bearing must not surface as a fabricated "hazard at 0 m / 000 deg".
+                        val dist = hObj.optDouble("distance", Double.NaN)
+                        val bear = hObj.optDouble("bearing", Double.NaN)
                         val severity = when (hObj.optString("severity", "normal")) {
                             "alert" -> NotificationState.ALERT
                             "warn" -> NotificationState.WARN
@@ -647,11 +648,12 @@ class SignalKDeltaParser(
                             "emergency" -> NotificationState.EMERGENCY
                             else -> NotificationState.NORMAL
                         }
+                        if (dist.isNaN()) continue // unverifiable hazard entry; do not alarm with invented proximity
                         val pos = hObj.optJSONObject("position")
                         val latLon = if (pos != null) {
                             val lat = pos.optDouble("latitude", Double.NaN)
                             val lon = pos.optDouble("longitude", Double.NaN)
-                            if (MarineStateConstants.isValidLat(lat)) lat to lon else null
+                            if (MarineStateConstants.isValidLat(lat) && MarineStateConstants.isValidLon(lon)) lat to lon else null
                         } else null
                         hazards.add(ForwardHazard(id, name, dist, bear, severity, latLon))
                     }
@@ -668,7 +670,7 @@ class SignalKDeltaParser(
                         if (pos != null) {
                             val lat = pos.optDouble("latitude", Double.NaN)
                             val lon = pos.optDouble("longitude", Double.NaN)
-                            if (!lat.isNaN()) {
+                            if (MarineStateConstants.isValidLat(lat) && MarineStateConstants.isValidLon(lon)) {
                                 val oldPoint = state.serverNextPoint
                                 val newPoint = LatLon(lat, lon)
                                 if (oldPoint != newPoint) {
@@ -862,14 +864,25 @@ class SignalKDeltaParser(
                     val stbd = valueObj.optJSONObject("starboardTackPoint")
                     val target = valueObj.optJSONObject("targetWaypoint")
                     if (target != null) {
-                        val laylineData = net.osmand.plus.plugins.nautical.laylines.engine.LaylineData(
-                            portTackPoint = port?.let { net.osmand.plus.plugins.nautical.laylines.engine.LatLon(it.optDouble("latitude"), it.optDouble("longitude")) },
-                            starboardTackPoint = stbd?.let { net.osmand.plus.plugins.nautical.laylines.engine.LatLon(it.optDouble("latitude"), it.optDouble("longitude")) },
-                            isFetchable = valueObj.optBoolean("isFetchable", true),
-                            targetWaypoint = net.osmand.plus.plugins.nautical.laylines.engine.LatLon(target.optDouble("latitude"), target.optDouble("longitude"))
-                        )
-                        state = state.copy(serverLaylines = laylineData)
-                        updated = true
+                        // Coordinates must arrive valid; a NaN component would fabricate a layline endpoint.
+                        fun toLaylinePoint(it: JSONObject?): net.osmand.plus.plugins.nautical.laylines.engine.LatLon? {
+                            val plat = it?.optDouble("latitude", Double.NaN) ?: Double.NaN
+                            val plon = it?.optDouble("longitude", Double.NaN) ?: Double.NaN
+                            return if (!plat.isNaN() && !plon.isNaN()) {
+                                net.osmand.plus.plugins.nautical.laylines.engine.LatLon(plat, plon)
+                            } else null
+                        }
+                        val targetPoint = toLaylinePoint(target)
+                        if (targetPoint != null) {
+                            val laylineData = net.osmand.plus.plugins.nautical.laylines.engine.LaylineData(
+                                portTackPoint = toLaylinePoint(port),
+                                starboardTackPoint = toLaylinePoint(stbd),
+                                isFetchable = valueObj.optBoolean("isFetchable", true),
+                                targetWaypoint = targetPoint
+                            )
+                            state = state.copy(serverLaylines = laylineData)
+                            updated = true
+                        }
                     }
                 }
             }
@@ -936,8 +949,8 @@ class SignalKDeltaParser(
                         val obj = value["value"] as? Map<*, *> ?: value
                         sails.add(Sail(
                             id = key.toString(),
-                            name = obj["name"]?.toString() ?: "Unknown",
-                            type = obj["type"]?.toString() ?: "Unknown",
+                            name = obj["name"]?.toString() ?: key.toString(),
+                            type = obj["type"]?.toString() ?: "",
                             area = (obj["area"] as? Number)?.toDouble(),
                             active = obj["active"] as? Boolean ?: false,
                             reefs = (obj["reefs"] as? Number)?.toInt(),
@@ -972,8 +985,8 @@ class SignalKDeltaParser(
                         val obj = valueObj["value"] as? Map<*, *> ?: valueObj
                         currentList.add(Sail(
                             id = sailId,
-                            name = obj["name"]?.toString() ?: "Unknown",
-                            type = obj["type"]?.toString() ?: "Unknown",
+                            name = obj["name"]?.toString() ?: sailId,
+                            type = obj["type"]?.toString() ?: "",
                             area = (obj["area"] as? Number)?.toDouble(),
                             active = obj["active"] as? Boolean ?: false,
                             reefs = (obj["reefs"] as? Number)?.toInt(),
@@ -1004,17 +1017,21 @@ class SignalKDeltaParser(
 
         when (path) {
             SignalKPaths.STEERING_AUTOPILOT_STATE -> {
-                val raw = (valueObj as? String ?: "standby").uppercase(Locale.US)
-                val normalized = when (raw) {
-                    "ROUTE", "TRACK" -> "track"
-                    else -> raw.lowercase(Locale.US)
+                val rawStr = valueObj as? String
+                // A missing or non-string value must not fabricate "standby"; keep last known state.
+                if (!rawStr.isNullOrEmpty()) {
+                    val raw = rawStr.uppercase(Locale.US)
+                    val normalized = when (raw) {
+                        "ROUTE", "TRACK" -> "track"
+                        else -> raw.lowercase(Locale.US)
+                    }
+                    var nextPendingMode = state.pendingAutopilotState
+                    if (normalized == nextPendingMode?.lowercase(Locale.US)) {
+                        nextPendingMode = null
+                    }
+                    state = state.copy(autopilotState = normalized, pendingAutopilotState = nextPendingMode)
+                    updated = true
                 }
-                var nextPendingMode = state.pendingAutopilotState
-                if (normalized == nextPendingMode?.lowercase(Locale.US)) {
-                    nextPendingMode = null
-                }
-                state = state.copy(autopilotState = normalized, pendingAutopilotState = nextPendingMode)
-                updated = true
             }
             SignalKPaths.STEERING_AUTOPILOT_DUTY_CYCLE -> {
                 if (!value.isNaN()) {
@@ -1666,8 +1683,15 @@ class SignalKDeltaParser(
                         val latLonRegex = Regex("([-+]?\\d*\\.?\\d+)[,\\s\\w:]+([-+]?\\d*\\.?\\d+)")
                         val match = latLonRegex.find(message)
                         if (match != null) {
-                            mobLat = match.groupValues[1].toDoubleOrNull()
-                            mobLon = match.groupValues[2].toDoubleOrNull()
+                            val lat = match.groupValues[1].toDoubleOrNull()
+                            val lon = match.groupValues[2].toDoubleOrNull()
+                            // Regex extraction is best-effort; garbage must not become a fake MOB position.
+                            if (lat != null && lon != null &&
+                                MarineStateConstants.isValidLat(lat) && MarineStateConstants.isValidLon(lon)
+                            ) {
+                                mobLat = lat
+                                mobLon = lon
+                            }
                         }
                         state = state.copy(
                             isMobActive = notificationState != NotificationState.NORMAL,
@@ -1706,7 +1730,7 @@ class SignalKDeltaParser(
                     val field = names[1]
                     val currentSails = state.sailInventory.toMutableList()
                     val idx = currentSails.indexOfFirst { it.id == sailId }
-                    val sail = if (idx >= 0) currentSails[idx] else Sail(id = sailId, name = sailId, type = "Unknown")
+                    val sail = if (idx >= 0) currentSails[idx] else Sail(id = sailId, name = sailId, type = "")
                     val nextSail = when (field) {
                         "name" -> sail.copy(name = valueObj?.toString() ?: sail.name)
                         "type" -> sail.copy(type = valueObj?.toString() ?: sail.type)
@@ -1825,8 +1849,8 @@ class SignalKDeltaParser(
                         val obj = value["value"] as? Map<*, *> ?: value
                         sails.add(Sail(
                             id = key.toString(),
-                            name = obj["name"]?.toString() ?: "Unknown",
-                            type = obj["type"]?.toString() ?: "Unknown",
+                            name = obj["name"]?.toString() ?: key.toString(),
+                            type = obj["type"]?.toString() ?: "",
                             area = (obj["area"] as? Number)?.toDouble(),
                             active = obj["active"] as? Boolean ?: false,
                             reefs = (obj["reefs"] as? Number)?.toInt(),

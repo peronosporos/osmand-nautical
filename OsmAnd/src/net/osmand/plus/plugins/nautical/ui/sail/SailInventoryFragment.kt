@@ -46,8 +46,13 @@ class SailInventoryFragment : BaseOsmAndFragment() {
 
         viewLifecycleOwner.lifecycleScope.launch {
             NauticalPlugin.engine?.marineStateFlow?.collectLatest { state ->
-                val efficiencyPct = (state.activeSailEfficiency * 100.0).toInt()
-                txtEfficiency?.text = getString(R.string.nautical_sail_efficiency_label, efficiencyPct)
+                // Honest display: with no server sail inventory the efficiency heuristic
+                // would invent a full main + headsail (100%); show '--' instead.
+                txtEfficiency?.text = if (state.sailInventory.isEmpty()) {
+                    getString(R.string.nautical_sail_efficiency_none)
+                } else {
+                    getString(R.string.nautical_sail_efficiency_label, (state.activeSailEfficiency * 100.0).toInt())
+                }
 
                 val rawSails = if (state.sailInventory.isNotEmpty()) {
                     state.sailInventory

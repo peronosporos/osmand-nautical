@@ -514,11 +514,15 @@ val MarineState.tidalCurrentDirection: Double?
 
 val MarineState.hasValidFix: Boolean
     get() {
-        val lat = latitude ?: 0.0
-        val lon = longitude ?: 0.0
+        // Honest fix gate: both coordinates must be present and in valid range;
+        // a single received coordinate or an out-of-range value is not a fix.
+        val lat = latitude ?: return false
+        val lon = longitude ?: return false
+        if (!MarineStateConstants.isValidLat(lat) || !MarineStateConstants.isValidLon(lon)) return false
+        if (lat == 0.0 && lon == 0.0) return false // (0,0) is the classic unset sentinel, not a real fix
         val timestamp = timestamps["navigation.position"] ?: 0L
         val age = System.currentTimeMillis() - timestamp
-        return (lat != 0.0 || lon != 0.0) && age < 30000
+        return age < 30000
     }
 
 val MarineState.activeSailEfficiency: Double
