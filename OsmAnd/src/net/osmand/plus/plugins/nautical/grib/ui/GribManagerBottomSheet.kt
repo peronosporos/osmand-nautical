@@ -8,6 +8,7 @@ import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.RecyclerView
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -371,7 +372,7 @@ class GribManagerBottomSheet : BottomSheetDialogFragment() {
             val activeGribFile = SailingDependencyContainer.gribRepository?.gridData?.fileName
             val isActive = file.name == activeGribFile
             holder.activeIndicator.visibility = if (isActive) View.VISIBLE else View.GONE
-            holder.itemView.setBackgroundColor(if (isActive) 0x1A2196F3.toInt() else 0)
+            holder.itemView.setBackgroundColor(if (isActive) ContextCompat.getColor(holder.itemView.context, R.color.nautical_grib_active_bg) else 0)
 
             holder.metadataJob?.cancel()
             holder.metadataJob = viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {

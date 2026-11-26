@@ -16,6 +16,8 @@ import net.osmand.plus.R
 import net.osmand.plus.base.bottomsheetmenu.BaseBottomSheetItem
 import net.osmand.plus.plugins.nautical.NauticalPlugin
 import net.osmand.plus.plugins.nautical.di.SailingDependencyContainer
+import net.osmand.plus.plugins.nautical.ui.NauticalColorResolver
+import net.osmand.plus.plugins.nautical.ui.NauticalSemanticColor
 import net.osmand.plus.plugins.nautical.ui.editor.PolarCurveCanvasView
 import net.osmand.plus.plugins.nautical.ui.widgets.BaseNauticalBottomSheet
 import java.util.Locale
@@ -57,26 +59,26 @@ class PolarRecorderBottomSheet : BaseNauticalBottomSheet() {
         val btnDownload = customView.findViewById<MaterialButton>(R.id.btn_download_server_polar)
 
         if (isNightVision) {
-            customView.setBackgroundColor(0xEE120000.toInt())
-            customView.findViewById<View>(R.id.drag_handle)?.setBackgroundColor(0x80FF1744.toInt())
+            customView.setBackgroundColor(ContextCompat.getColor(themedCtx, R.color.nautical_night_vision_bg))
+            customView.findViewById<View>(R.id.drag_handle)?.setBackgroundColor(ContextCompat.getColor(themedCtx, R.color.nautical_night_vision_muted))
             customView.findViewById<com.google.android.material.card.MaterialCardView>(R.id.card_polar_header)?.apply {
-                setCardBackgroundColor(0xEE120000.toInt())
-                strokeColor = 0xFFFF1744.toInt()
+                setCardBackgroundColor(ContextCompat.getColor(themedCtx, R.color.nautical_night_vision_bg))
+                strokeColor = ContextCompat.getColor(themedCtx, R.color.nautical_night_vision_primary)
             }
             customView.findViewById<com.google.android.material.card.MaterialCardView>(R.id.card_polar_canvas)?.apply {
-                setCardBackgroundColor(0xEE120000.toInt())
-                strokeColor = 0xFFFF1744.toInt()
+                setCardBackgroundColor(ContextCompat.getColor(themedCtx, R.color.nautical_night_vision_bg))
+                strokeColor = ContextCompat.getColor(themedCtx, R.color.nautical_night_vision_primary)
             }
-            customView.findViewById<TextView>(R.id.txt_polar_title)?.setTextColor(0xFFFF1744.toInt())
-            customView.findViewById<TextView>(R.id.txt_scatter_overlay_label)?.setTextColor(0xFFFF1744.toInt())
-            txtSampleCount.setTextColor(0xFFFF8A80.toInt())
-            txtActiveProfile.setTextColor(0xFFFF8A80.toInt())
-            btnStopAndSave.setTextColor(0xFFFF1744.toInt())
-            btnDownload.setTextColor(0xFFFF8A80.toInt())
+            customView.findViewById<TextView>(R.id.txt_polar_title)?.setTextColor(ContextCompat.getColor(themedCtx, R.color.nautical_night_vision_primary))
+            customView.findViewById<TextView>(R.id.txt_scatter_overlay_label)?.setTextColor(ContextCompat.getColor(themedCtx, R.color.nautical_night_vision_primary))
+            txtSampleCount.setTextColor(ContextCompat.getColor(themedCtx, R.color.nautical_night_vision_data))
+            txtActiveProfile.setTextColor(ContextCompat.getColor(themedCtx, R.color.nautical_night_vision_data))
+            btnStopAndSave.setTextColor(ContextCompat.getColor(themedCtx, R.color.nautical_night_vision_primary))
+            btnDownload.setTextColor(ContextCompat.getColor(themedCtx, R.color.nautical_night_vision_data))
         }
 
-        val activeColor = if (isNightVision) 0xFFFF1744.toInt() else ContextCompat.getColor(themedCtx, R.color.nautical_status_green)
-        val idleColor = if (isNightVision) 0x80FF1744.toInt() else ContextCompat.getColor(themedCtx, R.color.text_color_secondary_light)
+        val activeColor = if (isNightVision) ContextCompat.getColor(themedCtx, R.color.nautical_night_vision_primary) else ContextCompat.getColor(themedCtx, R.color.nautical_status_green)
+        val idleColor = if (isNightVision) ContextCompat.getColor(themedCtx, R.color.nautical_night_vision_muted) else NauticalColorResolver.getColor(themedCtx, NauticalSemanticColor.SECONDARY)
 
         fun updateRecordingUi() {
             if (isRecording) {
@@ -84,13 +86,13 @@ class PolarRecorderBottomSheet : BaseNauticalBottomSheet() {
                 txtStatus.setTextColor(activeColor)
                 btnToggleRec.text = getString(R.string.nautical_polar_stop_recording)
                 btnToggleRec.setIconResource(R.drawable.ic_action_rec_stop)
-                btnToggleRec.backgroundTintList = ColorStateList.valueOf(if (isNightVision) 0xFFB71C1C.toInt() else ContextCompat.getColor(themedCtx, R.color.color_warning))
+                btnToggleRec.backgroundTintList = ColorStateList.valueOf(if (isNightVision) ContextCompat.getColor(themedCtx, R.color.nautical_night_vision_recording) else ContextCompat.getColor(themedCtx, R.color.color_warning))
             } else {
                 txtStatus.text = getString(R.string.nautical_polar_rec_status_idle)
                 txtStatus.setTextColor(idleColor)
                 btnToggleRec.text = getString(R.string.nautical_polar_start_recording)
                 btnToggleRec.setIconResource(R.drawable.ic_action_rec_start)
-                btnToggleRec.backgroundTintList = if (isNightVision) ColorStateList.valueOf(0xFF8B0000.toInt()) else null
+                btnToggleRec.backgroundTintList = if (isNightVision) ColorStateList.valueOf(ContextCompat.getColor(themedCtx, R.color.nautical_night_vision_recording_idle)) else null
             }
             txtSampleCount.text = getString(R.string.nautical_polar_samples_count, recordedScatterPoints.size)
             if (showScatterOverlay) {

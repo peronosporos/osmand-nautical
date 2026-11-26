@@ -48,13 +48,12 @@ class PassagePlanBottomSheet : BaseNauticalBottomSheet() {
         val btnExportGpx = customView.findViewById<MaterialButton>(R.id.btn_export_gpx)
 
         rvLegs.layoutManager = LinearLayoutManager(requireContext())
-        legAdapter = PassageLegAdapter()
-        rvLegs.adapter = legAdapter
-
         val viewModel = ViewModelProvider(requireActivity())[RoutingViewModel::class.java]
         val app = requireActivity().application as? net.osmand.plus.OsmandApplication
         val draft: Float = app?.settings?.NAUTICAL_VESSEL_DRAFT?.get() ?: 2.0f
         val margin: Float = 0.5f
+        legAdapter = PassageLegAdapter(draft, margin)
+        rvLegs.adapter = legAdapter
 
         viewLifecycleOwner.lifecycleScope.launch {
             viewModel.optimalRoute.collectLatest { result ->
@@ -67,6 +66,7 @@ class PassagePlanBottomSheet : BaseNauticalBottomSheet() {
                     txtTotalTime.text = getString(R.string.nautical_route_total_ete_fmt, String.format(Locale.US, "%.1f", result.totalTimeHours))
 
                     depthProfileView.setRouteData(result.legs, draft, margin)
+                    app?.let { depthProfileView.isNightVision = NauticalPlugin.isNightVision(it) }
 
                     val liveState = NauticalPlugin.engine?.getCurrentState()
                     val twd = liveState?.windDirectionTrue ?: liveState?.windDirectionApparent
@@ -168,7 +168,10 @@ class PassagePlanBottomSheet : BaseNauticalBottomSheet() {
         }
     }
 
-    private class PassageLegAdapter : ListAdapter<PassagePlanLeg, LegViewHolder>(LegDiffCallback()) {
+    private class PassageLegAdapter(
+        private val vesselDraftMeters: Float,
+        private val safetyMarginMeters: Float
+    ) : ListAdapter<PassagePlanLeg, LegViewHolder>(LegDiffCallback()) {
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): LegViewHolder {
             val view = LayoutInflater.from(parent.context).inflate(R.layout.item_passage_plan_leg, parent, false)
             return LegViewHolder(view)
@@ -192,28 +195,63 @@ class PassagePlanBottomSheet : BaseNauticalBottomSheet() {
         private val txtCtsTwa: TextView = view.findViewById(R.id.txt_leg_cts_twa)
         private val txtWind: TextView = view.findViewById(R.id.txt_leg_wind)
         private val txtDepth: TextView = view.findViewById(R.id.txt_leg_depth_clearance)
+        private val txtDrift: TextView = view.findViewById(R.id.txt_leg_tidal_drift)
         private val txtEte: TextView = view.findViewById(R.id.txt_leg_ete)
 
         fun bind(leg: PassagePlanLeg) {
             txtTitle.text = txtTitle.context.getString(R.string.nautical_leg_title_fmt, leg.legNumber, leg.legNumber, leg.legNumber + 1)
             txtDist.text = String.format(Locale.US, "%.1f NM", leg.distanceNm)
 
-            val twaDeg = leg.windAngleRad?.let { Math.toDegrees(it).toInt() } ?: 45
-            txtCtsTwa.text = txtCtsTwa.context.getString(R.string.nautical_leg_cts_twa_fmt, leg.courseToSteerDeg.toInt(), twaDeg)
+            // Wind data now comes from the engine's real per-leg forecast
+            // sampling; without it the row shows CTS only (previously it
+            // fabricated TWA 45° and wind 15 kn).
+            val ctsDeg = leg.courseToSteerDeg.toInt()
+            val twaDeg = leg.windAngleRad?.let { Math.toDegrees(it).toInt() }
+            txtCtsTwa.text = if (twaDeg != null) {
+                txtCtsTwa.context.getString(R.string.nautical_leg_cts_twa_fmt, ctsDeg, twaDeg)
+            } else {
+                txtCtsTwa.context.getString(R.string.nautical_leg_cts_only_fmt, ctsDeg)
+            }
 
-            val windKn = leg.windSpeedMs?.let { it * 1.94384 } ?: 15.0
-            txtWind.text = txtWind.context.getString(R.string.nautical_leg_wind_fmt, String.format(Locale.US, "%.1f", windKn))
+            val windKn = leg.windSpeedMs?.let { it * 1.94384 }
+            if (windKn == null) {
+                txtWind.visibility = View.GONE
+            } else {
+                txtWind.visibility = View.VISIBLE
+                txtWind.text = txtWind.context.getString(R.string.nautical_leg_wind_fmt, String.format(Locale.US, "%.1f", windKn))
+            }
 
-            // Dynamic depth estimation along leg
-            val estDepth = 4.0f + (kotlin.math.sin((leg.legNumber % 5) * 0.6) * 12.0).toFloat()
-            val isSafe = estDepth >= 2.5f
-            txtDepth.text = txtDepth.context.getString(R.string.nautical_pp_depth_fmt, String.format(Locale.US, "%.1f", estDepth), txtDepth.context.getString(if (isSafe) R.string.nautical_depth_safe else R.string.nautical_depth_shallow_warning))
-            txtDepth.setTextColor(
-                androidx.core.content.ContextCompat.getColor(
-                    itemView.context,
-                    if (isSafe) R.color.nautical_status_green else R.color.nautical_status_red
+            // Real chart depth (S-57 DEPARE minimum along the leg, sampled by
+            // the routing engine); honest n/a when no depth area covers it.
+            val legMinDepth = leg.minDepthMeters
+            if (legMinDepth == null) {
+                txtDepth.text = txtDepth.context.getString(R.string.nautical_pp_depth_na_fmt, txtDepth.context.getString(R.string.nautical_not_available))
+                txtDepth.setTextColor(
+                    net.osmand.plus.plugins.nautical.ui.NauticalColorResolver.getColor(
+                        itemView.context, net.osmand.plus.plugins.nautical.ui.NauticalSemanticColor.SECONDARY
+                    )
                 )
-            )
+            } else {
+                val isSafe = legMinDepth >= (vesselDraftMeters + safetyMarginMeters)
+                txtDepth.text = txtDepth.context.getString(R.string.nautical_pp_depth_fmt, String.format(Locale.US, "%.1f", legMinDepth), txtDepth.context.getString(if (isSafe) R.string.nautical_depth_safe else R.string.nautical_depth_shallow_warning))
+                txtDepth.setTextColor(
+                    androidx.core.content.ContextCompat.getColor(
+                        itemView.context,
+                        if (isSafe) R.color.nautical_status_green else R.color.nautical_status_red
+                    )
+                )
+            }
+
+            // Real forecast current (set/drift) sampled per leg; the chip was
+            // previously never bound and showed the "+0.8 kn" preview forever.
+            val driftKn = leg.expectedDriftKn
+            val setDeg = leg.expectedSetDeg
+            if (driftKn != null && setDeg != null) {
+                txtDrift.visibility = View.VISIBLE
+                txtDrift.text = txtDrift.context.getString(R.string.nautical_leg_drift_fmt, String.format(Locale.US, "%.1f", driftKn), setDeg.toInt())
+            } else {
+                txtDrift.visibility = View.GONE
+            }
 
             val eteMin = (leg.eteHours * 60).toInt()
             txtEte.text = txtEte.context.getString(R.string.nautical_leg_ete_fmt, eteMin)

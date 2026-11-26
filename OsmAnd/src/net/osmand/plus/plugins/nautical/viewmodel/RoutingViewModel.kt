@@ -28,8 +28,11 @@ class RoutingViewModel : ViewModel() {
         gridData: GribGridData,
         s57Index: S57SpatialIndex,
         safetyManager: net.osmand.plus.plugins.nautical.engine.NauticalSafetyManager,
+        minDepthRequiredMeters: Double? = null,
     ) {
-        val draft = safetyManager.getVesselDraft()
+        // The sheet's "min depth clearance" control now actually gates the
+        // engine's DEPARE grounding check (previously a dead control).
+        val draft = minDepthRequiredMeters ?: safetyManager.getVesselDraft()
         _routingStatus.value = RoutingStatus.Starting
         viewModelScope.launch {
             try {

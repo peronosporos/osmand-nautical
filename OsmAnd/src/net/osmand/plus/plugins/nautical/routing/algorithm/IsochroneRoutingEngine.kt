@@ -125,7 +125,7 @@ class IsochroneRoutingEngine(
             for (node in currentFrontier) {
                 val distToDest = distanceNm(node.latitude, node.longitude, request.destination.latitude, request.destination.longitude)
                 if (distToDest < 5.0) {
-                    return@withContext buildResult(node, finalConfidence)
+                    return@withContext buildResult(node, finalConfidence, request.departureTime)
                 }
 
                 for (cogDeg in 0 until 360 step 5) {
@@ -359,7 +359,7 @@ class IsochroneRoutingEngine(
         return Pair(Math.toDegrees(lat2), Math.toDegrees(lon2))
     }
 
-    private fun buildResult(endNode: IsochroneNode, confidence: Double): OptimalRouteResult {
+    private fun buildResult(endNode: IsochroneNode, confidence: Double, departureTime: Long): OptimalRouteResult {
         val path = mutableListOf<Waypoint>()
         val legs = mutableListOf<net.osmand.plus.plugins.nautical.routing.model.PassagePlanLeg>()
         var totalDist = 0.0
@@ -380,6 +380,18 @@ class IsochroneRoutingEngine(
                 val dist = distanceNm(prev.latitude, prev.longitude, node.latitude, node.longitude)
                 totalDist += dist
 
+                // Real forecast/data attachment per leg (previously the
+                // passage-plan UI invented TWA 45, wind 15 kn, a sine-wave
+                // depth and left set/drift always null).
+                val midLat = (prev.latitude + node.latitude) / 2.0
+                val midLon = (prev.longitude + node.longitude) / 2.0
+                val midTimestamp = departureTime +
+                    (((prev.cumulativeTimeHours + node.cumulativeTimeHours) / 2.0) * 3_600_000.0).toLong()
+                val legWind = gribEngine.getWindVector(midLat, midLon, midTimestamp)
+                val legCurrent = gribEngine.getCurrentVector(midLat, midLon, midTimestamp)
+                val legTwaDeg = legWind?.let { windDir ->
+                    ((node.heading - windDir + 540.0) % 360.0) - 180.0
+                }
                 legs.add(
                     net.osmand.plus.plugins.nautical.routing.model.PassagePlanLeg(
                         legNumber = i,
@@ -387,10 +399,15 @@ class IsochroneRoutingEngine(
                         to = wpt,
                         distanceNm = dist,
                         courseToSteerDeg = node.heading,
-                        expectedSetDeg = null,
-                        expectedDriftKn = null,
+                        expectedSetDeg = legCurrent?.let { c ->
+                            (Math.toDegrees(atan2(c.u, c.v)) + 360.0) % 360.0
+                        },
+                        expectedDriftKn = legCurrent?.let { c -> c.speed * 1.94384 },
                         speedOverGroundKn = node.speedOverGround,
                         eteHours = node.cumulativeTimeHours - prev.cumulativeTimeHours,
+                        windSpeedMs = legWind?.speed,
+                        windAngleRad = legTwaDeg?.let { PI * it / 180.0 },
+                        minDepthMeters = sampleMinDepth(prev.latitude, prev.longitude, node.latitude, node.longitude),
                     ),
                 )
             }
@@ -403,5 +420,34 @@ class IsochroneRoutingEngine(
             legs = legs,
             confidenceFactor = confidence
         )
+    }
+
+    /**
+     * Minimum chart depth along the leg, sampled from real S-57 DEPARE depth
+     * areas (DRVAL1 of the enclosing area at each sample point). Returns null
+     * when no depth area covers any sample, i.e. no depth data for the leg.
+     */
+    private fun sampleMinDepth(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double? {
+        val distNmVal = distanceNm(lat1, lon1, lat2, lon2)
+        val samples = (distNmVal / 0.1).toInt().coerceIn(2, 40) // ~100 m spacing
+        var minDepth: Double? = null
+        val point = Coordinate()
+        for (s in 0..samples) {
+            val f = s.toDouble() / samples
+            point.x = lon1 + (lon2 - lon1) * f
+            point.y = lat1 + (lat2 - lat1) * f
+            val queryPoint = geometryFactory.createPoint(point)
+            val depthFeatures = s57Index.queryByAcronym(queryPoint, setOf("DEPARE"))
+            for (feature in depthFeatures) {
+                val drval1 = feature.attributes["DRVAL1"]?.toDoubleOrNull() ?: continue
+                val inside = feature.geometries.any { geo ->
+                    geo.toJtsGeometry(geometryFactory)?.intersects(queryPoint) == true
+                }
+                if (inside) {
+                    minDepth = if (minDepth == null) drval1 else minOf(minDepth, drval1)
+                }
+            }
+        }
+        return minDepth
     }
 }

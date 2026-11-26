@@ -165,7 +165,7 @@ class NmeaPlaybackControlBottomSheet : BaseMaterialBottomSheetDialogFragment() {
     private fun showFileSelectionDialog() {
         val files = viewModel.getReplayFiles()
         if (files.isEmpty()) {
-            app.showToastMessage(R.string.logbook_empty)
+            app.showToastMessage(R.string.nautical_replay_no_files)
             return
         }
 

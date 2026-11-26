@@ -68,6 +68,16 @@ class MarineRasterMapLayer(context: Context) : MapTileLayer(context, false) {
             lastNightVision = isNightVision
         }
 
+        // Blend mode (normal/multiply/overlay) persisted from the raster
+        // control sheet; overlay requires API 29+ and degrades to normal.
+        drawPaint.xfermode = when (app.settings.NAUTICAL_RASTER_CHARTS_BLEND.get()) {
+            1 -> android.graphics.PorterDuffXfermode(android.graphics.PorterDuff.Mode.MULTIPLY)
+            2 -> if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+                android.graphics.PorterDuffXfermode(android.graphics.PorterDuff.Mode.OVERLAY)
+            } else null
+            else -> null
+        }
+
         val latLonBounds = tileBox.latLonBounds
         val zoom = tileBox.zoom
         
@@ -99,6 +109,7 @@ class MarineRasterMapLayer(context: Context) : MapTileLayer(context, false) {
                 // Ensure the paint settings are used by the base layer
                 this.paintBitmap.alpha = alpha
                 this.paintBitmap.colorFilter = drawPaint.colorFilter
+                this.paintBitmap.xfermode = drawPaint.xfermode
                 drawTileMap(canvas, tileBox, drawSettings)
             }
         } finally {

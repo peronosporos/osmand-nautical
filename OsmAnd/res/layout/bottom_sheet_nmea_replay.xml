@@ -96,7 +96,7 @@
             app:icon="@drawable/ic_action_play_dark"
             app:iconGravity="textStart"
             app:iconPadding="0dp"
-            app:iconTint="#FFFFFF"
+            app:iconTint="@android:color/white"
             app:backgroundTint="?attr/active_color_primary"
             app:cornerRadius="22dp"
             android:contentDescription="@string/nautical_replay_btn_play" />

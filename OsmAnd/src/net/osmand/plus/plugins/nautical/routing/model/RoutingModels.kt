@@ -37,7 +37,8 @@ data class PassagePlanLeg(
     val eteHours: Double,
     val windSpeedMs: Double? = null,
     val windAngleRad: Double? = null,
-    val waveHeightM: Double? = null
+    val waveHeightM: Double? = null,
+    val minDepthMeters: Double? = null
 )
 
 data class OptimalRouteResult(

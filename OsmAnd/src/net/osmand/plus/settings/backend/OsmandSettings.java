@@ -3690,6 +3690,7 @@ public class OsmandSettings {
 	public final CommonPreference<Boolean> NAUTICAL_WET_SCREEN_VOLUME_KEYS = registerBooleanPreference("nautical_wet_screen_volume_keys", true).makeProfile();
 	public final CommonPreference<Boolean> NAUTICAL_LOCK_TOUCH_DURING_MANEUVERS = registerBooleanPreference("nautical_lock_touch_during_maneuvers", false).makeProfile();
 	public final CommonPreference<Integer> NAUTICAL_RASTER_CHARTS_OPACITY = registerIntPreference("nautical_raster_charts_opacity", 255).makeProfile();
+	public final CommonPreference<Integer> NAUTICAL_RASTER_CHARTS_BLEND = registerIntPreference("nautical_raster_charts_blend", 0).makeProfile();
 	public final CommonPreference<Boolean> NAUTICAL_HEAVY_WEATHER_MODE = registerBooleanPreference("nautical_heavy_weather_mode", false).makeProfile();
 	public final CommonPreference<Boolean> NAUTICAL_NAVTEX_ENABLED = registerBooleanPreference("nautical_navtex_enabled", true).makeProfile();
 	public final CommonPreference<Boolean> NAUTICAL_AIS_ENABLED = registerBooleanPreference("nautical_ais_enabled", true).makeProfile();

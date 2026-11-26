@@ -26,6 +26,11 @@ import kotlin.math.abs
  */
 class SensorHealthBottomSheet : BaseNauticalBottomSheet() {
 
+    private lateinit var themedCtx: android.content.Context
+    private var prevHeadingFixMs: Long = -1L
+    private var prevHeadingWallMs: Long = 0L
+    private var measuredHeadingHz: Double? = null
+
     private lateinit var badgeGps: TextView
     private lateinit var txtGpsDetails: TextView
 
@@ -45,9 +50,9 @@ class SensorHealthBottomSheet : BaseNauticalBottomSheet() {
     private lateinit var txtServerDetails: TextView
 
     override fun createMenuItems(savedInstanceState: Bundle?) {
-        addTitleItem("Sensor & Hardware Diagnostics")
+        addTitleItem(getString(R.string.nautical_sh_title))
 
-        val themedCtx = net.osmand.plus.utils.UiUtilities.getThemedContext(requireContext(), nightMode)
+        themedCtx = net.osmand.plus.utils.UiUtilities.getThemedContext(requireContext(), nightMode)
         val customView = LayoutInflater.from(themedCtx).inflate(R.layout.bottom_sheet_sensor_health, null)
 
         badgeGps = customView.findViewById(R.id.badge_gps_health)
@@ -94,7 +99,8 @@ class SensorHealthBottomSheet : BaseNauticalBottomSheet() {
             String.format(Locale.US, "%.5f°, %.5f°", state.latitude, state.longitude)
         } else {
             val loc = app.locationProvider?.lastKnownLocation
-            if (loc != null) String.format(Locale.US, "%.5f°, %.5f° (Internal GPS)", loc.latitude, loc.longitude) else "No Fix"
+            if (loc != null) getString(R.string.nautical_sh_gps_internal_fmt, loc.latitude, loc.longitude)
+            else getString(R.string.nautical_sh_no_fix)
         }
         val hdopStr = state.gnss?.horizontalDilution?.let { String.format(Locale.US, "%.1f", it) } ?: "--"
         val satsStr = state.gnss?.satellites?.toString() ?: "--"
@@ -109,7 +115,21 @@ class SensorHealthBottomSheet : BaseNauticalBottomSheet() {
         val hdgTrueStr = state.headingTrue?.let { String.format(Locale.US, "%03.1f°", Math.toDegrees(it)) } ?: "--"
         val hdgMagStr = state.headingMagnetic?.let { String.format(Locale.US, "%03.1f°", Math.toDegrees(it)) } ?: "--"
         val rotStr = state.rateOfTurn?.let { String.format(Locale.US, "%.1f °/min", it * 60.0) } ?: "--"
-        val hdgRateStr = if (hdgAgeMs in 0..2000) "10.0 Hz" else if (hdgAgeMs > 0) "< 1.0 Hz" else "--"
+        // Observed heading update rate from successive fix timestamps: the
+        // old "10.0 Hz" claim was age-inferred, not measured.
+        if (state.timeOfHeadingFix > 0 && state.timeOfHeadingFix != prevHeadingFixMs) {
+            val wallNow = System.currentTimeMillis()
+            if (prevHeadingFixMs > 0 && wallNow > prevHeadingWallMs) {
+                val dtMs = wallNow - prevHeadingWallMs
+                if (dtMs in 1..10_000) {
+                    val hz = 1000.0 / dtMs
+                    measuredHeadingHz = measuredHeadingHz?.let { it * 0.7 + hz * 0.3 } ?: hz
+                }
+            }
+            prevHeadingFixMs = state.timeOfHeadingFix
+            prevHeadingWallMs = wallNow
+        }
+        val hdgRateStr = measuredHeadingHz?.let { String.format(Locale.US, "%.1f Hz", it) } ?: "--"
         txtCompassDetails.text = getString(R.string.nautical_sh_compass_details_fmt, hdgTrueStr, hdgMagStr, rotStr, hdgRateStr)
 
         // 3. Depth Sounder
@@ -142,8 +162,9 @@ class SensorHealthBottomSheet : BaseNauticalBottomSheet() {
         } ?: 0
         val isAisActive = aisCount > 0 || (state.connectionStatus == ConnectionStatus.CONNECTED)
 
-        badgeAis.text = if (isAisActive) "OK" else "STANDBY"
-        badgeAis.setTextColor(ContextCompat.getColor(requireContext(), if (isAisActive) R.color.color_ok else R.color.color_warning))
+        badgeAis.text = if (isAisActive) getString(R.string.shared_string_ok).uppercase(Locale.US)
+            else getString(R.string.nautical_status_standby).uppercase(Locale.US)
+        badgeAis.setTextColor(ContextCompat.getColor(themedCtx, if (isAisActive) R.color.color_ok else R.color.color_warning))
         txtAisDetails.text = getString(
                 R.string.nautical_sh_ais_details_fmt,
                 aisCount,
@@ -154,24 +175,24 @@ class SensorHealthBottomSheet : BaseNauticalBottomSheet() {
         // 6. Signal K / Server Multiplexer
         val serverIp = app.settings.NAUTICAL_SERVER_IP.get()
         val serverPort = app.settings.NAUTICAL_SERVER_PORT.get()
-        val endpoint = if (serverIp.isNotEmpty()) "$serverIp:$serverPort" else "Local NMEA / Mock"
+        val endpoint = if (serverIp.isNotEmpty()) "$serverIp:$serverPort" else getString(R.string.nautical_sh_endpoint_local)
 
         when (state.connectionStatus) {
             ConnectionStatus.CONNECTED -> {
                 badgeServer.text = getString(R.string.nautical_cockpit_conn_connected).uppercase()
-                badgeServer.setTextColor(ContextCompat.getColor(requireContext(), R.color.color_ok))
+                badgeServer.setTextColor(ContextCompat.getColor(themedCtx, R.color.color_ok))
             }
             ConnectionStatus.CONNECTING -> {
                 badgeServer.text = getString(R.string.nautical_cockpit_conn_connecting).uppercase()
-                badgeServer.setTextColor(ContextCompat.getColor(requireContext(), R.color.color_warning))
+                badgeServer.setTextColor(ContextCompat.getColor(themedCtx, R.color.color_warning))
             }
             ConnectionStatus.STALE -> {
                 badgeServer.text = getString(R.string.nautical_cockpit_conn_stale).uppercase()
-                badgeServer.setTextColor(ContextCompat.getColor(requireContext(), R.color.color_warning))
+                badgeServer.setTextColor(ContextCompat.getColor(themedCtx, R.color.color_warning))
             }
             ConnectionStatus.DISCONNECTED, ConnectionStatus.UNAUTHORIZED -> {
                 badgeServer.text = getString(R.string.nautical_cockpit_conn_disconnected).uppercase()
-                badgeServer.setTextColor(ContextCompat.getColor(requireContext(), R.color.text_color_negative))
+                badgeServer.setTextColor(ContextCompat.getColor(themedCtx, R.color.text_color_negative))
             }
         }
         // Real round-trip latency telemetry is not wired yet; never show a
@@ -181,7 +202,7 @@ class SensorHealthBottomSheet : BaseNauticalBottomSheet() {
     }
 
     private fun setHealthBadge(badge: TextView, ageMs: Long, hasValue: Boolean) {
-        val ctx = context ?: return
+        val ctx = themedCtx
         if (!hasValue || ageMs < 0 || ageMs > 5000) {
             badge.text = getString(R.string.nautical_sh_badge_lost)
             badge.setTextColor(ContextCompat.getColor(ctx, R.color.text_color_negative))

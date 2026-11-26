@@ -669,6 +669,15 @@
 	<color name="nautical_metric_cat_env">#3949AB</color>
 	<color name="nautical_metric_cat_vessel">#F57C00</color>
 	<color name="nautical_metric_cat_power">#D89B00</color>
+	<color name="nautical_grib_active_bg">#1A2196F3</color>
+	<color name="nautical_grib_scrubber_card">#EE121820</color>
+	<color name="nautical_grib_scrubber_border">#FF0288D1</color>
+	<color name="nautical_grib_scrubber_accent">#FF00E5FF</color>
+	<color name="nautical_grib_scrubber_accent_bg">#3300E5FF</color>
+	<color name="nautical_grib_scrubber_close">#CCFFFFFF</color>
+	<color name="nautical_chip_idle_stroke">#40888888</color>
+	<color name="nautical_night_vision_recording">#FFB71C1C</color>
+	<color name="nautical_night_vision_recording_idle">#FF8B0000</color>
 	<color name="nautical_ais_buddy_gold">#FFD700</color>
 	<color name="nautical_ais_danger_bg">#33FF0000</color>
 	<color name="nautical_ais_danger_icon">#FF0000</color>

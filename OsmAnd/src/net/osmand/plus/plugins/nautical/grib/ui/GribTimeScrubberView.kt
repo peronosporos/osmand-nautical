@@ -75,8 +75,8 @@ class GribTimeScrubberView @JvmOverloads constructor(
             val shape = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
                 cornerRadius = 10f * density
-                setColor(0xEE121820.toInt()) // Deep dark marine card
-                setStroke((1.5f * density).toInt(), 0xFF0288D1.toInt()) // Subtle ocean blue border
+                setColor(ContextCompat.getColor(context, R.color.nautical_grib_scrubber_card))
+                setStroke((1.5f * density).toInt(), ContextCompat.getColor(context, R.color.nautical_grib_scrubber_border))
             }
             background = shape
             setPadding(padH, padV, padH, padV)
@@ -95,7 +95,7 @@ class GribTimeScrubberView @JvmOverloads constructor(
 
         statusBadgeView = TextView(context).apply {
             text = context.getString(R.string.nautical_grib_forecast_title)
-            setTextColor(0xFF00E5FF.toInt())
+            setTextColor(ContextCompat.getColor(context, R.color.nautical_grib_scrubber_accent))
             textSize = 10.5f
             typeface = android.graphics.Typeface.DEFAULT_BOLD
             val badgePadH = (6f * density).toInt()
@@ -104,7 +104,7 @@ class GribTimeScrubberView @JvmOverloads constructor(
             background = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
                 cornerRadius = 4f * density
-                setColor(0x3300E5FF.toInt())
+                setColor(ContextCompat.getColor(context, R.color.nautical_grib_scrubber_accent_bg))
             }
         }
         topRow.addView(statusBadgeView)
@@ -126,7 +126,7 @@ class GribTimeScrubberView @JvmOverloads constructor(
                 leftMargin = (6f * density).toInt()
             }
             setImageResource(R.drawable.ic_action_remove_dark)
-            setColorFilter(0xCCFFFFFF.toInt())
+            setColorFilter(ContextCompat.getColor(context, R.color.nautical_grib_scrubber_close))
             setOnClickListener {
                 stopPlayback()
                 resetToLive()
@@ -170,7 +170,7 @@ class GribTimeScrubberView @JvmOverloads constructor(
                 rightMargin = (4f * density).toInt()
             }
             setImageResource(R.drawable.ic_play_dark)
-            setColorFilter(0xFF00E5FF.toInt())
+            setColorFilter(ContextCompat.getColor(context, R.color.nautical_grib_scrubber_accent))
             setOnClickListener {
                 togglePlayback()
             }

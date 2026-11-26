@@ -22,10 +22,11 @@ import net.osmand.plus.plugins.nautical.engine.NauticalSafetyManager
 import net.osmand.plus.plugins.nautical.grib.parser.GribGridData
 import net.osmand.plus.plugins.nautical.grib.parser.GribHeader
 import net.osmand.plus.plugins.nautical.grib.parser.TimeStepGrid
-import net.osmand.plus.plugins.nautical.network.PolarProfile
 import net.osmand.plus.plugins.nautical.routing.model.RoutingRequest
 import net.osmand.plus.plugins.nautical.routing.model.Waypoint
 import net.osmand.plus.plugins.nautical.s57.S57SpatialIndex
+import net.osmand.plus.plugins.nautical.ui.NauticalColorResolver
+import net.osmand.plus.plugins.nautical.ui.NauticalSemanticColor
 import net.osmand.plus.plugins.nautical.ui.widgets.BaseNauticalBottomSheet
 import net.osmand.plus.plugins.nautical.viewmodel.RoutingStatus
 import net.osmand.plus.plugins.nautical.viewmodel.RoutingViewModel
@@ -86,8 +87,8 @@ class WeatherRoutingConfigBottomSheet : BaseNauticalBottomSheet() {
                     btn.setTextColor(activeColor)
                     btn.strokeWidth = (2 * resources.displayMetrics.density).toInt()
                 } else {
-                    btn.strokeColor = ColorStateList.valueOf(0x40888888)
-                    btn.setTextColor(ContextCompat.getColor(themedCtx, R.color.text_color_secondary_light))
+                    btn.strokeColor = ColorStateList.valueOf(ContextCompat.getColor(themedCtx, R.color.nautical_chip_idle_stroke))
+                    btn.setTextColor(NauticalColorResolver.getColor(themedCtx, NauticalSemanticColor.SECONDARY))
                     btn.strokeWidth = (1 * resources.displayMetrics.density).toInt()
                 }
             }
@@ -107,8 +108,8 @@ class WeatherRoutingConfigBottomSheet : BaseNauticalBottomSheet() {
                     btn.setTextColor(activeColor)
                     btn.strokeWidth = (2 * resources.displayMetrics.density).toInt()
                 } else {
-                    btn.strokeColor = ColorStateList.valueOf(0x40888888)
-                    btn.setTextColor(ContextCompat.getColor(themedCtx, R.color.text_color_secondary_light))
+                    btn.strokeColor = ColorStateList.valueOf(ContextCompat.getColor(themedCtx, R.color.nautical_chip_idle_stroke))
+                    btn.setTextColor(NauticalColorResolver.getColor(themedCtx, NauticalSemanticColor.SECONDARY))
                     btn.strokeWidth = (1 * resources.displayMetrics.density).toInt()
                 }
             }
@@ -128,9 +129,9 @@ class WeatherRoutingConfigBottomSheet : BaseNauticalBottomSheet() {
             override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
                 comfortSpeedWeight = progress
                 txtWeightingVal.text = when {
-                    progress < 30 -> "Max Comfort ($progress%)"
-                    progress > 70 -> "Max Speed ($progress%)"
-                    else -> "Balanced ($progress%)"
+                    progress < 30 -> getString(R.string.nautical_wr_weight_comfort_fmt, progress)
+                    progress > 70 -> getString(R.string.nautical_wr_weight_speed_fmt, progress)
+                    else -> getString(R.string.nautical_wr_weight_balanced_fmt, progress)
                 }
             }
             override fun onStartTrackingTouch(seekBar: SeekBar?) {}
@@ -186,43 +187,43 @@ class WeatherRoutingConfigBottomSheet : BaseNauticalBottomSheet() {
             txtProgressMsg.text = getString(R.string.nautical_calculating_weather_route)
 
             val plugin = NauticalPlugin.getInstance()
+            val appCtx = plugin?.application ?: (requireActivity().application as net.osmand.plus.OsmandApplication)
+            fun refuseCalc(resId: Int) {
+                layoutProgress.visibility = View.GONE
+                btnCalculate.isEnabled = true
+                appCtx.showToastMessage(resId)
+            }
             val ownLoc = plugin?.application?.locationProvider?.lastKnownLocation
-            val startWp = if (ownLoc != null) Waypoint(ownLoc.latitude, ownLoc.longitude) else Waypoint(52.5, 4.5)
+            if (ownLoc == null) {
+                // Honesty gate: routing from an invented position is refused
+                // (previously it silently started at 52.5N 4.5E).
+                refuseCalc(R.string.nautical_wr_no_position)
+                return@setOnClickListener
+            }
+            val startWp = Waypoint(ownLoc.latitude, ownLoc.longitude)
 
             val argLat = arguments?.getDouble(EXTRA_DEST_LAT, 0.0)?.takeIf { it != 0.0 }
                 ?: plugin?.application?.settings?.NAUTICAL_TACTICAL_TARGET_LAT?.get()?.takeIf { it != 0.0 }
             val argLon = arguments?.getDouble(EXTRA_DEST_LON, 0.0)?.takeIf { it != 0.0 }
                 ?: plugin?.application?.settings?.NAUTICAL_TACTICAL_TARGET_LON?.get()?.takeIf { it != 0.0 }
 
-            val destWp = if (argLat != null && argLon != null) {
-                Waypoint(argLat, argLon)
-            } else {
-                Waypoint(startWp.latitude + 0.5, startWp.longitude + 0.8)
+            if (argLat == null || argLon == null) {
+                // Honesty gate: previously this invented a destination half a
+                // degree away and confidently routed to it.
+                refuseCalc(R.string.nautical_wr_no_destination)
+                return@setOnClickListener
             }
+            val destWp = Waypoint(argLat, argLon)
 
             val depTime = System.currentTimeMillis() + departureOffsetHours * 3600000L
 
             val polarProfile = SailingDependencyContainer.performanceRepository?.activePolarProfile?.value
-                ?: PolarProfile(
-                    name = "Default Cruiser",
-                    description = "Standard Polar Profile",
-                    tws = listOf(6.0, 8.0, 10.0, 12.0, 14.0, 16.0, 20.0),
-                    twa = listOf(30.0, 40.0, 50.0, 60.0, 70.0, 80.0, 90.0, 110.0, 120.0, 135.0, 150.0, 180.0),
-                    speeds = listOf(
-                        listOf(3.2, 4.4, 5.3, 6.0, 6.4, 6.7, 6.9),
-                        listOf(4.6, 5.8, 6.6, 7.1, 7.4, 7.6, 7.8),
-                        listOf(5.2, 6.4, 7.1, 7.5, 7.8, 8.0, 8.2),
-                        listOf(5.5, 6.7, 7.4, 7.8, 8.1, 8.3, 8.5),
-                        listOf(5.7, 6.9, 7.6, 8.0, 8.3, 8.5, 8.8),
-                        listOf(5.8, 7.0, 7.7, 8.1, 8.4, 8.7, 9.0),
-                        listOf(5.8, 7.0, 7.7, 8.2, 8.5, 8.8, 9.2),
-                        listOf(5.5, 6.8, 7.5, 8.1, 8.5, 8.9, 9.4),
-                        listOf(5.1, 6.4, 7.2, 7.8, 8.3, 8.8, 9.5),
-                        listOf(4.3, 5.6, 6.5, 7.2, 7.8, 8.4, 9.2),
-                        listOf(3.5, 4.6, 5.5, 6.3, 7.0, 7.7, 8.6),
-                        listOf(2.8, 3.8, 4.6, 5.3, 6.0, 6.7, 7.6)
-                    )
-                )
+            if (polarProfile == null) {
+                // Honesty gate: routing would claim boat speeds from an
+                // invented "Default Cruiser" polar table; refuse instead.
+                refuseCalc(R.string.nautical_wr_no_polar)
+                return@setOnClickListener
+            }
 
             val request = RoutingRequest(
                 start = startWp,
@@ -238,8 +239,16 @@ class WeatherRoutingConfigBottomSheet : BaseNauticalBottomSheet() {
             val resolvedGrid: GribGridData = if (memoryGrid != null && memoryGrid.timeSteps.isNotEmpty()) {
                 memoryGrid
             } else {
-                val tws = liveState?.windSpeedTrue ?: liveState?.windSpeedApparent ?: 8.0
-                val twd = liveState?.windDirectionTrue ?: liveState?.windDirectionApparent ?: 0.785
+                val tws = liveState?.windSpeedTrue ?: liveState?.windSpeedApparent
+                val twd = liveState?.windDirectionTrue ?: liveState?.windDirectionApparent
+                if (tws == null || twd == null) {
+                    // Honesty gate: without a forecast file or a live wind
+                    // measurement there is no wind field to route on
+                    // (previously it invented a constant 8 m/s breeze).
+                    refuseCalc(R.string.nautical_wr_no_wind_data)
+                    return@setOnClickListener
+                }
+                // Uniform grid synthesized from the single live observation.
                 val u = (-tws * sin(twd)).toFloat()
                 val v = (-tws * cos(twd)).toFloat()
                 val minLat = minOf(startWp.latitude, destWp.latitude) - 1.5
@@ -260,7 +269,7 @@ class WeatherRoutingConfigBottomSheet : BaseNauticalBottomSheet() {
             val index = plugin?.s57SpatialIndex ?: S57SpatialIndex(app)
             val safety = plugin?.safetyManager ?: NauticalSafetyManager.getInstance(app)
 
-            viewModel.calculateWeatherRoute(request, resolvedGrid, index, safety)
+            viewModel.calculateWeatherRoute(request, resolvedGrid, index, safety, minDepthClearance)
         }
 
         updateDepButtons()

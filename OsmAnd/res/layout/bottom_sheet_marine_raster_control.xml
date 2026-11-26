@@ -69,7 +69,7 @@
             android:id="@+id/opacity_percent"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="100%"
+            tools:text="100%"
             android:textAppearance="@style/TextAppearance.AppCompat.Medium"
             android:textColor="?android:attr/textColorSecondary"
             android:textStyle="bold" />

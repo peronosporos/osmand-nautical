@@ -47,10 +47,24 @@ class MarineRasterSettingsControl : BaseMaterialBottomSheetDialogFragment() {
             override fun onStopTrackingTouch(seekBar: SeekBar?) {}
         })
 
+        // Blend mode was a dead toggle (checked a fixed button, persisted
+        // nothing). Now it round-trips a real setting consumed by the layer.
         val blendGroup = view.findViewById<com.google.android.material.button.MaterialButtonToggleGroup>(R.id.raster_blend_group)
-        blendGroup?.check(R.id.btn_blend_normal)
-        blendGroup?.addOnButtonCheckedListener { _, _, isChecked ->
+        val blendSelection = when (settings.NAUTICAL_RASTER_CHARTS_BLEND.get()) {
+            1 -> R.id.btn_blend_multiply
+            2 -> R.id.btn_blend_overlay
+            else -> R.id.btn_blend_normal
+        }
+        blendGroup?.check(blendSelection)
+        blendGroup?.addOnButtonCheckedListener { _, checkedId, isChecked ->
             if (isChecked) {
+                settings.NAUTICAL_RASTER_CHARTS_BLEND.set(
+                    when (checkedId) {
+                        R.id.btn_blend_multiply -> 1
+                        R.id.btn_blend_overlay -> 2
+                        else -> 0
+                    }
+                )
                 view.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
                 app.osmandMap.refreshMap()
             }

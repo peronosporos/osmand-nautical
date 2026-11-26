@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:layout_marginBottom="8dp"
@@ -27,7 +28,7 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="Leg 1: WP 1 → WP 2"
+                tools:text="Leg 1: WP 1 → WP 2"
                 android:textAppearance="@style/TextAppearance.AppCompat.Small"
                 android:textStyle="bold"
                 android:textColor="?android:attr/textColorPrimary" />
@@ -36,7 +37,7 @@
                 android:id="@+id/txt_leg_distance"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="4.2 NM"
+                tools:text="4.2 NM"
                 android:textStyle="bold"
                 android:textSize="13sp"
                 android:textColor="?attr/active_color_primary" />
@@ -53,7 +54,7 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="CTS: 045°T • TWA: 52°"
+                tools:text="CTS: 045°T • TWA: 52°"
                 android:textSize="12sp"
                 android:textColor="?android:attr/textColorSecondary" />
 
@@ -61,7 +62,7 @@
                 android:id="@+id/txt_leg_wind"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Wind: 14 kn @ 095°"
+                tools:text="Wind: 14 kn @ 095°"
                 android:textSize="12sp"
                 android:textColor="?android:attr/textColorSecondary" />
         </LinearLayout>
@@ -78,7 +79,7 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="Depth: > 5.0 m (Safe)"
+                tools:text="Depth: > 5.0 m (Safe)"
                 android:textSize="12sp"
                 android:textColor="@color/nautical_status_green" />
 
@@ -86,7 +87,7 @@
                 android:id="@+id/txt_leg_tidal_drift"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="+0.8 kn Current"
+                tools:text="+0.8 kn Current"
                 android:textSize="11sp"
                 android:textStyle="bold"
                 android:paddingHorizontal="6dp"
@@ -100,7 +101,7 @@
                 android:id="@+id/txt_leg_ete"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="ETE: 38 min"
+                tools:text="ETE: 38 min"
                 android:textSize="12sp"
                 android:textStyle="bold"
                 android:textColor="?android:attr/textColorPrimary" />

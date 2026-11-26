@@ -1,19 +1,30 @@
 package net.osmand.plus.plugins.nautical.routing.ui
 
 import android.content.Context
-import android.graphics.*
+import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.DashPathEffect
+import android.graphics.Paint
+import android.graphics.Path
+import android.graphics.RectF
+import android.graphics.Typeface
 import android.util.AttributeSet
 import android.view.View
-import net.osmand.plus.OsmandApplication
+import net.osmand.plus.R
 import net.osmand.plus.plugins.nautical.routing.model.PassagePlanLeg
 import java.util.Locale
 import kotlin.math.max
 import kotlin.math.min
 
 /**
- * Route Depth & Safety Clearance Profile Graph View.
- * Displays cross-sectional sea bed depth profile, minimum dynamic keel clearance,
- * waypoint segment distances, and highlights legs crossing unsafe shallow depths.
+ * Route Depth & Safety Clearance Profile Graph.
+ *
+ * Plots the REAL minimum chart depth per leg (S-57 DEPARE areas sampled by
+ * the routing engine) as a step profile with the draft safety limit, keel
+ * clearance badge and waypoint ticks. When any leg lacks chart depth
+ * coverage the view renders an honest "data unavailable" message instead of
+ * an invented seabed curve (the previous implementation drew a sine wave
+ * from the leg index and computed fake safe/shallow verdicts from it).
  *
  * Strictly zero allocations in onDraw cycles.
  */
@@ -24,10 +35,12 @@ class RouteDepthProfileGraphView @JvmOverloads constructor(
 ) : View(context, attrs, defStyleAttr) {
 
     private var legs: List<PassagePlanLeg> = emptyList()
-    private var minKeelClearanceMeters: Float = 4.5f
+    private var minKeelClearanceMeters: Float = 0.0f
     private var safetyThresholdMeters: Float = 2.5f // Draft + Safety Margin
     private var maxDepthScaleMeters: Float = 20.0f
     private var totalRouteNm: Float = 0.0f
+    private var hasChartDepths: Boolean = false
+    private var isRouteDepthSafe: Boolean = false
 
     var isNightVision: Boolean = false
         set(value) {
@@ -122,12 +135,17 @@ class RouteDepthProfileGraphView @JvmOverloads constructor(
         typeface = Typeface.DEFAULT_BOLD
     }
 
+    private val noDataTextPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = 0xFF607D8B.toInt()
+        textAlign = Paint.Align.CENTER
+        typeface = Typeface.DEFAULT_BOLD
+    }
+
     // Preallocated geometry & paths
     private val seabedPath = Path()
     private val seabedFillPath = Path()
     private val unsafeZonePath = Path()
     private val badgeRect = RectF()
-    private val gridRect = RectF()
 
     fun setRouteData(
         legs: List<PassagePlanLeg>,
@@ -138,29 +156,22 @@ class RouteDepthProfileGraphView @JvmOverloads constructor(
         this.safetyThresholdMeters = safetyDraftMeters + safetyMarginMeters
         this.totalRouteNm = legs.sumOf { it.distanceNm }.toFloat()
 
-        // Calculate simulated/interpolated route depths
-        var minClearance = Float.MAX_VALUE
-        for (i in legs.indices) {
-            val leg = legs[i]
-            // Depth model: deeper on open water, shallower near ends
-            val legDepth = estimateLegDepth(i, legs.size)
-            val clearance = legDepth - safetyDraftMeters
-            if (clearance < minClearance) {
-                minClearance = clearance
+        // Honest data gate: the profile is drawn only when every leg has real
+        // chart depth coverage (engine-sampled S-57 DEPARE minima).
+        hasChartDepths = legs.isNotEmpty() && legs.all { it.minDepthMeters != null }
+        if (hasChartDepths) {
+            val minDepth = legs.minOf { it.minDepthMeters!! }.toFloat()
+            minKeelClearanceMeters = (minDepth - safetyDraftMeters).coerceAtLeast(0f)
+            // Safe means enough water beyond draft: clearance >= safety margin.
+            isRouteDepthSafe = minKeelClearanceMeters >= safetyMarginMeters
+            if (isNightVision) {
+                clearanceBadgeStrokePaint.color = if (isRouteDepthSafe) 0xFFD50000.toInt() else 0xFFFF1744.toInt()
+                clearanceTextPaint.color = if (isRouteDepthSafe) 0xFFFF8A80.toInt() else 0xFFFF1744.toInt()
+            } else {
+                clearanceBadgeStrokePaint.color = if (isRouteDepthSafe) 0xFF43A047.toInt() else 0xFFFF1744.toInt()
+                clearanceTextPaint.color = if (isRouteDepthSafe) 0xFF69F0AE.toInt() else 0xFFFF5252.toInt()
             }
         }
-        this.minKeelClearanceMeters = if (minClearance != Float.MAX_VALUE) max(0.5f, minClearance) else 4.5f
-
-        // Adjust badge styling based on safety
-        val isSafe = minKeelClearanceMeters >= safetyMarginMeters
-        if (isNightVision) {
-            clearanceBadgeStrokePaint.color = if (isSafe) 0xFFD50000.toInt() else 0xFFFF1744.toInt()
-            clearanceTextPaint.color = if (isSafe) 0xFFFF8A80.toInt() else 0xFFFF1744.toInt()
-        } else {
-            clearanceBadgeStrokePaint.color = if (isSafe) 0xFF43A047.toInt() else 0xFFFF1744.toInt()
-            clearanceTextPaint.color = if (isSafe) 0xFF69F0AE.toInt() else 0xFFFF5252.toInt()
-        }
-
         invalidate()
     }
 
@@ -177,6 +188,7 @@ class RouteDepthProfileGraphView @JvmOverloads constructor(
             waypointMarkerPaint.color = 0xFFD50000.toInt()
             labelTextPaint.color = 0xFFFF8A80.toInt()
             clearanceBadgeBgPaint.color = 0xEE120000.toInt()
+            noDataTextPaint.color = 0xFFFF8A80.toInt()
         } else {
             waterBgPaint.color = 0x220288D1.toInt()
             gridLinePaint.color = 0x33FFFFFF.toInt()
@@ -189,15 +201,8 @@ class RouteDepthProfileGraphView @JvmOverloads constructor(
             waypointMarkerPaint.color = 0xFF0288D1.toInt()
             labelTextPaint.color = 0xFFCFD8DC.toInt()
             clearanceBadgeBgPaint.color = 0xEE121820.toInt()
+            noDataTextPaint.color = 0xFF607D8B.toInt()
         }
-    }
-
-    private fun estimateLegDepth(legIndex: Int, totalLegs: Int): Float {
-        if (totalLegs <= 1) return 8.0f
-        val progress = legIndex.toFloat() / (totalLegs - 1).toFloat()
-        // Natural bathymetry curve: shallower near ports (progress ~0 and ~1), deep mid-passage
-        val depthFactor = kotlin.math.sin(progress * Math.PI.toFloat())
-        return 4.0f + (depthFactor * 18.0f)
     }
 
     override fun onDraw(canvas: Canvas) {
@@ -218,12 +223,23 @@ class RouteDepthProfileGraphView @JvmOverloads constructor(
         if (graphW <= 10f || graphH <= 10f) return
 
         // 1. Water Background
-        gridRect.set(padL, padT, padL + graphW, padT + graphH)
-        canvas.drawRect(gridRect, waterBgPaint)
+        canvas.drawRect(padL, padT, padL + graphW, padT + graphH, waterBgPaint)
+
+        if (!hasChartDepths) {
+            // Honesty state: no real bathymetry for this route; nothing else
+            // may be drawn (previously a simulated sine seabed was shown here).
+            val msg = context.getString(R.string.nautical_pp_no_bathymetry)
+            noDataTextPaint.textSize = 12f * density
+            canvas.drawText(msg, w / 2f, padT + graphH / 2f, noDataTextPaint)
+            canvas.drawText(context.getString(R.string.nautical_pp_depth_profile_title),
+                16f * density, (20f * density), labelTextPaint)
+            return
+        }
 
         // 2. Depth Grid Lines (0m, 5m, 10m, 15m, 20m)
         val depthSteps = floatArrayOf(0f, 5f, 10f, 15f, 20f)
         for (d in depthSteps) {
+            if (d > maxDepthScaleMeters) break
             val y = padT + (d / maxDepthScaleMeters) * graphH
             canvas.drawLine(padL, y, padL + graphW, y, gridLinePaint)
             labelTextPaint.textSize = 10f * density
@@ -234,17 +250,19 @@ class RouteDepthProfileGraphView @JvmOverloads constructor(
         canvas.drawLine(padL, padT, padL + graphW, padT, waterlinePaint)
 
         // 4. Safety Clearance Threshold Line (Draft + Margin)
-        val safetyY = padT + (safetyThresholdMeters / maxDepthScaleMeters) * graphH
+        val safetyY = padT + (min(safetyThresholdMeters, maxDepthScaleMeters) / maxDepthScaleMeters) * graphH
         canvas.drawLine(padL, safetyY, padL + graphW, safetyY, safetyLinePaint)
 
         labelTextPaint.textSize = 9.5f * density
         labelTextPaint.color = 0xFFFF9800.toInt()
-        canvas.drawText("Safety Limit (${String.format(Locale.US, "%.1fm", safetyThresholdMeters)})", padL + (6f * density), safetyY - (3f * density), labelTextPaint)
+        val safetyLabel = context.getString(
+            R.string.nautical_pp_safety_limit_fmt,
+            String.format(Locale.US, "%.1f", safetyThresholdMeters)
+        )
+        canvas.drawText(safetyLabel, padL + (6f * density), safetyY - (3f * density), labelTextPaint)
 
-        // 5. Seabed Profile Polygon & Waypoint Ticks
-        if (legs.isNotEmpty()) {
-            drawSeabedProfile(canvas, padL, padT, graphW, graphH, density)
-        }
+        // 5. Seabed Profile Polygon & Waypoint Ticks (real per-leg minima)
+        drawSeabedProfile(canvas, padL, padT, graphW, graphH, density)
 
         // 6. Header Clearance Badge Readout
         drawClearanceBadge(canvas, w, density)
@@ -265,59 +283,67 @@ class RouteDepthProfileGraphView @JvmOverloads constructor(
         seabedFillPath.reset()
         unsafeZonePath.reset()
 
-        var currentDistNm = 0f
         val totalDist = max(0.1f, totalRouteNm)
+        fun xAt(distNm: Float): Float = padL + (distNm / totalDist).coerceIn(0f, 1f) * graphW
+        fun yAt(depthM: Float): Float = padT + (min(depthM, maxDepthScaleMeters) / maxDepthScaleMeters).coerceIn(0f, 1f) * graphH
 
-        var first = true
-        var prevX = padL
-        var prevY = padT
+        // Step profile from real per-leg minima: each leg's depth applies
+        // from its start boundary to its end boundary.
+        var distNm = 0f
+        var currentDepth = legs[0].minDepthMeters!!.toFloat()
+        seabedPath.moveTo(xAt(0f), yAt(currentDepth))
+        seabedFillPath.moveTo(xAt(0f), yAt(currentDepth))
 
-        for (i in 0 until nPoints) {
-            val distRatio = (currentDistNm / totalDist).coerceIn(0f, 1f)
-            val px = padL + distRatio * graphW
-            val depth = estimateLegDepth(min(i, nLegs - 1), nLegs)
-            val py = padT + (depth / maxDepthScaleMeters).coerceIn(0f, 1f) * graphH
+        for (i in 0 until nLegs) {
+            val legDepth = legs[i].minDepthMeters!!.toFloat()
+            val xStart = xAt(distNm)
+            val legDist = legs[i].distanceNm.toFloat()
+            val xEnd = xAt(distNm + legDist)
 
-            if (first) {
-                seabedPath.moveTo(px, py)
-                seabedFillPath.moveTo(px, py)
-                first = false
+            // Vertical step transition at the leg boundary, then flat.
+            if (legDepth != currentDepth && i > 0) {
+                seabedPath.lineTo(xStart, yAt(currentDepth))
+                seabedFillPath.lineTo(xStart, yAt(currentDepth))
+                currentDepth = legDepth
+                seabedPath.lineTo(xStart, yAt(currentDepth))
+                seabedFillPath.lineTo(xStart, yAt(currentDepth))
             } else {
-                seabedPath.lineTo(px, py)
-                seabedFillPath.lineTo(px, py)
+                currentDepth = legDepth
+            }
+            seabedPath.lineTo(xEnd, yAt(currentDepth))
+            seabedFillPath.lineTo(xEnd, yAt(currentDepth))
 
-                // Highlight unsafe shallow sections
-                val isUnsafe = depth < safetyThresholdMeters
-                if (isUnsafe) {
-                    unsafeZonePath.reset()
-                    unsafeZonePath.moveTo(prevX, prevY)
-                    unsafeZonePath.lineTo(px, py)
-                    unsafeZonePath.lineTo(px, padT + graphH)
-                    unsafeZonePath.lineTo(prevX, padT + graphH)
-                    unsafeZonePath.close()
-                    canvas.drawPath(unsafeZonePath, unsafeShadingPaint)
-                    canvas.drawLine(prevX, prevY, px, py, unsafeStrokePaint)
-                }
+            // Highlight unsafe shallow sections (real data verdicts only)
+            if (currentDepth < safetyThresholdMeters) {
+                unsafeZonePath.reset()
+                unsafeZonePath.moveTo(xStart, yAt(currentDepth))
+                unsafeZonePath.lineTo(xEnd, yAt(currentDepth))
+                unsafeZonePath.lineTo(xEnd, padT + graphH)
+                unsafeZonePath.lineTo(xStart, padT + graphH)
+                unsafeZonePath.close()
+                canvas.drawPath(unsafeZonePath, unsafeShadingPaint)
+                canvas.drawLine(xStart, yAt(currentDepth), xEnd, yAt(currentDepth), unsafeStrokePaint)
             }
 
-            // Draw Waypoint Marker & Label
-            canvas.drawCircle(px, padT, 4f * density, waypointMarkerPaint)
-            canvas.drawCircle(px, padT, 4f * density, waypointMarkerStrokePaint)
-
+            // Draw Waypoint Marker & Label at the leg start boundary
+            canvas.drawCircle(xStart, padT, 4f * density, waypointMarkerPaint)
+            canvas.drawCircle(xStart, padT, 4f * density, waypointMarkerStrokePaint)
             labelTextPaint.color = Color.WHITE
             labelTextPaint.textSize = 9f * density
-            val wpLabel = "WP${i + 1}"
-            canvas.drawText(wpLabel, px - (8f * density), padT + graphH + (14f * density), labelTextPaint)
+            canvas.drawText("WP${i + 1}", xStart - (8f * density), padT + graphH + (14f * density), labelTextPaint)
 
-            if (i < nLegs) {
-                currentDistNm += legs[i].distanceNm.toFloat()
-            }
-            prevX = px
-            prevY = py
+            distNm += legDist
         }
 
-        // Close seabed polygon down to bottom
+        // Final waypoint marker
         val lastX = padL + graphW
+        canvas.drawCircle(lastX, padT, 4f * density, waypointMarkerPaint)
+        canvas.drawCircle(lastX, padT, 4f * density, waypointMarkerStrokePaint)
+        labelTextPaint.color = Color.WHITE
+        labelTextPaint.textSize = 9f * density
+        canvas.drawText("WP$nPoints", lastX - (8f * density), padT + graphH + (14f * density), labelTextPaint)
+
+        // Close seabed polygon down to bottom
         seabedFillPath.lineTo(lastX, padT + graphH)
         seabedFillPath.lineTo(padL, padT + graphH)
         seabedFillPath.close()
@@ -327,11 +353,12 @@ class RouteDepthProfileGraphView @JvmOverloads constructor(
     }
 
     private fun drawClearanceBadge(canvas: Canvas, width: Float, density: Float) {
-        val label = if (minKeelClearanceMeters >= safetyThresholdMeters - 2.0f) {
-            String.format(Locale.US, "Min Keel Clearance: %.1f m (SAFE)", minKeelClearanceMeters)
-        } else {
-            String.format(Locale.US, "Min Keel Clearance: %.1f m (SHALLOW RISK)", minKeelClearanceMeters)
-        }
+        val verdictRes = if (isRouteDepthSafe) R.string.nautical_depth_safe else R.string.nautical_depth_shallow_warning
+        val label = context.getString(
+            R.string.nautical_pp_badge_clearance_fmt,
+            String.format(Locale.US, "%.1f", minKeelClearanceMeters),
+            context.getString(verdictRes)
+        )
 
         val textWidth = clearanceTextPaint.measureText(label)
         val badgeW = textWidth + (16f * density)
@@ -348,6 +375,6 @@ class RouteDepthProfileGraphView @JvmOverloads constructor(
         // Route Profile Title
         labelTextPaint.color = 0xFF00E5FF.toInt()
         labelTextPaint.textSize = 11f * density
-        canvas.drawText("ROUTE DEPTH & CLEARANCE PROFILE", 16f * density, badgeTop + (14f * density), labelTextPaint)
+        canvas.drawText(context.getString(R.string.nautical_pp_depth_profile_title), 16f * density, badgeTop + (14f * density), labelTextPaint)
     }
 }
