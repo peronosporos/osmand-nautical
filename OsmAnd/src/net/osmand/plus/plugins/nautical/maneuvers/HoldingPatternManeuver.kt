@@ -20,7 +20,7 @@ class HoldingPatternManeuver(app: OsmandApplication) : ManeuverEngine(app) {
         initialHeading = Double.NaN
         totalTurnDegrees = 0.0
         lastHeading = Double.NaN
-        speak("Holding pattern 360 turn initiated.")
+        speak(app.getString(R.string.nautical_holding_pattern_initiated))
     }
 
     override fun onStateUpdate(state: MarineState) {
@@ -41,7 +41,7 @@ class HoldingPatternManeuver(app: OsmandApplication) : ManeuverEngine(app) {
 
             if (totalTurnDegrees >= 350.0) {
                 transitionToCompleted()
-                speak("Holding pattern completed.")
+                speak(app.getString(R.string.nautical_holding_pattern_completed))
             }
         }
     }

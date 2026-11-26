@@ -631,6 +631,21 @@
     <string name="nautical_ai_rep_vessel_hint">Vous pouvez interroger le vent, la profondeur, la vitesse ou les batteries, et commander le pilote automatique et les éclairages.</string>
     <string name="nautical_ai_na">n/d</string>
     <string name="nautical_ai_kn_fmt">%.1f kn</string>
+    <string name="nautical_fmt_kn">%.1f kn</string>
+    <string name="nautical_fmt_nm1">%.1f NM</string>
+    <string name="nautical_fmt_nm2">%.2f NM</string>
+    <string name="nautical_fmt_m">%.1f m</string>
+    <string name="nautical_fmt_kn_axis">%1$s%2$.1fkn</string>
+    <string name="nautical_fmt_value_kn">%1$s kn</string>
+    <string name="nautical_fmt_value_nm">%1$s NM</string>
+    <string name="nautical_maneuver_timed_out">Délai de la manœuvre dépassé</string>
+    <string name="nautical_mooring_manual_override">Prise de barre manuelle détectée</string>
+    <string name="nautical_holding_pattern_initiated">Début du circuit d\'attente sur 360 degrés.</string>
+    <string name="nautical_holding_pattern_completed">Circuit d\'attente terminé.</string>
+    <string name="nautical_maneuver_missing_state">Données d\'état initiales manquantes</string>
+    <string name="nautical_mooring_speed_high_fmt">Vitesse trop élevée pour l\'amarrage : %1$s kn</string>
+    <string name="nautical_mooring_executing">Manœuvre d\'amarrage en cours. Surveillez la distance et la vitesse.</string>
+    <string name="nautical_mooring_completed_status">Amarrage terminé</string>
     <string name="nautical_ai_deg_fmt">%d°</string>
     <string name="logbook_empty">Aucune entrée de journal enregistrée pour le moment.</string>
     <string name="nautical_no_media">Aucun média</string>
@@ -1253,7 +1268,7 @@
     <string name="nautical_alternator_voltage">Tension de l\'alternateur</string>
     <string name="nautical_anchor_depth_label">Profondeur de l\'eau</string>
     <string name="nautical_anchor_desync_warning">Position de l\'ancre désynchronisée du serveur !</string>
-    <string name="nautical_anchor_dragging_alarm">Suspicion de chasse de l\'ancre ! Distance %1$.1fm &gt; Autorisée %2$.1fm. Orin : %3$dm, Profondeur : %4$.1fm</string>
+    <string name="nautical_anchor_dragging_alarm">Suspicion de chasse de l\'ancre ! Distance %1$.1fm &gt; Autorisée %2$.1fm. Ligne de mouillage : %3$dm, Profondeur : %4$.1fm</string>
     <string name="nautical_anchor_drift_alarm">ALARME DE DÉRIVE DE L\'ANCRE ! Navire hors limite !</string>
     <string name="nautical_anchor_gps_lost_alarm">SIGNAL GPS PERDU ! VÉRIFIEZ LA VEILLE D\'ANCRE !</string>
     <string name="nautical_anchor_scope_format">%1$d:1</string>
@@ -1262,9 +1277,9 @@
     <string name="nautical_anchoring_at_depth_localized">Mouillage à %1$s %2$s.</string>
     <string name="nautical_anchoring_dropping">Largage de l\'ancre</string>
     <string name="nautical_anchoring_paying_out">Filage : %1$.1f m / %2$.1f m</string>
-    <string name="nautical_anchoring_scope_msg">Rapport de mouillage défini à %1$.1f. Filage de %2$s %3$s d\'orin.</string>
+    <string name="nautical_anchoring_scope_msg">Rapport de mouillage défini à %1$.1f. Filage de %2$s %3$s de ligne de mouillage.</string>
     <string name="nautical_anchoring_set">Navire stabilisé : ancre tenue</string>
-    <string name="nautical_anchoring_settling_desc">Orin filé - stabilisation du navire (Vitesse : %1$s kn)</string>
+    <string name="nautical_anchoring_settling_desc">Ligne filée - stabilisation du navire (Vitesse : %1$s kn)</string>
     <string name="nautical_anchoring_settling_manual">Stabilisation du navire (Vitesse : %1$s kn). Attendre &lt; 0.1 kn.</string>
     <string name="nautical_anchoring_slide_to_set">GLISSER POUR POSER L\'ANCRE</string>
     <string name="nautical_anchoring_windlass_prompt">Commande du guindeau disponible. Faut-il descendre l\'ancre maintenant ?</string>
@@ -1288,7 +1303,7 @@
     <string name="nautical_battery_soc_desc">État de charge de la batterie</string>
     <string name="nautical_battery_volt_desc">Tension de la batterie</string>
     <string name="nautical_boost_pressure">Pression de suralimentation</string>
-    <string name="nautical_calculated_rode">Orin calculé : %1$.1f m</string>
+    <string name="nautical_calculated_rode">Ligne de mouillage calculée : %1$.1f m</string>
     <string name="nautical_camera">Caméra du navire</string>
     <string name="nautical_charger_state">État du chargeur</string>
     <string name="nautical_cog_desc">Cap sur le fond</string>
@@ -1397,7 +1412,7 @@
     <string name="nautical_manual_override_detected">Intervention manuelle détectée via shadow drive</string>
     <string name="nautical_marine_station">Station marine</string>
     <string name="nautical_master_telemetry_desc">Accès à une grille personnalisable de télémétrie en temps réel</string>
-    <string name="nautical_med_mooring_anchor_away">Ancre au fond. Filage de l\'orin. Marche arrière lente.</string>
+    <string name="nautical_med_mooring_anchor_away">Ancre au fond. Filage de la ligne. Marche arrière lente.</string>
     <string name="nautical_med_mooring_anchor_set">Ancre posée. Cul au quai en marche arrière. Vitesse cible en marche arrière : 0.5 à 1 nœud.</string>
     <string name="nautical_med_mooring_approaching">Approche de la zone de largage</string>
     <string name="nautical_med_mooring_armed_msg">Mouillage méditerranéen armé. Larguez l\'ancre à %1$d mètres du quai.</string>
@@ -1407,7 +1422,7 @@
     <string name="nautical_med_mooring_drop_anchor_now">LARGUEZ L\'ANCRE MAINTENANT !</string>
     <string name="nautical_med_mooring_leeway_warning">Dérive critique, utilisez le propulseur d\'étrave.</string>
     <string name="nautical_med_mooring_maneuver_completed">Manœuvre terminée</string>
-    <string name="nautical_med_mooring_paying_out">Filage de l\'orin</string>
+    <string name="nautical_med_mooring_paying_out">Filage de la ligne</string>
     <string name="nautical_med_mooring_rode_payout_format">Filage : %1$.1fm / %2$.1fm</string>
     <string name="nautical_med_mooring_speed_abort">Vitesse d\'approche excessive près du quai ! Annulation.</string>
     <string name="nautical_med_mooring_stern_approach">Approche en poupe</string>
@@ -1513,7 +1528,7 @@
     <string name="nautical_toast_heading_sent">Cap envoyé au pilote automatique</string>
     <string name="nautical_toast_helm_safety_release">Dégagement d\'urgence du verrou de barre activé</string>
     <string name="nautical_toast_mode_changed">Mode du pilote mis à jour</string>
-    <string name="nautical_toast_paying_out_rode">Filage de %1$dm d\'orin pour relâcher la tension</string>
+    <string name="nautical_toast_paying_out_rode">Filage de %1$dm de ligne pour relâcher la tension</string>
     <string name="nautical_toast_stopped">Pilote arrêté</string>
     <string name="nautical_toast_waypoint_deleted">Point de route supprimé</string>
     <string name="nautical_touch_lock_active_full">%1$s\n%2$s</string>
@@ -1569,7 +1584,7 @@
     <string name="nautical_weighing_anchor_dist_fmt">Dist de l\'ancre : %1$s %2$s</string>
     <string name="nautical_weighing_anchor_executing">L\'ancre est levée. Suivi de la distance au point de largage.</string>
     <string name="nautical_weighing_anchor_over_anchor">À la verticale de l\'ancre</string>
-    <string name="nautical_weighing_anchor_rode_in_fmt">Orin rentré : %1$s %2$s</string>
+    <string name="nautical_weighing_anchor_rode_in_fmt">Ligne rentrée : %1$s %2$s</string>
     <string name="nautical_weighing_anchor_windlass_up_prompt">Commande du guindeau disponible. Faut-il relever l\'ancre maintenant ?</string>
     <string name="nautical_widget_cog_label">COG</string>
     <string name="nautical_widget_depth_label">Profondeur</string>

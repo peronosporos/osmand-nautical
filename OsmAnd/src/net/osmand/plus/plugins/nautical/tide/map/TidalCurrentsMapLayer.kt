@@ -301,7 +301,7 @@ class TidalCurrentsMapLayer(context: Context) : OsmandMapLayer(context) {
         }
 
         // Draw speed badge (e.g., "1.8 kn") alongside arrow
-        val badgeLabel = String.format(java.util.Locale.US, "%.1f kn", speedKnots)
+        val badgeLabel = context.getString(R.string.nautical_fmt_kn, speedKnots)
         val textW = badgeTextPaint.measureText(badgeLabel)
         val textH = badgeTextPaint.textSize
         val bW = textW + 12f

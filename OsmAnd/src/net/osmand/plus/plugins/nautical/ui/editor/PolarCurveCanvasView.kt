@@ -141,7 +141,7 @@ class PolarCurveCanvasView @JvmOverloads constructor(
                 -90f, 180f, false, paint
             )
             // Speed labels
-            canvas.drawText("${speed}kn", (originX + r).toFloat() + 2f * density, originY + 12f * density, textPaint)
+            canvas.drawText(speed.toString() + context.getString(R.string.nautical_unit_knots), (originX + r).toFloat() + 2f * density, originY + 12f * density, textPaint)
         }
 
         // Draw TWA angle radial lines (0°, 30°, 60°, 90°, 120°, 150°, 180°)

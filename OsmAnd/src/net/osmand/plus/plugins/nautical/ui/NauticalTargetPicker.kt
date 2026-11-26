@@ -244,7 +244,7 @@ class NauticalTargetPicker : BottomSheetDialogFragment() {
                 val distNm = ownLoc.distanceTo(targetLoc) / 1852.0
                 val bearingDeg = (ownLoc.bearingTo(targetLoc) + 360f) % 360f
                 val distView = TextView(context).apply {
-                    text = getString(R.string.nautical_ais_range_bearing, String.format(Locale.US, "%.1fnm", distNm), String.format(Locale.US, "%03.0f°", bearingDeg))
+                    text = getString(R.string.nautical_ais_range_bearing, context.getString(R.string.nautical_fmt_nm1, distNm), String.format(Locale.US, "%03.0f°", bearingDeg))
                     textSize = 13f
                     setTypeface(null, android.graphics.Typeface.BOLD)
                 }
@@ -253,7 +253,7 @@ class NauticalTargetPicker : BottomSheetDialogFragment() {
 
             if (target.sog != AisObjectConstants.INVALID_SOG && target.sog > 0) {
                 val sogView = TextView(context).apply {
-                    text = String.format(Locale.US, "%.1f kn", target.sog)
+                    text = context.getString(R.string.nautical_fmt_kn, target.sog)
                     textSize = 12f
                     setTextColor(ColorUtilities.getSecondaryTextColor(requireActivity().application as OsmandApplication, false))
                 }

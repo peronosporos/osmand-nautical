@@ -631,6 +631,21 @@
     <string name="nautical_ai_rep_vessel_hint">Puedes preguntar por el viento, la profundidad, la velocidad o las baterías, y dar órdenes al piloto automático y a las luces.</string>
     <string name="nautical_ai_na">n/d</string>
     <string name="nautical_ai_kn_fmt">%.1f kn</string>
+    <string name="nautical_fmt_kn">%.1f kn</string>
+    <string name="nautical_fmt_nm1">%.1f NM</string>
+    <string name="nautical_fmt_nm2">%.2f NM</string>
+    <string name="nautical_fmt_m">%.1f m</string>
+    <string name="nautical_fmt_kn_axis">%1$s%2$.1fkn</string>
+    <string name="nautical_fmt_value_kn">%1$s kn</string>
+    <string name="nautical_fmt_value_nm">%1$s NM</string>
+    <string name="nautical_maneuver_timed_out">Tiempo de espera de la maniobra agotado</string>
+    <string name="nautical_mooring_manual_override">Se detectó control manual del timón</string>
+    <string name="nautical_holding_pattern_initiated">Iniciado circuito de espera de 360 grados.</string>
+    <string name="nautical_holding_pattern_completed">Circuito de espera completado.</string>
+    <string name="nautical_maneuver_missing_state">Faltan los datos de estado iniciales</string>
+    <string name="nautical_mooring_speed_high_fmt">Velocidad excesiva para el atraque: %1$s kn</string>
+    <string name="nautical_mooring_executing">Ejecutando maniobra de atraque. Vigile la distancia y la velocidad.</string>
+    <string name="nautical_mooring_completed_status">Atraque completado</string>
     <string name="nautical_ai_deg_fmt">%d°</string>
     <string name="logbook_empty">Aún no se han registrado entradas en el cuaderno.</string>
     <string name="nautical_no_media">Sin multimedia</string>
@@ -1253,7 +1268,7 @@
     <string name="nautical_alternator_voltage">Voltaje del alternador</string>
     <string name="nautical_anchor_depth_label">Profundidad del agua</string>
     <string name="nautical_anchor_desync_warning">¡Posición del ancla desincronizada del servidor!</string>
-    <string name="nautical_anchor_dragging_alarm">¡Sospecha de garreo del ancla! Distancia %1$.1fm &gt; Permitida %2$.1fm. Línea: %3$dm, Profundidad: %4$.1fm</string>
+    <string name="nautical_anchor_dragging_alarm">¡Sospecha de garreo del ancla! Distancia %1$.1fm &gt; Permitida %2$.1fm. Línea de fondeo: %3$dm, Profundidad: %4$.1fm</string>
     <string name="nautical_anchor_drift_alarm">¡ALARMA DE DERIVA DEL ANCLA! ¡Buque fuera del límite!</string>
     <string name="nautical_anchor_gps_lost_alarm">¡SEÑAL GPS PERDIDA! ¡REVISE LA VIGILANCIA DEL ANCLA!</string>
     <string name="nautical_anchor_scope_format">%1$d:1</string>
@@ -1262,9 +1277,9 @@
     <string name="nautical_anchoring_at_depth_localized">Fondeando a %1$s %2$s.</string>
     <string name="nautical_anchoring_dropping">Soltando el ancla</string>
     <string name="nautical_anchoring_paying_out">Largando: %1$.1f m / %2$.1f m</string>
-    <string name="nautical_anchoring_scope_msg">Amarre ajustado a %1$.1f. Largando %2$s %3$s de línea.</string>
+    <string name="nautical_anchoring_scope_msg">Amarre ajustado a %1$.1f. Largando %2$s %3$s de línea de fondeo.</string>
     <string name="nautical_anchoring_set">Buque asentado: ancla fijada</string>
-    <string name="nautical_anchoring_settling_desc">Línea desplegada - asentando el buque (Velocidad: %1$s kn)</string>
+    <string name="nautical_anchoring_settling_desc">Línea de fondeo desplegada - asentando el buque (Velocidad: %1$s kn)</string>
     <string name="nautical_anchoring_settling_manual">Asentando el buque (Velocidad: %1$s kn). Espere &lt; 0.1 kn.</string>
     <string name="nautical_anchoring_slide_to_set">DESLIZAR PARA FIJAR EL ANCLA</string>
     <string name="nautical_anchoring_windlass_prompt">Control del molinete disponible. ¿Bajar el ancla ahora?</string>
@@ -1288,7 +1303,7 @@
     <string name="nautical_battery_soc_desc">Estado de carga de la batería</string>
     <string name="nautical_battery_volt_desc">Voltaje de la batería</string>
     <string name="nautical_boost_pressure">Presión de sobrealimentación</string>
-    <string name="nautical_calculated_rode">Línea calculada: %1$.1f m</string>
+    <string name="nautical_calculated_rode">Línea de fondeo calculada: %1$.1f m</string>
     <string name="nautical_camera">Cámara del buque</string>
     <string name="nautical_charger_state">Estado del cargador</string>
     <string name="nautical_cog_desc">Rumbo sobre el fondo</string>
@@ -1397,7 +1412,7 @@
     <string name="nautical_manual_override_detected">Accionamiento manual detectado vía shadow drive</string>
     <string name="nautical_marine_station">Estación marina</string>
     <string name="nautical_master_telemetry_desc">Acceso a una cuadrícula personalizable de telemetría en tiempo real</string>
-    <string name="nautical_med_mooring_anchor_away">Ancla abajo. Largando línea. Atrás despacio.</string>
+    <string name="nautical_med_mooring_anchor_away">Ancla abajo. Largando línea de fondeo. Atrás despacio.</string>
     <string name="nautical_med_mooring_anchor_set">Ancla fijada. Acercando la popa al muelle. Velocidad objetivo en atrás: 0.5 a 1 nudo.</string>
     <string name="nautical_med_mooring_approaching">Aproximando a la zona de fondeo</string>
     <string name="nautical_med_mooring_armed_msg">Amarre mediterráneo armado. Suelte el ancla a %1$d metros del muro del muelle.</string>
@@ -1407,7 +1422,7 @@
     <string name="nautical_med_mooring_drop_anchor_now">¡SOLTE EL ANCLA AHORA!</string>
     <string name="nautical_med_mooring_leeway_warning">Abatimiento crítico, aplique hélice de proa.</string>
     <string name="nautical_med_mooring_maneuver_completed">Maniobra completada</string>
-    <string name="nautical_med_mooring_paying_out">Largando línea</string>
+    <string name="nautical_med_mooring_paying_out">Largando línea de fondeo</string>
     <string name="nautical_med_mooring_rode_payout_format">Largando: %1$.1fm / %2$.1fm</string>
     <string name="nautical_med_mooring_speed_abort">¡Velocidad excesiva cerca del muelle! Abortando.</string>
     <string name="nautical_med_mooring_stern_approach">Aproximación de popa</string>
@@ -1513,7 +1528,7 @@
     <string name="nautical_toast_heading_sent">Rumo enviado al piloto automático</string>
     <string name="nautical_toast_helm_safety_release">Liberación de seguridad del bloqueo de timón activada</string>
     <string name="nautical_toast_mode_changed">Modo del piloto automático actualizado</string>
-    <string name="nautical_toast_paying_out_rode">Largando %1$dm de línea para liberar tensión</string>
+    <string name="nautical_toast_paying_out_rode">Largando %1$dm de línea de fondeo para liberar tensión</string>
     <string name="nautical_toast_stopped">Piloto automático detenido</string>
     <string name="nautical_toast_waypoint_deleted">Waypoint eliminado</string>
     <string name="nautical_touch_lock_active_full">%1$s\n%2$s</string>
@@ -1569,7 +1584,7 @@
     <string name="nautical_weighing_anchor_dist_fmt">Dist al ancla: %1$s %2$s</string>
     <string name="nautical_weighing_anchor_executing">Levando anclas. Siguiendo la distancia al punto de soltada.</string>
     <string name="nautical_weighing_anchor_over_anchor">Sobre el ancla</string>
-    <string name="nautical_weighing_anchor_rode_in_fmt">Línea recogida: %1$s %2$s</string>
+    <string name="nautical_weighing_anchor_rode_in_fmt">Línea de fondeo recogida: %1$s %2$s</string>
     <string name="nautical_weighing_anchor_windlass_up_prompt">Control del molinete disponible. ¿Levantar el ancla ahora?</string>
     <string name="nautical_widget_cog_label">COG</string>
     <string name="nautical_widget_depth_label">Profundidad</string>

@@ -362,7 +362,7 @@ class OceanographicGribMapLayer(context: Context) : OsmandMapLayer(context) {
 
                         // Speed label when zoom >= 13
                         if (tileBox.zoom >= 13) {
-                            val labelText = String.format(Locale.US, "%.1f kn", speedKn)
+                            val labelText = context.getString(R.string.nautical_fmt_kn, speedKn)
                             val textWidth = currentLabelPaint.measureText(labelText)
                             val textHeight = currentLabelPaint.textSize
                             val labelX = endX + (sin(screenAngle) * 14f * tileBox.density).toFloat()

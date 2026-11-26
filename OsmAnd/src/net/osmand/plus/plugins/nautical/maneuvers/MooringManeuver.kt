@@ -25,7 +25,7 @@ class MooringManeuver(app: OsmandApplication) : ManeuverEngine(app) {
         super.transitionToArmed()
         val apm = net.osmand.plus.plugins.nautical.NauticalPlugin.autopilot
         if (apm?.state?.value != "standby") {
-            speak("Autopilot active. Disengage before approach.")
+            speak(app.getString(R.string.nautical_docking_ap_active))
         }
     }
 
@@ -33,11 +33,11 @@ class MooringManeuver(app: OsmandApplication) : ManeuverEngine(app) {
         val apm = net.osmand.plus.plugins.nautical.NauticalPlugin.autopilot
         if (apm?.state?.value != "standby") {
             apm?.disengage()
-            speak("Autopilot disengaged for approach.")
+            speak(app.getString(R.string.nautical_docking_ap_disengaged))
         }
 
         super.transitionToExecuting()
-        speak("Mooring maneuver executing. Monitor distance and speed.")
+        speak(app.getString(R.string.nautical_mooring_executing))
     }
 
     override fun onStateUpdate(state: MarineState) {
@@ -53,13 +53,13 @@ class MooringManeuver(app: OsmandApplication) : ManeuverEngine(app) {
             val completionThreshold = (vesselLengthMeters * 0.3).coerceAtLeast(2.0)
 
             if (dist < speedLimitThreshold && sogKnots > 2.5) {
-                transitionToAborted("Speed too high for mooring: ${sogKnots.format(1)} kn")
+                transitionToAborted(app.getString(R.string.nautical_mooring_speed_high_fmt, sogKnots.format(1)))
                 return
             }
 
             // Auto completion: within scaled threshold and stopped
             if (dist < completionThreshold && sogKnots < 0.2) {
-                pushInstruction("Mooring Completed")
+                pushInstruction(app.getString(R.string.nautical_mooring_completed_status))
                 pushProgress(100)
                 transitionToCompleted()
             } else if (dist < approachThreshold) {

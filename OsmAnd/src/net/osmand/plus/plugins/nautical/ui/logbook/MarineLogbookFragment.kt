@@ -267,9 +267,9 @@ class MarineLogbookFragment : BaseOsmAndFragment() {
                 val isWatchMode = wearOsManager.isWatchMode()
                 if (!isWatchMode && metrics.totalEntries > 0) {
                     view.findViewById<View>(R.id.card_voyage_summary)?.visibility = View.VISIBLE
-                    view.findViewById<TextView>(R.id.txt_summary_total_distance)?.text = String.format(java.util.Locale.US, "%.1f NM", metrics.totalDistanceNm)
-                    view.findViewById<TextView>(R.id.txt_summary_avg_sog)?.text = String.format(java.util.Locale.US, "%.1f kn", metrics.avgSogKnots)
-                    view.findViewById<TextView>(R.id.txt_summary_max_sog)?.text = String.format(java.util.Locale.US, "%.1f kn", metrics.maxSogKnots)
+                    view.findViewById<TextView>(R.id.txt_summary_total_distance)?.text = app.getString(R.string.nautical_fmt_nm1, metrics.totalDistanceNm)
+                    view.findViewById<TextView>(R.id.txt_summary_avg_sog)?.text = app.getString(R.string.nautical_fmt_kn, metrics.avgSogKnots)
+                    view.findViewById<TextView>(R.id.txt_summary_max_sog)?.text = app.getString(R.string.nautical_fmt_kn, metrics.maxSogKnots)
                     val ratioStr = if (metrics.enginePercent > 0 || metrics.sailPercent > 0) {
                         String.format(java.util.Locale.US, "%.0f%% / %.0f%%", metrics.enginePercent, metrics.sailPercent)
                     } else {

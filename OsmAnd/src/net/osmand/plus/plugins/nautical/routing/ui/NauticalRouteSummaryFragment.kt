@@ -267,7 +267,7 @@ class NauticalRouteSummaryFragment : BaseOsmAndFragment() {
 
         fun bind(leg: PassagePlanLeg) {
             title.text = title.context.getString(R.string.nautical_leg_title_fmt, leg.legNumber, leg.legNumber, leg.legNumber + 1)
-            dist.text = String.format(Locale.US, "%.1f NM", leg.distanceNm)
+            dist.text = title.context.getString(R.string.nautical_fmt_nm1, leg.distanceNm)
 
             // Same honest pattern as the passage plan sheet: real per-leg
             // forecast data, CTS-only / hidden rows / localized n/a otherwise

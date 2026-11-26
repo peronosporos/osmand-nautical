@@ -100,7 +100,7 @@ abstract class ManeuverEngine(
         timeoutJob = engineScope.launch {
             delay(maneuverTimeoutMs)
             if (currentState == ManeuverStateMachine.State.EXECUTING) {
-                transitionToAborted("Maneuver timed out")
+                transitionToAborted(app.getString(R.string.nautical_maneuver_timed_out))
             }
         }
     }

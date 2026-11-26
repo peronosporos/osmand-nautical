@@ -200,7 +200,7 @@ class PassagePlanBottomSheet : BaseNauticalBottomSheet() {
 
         fun bind(leg: PassagePlanLeg) {
             txtTitle.text = txtTitle.context.getString(R.string.nautical_leg_title_fmt, leg.legNumber, leg.legNumber, leg.legNumber + 1)
-            txtDist.text = String.format(Locale.US, "%.1f NM", leg.distanceNm)
+            txtDist.text = txtTitle.context.getString(R.string.nautical_fmt_nm1, leg.distanceNm)
 
             // Wind data now comes from the engine's real per-leg forecast
             // sampling; without it the row shows CTS only (previously it

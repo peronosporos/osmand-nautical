@@ -109,7 +109,7 @@ class MedMooringManeuver(app: OsmandApplication) : ManeuverEngine(app) {
         val broker = NauticalPlugin.engine?.dataBroker ?: return
         helmOverrideListener = CoroutineScope(Dispatchers.Main).launch {
             broker.manualOverrideTriggered.collect {
-                transitionToAborted("Manual helm override detected")
+                transitionToAborted(app.getString(R.string.nautical_mooring_manual_override))
             }
         }
     }

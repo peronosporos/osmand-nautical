@@ -233,8 +233,8 @@ class TideGraphView @JvmOverloads constructor(
         endTime = predictions.last().timestamp
         val timeRange = (endTime - startTime).coerceAtLeast(1).toFloat()
 
-        yAxisMaxLabel = if (isCurrentDataset) String.format(Locale.US, "%.1f kn", maxVal * 1.94384) else String.format(Locale.US, "%.1f m", maxVal)
-        yAxisMinLabel = if (isCurrentDataset) String.format(Locale.US, "%.1f kn", minVal * 1.94384) else String.format(Locale.US, "%.1f m", minVal)
+        yAxisMaxLabel = if (isCurrentDataset) context.getString(R.string.nautical_fmt_kn, maxVal * 1.94384) else context.getString(R.string.nautical_fmt_m, maxVal)
+        yAxisMinLabel = if (isCurrentDataset) context.getString(R.string.nautical_fmt_kn, minVal * 1.94384) else context.getString(R.string.nautical_fmt_m, minVal)
 
         tidePath.rewind()
         drawData = predictions.mapIndexed { i, p ->
@@ -260,7 +260,7 @@ class TideGraphView @JvmOverloads constructor(
                     }
                     PredictionDrawData(
                         x, y,
-                        String.format(Locale.US, "%s%.1fkn", prefix, labelValue),
+                        context.getString(R.string.nautical_fmt_kn_axis, prefix, labelValue),
                         timeFormat.format(Date(p.timestamp)),
                         p.isHighTide
                     )
@@ -346,7 +346,7 @@ class TideGraphView @JvmOverloads constructor(
             // Outside the sample range there is no honest value to show: time only.
             timeStr
         } else {
-            val unit = if (isCurrentDataset) "kn" else "m"
+            val unit = if (isCurrentDataset) context.getString(R.string.nautical_unit_knots) else context.getString(R.string.nautical_unit_meters)
             val displayVal = if (isCurrentDataset) valAtCursor * 1.94384 else valAtCursor
             when (trend) {
                 1 -> String.format(

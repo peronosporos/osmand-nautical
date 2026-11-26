@@ -153,7 +153,7 @@ class NauticalAisDetailsDialog : BaseBottomSheetDialogFragment() {
             }
             val distNm = ownLoc.distanceTo(targetLoc) / 1852.0
             val bearingDeg = (ownLoc.bearingTo(targetLoc) + 360f) % 360f
-            val rangeStr = String.format(Locale.US, "%.2f nm", distNm)
+            val rangeStr = getString(R.string.nautical_fmt_nm2, distNm)
             val bearingStr = String.format(Locale.US, "%03.0f°", bearingDeg)
             view.findViewById<TextView>(R.id.txt_range_bearing).text = getString(R.string.nautical_ais_range_bearing, rangeStr, bearingStr)
         } else {

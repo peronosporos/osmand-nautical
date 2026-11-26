@@ -58,7 +58,7 @@ class MarineLogbookAdapter : ListAdapter<LogbookEntry, MarineLogbookAdapter.Logb
             navData.text = context.getString(
                 R.string.logbook_format_nav_data,
                 context.getString(R.string.logbook_header_sog),
-                sogKn?.let { String.format(Locale.US, "%.1fkn", it) } ?: "--",
+                sogKn?.let { context.getString(R.string.nautical_fmt_kn, it) } ?: "--",
                 cogDeg?.let { String.format(Locale.US, "%03.0f°", it) } ?: "--"
             )
 
@@ -66,7 +66,7 @@ class MarineLogbookAdapter : ListAdapter<LogbookEntry, MarineLogbookAdapter.Logb
             val twaDeg = entry.twa?.let { Math.toDegrees(it) }
             windData.text = context.getString(
                 R.string.logbook_format_wind_data,
-                twsKn?.let { String.format(Locale.US, "%.1fkn", it) } ?: "--",
+                twsKn?.let { context.getString(R.string.nautical_fmt_kn, it) } ?: "--",
                 twaDeg?.let { String.format(Locale.US, "%1.0f°", it) } ?: "--"
             )
 

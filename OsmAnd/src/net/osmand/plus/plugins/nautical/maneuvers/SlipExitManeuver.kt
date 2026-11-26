@@ -41,7 +41,7 @@ class SlipExitManeuver(app: OsmandApplication) : ManeuverEngine(app) {
     override fun transitionToExecuting() {
         val state = NauticalPlugin.engine?.getCurrentState()
         if (state == null || state.latitude == null || state.longitude == null) {
-            transitionToAborted("Missing initial state data")
+            transitionToAborted(app.getString(R.string.nautical_maneuver_missing_state))
             return
         }
 

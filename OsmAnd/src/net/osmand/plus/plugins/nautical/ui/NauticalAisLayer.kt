@@ -311,7 +311,7 @@ class NauticalAisLayer(
             val cached = cpaLabelCache[mmsi]
             if (cached != null) return cached
         }
-        val label = String.format(java.util.Locale.US, "CPA: %.1f NM", cpaNm)
+        val label = context.getString(R.string.nautical_cpa_fmt, context.getString(R.string.nautical_fmt_nm1, cpaNm))
         cpaLastDistCache[mmsi] = cpaNm
         cpaLabelCache[mmsi] = label
         return label

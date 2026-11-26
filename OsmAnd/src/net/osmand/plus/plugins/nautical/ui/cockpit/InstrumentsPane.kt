@@ -130,7 +130,7 @@ class InstrumentsPane(private val app: OsmandApplication) : CockpitScreen {
         val sogKn = state.speedOverGround?.let { SignalKUnitConverter.msToKnots(it) }
         setValue(
             sogValue,
-            sogKn?.let { String.format(Locale.US, "%.1f kn", it) },
+            sogKn?.let { app.getString(R.string.nautical_fmt_kn, it) },
             state.isSogStale()
         )
 
@@ -144,14 +144,14 @@ class InstrumentsPane(private val app: OsmandApplication) : CockpitScreen {
         val depthM = state.depthBelowKeel ?: state.depthBelowTransducer
         setValue(
             depthValue,
-            depthM?.let { String.format(Locale.US, "%.1f m", it) },
+            depthM?.let { app.getString(R.string.nautical_fmt_m, it) },
             state.isDepthStale()
         )
 
         val awsKn = state.windSpeedApparent?.let { SignalKUnitConverter.msToKnots(it) }
         setValue(
             windValue,
-            awsKn?.let { String.format(Locale.US, "%.1f kn", it) },
+            awsKn?.let { app.getString(R.string.nautical_fmt_kn, it) },
             state.isWindStale()
         )
 

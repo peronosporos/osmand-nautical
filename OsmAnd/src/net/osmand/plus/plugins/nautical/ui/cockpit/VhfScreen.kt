@@ -154,7 +154,7 @@ class VhfScreen(private val app: OsmandApplication) : CockpitScreen {
         } else {
             "--"
         }
-        val sog = t.sogKnots?.let { String.format(Locale.US, "%.1f kn", it) } ?: "--"
+        val sog = t.sogKnots?.let { app.getString(R.string.nautical_fmt_kn, it) } ?: "--"
         return "$rangeBearing · $sog"
     }
 

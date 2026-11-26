@@ -147,9 +147,9 @@ class SensorHealthBottomSheet : BaseNauticalBottomSheet() {
         val hasWind = state.windSpeedApparent != null || state.windSpeedTrue != null
         setHealthBadge(badgeWind, windAgeMs, hasWind)
 
-        val awsKnStr = state.windSpeedApparent?.let { String.format(Locale.US, "%.1f kn", SignalKUnitConverter.msToKnots(it)) } ?: "--"
+        val awsKnStr = state.windSpeedApparent?.let { getString(R.string.nautical_fmt_kn, SignalKUnitConverter.msToKnots(it)) } ?: "--"
         val awaDegStr = state.windDirectionApparent?.let { String.format(Locale.US, "%03d°", ((Math.toDegrees(it) + 360.0) % 360.0).toInt()) } ?: "--"
-        val twsKnStr = state.windSpeedTrue?.let { String.format(Locale.US, "%.1f kn", SignalKUnitConverter.msToKnots(it)) } ?: "--"
+        val twsKnStr = state.windSpeedTrue?.let { getString(R.string.nautical_fmt_kn, SignalKUnitConverter.msToKnots(it)) } ?: "--"
         val twdDegStr = state.windDirectionTrue?.let { String.format(Locale.US, "%03d°", ((Math.toDegrees(it) + 360.0) % 360.0).toInt()) } ?: "--"
         txtWindDetails.text = getString(R.string.nautical_sh_wind_details_fmt, awsKnStr, awaDegStr, twsKnStr, twdDegStr)
 

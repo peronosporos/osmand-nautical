@@ -405,13 +405,13 @@ class AisTargetListBottomSheet : BaseBottomSheetDialogFragment() {
             // 3. Range & Bearing from Own Vessel
             if (item.rangeMeters < Double.MAX_VALUE / 2) {
                 val rangeNm = item.rangeMeters / 1852.0
-                txtRangeBearing.text = String.format(Locale.US, "%.2f NM • %03.0f°", rangeNm, item.bearingDeg)
+                txtRangeBearing.text = getString(R.string.nautical_ais_range_bearing, getString(R.string.nautical_fmt_nm2, rangeNm), String.format(Locale.US, "%03.0f°", item.bearingDeg))
             } else {
                 txtRangeBearing.text = "-- • --"
             }
 
             // 4. SOG & COG ('--' when the target does not report them; never fake 0.0 kn / 000°)
-            val sogText = item.sogKnots?.let { String.format(Locale.US, "%.1f kn", it) } ?: "--"
+            val sogText = item.sogKnots?.let { getString(R.string.nautical_fmt_kn, it) } ?: "--"
             val cogText = item.cogDeg?.let { String.format(Locale.US, "%03.0f°", it) } ?: "--"
             txtSogCog.text = "$sogText • $cogText"
 
@@ -419,7 +419,7 @@ class AisTargetListBottomSheet : BaseBottomSheetDialogFragment() {
             val cpaNm = item.cpaNm
             val tcpaSec = item.tcpaSec
             if (cpaNm != null) {
-                val cpaStr = String.format(Locale.US, "%.1f NM", cpaNm)
+                val cpaStr = getString(R.string.nautical_fmt_nm1, cpaNm)
                 if (tcpaSec != null && tcpaSec > 0) {
                     val tcpaStr = when {
                         tcpaSec < 60 -> "${tcpaSec.toInt()}s"

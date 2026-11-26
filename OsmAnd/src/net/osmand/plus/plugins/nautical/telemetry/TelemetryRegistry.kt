@@ -314,7 +314,7 @@ object TelemetryRegistry {
                     val degPerMin = Math.toDegrees(value) * 60.0
                     MetricValue(
                         primaryText = String.format(Locale.US, "%.1f", degPerMin),
-                        unitText = "°/m",
+                        unitText = context.getString(R.string.nautical_unit_rot_short),
                         rawNumericValue = degPerMin
                     )
                 }
@@ -721,7 +721,7 @@ object TelemetryRegistry {
             MetricValue(primaryText = fv.value, unitText = fv.unit, rawNumericValue = value)
         } else {
             val kn = SignalKUnitConverter.msToKnots(value)
-            MetricValue(primaryText = String.format(Locale.US, "%.1f", kn), unitText = "kn", rawNumericValue = kn)
+            MetricValue(primaryText = String.format(Locale.US, "%.1f", kn), unitText = context.getString(R.string.nautical_unit_knots), rawNumericValue = kn)
         }
     }
 
@@ -732,7 +732,7 @@ object TelemetryRegistry {
             val fv = OsmAndFormatter.getFormattedAltitudeValue(value, app, settings.ALTITUDE_METRIC.get())
             MetricValue(primaryText = fv.value, unitText = fv.unit, rawNumericValue = value)
         } else {
-            MetricValue(primaryText = String.format(Locale.US, "%.1f", value), unitText = "m", rawNumericValue = value)
+            MetricValue(primaryText = String.format(Locale.US, "%.1f", value), unitText = context.getString(R.string.nautical_unit_meters), rawNumericValue = value)
         }
     }
 
@@ -744,20 +744,20 @@ object TelemetryRegistry {
             MetricValue(primaryText = fv.value, unitText = fv.unit, rawNumericValue = value)
         } else {
             val nm = value / 1852.0
-            MetricValue(primaryText = String.format(Locale.US, "%.2f", nm), unitText = "nm", rawNumericValue = nm)
+            MetricValue(primaryText = String.format(Locale.US, "%.2f", nm), unitText = context.getString(R.string.nautical_unit_nm), rawNumericValue = nm)
         }
     }
 
     private fun formatAngle(value: Double?): MetricValue {
         if (value == null || value.isNaN()) return MetricValue("---", isValid = false)
         val deg = (Math.toDegrees(value) % 360.0 + 360.0) % 360.0
-        return MetricValue(primaryText = String.format(Locale.US, "%03.0f", deg), unitText = "°", rawNumericValue = deg)
+        return MetricValue(primaryText = String.format(Locale.US, "%03.0f", deg), unitText = context.getString(R.string.nautical_unit_deg), rawNumericValue = deg)
     }
 
     private fun formatSignedAngle(value: Double?): MetricValue {
         if (value == null || value.isNaN()) return MetricValue("---", isValid = false)
         val deg = Math.toDegrees(value)
-        return MetricValue(primaryText = String.format(Locale.US, "%+.1f", deg), unitText = "°", rawNumericValue = deg)
+        return MetricValue(primaryText = String.format(Locale.US, "%+.1f", deg), unitText = context.getString(R.string.nautical_unit_deg), rawNumericValue = deg)
     }
 
     private fun formatPortStarboardAngle(value: Double?): MetricValue {
@@ -777,7 +777,7 @@ object TelemetryRegistry {
         }
         return MetricValue(
             primaryText = "$prefix${String.format(Locale.US, "%.0f", abs(deg))}",
-            unitText = "°",
+            unitText = context.getString(R.string.nautical_unit_deg),
             rawNumericValue = deg,
             isPortStarboard = true,
             angleSide = side
