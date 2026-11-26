@@ -6920,6 +6920,11 @@
     <string name="nautical_pressure_label">Βαρόμετρο: %s</string>
     <string name="nautical_water_temp_label">Θάλασσα: %s</string>
     <string name="nautical_vessel_data_unavailable">Δεδομένα σκάφους μη διαθέσιμα</string>
+    <string name="nautical_mmsi_fmt">MMSI: %1$s</string>
+    <string name="nautical_toast_cpa_threshold_set">Το όριο CPA ορίστηκε σε %1$s NM</string>
+    <string name="nautical_buddy_hint_mmsi">Εισάγετε MMSI 9 ψηφίων</string>
+    <string name="nautical_buddy_range_fmt">Απόσταση: %1$s nm • %2$s° | %3$s</string>
+    <string name="nautical_toast_invalid_mmsi">Μη έγκυρο MMSI. Εισάγετε ένα έγκυρο MMSI 9 ψηφίων.</string>
     <string name="nautical_buddy_type_status">Τύπος: %1$s | Κατάσταση: %2$s</string>
     <string name="nautical_checklist_sync_failed">Αποτυχία Συγχρονισμού Λίστας Ελέγχου</string>
     <string name="nautical_sar_iterations_hint">Επαναλήψεις</string>

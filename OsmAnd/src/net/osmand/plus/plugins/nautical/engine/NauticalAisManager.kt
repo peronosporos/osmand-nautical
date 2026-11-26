@@ -710,7 +710,7 @@ class NauticalAisManager(private val app: OsmandApplication) : AisDataListener {
             val isDangerous = extras.hasCpaWarning || (obj.isMovable() && isThreatTimeValid && isThreatDistance && isThreatTime)
 
             val vesselName = obj.shipName?.trim().takeIf { !it.isNullOrEmpty() } ?: "MMSI: ${obj.mmsi}"
-            val shipType = obj.getShipTypeString().takeIf { it.isNotEmpty() && it != "unknown" }
+            val shipType = obj.getShipTypeString().takeIf { it.isNotEmpty() }
                 ?: app.getString(R.string.nautical_vessel_generic)
 
             AisTargetSummary(

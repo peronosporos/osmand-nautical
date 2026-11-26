@@ -304,7 +304,7 @@ class AisObject {
 
     fun getShipTypeString(): String {
         return when (this.shipType) {
-            INVALID_SHIP_TYPE -> "unknown"
+            INVALID_SHIP_TYPE -> ""
             20, 25, 26, 27, 28, 29 -> "Wing in ground (WIG)"
             21 -> "WIG, Hazardous category A"
             22 -> "WIG, Hazardous category B"
@@ -372,7 +372,7 @@ class AisObject {
             12 -> "Power-driven vessel pushing ahead or towing alongside (regional use)"
             7 -> "Engaged in Fishing"
             14 -> "AIS-SART is active"
-            INVALID_NAV_STATUS -> "unknown"
+            INVALID_NAV_STATUS -> ""
             else -> navStatus.toString()
         }
     }

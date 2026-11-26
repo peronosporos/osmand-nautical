@@ -181,7 +181,7 @@ class NauticalAisDetailsDialog : BaseBottomSheetDialogFragment() {
             txtCpa.setTextColor(net.osmand.plus.utils.AndroidUtils.getColorFromAttr(requireContext(), android.R.attr.textColorSecondary))
         }
 
-        view.findViewById<TextView>(R.id.txt_status).text = getString(R.string.nautical_ais_details_status, ais.getNavStatusString())
+        view.findViewById<TextView>(R.id.txt_status).text = getString(R.string.nautical_ais_details_status, ais.getNavStatusString().ifEmpty { na })
 
         val totalLen = ais.dimensionToBow + ais.dimensionToStern
         val totalBeam = ais.dimensionToPort + ais.dimensionToStarboard

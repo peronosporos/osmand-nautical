@@ -177,7 +177,9 @@ class NauticalBuddyListFragment : BaseOsmAndFragment() {
                 val type = ais.getShipTypeString().ifEmpty { ctx.getString(R.string.nautical_vessel_generic) }
                 holder.txtDesc.text = ctx.getString(R.string.nautical_buddy_range_fmt, String.format(java.util.Locale.US, "%.2f", distNm), String.format(java.util.Locale.US, "%03.0f", bearingDeg), type)
             } else if (ais != null) {
-                holder.txtDesc.text = ctx.getString(R.string.nautical_buddy_type_status, ais.getShipTypeString(), ais.getNavStatusString())
+                val typeNa = ais.getShipTypeString().ifEmpty { ctx.getString(R.string.nautical_not_available) }
+                val statusNa = ais.getNavStatusString().ifEmpty { ctx.getString(R.string.nautical_not_available) }
+                holder.txtDesc.text = ctx.getString(R.string.nautical_buddy_type_status, typeNa, statusNa)
             } else {
                 holder.txtDesc.text = ctx.getString(R.string.nautical_vessel_data_unavailable)
             }
