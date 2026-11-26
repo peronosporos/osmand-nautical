@@ -7153,6 +7153,7 @@
     <string name="nautical_gnss_quality">Ποιότητα GNSS</string>
     <string name="nautical_gnss_quality_desc">Μεταδεδομένα κατάστασης και ακρίβειας δορυφόρων (HDOP/Δορυφόροι)</string>
     <string name="nautical_anchor_set_auto">Η άγκυρα ποντίστηκε (Βάθος: %1$.1fm, Έκταμα: %2$.1f:1, Ακτίνα: %3$dm)</string>
+    <string name="nautical_anchor_rode_deployed"> • Σκάλα: %1$dm/%2$dft</string>
     <string name="nautical_salinity">Αλατότητα Νερού</string>
     <string name="nautical_salinity_desc">Αλατότητα νερού μετρούμενη σε μέρη επί τοις χιλίοις (‰)</string>
     <string name="nautical_dew_point">Σημείο Δρόσου</string>
@@ -7637,6 +7638,8 @@
     <string name="nautical_use_standard_units">Τυπικές ναυτικές μονάδες</string>
     <string name="nautical_use_standard_units_desc">Επιβολή κόμβων και ναυτικών μιλίων ανεξάρτητα από τις τοπικές ρυθμίσεις</string>
     <string name="nautical_pilot_title">Ναυτικός Πιλότος</string>
+    <string name="nautical_passage_plan_title">Σχέδιο Πλόης</string>
+    <string name="nautical_screen_touch_lock_title">Κλείδωμα Αφής Βρεγμένης Οθόνης</string>
     <string name="nautical_mode_compass">ΠΥΞΙΔΑ</string>
     <string name="nautical_mode_wind">ΑΝΕΜΟΣ</string>
     <string name="nautical_pilot_desc">Έλεγχος κατάστασης αυτόματου πιλότου</string>

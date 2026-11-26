@@ -1459,6 +1459,7 @@
     <string name="nautical_gnss_quality">GNSS Quality</string>
     <string name="nautical_gnss_quality_desc">Metadata about satellite health and precision (HDOP/Sats)</string>
     <string name="nautical_anchor_set_auto">Anchor set (Depth: %1$.1fm, Scope: %2$.1f:1, Radius: %3$dm)</string>
+    <string name="nautical_anchor_rode_deployed"> • Rode: %1$dm/%2$dft</string>
     <string name="nautical_salinity">Water Salinity</string>
     <string name="nautical_salinity_desc">Water salinity measured in parts per thousand (‰)</string>
     <string name="nautical_dew_point">Dew Point</string>

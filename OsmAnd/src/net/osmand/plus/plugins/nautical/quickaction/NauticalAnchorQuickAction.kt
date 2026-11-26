@@ -50,7 +50,7 @@ class NauticalAnchorQuickAction : QuickAction {
             if (state != null) {
                 val liveDepth = state.depthBelowTransducer ?: state.depthBelowKeel
                 val hasGps = (state.latitude != null) && (state.longitude != null) && (!state.stalePaths.contains("navigation.position"))
-                
+
                 if (liveDepth != null && liveDepth > 0 && hasGps) {
                     val depth = liveDepth.toFloat()
                     val bowOffset = app.settings.NAUTICAL_ANCHOR_BOW_OFFSET.get()
@@ -58,20 +58,20 @@ class NauticalAnchorQuickAction : QuickAction {
                     val safetyMargin = app.settings.NAUTICAL_ANCHOR_SAFETY_MARGIN.get()
                     val tideRise = app.settings.NAUTICAL_ANCHOR_TIDE_RISE.get()
                     val freeboard = app.settings.NAUTICAL_ANCHOR_FREEBOARD.get()
-                    
+
                     val rode = AnchorCalculator.calculateRodeLength(depth.toDouble(), tideRise.toDouble(), freeboard.toDouble(), scopeRatio.toDouble())
                     val totalRadius = AnchorCalculator.calculateTotalRadius(rode, bowOffset.toDouble(), safetyMargin.toDouble())
-                    
+
                     val curLat = state.latitude
                     val curLon = state.longitude
                     val hdg = state.headingTrue?.let { Math.toDegrees(it) } ?: state.courseOverGroundTrue?.let { Math.toDegrees(it) } ?: 0.0
-                    
+
                     val anchorPos = AnchorCalculator.calculateAnchorDrop(curLat, curLon, hdg, bowOffset.toDouble())
                     plugin.anchorWatchdog?.setAnchor(anchorPos.latitude, anchorPos.longitude, totalRadius.toFloat())
                     app.settings.NAUTICAL_ANCHOR_DEPTH.set(depth)
-                    
+
                     val deployed = state.rodeDeployed
-                    val deployedStr = if (deployed != null) " • Rode: ${deployed.toInt()}m/${(deployed * 3.28084).toInt()}ft" else ""
+                    val deployedStr = if (deployed != null) app.getString(R.string.nautical_anchor_rode_deployed, deployed.toInt(), (deployed * 3.28084).toInt()) else ""
                     app.showToastMessage(app.getString(R.string.nautical_anchor_set_auto, depth, scopeRatio, totalRadius.toInt()) + deployedStr)
                 } else if (!mapActivity.supportFragmentManager.isStateSaved) {
                     AnchorWatchDialogFragment.show(mapActivity.supportFragmentManager)
