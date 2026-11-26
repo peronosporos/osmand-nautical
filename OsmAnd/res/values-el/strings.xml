@@ -6050,6 +6050,9 @@
     <string name="nautical_workflow_confirm">Επιβεβαίωση</string>
     <string name="nautical_slide_to_confirm">ΣΥΡΕΤΕ ΓΙΑ ΕΠΙΒΕΒΑΙΩΣΗ</string>
     <string name="nautical_system_stale_no_data">Στοιχεία Παλαιωμένα</string>
+    <string name="nautical_mode_auto_short">ΑΥΤΟΜΑΤΟ</string>
+    <string name="nautical_maneuver_no_heading">Χωρίς δεδομένα πλεύσης, ο ελιγμός δεν μπορεί να προγραμματιστεί</string>
+    <string name="nautical_no_historical_data">Δεν υπάρχουν διαθέσιμα ιστορικά δεδομένα</string>
     <string name="mob_alarm_title">ΑΝΘΡΩΠΟΣ ΣΤΗ ΘΑΛΑΣΣΑ!</string>
     <string name="mob_btn_cancel">ΑΚΥΡΩΣΗ ΕΞΑΙΡΕΤΙΚΗΣ ΚΑΤΑΣΤΑΣΗΣ</string>
     <string name="nautical_anchor_breakout_risk_fmt">⚠ ΥΨΗΛΟΣ ΚΙΝΔΥΝΟΣ ΑΠΟΣΥΡΜΑΣΗΣ: Απότομη μεταβολή ανέμου %1$d°</string>

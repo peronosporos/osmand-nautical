@@ -16,9 +16,10 @@ class HeadingErrorLinearView @JvmOverloads constructor(
     defStyleAttr: Int = 0,
 ) : View(context, attrs, defStyleAttr) {
 
-    var headingError: Float = 0f
+    // Tri-state: null means no live data (nothing fabricated).
+    var headingError: Float? = null
         set(value) {
-            field = value.coerceIn(-45f, 45f)
+            field = value?.coerceIn(-45f, 45f)
             invalidate()
         }
 
@@ -135,18 +136,31 @@ class HeadingErrorLinearView @JvmOverloads constructor(
             canvas.drawText(DEGREE_LABELS[idx], x, textY, textPaint)
         }
 
-        // 4. Draw Dynamic Error Magnitude Highlight Bar
+        // 4. No live data: honest n/a instead of a fabricated 0 degree error
+        val err = headingError
+        if (err == null) {
+            textPaint.textSize = dp14
+            textPaint.color = colorSecondary
+            textPaint.alpha = 255
+            canvas.drawText(
+                context.getString(R.string.nautical_not_available),
+                w / 2f, h * 0.72f, textPaint
+            )
+            return
+        }
+
+        // 5. Draw Dynamic Error Magnitude Highlight Bar
         val zeroX = padding + (0.5f * scaleWidth)
-        val errorRatio = (headingError + 45f) / 90f
+        val errorRatio = (err + 45f) / 90f
         val indicatorX = padding + (errorRatio * scaleWidth)
 
         val errorColor = when {
-            abs(headingError) < 5f -> colorGreen
-            abs(headingError) < 15f -> colorYellow
+            abs(err) < 5f -> colorGreen
+            abs(err) < 15f -> colorYellow
             else -> colorRed
         }
 
-        if (abs(headingError) > 0.5f) {
+        if (abs(err) > 0.5f) {
             paint.style = Paint.Style.STROKE
             paint.strokeWidth = dp4
             paint.color = errorColor
@@ -170,6 +184,7 @@ class HeadingErrorLinearView @JvmOverloads constructor(
     override fun onInitializeAccessibilityNodeInfo(info: AccessibilityNodeInfo) {
         super.onInitializeAccessibilityNodeInfo(info)
         info.className = HeadingErrorLinearView::class.java.name
-        info.contentDescription = context.getString(R.string.nautical_hdg_err) + ": " + headingError.toString() + "°"
+        info.contentDescription = context.getString(R.string.nautical_hdg_err) + ": " +
+            (headingError?.let { it.toString() + "°" } ?: context.getString(R.string.nautical_not_available))
     }
 }

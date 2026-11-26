@@ -3,11 +3,11 @@ package net.osmand.plus.plugins.nautical.ui
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Color
-import android.graphics.DashPathEffect
 import android.graphics.LinearGradient
 import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.Shader
+import androidx.core.content.ContextCompat
 import android.os.Bundle
 import android.util.AttributeSet
 import android.view.LayoutInflater
@@ -51,16 +51,17 @@ class TelemetryChartView @JvmOverloads constructor(
             invalidate()
         }
 
-    var isPressure: Boolean = false
+    var unit: String = ""
+
+    // Data line color: set by the sheet from the metric's category palette
+    // (same palette as the telemetry tiles). Defaults to navigation blue.
+    var dataColor: Int = ContextCompat.getColor(context, R.color.nautical_metric_cat_nav)
         set(value) {
             field = value
             invalidate()
         }
 
-    var unit: String = ""
-
     private val linePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.rgb(33, 150, 243)
         strokeWidth = 4f
         style = Paint.Style.STROKE
     }
@@ -70,21 +71,12 @@ class TelemetryChartView @JvmOverloads constructor(
     }
 
     private val gridPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.argb(40, 128, 128, 128)
         strokeWidth = 1.5f
         style = Paint.Style.STROKE
     }
 
     private val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.GRAY
         textSize = 24f
-    }
-
-    private val statGuidePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.argb(120, 255, 152, 0)
-        strokeWidth = 2f
-        style = Paint.Style.STROKE
-        pathEffect = DashPathEffect(floatArrayOf(10f, 10f), 0f)
     }
 
     private val path = Path()
@@ -99,6 +91,10 @@ class TelemetryChartView @JvmOverloads constructor(
         val w = width.toFloat()
         val h = height.toFloat()
         if (w <= 0 || h <= 0) return
+
+        // Theme-aware colors (grid/labels follow the active display mode)
+        gridPaint.color = NauticalColorResolver.getColor(context, NauticalSemanticColor.GRID)
+        textPaint.color = NauticalColorResolver.getColor(context, NauticalSemanticColor.SECONDARY)
 
         val paddingLeft = 50f
         val paddingRight = 20f
@@ -183,16 +179,17 @@ class TelemetryChartView @JvmOverloads constructor(
         if (plotH != lastPlotH || paddingTop != lastTop) {
             lastPlotH = plotH
             lastTop = paddingTop
+            val depth = ContextCompat.getColor(context, R.color.nautical_chart_depth)
             depthShader = LinearGradient(
                 0f, paddingTop, 0f, paddingTop + plotH,
-                Color.argb(140, 139, 69, 19),
-                Color.argb(40, 139, 69, 19),
+                Color.argb(140, Color.red(depth), Color.green(depth), Color.blue(depth)),
+                Color.argb(40, Color.red(depth), Color.green(depth), Color.blue(depth)),
                 Shader.TileMode.CLAMP
             )
             normalShader = LinearGradient(
                 0f, paddingTop, 0f, paddingTop + plotH,
-                Color.argb(120, 33, 150, 243),
-                Color.argb(20, 33, 150, 243),
+                Color.argb(120, Color.red(dataColor), Color.green(dataColor), Color.blue(dataColor)),
+                Color.argb(20, Color.red(dataColor), Color.green(dataColor), Color.blue(dataColor)),
                 Shader.TileMode.CLAMP
             )
         }
@@ -205,14 +202,14 @@ class TelemetryChartView @JvmOverloads constructor(
             fillPath.close()
 
             fillPaint.shader = depthShader
-            linePaint.color = Color.rgb(205, 133, 63)
+            linePaint.color = ContextCompat.getColor(context, R.color.nautical_chart_depth)
         } else {
             fillPath.lineTo(lastX, paddingTop + plotH)
             fillPath.lineTo(firstX, paddingTop + plotH)
             fillPath.close()
 
             fillPaint.shader = normalShader
-            linePaint.color = Color.rgb(33, 150, 243)
+            linePaint.color = dataColor
         }
 
         canvas.drawPath(fillPath, fillPaint)
@@ -286,7 +283,14 @@ class MetricGraphBottomSheet : NauticalMenuBottomSheetDialogFragment() {
                 ViewGroup.LayoutParams.MATCH_PARENT
             )
             isDepth = metricDef?.isDepth == true
-            isPressure = metricDef?.isPressure == true
+            dataColor = ContextCompat.getColor(requireContext(), when (metricDef?.category) {
+                net.osmand.plus.plugins.nautical.telemetry.MetricCategory.NAVIGATION -> R.color.nautical_metric_cat_nav
+                net.osmand.plus.plugins.nautical.telemetry.MetricCategory.WIND -> R.color.nautical_metric_cat_wind
+                net.osmand.plus.plugins.nautical.telemetry.MetricCategory.ENVIRONMENT -> R.color.nautical_metric_cat_env
+                net.osmand.plus.plugins.nautical.telemetry.MetricCategory.VESSEL -> R.color.nautical_metric_cat_vessel
+                net.osmand.plus.plugins.nautical.telemetry.MetricCategory.POWER -> R.color.nautical_metric_cat_power
+                else -> R.color.nautical_metric_cat_nav
+            })
         }
         chartContainer.addView(chartView)
 
@@ -298,15 +302,20 @@ class MetricGraphBottomSheet : NauticalMenuBottomSheetDialogFragment() {
 
         val chips = listOf(chip5m, chip30m, chip6h, chip24h)
 
+        val chipActiveColor = net.osmand.plus.utils.AndroidUtils.getColorFromAttr(requireContext(), R.attr.active_color_primary)
+        val chipBgColor = net.osmand.plus.utils.AndroidUtils.getColorFromAttr(requireContext(), R.attr.card_and_list_background_basic)
+        val chipTextColor = net.osmand.plus.utils.AndroidUtils.getColorFromAttr(requireContext(), android.R.attr.textColorSecondary)
+
         fun selectChip(selected: TextView, duration: Long) {
             selectedDurationMs = duration
             for (c in chips) {
+                c.setBackgroundResource(R.drawable.btn_active_light)
                 if (c == selected) {
-                    c.setBackgroundResource(R.drawable.btn_active_light)
+                    c.backgroundTintList = android.content.res.ColorStateList.valueOf(chipActiveColor)
                     c.setTextColor(Color.WHITE)
                 } else {
-                    c.background = null
-                    c.setTextColor(Color.GRAY)
+                    c.backgroundTintList = android.content.res.ColorStateList.valueOf(chipBgColor)
+                    c.setTextColor(chipTextColor)
                 }
             }
             refreshData()

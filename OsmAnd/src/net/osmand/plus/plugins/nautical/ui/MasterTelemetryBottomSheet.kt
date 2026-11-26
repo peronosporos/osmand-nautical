@@ -101,20 +101,23 @@ class MasterTelemetryBottomSheet : NauticalMenuBottomSheetDialogFragment() {
         val cardBgColor = net.osmand.plus.utils.AndroidUtils.getColorFromAttr(requireContext(), R.attr.card_and_list_background_basic)
         val textColorSecondary = net.osmand.plus.utils.AndroidUtils.getColorFromAttr(requireContext(), android.R.attr.textColorSecondary)
 
-        fun selectPreset(chip: TextView, presetId: String) {
-            val presetKeys = TelemetryRegistry.getPresetKeys(presetId)
-            app.settings.NAUTICAL_MASTER_TELEMETRY_ITEMS.set(presetKeys.joinToString(","))
+        fun styleChips(active: TextView?) {
             for (c in chips) {
-                if (c == chip) {
-                    c.setBackgroundResource(R.drawable.btn_active_light)
+                c.setBackgroundResource(R.drawable.btn_active_light)
+                if (c == active) {
                     c.backgroundTintList = android.content.res.ColorStateList.valueOf(activeColor)
                     c.setTextColor(Color.WHITE)
                 } else {
-                    c.setBackgroundResource(R.drawable.btn_active_light)
                     c.backgroundTintList = android.content.res.ColorStateList.valueOf(cardBgColor)
                     c.setTextColor(textColorSecondary)
                 }
             }
+        }
+
+        fun selectPreset(chip: TextView, presetId: String) {
+            val presetKeys = TelemetryRegistry.getPresetKeys(presetId)
+            app.settings.NAUTICAL_MASTER_TELEMETRY_ITEMS.set(presetKeys.joinToString(","))
+            styleChips(chip)
             adapter?.loadMetricsFromSettings()
         }
 
@@ -123,14 +126,24 @@ class MasterTelemetryBottomSheet : NauticalMenuBottomSheetDialogFragment() {
         chipAnchorage.setOnClickListener { selectPreset(chipAnchorage, TelemetryRegistry.PRESET_ANCHORAGE) }
         chipPassage.setOnClickListener { selectPreset(chipPassage, TelemetryRegistry.PRESET_PASSAGE) }
 
-        // Initial preset styling
-        for (c in chips) {
-            c.setBackgroundResource(R.drawable.btn_active_light)
-            c.backgroundTintList = android.content.res.ColorStateList.valueOf(cardBgColor)
-            c.setTextColor(textColorSecondary)
+        // Initial preset styling: highlight the preset that is ACTUALLY
+        // active (previously always highlighted Sailing even when the saved
+        // selection was another preset or a custom tile set).
+        val presetChips = listOf(
+            chipSailing to TelemetryRegistry.PRESET_SAILING,
+            chipPilotage to TelemetryRegistry.PRESET_PILOTAGE,
+            chipAnchorage to TelemetryRegistry.PRESET_ANCHORAGE,
+            chipPassage to TelemetryRegistry.PRESET_PASSAGE,
+        )
+        val rawItems = app.settings.NAUTICAL_MASTER_TELEMETRY_ITEMS.get()
+        val activeChip = if (rawItems == null) {
+            chipSailing
+        } else {
+            presetChips.firstOrNull { (_, presetId) ->
+                rawItems == TelemetryRegistry.getPresetKeys(presetId).joinToString(",")
+            }?.first
         }
-        chipSailing.backgroundTintList = android.content.res.ColorStateList.valueOf(activeColor)
-        chipSailing.setTextColor(Color.WHITE)
+        styleChips(activeChip)
 
         adapter?.loadMetricsFromSettings()
 
@@ -173,11 +186,11 @@ class MasterTelemetryBottomSheet : NauticalMenuBottomSheetDialogFragment() {
         private val colorPort = ContextCompat.getColor(context, R.color.nautical_status_red)
         private val colorStarboard = ContextCompat.getColor(context, R.color.nautical_status_green)
 
-        private val colorNav = Color.rgb(2, 136, 209)
-        private val colorWind = Color.rgb(0, 137, 123)
-        private val colorEnv = Color.rgb(57, 73, 171)
-        private val colorVessel = Color.rgb(245, 124, 0)
-        private val colorPower = Color.rgb(216, 155, 0)
+        private val colorNav = ContextCompat.getColor(context, R.color.nautical_metric_cat_nav)
+        private val colorWind = ContextCompat.getColor(context, R.color.nautical_metric_cat_wind)
+        private val colorEnv = ContextCompat.getColor(context, R.color.nautical_metric_cat_env)
+        private val colorVessel = ContextCompat.getColor(context, R.color.nautical_metric_cat_vessel)
+        private val colorPower = ContextCompat.getColor(context, R.color.nautical_metric_cat_power)
 
         fun loadMetricsFromSettings() {
             var raw = app.settings.NAUTICAL_MASTER_TELEMETRY_ITEMS.get()

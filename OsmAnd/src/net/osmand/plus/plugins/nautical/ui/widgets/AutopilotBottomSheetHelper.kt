@@ -161,11 +161,18 @@ class AutopilotBottomSheetHelper(
 
     fun handlePrimaryManeuver(vesselType: VesselType, state: MarineState?, isPort: Boolean) {
         val isProa = vesselType == VesselType.PROA
+        // No invented 0-degree base heading: maneuvers that compute a target
+        // from the current heading refuse when nothing was measured.
+        val hasHeading = state?.targetHeading != null || state?.headingTrue != null
         val curH = (state?.targetHeading ?: state?.headingTrue)?.let { Math.toDegrees(it) } ?: 0.0
         val mm = NauticalPlugin.getInstance()?.maneuverManager
 
         if (isProa) {
             if (isPort) {
+                if (!hasHeading) {
+                    NauticalPlugin.getInstance()?.application?.showToastMessage(R.string.nautical_maneuver_no_heading)
+                    return
+                }
                 val targetDeg = (((curH + 180.0) % 360.0 + 360.0) % 360.0).toInt()
                 onInitiateManeuver(sheet.getString(R.string.nautical_shunt), targetDeg) {
                     NauticalPlugin.autopilot?.shunt()
@@ -178,11 +185,15 @@ class AutopilotBottomSheetHelper(
                 }
             }
         } else {
-            // Tack planning needs real wind: refuse rather than plan a turn
-            // from an invented 45° apparent angle.
+            // Tack planning needs real wind AND a real heading: refuse
+            // rather than plan a turn from invented values.
             val awaDeg = state?.windDirectionApparent?.let { Math.toDegrees(it) }
             if (awaDeg == null) {
                 NauticalPlugin.getInstance()?.application?.showToastMessage(R.string.nautical_maneuver_no_wind)
+                return
+            }
+            if (!hasHeading) {
+                NauticalPlugin.getInstance()?.application?.showToastMessage(R.string.nautical_maneuver_no_heading)
                 return
             }
             val delta = (2.0 * abs(awaDeg)).coerceIn(70.0, 110.0)
@@ -204,6 +215,9 @@ class AutopilotBottomSheetHelper(
 
     fun handleSecondaryManeuver(index: Int, vesselType: VesselType, state: MarineState?) {
         val isProa = vesselType == VesselType.PROA
+        // No invented 0-degree base heading: dodge/gybe below refuse when
+        // nothing was measured (same honesty rule as the primary maneuvers).
+        val hasHeading = state?.targetHeading != null || state?.headingTrue != null
         val curH = (state?.targetHeading ?: state?.headingTrue)?.let { Math.toDegrees(it) } ?: 0.0
         // Nullable: gybe branches below refuse when the wind is unknown
         // (formerly they plotted the turn from an invented 45° AWA).
@@ -257,6 +271,10 @@ class AutopilotBottomSheetHelper(
                 }
                 7 -> {
                     // Dodge Port (-10°)
+                    if (!hasHeading) {
+                        NauticalPlugin.getInstance()?.application?.showToastMessage(R.string.nautical_maneuver_no_heading)
+                        return
+                    }
                     val targetDeg = (((curH - 10.0) % 360.0 + 360.0) % 360.0).toInt()
                     onInitiateManeuver(sheet.getString(R.string.nautical_dodge_port_label), targetDeg) { confirmedDeg ->
                         confirmedDeg?.let { NauticalPlugin.autopilot?.setTargetHeading(it.toDouble()) }
@@ -265,6 +283,10 @@ class AutopilotBottomSheetHelper(
                 }
                 8 -> {
                     // Dodge Starboard (+10°)
+                    if (!hasHeading) {
+                        NauticalPlugin.getInstance()?.application?.showToastMessage(R.string.nautical_maneuver_no_heading)
+                        return
+                    }
                     val targetDeg = (((curH + 10.0) % 360.0 + 360.0) % 360.0).toInt()
                     onInitiateManeuver(sheet.getString(R.string.nautical_dodge_stbd_label), targetDeg) { confirmedDeg ->
                         confirmedDeg?.let { NauticalPlugin.autopilot?.setTargetHeading(it.toDouble()) }
@@ -282,7 +304,7 @@ class AutopilotBottomSheetHelper(
                     // Emergency Stop
                     onInitiateManeuver(sheet.getString(R.string.nautical_emergency_stop_label), null) {
                         NauticalPlugin.autopilot?.emergencyStop()
-                        mm?.abort("Emergency stop executed", isAlarm = true)
+                        mm?.abort(sheet.getString(R.string.nautical_emergency_stop_executed), isAlarm = true)
                     }
                 }
             }
@@ -292,6 +314,10 @@ class AutopilotBottomSheetHelper(
                     // Gybe Port
                     if (awaDeg == null) {
                         NauticalPlugin.getInstance()?.application?.showToastMessage(R.string.nautical_maneuver_no_wind)
+                        return
+                    }
+                    if (!hasHeading) {
+                        NauticalPlugin.getInstance()?.application?.showToastMessage(R.string.nautical_maneuver_no_heading)
                         return
                     }
                     val delta = (180.0 - 2.0 * abs(180.0 - abs(awaDeg))).coerceIn(70.0, 120.0)
@@ -307,6 +333,10 @@ class AutopilotBottomSheetHelper(
                     // Gybe Starboard
                     if (awaDeg == null) {
                         NauticalPlugin.getInstance()?.application?.showToastMessage(R.string.nautical_maneuver_no_wind)
+                        return
+                    }
+                    if (!hasHeading) {
+                        NauticalPlugin.getInstance()?.application?.showToastMessage(R.string.nautical_maneuver_no_heading)
                         return
                     }
                     val delta = (180.0 - 2.0 * abs(180.0 - abs(awaDeg))).coerceIn(70.0, 120.0)
@@ -377,6 +407,10 @@ class AutopilotBottomSheetHelper(
                 }
                 11 -> {
                     // Dodge Port (-10°)
+                    if (!hasHeading) {
+                        NauticalPlugin.getInstance()?.application?.showToastMessage(R.string.nautical_maneuver_no_heading)
+                        return
+                    }
                     val targetDeg = (((curH - 10.0) % 360.0 + 360.0) % 360.0).toInt()
                     onInitiateManeuver(sheet.getString(R.string.nautical_dodge_port_label), targetDeg) { confirmedDeg ->
                         confirmedDeg?.let { NauticalPlugin.autopilot?.setTargetHeading(it.toDouble()) }
@@ -385,6 +419,10 @@ class AutopilotBottomSheetHelper(
                 }
                 12 -> {
                     // Dodge Starboard (+10°)
+                    if (!hasHeading) {
+                        NauticalPlugin.getInstance()?.application?.showToastMessage(R.string.nautical_maneuver_no_heading)
+                        return
+                    }
                     val targetDeg = (((curH + 10.0) % 360.0 + 360.0) % 360.0).toInt()
                     onInitiateManeuver(sheet.getString(R.string.nautical_dodge_stbd_label), targetDeg) { confirmedDeg ->
                         confirmedDeg?.let { NauticalPlugin.autopilot?.setTargetHeading(it.toDouble()) }
@@ -402,7 +440,7 @@ class AutopilotBottomSheetHelper(
                     // Emergency Stop
                     onInitiateManeuver(sheet.getString(R.string.nautical_emergency_stop_label), null) {
                         NauticalPlugin.autopilot?.emergencyStop()
-                        mm?.abort("Emergency stop executed", isAlarm = true)
+                        mm?.abort(sheet.getString(R.string.nautical_emergency_stop_executed), isAlarm = true)
                     }
                 }
             }

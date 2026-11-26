@@ -635,8 +635,15 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
         errorLinear.setNightMode(nightMode)
         rudderView.setNightMode(nightMode)
 
-        // Mode badge update with OsmAnd styling
-        badgePilotMode.text = rawMode
+        // Mode badge update with OsmAnd styling (localized mode word;
+        // unknown engine values fall back to the raw text honestly)
+        badgePilotMode.text = when (rawMode) {
+            "AUTO", "COMPASS" -> getString(R.string.nautical_mode_auto_short)
+            "WIND", "TWA", "AWA" -> getString(R.string.nautical_mode_wind_short)
+            "TRACK", "ROUTE" -> getString(R.string.nautical_mode_track_short)
+            "STANDBY", "OFF" -> getString(R.string.nautical_mode_standby)
+            else -> rawMode
+        }
         badgePilotMode.setBackgroundResource(R.drawable.btn_active_light)
         badgePilotMode.backgroundTintList = ContextCompat.getColorStateList(requireContext(), R.color.icon_color_osmand_light)
         badgePilotMode.setTextColor(Color.WHITE)
@@ -657,7 +664,7 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
         // Toggle Group Checked State
         val targetCheckedId = when (rawMode) {
             "AUTO" -> R.id.btn_mode_compass
-            "WIND" -> R.id.btn_mode_wind
+            "WIND", "TWA", "AWA" -> R.id.btn_mode_wind
             "TRACK", "ROUTE" -> R.id.btn_mode_route
             "STANDBY" -> R.id.btn_mode_stop
             else -> View.NO_ID
@@ -683,33 +690,42 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
             btn.strokeColor = ColorStateList.valueOf(defaultStrokeColor)
         }
 
-        // Headings & Deviations
-        val actualH = state.headingTrue?.let { Math.toDegrees(it) } ?: 0.0
-        val targetH = (state.pendingTargetHeading ?: state.targetHeading ?: state.headingTrue)?.let { Math.toDegrees(it) } ?: 0.0
-        var hdgErr = (actualH - targetH).toFloat()
-        while (hdgErr > 180) hdgErr -= 360
-        while (hdgErr < -180) hdgErr += 360
+        // Headings & Deviations (null = no live data; nothing fabricated)
+        val actualH = state.headingTrue?.let { Math.toDegrees(it) }
+        val targetH = (state.pendingTargetHeading ?: state.targetHeading ?: state.headingTrue)?.let { Math.toDegrees(it) }
+        val hdgErr: Float? = if (actualH != null && targetH != null) {
+            var e = (actualH - targetH).toFloat()
+            while (e > 180) e -= 360
+            while (e < -180) e += 360
+            e
+        } else null
 
         if (rawMode == "WIND") {
-            val awaDeg = state.windDirectionApparent?.let { Math.toDegrees(it).toInt() } ?: 0
-            val targetAwaDeg = state.targetWindAngleApparent?.let { Math.toDegrees(it).toInt() } ?: 0
-            var windErr = (awaDeg - targetAwaDeg).toFloat()
-            while (windErr > 180) windErr -= 360
-            while (windErr < -180) windErr += 360
+            val awaDeg = state.windDirectionApparent?.let { Math.toDegrees(it).toInt() }
+            val targetAwaDeg = state.targetWindAngleApparent?.let { Math.toDegrees(it).toInt() }
+            val windErr: Float? = if (awaDeg != null && targetAwaDeg != null) {
+                var e = (awaDeg - targetAwaDeg).toFloat()
+                while (e > 180) e -= 360
+                while (e < -180) e += 360
+                e
+            } else null
             errorLinear.headingError = windErr
         } else if (rawMode == "TWA") {
-            val twaDeg = state.trueWindAngle?.let { Math.toDegrees(it).toInt() } ?: 0
-            val targetTwaDeg = state.targetWindAngleTrue?.let { Math.toDegrees(it).toInt() } ?: 0
-            var windErr = (twaDeg - targetTwaDeg).toFloat()
-            while (windErr > 180) windErr -= 360
-            while (windErr < -180) windErr += 360
+            val twaDeg = state.trueWindAngle?.let { Math.toDegrees(it).toInt() }
+            val targetTwaDeg = state.targetWindAngleTrue?.let { Math.toDegrees(it).toInt() }
+            val windErr: Float? = if (twaDeg != null && targetTwaDeg != null) {
+                var e = (twaDeg - targetTwaDeg).toFloat()
+                while (e > 180) e -= 360
+                while (e < -180) e += 360
+                e
+            } else null
             errorLinear.headingError = windErr
         } else {
             errorLinear.headingError = hdgErr
         }
 
-        arcView.targetHeading = targetH.toInt()
-        arcView.actualHeading = actualH.toInt()
+        if (targetH != null) arcView.targetHeading = targetH.toInt()
+        if (actualH != null) arcView.actualHeading = actualH.toInt()
         state.windDirectionApparent?.let { arcView.windAngleApparent = Math.toDegrees(it).toInt() }
         state.targetWindAngleApparent?.let { arcView.targetWindAngleApparent = Math.toDegrees(it).toInt() }
 
@@ -738,7 +754,7 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
         app?.player?.let { player ->
             val textId = when (mode.uppercase(Locale.US)) {
                 "AUTO" -> R.string.nautical_mode_engaged_auto
-                "WIND" -> R.string.nautical_mode_engaged_wind
+                "WIND", "AWA", "TWA" -> R.string.nautical_mode_engaged_wind
                 "TRACK" -> R.string.nautical_mode_engaged_track
                 "STANDBY" -> R.string.nautical_mode_engaged_standby
                 else -> return
