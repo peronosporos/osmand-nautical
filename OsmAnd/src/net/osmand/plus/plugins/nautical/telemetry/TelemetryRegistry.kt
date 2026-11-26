@@ -381,7 +381,9 @@ object TelemetryRegistry {
                 titleRes = R.string.nautical_pitch,
                 category = MetricCategory.NAVIGATION,
                 extractor = { it.pitch },
-                formatter = { _, _, value, _ -> formatAngle(value) }
+                // Pitch is a signed metric (bow up/down); compass-style 0-360 normalization
+                // would show a bow-down 5 deg pitch as 355 deg.
+                formatter = { _, _, value, _ -> formatSignedAngle(value) }
             )
         )
 
@@ -750,6 +752,12 @@ object TelemetryRegistry {
         if (value == null || value.isNaN()) return MetricValue("---", isValid = false)
         val deg = (Math.toDegrees(value) % 360.0 + 360.0) % 360.0
         return MetricValue(primaryText = String.format(Locale.US, "%03.0f", deg), unitText = "°", rawNumericValue = deg)
+    }
+
+    private fun formatSignedAngle(value: Double?): MetricValue {
+        if (value == null || value.isNaN()) return MetricValue("---", isValid = false)
+        val deg = Math.toDegrees(value)
+        return MetricValue(primaryText = String.format(Locale.US, "%+.1f", deg), unitText = "°", rawNumericValue = deg)
     }
 
     private fun formatPortStarboardAngle(value: Double?): MetricValue {

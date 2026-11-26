@@ -72,14 +72,15 @@ class TelemetryFilterEngine(
             val rawSecondary = def.secondaryExtractor?.invoke(state)
 
             if (rawPrimary != null && !rawPrimary.isNaN() && !rawPrimary.isInfinite()) {
-                val filteredPrimary = applyFilter(def.key, rawPrimary, def.category, def.isDepth, now)
+                val filteredPrimary = applyFilter(def.key, rawPrimary, def.category, def.isDepth, now, def.isPortStarboardAngle)
                 lastValues[def.key] = filteredPrimary
                 lastUpdateTimes[def.key] = now
                 def.ringBuffer.addSample(now, filteredPrimary)
 
                 val filteredSecondary = if (rawSecondary != null && !rawSecondary.isNaN() && !rawSecondary.isInfinite()) {
-                    val filteredSec = applyFilter("${def.key}_sec", rawSecondary, def.category, false, now)
+                    val filteredSec = applyFilter("${def.key}_sec", rawSecondary, def.category, false, now, false)
                     lastSecondaryValues[def.key] = filteredSec
+                    lastUpdateTimes["${def.key}_sec"] = now
                     filteredSec
                 } else {
                     lastSecondaryValues[def.key]
@@ -127,7 +128,8 @@ class TelemetryFilterEngine(
         raw: Double,
         category: MetricCategory,
         isDepth: Boolean,
-        now: Long
+        now: Long,
+        isAngle: Boolean = false
     ): Double {
         val prevVal = lastValues[key] ?: return raw
         val prevTime = lastUpdateTimes[key] ?: (now - 1000L)
@@ -157,13 +159,14 @@ class TelemetryFilterEngine(
 
         val alpha = (1.0 - exp(-dtSec / tau)).coerceIn(0.01, 1.0)
 
-        val isAngle = key.contains("angle", ignoreCase = true) ||
+        val isAngleKey = isAngle ||
+                key.contains("angle", ignoreCase = true) ||
                 key.contains("heading", ignoreCase = true) ||
                 key.contains("course", ignoreCase = true) ||
                 key.contains("direction", ignoreCase = true) ||
                 key.contains("roll") || key.contains("pitch")
 
-        return if (isAngle) {
+        return if (isAngleKey) {
             var diff = raw - prevVal
             while (diff < -PI) diff += 2 * PI
             while (diff > PI) diff -= 2 * PI
