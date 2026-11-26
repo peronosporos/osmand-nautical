@@ -3815,7 +3815,6 @@
     <string name="purchases_feature_desc_combined_wiki">Consultez les articles Wikipédia sans connexion Internet. Les données hors ligne sont découpées par pays et disponibles dans toutes les langues.</string>
     <string name="purchases_feature_desc_hourly_map_updates">Bénéficiez de mises à jour cartographiques plus fréquentes. Mises à jour toutes les heures, tous les jours ou toutes les semaines. Les mises à jour sont téléchargées de manière incrémentielle, uniquement pour la zone modifiée.</string>
     <string name="purchases_feature_desc_osmand_cloud">Utilisez OsmAnd Cloud pour sauvegarder toutes les données d\'OsmAnd en ligne. Plus aucun risque de perdre vos données après une réinstallation. Sauvegardez et restaurez toutes vos informations sans difficulté.</string>
-    <string name="nautical_depth">Profondeur nautique</string>
     <string name="purchases_feature_desc_unlimited_map_download">Téléchargez en illimité des cartes hors ligne pour tous les continents et toutes les régions.</string>
     <string name="purchases_feature_desc_terrain">Courbes de niveau, ombrage du relief, pentes colorées mettant en valeur sommets et plaines.</string>
     <string name="purchases_feature_desc_nautical">Indique la profondeur des fonds marins</string>
@@ -6128,12 +6127,5 @@
     <string name="route_calculation_method_standard_only_desc">Utilise toujours l\'itinéraire standard. C\'est plus lent, mais cela permet de naviguer avec des cartes datant de différentes périodes.</string>
     <string name="route_calculation_method_fast_only">Rapide uniquement</string>
     <string name="route_calculation_method_fast_only_desc">Utilise toujours l\'itinéraire le plus rapide. Le calcul s\'interrompt et demande des mises à jour si les dates de la carte ne correspondent pas.</string>
-    <string name="ais_own_object">Paramètres d\'affichage de votre objet AIS</string>
     <string name="ais_own_object_description">Si votre navire est équipé d\'un émetteur AIS, son signal sera reçu en même temps que ceux des autres navires équipés d\'un AIS. Le traitement particulier du signal AIS de votre navire est défini ici.</string>
-    <string name="ais_own_mmsi">Votre numéro MMSI (Maritime Mobile Service Identity)</string>
-    <string name="ais_own_mmsi_description">Identifiez le MMSI (numéro à 9 chiffres) de votre propre objet AIS.</string>
-    <string name="ais_display_own_position">Indiquez si l\'objet AIS correspondant doit être affiché.</string>
-    <string name="ais_display_own_position_description">En règle générale, OsmAnd affiche votre position. L\'affichage supplémentaire de votre objet AIS peut prêter à confusion et peut être désactivé ici.</string>
-    <string name="ais_receive_in_background">Recevoir les données AIS même lorsque OsmAnd est en pause.</string>
-    <string name="ais_receive_in_background_description">Lorsque cette option est activée, le récepteur AIS fonctionne même si OsmAnd est en pause ou s\'exécute en arrière-plan. Si l\'option est désactivée, aucun message AIS n\'est reçu lorsque OsmAnd s\'exécute en arrière-plan.</string>
 </resources>

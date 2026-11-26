@@ -1,13 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="ais_own_object">Einstellung zur Anzeige des eigenen AIS Objektes</string>
     <string name="ais_own_object_description">Wenn das eigene Schiff einen AIS Transmitter besitzt, wird das empfangene Signal zusammen mit den anderen Schiffen empfangen. Die Anzeige des eigenen AIS Objektes kann hier definiert werden.</string>
-    <string name="ais_own_mmsi">Eigene MMSI (Maritime Mobile Service Identity)</string>
-    <string name="ais_own_mmsi_description">Eingabe der MMSI (9 stelliger numerischer Wert) für das eigene AIS Objekt.</string>
-    <string name="ais_display_own_position">Anzeige des eigenen AIS-Objektes erlauben.</string>
-    <string name="ais_display_own_position_description">Üblicherweise zeigt OsmAnd die eigene Position an. Wenn das eigene Schiff einen AIS-Sender besitzt, wird zusätzlich die empfangene Postion durch das Plugin angezeigt. Um Verwirrung zu vermeiden, kann diese Anzeige unterdrückt werden.</string>
-    <string name="ais_receive_in_background">Empfang von AIS-Daten wenn OsmAnd im Hintergrund läuft.</string>
-    <string name="ais_receive_in_background_description">Wenn aktiv, dann werden weiterhin AIS-Daen empfangen, auch wenn OsmAnd im Hintergrund läuft, andernfalls wird der Daten-Empfang unterbrochen.</string>
     <string name="release_5_0">
     • Entdecken Sie top-bewertete POIs im neuen Erkundungsmodus\n\n
     • Alle OSM-Routen jetzt durchsuchbar! Wandern, Radfahren, MTB und mehr\n\n
@@ -3941,7 +3934,6 @@
     <string name="wikipedia_and_wikivoyage_offline">Wikipedia und Wikivoyage offline</string>
     <string name="offline_wikipeadia">Wikipedia offline</string>
     <string name="offline_wikivoyage">Wikivoyage offline</string>
-    <string name="nautical_depth">Nautische Tiefe</string>
     <string name="ltr_or_rtl_combine_via_or">%1$s oder %2$s</string>
     <string name="shared_string_learn_more">Mehr Informationen</string>
     <string name="cancel_anytime_in_huawei_appgallery">Jederzeit in der Huawei AppGallery kündigen</string>

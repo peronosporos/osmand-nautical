@@ -3849,7 +3849,6 @@
     <string name="shared_string_mini">mini</string>
     <string name="empty_category_name">Nombre de categoría vacío</string>
     <string name="start_point">Iniciar</string>
-    <string name="nautical_depth">Profundidad náutica</string>
     <string name="routing_attr_prefer_horse_routes_name">Preferir rutas ecuestres</string>
     <string name="select_nav_profile_dialog_message">El «Tipo de navegación» determina cómo se calculan las rutas, entre motores de navegación en línea o sin conexión.</string>
     <string name="search_title">Buscar: %1$s</string>
