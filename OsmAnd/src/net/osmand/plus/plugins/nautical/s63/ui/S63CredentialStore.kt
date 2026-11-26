@@ -34,6 +34,7 @@ class S63CredentialStore(private val app: OsmandApplication) {
     
     // Memory cache to avoid repeated SharedPreferences reads during high-frequency map events
     private val cellKeyCache = ConcurrentHashMap<String, String>()
+    private val cellKey2Cache = ConcurrentHashMap<String, String>()
     private val expiryCache = ConcurrentHashMap<String, String>()
     private var cachedHwid: ByteArray? = null
 
@@ -85,20 +86,24 @@ class S63CredentialStore(private val app: OsmandApplication) {
      */
     fun savePermits(permits: Map<String, S63PermitGenerator.PermitInfo>) {
         prefs.edit {
-            prefs.all.keys.filter { it.startsWith(PREFIX_CELL_KEY) || it.startsWith(PREFIX_CELL_EXPIRY) }.forEach { remove(it) }
+            prefs.all.keys.filter {
+                it.startsWith(PREFIX_CELL_KEY) || it.startsWith(PREFIX_CELL_KEY2) || it.startsWith(PREFIX_CELL_EXPIRY)
+            }.forEach { remove(it) }
 
             permits.forEach { (cell, info) ->
                 putString(PREFIX_CELL_KEY + cell, info.cellKey)
+                putString(PREFIX_CELL_KEY2 + cell, info.cellKey2)
                 putString(PREFIX_CELL_EXPIRY + cell, info.expiryDate)
                 cellKeyCache[cell] = info.cellKey
+                cellKey2Cache[cell] = info.cellKey2
                 expiryCache[cell] = info.expiryDate
             }
         }
     }
 
-    @Deprecated("Use savePermits", ReplaceWith("savePermits(keys.mapValues { S63PermitGenerator.PermitInfo(it.value, \"\") })"))
+    @Deprecated("Use savePermits", ReplaceWith("savePermits(keys.mapValues { S63PermitGenerator.PermitInfo(it.value, \"\", \"\") })"))
     fun saveCellKeys(keys: Map<String, String>) {
-        savePermits(keys.mapValues { S63PermitGenerator.PermitInfo(it.value, "") })
+        savePermits(keys.mapValues { S63PermitGenerator.PermitInfo(it.value, "", "") })
     }
 
     fun getCellKey(cellName: String): String? {
@@ -106,6 +111,19 @@ class S63CredentialStore(private val app: OsmandApplication) {
         val key = prefs.getString(PREFIX_CELL_KEY + cellName, null)
         if (key != null) {
             cellKeyCache[cellName] = key
+        }
+        return key
+    }
+
+    /**
+     * The second cell key (CK2) of the permit, used as fallback when the
+     * cell key has been iterated by the data server (S-63 10.7.3 step c).
+     */
+    fun getCellKey2(cellName: String): String? {
+        cellKey2Cache[cellName]?.let { return it }
+        val key = prefs.getString(PREFIX_CELL_KEY2 + cellName, null)
+        if (key != null) {
+            cellKey2Cache[cellName] = key
         }
         return key
     }
@@ -127,6 +145,7 @@ class S63CredentialStore(private val app: OsmandApplication) {
         private const val KEY_M_ID = "m_id"
         private const val KEY_M_KEY = "m_key"
         private const val PREFIX_CELL_KEY = "cell_key_"
+        private const val PREFIX_CELL_KEY2 = "cell_key2_"
         private const val PREFIX_CELL_EXPIRY = "cell_expiry_"
     }
 }

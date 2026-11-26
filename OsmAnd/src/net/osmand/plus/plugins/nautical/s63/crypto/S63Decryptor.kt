@@ -21,9 +21,13 @@ object S63Decryptor {
      * Decrypts an S-63 encrypted stream and writes the result to an output stream.
      * Uses Blowfish/ECB/NoPadding as per S-63 standard.
      *
+     * Note: the trailing RFC 1423 padding bytes of the final block are
+     * included in the output; consumers that stop at a structured end
+     * (e.g. a ZIP reader) tolerate them.
+     *
      * @param encryptedInput Input stream containing encrypted S-63 data.
      * @param output Output stream for decrypted data.
-     * @param cellKey 16-character hexadecimal cell key.
+     * @param cellKey 10-character hexadecimal cell key (5 bytes, S-63 10.7.2).
      */
     @Suppress("unused")
     fun decryptStream(encryptedInput: InputStream, output: OutputStream, cellKey: String) {
@@ -43,9 +47,12 @@ object S63Decryptor {
     /**
      * Decrypts an S-63 cell (encrypted ZIP) and extracts the primary S-57 (.000) file.
      *
+     * The cell file is a ZIP-compressed S-57 file encrypted with Blowfish/ECB
+     * using the 5-byte cell key (S-63 9.5.2, 9.5.3, 10.7.3, 10.7.4).
+     *
      * @param encryptedInput Input stream containing the encrypted .031 or .enc file.
      * @param s57Output Output stream where the decrypted .000 file will be written.
-     * @param cellKey 16-character hexadecimal cell key.
+     * @param cellKey 10-character hexadecimal cell key (5 bytes, S-63 10.7.2).
      */
     fun decryptAndUnzipS57(encryptedInput: InputStream, s57Output: OutputStream, cellKey: String) {
         val keyBytes = fromHexString(cellKey)
@@ -72,6 +79,37 @@ object S63Decryptor {
                 zis.closeEntry()
                 entry = zis.nextEntry
             }
+        }
+    }
+
+    /**
+     * Fast check whether the given 5-byte cell key decrypts the first block of
+     * an S-63 cell file into a ZIP local file header ("PK\x03\x04").
+     *
+     * S-63 10.7.3 footnote 15 allows verifying the key by checking that the
+     * decrypted header is compliant with the ZIP standard instead of
+     * decrypting the whole file. Used to select between CK1 and CK2 before
+     * streaming (S-63 10.7.3 steps a/c) and to detect plain S-57 files.
+     *
+     * @param firstBlock The first 8 bytes of the candidate cell file.
+     * @param cellKey 10-character hexadecimal cell key (5 bytes).
+     * @return True when the block decrypts to a ZIP local file header.
+     */
+    fun isEncryptedZipHeader(firstBlock: ByteArray, cellKey: String): Boolean {
+        if (firstBlock.size < 8 || cellKey.isEmpty()) {
+            return false
+        }
+        return try {
+            val cipher = Cipher.getInstance(BLOWFISH_ALGORITHM)
+            cipher.init(Cipher.DECRYPT_MODE, SecretKeySpec(fromHexString(cellKey), "Blowfish"))
+            val decrypted = cipher.doFinal(firstBlock.copyOf(8))
+            decrypted.size >= 4 &&
+                    decrypted[0] == 'P'.code.toByte() &&
+                    decrypted[1] == 'K'.code.toByte() &&
+                    decrypted[2] == 3.toByte() &&
+                    decrypted[3] == 4.toByte()
+        } catch (_: Exception) {
+            false
         }
     }
 

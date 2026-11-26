@@ -141,10 +141,18 @@ class S63PermitViewModel(
                 if (validPermits.isNotEmpty()) {
                     val permitsMap = mutableMapOf<String, S63PermitGenerator.PermitInfo>()
                     validPermits.forEach {
-                        permitsMap[it.cellName] = S63PermitGenerator.PermitInfo(it.keyHex, it.expiryDate)
+                        permitsMap[it.cellName] = S63PermitGenerator.PermitInfo(
+                            cellKey = it.keyHex,
+                            cellKey2 = it.keyHex2,
+                            expiryDate = it.expiryDate
+                        )
                     }
                     expiredPermits.forEach {
-                        permitsMap[it.cellName] = S63PermitGenerator.PermitInfo("", it.expiryDate)
+                        permitsMap[it.cellName] = S63PermitGenerator.PermitInfo(
+                            cellKey = "",
+                            cellKey2 = "",
+                            expiryDate = it.expiryDate
+                        )
                     }
                     store.savePermits(permitsMap)
 
