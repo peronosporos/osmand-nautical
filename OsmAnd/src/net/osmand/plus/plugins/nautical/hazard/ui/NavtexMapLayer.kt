@@ -8,7 +8,6 @@ import net.osmand.plus.activities.MapActivity
 import net.osmand.plus.plugins.nautical.hazard.engine.NavtexMessage
 import net.osmand.plus.plugins.nautical.hazard.engine.NavtexSubject
 import net.osmand.plus.plugins.nautical.hazard.viewmodel.NavtexUiState
-import net.osmand.plus.R
 import net.osmand.data.LatLon
 import net.osmand.data.PointDescription
 import net.osmand.plus.views.layers.MapSelectionResult
@@ -311,12 +310,10 @@ class NavtexMapLayer(private val activity: MapActivity) : OsmandMapLayer(activit
 
     override fun getObjectName(o: Any?): PointDescription? {
         val msg = o as? NavtexMessage ?: return null
-        val typeStr = when(msg.subject) {
-            NavtexSubject.NAVTEX_WARNING -> activity.getString(R.string.navtex_dialog_title)
-            NavtexSubject.METEOROLOGICAL_WARNING -> activity.getString(R.string.navtex_subject_filter)
-            NavtexSubject.SEARCH_AND_RESCUE -> activity.getString(R.string.navtex_hud_urgent_title)
-            else -> activity.getString(R.string.navtex_dialog_title)
-        }
+        // The menu title is the localized subject label followed by the
+        // message identifier (e.g. "Navigational warning: SA03"); the old
+        // lookups reused unrelated dialog titles as the subject name.
+        val typeStr = msg.subject.label(activity)
         return PointDescription(PointDescription.POINT_TYPE_POI, "$typeStr: ${msg.id}")
     }
 

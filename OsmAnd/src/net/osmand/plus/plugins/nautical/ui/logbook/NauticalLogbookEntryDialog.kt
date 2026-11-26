@@ -37,21 +37,22 @@ class NauticalLogbookEntryDialog : BaseMaterialBottomSheetDialogFragment() {
         val lon = loc?.longitude ?: engine?.getCurrentState()?.longitude
         
         if (plugin != null && lat != null && lon != null) {
+            val state = engine?.getCurrentState()
             val entry = net.osmand.plus.plugins.nautical.logbook.data.LogbookEntry(
                 timestamp = System.currentTimeMillis(),
                 latitude = lat,
                 longitude = lon,
-                sog = loc?.speed?.toDouble() ?: engine?.getCurrentState()?.speedOverGround,
-                cog = loc?.bearing?.let { Math.toRadians(it.toDouble()) } ?: engine?.getCurrentState()?.courseOverGroundTrue,
-                heading = engine?.getCurrentState()?.headingTrue,
-                tws = engine?.getCurrentState()?.windSpeedTrue,
-                twa = engine?.getCurrentState()?.trueWindAngle,
-                twd = engine?.getCurrentState()?.windDirectionTrue,
-                pressure = engine?.getCurrentState()?.outsidePressure,
-                waterDepth = engine?.getCurrentState()?.depthBelowTransducer,
-                waterTemp = engine?.getCurrentState()?.waterTemperature,
-                batteryVoltage = engine?.getCurrentState()?.batteryVoltage,
-                engineHours = engine?.getCurrentState()?.engineRunTime?.let { it / 3600.0 },
+                sog = loc?.speed?.toDouble() ?: state?.speedOverGround,
+                cog = loc?.bearing?.let { Math.toRadians(it.toDouble()) } ?: state?.courseOverGroundTrue,
+                heading = state?.headingTrue,
+                tws = state?.windSpeedTrue,
+                twa = state?.trueWindAngle,
+                twd = state?.windDirectionTrue,
+                pressure = state?.outsidePressure,
+                waterDepth = state?.depthBelowTransducer,
+                waterTemp = state?.waterTemperature,
+                batteryVoltage = state?.batteryVoltage,
+                engineHours = state?.engineRunTime?.let { it / 3600.0 },
                 sailPlan = plugin.application.settings.NAUTICAL_ACTIVE_SAIL_PLAN.get() ?: "",
                 notes = text
             )

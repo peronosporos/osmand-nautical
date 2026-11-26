@@ -15,6 +15,7 @@ import net.osmand.plus.plugins.nautical.utils.TemporalUtils
 import net.osmand.plus.utils.AndroidDbUtils
 
 class MarineLogbookRepository(context: OsmandApplication) {
+    private val app = context
     private val log = PlatformUtil.getLog(MarineLogbookRepository::class.java)
 
     private val dbHelper = LogbookDbHelper(context)
@@ -22,20 +23,28 @@ class MarineLogbookRepository(context: OsmandApplication) {
     val logEntries: StateFlow<List<LogbookEntry>> = _logEntries.asStateFlow()
 
     suspend fun insertEntry(entry: LogbookEntry): Boolean = withContext(Dispatchers.IO) {
-        NauticalIOQueue.writeMutex.withLock {
+        val inserted = NauticalIOQueue.writeMutex.withLock {
             insertEntrySync(entry)
         }
-        // Item 2: Don't hardcode refresh limit to 100, use existing list size to avoid jumping
-        val currentSize = _logEntries.value.size
-        refreshEntries(limit = if (currentSize > 0) currentSize + 1 else 100, offset = 0, append = false)
+        if (inserted) {
+            // Item 2: Don't hardcode refresh limit to 100, use existing list size to avoid jumping
+            val currentSize = _logEntries.value.size
+            refreshEntries(limit = if (currentSize > 0) currentSize + 1 else 100, offset = 0, append = false)
+        } else {
+            false
+        }
     }
 
     suspend fun insertEntries(entries: List<LogbookEntry>): Boolean = withContext(Dispatchers.IO) {
-        NauticalIOQueue.writeMutex.withLock {
+        val inserted = NauticalIOQueue.writeMutex.withLock {
             insertEntriesSync(entries)
         }
-        val currentSize = _logEntries.value.size
-        refreshEntries(limit = if (currentSize > 0) currentSize + entries.size else 100, offset = 0, append = false)
+        if (inserted) {
+            val currentSize = _logEntries.value.size
+            refreshEntries(limit = if (currentSize > 0) currentSize + entries.size else 100, offset = 0, append = false)
+        } else {
+            false
+        }
     }
 
     suspend fun upsertTacticalState(key: String, value: String) = withContext(Dispatchers.IO) {
@@ -95,48 +104,62 @@ class MarineLogbookRepository(context: OsmandApplication) {
     /**
      * Synchronous insert for emergency/crash logging or batch sync.
      */
-    fun insertEntrySync(entry: LogbookEntry) {
-        val db = dbHelper.openConnection(readonly = false) ?: return
+    fun insertEntrySync(entry: LogbookEntry): Boolean {
+        val values = entryToMap(entry) ?: return false
+        val db = dbHelper.openConnection(readonly = false) ?: return false
         try {
             db.beginTransaction()
-            val values = entryToMap(entry)
             db.execSQL(
                 AndroidDbUtils.createDbInsertQuery(LogbookDbHelper.TABLE_LOGBOOK, values.keys),
                 values.values.toTypedArray(),
             )
             db.setTransactionSuccessful()
+            return true
         } catch (e: Exception) {
             log.error("Sync insert failed", e)
+            return false
         } finally {
             db.endTransaction()
             db.close()
         }
     }
 
-    fun insertEntriesSync(entries: List<LogbookEntry>) {
-        val db = dbHelper.openConnection(readonly = false) ?: return
+    fun insertEntriesSync(entries: List<LogbookEntry>): Boolean {
+        val db = dbHelper.openConnection(readonly = false) ?: return false
+        var inserted = false
         try {
             db.beginTransaction()
             for (entry in entries) {
-                val values = entryToMap(entry)
+                val values = entryToMap(entry) ?: continue
                 db.execSQL(
                     AndroidDbUtils.createDbInsertQuery(LogbookDbHelper.TABLE_LOGBOOK, values.keys),
                     values.values.toTypedArray(),
                 )
+                inserted = true
             }
             db.setTransactionSuccessful()
+            return inserted
         } catch (e: Exception) {
             log.error("Batch sync insert failed", e)
+            return false
         } finally {
             db.endTransaction()
             db.close()
         }
     }
 
-    private fun entryToMap(entry: LogbookEntry): Map<String, Any?> {
+    /**
+     * A logbook is an official record: an entry whose timestamp fails
+     * validation is skipped (null), never re-stamped with the current time,
+     * which would fabricate when the measurement was taken.
+     */
+    private fun entryToMap(entry: LogbookEntry): Map<String, Any?>? {
+        val ts = TemporalUtils.validate(entry.timestamp)
+        if (ts == 0L) {
+            log.warn("Skipping logbook entry with invalid timestamp ${entry.timestamp}")
+            return null
+        }
         val values = mutableMapOf<String, Any?>()
-        var ts = TemporalUtils.validate(entry.timestamp)
-        if (ts == 0L) ts = System.currentTimeMillis()
         values[LogbookDbHelper.COL_TIMESTAMP] = ts
         values[LogbookDbHelper.COL_LAT] = entry.latitude
         values[LogbookDbHelper.COL_LON] = entry.longitude
@@ -189,7 +212,11 @@ class MarineLogbookRepository(context: OsmandApplication) {
                     try {
                         if (((cursor != null) && cursor.moveToFirst())) {
                             val entry = readEntry(cursor)
-                            val pushTitle = if (entry.sailPlan.isNotEmpty()) "Marine Log Update: ${entry.sailPlan}" else "Marine Log Update"
+                            val pushTitle = if (entry.sailPlan.isNotEmpty()) {
+                                app.getString(net.osmand.plus.R.string.nautical_log_update_title_fmt, entry.sailPlan)
+                            } else {
+                                app.getString(net.osmand.plus.R.string.nautical_log_update_title)
+                            }
                             NauticalPlugin.engine?.resourceManager?.pushNoteToServer(
                                 entry.latitude, entry.longitude, 
                                 pushTitle, 

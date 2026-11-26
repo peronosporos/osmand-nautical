@@ -144,7 +144,7 @@ class NauticalWeatherRoutingEngine(private val app: OsmandApplication) {
         } else {
             scope.launch(Dispatchers.Default) {
                 try {
-                    val safetyChecker = SafetyCorridorChecker(index, sm)
+                    val safetyChecker = SafetyCorridorChecker(app, index, sm)
                     val gribEngine = net.osmand.plus.plugins.nautical.grib.parser.GribInterpolationEngine(resolvedGrid)
                     val engine = IsochroneRoutingEngine(
                         gribEngine = gribEngine,

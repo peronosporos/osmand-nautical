@@ -92,8 +92,8 @@ class NavtexHudView @JvmOverloads constructor(
         
         val newEmergency = urgent.any { 
             it.subject == NavtexSubject.SEARCH_AND_RESCUE || 
-            it.subject == NavtexSubject.NAVTEX_WARNING || 
-            it.subject == NavtexSubject.NAVIGATIONAL_WARNING_L 
+            it.subject == NavtexSubject.NAVIGATIONAL_WARNING || 
+            it.subject == NavtexSubject.NAVIGATIONAL_WARNING_ADDITIONAL 
         }
 
         if (newEmergency != isEmergencyState) {
@@ -147,7 +147,7 @@ class NavtexHudView @JvmOverloads constructor(
             return
         }
         val msg = messages[currentIndex]
-        titleView.text = "${msg.subject.name.replace("_", " ")}: ${msg.id}"
+        titleView.text = "${msg.subject.label(context)}: ${msg.id}"
         badgeView.text = "[ ${currentIndex + 1} / ${messages.size} ]"
         badgeView.isVisible = messages.size > 1
         
@@ -171,8 +171,8 @@ class NavtexHudView @JvmOverloads constructor(
 
     private fun getPriority(subject: NavtexSubject): Int = when (subject) {
         NavtexSubject.SEARCH_AND_RESCUE -> 0
-        NavtexSubject.NAVTEX_WARNING -> 1
-        NavtexSubject.NAVIGATIONAL_WARNING_L -> 1
+        NavtexSubject.NAVIGATIONAL_WARNING -> 1
+        NavtexSubject.NAVIGATIONAL_WARNING_ADDITIONAL -> 1
         NavtexSubject.METEOROLOGICAL_WARNING -> 2
         else -> 3
     }

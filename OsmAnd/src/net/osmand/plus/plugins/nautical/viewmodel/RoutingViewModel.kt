@@ -32,6 +32,7 @@ class RoutingViewModel : ViewModel() {
         viewModelScope.launch {
             try {
                 val safetyChecker = net.osmand.plus.plugins.nautical.hazard.engine.SafetyCorridorChecker(
+                    app = safetyManager.app,
                     indexManager = s57Index,
                     safetyManager = safetyManager
                 )

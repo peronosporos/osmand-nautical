@@ -15,7 +15,10 @@ object LogbookCsvExporter {
 
     private val log = PlatformUtil.getLog(LogbookCsvExporter::class.java)
 
-    private fun getHeader(delimiter: String) = "Timestamp(UTC)${delimiter}Latitude${delimiter}Longitude${delimiter}SOG(knots)${delimiter}COG${delimiter}TWS${delimiter}TWA${delimiter}TWD${delimiter}Depth(m)${delimiter}WaterTemp(C)${delimiter}Voltage(V)${delimiter}EngineHours${delimiter}Sail Plan${delimiter}Notes\n"
+    // Every column is explicitly unit-labeled; heading and barometric
+    // pressure are exported too instead of being silently dropped
+    // (they are recorded in the database).
+    private fun getHeader(delimiter: String) = "Timestamp(UTC)${delimiter}Latitude${delimiter}Longitude${delimiter}SOG(knots)${delimiter}COG(deg)${delimiter}Heading(deg)${delimiter}TWS(knots)${delimiter}TWA(deg)${delimiter}TWD(deg)${delimiter}Pressure(hPa)${delimiter}Depth(m)${delimiter}WaterTemp(C)${delimiter}Voltage(V)${delimiter}EngineHours${delimiter}Sail Plan${delimiter}Notes\n"
 
     fun export(entries: List<LogbookEntry>, outputStream: OutputStream): Result<Unit> {
         val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).apply {
@@ -44,6 +47,9 @@ object LogbookCsvExporter {
                     val twsKnots = entry.tws?.let { decimalFormat.format(it * 1.94384) } ?: ""
                     val twaDegrees = entry.twa?.let { decimalFormat.format(Math.toDegrees(it)) } ?: ""
                     val twdDegrees = entry.twd?.let { decimalFormat.format(Math.toDegrees(it)) } ?: ""
+                    val headingDegrees = entry.heading?.let { decimalFormat.format(Math.toDegrees(it)) } ?: ""
+                    // Pressure is stored in pascal; hPa is the marine standard.
+                    val pressureHpa = entry.pressure?.let { decimalFormat.format(it / 100.0) } ?: ""
                     val depthMeters = entry.waterDepth?.let { decimalFormat.format(it) } ?: ""
                     val waterTempC = entry.waterTemp?.let { decimalFormat.format(it - 273.15) } ?: ""
                     val voltage = entry.batteryVoltage?.let { highPrecisionFormat.format(it) } ?: ""
@@ -55,9 +61,11 @@ object LogbookCsvExporter {
                         append(String.format(Locale.US, "%.6f", entry.longitude)).append(delimiter)
                         append(sogKnots).append(delimiter)
                         append(cogDegrees).append(delimiter)
+                        append(headingDegrees).append(delimiter)
                         append(twsKnots).append(delimiter)
                         append(twaDegrees).append(delimiter)
                         append(twdDegrees).append(delimiter)
+                        append(pressureHpa).append(delimiter)
                         append(depthMeters).append(delimiter)
                         append(waterTempC).append(delimiter)
                         append(voltage).append(delimiter)

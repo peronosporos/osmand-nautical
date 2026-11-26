@@ -165,31 +165,40 @@ class MarineLogbookViewModel(
                 if (response.isSuccessful && response.body() != null) {
                     val serverEntries = response.body()!!
                     val entriesToInsert = mutableListOf<LogbookEntry>()
-                    
+                    var updatedCount = 0
+
                     withContext(Dispatchers.IO) {
                         serverEntries.forEach { (uuid, serverEntry) ->
                             val localEntry = repository.getEntryByUuid(uuid)
                             if (localEntry == null) {
                                 val ts = net.osmand.plus.plugins.nautical.utils.TemporalUtils.parseIso8601(serverEntry.timestamp)
-                                entriesToInsert.add(LogbookEntry(
-                                    timestamp = if (ts > 0) ts else System.currentTimeMillis(),
-                                    latitude = serverEntry.position?.coordinates?.getOrNull(1) ?: 0.0,
-                                    longitude = serverEntry.position?.coordinates?.getOrNull(0) ?: 0.0,
-                                    sog = null,
-                                    cog = null,
-                                    heading = null,
-                                    tws = null,
-                                    twa = null,
-                                    twd = null,
-                                    pressure = null,
-                                    waterDepth = null,
-                                    waterTemp = null,
-                                    batteryVoltage = null,
-                                    engineHours = null,
-                                    sailPlan = serverEntry.category ?: "",
-                                    notes = serverEntry.description ?: serverEntry.title ?: "",
-                                    serverUuid = uuid
-                                ))
+                                // A server entry with an unparsable timestamp is
+                                // SKIPPED: stamping it with "now" would falsify
+                                // the chronological order of the official record.
+                                if (ts > 0) {
+                                    // 0.0 position is the established "no position"
+                                    // sentinel (summary-distance skips 0,0 pairs);
+                                    // the server notes stay valuable on their own.
+                                    entriesToInsert.add(LogbookEntry(
+                                        timestamp = ts,
+                                        latitude = serverEntry.position?.coordinates?.getOrNull(1) ?: 0.0,
+                                        longitude = serverEntry.position?.coordinates?.getOrNull(0) ?: 0.0,
+                                        sog = null,
+                                        cog = null,
+                                        heading = null,
+                                        tws = null,
+                                        twa = null,
+                                        twd = null,
+                                        pressure = null,
+                                        waterDepth = null,
+                                        waterTemp = null,
+                                        batteryVoltage = null,
+                                        engineHours = null,
+                                        sailPlan = serverEntry.category ?: "",
+                                        notes = serverEntry.description ?: serverEntry.title ?: "",
+                                        serverUuid = uuid
+                                    ))
+                                }
                             } else {
                                 // Smart Merge: Preserve local telemetry if server only has position/category/notes
                                 val updated = localEntry.copy(
@@ -199,6 +208,7 @@ class MarineLogbookViewModel(
                                 if (updated != localEntry) {
                                     // Item 3: Don't push back to server during sync
                                     repository.updateEntryDetails(updated.id, updated.sailPlan, updated.notes, pushToServer = false)
+                                    updatedCount++
                                 }
                             }
                         }
@@ -206,7 +216,8 @@ class MarineLogbookViewModel(
                             repository.insertEntriesSync(entriesToInsert)
                         }
                     }
-                    _uiEvents.emit(UiEvent.ShowToastRes(net.osmand.plus.R.string.nautical_logbook_sync_success, arrayOf(serverEntries.size)))
+                    // Report what actually changed, not what the server sent.
+                    _uiEvents.emit(UiEvent.ShowToastRes(net.osmand.plus.R.string.nautical_logbook_sync_success, arrayOf(entriesToInsert.size + updatedCount)))
                     refresh()
                 } else {
                     _uiEvents.emit(UiEvent.ShowToastRes(net.osmand.plus.R.string.nautical_logbook_sync_failed))

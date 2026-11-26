@@ -8,6 +8,8 @@ object NavtexMessageDecoder {
 
     private const val MESSAGE_START = "ZCZC"
     private const val MESSAGE_END = "NNNN"
+    // B1 (A-Z) B2 (A-Z) B3B4 (00-99) directly after ZCZC
+    private val HEADER_ID = Regex("ZCZC\\s*([A-Z][A-Z]\\d{1,2})")
 
     /**
      * Decodes a raw NAVTEX message block.
@@ -24,16 +26,16 @@ object NavtexMessageDecoder {
         val lines = trimmed.lines().filter { it.isNotBlank() }
         if (lines.isEmpty()) return null
 
-        // Line 1 usually contains ZCZC [B1B2B3B4]
+        // Line 1 usually contains ZCZC [B1B2B3B4]: B1 = station letter,
+        // B2 = subject indicator, B3B4 = serial number. Some feeds omit
+        // the space after ZCZC, so match the group directly.
         val headerLine = lines.firstOrNull { it.contains(MESSAGE_START) } ?: return null
-        val headerParts = headerLine.split(" ").filter { it.isNotBlank() }
-        val idPart = headerParts.find { it.length == 4 && it != MESSAGE_START } ?: headerParts.getOrNull(1) ?: return null
-
-        if (idPart.length < 4) return null
+        val idPart = HEADER_ID.find(headerLine)?.groupValues?.get(1) ?: return null
+        if (idPart.length != 4) return null
 
         val stationLetter = idPart[0]
         val subjectChar = idPart[1]
-        val sequenceNumber = idPart.substring(2).trim().toIntOrNull() ?: 0
+        val sequenceNumber = idPart.substring(2).toIntOrNull() ?: 0
         val subject = NavtexSubject.fromCode(subjectChar)
 
         // The rest is the body
@@ -53,8 +55,12 @@ object NavtexMessageDecoder {
     }
 
     private fun isUrgent(subject: NavtexSubject): Boolean {
-        return subject == NavtexSubject.NAVTEX_WARNING ||
+        // Non-rejectable categories (subject indicators A, B, D, plus L
+        // which is additional to A) are always treated as urgent per the
+        // NAVTEX receiver requirements.
+        return subject == NavtexSubject.NAVIGATIONAL_WARNING ||
                subject == NavtexSubject.METEOROLOGICAL_WARNING ||
-               subject == NavtexSubject.SEARCH_AND_RESCUE
+               subject == NavtexSubject.SEARCH_AND_RESCUE ||
+               subject == NavtexSubject.NAVIGATIONAL_WARNING_ADDITIONAL
     }
 }

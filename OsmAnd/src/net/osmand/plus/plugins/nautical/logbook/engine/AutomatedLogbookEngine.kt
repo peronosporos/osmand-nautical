@@ -60,7 +60,11 @@ class AutomatedLogbookEngine(
                     // Check every minute if interval changed or it's time to log
                     val now = TemporalUtils.now()
                     if (now - lastLoggedTime >= intervalHours.toLong() * 3600 * 1000L) {
-                        triggerLog("Periodic")
+                        // Reason stays null so triggerLog itself resolves the
+                        // localized "Periodic" label; a hardcoded English word
+                        // here would defeat the reason comparison below on
+                        // non-English devices.
+                        triggerLog()
                     }
                     delay(60000L.milliseconds) 
                 } else {
@@ -177,8 +181,13 @@ class AutomatedLogbookEngine(
 
         repository.insertEntry(entry)
         
-        // Sync to Signal K
-        val pushTitle = if (entry.sailPlan.isNotEmpty()) "Marine Log: ${entry.sailPlan}" else "Marine Log Entry"
+        // Sync to Signal K; the note title the crew sees in the server-side
+        // logbook view follows the mariner's locale, like every other label.
+        val pushTitle = if (entry.sailPlan.isNotEmpty()) {
+            app.getString(net.osmand.plus.R.string.nautical_log_push_title_fmt, entry.sailPlan)
+        } else {
+            app.getString(net.osmand.plus.R.string.nautical_log_push_title)
+        }
         try {
             // Item 6: Better error logging for push failures
             signalKEngine.resourceManager.pushNoteToServer(lat, lon, pushTitle, entry.notes)

@@ -63,14 +63,20 @@ class NavtexViewModel(
         locationFlow
     ) { messages, filters, location ->
         val now = System.currentTimeMillis()
-        val ttl48h = 48 * 3600 * 1000L
+        // Same configurable retention the repository uses when pruning the
+        // database (NAUTICAL_NAVTEX_EXPIRY_HOURS), so the list and the
+        // stored rows follow one rule instead of two.
+        val expiryHours = maxOf(1L, settings.NAUTICAL_NAVTEX_EXPIRY_HOURS.get().toLong())
+        val expiryMs = expiryHours * 60L * 60L * 1000L
 
         val filtered = messages.filter { msg ->
-            // Filter out expired bulletins (> 48h) or messages with timestamp in the future / invalid
-            if (now - msg.timestamp > ttl48h) return@filter false
+            // Filter out expired bulletins or messages with timestamp in the future / invalid
+            if (now - msg.timestamp > expiryMs) return@filter false
 
-            // Subject 'A' (NAVTEX_WARNING) and 'D' (SEARCH_AND_RESCUE) always bypass filters per safety audit
-            if ((msg.subject == NavtexSubject.NAVTEX_WARNING) || (msg.subject == NavtexSubject.SEARCH_AND_RESCUE)) {
+            // Non-rejectable subject categories (A, B, D plus L, which is
+            // additional to A) always bypass the display filters, matching
+            // the isUrgent semantics of the decoder and the parser.
+            if (msg.isUrgent) {
                 return@filter true
             }
 

@@ -99,7 +99,7 @@ class NavtexListFragment : BaseOsmAndFragment() {
 
     private fun showSubjectSelectionDialog(viewModel: net.osmand.plus.plugins.nautical.hazard.viewmodel.NavtexViewModel) {
         val subjects = NavtexSubject.entries.toTypedArray()
-        val names = subjects.map { it.name.replace("_", " ") }.toTypedArray()
+        val names = subjects.map { it.label(requireContext()) }.toTypedArray()
         
         MaterialAlertDialogBuilder(requireContext())
             .setTitle(R.string.navtex_subject_filter)
@@ -144,7 +144,7 @@ class NavtexListFragment : BaseOsmAndFragment() {
             holder.time.text = sdf.format(Date(msg.timestamp))
             holder.body.text = msg.body
             
-            holder.priority.text = msg.subject.name.replace("_", " ")
+            holder.priority.text = msg.subject.label(holder.itemView.context)
             val color = when (msg.subject) {
                 NavtexSubject.SEARCH_AND_RESCUE -> 0xFFD32F2F.toInt()
                 NavtexSubject.METEOROLOGICAL_WARNING -> 0xFFF57C00.toInt()

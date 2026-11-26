@@ -43,7 +43,7 @@ class NauticalSafetyAlertService(private val app: OsmandApplication) {
         val index = NauticalPlugin.getInstance()?.s57SpatialIndex ?: return
         val sm = NauticalPlugin.getInstance()?.safetyManager ?: return
         
-        val checker = SafetyCorridorChecker(index, sm)
+        val checker = SafetyCorridorChecker(app, index, sm)
         val issues = checker.checkLookAhead(lat, lon)
         
         val danger = issues.find { it.severity == Severity.DANGER }

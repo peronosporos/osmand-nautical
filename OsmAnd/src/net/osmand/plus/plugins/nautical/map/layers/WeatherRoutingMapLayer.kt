@@ -264,6 +264,7 @@ class WeatherRoutingMapLayer(context: Context) : OsmandMapLayer(context) {
             val newCache = withContext(Dispatchers.Default) {
                 if (safetyCorridorChecker == null && indexManager != null && sailingPlugin.safetyManager != null) {
                     safetyCorridorChecker = SafetyCorridorChecker(
+                        app,
                         indexManager,
                         sailingPlugin.safetyManager!!
                     )

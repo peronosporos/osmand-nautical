@@ -13,6 +13,7 @@ import net.osmand.plus.plugins.nautical.s57.S57SpatialIndex
  * Scans a projected safety corridor along a route for navigational hazards.
  */
 class SafetyCorridorChecker(
+    private val app: net.osmand.plus.OsmandApplication,
     private val indexManager: S57SpatialIndex,
     private val safetyManager: net.osmand.plus.plugins.nautical.engine.NauticalSafetyManager
 ) {
@@ -85,7 +86,7 @@ class SafetyCorridorChecker(
             if (area.intersects(point)) {
                 issues.add(SafetyIssue(
                     segmentIndex,
-                    "Forward Watch: ${hazard.name}",
+                    app.getString(net.osmand.plus.R.string.nautical_corridor_forward_watch_fmt, hazard.name),
                     S57Object(0L, "FORWARD_HAZARD", net.osmand.plus.plugins.nautical.s57.S57PrimitiveType.POINT, emptyMap(), emptyList()),
                     if (hazard.severity == net.osmand.plus.plugins.nautical.engine.NotificationState.EMERGENCY || hazard.severity == net.osmand.plus.plugins.nautical.engine.NotificationState.ALARM) Severity.DANGER else Severity.WARNING
                 ))
@@ -96,7 +97,7 @@ class SafetyCorridorChecker(
     private fun checkSignalKRegions(area: com.vividsolutions.jts.geom.Geometry, issues: MutableList<SafetyIssue>, segmentIndex: Int) {
         val regions = safetyManager.getSignalKRegions()
         for (region in regions) {
-            val name = region.feature.properties["name"] as? String ?: "SignalK Region"
+            val name = region.feature.properties["name"] as? String ?: app.getString(net.osmand.plus.R.string.nautical_corridor_signalk_region)
             // Simple spatial check for bounding boxes if geometry is complex
             val bounds = region.feature.properties["bounds"] as? List<*>
             if (bounds != null && bounds.size == 4) {
@@ -199,11 +200,15 @@ class SafetyCorridorChecker(
     private fun evaluateHazard(hazard: S57Object, segmentIndex: Int): SafetyIssue? {
         val minSafeDepth = safetyManager.getMinSafeDepth()
 
+        val res = net.osmand.plus.R.string
         return when (hazard.acronym) {
             "DEPARE" -> {
-                val drval1 = hazard.attributes["DRVAL1"]?.toDoubleOrNull() ?: 0.0
+                // A DEPARE record without DRVAL1 carries no charted depth;
+                // treating it as 0 m would fabricate a danger, so it is
+                // simply not evaluated against the vessel draft.
+                val drval1 = hazard.attributes["DRVAL1"]?.toDoubleOrNull() ?: return null
                 if (drval1 < minSafeDepth) {
-                    SafetyIssue(segmentIndex, "Shallow Water: ${drval1}m", hazard, Severity.DANGER)
+                    SafetyIssue(segmentIndex, app.getString(res.nautical_corridor_shallow_water_fmt, drval1), hazard, Severity.DANGER)
                 } else null
             }
             "SOUNDG" -> {
@@ -212,13 +217,20 @@ class SafetyCorridorChecker(
                     .minOrNull()
 
                 if (minSounding != null && minSounding < minSafeDepth) {
-                    SafetyIssue(segmentIndex, "Shallow Sounding: ${minSounding}m", hazard, Severity.DANGER)
+                    SafetyIssue(segmentIndex, app.getString(res.nautical_corridor_shallow_sounding_fmt, minSounding), hazard, Severity.DANGER)
                 } else null
             }
-            "WRECKS" -> SafetyIssue(segmentIndex, "Wreck", hazard, Severity.DANGER)
-            "OBSTRN" -> SafetyIssue(segmentIndex, "Obstruction", hazard, Severity.DANGER)
-            "RESTRN", "DMPGRD", "MILARE", "SIGNALK_REGION" -> SafetyIssue(segmentIndex, hazard.attributes["name"] ?: "Restricted Area", hazard, Severity.WARNING)
-            "UWTROC" -> SafetyIssue(segmentIndex, "Underwater Rock", hazard, Severity.DANGER)
+            "WRECKS" -> SafetyIssue(segmentIndex, app.getString(res.nautical_corridor_wreck), hazard, Severity.DANGER)
+            "OBSTRN" -> SafetyIssue(segmentIndex, app.getString(res.nautical_corridor_obstruction), hazard, Severity.DANGER)
+            "RESTRN", "DMPGRD", "MILARE", "SIGNALK_REGION" -> SafetyIssue(
+                segmentIndex,
+                // S-57 object names are carried under OBJNAM; the general
+                // "name" key is not part of the S-57 attribute set.
+                hazard.attributes["OBJNAM"] ?: app.getString(res.nautical_corridor_restricted_area),
+                hazard,
+                Severity.WARNING
+            )
+            "UWTROC" -> SafetyIssue(segmentIndex, app.getString(res.nautical_corridor_underwater_rock), hazard, Severity.DANGER)
             else -> null
         }
     }

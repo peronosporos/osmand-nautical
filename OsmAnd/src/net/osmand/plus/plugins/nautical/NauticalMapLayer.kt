@@ -1118,7 +1118,7 @@ class NauticalMapLayer(context: Context) : OsmandMapLayer(context), SharedPrefer
                 val safetyManager = NauticalPlugin.getInstance()?.safetyManager
                 var checker = safetyCorridorChecker
                 if (checker == null && indexManager != null && safetyManager != null) {
-                    checker = SafetyCorridorChecker(indexManager, safetyManager)
+                    checker = SafetyCorridorChecker(app, indexManager, safetyManager)
                     safetyCorridorChecker = checker
                 }
                 val currentRoute = route.toList()

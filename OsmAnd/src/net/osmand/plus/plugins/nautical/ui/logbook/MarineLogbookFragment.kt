@@ -219,7 +219,7 @@ class MarineLogbookFragment : BaseOsmAndFragment() {
         requireActivity().addMenuProvider(
             object : MenuProvider {
                 override fun onCreateMenu(menu: Menu, menuInflater: MenuInflater) {
-                    val syncItem = menu.add(0, SYNC_SERVER_ID, 0, "Sync with Server")
+                    val syncItem = menu.add(0, SYNC_SERVER_ID, 0, getString(R.string.nautical_logbook_sync_server))
                     syncItem.setShowAsAction(MenuItem.SHOW_AS_ACTION_IF_ROOM)
                     syncItem.setIcon(R.drawable.ic_action_refresh_dark)
                     

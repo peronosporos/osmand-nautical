@@ -7,7 +7,7 @@ import net.osmand.plus.settings.backend.OsmandSettings
  * Centralized source of truth for vessel safety thresholds and SI unit conversions.
  * Force all modules to query this manager to ensure consistent safety evaluation.
  */
-class NauticalSafetyManager private constructor(private val app: OsmandApplication) {
+class NauticalSafetyManager private constructor(val app: OsmandApplication) {
     private val settings: OsmandSettings = app.settings
     private val signalKRegions = mutableMapOf<String, net.osmand.plus.plugins.nautical.network.SignalKRegion>()
     private val forwardHazards = mutableListOf<ForwardHazard>()
