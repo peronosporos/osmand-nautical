@@ -64,7 +64,7 @@ class CockpitShellActivity : AppCompatActivity() {
         mobBanner = TextView(this).apply {
             setText(R.string.nautical_cockpit_mob_banner)
             setTextColor(Color.BLACK)
-            setBackgroundColor(ContextCompat.getColor(this, R.color.nautical_cockpit_stage_danger))
+            setBackgroundColor(ContextCompat.getColor(this@CockpitShellActivity, R.color.nautical_cockpit_stage_danger))
             setTypeface(typeface, Typeface.BOLD)
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 18f)
             gravity = Gravity.CENTER
@@ -122,7 +122,7 @@ class CockpitShellActivity : AppCompatActivity() {
             val button = Button(this).apply {
                 text = paneName(id)
                 setTextColor(fg)
-                setBackgroundColor(if (night) ContextCompat.getColor(this, R.color.nautical_cockpit_night_button_bg) else ContextCompat.getColor(this, R.color.nautical_cockpit_day_button_bg))
+                setBackgroundColor(if (night) ContextCompat.getColor(this@CockpitShellActivity, R.color.nautical_cockpit_night_button_bg) else ContextCompat.getColor(this@CockpitShellActivity, R.color.nautical_cockpit_day_button_bg))
                 isAllCaps = false
                 setOnClickListener { mount(id) }
             }

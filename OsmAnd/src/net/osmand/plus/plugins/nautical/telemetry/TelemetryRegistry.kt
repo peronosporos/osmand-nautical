@@ -282,7 +282,7 @@ object TelemetryRegistry {
                 titleRes = R.string.nautical_cog,
                 category = MetricCategory.NAVIGATION,
                 extractor = { it.courseOverGroundTrue },
-                formatter = { _, _, value, _ -> formatAngle(value) }
+                formatter = { context, _, value, _ -> formatAngle(context, value) }
             )
         )
         register(
@@ -291,7 +291,7 @@ object TelemetryRegistry {
                 titleRes = R.string.nautical_heading_magnetic,
                 category = MetricCategory.NAVIGATION,
                 extractor = { it.headingMagnetic },
-                formatter = { _, _, value, _ -> formatAngle(value) }
+                formatter = { context, _, value, _ -> formatAngle(context, value) }
             )
         )
         register(
@@ -300,7 +300,7 @@ object TelemetryRegistry {
                 titleRes = R.string.nautical_heading_true,
                 category = MetricCategory.NAVIGATION,
                 extractor = { it.headingTrue },
-                formatter = { _, _, value, _ -> formatAngle(value) }
+                formatter = { context, _, value, _ -> formatAngle(context, value) }
             )
         )
         register(
@@ -309,7 +309,7 @@ object TelemetryRegistry {
                 titleRes = R.string.nautical_rot,
                 category = MetricCategory.NAVIGATION,
                 extractor = { it.rateOfTurn },
-                formatter = { _, _, value, _ ->
+                formatter = { context, _, value, _ ->
                     if (value == null || value.isNaN()) return@TelemetryMetricDefinition MetricValue("---", isValid = false)
                     val degPerMin = Math.toDegrees(value) * 60.0
                     MetricValue(
@@ -372,7 +372,7 @@ object TelemetryRegistry {
                 category = MetricCategory.NAVIGATION,
                 isPortStarboardAngle = true,
                 extractor = { it.roll },
-                formatter = { _, _, value, _ -> formatPortStarboardAngle(value) }
+                formatter = { context, _, value, _ -> formatPortStarboardAngle(context, value) }
             )
         )
         register(
@@ -383,7 +383,7 @@ object TelemetryRegistry {
                 extractor = { it.pitch },
                 // Pitch is a signed metric (bow up/down); compass-style 0-360 normalization
                 // would show a bow-down 5 deg pitch as 355 deg.
-                formatter = { _, _, value, _ -> formatSignedAngle(value) }
+                formatter = { context, _, value, _ -> formatSignedAngle(context, value) }
             )
         )
 
@@ -395,7 +395,7 @@ object TelemetryRegistry {
                 category = MetricCategory.WIND,
                 isPortStarboardAngle = true,
                 extractor = { it.windDirectionApparent },
-                formatter = { _, _, value, _ -> formatPortStarboardAngle(value) }
+                formatter = { context, _, value, _ -> formatPortStarboardAngle(context, value) }
             )
         )
         register(
@@ -414,7 +414,7 @@ object TelemetryRegistry {
                 category = MetricCategory.WIND,
                 isPortStarboardAngle = true,
                 extractor = { it.trueWindAngle },
-                formatter = { _, _, value, _ -> formatPortStarboardAngle(value) }
+                formatter = { context, _, value, _ -> formatPortStarboardAngle(context, value) }
             )
         )
         register(
@@ -432,7 +432,7 @@ object TelemetryRegistry {
                 titleRes = R.string.nautical_twd,
                 category = MetricCategory.WIND,
                 extractor = { it.windDirectionTrue },
-                formatter = { _, _, value, _ -> formatAngle(value) }
+                formatter = { context, _, value, _ -> formatAngle(context, value) }
             )
         )
         register(
@@ -445,7 +445,7 @@ object TelemetryRegistry {
                 extractor = { it.windDirectionApparent },
                 secondaryExtractor = { it.windSpeedApparent },
                 formatter = { context, settings, angleVal, speedVal ->
-                    val angleMetric = formatPortStarboardAngle(angleVal)
+                    val angleMetric = formatPortStarboardAngle(context, angleVal)
                     val speedMetric = formatSpeed(context, settings, speedVal)
                     MetricValue(
                         primaryText = angleMetric.primaryText,
@@ -469,7 +469,7 @@ object TelemetryRegistry {
                 extractor = { it.trueWindAngle },
                 secondaryExtractor = { it.windSpeedTrue },
                 formatter = { context, settings, angleVal, speedVal ->
-                    val angleMetric = formatPortStarboardAngle(angleVal)
+                    val angleMetric = formatPortStarboardAngle(context, angleVal)
                     val speedMetric = formatSpeed(context, settings, speedVal)
                     MetricValue(
                         primaryText = angleMetric.primaryText,
@@ -578,7 +578,7 @@ object TelemetryRegistry {
                 category = MetricCategory.VESSEL,
                 isPortStarboardAngle = true,
                 extractor = { it.rudderAngle ?: it.simulatedRudderAngle },
-                formatter = { _, _, value, _ -> formatPortStarboardAngle(value) }
+                formatter = { context, _, value, _ -> formatPortStarboardAngle(context, value) }
             )
         )
         register(
@@ -748,19 +748,19 @@ object TelemetryRegistry {
         }
     }
 
-    private fun formatAngle(value: Double?): MetricValue {
+    private fun formatAngle(context: Context, value: Double?): MetricValue {
         if (value == null || value.isNaN()) return MetricValue("---", isValid = false)
         val deg = (Math.toDegrees(value) % 360.0 + 360.0) % 360.0
         return MetricValue(primaryText = String.format(Locale.US, "%03.0f", deg), unitText = context.getString(R.string.nautical_unit_deg), rawNumericValue = deg)
     }
 
-    private fun formatSignedAngle(value: Double?): MetricValue {
+    private fun formatSignedAngle(context: Context, value: Double?): MetricValue {
         if (value == null || value.isNaN()) return MetricValue("---", isValid = false)
         val deg = Math.toDegrees(value)
         return MetricValue(primaryText = String.format(Locale.US, "%+.1f", deg), unitText = context.getString(R.string.nautical_unit_deg), rawNumericValue = deg)
     }
 
-    private fun formatPortStarboardAngle(value: Double?): MetricValue {
+    private fun formatPortStarboardAngle(context: Context, value: Double?): MetricValue {
         if (value == null || value.isNaN()) return MetricValue("---", isValid = false)
         var deg = Math.toDegrees(value)
         while (deg < -180.0) deg += 360.0

@@ -9,6 +9,7 @@ import net.osmand.data.LatLon
 import net.osmand.data.PointDescription
 import net.osmand.data.RotatedTileBox
 import net.osmand.plus.ChartPointsHelper
+import net.osmand.plus.R
 import net.osmand.plus.plugins.nautical.NauticalPlugin
 import net.osmand.plus.plugins.nautical.engine.NauticalAisManager
 import net.osmand.plus.plugins.nautical.engine.SailingWorkflowState

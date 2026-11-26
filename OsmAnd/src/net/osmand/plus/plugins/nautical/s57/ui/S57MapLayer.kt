@@ -581,7 +581,7 @@ class S57MapLayer(context: Context, private val indexManager: S57SpatialIndex) :
                 var soundingIntPart: String? = null
                 var soundingFracDigit: String? = null
                 
-                val depthValue = optimized.depth
+                val depthValue = (optimized as? S57Geometry.Point)?.depth
                 if (tileBox.zoom >= 12 && feature.acronym == "SOUNDG" && optimized is S57Geometry.Point && depthValue != null) {
                     val depth = depthValue
                     soundingDepth = depth

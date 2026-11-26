@@ -209,7 +209,7 @@ class S57FileReader(private val inputStream: InputStream) {
      */
     private fun fieldData(field: RawField): ByteArray {
         val data = field.data
-        return if (data.isNotEmpty() && data[data.size - 1] == FIELD_TERMINATOR) {
+        return if (data.isNotEmpty() && data[data.size - 1] == FIELD_TERMINATOR.toByte()) {
             data.copyOfRange(0, data.size - 1)
         } else {
             data
@@ -237,8 +237,8 @@ class S57FileReader(private val inputStream: InputStream) {
     private fun parseDssi(record: RawRecord) {
         val dssi = firstField(record, "DSSI") ?: return
         if (dssi.data.size >= 3) {
-            attributeCharset = charsetForLexicalLevel(dssi.data[1])
-            nationalCharset = charsetForLexicalLevel(dssi.data[2])
+            attributeCharset = charsetForLexicalLevel(dssi.data[1].toInt())
+            nationalCharset = charsetForLexicalLevel(dssi.data[2].toInt())
         }
     }
 
@@ -517,7 +517,7 @@ class S57FileReader(private val inputStream: InputStream) {
             val label = readShortLE(data, i).toInt() and 0xFFFF
             i += 2
             var end = i
-            while (end < data.size && data[end] != UNIT_SEPARATOR && data[end] != FIELD_TERMINATOR) {
+            while (end < data.size && data[end] != UNIT_SEPARATOR.toByte() && data[end] != FIELD_TERMINATOR.toByte()) {
                 end++
             }
             val value = String(data, i, end - i, charset)
@@ -597,8 +597,8 @@ class S57FileReader(private val inputStream: InputStream) {
             "147:TSSCRS,148:TSSLPT,149:TSSRON,150:TSEZNE,151:TUNNEL,152:TWRTPT,153:UWTROC,154:UNSARE,155:VEGATN," +
             "156:WATTUR,157:WATFAL,158:WEDKLP,159:WRECKS,160:TS_FEB,161:ARCSLN,162:ASLXIS,163:NEWOBJ,300:M_ACCY," +
             "301:M_CSCL,302:M_COVR,303:M_HDAT,304:M_HOPA,305:M_NPUB,306:M_NSYS,307:M_PROD,308:M_QUAL,309:M_SDAT," +
-            "310:M_SREL,311:M_UNIT,312:M_VDAT,400:C_AGGR,401:C_ASSO,402:C_STAC,500:$AREAS,501:$LINES,502:$CSYMB," +
-            "503:$COMPS,504:$TEXTS,17000:achbrt,17001:achare,17002:canbnk,17003:depare,17004:dismar,17005:resare," +
+            "310:M_SREL,311:M_UNIT,312:M_VDAT,400:C_AGGR,401:C_ASSO,402:C_STAC,500:\$AREAS,501:\$LINES,502:\$CSYMB," +
+            "503:\$COMPS,504:\$TEXTS,17000:achbrt,17001:achare,17002:canbnk,17003:depare,17004:dismar,17005:resare," +
             "17006:rivbnk,17007:sistat,17008:sistaw,17009:topmar,17010:berths,17011:bridge,17012:cblohd,17013:feryrt," +
             "17014:hrbare,17015:hrbfac,17016:lokbsn,17017:rdocal,17018:m_nsys,17050:notmrk,17051:wtwaxs,17052:wtwprf," +
             "17053:brgare,17054:bunsta,17055:comare,17056:hrbbsn,17057:lokare,17058:lkbspt,17059:prtare,17060:bcnwtw," +
@@ -622,20 +622,20 @@ class S57FileReader(private val inputStream: InputStream) {
             "42:CATOBS,43:CATOFP,44:CATOLB,45:CATPLE,46:CATPIL,47:CATPIP,48:CATPRA,49:CATPYL,50:CATQUA,51:CATRAS," +
             "52:CATRTB,53:CATROS,54:CATTRK,55:CATRSC,56:CATREA,57:CATROD,58:CATRUN,59:CATSEA,60:CATSLC,61:CATSIT," +
             "62:CATSIW,63:CATSIL,64:CATSLO,65:CATSCF,66:CATSPM,67:CATTSS,68:CATVEG,69:CATWAT,70:CATWED,71:CATWRK," +
-            "72:CATZOC,73:$SPACE,74:$CHARS,75:COLOUR,76:COLPAT,77:COMCHA,78:$CSIZE,79:CPDATE,80:CSCALE,81:CONDTN," +
+            "72:CATZOC,73:\$SPACE,74:\$CHARS,75:COLOUR,76:COLPAT,77:COMCHA,78:\$CSIZE,79:CPDATE,80:CSCALE,81:CONDTN," +
             "82:CONRAD,83:CONVIS,84:CURVEL,85:DATEND,86:DATSTA,87:DRVAL1,88:DRVAL2,89:DUNITS,90:ELEVAT,91:ESTRNG," +
             "92:EXCLIT,93:EXPSOU,94:FUNCTN,95:HEIGHT,96:HUNITS,97:HORACC,98:HORCLR,99:HORLEN,100:HORWID,101:ICEFAC," +
-            "102:INFORM,103:JRSDTN,104:$JUSTH,105:$JUSTV,106:LIFCAP,107:LITCHR,108:LITVIS,109:MARSYS,110:MLTYLT," +
+            "102:INFORM,103:JRSDTN,104:\$JUSTH,105:\$JUSTV,106:LIFCAP,107:LITCHR,108:LITVIS,109:MARSYS,110:MLTYLT," +
             "111:NATION,112:NATCON,113:NATSUR,114:NATQUA,115:NMDATE,116:OBJNAM,117:ORIENT,118:PEREND,119:PERSTA," +
             "120:PICREP,121:PILDST,122:PRCTRY,123:PRODCT,124:PUBREF,125:QUASOU,126:RADWAL,127:RADIUS,128:RECDAT," +
             "129:RECIND,130:RYRMGV,131:RESTRN,132:SCAMAX,133:SCAMIN,134:SCVAL1,135:SCVAL2,136:SECTR1,137:SECTR2," +
             "138:SHIPAM,139:SIGFRQ,140:SIGGEN,141:SIGGRP,142:SIGPER,143:SIGSEQ,144:SOUACC,145:SDISMX,146:SDISMN," +
-            "147:SORDAT,148:SORIND,149:STATUS,150:SURATH,151:SUREND,152:SURSTA,153:SURTYP,154:$SCALE,155:$SCODE," +
-            "156:TECSOU,157:$TXSTR,158:TXTDSC,159:TS_TSP,160:TS_TSV,161:T_ACWL,162:T_HWLW,163:T_MTOD,164:T_THDF," +
-            "165:T_TINT,166:T_TSVL,167:T_VAHC,168:TIMEND,169:TIMSTA,170:$TINTS,171:TOPSHP,172:TRAFIC,173:VALACM," +
+            "147:SORDAT,148:SORIND,149:STATUS,150:SURATH,151:SUREND,152:SURSTA,153:SURTYP,154:\$SCALE,155:\$SCODE," +
+            "156:TECSOU,157:\$TXSTR,158:TXTDSC,159:TS_TSP,160:TS_TSV,161:T_ACWL,162:T_HWLW,163:T_MTOD,164:T_THDF," +
+            "165:T_TINT,166:T_TSVL,167:T_VAHC,168:TIMEND,169:TIMSTA,170:\$TINTS,171:TOPSHP,172:TRAFIC,173:VALACM," +
             "174:VALDCO,175:VALLMA,176:VALMAG,177:VALMXR,178:VALNMR,179:VALSOU,180:VERACC,181:VERCLR,182:VERCCL," +
             "183:VERCOP,184:VERCSA,185:VERDAT,186:VERLEN,187:WATLEV,188:CAT_TS,189:PUNITS,190:CLSDEF,191:CLSNAM," +
-            "192:SYMINS,300:NINFOM,301:NOBJNM,302:NPLDST,303:$NTXST,304:NTXTDS,400:HORDAT,401:POSACC,402:QUAPOS," +
+            "192:SYMINS,300:NINFOM,301:NOBJNM,302:NPLDST,303:\$NTXST,304:NTXTDS,400:HORDAT,401:POSACC,402:QUAPOS," +
             "17000:catach,17001:catdis,17002:catsit,17003:catsiw,17004:restrn,17005:verdat,17006:catbrg,17007:catfry," +
             "17008:cathaf,17009:marsys,17050:addmrk,17051:catbnk,17052:catnmk,17055:clsdng,17056:dirimp,17057:disbk1," +
             "17058:disbk2,17059:disipu,17060:disipd,17061:eleva1,17062:eleva2,17063:fnctnm,17064:wtwdis,17065:bunves," +

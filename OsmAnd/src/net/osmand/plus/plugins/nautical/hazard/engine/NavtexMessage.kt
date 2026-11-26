@@ -1,6 +1,7 @@
 package net.osmand.plus.plugins.nautical.hazard.engine
 
 import net.osmand.data.LatLon
+import net.osmand.plus.R
 import java.io.Serializable
 
 /**
@@ -42,27 +43,26 @@ enum class NavtexSubject(val code: Char) : Serializable {
      * such as AIS, LORAN, OMEGA, SATNAV stay untranslated.
      */
     fun label(context: android.content.Context): String {
-        val res = net.osmand.plus.R.string
         return when (this) {
-            NAVIGATIONAL_WARNING -> context.getString(res.navtex_subject_a)
-            METEOROLOGICAL_WARNING -> context.getString(res.navtex_subject_b)
-            ICE_REPORT -> context.getString(res.navtex_subject_c)
-            SEARCH_AND_RESCUE -> context.getString(res.navtex_subject_d)
-            METEOROLOGICAL_FORECAST -> context.getString(res.navtex_subject_e)
-            PILOT_SERVICE -> context.getString(res.navtex_subject_f)
-            AIS_MESSAGES -> context.getString(res.navtex_subject_g)
-            LORAN_MESSAGES -> context.getString(res.navtex_subject_h)
-            NOT_USED_FORMER_OMEGA -> context.getString(res.navtex_subject_i)
-            SATNAV_MESSAGES -> context.getString(res.navtex_subject_j)
-            OTHER_ELECTRONIC_NAVAIDS -> context.getString(res.navtex_subject_k)
-            NAVIGATIONAL_WARNING_ADDITIONAL -> context.getString(res.navtex_subject_l)
-            TEST_TRANSMISSIONS -> context.getString(res.navtex_subject_t)
-            NOTICE_TO_FISHERMEN -> context.getString(res.navtex_subject_v)
-            ENVIRONMENTAL_MESSAGES -> context.getString(res.navtex_subject_w)
-            SPECIAL_SERVICES_X -> context.getString(res.navtex_subject_x)
-            SPECIAL_SERVICES_Y -> context.getString(res.navtex_subject_y)
-            NO_MESSAGE -> context.getString(res.navtex_subject_z)
-            UNKNOWN -> context.getString(res.navtex_subject_unknown)
+            NAVIGATIONAL_WARNING -> context.getString(R.string.navtex_subject_a)
+            METEOROLOGICAL_WARNING -> context.getString(R.string.navtex_subject_b)
+            ICE_REPORT -> context.getString(R.string.navtex_subject_c)
+            SEARCH_AND_RESCUE -> context.getString(R.string.navtex_subject_d)
+            METEOROLOGICAL_FORECAST -> context.getString(R.string.navtex_subject_e)
+            PILOT_SERVICE -> context.getString(R.string.navtex_subject_f)
+            AIS_MESSAGES -> context.getString(R.string.navtex_subject_g)
+            LORAN_MESSAGES -> context.getString(R.string.navtex_subject_h)
+            NOT_USED_FORMER_OMEGA -> context.getString(R.string.navtex_subject_i)
+            SATNAV_MESSAGES -> context.getString(R.string.navtex_subject_j)
+            OTHER_ELECTRONIC_NAVAIDS -> context.getString(R.string.navtex_subject_k)
+            NAVIGATIONAL_WARNING_ADDITIONAL -> context.getString(R.string.navtex_subject_l)
+            TEST_TRANSMISSIONS -> context.getString(R.string.navtex_subject_t)
+            NOTICE_TO_FISHERMEN -> context.getString(R.string.navtex_subject_v)
+            ENVIRONMENTAL_MESSAGES -> context.getString(R.string.navtex_subject_w)
+            SPECIAL_SERVICES_X -> context.getString(R.string.navtex_subject_x)
+            SPECIAL_SERVICES_Y -> context.getString(R.string.navtex_subject_y)
+            NO_MESSAGE -> context.getString(R.string.navtex_subject_z)
+            UNKNOWN -> context.getString(R.string.navtex_subject_unknown)
         }
     }
 

@@ -70,7 +70,7 @@ class TideStationBottomSheet : BaseNauticalBottomSheet() {
         // Add Graph
         val themedCtx = net.osmand.plus.utils.UiUtilities.getThemedContext(requireContext(), nightMode)
         val graphContainer = LayoutInflater.from(themedCtx).inflate(R.layout.bottom_sheet_nautical_data, null)
-        graphTitleView = graphContainer.findViewById(R.id.graph_title)?.apply {
+        graphTitleView = graphContainer.findViewById<TextView>(R.id.graph_title)?.apply {
             // Hidden until a station with predictions is selected, so no fabricated title shows.
             visibility = View.INVISIBLE
             text = ""

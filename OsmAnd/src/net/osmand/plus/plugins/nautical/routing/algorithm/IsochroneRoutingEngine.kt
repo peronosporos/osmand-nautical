@@ -389,8 +389,8 @@ class IsochroneRoutingEngine(
                     (((prev.cumulativeTimeHours + node.cumulativeTimeHours) / 2.0) * 3_600_000.0).toLong()
                 val legWind = gribEngine.getWindVector(midLat, midLon, midTimestamp)
                 val legCurrent = gribEngine.getCurrentVector(midLat, midLon, midTimestamp)
-                val legTwaDeg = legWind?.let { windDir ->
-                    ((node.heading - windDir + 540.0) % 360.0) - 180.0
+                val legTwaDeg = legWind?.let { wind ->
+                    ((node.heading - wind.direction + 540.0) % 360.0) - 180.0
                 }
                 legs.add(
                     net.osmand.plus.plugins.nautical.routing.model.PassagePlanLeg(

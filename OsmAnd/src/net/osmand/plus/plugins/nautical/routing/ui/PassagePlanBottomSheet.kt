@@ -174,7 +174,7 @@ class PassagePlanBottomSheet : BaseNauticalBottomSheet() {
     ) : ListAdapter<PassagePlanLeg, LegViewHolder>(LegDiffCallback()) {
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): LegViewHolder {
             val view = LayoutInflater.from(parent.context).inflate(R.layout.item_passage_plan_leg, parent, false)
-            return LegViewHolder(view)
+            return LegViewHolder(view, vesselDraftMeters, safetyMarginMeters)
         }
 
         override fun onBindViewHolder(holder: LegViewHolder, position: Int) {
@@ -189,7 +189,11 @@ class PassagePlanBottomSheet : BaseNauticalBottomSheet() {
         }
     }
 
-    private class LegViewHolder(view: View) : RecyclerView.ViewHolder(view) {
+    private class LegViewHolder(
+        view: View,
+        private val vesselDraftMeters: Float,
+        private val safetyMarginMeters: Float
+    ) : RecyclerView.ViewHolder(view) {
         private val txtTitle: TextView = view.findViewById(R.id.txt_leg_title)
         private val txtDist: TextView = view.findViewById(R.id.txt_leg_distance)
         private val txtCtsTwa: TextView = view.findViewById(R.id.txt_leg_cts_twa)

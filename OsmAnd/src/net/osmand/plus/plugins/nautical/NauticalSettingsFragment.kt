@@ -586,7 +586,7 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
         }
         findPreference<EditTextPreferenceEx>(settings.NAUTICAL_TACKING_WIND_LIMIT.id)?.apply {
             setThemedIcon(OsmAndR.drawable.ic_action_wind)
-            summary = getString(R.string.nautical_fmt_value_kn, settings.NAUTICAL_TACKING_WIND_LIMIT.get())
+            summary = getString(OsmAndR.string.nautical_fmt_value_kn, settings.NAUTICAL_TACKING_WIND_LIMIT.get())
         }
         findPreference<EditTextPreferenceEx>(settings.NAUTICAL_MOB_AUDIO_INTERVAL.id)?.apply {
             setThemedIcon(OsmAndR.drawable.ic_action_volume_up)
@@ -815,11 +815,11 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
         findPreference<ListPreferenceEx>(plugin.aisCpaWarningDistance.id)?.apply {
             setThemedIcon(OsmAndR.drawable.ic_action_anchor)
             val entryValuesArr = arrayOf(0.02f, 0.05f, 0.1f, 0.2f, 0.5f, 1.0f, 2.0f)
-            entries = entryValuesArr.map { getString(R.string.nautical_fmt_value_nm, it) }.toTypedArray()
+            entries = entryValuesArr.map { getString(OsmAndR.string.nautical_fmt_value_nm, it) }.toTypedArray()
             entryValues = entryValuesArr.map { it.toString() }.toTypedArray()
             val current = plugin.aisCpaWarningDistance.get()
             value = current.toString()
-            summary = getString(R.string.nautical_fmt_value_nm, current)
+            summary = getString(OsmAndR.string.nautical_fmt_value_nm, current)
         }
 
         findPreference<EditTextPreferenceEx>(plugin.aisOwnMmsi.id)?.apply {
@@ -1477,7 +1477,7 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
                     onPreferenceChanged(key)
                 }
                 plugin?.aisCpaWarningDistance?.id -> {
-                    preference.summary = getString(R.string.nautical_fmt_value_nm, newString)
+                    preference.summary = getString(OsmAndR.string.nautical_fmt_value_nm, newString)
                     onPreferenceChanged(key)
                 }
                 plugin?.aisOwnMmsi?.id -> {
@@ -1534,7 +1534,7 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
                     onPreferenceChanged(key)
                 }
                 settings.NAUTICAL_TACKING_WIND_LIMIT.id -> {
-                    preference.summary = getString(R.string.nautical_fmt_value_kn, newString)
+                    preference.summary = getString(OsmAndR.string.nautical_fmt_value_kn, newString)
                     onPreferenceChanged(key)
                 }
                 settings.NAUTICAL_MOB_AUDIO_INTERVAL.id -> {

@@ -5,7 +5,7 @@ import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 import net.osmand.data.LatLon
-import net.osmand.util.PlatformUtil
+import net.osmand.PlatformUtil
 import org.json.JSONObject
 import androidx.core.database.sqlite.transaction
 import java.io.ByteArrayInputStream
