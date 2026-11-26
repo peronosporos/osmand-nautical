@@ -40,6 +40,8 @@ class MobEmergencyHeaderView @JvmOverloads constructor(
     private val maneuversButton: Button
     private val mobIcon: android.widget.ImageView
     private val cancelProgressBar: android.widget.ProgressBar
+    private val mobTitle: TextView
+    private val mobContainer: android.widget.LinearLayout
 
     private var viewModel: MobViewModel? = null
     private val handler = Handler(Looper.getMainLooper())
@@ -72,6 +74,8 @@ class MobEmergencyHeaderView @JvmOverloads constructor(
         maneuversButton = findViewById(R.id.btn_mob_maneuvers)
         mobIcon = findViewById(R.id.mob_icon)
         cancelProgressBar = findViewById(R.id.cancel_progress)
+        mobTitle = findViewById(R.id.mob_title)
+        mobContainer = findViewById(R.id.mob_hud_container)
 
         setupListeners()
         isVisible = false
@@ -180,33 +184,40 @@ class MobEmergencyHeaderView @JvmOverloads constructor(
         val isNight = net.osmand.plus.plugins.nautical.NauticalPlugin.isNightVision(app)
         applyNightVisionTheme(isNight)
 
-        state.distanceMeters?.let {
+        // Absent sensor data degrades to an explicit localized n/a instead of
+        // silently keeping the previous value on an emergency screen.
+        val na = context.getString(R.string.nautical_not_available)
+        distanceView.text = state.distanceMeters?.let {
             val (v, u) = net.osmand.plus.plugins.nautical.engine.SignalKUnitConverter.formatValue(context, settings, it, "distance")
-            distanceView.text = "$v $u"
-        }
-        
-        state.bearingDegrees?.let {
+            "$v $u"
+        } ?: na
+
+        bearingView.text = state.bearingDegrees?.let {
             val (v, u) = net.osmand.plus.plugins.nautical.engine.SignalKUnitConverter.formatValue(context, settings, it, "angle")
-            bearingView.text = "$v$u"
-        }
-        
-        state.etaSeconds?.let {
+            "$v$u"
+        } ?: na
+
+        etaView.text = state.etaSeconds?.let {
             if (it.isInfinite()) {
-                etaView.text = "--:--"
+                "--:--"
             } else {
                 val mins = TimeUnit.SECONDS.toMinutes(it.toLong())
                 val secs = it.toLong() % 60
-                etaView.text = String.format("%02d:%02d", mins, secs)
+                String.format(java.util.Locale.US, "%02d:%02d", mins, secs)
             }
-        }
+        } ?: na
 
         // If RESOLVED, change text or style?
         if (state.state == net.osmand.plus.plugins.nautical.mob.engine.MobState.RESOLVED) {
             cancelMobButton.text = context.getString(R.string.nautical_ack_clear)
+            // RESOLVED clears with a single tap: announce the button as-is.
+            cancelMobButton.contentDescription = null
             silenceButton.isVisible = false
             findViewById<android.view.View?>(R.id.mob_tactical_buttons)?.isVisible = false
         } else {
             cancelMobButton.setText(R.string.mob_btn_cancel)
+            cancelMobButton.contentDescription =
+                context.getString(R.string.nautical_a11y_hold_to_cancel_mob)
             silenceButton.isVisible = true
             
             val tacticalContainer = findViewById<android.view.View?>(R.id.mob_tactical_buttons)
@@ -226,21 +237,61 @@ class MobEmergencyHeaderView @JvmOverloads constructor(
     }
 
     private fun applyNightVisionTheme(enabled: Boolean) {
-        val container = findViewById<android.widget.LinearLayout>(R.id.mob_hud_container)
         if (enabled) {
-            container?.setBackgroundColor(0xEE120000.toInt())
+            mobContainer?.setBackgroundColor(
+                androidx.core.content.ContextCompat.getColor(context, R.color.nautical_night_vision_bg)
+            )
             mobIcon.setColorFilter(0xFFFF1744.toInt())
-            findViewById<TextView>(R.id.mob_title)?.setTextColor(0xFFFF1744.toInt())
+            mobTitle?.setTextColor(0xFFFF1744.toInt())
             distanceView.setTextColor(0xFFFF1744.toInt())
             bearingView.setTextColor(0xFFFF1744.toInt())
             etaView.setTextColor(0xFFFF1744.toInt())
+            // Monochromatic red discipline: teal/indigo/green/orange panels
+            // would blast the helmsman's night adaptation mid-emergency.
+            val nightBg = androidx.core.content.ContextCompat.getColor(context, R.color.nautical_mob_night_btn_bg)
+            with(android.content.res.ColorStateList.valueOf(nightBg)) {
+                for (btn in arrayOf(silenceButton, cancelMobButton, heaveToButton, motorReturnButton,
+                    holdHeadingButton, sarPatternsButton, maneuversButton)) {
+                    btn.backgroundTintList = this
+                    btn.setTextColor(android.graphics.Color.WHITE)
+                }
+            }
         } else {
-            container?.setBackgroundColor(0xFFD32F2F.toInt())
+            mobContainer?.setBackgroundColor(
+                androidx.core.content.ContextCompat.getColor(context, R.color.nautical_mob_header_bg)
+            )
             mobIcon.setColorFilter(android.graphics.Color.WHITE)
-            findViewById<TextView>(R.id.mob_title)?.setTextColor(android.graphics.Color.WHITE)
+            mobTitle?.setTextColor(android.graphics.Color.WHITE)
             distanceView.setTextColor(android.graphics.Color.WHITE)
             bearingView.setTextColor(android.graphics.Color.WHITE)
             etaView.setTextColor(android.graphics.Color.WHITE)
+            val orange = androidx.core.content.ContextCompat.getColor(context, R.color.nautical_mob_btn_silence)
+            silenceButton.backgroundTintList = android.content.res.ColorStateList.valueOf(orange)
+            silenceButton.setTextColor(android.graphics.Color.WHITE)
+            cancelMobButton.backgroundTintList = android.content.res.ColorStateList.valueOf(
+                androidx.core.content.ContextCompat.getColor(context, R.color.nautical_mob_btn_cancel)
+            )
+            cancelMobButton.setTextColor(android.graphics.Color.WHITE)
+            heaveToButton.backgroundTintList = android.content.res.ColorStateList.valueOf(
+                androidx.core.content.ContextCompat.getColor(context, R.color.nautical_mob_btn_heave_to)
+            )
+            heaveToButton.setTextColor(android.graphics.Color.WHITE)
+            motorReturnButton.backgroundTintList = android.content.res.ColorStateList.valueOf(
+                androidx.core.content.ContextCompat.getColor(context, R.color.nautical_mob_btn_motor_return)
+            )
+            motorReturnButton.setTextColor(android.graphics.Color.WHITE)
+            holdHeadingButton.backgroundTintList = android.content.res.ColorStateList.valueOf(
+                androidx.core.content.ContextCompat.getColor(context, R.color.nautical_mob_btn_hold_heading)
+            )
+            holdHeadingButton.setTextColor(android.graphics.Color.WHITE)
+            sarPatternsButton.backgroundTintList = android.content.res.ColorStateList.valueOf(
+                androidx.core.content.ContextCompat.getColor(context, R.color.nautical_mob_btn_sar)
+            )
+            sarPatternsButton.setTextColor(android.graphics.Color.WHITE)
+            maneuversButton.backgroundTintList = android.content.res.ColorStateList.valueOf(
+                androidx.core.content.ContextCompat.getColor(context, R.color.nautical_mob_btn_maneuvers)
+            )
+            maneuversButton.setTextColor(android.graphics.Color.WHITE)
         }
     }
 }

@@ -74,6 +74,10 @@ class AnchorWatchHudView @JvmOverloads constructor(
             AnchorWatchDialogFragment().show(act.supportFragmentManager, "AnchorWatchDialog")
         }
 
+        bindResetAnchorAction()
+    }
+
+    private fun bindResetAnchorAction() {
         btnResetAnchorPos.setOnClickListener {
             val plugin = NauticalPlugin.getInstance() ?: return@setOnClickListener
             val state = NauticalPlugin.engine?.getCurrentState()
@@ -141,6 +145,12 @@ class AnchorWatchHudView @JvmOverloads constructor(
                     plugin.anchorWatchdog?.resetChafeCycleCounter()
                     update()
                 }
+            } else {
+                // Restore the base action: without this, a cleared overload or
+                // chafe advisory left the "pay out rode" handler()/text bound
+                // forever, and the reset-position function was unreachable.
+                btnResetAnchorPos.setText(R.string.shared_string_reset)
+                bindResetAnchorAction()
             }
             
             val isHighLoad = plugin.anchorWatchdog?.isHighRodeLoad?.value == true
@@ -171,7 +181,10 @@ class AnchorWatchHudView @JvmOverloads constructor(
             if (isHighLoad || (deployed != null && deployed < minRodeRequired)) {
                 txtRode.setTextColor(0xFFFF1744.toInt())
             } else if (deployed != null && deployed >= minRodeRequired) {
-                txtRode.setTextColor(if (isNight) 0xFFFF8A80.toInt() else 0xFF2E7D32.toInt())
+                txtRode.setTextColor(
+                if (isNight) 0xFFFF8A80.toInt()
+                else androidx.core.content.ContextCompat.getColor(context, R.color.nautical_status_green)
+            )
             } else if (!isNight) {
                 txtRode.setTextColor(AndroidUtils.getColorFromAttr(context, R.attr.text_color_primary_v2))
             }

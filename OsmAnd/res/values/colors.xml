@@ -644,6 +644,16 @@
 	<color name="nautical_status_yellow">#F1C40F</color>
 	<color name="nautical_status_orange">#E67E22</color>
 	<color name="nautical_status_red">#E74C3C</color>
+	<color name="nautical_mob_header_bg">#D32F2F</color>
+	<color name="nautical_mob_dim_label">#FFCDD2</color>
+	<color name="nautical_mob_night_btn_bg">#700A0A</color>
+	<color name="nautical_mob_btn_sar">#009688</color>
+	<color name="nautical_mob_btn_maneuvers">#3F51B5</color>
+	<color name="nautical_mob_btn_heave_to">#FF9800</color>
+	<color name="nautical_mob_btn_motor_return">#4CAF50</color>
+	<color name="nautical_mob_btn_hold_heading">#607D8B</color>
+	<color name="nautical_mob_btn_silence">#F44336</color>
+	<color name="nautical_mob_btn_cancel">#B71C1C</color>
 	<color name="nautical_status_blue">#3498DB</color>
 	<color name="nautical_status_bg_active">#E3F2FD</color>
 	<color name="nautical_status_bg_emergency">#FFCDD2</color>

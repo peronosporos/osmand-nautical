@@ -39,6 +39,7 @@
     <string name="nautical_hud_tide_m_fmt">TIDE: %1$.1fm</string>
     <string name="nautical_hud_hazard_wrn">HAZARD!</string>
     <string name="nautical_hud_all_clear">CLEAR</string>
+    <string name="nautical_a11y_hold_to_cancel_mob">Hold 2 seconds to cancel MOB</string>
     <string name="nautical_rode_deployed_placeholder">Rode Deployed: -- m</string>
     <string name="nautical_anchor_track_history_live">Track History: Live (Now)</string>
     <string name="nautical_rode_deployed_fmt">Rode Deployed: %1$.1f m</string>
