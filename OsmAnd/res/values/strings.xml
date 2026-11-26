@@ -344,6 +344,9 @@
     <string name="nautical_sail_efficiency_label">Sail Area Efficiency: %1$d%%</string>
     <string name="nautical_sail_efficiency_none">Sail Area Efficiency: --</string>
     <string name="nautical_signalk_waypoint">SignalK Waypoint</string>
+    <string name="nautical_battery_low_starter_fmt">Low starter battery: %1$s at %2$.1f V</string>
+    <string name="nautical_battery_low_fmt">Low battery: %1$s at %2$.1f V (%3$.0f%% SoC)</string>
+    <string name="nautical_alarm_collision_no_data_fmt">AIS collision risk: %1$s (CPA data unavailable)</string>
     <string name="nautical_no_sails_found">No sails found in inventory</string>
     <string name="nautical_calculating_weather_route">Calculating optimal weather route…</string>
     <string name="nautical_view_buddies">View Buddies</string>

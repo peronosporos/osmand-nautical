@@ -9,6 +9,7 @@ import androidx.core.app.NotificationManagerCompat
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 import net.osmand.PlatformUtil
@@ -188,13 +189,22 @@ class NauticalNotificationManager(
     }
 
     private fun getAlarmTypeForPath(path: String): AlarmType {
+        // Aligned with AlarmPriorityManager.mapKeyToAlarmType so the same Signal K alert
+        // produces consistent audio semantics in both managers (previously watchdog fell
+        // through to XTE navigation audio here).
         return when {
             path.startsWith("notifications.communication.dsc") -> AlarmType.DSC_DISTRESS
             path == "notifications.navigation.ais.sart" -> AlarmType.AIS_SART
             path == SignalKPaths.NOTIFICATIONS_MOB -> AlarmType.MOB
             path == "notifications.safety.alarm.gybe" -> AlarmType.TACTICAL_GYBE
             path == "notifications.navigation.offCourse" -> AlarmType.XTE_NAVIGATION
-            else -> AlarmType.XTE_NAVIGATION
+            path == SignalKPaths.NOTIFICATIONS_WATCHDOG -> AlarmType.SOLO_WATCHDOG
+            path.contains("collision") -> AlarmType.COLLISION_DANGER
+            path.contains("depth") || path.contains("shallow") -> AlarmType.SHALLOW_WATER
+            path.contains("anchor") -> AlarmType.ANCHOR_DRIFT
+            // Unknown categories previously reused XTE navigation audio; a generic
+            // safety-hazard tone is the honest neutral default for unspecified alerts.
+            else -> AlarmType.MAP_HAZARD
         }
     }
 
@@ -234,15 +244,18 @@ class NauticalNotificationManager(
     }
 
 
-    private var lastCriticalNotifyTime = 0L
+    private val lastCriticalNotifyTimes = ConcurrentHashMap<String, Long>()
     private val NOTIFY_THROTTLE_MS = 2500L
 
     fun postCriticalNotification(id: String, title: String, message: String) {
         val now = System.currentTimeMillis()
-        if (now - lastCriticalNotifyTime < NOTIFY_THROTTLE_MS) {
+        // Throttle per alert id: a global throttle previously dropped a NEW critical
+        // alert (e.g. MOB) because an unrelated one had been posted seconds before.
+        val last = lastCriticalNotifyTimes[id] ?: 0L
+        if (now - last < NOTIFY_THROTTLE_MS) {
             return
         }
-        lastCriticalNotifyTime = now
+        lastCriticalNotifyTimes[id] = now
         val builder = NotificationCompat.Builder(app, CHANNEL_CRITICAL)
             .setSmallIcon(R.drawable.ic_action_sail_boat_dark)
             .setContentTitle(title)
@@ -303,6 +316,25 @@ class NauticalNotificationManager(
                                     else -> app.getString(R.string.nautical_notification_state_warning)
                                 }
                                 postCriticalNotification(path, priorityPrefix, notification.message)
+                            }
+                        }
+                    }
+                    // A restored alarm whose state never changes would otherwise never be
+                    // voiced or bannered again after a restart (identical state == no trigger).
+                    // Re-announce still-active critical alerts once the startup silence ends.
+                    val stillCritical = alerts.filter {
+                        it.value.state == NotificationState.ALARM || it.value.state == NotificationState.EMERGENCY
+                    }
+                    if (stillCritical.isNotEmpty()) {
+                        delay(STARTUP_SILENCE_MS)
+                        stillCritical.forEach { (path, notification) ->
+                            processedNotifications[path]?.let { current ->
+                                if (current.state == notification.state &&
+                                    (current.state == NotificationState.ALARM || current.state == NotificationState.EMERGENCY)
+                                ) {
+                                    triggerAlert(path, current)
+                                    lastTriggerTimes[path] = System.currentTimeMillis()
+                                }
                             }
                         }
                     }

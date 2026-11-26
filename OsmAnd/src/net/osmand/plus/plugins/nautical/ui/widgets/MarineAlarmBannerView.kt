@@ -468,10 +468,14 @@ class MarineAlarmBannerView @JvmOverloads constructor(
             val tcpaSec = threat?.tcpaSeconds ?: 0.0
             val tcpaMin = (tcpaSec / 60.0).toInt().coerceAtLeast(1)
 
-            val desc = if (cpaNm > 0.0 && tcpaSec > 0.0) {
-                context.getString(R.string.nautical_alarm_collision_fmt, vesselName, String.format(Locale.US, "%.1f", cpaNm), tcpaMin)
-            } else {
-                context.getString(R.string.nautical_alarm_collision_immediate_fmt, vesselName)
+            val desc = when {
+                cpaNm > 0.0 && tcpaSec > 0.0 ->
+                    context.getString(R.string.nautical_alarm_collision_fmt, vesselName, String.format(Locale.US, "%.1f", cpaNm), tcpaMin)
+                // "Immediate" is only honest when threat numbers exist; with no data say so.
+                (threat == null || state?.cpa == null) ->
+                    context.getString(R.string.nautical_alarm_collision_no_data_fmt, vesselName)
+                else ->
+                    context.getString(R.string.nautical_alarm_collision_immediate_fmt, vesselName)
             }
 
             // Find target vessel location

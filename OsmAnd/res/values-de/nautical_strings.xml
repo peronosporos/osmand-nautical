@@ -118,6 +118,9 @@
     <string name="nautical_ais_call_sign_fmt">Rufzeichen: %1$s</string>
     <string name="nautical_sail_efficiency_none">Segelflächen-Effizienz: --</string>
     <string name="nautical_signalk_waypoint">SignalK-Wegpunkt</string>
+    <string name="nautical_battery_low_starter_fmt">Schwache Starterbatterie: %1$s bei %2$.1f V</string>
+    <string name="nautical_battery_low_fmt">Schwache Batterie: %1$s bei %2$.1f V (%3$.0f%% SoC)</string>
+    <string name="nautical_alarm_collision_no_data_fmt">AIS-Kollisionsgefahr: %1$s (CPA nicht verfügbar)</string>
     <string name="nautical_vhf_06_inter">06 SCHIFF-SCHIFF</string>
     <string name="nautical_vhf_09_call">09 RUF</string>
     <string name="nautical_vhf_13_safety">13 SICHERHEIT</string>

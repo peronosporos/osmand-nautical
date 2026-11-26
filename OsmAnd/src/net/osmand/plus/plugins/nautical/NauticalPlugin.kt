@@ -849,6 +849,12 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
         if (alarmPriorityManager == null) {
             alarmPriorityManager = AlarmPriorityManager(app, engine!!.dataBroker)
         }
+        // The notification manager was declared and called but never instantiated before,
+        // so Signal K critical alerts silently skipped banners, Android notifications and
+        // rescue-locate. Wire it up (once) alongside the priority manager.
+        if (notificationManager == null) {
+            notificationManager = NauticalNotificationManager(app, logbookRepository)
+        }
         if (maneuverManager == null) {
             maneuverManager = ManeuverManager(app).apply {
                 val anchoring = net.osmand.plus.plugins.nautical.maneuvers.AnchoringManeuver(app)
