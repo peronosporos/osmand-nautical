@@ -20,6 +20,7 @@ class TideStationBottomSheet : BaseNauticalBottomSheet() {
 
     private lateinit var viewModel: TideViewModel
     private var graphView: TideGraphView? = null
+    private var graphTitleView: TextView? = null
 
     companion object {
         const val TAG = "tide_station"
@@ -69,7 +70,11 @@ class TideStationBottomSheet : BaseNauticalBottomSheet() {
         // Add Graph
         val themedCtx = net.osmand.plus.utils.UiUtilities.getThemedContext(requireContext(), nightMode)
         val graphContainer = LayoutInflater.from(themedCtx).inflate(R.layout.bottom_sheet_nautical_data, null)
-        graphContainer.findViewById<View>(R.id.graph_title)?.visibility = View.GONE
+        graphTitleView = graphContainer.findViewById(R.id.graph_title)?.apply {
+            // Hidden until a station with predictions is selected, so no fabricated title shows.
+            visibility = View.INVISIBLE
+            text = ""
+        }
         val oldGraph = graphContainer.findViewById<View>(R.id.graph_view)
         val container = oldGraph?.parent as? ViewGroup
         
@@ -90,6 +95,10 @@ class TideStationBottomSheet : BaseNauticalBottomSheet() {
             } else {
                 it.addView(graphView)
             }
+        } ?: run {
+            // Layout without a graph_view parent: attach directly to the inflated root
+            // instead of silently dropping the graph.
+            (graphContainer as? ViewGroup)?.addView(graphView)
         }
 
         items.add(BaseBottomSheetItem.Builder().setCustomView(graphContainer).create())
@@ -100,10 +109,19 @@ class TideStationBottomSheet : BaseNauticalBottomSheet() {
     private fun observeViewModel() {
         lifecycleScope.launch {
             viewModel.selectedStation.collectLatest { station ->
-                val source = if (station?.constituents?.isEmpty() == true) "Signal K" else "Local"
-                val name = station?.name ?: getString(R.string.tide_dialog_title)
-                // In MenuBottomSheet, we'd need to update the title item if we want it dynamic.
-                // For now, let's keep it simple or use a custom view for title.
+                if (station != null) {
+                    // Signal K stations are mapped without constituents; local imported
+                    // stations always carry at least one.
+                    val source = if (station.constituents.isEmpty()) {
+                        getString(R.string.nautical_tide_source_signalk)
+                    } else {
+                        getString(R.string.nautical_tide_source_local)
+                    }
+                    graphTitleView?.apply {
+                        text = getString(R.string.tide_station_title_with_source, station.name, source)
+                        visibility = View.VISIBLE
+                    }
+                }
             }
         }
 

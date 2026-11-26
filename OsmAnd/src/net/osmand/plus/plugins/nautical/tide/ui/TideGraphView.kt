@@ -7,6 +7,7 @@ import android.view.MotionEvent
 import android.view.View
 import net.osmand.plus.OsmandApplication
 import net.osmand.StateChangedListener
+import net.osmand.plus.R
 import net.osmand.plus.plugins.nautical.NauticalPlugin
 import net.osmand.plus.plugins.nautical.ui.NauticalColorResolver
 import net.osmand.plus.plugins.nautical.ui.NauticalSemanticColor
@@ -139,6 +140,7 @@ class TideGraphView @JvmOverloads constructor(
     private var isScrubbing = false
     private var scrubberTouchX = 0f
     private var scrubberTouchY = 0f
+    private var scrubberHasValue = false
     private var scrubberLabel = ""
     private val badgeRect = RectF()
 
@@ -227,21 +229,43 @@ class TideGraphView @JvmOverloads constructor(
 
         tidePath.rewind()
         drawData = predictions.mapIndexed { i, p ->
+            val isCurrentPoint = p.velocity != null
             val valToDraw = p.velocity ?: p.heightMeters
             val x = pad + (((p.timestamp - startTime).toFloat() / timeRange) * graphW)
             val y = h - pad - (((valToDraw - minVal).toFloat() / range.toFloat()) * graphH)
 
             if (i == 0) tidePath.moveTo(x, y) else tidePath.lineTo(x, y)
 
-            val labelValue = if (p.velocity != null) p.velocity * 1.94384 else p.heightMeters
-            val unit = if (p.velocity != null) "kn" else "m"
-
-            val isHwOrLw = p.isHighTide != null || p.velocity != null
-            val prefix = if (p.isHighTide == true) "HW " else if (p.isHighTide == false) "LW " else ""
-            val hLabel = if (isHwOrLw) String.format(Locale.US, "%s%.1f%s", prefix, labelValue, unit) else null
-            val tLabel = if (isHwOrLw) timeFormat.format(Date(p.timestamp)) else null
-
-            PredictionDrawData(x, y, hLabel, tLabel, p.isHighTide)
+            // Markers are only drawn for real extreme events (HW/LW for tide
+            // stations, maximum/minimum stream for current stations); ordinary
+            // samples never get a circle or label.
+            if (p.isHighTide == null) {
+                PredictionDrawData(x, y, null, null, null)
+            } else {
+                if (isCurrentPoint) {
+                    val labelValue = p.velocity!! * 1.94384
+                    val prefix = if (p.isHighTide == true) {
+                        context.getString(R.string.nautical_tide_current_max) + " "
+                    } else {
+                        context.getString(R.string.nautical_tide_current_min) + " "
+                    }
+                    PredictionDrawData(
+                        x, y,
+                        String.format(Locale.US, "%s%.1fkn", prefix, labelValue),
+                        timeFormat.format(Date(p.timestamp)),
+                        p.isHighTide
+                    )
+                } else {
+                    // HW / LW are the canonical abbreviations used in tide tables.
+                    val prefix = if (p.isHighTide == true) "HW " else "LW "
+                    PredictionDrawData(
+                        x, y,
+                        String.format(Locale.US, "%s%.1fm", prefix, p.heightMeters),
+                        timeFormat.format(Date(p.timestamp)),
+                        p.isHighTide
+                    )
+                }
+            }
         }
     }
 
@@ -276,9 +300,10 @@ class TideGraphView @JvmOverloads constructor(
         val progress = ((clampedX - pad) / graphW).coerceIn(0f, 1f)
         val targetTime = (startTime + (progress * (endTime - startTime))).toLong()
 
-        // Interpolate value and trend
-        var valAtCursor = minVal
-        var trend = "▲"
+        // Interpolate value and trend; unknown when no bracket contains the time.
+        var found = false
+        var valAtCursor = 0.0
+        var trend = 0 // +1 rising, -1 falling, 0 flat
         if (predictions.size >= 2) {
             for (i in 0 until predictions.size - 1) {
                 val p1 = predictions[i]
@@ -289,7 +314,12 @@ class TideGraphView @JvmOverloads constructor(
                     val v1 = p1.velocity ?: p1.heightMeters
                     val v2 = p2.velocity ?: p2.heightMeters
                     valAtCursor = v1 + factor * (v2 - v1)
-                    trend = if (v2 >= v1) "▲" else "▼"
+                    trend = when {
+                        v2 > v1 -> 1
+                        v2 < v1 -> -1
+                        else -> 0
+                    }
+                    found = true
                     break
                 }
             }
@@ -297,13 +327,28 @@ class TideGraphView @JvmOverloads constructor(
 
         val range = (maxVal - minVal).coerceAtLeast(0.1)
         scrubberTouchX = clampedX
-        scrubberTouchY = viewHeight - pad - (((valAtCursor - minVal).toFloat() / range.toFloat()) * graphH)
+        scrubberHasValue = found
+        if (found) {
+            scrubberTouchY = viewHeight - pad - (((valAtCursor - minVal).toFloat() / range.toFloat()) * graphH)
+        }
 
         val timeStr = timeFormat.format(Date(targetTime))
-        val unit = if (isCurrentDataset) "kn" else "m"
-        val displayVal = if (isCurrentDataset) valAtCursor * 1.94384 else valAtCursor
-        val trendText = if (trend == "▲") "Rising" else "Falling"
-        scrubberLabel = String.format(Locale.US, "%s • %.1f %s %s (%s)", timeStr, displayVal, unit, trend, trendText)
+        scrubberLabel = if (!found) {
+            // Outside the sample range there is no honest value to show: time only.
+            timeStr
+        } else {
+            val unit = if (isCurrentDataset) "kn" else "m"
+            val displayVal = if (isCurrentDataset) valAtCursor * 1.94384 else valAtCursor
+            when (trend) {
+                1 -> String.format(
+                    Locale.US, "%s • %.1f %s ▲ (%s)", timeStr, displayVal, unit,
+                    context.getString(R.string.nautical_tide_rising))
+                -1 -> String.format(
+                    Locale.US, "%s • %.1f %s ▼ (%s)", timeStr, displayVal, unit,
+                    context.getString(R.string.nautical_tide_falling))
+                else -> String.format(Locale.US, "%s • %.1f %s", timeStr, displayVal, unit)
+            }
+        }
     }
 
     override fun onDraw(canvas: Canvas) {
@@ -331,10 +376,12 @@ class TideGraphView @JvmOverloads constructor(
                 val markerP = if (isHigh) hwMarkerPaint else lwMarkerPaint
                 canvas.drawCircle(data.x, data.y, 6f * density, markerP)
 
+                // Keep both label lines fully on screen.
+                val labelX = (data.x - 24f * density).coerceIn(2f * density, viewWidth - 62f * density)
                 val labelY1 = if (isHigh) data.y - 18f * density else data.y + 22f * density
                 val labelY2 = if (isHigh) data.y - 6f * density else data.y + 34f * density
-                canvas.drawText(data.heightLabel, data.x - 24f * density, labelY1, textPaint)
-                canvas.drawText(data.timeLabel, data.x - 24f * density, labelY2, textPaint)
+                canvas.drawText(data.heightLabel, labelX, labelY1, textPaint)
+                canvas.drawText(data.timeLabel, labelX, labelY2, textPaint)
             }
         }
 
@@ -344,7 +391,15 @@ class TideGraphView @JvmOverloads constructor(
             val timeRange = (endTime - startTime).coerceAtLeast(1).toFloat()
             val liveX = pad + (((now - startTime).toFloat() / timeRange) * graphW)
             canvas.drawLine(liveX, pad, liveX, viewHeight - pad, liveLinePaint)
-            canvas.drawCircle(liveX, pad + graphH / 2f, 4f * density, liveMarkerPaint)
+
+            // The vessel's live water level, when known, is drawn at its real height;
+            // without it no marker is invented.
+            val liveHeight = vesselTide?.height
+            if (!isCurrentDataset && liveHeight != null && liveHeight.isFinite()) {
+                val range = (maxVal - minVal).coerceAtLeast(0.1)
+                val liveY = (viewHeight - pad - (((liveHeight - minVal).toFloat() / range.toFloat()) * graphH))
+                canvas.drawCircle(liveX, liveY, 4f * density, liveMarkerPaint)
+            }
         }
 
         // Draw Y-axis Max/Min labels
@@ -354,7 +409,9 @@ class TideGraphView @JvmOverloads constructor(
         // Draw Interactive Scrubber Cursor & Floating Badge
         if (isScrubbing && scrubberLabel.isNotEmpty()) {
             canvas.drawLine(scrubberTouchX, pad, scrubberTouchX, viewHeight - pad, scrubberLinePaint)
-            canvas.drawCircle(scrubberTouchX, scrubberTouchY, 7f * density, scrubberMarkerPaint)
+            if (scrubberHasValue) {
+                canvas.drawCircle(scrubberTouchX, scrubberTouchY, 7f * density, scrubberMarkerPaint)
+            }
 
             // Floating Header Badge
             val badgeW = 200f * density

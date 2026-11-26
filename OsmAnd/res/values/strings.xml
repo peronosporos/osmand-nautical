@@ -1658,6 +1658,15 @@
 	<string name="nautical_maneuver_menu">Tactical Maneuvers</string>
 	<string name="nautical_switches_label">Boat Switches &amp; Relays</string>
 	<string name="nautical_tide_manager">Tide Data Manager</string>
+    <string name="nautical_tide_rising">Rising</string>
+    <string name="nautical_tide_falling">Falling</string>
+    <string name="nautical_tide_current_max">Max</string>
+    <string name="nautical_tide_current_min">Min</string>
+    <string name="nautical_tide_time_now">Now</string>
+    <string name="nautical_tide_time_offset_fmt">T%+.1f h</string>
+    <string name="nautical_tide_lat_lon_fmt">Lat: %1$.4f, Lon: %2$.4f</string>
+    <string name="nautical_tide_source_local">Local</string>
+    <string name="nautical_tide_source_signalk">Signal K</string>
 	<string name="nautical_enc_manager">S-57 ENC Chart Manager</string>
 	<string name="nautical_grib_manager">GRIB Weather Manager</string>
 	<string name="nautical_hardware_health">Hardware Health &amp; NMEA Stats</string>

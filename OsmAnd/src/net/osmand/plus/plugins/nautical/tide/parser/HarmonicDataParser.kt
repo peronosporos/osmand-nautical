@@ -1,5 +1,6 @@
 package net.osmand.plus.plugins.nautical.tide.parser
 
+import net.osmand.PlatformUtil
 import net.osmand.plus.plugins.nautical.tide.model.HarmonicConstituent
 import net.osmand.plus.plugins.nautical.tide.model.TideStation
 import java.io.BufferedReader
@@ -13,8 +14,13 @@ import kotlin.math.sqrt
 
 class HarmonicDataParser {
 
+    private val log = PlatformUtil.getLog(HarmonicDataParser::class.java)
+
     private val stations = CopyOnWriteArrayList<TideStation>()
-    
+
+    // Constituent speeds declared in the file header, keyed by upper-case name.
+    private val constituentSpeeds = mutableMapOf<String, Double?>()
+
     // Coarse spatial index: Map of "latIndex,lonIndex" to list of stations
     // Index is floor(lat) and floor(lon) for 1x1 degree buckets
     private val spatialIndex = mutableMapOf<String, MutableList<TideStation>>()
@@ -26,6 +32,7 @@ class HarmonicDataParser {
         synchronized(spatialIndex) {
             spatialIndex.clear()
         }
+        constituentSpeeds.clear()
     }
 
     /**
@@ -33,13 +40,16 @@ class HarmonicDataParser {
      */
     fun parse(inputStream: InputStream): List<TideStation> {
         val reader = BufferedReader(InputStreamReader(inputStream))
-        val constituentSpeeds = mutableMapOf<String, Double>()
+        constituentSpeeds.clear()
         var currentStationName: String? = null
         var currentLat = 0.0
         var currentLon = 0.0
+        var currentHasLocation = false
         var currentTimezone = 0
         var currentDatum = 0.0
+        var currentOrientation: Double? = null
         val currentConstituents = mutableListOf<HarmonicConstituent>()
+        var skippedLines = 0
 
         reader.forEachLine { line ->
             val trimmed = line.trim()
@@ -49,25 +59,50 @@ class HarmonicDataParser {
                 trimmed.startsWith("constituent") -> {
                     val parts = trimmed.split(Regex("\\s+"))
                     if (parts.size >= 3) {
-                        constituentSpeeds[parts[1]] = parts[2].toDouble()
+                        val speed = parts[2].toDoubleOrNull()
+                        if (speed != null) {
+                            constituentSpeeds[parts[1].uppercase(java.util.Locale.US)] = speed
+                        } else {
+                            skippedLines++
+                        }
                     }
                 }
                 trimmed.startsWith("station") -> {
-                    saveCurrentStation(currentStationName, currentLat, currentLon, currentTimezone, currentDatum, currentConstituents)
+                    saveCurrentStation(currentStationName, currentLat, currentLon, currentHasLocation,
+                        currentTimezone, currentDatum, currentConstituents, currentOrientation)
                     currentStationName = trimmed.substringAfter("station").trim().trim('"')
                     currentConstituents.clear()
                     currentDatum = 0.0
+                    currentLat = 0.0
+                    currentLon = 0.0
+                    currentHasLocation = false
+                    currentOrientation = null
                 }
                 trimmed.startsWith("location") -> {
                     val parts = trimmed.split(Regex("\\s+"))
                     if (parts.size >= 3) {
-                        currentLat = parts[1].toDouble()
-                        currentLon = parts[2].toDouble()
+                        val lat = parts[1].toDoubleOrNull()
+                        val lon = parts[2].toDoubleOrNull()
+                        if (lat != null && lon != null) {
+                            currentLat = lat
+                            currentLon = lon
+                            currentHasLocation = true
+                        } else {
+                            skippedLines++
+                        }
                     }
                 }
                 trimmed.startsWith("timezone") -> {
                     val tz = trimmed.substringAfter("timezone").trim()
                     currentTimezone = parseTimezone(tz)
+                }
+                trimmed.startsWith("orientation") -> {
+                    val deg = trimmed.split(Regex("\\s+")).getOrNull(1)?.toDoubleOrNull()
+                    if (deg != null) {
+                        currentOrientation = deg
+                    } else {
+                        skippedLines++
+                    }
                 }
                 trimmed.startsWith("datum") || trimmed.startsWith("level") -> {
                     val d = trimmed.split(Regex("\\s+")).getOrNull(1)?.toDoubleOrNull()
@@ -77,28 +112,45 @@ class HarmonicDataParser {
                     val parts = trimmed.split(Regex("\\s+"))
                     if (parts.size >= 3) {
                         val name = parts[0]
-                        val speed = constituentSpeeds[name] ?: 0.0
-                        val amplitude = parts[1].toDouble()
-                        val epoch = parts[2].toDouble()
-                        currentConstituents.add(HarmonicConstituent(name, amplitude, epoch, speed))
+                        val amplitude = parts[1].toDoubleOrNull()
+                        val epoch = parts[2].toDoubleOrNull()
+                        if (amplitude != null && epoch != null) {
+                            // Speed is only stored when the file header declares it; the
+                            // prediction engine derives speeds from its own registry.
+                            currentConstituents.add(
+                                HarmonicConstituent(name, amplitude, epoch, constituentSpeeds[name.uppercase(java.util.Locale.US)])
+                            )
+                        } else {
+                            skippedLines++
+                        }
                     }
                 }
             }
         }
-        saveCurrentStation(currentStationName, currentLat, currentLon, currentTimezone, currentDatum, currentConstituents)
-        
+        saveCurrentStation(currentStationName, currentLat, currentLon, currentHasLocation,
+            currentTimezone, currentDatum, currentConstituents, currentOrientation)
+
+        if (skippedLines > 0) {
+            log.warn("HarmonicDataParser: skipped $skippedLines malformed line(s) while parsing.")
+        }
         return stations
     }
 
     private fun saveCurrentStation(
-        name: String?, 
-        lat: Double, 
-        lon: Double, 
-        tz: Int, 
+        name: String?,
+        lat: Double,
+        lon: Double,
+        hasLocation: Boolean,
+        tz: Int,
         datum: Double,
-        constituents: List<HarmonicConstituent>
+        constituents: List<HarmonicConstituent>,
+        orientationDeg: Double? = null
     ) {
         if ((name != null) && constituents.isNotEmpty()) {
+            if (!hasLocation) {
+                log.warn("HarmonicDataParser: station '$name' has no location line; it is excluded.")
+                return
+            }
             val id = createStableId(name, lat, lon)
             val newStation = TideStation(
                 id = id,
@@ -107,22 +159,27 @@ class HarmonicDataParser {
                 longitude = lon,
                 timezoneOffset = tz,
                 datum = datum,
-                constituents = ArrayList(constituents)
+                constituents = ArrayList(constituents),
+                orientationDeg = orientationDeg
             )
-            
-            // Atomic update for spatial index and main list
+
+            // Atomic update for spatial index and main list.
             synchronized(spatialIndex) {
                 stations.removeAll { it.id == id }
                 stations.add(newStation)
-                
-                val bucketKey = getBucketKey(lat, lon)
-                spatialIndex.getOrPut(bucketKey) { mutableListOf() }.add(newStation)
+
+                // Purge any stale entry for this id from every bucket, otherwise a
+                // re-imported station would be returned twice from bounds/nearest queries.
+                spatialIndex.values.forEach { bucket -> bucket.removeAll { it.id == id } }
+                spatialIndex.getOrPut(getBucketKey(lat, lon)) { mutableListOf() }.add(newStation)
             }
         }
     }
 
     private fun getBucketKey(lat: Double, lon: Double): String {
-        return "${lat.toInt()},${lon.toInt()}"
+        // Floor, not truncate: queries use Math.floor too, and toInt() would place
+        // negative-hemisphere coordinates (e.g. lat -0.5) into the wrong bucket.
+        return "${Math.floor(lat).toInt()},${Math.floor(lon).toInt()}"
     }
 
     fun getStationsInBounds(minLat: Double, maxLat: Double, minLon: Double, maxLon: Double): List<TideStation> {
@@ -147,10 +204,10 @@ class HarmonicDataParser {
         val result = mutableListOf<TideStation>()
         val latInt = Math.floor(lat).toInt()
         val lonInt = Math.floor(lon).toInt()
-        
-        for (i in -1..1) {
-            for (j in -1..1) {
-                synchronized(spatialIndex) {
+
+        synchronized(spatialIndex) {
+            for (i in -1..1) {
+                for (j in -1..1) {
                     spatialIndex["${latInt + i},${lonInt + j}"]?.let { result.addAll(it) }
                 }
             }
@@ -183,8 +240,9 @@ class HarmonicDataParser {
     private fun parseTimezone(tz: String): Int {
         return try {
             if (tz.startsWith("UTC")) {
-                val offset = tz.substring(3).toIntOrNull() ?: 0
-                offset * 3600
+                // Accept both integer and fractional hours (e.g. UTC+5, UTC+5.5, UTC-3).
+                val hours = tz.substring(3).toDoubleOrNull()
+                if (hours != null) (hours * 3600.0).toInt() else 0
             } else {
                 // Support Olson names: Europe/London
                 java.util.TimeZone.getTimeZone(tz).rawOffset / 1000

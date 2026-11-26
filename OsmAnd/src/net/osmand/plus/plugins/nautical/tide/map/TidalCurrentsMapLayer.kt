@@ -12,6 +12,7 @@ import android.os.Bundle
 import kotlinx.coroutines.*
 import net.osmand.data.RotatedTileBox
 import net.osmand.plus.OsmandApplication
+import net.osmand.plus.R
 import net.osmand.plus.activities.MapActivity
 import net.osmand.plus.plugins.nautical.NauticalPlugin
 import net.osmand.plus.plugins.nautical.di.SailingDependencyContainer
@@ -180,12 +181,13 @@ class TidalCurrentsMapLayer(context: Context) : OsmandMapLayer(context) {
         canvas.drawText("−30m", scrubberMinusRect.centerX(), textY, scrubberTextPaint)
         canvas.drawText("+30m", scrubberPlusRect.centerX(), textY, scrubberTextPaint)
 
-        // Format and draw center HW offset
+        // Format and draw center label. The offset is from NOW, not from high water,
+        // so the label says so instead of fabricating "HW" semantics.
         val offsetHours = timeOffsetMs / (3600.0 * 1000.0)
-        val centerLabel = when {
-            abs(offsetHours) < 0.05 -> "HW (Now)"
-            offsetHours > 0 -> String.format(java.util.Locale.US, "HW +%.1fh", offsetHours)
-            else -> String.format(java.util.Locale.US, "HW %.1fh", offsetHours)
+        val centerLabel = if (abs(offsetHours) < 0.05) {
+            context.getString(R.string.nautical_tide_time_now)
+        } else {
+            context.getString(R.string.nautical_tide_time_offset_fmt, offsetHours)
         }
         canvas.drawText(centerLabel, scrubberCenterRect.centerX(), textY, scrubberTextPaint)
     }
@@ -207,45 +209,46 @@ class TidalCurrentsMapLayer(context: Context) : OsmandMapLayer(context) {
                 val skStations = tideManager?.stations?.value?.values ?: emptyList()
                 
                 val arrows = mutableListOf<TidalArrow>()
-                
-                // Local harmonic stations
+
+                // Local harmonic stations. Only stations carrying a flood orientation are
+                // tidal-current stations: without it there is no stream direction at all,
+                // and a dh/dt-derived "current" would be fabricated data, so they are skipped.
                 for (station in stationsInViewport) {
                     if (!tileBox.containsLatLon(station.latitude, station.longitude)) continue
+                    val orientationDeg = station.orientationDeg ?: continue
+                    val currentEngine = engine ?: continue
 
                     val x = tileBox.getPixXFromLatLon(station.latitude, station.longitude)
                     val y = tileBox.getPixYFromLatLon(station.latitude, station.longitude)
 
-                    val height = engine?.calculateHeight(station, timestamp) ?: 0.0
-                    val nextHeight = engine?.calculateHeight(station, timestamp + 1000 * 300) ?: 0.0 // 5 min interval for rate
-                    
-                    // Improved Rate calculation (meters per hour)
-                    val rateMph = (nextHeight - height) * 12.0
-                    val velocity = rateMph.coerceIn(-5.0, 5.0)
-                    
-                    val baseAngle = station.orientationDeg?.let { Math.toRadians(it) } ?: 0.0
-                    val angle = if (velocity >= 0) baseAngle else (baseAngle + Math.PI)
-                    
-                    arrows.add(TidalArrow(x, y, abs(velocity), angle))
+                    // For current stations the harmonics predict the stream speed (m/s);
+                    // a negative value is the ebb, which flows opposite to the flood direction.
+                    val speed = currentEngine.calculateHeight(station, timestamp)
+                    val baseAngle = Math.toRadians(orientationDeg)
+                    val angle = if (speed >= 0) baseAngle else (baseAngle + Math.PI)
+
+                    arrows.add(TidalArrow(x, y, abs(speed), angle))
                 }
 
                 // Signal K current stations
+                val marineState = NauticalPlugin.engine?.marineStateFlow?.value
                 for (skStation in skStations) {
                     val lat = skStation.position.coordinates[1]
                     val lon = skStation.position.coordinates[0]
                     if (!tileBox.containsLatLon(lat, lon)) continue
-                    
-                    val isCurrent = skStation.name.contains("Current", ignoreCase = true) || 
+
+                    val isCurrent = skStation.name.contains("Current", ignoreCase = true) ||
                                     skStation.properties?.get("type") == "current"
-                    
-                    if (isCurrent) {
-                        val x = tileBox.getPixXFromLatLon(lat, lon)
-                        val y = tileBox.getPixYFromLatLon(lat, lon)
-                        
-                        val marineState = NauticalPlugin.engine?.marineStateFlow?.value
-                        if (skStation.name == marineState?.tide?.stationName) {
-                            val drift = marineState.drift ?: 0.0
-                            val set = marineState.setTrue ?: 0.0
-                            arrows.add(TidalArrow(x, y, drift, set))
+
+                    if (isCurrent && marineState != null && skStation.name == marineState.tide?.stationName) {
+                        // drift (m/s) and set (radians true) are only drawn when the vessel
+                        // actually has a live fix; there is no honest arrow without them.
+                        val drift = marineState.drift
+                        val setRad = marineState.setTrue
+                        if (drift != null && setRad != null) {
+                            val x = tileBox.getPixXFromLatLon(lat, lon)
+                            val y = tileBox.getPixYFromLatLon(lat, lon)
+                            arrows.add(TidalArrow(x, y, drift, setRad))
                         }
                     }
                 }

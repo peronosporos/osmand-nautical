@@ -73,23 +73,26 @@ class TideViewModel : ViewModel() {
             val extremes = tideManager.getExtremes(stationId)
             
             if (timeline.isNotEmpty() || extremes.isNotEmpty()) {
-                val isCurrent = (skStation.name.contains("Current", ignoreCase = true)) || 
+                val isCurrent = (skStation.name.contains("Current", ignoreCase = true)) ||
                                 (skStation.properties?.get("type") == "current")
-                
-                val mappedPredictions = timeline.mapIndexed { i, skp ->
+
+                // For current stations the server's value is the stream velocity, not a
+                // height; the height is genuinely unknown and encoded as NaN, never 0.0.
+                val mappedPredictions = timeline.mapIndexedNotNull { i, skp ->
+                    val ts = parseSkTime(skp.timestamp) ?: return@mapIndexedNotNull null
                     val h = skp.height
                     var isHigh: Boolean? = null
-                    
+
                     if (!isCurrent && i > 0 && i < timeline.size - 1) {
                         val prevH = timeline[i - 1].height
                         val nextH = timeline[i + 1].height
                         if (h > prevH && h > nextH) isHigh = true
                         else if (h < prevH && h < nextH) isHigh = false
                     }
-                    
+
                     TidePrediction(
-                        timestamp = parseSkTime(skp.timestamp),
-                        heightMeters = if (isCurrent) 0.0 else h,
+                        timestamp = ts,
+                        heightMeters = if (isCurrent) Double.NaN else h,
                         velocity = if (isCurrent) h else null,
                         isHighTide = isHigh
                     )
@@ -98,7 +101,7 @@ class TideViewModel : ViewModel() {
                 // Enrich with actual extremes if available
                 val finalPredictions = mappedPredictions.toMutableList()
                 extremes.forEach { ext ->
-                    val ts = parseSkTime(ext.timestamp)
+                    val ts = parseSkTime(ext.timestamp) ?: return@forEach
                     val isHigh = ext.type.lowercase(Locale.US).contains("high")
                     // Check if we already have a prediction near this time
                     val existingIdx = finalPredictions.indexOfFirst { Math.abs(it.timestamp - ts) < 600000 }
@@ -107,7 +110,7 @@ class TideViewModel : ViewModel() {
                     } else {
                         finalPredictions.add(TidePrediction(
                             timestamp = ts,
-                            heightMeters = if (isCurrent) 0.0 else ext.height,
+                            heightMeters = if (isCurrent) Double.NaN else ext.height,
                             velocity = if (isCurrent) ext.height else null,
                             isHighTide = isHigh
                         ))
@@ -127,11 +130,15 @@ class TideViewModel : ViewModel() {
         }
     }
 
-    private fun parseSkTime(timeStr: String): Long {
+    /**
+     * Parses a Signal K timestamp; returns null when it cannot be parsed, so the
+     * caller can drop the point instead of relocating it to "now".
+     */
+    private fun parseSkTime(timeStr: String): Long? {
         return try {
-            skDateFormat.parse(timeStr)?.time ?: System.currentTimeMillis()
+            skDateFormat.parse(timeStr)?.time
         } catch (_: Exception) {
-            System.currentTimeMillis()
+            null
         }
     }
 
@@ -181,7 +188,19 @@ class TideViewModel : ViewModel() {
         viewModelScope.launch {
             val now = System.currentTimeMillis()
             val results = engine?.predictTides(station, now) ?: emptyList()
-            _predictions.value = results
+            // A local station with an orientation is a tidal-current station: its
+            // harmonics predict stream velocity (m/s), not a water height.
+            _predictions.value = if (station.orientationDeg != null) {
+                results.map {
+                    it.copy(
+                        heightMeters = Double.NaN,
+                        heightAboveDatum = Double.NaN,
+                        velocity = it.heightMeters
+                    )
+                }
+            } else {
+                results
+            }
         }
     }
 

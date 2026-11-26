@@ -21,7 +21,7 @@ import kotlinx.coroutines.withContext
 import net.osmand.plus.R
 import net.osmand.plus.base.BaseOsmAndFragment
 import net.osmand.plus.plugins.nautical.NauticalPlugin
-import net.osmand.plus.plugins.nautical.network.SignalKTideStation
+import net.osmand.plus.plugins.nautical.di.SailingDependencyContainer
 import net.osmand.plus.plugins.nautical.tide.parser.HarmonicDataParser
 import java.io.File
 import java.util.Locale
@@ -32,6 +32,14 @@ class TideDataManagerFragment : BaseOsmAndFragment() {
     private lateinit var importButton: Button
     private lateinit var progressBar: ProgressBar
     private lateinit var recyclerView: RecyclerView
+
+    /** A station row shown in the list, from either a local file or Signal K. */
+    private data class StationRow(
+        val name: String,
+        val lat: Double,
+        val lon: Double,
+        val sourceLabel: String
+    )
 
     private val filePickerLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
@@ -64,16 +72,42 @@ class TideDataManagerFragment : BaseOsmAndFragment() {
     private fun observeStations() {
         val tideManager = NauticalPlugin.getInstance()?.tideManager ?: return
         viewLifecycleOwner.lifecycleScope.launch {
-            tideManager.stations.collectLatest { stations ->
-                recyclerView.adapter = StationAdapter(stations.values.toList())
+            tideManager.stations.collectLatest {
+                updateStationList()
             }
         }
+    }
+
+    /**
+     * The list shows both sources honestly: locally imported harmonic stations and
+     * stations currently served by Signal K, each labelled with its source.
+     */
+    private fun updateStationList() {
+        val local = SailingDependencyContainer.tideParser?.getStations() ?: emptyList()
+        val localLabel = getString(R.string.nautical_tide_source_local)
+        val localRows = local
+            .sortedBy { it.name.lowercase(Locale.US) }
+            .map { StationRow(it.name, it.latitude, it.longitude, localLabel) }
+
+        val skLabel = getString(R.string.nautical_tide_source_signalk)
+        val skRows = (NauticalPlugin.getInstance()?.tideManager?.stations?.value?.values ?: emptyList())
+            .sortedBy { it.name.lowercase(Locale.US) }
+            .map { s ->
+                StationRow(
+                    s.name,
+                    s.position.coordinates[1],
+                    s.position.coordinates[0],
+                    skLabel
+                )
+            }
+
+        recyclerView.adapter = StationAdapter(localRows + skRows)
     }
 
     private fun launchFilePicker() {
         val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
             addCategory(Intent.CATEGORY_OPENABLE)
-            type = "*/*" 
+            type = "*/*"
             val mimeTypes = arrayOf("text/plain", "application/octet-stream", "text/comma-separated-values")
             putExtra(Intent.EXTRA_MIME_TYPES, mimeTypes)
         }
@@ -98,6 +132,7 @@ class TideDataManagerFragment : BaseOsmAndFragment() {
             } catch (_: Exception) {
                 statusText.text = getString(R.string.tide_import_error_reading)
             }
+            updateStationList()
         }
     }
 
@@ -123,7 +158,7 @@ class TideDataManagerFragment : BaseOsmAndFragment() {
         }
     }
 
-    private inner class StationAdapter(private val stations: List<SignalKTideStation>) : RecyclerView.Adapter<StationViewHolder>() {
+    private inner class StationAdapter(private val stations: List<StationRow>) : RecyclerView.Adapter<StationViewHolder>() {
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): StationViewHolder {
             val v = LayoutInflater.from(parent.context).inflate(R.layout.list_item_with_descr, parent, false)
             return StationViewHolder(v)
@@ -131,12 +166,16 @@ class TideDataManagerFragment : BaseOsmAndFragment() {
         override fun onBindViewHolder(holder: StationViewHolder, position: Int) {
             val station = stations[position]
             holder.title.text = station.name
-            holder.info.text = String.format(Locale.US, "Lat: %.4f, Lon: %.4f", station.position.coordinates[1], station.position.coordinates[0])
+            holder.info.text = String.format(
+                Locale.US, "%s • %s",
+                getString(R.string.nautical_tide_lat_lon_fmt, station.lat, station.lon),
+                station.sourceLabel
+            )
             holder.icon.setImageResource(R.drawable.ic_action_marker_dark)
             holder.icon.visibility = View.VISIBLE
-            
+
             holder.itemView.setOnClickListener {
-                app.settings.setMapLocationToShow(station.position.coordinates[1], station.position.coordinates[0], 13)
+                app.settings.setMapLocationToShow(station.lat, station.lon, 13)
                 app.runInUIThread { requireActivity().onBackPressedDispatcher.onBackPressed() }
             }
         }
