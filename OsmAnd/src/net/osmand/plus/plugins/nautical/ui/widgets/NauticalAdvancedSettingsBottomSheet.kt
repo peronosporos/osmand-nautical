@@ -335,9 +335,24 @@ class NauticalAdvancedSettingsBottomSheet : BaseNauticalBottomSheet() {
         customView.findViewById<Button>(R.id.btn_stop_compass_calib)?.setOnClickListener { autopilot.stopPypilotCalibration("compass") }
         customView.findViewById<Button>(R.id.btn_stop_rudder_calib)?.setOnClickListener { autopilot.stopPypilotCalibration("rudder") }
         customView.findViewById<Button>(R.id.btn_select_pypilot_profile)?.setOnClickListener {
-            val profiles = arrayOf("Default", "Slow", "Heavy", "Racing")
-            MaterialAlertDialogBuilder(requireContext()).setTitle(R.string.nautical_pypilot_profile)
-                .setItems(profiles) { _, which -> autopilot.setPypilotProfile(profiles[which]) }.show()
+            // pypilot profile names are free-form on the server; a fixed
+            // "Default/Slow/Heavy/Racing" list would invent profiles that may
+            // not exist. Ask for the exact name, prefilled with the live value.
+            val current = NauticalPlugin.engine?.getCurrentState()?.pypilotConfig?.activeProfile
+            val input = android.widget.EditText(themedContext)
+            input.setText(current ?: "")
+            input.hint = getString(R.string.nautical_pypilot_profile_hint)
+            MaterialAlertDialogBuilder(requireContext())
+                .setTitle(R.string.nautical_pypilot_profile)
+                .setView(input)
+                .setPositiveButton(R.string.shared_string_ok) { _, _ ->
+                    val name = input.text.toString().trim()
+                    if (name.isNotEmpty()) {
+                        autopilot.setPypilotProfile(name)
+                    }
+                }
+                .setNegativeButton(R.string.shared_string_cancel, null)
+                .show()
         }
 
         updateChart()
@@ -457,12 +472,14 @@ class NauticalAdvancedSettingsBottomSheet : BaseNauticalBottomSheet() {
         val secondaryColor = ContextCompat.getColor(requireContext(), R.color.nautical_status_red)
         val textColor = if (nightMode) Color.WHITE else Color.BLACK
 
-        val dataSetHeading = LineDataSet(entriesHeading, "Heading Error").apply {
+        // The series plot the SIMULATED heading response and rudder angle of the
+        // PID preview, not a measured "heading error" — label them honestly.
+        val dataSetHeading = LineDataSet(entriesHeading, getString(R.string.nautical_chart_heading_sim)).apply {
             color = primaryColor
             setDrawCircles(false)
             lineWidth = 2f
         }
-        val dataSetRudder = LineDataSet(entriesRudder, "Rudder Angle").apply {
+        val dataSetRudder = LineDataSet(entriesRudder, getString(R.string.nautical_chart_rudder_sim)).apply {
             color = secondaryColor
             setDrawCircles(false)
             lineWidth = 1f

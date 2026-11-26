@@ -117,7 +117,13 @@ class LaylineViewModel(
                 } ?: if (tacticalLat != 0.0) {
                     LatLon(tacticalLat, tacticalLon)
                 } else if (infiniteEnabled) {
-                    val cog = liveData.courseOverGround ?: liveData.headingTrue ?: 0.0
+                    // Project along a real course only; fabricating due-north
+                    // would draw a meaningless layline when COG is unknown.
+                    val cog = liveData.courseOverGround ?: liveData.headingTrue
+                    if (cog == null) {
+                        _uiState.value = LaylineUiState(boatLat = lat, boatLon = lon)
+                        return@withContext
+                    }
                     val dist = 1852.0 * 10.0 // Dummy target 10 NM ahead for direction
                     LaylineMathEngine.projectPoint(boatPos, cog, dist)
                 } else null
@@ -127,21 +133,37 @@ class LaylineViewModel(
                     return@withContext
                 }
 
-                val stwMs = liveData.speedThroughWater ?: liveData.speedOverGround ?: 0.0
-                val twsMs = liveData.windSpeedTrue ?: 0.0
+                // Boat-speed vector is required for the current composition;
+                // without STW or SOG there is nothing honest to project.
+                val stwMs = liveData.speedThroughWater ?: liveData.speedOverGround ?: run {
+                    _uiState.value = LaylineUiState(boatLat = lat, boatLon = lon)
+                    return@withContext
+                }
+                // Polar optimum needs real TWS; without it the tack-angle
+                // setting is the disclosed fallback.
+                val twsKnown = liveData.windSpeedTrue
 
                 // Fallback to Tack Angle setting (TASK-FALLBACK)
                 val fallbackTwa = Math.toRadians(settings.NAUTICAL_LAYLINES_TACK_ANGLE.get().toDouble() / 2.0)
 
                 val twaRad = liveData.targetAngle ?: run {
-                    polar?.let { p ->
-                        val engine = net.osmand.plus.plugins.nautical.maneuvers.PolarDiagram()
-                        engine.loadFromProfile(p)
-                        engine.getOptimalUpwindTwaRad(twsMs)
-                    } ?: fallbackTwa
+                    if (twsKnown != null) {
+                        polar?.let { p ->
+                            val engine = net.osmand.plus.plugins.nautical.maneuvers.PolarDiagram()
+                            engine.loadFromProfile(p)
+                            engine.getOptimalUpwindTwaRad(twsKnown)
+                        } ?: fallbackTwa
+                    } else {
+                        fallbackTwa
+                    }
                 }
 
-                val twdRad = calculateTwdRad(liveData) ?: 0.0
+                // Laylines are wind geometry: without resolvable TWD, show the
+                // boat position only instead of inventing "wind from north".
+                val twdRad = calculateTwdRad(liveData) ?: run {
+                    _uiState.value = LaylineUiState(boatLat = lat, boatLon = lon)
+                    return@withContext
+                }
                 
                 // Observed Current (Task 3)
                 val observedDrift = liveData.drift ?: 0.0

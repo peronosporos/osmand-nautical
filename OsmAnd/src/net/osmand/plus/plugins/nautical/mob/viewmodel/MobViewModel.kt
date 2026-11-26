@@ -450,8 +450,13 @@ class MobViewModel(
         
         val state = NauticalPlugin.engine?.getCurrentState() ?: return
         
-        // 1. Initiate Tack
-        val awa = state.windDirectionApparent ?: 0.0
+        // Heave-to needs real wind to pick the tack side and to steady the
+        // rudder against it; refuse rather than guess starboard.
+        val awa = state.windDirectionApparent
+        if (awa == null) {
+            app.showToastMessage(app.getString(R.string.nautical_maneuver_no_wind))
+            return
+        }
         val isPortTack = awa < 0
         apc.tack(port = isPortTack, manageLock = false)
         
@@ -462,7 +467,7 @@ class MobViewModel(
             
             while (System.currentTimeMillis() < timeout) {
                 val currentState = NauticalPlugin.engine?.getCurrentState() ?: break
-                val currentAwa = currentState.windDirectionApparent ?: 0.0
+                val currentAwa = currentState.windDirectionApparent ?: continue
                 
                 if (isPortTack && currentAwa > 0.05) {
                     tackCompleted = true
@@ -476,8 +481,12 @@ class MobViewModel(
 
             if (tackCompleted) {
                 val finalState = NauticalPlugin.engine?.getCurrentState()
-                val finalAwa = finalState?.windDirectionApparent ?: 0.0
-                apc.setRudderAngle(if (finalAwa > 0) Math.toRadians(35.0) else Math.toRadians(-35.0))
+                val finalAwa = finalState?.windDirectionApparent
+                // Lock the rudder against the NEW tack only when the wind
+                // actually confirms which side we ended up on.
+                if (finalAwa != null) {
+                    apc.setRudderAngle(if (finalAwa > 0) Math.toRadians(35.0) else Math.toRadians(-35.0))
+                }
             }
         }
     }

@@ -58,7 +58,10 @@ class AnchorWatchHudView @JvmOverloads constructor(
             val plugin = NauticalPlugin.getInstance() ?: return@setOnClickListener
             val lat = plugin.application.settings.NAUTICAL_ANCHOR_LAT.get()
             val lon = plugin.application.settings.NAUTICAL_ANCHOR_LON.get()
-            if (lat != 0.0) {
+            // Both coordinates must be known: a (lat, 0.0) pair would arm the
+            // weighing-anchor maneuver against a fabricated drop point on the
+            // prime meridian.
+            if (lat != 0.0 && lon != 0.0) {
                 (plugin.maneuverManager?.getManeuverById("weighing_anchor") as? WeighingAnchorManeuver)?.let {
                     it.setDropPoint(lat, lon)
                     plugin.maneuverManager?.setActiveManeuver("weighing_anchor")

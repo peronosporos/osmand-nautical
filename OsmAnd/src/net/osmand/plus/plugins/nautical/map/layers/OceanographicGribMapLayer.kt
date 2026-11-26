@@ -135,6 +135,12 @@ class OceanographicGribMapLayer(context: Context) : OsmandMapLayer(context) {
     private val layerScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     private var updateJob: Job? = null
 
+    /** Drop the cached render so the next draw rebuilds. Public so settings UI
+     * (layer chips) can force an immediate rebuild after toggling layer prefs. */
+    fun invalidateRenderCache() {
+        renderCache = GribRenderCache()
+    }
+
     override fun drawInScreenPixels(): Boolean = true
 
     override fun onDraw(canvas: Canvas, tileBox: RotatedTileBox, settings: DrawSettings) {

@@ -65,13 +65,16 @@ class GybingManeuver(app: OsmandApplication) : ManeuverEngine(app) {
                 pushInstruction(app.getString(R.string.nautical_gybing_turning))
                 pushProgress(30)
 
-                // Autopilot control after boom is secured
+                // Autopilot control after boom is secured; only with real wind
+                // to read the gybe side from; otherwise the crew steers it.
                 val apm = NauticalPlugin.autopilot
                 val apState = apm?.state?.value ?: "standby"
                 if (apState == "auto" || apState == "wind") {
-                    val awa = state?.windDirectionApparent ?: 0.0
-                    val direction = if (awa < 0) "starboard" else "port"
-                    apm?.gybe(direction = direction, manageLock = false)
+                    val awa = state?.windDirectionApparent
+                    if (awa != null) {
+                        val direction = if (awa < 0) "starboard" else "port"
+                        apm?.gybe(direction = direction, manageLock = false)
+                    }
                 }
             }
         }
@@ -83,9 +86,14 @@ class GybingManeuver(app: OsmandApplication) : ManeuverEngine(app) {
         val awa = state.windDirectionApparent?.let { Math.toDegrees(it) } ?: return
         val absAwa = abs(awa)
 
-        // ITEM 4: Dynamic thresholds for gybing
-        val tws = state.windSpeedTrue ?: 5.14
-        val targetTwa = NauticalPlugin.getInstance()?.tacticalProcessor?.polarDiagram?.getOptimalDownwindTwaRad(tws)?.let { Math.toDegrees(it) } ?: 150.0
+        // ITEM 4: Dynamic thresholds for gybing. TWS-dependent optimum only
+        // when TWS is known; otherwise the disclosed 150° running default.
+        val tws = state.windSpeedTrue
+        val targetTwa = if (tws != null) {
+            NauticalPlugin.getInstance()?.tacticalProcessor?.polarDiagram?.getOptimalDownwindTwaRad(tws)?.let { Math.toDegrees(it) } ?: 150.0
+        } else {
+            150.0
+        }
 
         val sheetInThreshold = min(170.0, targetTwa + 15.0)
         val sheetOutThreshold = targetTwa + 5.0

@@ -49,7 +49,7 @@ class SignalKServerChartsFragment : BaseOsmAndFragment() {
         super.onViewCreated(view, savedInstanceState)
         requireActivity().addMenuProvider(object : MenuProvider {
             override fun onCreateMenu(menu: android.view.Menu, menuInflater: android.view.MenuInflater) {
-                menu.add(0, 1, 0, "Refresh")
+                menu.add(0, 1, 0, getString(net.osmand.plus.R.string.shared_string_refresh))
                     .setIcon(R.drawable.ic_action_refresh_dark)
                     .setShowAsAction(android.view.MenuItem.SHOW_AS_ACTION_IF_ROOM)
             }
@@ -174,12 +174,20 @@ class SignalKServerChartsFragment : BaseOsmAndFragment() {
         fun bind(chart: SignalKChart, onEnable: (SignalKChart) -> Unit, onDelete: (SignalKChart) -> Unit) {
             txtName.text = chart.name ?: chart.identifier
             val ctx = txtDesc.context
-            txtDesc.text = ctx.getString(
-                R.string.nautical_server_charts_meta_fmt,
-                chart.type ?: ctx.getString(R.string.nautical_server_charts_raster),
-                chart.minzoom ?: 0,
-                chart.maxzoom ?: 18
-            )
+            // Show the zoom meta only when the server actually reports the
+            // zoom range; fabricating a "z0-18" range misled operators.
+            val minZ = chart.minzoom
+            val maxZ = chart.maxzoom
+            txtDesc.text = if (minZ != null && maxZ != null) {
+                ctx.getString(
+                    R.string.nautical_server_charts_meta_fmt,
+                    chart.type ?: ctx.getString(R.string.nautical_server_charts_raster),
+                    minZ,
+                    maxZ
+                )
+            } else {
+                chart.type ?: ctx.getString(R.string.nautical_server_charts_raster)
+            }
             btnEnable.setOnClickListener { onEnable(chart) }
             btnDelete.setOnClickListener { onDelete(chart) }
         }

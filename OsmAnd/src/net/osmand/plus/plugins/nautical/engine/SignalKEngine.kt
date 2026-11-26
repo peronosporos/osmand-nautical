@@ -511,6 +511,9 @@ class SignalKEngine(
         autoSaveJob = null
         messageProcessingJob?.cancel()
         messageProcessingJob = null
+        pulseJob?.cancel()
+        pulseJob = null
+        _pulseFlow.value = false
         messageChannel.close()
         parsingScope.cancel()
         resourceManager.stopSync()
@@ -762,7 +765,9 @@ class SignalKEngine(
                         xteNm = 0.0,
                         steerLeft = false,
                         bearingTrue = bearing,
-                        waypointId = "WPT-${routeTracker.routeQueue.size}",
+                        // Real waypoint name when the route carries one;
+                        // positional index is the disclosed fallback.
+                        waypointId = routeTracker.activeWaypointName ?: "WPT-${routeTracker.routeQueue.size}",
                         targetLat = next.first,
                         targetLon = next.second,
                         distanceNm = distNm,

@@ -79,7 +79,11 @@ class SignalKMetricsCalculator(
             s = s.copy(
                 xteMeters = abs(xte),
                 xteDirection = direction,
-                crossTrackError = s.crossTrackError ?: xte,
+                // Live local XTE while the local route is active: the old
+                // `?: xte` one-time fallback froze the first value forever
+                // (the server value is preserved when no route is active,
+                // because this block only runs while one is).
+                crossTrackError = xte,
                 isOutsideSafetyCorridor = isOutsideCorridor
             )
         }
@@ -101,7 +105,9 @@ class SignalKMetricsCalculator(
 
         val polarDiagram = NauticalPlugin.getInstance()?.tacticalProcessor?.polarDiagram
         val tws = s.windSpeedTrue
-        val twa = s.trueWindAngle ?: s.windDirectionApparent
+        // Polar target speed is a TRUE-wind-angle lookup; substituting AWA
+        // would feed the polar table fabricated wind geometry.
+        val twa = s.trueWindAngle
         val stw = if (s.isStwUnreliable) s.speedOverGround else s.speedThroughWater
         if (polarDiagram != null && tws != null && twa != null) {
             val eff = s.activeSailEfficiency

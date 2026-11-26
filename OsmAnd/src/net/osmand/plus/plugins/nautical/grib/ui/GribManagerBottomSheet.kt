@@ -50,7 +50,7 @@ class GribManagerBottomSheet : BottomSheetDialogFragment() {
     private var currentStepIndex = 0
     private var baseTimestamp = 0L
 
-    private val timeFormat = SimpleDateFormat("EEE HH:mm 'UTC'", Locale.US).apply {
+    private val timeFormat = SimpleDateFormat("EEE HH:mm 'UTC'", Locale.getDefault()).apply {
         timeZone = TimeZone.getTimeZone("UTC")
     }
 
@@ -113,23 +113,31 @@ class GribManagerBottomSheet : BottomSheetDialogFragment() {
     private fun setupWeatherLayers(view: View) {
         val app = activity?.application as? OsmandApplication ?: return
         val map = app.osmandMap
+        val plugin = net.osmand.plus.plugins.nautical.NauticalPlugin.getInstance()
 
-        val chipWind = view.findViewById<com.google.android.material.chip.Chip>(R.id.chip_layer_wind)
-        val chipGusts = view.findViewById<com.google.android.material.chip.Chip>(R.id.chip_layer_gusts)
+        // Note: wind barbs / gusts / temperature chips were REMOVED — the GRIB
+        // map layer only renders pressure isobars and waves, so those toggles
+        // were fake functionality (changed nothing but looked live).
         val chipWaves = view.findViewById<com.google.android.material.chip.Chip>(R.id.chip_layer_waves)
         val chipPressure = view.findViewById<com.google.android.material.chip.Chip>(R.id.chip_layer_pressure)
-        val chipTemp = view.findViewById<com.google.android.material.chip.Chip>(R.id.chip_layer_temp)
 
-        val layerListener = { _: android.widget.CompoundButton, _: Boolean ->
+        // Restore the real persisted layer states.
+        chipWaves?.isChecked = app.settings.NAUTICAL_SHOW_GRIB_WAVES.get()
+        chipPressure?.isChecked = app.settings.NAUTICAL_SHOW_GRIB_PRESSURE.get()
+
+        // Toggles write the persisted prefs AND force an immediate render-cache
+        // rebuild (previously the pref only took effect after a pan debounce).
+        val gribLayer = plugin?.layerManager?.oceanographicGribMapLayer
+        chipWaves?.setOnCheckedChangeListener { _, checked ->
+            app.settings.NAUTICAL_SHOW_GRIB_WAVES.set(checked)
+            gribLayer?.invalidateRenderCache()
             map?.refreshMap()
-            Unit
         }
-
-        chipWind?.setOnCheckedChangeListener(layerListener)
-        chipGusts?.setOnCheckedChangeListener(layerListener)
-        chipWaves?.setOnCheckedChangeListener(layerListener)
-        chipPressure?.setOnCheckedChangeListener(layerListener)
-        chipTemp?.setOnCheckedChangeListener(layerListener)
+        chipPressure?.setOnCheckedChangeListener { _, checked ->
+            app.settings.NAUTICAL_SHOW_GRIB_PRESSURE.set(checked)
+            gribLayer?.invalidateRenderCache()
+            map?.refreshMap()
+        }
     }
 
     private fun setupPlaybackControls(view: View) {
@@ -168,7 +176,9 @@ class GribManagerBottomSheet : BottomSheetDialogFragment() {
             override fun onStopTrackingTouch(seekBar: android.widget.SeekBar?) {}
         })
 
-        val speeds = arrayOf("0.5x (Slow)", "1.0x (Normal)", "2.0x (Fast)", "4.0x (Rapid)")
+        // Plain numeric labels — the old "(Slow)/(Normal)/(Fast)/(Rapid)" words
+        // were hardcoded English with no i18n and no semantic value.
+        val speeds = arrayOf("0.5x", "1.0x", "2.0x", "4.0x")
         val adapter = android.widget.ArrayAdapter(requireContext(), android.R.layout.simple_spinner_item, speeds)
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         speedSpinner?.adapter = adapter

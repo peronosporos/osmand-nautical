@@ -521,8 +521,9 @@ class NauticalAisLayer(
         color = 0xFFFF1744.toInt()
     }
 
-    var predictiveHorizonMinutes: Int = 0
-    var isRelativeMotionVectorMode: Boolean = false
+    // Session-persistent tuning (restored from profile prefs; the sheet persists writes).
+    var predictiveHorizonMinutes: Int = application.settings.NAUTICAL_AIS_PREDICTIVE_HORIZON_MIN.get()
+    var isRelativeMotionVectorMode: Boolean = application.settings.NAUTICAL_AIS_RELATIVE_VECTORS.get()
 
     private val relativeVectorPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE

@@ -119,10 +119,16 @@ class NauticalRouteSummaryFragment : BaseOsmAndFragment() {
                         totalDistText.text = getString(R.string.nautical_route_total_dist_fmt, String.format(Locale.US, "%.1f", result.totalDistanceNm))
                         totalTimeText.text = getString(R.string.nautical_route_total_ete_fmt, String.format(Locale.US, "%.1f", result.totalTimeHours))
                         val liveState = net.osmand.plus.plugins.nautical.NauticalPlugin.engine?.getCurrentState()
-                        val twd = liveState?.windDirectionTrue ?: liveState?.windDirectionApparent ?: 0.0
-                        val (tacks, gybes) = net.osmand.plus.plugins.nautical.routing.NauticalWeatherRoutingEngine.countTacksAndGybes(result.legs, Math.toDegrees(twd))
-                        txtTacksGybes?.visibility = View.VISIBLE
-                        txtTacksGybes?.text = getString(R.string.nautical_route_summary_tacks, tacks, gybes)
+                        val twd = liveState?.windDirectionTrue ?: liveState?.windDirectionApparent
+                        if (twd != null) {
+                            // Counted against real live wind only; without wind
+                            // the row would be a fabricated tally.
+                            val (tacks, gybes) = net.osmand.plus.plugins.nautical.routing.NauticalWeatherRoutingEngine.countTacksAndGybes(result.legs, Math.toDegrees(twd))
+                            txtTacksGybes?.visibility = View.VISIBLE
+                            txtTacksGybes?.text = getString(R.string.nautical_route_summary_tacks, tacks, gybes)
+                        } else {
+                            txtTacksGybes?.visibility = View.GONE
+                        }
                         adapter.submitList(result.legs)
 
                         // Check for shallow water / clearance hazards along route waypoints

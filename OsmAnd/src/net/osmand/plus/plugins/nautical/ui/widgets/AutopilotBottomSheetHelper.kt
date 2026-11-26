@@ -178,7 +178,13 @@ class AutopilotBottomSheetHelper(
                 }
             }
         } else {
-            val awaDeg = state?.windDirectionApparent?.let { Math.toDegrees(it) } ?: 45.0
+            // Tack planning needs real wind: refuse rather than plan a turn
+            // from an invented 45° apparent angle.
+            val awaDeg = state?.windDirectionApparent?.let { Math.toDegrees(it) }
+            if (awaDeg == null) {
+                NauticalPlugin.getInstance()?.application?.showToastMessage(R.string.nautical_maneuver_no_wind)
+                return
+            }
             val delta = (2.0 * abs(awaDeg)).coerceIn(70.0, 110.0)
             val title = if (isPort) sheet.getString(R.string.nautical_tack_port) else sheet.getString(R.string.nautical_tack_stbd)
             val targetDeg = if (isPort) {
@@ -199,7 +205,9 @@ class AutopilotBottomSheetHelper(
     fun handleSecondaryManeuver(index: Int, vesselType: VesselType, state: MarineState?) {
         val isProa = vesselType == VesselType.PROA
         val curH = (state?.targetHeading ?: state?.headingTrue)?.let { Math.toDegrees(it) } ?: 0.0
-        val awaDeg = state?.windDirectionApparent?.let { Math.toDegrees(it) } ?: 45.0
+        // Nullable: gybe branches below refuse when the wind is unknown
+        // (formerly they plotted the turn from an invented 45° AWA).
+        val awaDeg = state?.windDirectionApparent?.let { Math.toDegrees(it) }
         val mm = NauticalPlugin.getInstance()?.maneuverManager
 
         if (isProa) {
@@ -282,6 +290,10 @@ class AutopilotBottomSheetHelper(
             when (index) {
                 1 -> {
                     // Gybe Port
+                    if (awaDeg == null) {
+                        NauticalPlugin.getInstance()?.application?.showToastMessage(R.string.nautical_maneuver_no_wind)
+                        return
+                    }
                     val delta = (180.0 - 2.0 * abs(180.0 - abs(awaDeg))).coerceIn(70.0, 120.0)
                     val targetDeg = (((curH - delta) % 360.0 + 360.0) % 360.0).toInt()
                     onInitiateManeuver(sheet.getString(R.string.nautical_gybe_port_label), targetDeg) { confirmedDeg ->
@@ -293,6 +305,10 @@ class AutopilotBottomSheetHelper(
                 }
                 2 -> {
                     // Gybe Starboard
+                    if (awaDeg == null) {
+                        NauticalPlugin.getInstance()?.application?.showToastMessage(R.string.nautical_maneuver_no_wind)
+                        return
+                    }
                     val delta = (180.0 - 2.0 * abs(180.0 - abs(awaDeg))).coerceIn(70.0, 120.0)
                     val targetDeg = (((curH + delta) % 360.0 + 360.0) % 360.0).toInt()
                     onInitiateManeuver(sheet.getString(R.string.nautical_gybe_stbd_label), targetDeg) { confirmedDeg ->

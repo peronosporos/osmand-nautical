@@ -3777,6 +3777,9 @@ public class OsmandSettings {
 	public final CommonPreference<Float> NAUTICAL_AIS_CPA_WARNING_DISTANCE = registerFloatPreference("nautical_ais_cpa_warning_distance", 1.0f).makeProfile();
 	public final CommonPreference<Integer> NAUTICAL_AIS_OWN_MMSI = registerIntPreference("nautical_ais_own_mmsi", 0).makeProfile();
 	public final CommonPreference<Boolean> NAUTICAL_AIS_DISPLAY_OWN_POSITION = registerBooleanPreference("nautical_ais_display_own_position", false).makeProfile();
+	public final CommonPreference<Integer> NAUTICAL_AIS_PREDICTIVE_HORIZON_MIN = registerIntPreference("nautical_ais_predictive_horizon_min", 0).makeProfile();
+	public final CommonPreference<Boolean> NAUTICAL_AIS_RELATIVE_VECTORS = registerBooleanPreference("nautical_ais_relative_vectors", false).makeProfile();
+	public final CommonPreference<String> NAUTICAL_AIS_LIST_SORT_MODE = registerStringPreference("nautical_ais_list_sort_mode", "THREAT_CPA").makeProfile();
 	public final CommonPreference<Float> NAUTICAL_GUARD_ZONE_RADIUS = registerFloatPreference("nautical_guard_zone_radius", 1.0f).makeProfile();
 
 	// Maneuver & Strategy Parameters

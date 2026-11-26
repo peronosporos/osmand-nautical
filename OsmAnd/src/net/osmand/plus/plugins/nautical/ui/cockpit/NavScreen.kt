@@ -39,11 +39,15 @@ class NavScreen(private val app: OsmandApplication) : CockpitScreen {
     private lateinit var distValue: TextView
     private lateinit var etaValue: TextView
 
+    // Kept so the render pass can reset the colour after a stale-GPS episode.
+    private var accentColor = 0
+
     override fun onCreateView(context: Context, parent: ViewGroup): View {
         val night = CockpitScreenTheme.isDark(app)
         val bg = if (night) 0xFF101010.toInt() else 0xFFF5F5F5.toInt()
         val fg = if (night) 0xFFDDDDDD.toInt() else 0xFF202020.toInt()
         val accent = if (night) 0xFFFF6E00.toInt() else 0xFF0B57D0.toInt()
+        accentColor = accent
 
         val column = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
@@ -119,6 +123,9 @@ class NavScreen(private val app: OsmandApplication) : CockpitScreen {
             if (state.isGpsStale()) {
                 text = "$text (${app.getString(R.string.nautical_cockpit_stale)})"
                 distValue.setTextColor(if (CockpitScreenTheme.isDark(app)) 0xFFF9A825.toInt() else 0xFF795548.toInt())
+            } else {
+                // Reset the amber "stale" tint once GPS is fresh again.
+                distValue.setTextColor(accentColor)
             }
             distValue.text = text
         } else {

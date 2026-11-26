@@ -2,8 +2,11 @@ package net.osmand.plus.plugins.nautical.ui.cockpit
 
 import android.content.Context
 import android.graphics.Typeface
+import android.os.Handler
+import android.os.Looper
 import android.util.TypedValue
 import android.view.Gravity
+import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
@@ -48,11 +51,21 @@ class WatchkeeperScreen(private val app: OsmandApplication) : CockpitScreen {
     private lateinit var mobValue: TextView
     private lateinit var mobButton: Button
 
+    private val clearHandler = Handler(Looper.getMainLooper())
+    private var clearRunnable: Runnable? = null
+    // Kept so render() can reset the value colour after a stale-GPS episode.
+    private var accentColor = 0
+
+    private companion object {
+        const val MOB_CLEAR_HOLD_MS = 2000L
+    }
+
     override fun onCreateView(context: Context, parent: ViewGroup): View {
         val night = CockpitScreenTheme.isDark(app)
         val bg = if (night) 0xFF101010.toInt() else 0xFFF5F5F5.toInt()
         val fg = if (night) 0xFFDDDDDD.toInt() else 0xFF202020.toInt()
         val accent = if (night) 0xFFFF6E00.toInt() else 0xFF0B57D0.toInt()
+        accentColor = accent
 
         val column = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
@@ -101,9 +114,35 @@ class WatchkeeperScreen(private val app: OsmandApplication) : CockpitScreen {
             setTextColor(fg)
             setBackgroundColor(if (night) 0xFF303030.toInt() else 0xFFDDDDDD.toInt())
             isAllCaps = false
-            setOnClickListener {
-                val mob = mobViewModel() ?: return@setOnClickListener
-                clearMob(mob)
+            // Safety standard shared with MobEmergencyHeaderView: clearing an
+            // ACTIVE man-over-board emergency requires a 2-second hold; a
+            // RESOLVED MOB clears on a plain tap. A stray tap during a live
+            // emergency must never silence the alarm and drop the casualty.
+            setOnTouchListener { v, event ->
+                val mob = mobViewModel() ?: return@setOnTouchListener false
+                val resolved = mob.uiState.value.state == net.osmand.plus.plugins.nautical.mob.engine.MobState.RESOLVED
+                if (resolved) {
+                    if (event.action == MotionEvent.ACTION_UP) {
+                        clearMob(mob)
+                        v.performClick()
+                    }
+                    return@setOnTouchListener true
+                }
+                when (event.action) {
+                    MotionEvent.ACTION_DOWN -> {
+                        clearRunnable = Runnable { clearMob(mob) }
+                        clearHandler.postDelayed(clearRunnable!!, MOB_CLEAR_HOLD_MS)
+                        v.isPressed = true
+                        true
+                    }
+                    MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                        clearRunnable?.let { clearHandler.removeCallbacks(it) }
+                        clearRunnable = null
+                        v.isPressed = false
+                        true
+                    }
+                    else -> false
+                }
             }
         }
         column.addView(mobButton, LinearLayout.LayoutParams(
@@ -130,11 +169,13 @@ class WatchkeeperScreen(private val app: OsmandApplication) : CockpitScreen {
         }
         val mob = mobViewModel() ?: return
         scope?.launch {
-            mob.uiState.collect { state -> renderMob(state.isMobActive) }
+            mob.uiState.collect { state -> renderMob(state.isMobActive, state.state == net.osmand.plus.plugins.nautical.mob.engine.MobState.RESOLVED) }
         }
     }
 
     override fun onStop() {
+        clearRunnable?.let { clearHandler.removeCallbacks(it) }
+        clearRunnable = null
         scope?.cancel()
         scope = null
     }
@@ -158,6 +199,10 @@ class WatchkeeperScreen(private val app: OsmandApplication) : CockpitScreen {
             if (state.isGpsStale()) {
                 text = "$text (${app.getString(R.string.nautical_cockpit_stale)})"
                 distanceValue.setTextColor(if (CockpitScreenTheme.isDark(app)) 0xFFF9A825.toInt() else 0xFF795548.toInt())
+            } else {
+                // Reset the amber "stale" tint once GPS is fresh again
+                // (it previously stuck until the screen was rebuilt).
+                distanceValue.setTextColor(accentColor)
             }
             distanceValue.text = text
         }
@@ -202,10 +247,20 @@ class WatchkeeperScreen(private val app: OsmandApplication) : CockpitScreen {
         stageValue.setTextColor(color)
     }
 
-    private fun renderMob(active: Boolean) {
+    private fun renderMob(active: Boolean, resolved: Boolean) {
         if (active) {
-            mobValue.text = app.getString(R.string.nautical_cockpit_wk_mob_active)
+            mobValue.text = if (resolved) {
+                app.getString(R.string.nautical_cockpit_wk_mob_clear_state)
+            } else {
+                app.getString(R.string.nautical_cockpit_wk_mob_active)
+            }
             mobButton.visibility = View.VISIBLE
+            // Disclose the hold-to-confirm requirement on the button itself.
+            if (resolved) {
+                mobButton.setText(R.string.nautical_cockpit_wk_mob_clear)
+            } else {
+                mobButton.setText(R.string.nautical_cockpit_wk_mob_clear_confirm)
+            }
         } else {
             mobValue.text = app.getString(R.string.nautical_cockpit_wk_mob_clear_state)
             mobButton.visibility = View.GONE

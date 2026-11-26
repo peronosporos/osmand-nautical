@@ -187,7 +187,11 @@ class NauticalSafetyEvaluator(
         val sog = state.speedOverGround ?: 0.0
         if (sog < 0.5) return // Ignore if stationary / anchored
 
-        val cogDeg = Math.toDegrees(state.courseOverGroundTrue ?: state.headingTrue ?: 0.0)
+        // A Rule-10 violation call needs the vessel's real course; without
+        // COG or heading this previously accused the operator of steering
+        // due north through the lane.
+        val cogRad = state.courseOverGroundTrue ?: state.headingTrue ?: return
+        val cogDeg = Math.toDegrees(cogRad)
         val dbHelper = net.osmand.plus.plugins.nautical.s57.S57SqliteHelper(app)
         val delta = 0.015
         val tssFeatures = try {
@@ -263,8 +267,8 @@ class NauticalSafetyEvaluator(
         }
 
         if (maxDeficit > 0.0) {
-            val sagNote = if (isSagApplied) " (Thermal Sag Applied)" else ""
-            val msg = String.format(Locale.US, "OVERHEAD CLEARANCE WARNING: Mast Deficit %.1fm%s", maxDeficit, sagNote)
+            val sagNote = if (isSagApplied) app.getString(R.string.nautical_hazard_thermal_sag) else ""
+            val msg = app.getString(R.string.nautical_hazard_overhead_fmt, maxDeficit, sagNote)
             notifications["safety.clearance.overhead"] = SignalKNotification(
                 message = msg,
                 state = NotificationState.ALARM
@@ -461,7 +465,7 @@ class NauticalSafetyEvaluator(
 
     data class DepthProfileSample(
         val distanceNm: Double,
-        val depthMeters: Double,
+        val depthMeters: Double?, // null = no sounding/chart data at this point
         val hazardName: String? = null,
         val hazardDepthMeters: Double? = null
     )
@@ -471,7 +475,7 @@ class NauticalSafetyEvaluator(
         val vesselDraft: Double,
         val safetyMargin: Double,
         val tideHeight: Double,
-        val minClearanceMeters: Double
+        val minClearanceMeters: Double? // null = no sounding data anywhere ahead
     )
 
     fun sampleForwardRouteDepthProfile(
@@ -480,6 +484,9 @@ class NauticalSafetyEvaluator(
         cogDeg: Double?
     ): ForwardRouteProfile? {
         if (lat == null || lon == null) return null
+        // "Ahead" is undefined without a course; previously fabricated a
+        // due-north profile when COG was missing.
+        val heading = cogDeg ?: return null
         val draft = app.settings.NAUTICAL_VESSEL_DRAFT.get().toDouble()
         val safetyMargin = app.settings.NAUTICAL_SAFETY_MARGIN.get().toDouble()
         val marineState = NauticalPlugin.engine?.marineStateFlow?.value
@@ -488,10 +495,9 @@ class NauticalSafetyEvaluator(
         val samples = mutableListOf<DepthProfileSample>()
         val totalDistanceNm = 1.0
         val numSamples = 20
-        val heading = cogDeg ?: 0.0
 
         val dbHelper = net.osmand.plus.plugins.nautical.s57.S57SqliteHelper(app)
-        var minClearance = 999.0
+        var minClearance: Double? = null
 
         for (i in 0..numSamples) {
             val distNm = (i.toDouble() / numSamples) * totalDistanceNm
@@ -512,24 +518,29 @@ class NauticalSafetyEvaluator(
                 emptyList()
             }
 
-            var sampledDepth = 15.0
+            // No invented 15 m baseline any more: chart points without a
+            // sounding stay null (unsurveyed), and clearance is computed
+            // only from real soundings.
+            var sampledDepth: Double? = null
             var hazardName: String? = null
             var hazardDepth: Double? = null
 
             for (f in features) {
                 val d = f.attributes["VALSOU"]?.toDoubleOrNull() ?: f.attributes["VALCO"]?.toDoubleOrNull()
-                if (d != null && d < sampledDepth) {
+                if (d != null && (sampledDepth == null || d < sampledDepth)) {
                     sampledDepth = d
                 }
                 if (f.acronym in listOf("UWTROC", "WRECKS", "OBSTRN")) {
                     hazardName = f.attributes["OBJNAM"] ?: f.acronym
-                    hazardDepth = d ?: 2.0
+                    hazardDepth = d
                 }
             }
 
-            val clearance = sampledDepth + tideHeight - draft - safetyMargin
-            if (clearance < minClearance) {
-                minClearance = clearance
+            if (sampledDepth != null) {
+                val clearance = sampledDepth + tideHeight - draft - safetyMargin
+                if (minClearance == null || clearance < minClearance) {
+                    minClearance = clearance
+                }
             }
 
             samples.add(DepthProfileSample(distNm, sampledDepth, hazardName, hazardDepth))

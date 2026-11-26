@@ -579,7 +579,12 @@ class AutopilotController(
 
     fun executeTacticalDodge(deltaDegrees: Double) {
         val state = NauticalPlugin.engine?.getCurrentState() ?: return
-        val currentHeading = state.targetHeading ?: state.headingTrue ?: 0.0
+        // A dodge is a relative turn from the CURRENT heading; without a
+        // heading it would swing from an invented "north". Refuse instead.
+        val currentHeading = state.targetHeading ?: state.headingTrue ?: run {
+            log.warn("Autopilot: Tactical dodge refused, no live heading")
+            return
+        }
         val currentWindAngle = state.targetWindAngleApparent ?: state.windDirectionApparent
         val mode = state.autopilotState
 
@@ -642,14 +647,39 @@ class AutopilotController(
 
     fun initiateAutoTack(direction: String) {
         val state = NauticalPlugin.engine?.getCurrentState() ?: return
-        val currentHeadingDeg = Math.toDegrees(state.headingTrue ?: state.targetHeading ?: 0.0)
-        val currentTwaRad = state.trueWindAngle ?: state.windDirectionApparent ?: Math.toRadians(45.0)
-        val currentTwaDeg = Math.toDegrees(currentTwaRad)
+        // A tack must be planned against REAL wind. The old silent fallback
+        // (45° TWA / 5 m/s invented) could turn the vessel the wrong way
+        // relative to the actual wind: refuse instead.
+        val knownTwaRad = state.trueWindAngle ?: state.windDirectionApparent
+        if (knownTwaRad == null) {
+            app.showToastMessage(R.string.nautical_maneuver_no_wind)
+            return
+        }
+        val currentTwaDeg = Math.toDegrees(knownTwaRad)
 
-        val twsMs = state.windSpeedTrue ?: state.windSpeedApparent ?: 5.0
         val polarDiagram = NauticalPlugin.getInstance()?.tacticalProcessor?.polarDiagram
-        val optTwa = polarDiagram?.getOptimalUpwindTarget(twsMs)?.targetTwaDeg ?: 45.0
+        val knownTwsMs = state.windSpeedTrue ?: state.windSpeedApparent
+        val optTwa = if (knownTwsMs != null) {
+            polarDiagram?.getOptimalUpwindTarget(knownTwsMs)?.targetTwaDeg ?: 45.0
+        } else {
+            45.0 // Textbook close-hauled angle when the polar/TWS is unknown.
+        }
         val finalTwa = if (direction == "PORT") -optTwa else optTwa
+
+        val knownHeadingRad = state.headingTrue ?: state.targetHeading
+        if (knownHeadingRad == null) {
+            // No live heading to steer the animated turn from: command the
+            // tack directly as a true-wind-angle target instead of
+            // inventing a "0°" starting heading.
+            setTargetTrueWindAngle(finalTwa)
+            NauticalPlugin.hudManager?.get()?.showBanner(
+                app.getString(net.osmand.plus.R.string.nautical_banner_auto_tacking, direction),
+                4000L,
+                isWarning = false
+            )
+            return
+        }
+        val currentHeadingDeg = Math.toDegrees(knownHeadingRad)
 
         val deltaTurnDeg = if (direction == "PORT") -kotlin.math.abs(currentTwaDeg - finalTwa).coerceAtLeast(60.0) else kotlin.math.abs(currentTwaDeg - finalTwa).coerceAtLeast(60.0)
         val targetHeading = (currentHeadingDeg + deltaTurnDeg + 360.0) % 360.0
@@ -870,7 +900,14 @@ class AutopilotController(
 
     fun commandHeading(targetHeadingDeg: Double) {
         val currentState = NauticalPlugin.engine?.getCurrentState()
-        val currentHeadingDeg = Math.toDegrees(currentState?.headingMagnetic ?: currentState?.headingTrue ?: 0.0)
+        val currentHeadingRad = currentState?.headingMagnetic ?: currentState?.headingTrue
+        if (currentHeadingRad == null) {
+            // No live heading to compute a relative turn from (the old code
+            // diffed against an invented "north"): set the absolute target.
+            setTargetHeading(targetHeadingDeg)
+            return
+        }
+        val currentHeadingDeg = Math.toDegrees(currentHeadingRad)
         val diffDeg = ((targetHeadingDeg - currentHeadingDeg + 540.0) % 360.0) - 180.0
 
         if (kotlin.math.abs(diffDeg) > 20.0) {
@@ -1143,11 +1180,17 @@ class AutopilotController(
         when (currentMode) {
             "wind", "twa", "vane", "awa" -> {
                 val marineState = broker?.marineState?.value
-                val currentTargetAwa = marineState?.targetWindAngleApparent 
-                    ?: NauticalPlugin.engine?.getCurrentState()?.windDirectionApparent 
-                    ?: Math.toRadians(45.0)
-                val newTargetAwa = if (isPort) -abs(currentTargetAwa) else abs(currentTargetAwa)
-                setTargetWindAngle(newTargetAwa)
+                // Pre-set the new wind target only when the current one is
+                // actually known; the Pypilot tack below runs on the
+                // autopilot's own sensors either way.
+                val currentTargetAwa = marineState?.targetWindAngleApparent
+                    ?: NauticalPlugin.engine?.getCurrentState()?.windDirectionApparent
+                if (currentTargetAwa != null) {
+                    val newTargetAwa = if (isPort) -abs(currentTargetAwa) else abs(currentTargetAwa)
+                    setTargetWindAngle(newTargetAwa)
+                } else {
+                    log.warn("commandTack: no known wind angle, skipping local wind-target pre-set")
+                }
             }
             "compass", "auto", "heading" -> {
                 val stateObj = NauticalPlugin.engine?.getCurrentState()
@@ -1157,11 +1200,17 @@ class AutopilotController(
                 val currentHdg = (targetHeadingMag.value?.let { Math.toDegrees(it) }
                     ?: stateObj?.headingMagnetic?.let { Math.toDegrees(it) }
                     ?: stateObj?.headingTrue?.let { Math.toDegrees(it) })
-                    ?: 0.0
-                val tackAngle = app.settings.NAUTICAL_LAYLINES_TACK_ANGLE.get().toDouble().coerceIn(60.0, 120.0)
-                val delta = if (isPort) -tackAngle else tackAngle
-                val newTargetHdg = (currentHdg + delta + 360.0) % 360.0
-                setTargetHeading(newTargetHdg)
+                if (currentHdg != null) {
+                    // A heading tack needs the live heading; skip the local
+                    // pre-set rather than computing from an invented "north"
+                    // (the Pypilot tack below uses its own compass).
+                    val tackAngle = app.settings.NAUTICAL_LAYLINES_TACK_ANGLE.get().toDouble().coerceIn(60.0, 120.0)
+                    val delta = if (isPort) -tackAngle else tackAngle
+                    val newTargetHdg = (currentHdg + delta + 360.0) % 360.0
+                    setTargetHeading(newTargetHdg)
+                } else {
+                    log.warn("commandTack: no known heading, skipping local heading-target pre-set")
+                }
             }
         }
 
@@ -1266,7 +1315,13 @@ class AutopilotController(
             setTargetWindAngle(targetWindAngle)
             setAutopilotMode("wind")
         } else {
-            val currentHeading = state?.headingTrue?.let { Math.toDegrees(it) } ?: 0.0
+            // Heading fallback must not compute from an invented "north";
+            // without wind AND heading there is nothing to heave-to on.
+            val currentHeading = state?.headingTrue?.let { Math.toDegrees(it) }
+            if (currentHeading == null) {
+                app.showToastMessage(R.string.nautical_no_data)
+                return
+            }
             val targetHdg = if (port) (currentHeading - 45.0 + 360.0) % 360.0 else (currentHeading + 45.0) % 360.0
             setTargetHeading(targetHdg)
             setAutopilotMode("auto")

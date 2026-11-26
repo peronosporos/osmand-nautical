@@ -68,13 +68,17 @@ class TackingManeuver(app: OsmandApplication) : ManeuverEngine(app) {
             AlarmType.TACTICAL_TACK
         )
 
-        // Autopilot control - Pass manageLock = false as we already acquired it above
+        // Autopilot control - Pass manageLock = false as we already acquired it above.
+        // Hand over to the autopilot only with real wind to read the tack
+        // side from; otherwise the crew steers the tack manually.
         val apm = NauticalPlugin.autopilot
         val apState = apm?.state?.value ?: "standby"
         if (apState == "auto" || apState == "wind") {
-            val awa = state?.windDirectionApparent ?: 0.0
-            val direction = if (awa < 0) "starboard" else "port"
-            apm?.tack(direction = direction, manageLock = false)
+            val awa = state?.windDirectionApparent
+            if (awa != null) {
+                val direction = if (awa < 0) "starboard" else "port"
+                apm?.tack(direction = direction, manageLock = false)
+            }
         }
         
         startInIronsDetection()
@@ -86,9 +90,15 @@ class TackingManeuver(app: OsmandApplication) : ManeuverEngine(app) {
         val awa = state.windDirectionApparent?.let { Math.toDegrees(it) } ?: return
         val absAwa = abs(awa)
         
-        // ITEM 4 FIX: Dynamic thresholds from Polar Diagram if available
-        val tws = state.windSpeedTrue ?: 5.14
-        val targetTwa = NauticalPlugin.getInstance()?.tacticalProcessor?.polarDiagram?.getOptimalUpwindTwaRad(tws)?.let { Math.toDegrees(it) } ?: 45.0
+        // ITEM 4 FIX: Dynamic thresholds from Polar Diagram if available.
+        // TWS-dependent optimum is only used when TWS is actually known;
+        // otherwise the disclosed 45° default upwind angle drives thresholds.
+        val tws = state.windSpeedTrue
+        val targetTwa = if (tws != null) {
+            NauticalPlugin.getInstance()?.tacticalProcessor?.polarDiagram?.getOptimalUpwindTwaRad(tws)?.let { Math.toDegrees(it) } ?: 45.0
+        } else {
+            45.0
+        }
         
         val releaseThreshold = min(10.0, targetTwa * 0.25)
         val pullThreshold = targetTwa * 0.33
@@ -148,25 +158,39 @@ class TackingManeuver(app: OsmandApplication) : ManeuverEngine(app) {
         inIronsJob = maneuverScope.launch {
             // Item 14: Reduced delay from 8s to 4s for faster stall detection
             delay(4.seconds)
+            var announced = false
             while (isActive) {
                 val state = NauticalPlugin.engine?.getCurrentState() ?: break
-                val awa = state.windDirectionApparent?.let { abs(Math.toDegrees(it)) } ?: 0.0
-                if (awa < 5.0) {
-                    val msg = app.getString(R.string.nautical_warn_stalled_in_irons)
-                    NauticalPlugin.hudManager?.get()?.showBanner(
-                        msg,
-                        5000L,
-                        "RESTART",
-                        true,
-                        onConfirm = {
-                            transitionToExecuting() // Retry the maneuver
+                // No wind data means the sensor cannot tell in-irons from a calm
+                // stall; announce only off REAL apparent wind, and only once per
+                // stall episode so banner + TTS don't repeat every 5 seconds.
+                val awaRad = state.windDirectionApparent
+                if (awaRad == null) {
+                    announced = false // wind came back unknown; re-arm for next episode
+                } else {
+                    val awa = abs(Math.toDegrees(awaRad))
+                    if (awa < 5.0) {
+                        if (!announced) {
+                            announced = true
+                            val msg = app.getString(R.string.nautical_warn_stalled_in_irons)
+                            NauticalPlugin.hudManager?.get()?.showBanner(
+                                msg,
+                                5000L,
+                                "RESTART",
+                                true,
+                                onConfirm = {
+                                    transitionToExecuting() // Retry the maneuver
+                                }
+                            )
+
+                            NauticalPlugin.getInstance()?.speechHelper?.speakAsync(
+                                app.getString(R.string.nautical_warn_stalled_in_irons_tts),
+                                AlarmType.TACTICAL_TACK
+                            )
                         }
-                    )
-                    
-                    NauticalPlugin.getInstance()?.speechHelper?.speakAsync(
-                        app.getString(R.string.nautical_warn_stalled_in_irons_tts),
-                        AlarmType.TACTICAL_TACK
-                    )
+                    } else if (awa > 10.0) {
+                        announced = false // sailed out of the stall zone
+                    }
                 }
                 delay(5.seconds)
             }

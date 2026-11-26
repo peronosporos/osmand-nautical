@@ -78,7 +78,7 @@ class NavtexListFragment : BaseOsmAndFragment() {
         
         val items = arrayOf(
             getString(R.string.navtex_only_urgent),
-            getString(R.string.navtex_subject_filter) + ": " + (current.subject?.name ?: "All"),
+            getString(R.string.navtex_subject_filter) + ": " + (current.subject?.name ?: getString(R.string.shared_string_all)),
             getString(R.string.navtex_max_distance)
         )
 
@@ -91,7 +91,7 @@ class NavtexListFragment : BaseOsmAndFragment() {
                     2 -> showDistanceSelectionDialog(viewModel)
                 }
             }
-            .setNeutralButton("Reset All") { _, _ ->
+            .setNeutralButton(R.string.navtex_filter_reset_all) { _, _ ->
                 viewModel.updateFilters(NavtexFilters())
             }
             .show()
@@ -106,14 +106,14 @@ class NavtexListFragment : BaseOsmAndFragment() {
             .setItems(names) { _, which ->
                 viewModel.setSubjectFilter(subjects[which])
             }
-            .setNeutralButton("Clear Filter") { _, _ ->
+            .setNeutralButton(R.string.navtex_filter_clear_subject) { _, _ ->
                 viewModel.setSubjectFilter(null)
             }
             .show()
     }
 
     private fun showDistanceSelectionDialog(viewModel: net.osmand.plus.plugins.nautical.hazard.viewmodel.NavtexViewModel) {
-        val distances = arrayOf("10 km", "50 km", "100 km", "500 km", "Any")
+        val distances = arrayOf("10 km", "50 km", "100 km", "500 km", getString(R.string.navtex_distance_any))
         val values = arrayOf(10.0, 50.0, 100.0, 500.0, null)
         
         MaterialAlertDialogBuilder(requireContext())

@@ -78,12 +78,20 @@ class DepthProfileMapLayer(
 
         val loc = app.locationProvider.lastKnownLocation ?: return
         val marineState = NauticalPlugin.engine?.marineStateFlow?.value
-        val cog = marineState?.courseOverGroundTrue ?: (if (loc.hasBearing()) loc.bearing.toDouble() else 0.0)
+        // "Ahead" needs a real course: COG from instruments (radians) or a
+        // GPS bearing (degrees); normalized to degrees here. Without either,
+        // no profile is sampled (previously a due-north profile was fabricated).
+        val cogDeg = marineState?.courseOverGroundTrue?.let { Math.toDegrees(it) }
+            ?: (if (loc.hasBearing()) loc.bearing.toDouble() else null)
+        if (cogDeg == null) {
+            lastProfile = null
+            return
+        }
 
         val now = System.currentTimeMillis()
         if (now - lastSampleTime > 2000L || lastProfile == null) {
             lastSampleTime = now
-            lastProfile = safetyEvaluator.sampleForwardRouteDepthProfile(loc.latitude, loc.longitude, cog)
+            lastProfile = safetyEvaluator.sampleForwardRouteDepthProfile(loc.latitude, loc.longitude, cogDeg)
         }
 
         val profile = lastProfile ?: return
@@ -121,8 +129,9 @@ class DepthProfileMapLayer(
 
         if (!isExpanded) {
             textPaint.textSize = 12f * density
-            val minClr = String.format(Locale.US, "%.1fm", profile.minClearanceMeters)
-            val title = "1.0 NM Depth Profile | Min Clearance: $minClr (Tap to Expand)"
+            val minClr = profile.minClearanceMeters?.let { String.format(Locale.US, "%.1fm", it) }
+                ?: context.getString(R.string.nautical_not_available)
+            val title = context.getString(R.string.nautical_depth_profile_summary_fmt, minClr)
             canvas.drawText(title, panelRect.left + 12f * density, panelRect.centerY() + (textPaint.textSize * 0.35f), textPaint)
             return
         }
@@ -130,11 +139,12 @@ class DepthProfileMapLayer(
         // Title and Min Clearance summary
         textPaint.textSize = 11f * density
         subTextPaint.textSize = 10f * density
-        val minClr = String.format(Locale.US, "%.1fm", profile.minClearanceMeters)
+        val minClr = profile.minClearanceMeters?.let { String.format(Locale.US, "%.1fm", it) }
+            ?: context.getString(R.string.nautical_not_available)
         val title = context.getString(R.string.nautical_depth_profile_title)
         canvas.drawText(title, panelRect.left + 12f * density, panelRect.top + 16f * density, textPaint)
 
-        val clrText = "Min Clearance: $minClr"
+        val clrText = context.getString(R.string.nautical_depth_profile_min_clearance_fmt, minClr)
         val clrX = panelRect.right - subTextPaint.measureText(clrText) - (12f * density)
         canvas.drawText(clrText, clrX, panelRect.top + 16f * density, subTextPaint)
 
@@ -162,14 +172,13 @@ class DepthProfileMapLayer(
         for (i in samples.indices) {
             val s = samples[i]
             val px = graphL + ((i.toFloat() / (samples.size - 1)) * graphW)
-            val effectiveD = s.depthMeters + profile.tideHeight
+            // Unsurveyed samples (null depth) leave a gap in the terrain:
+            // no invented seabed between soundings.
+            val sampleDepth = s.depthMeters ?: continue
+            val effectiveD = sampleDepth + profile.tideHeight
             val py = graphT + ((effectiveD / maxDepthAxis).toFloat().coerceIn(0f, 1f) * graphH)
 
-            if (i == 0) {
-                seabedPath.lineTo(px, py)
-            } else {
-                seabedPath.lineTo(px, py)
-            }
+            seabedPath.lineTo(px, py)
 
             // Hazard marker
             if (s.hazardName != null) {

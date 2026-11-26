@@ -85,21 +85,32 @@ class AisTargetListBottomSheet : BaseBottomSheetDialogFragment() {
         val btnToggleVector = view.findViewById<MaterialButton>(R.id.btn_toggle_vector_mode)
 
         val aisLayer = NauticalPlugin.getInstance()?.aisAisLayer
-        val currentHorizon = aisLayer?.predictiveHorizonMinutes ?: 0
+        // Restore the persisted predictive horizon (profile pref; see OsmandSettings).
+        val currentHorizon = aisLayer?.predictiveHorizonMinutes
+            ?: app?.settings?.NAUTICAL_AIS_PREDICTIVE_HORIZON_MIN?.get() ?: 0
         sliderPredictiveHorizon?.value = currentHorizon.toFloat()
-        txtPredictiveTime?.text = if (currentHorizon > 0) "Forward Horizon: T +${currentHorizon}m" else "Forward Horizon: Real-time (T +0m)"
+        txtPredictiveTime?.text = if (currentHorizon > 0) {
+            getString(R.string.nautical_ais_forward_horizon_fmt, currentHorizon)
+        } else {
+            getString(R.string.nautical_ais_forward_horizon_realtime)
+        }
 
         sliderPredictiveHorizon?.addOnChangeListener { _, value, _ ->
             val minutes = value.toInt()
-            txtPredictiveTime?.text = if (minutes > 0) "Forward Horizon: T +${minutes}m" else "Forward Horizon: Real-time (T +0m)"
+            txtPredictiveTime?.text = if (minutes > 0) {
+                getString(R.string.nautical_ais_forward_horizon_fmt, minutes)
+            } else {
+                getString(R.string.nautical_ais_forward_horizon_realtime)
+            }
             NauticalPlugin.getInstance()?.aisAisLayer?.predictiveHorizonMinutes = minutes
+            app?.settings?.NAUTICAL_AIS_PREDICTIVE_HORIZON_MIN?.set(minutes)
             val mapActivity = activity as? MapActivity
             mapActivity?.mapView?.refreshMap()
         }
 
         val updateVectorBtn = {
             val isRel = aisLayer?.isRelativeMotionVectorMode == true
-            btnToggleVector?.text = if (isRel) "MOTION VECTORS: RELATIVE" else "MOTION VECTORS: TRUE"
+            btnToggleVector?.text = if (isRel) getString(R.string.nautical_ais_vectors_relative) else getString(R.string.nautical_ais_vectors_true)
             btnToggleVector?.setIconResource(if (isRel) R.drawable.ic_action_direction_movement else R.drawable.ic_action_navigation_outlined)
         }
         updateVectorBtn()
@@ -107,6 +118,7 @@ class AisTargetListBottomSheet : BaseBottomSheetDialogFragment() {
         btnToggleVector?.setOnClickListener {
             if (aisLayer != null) {
                 aisLayer.isRelativeMotionVectorMode = !aisLayer.isRelativeMotionVectorMode
+                app?.settings?.NAUTICAL_AIS_RELATIVE_VECTORS?.set(aisLayer.isRelativeMotionVectorMode)
                 updateVectorBtn()
                 val mapActivity = activity as? MapActivity
                 mapActivity?.mapView?.refreshMap()
@@ -175,9 +187,16 @@ class AisTargetListBottomSheet : BaseBottomSheetDialogFragment() {
         rvTargets?.layoutManager = LinearLayoutManager(requireContext())
         rvTargets?.adapter = adapter
 
-        // Setup Sort Toggle Group
-        toggleGroup?.check(R.id.btn_sort_threat)
-        updateToggleButtonsAppearance(R.id.btn_sort_threat)
+        // Setup Sort Toggle Group — restore the persisted sort mode.
+        val savedSortName = app?.settings?.NAUTICAL_AIS_LIST_SORT_MODE?.get()
+        currentSortMode = AisSortMode.values().firstOrNull { it.name == savedSortName } ?: AisSortMode.THREAT_CPA
+        val initialSortButton = when (currentSortMode) {
+            AisSortMode.THREAT_CPA -> R.id.btn_sort_threat
+            AisSortMode.DISTANCE -> R.id.btn_sort_nearest
+            AisSortMode.NAME_ALPHA -> R.id.btn_sort_name
+        }
+        toggleGroup?.check(initialSortButton)
+        updateToggleButtonsAppearance(initialSortButton)
 
         toggleGroup?.addOnButtonCheckedListener { _, checkedId, isChecked ->
             if (isChecked) {
@@ -187,6 +206,7 @@ class AisTargetListBottomSheet : BaseBottomSheetDialogFragment() {
                     R.id.btn_sort_name -> AisSortMode.NAME_ALPHA
                     else -> AisSortMode.THREAT_CPA
                 }
+                app?.settings?.NAUTICAL_AIS_LIST_SORT_MODE?.set(currentSortMode.name)
                 updateToggleButtonsAppearance(checkedId)
                 refreshTargets()
             }

@@ -59,14 +59,18 @@ class TacticalProcessor(private val app: OsmandApplication) {
     fun update(state: MarineState) {
         val lat = state.latitude ?: return
         val lon = state.longitude ?: return
-        val tws = state.windSpeedTrue ?: 5.14
-        val twd = state.windDirectionTrue ?: 0.0
-        
+        // Layline geometry is wind-driven: without real TWD there is nothing
+        // honest to draw (previously fabricated "wind from north" lines).
+        val twd = state.windDirectionTrue ?: return
+        // Polar optimum needs real TWS; without it the user's tack-angle
+        // setting is the disclosed fallback.
+        val tws = state.windSpeedTrue
+
         val target = targetWaypoint ?: return
-        
+
         // TASK-001: Unified Layline Logic using LaylineMathEngine
         val fallbackTwa = Math.toRadians(app.settings.NAUTICAL_LAYLINES_TACK_ANGLE.get().toDouble() / 2.0)
-        val polarTwa = polarDiagram.getOptimalUpwindTwaRad(tws)
+        val polarTwa = if (tws != null) polarDiagram.getOptimalUpwindTwaRad(tws) else 0.0
         val optimalTwa = if (polarTwa > 0.0) polarTwa else fallbackTwa
 
         val manualLeeway = Math.toRadians(app.settings.NAUTICAL_MANUAL_LEEWAY_ANGLE.get().toDouble())
@@ -78,12 +82,16 @@ class TacticalProcessor(private val app: OsmandApplication) {
             (state.drift ?: 0.0) * cos(state.setTrue ?: 0.0)
         )
 
+        // Current composition needs a real boat-speed vector; inventing one
+        // would skew the drawn crossover points.
+        val boatSpeed = state.speedThroughWater ?: state.speedOverGround ?: return
+
         val result = LaylineMathEngine.calculateApparentLaylines(
             boatPosition = LatLon(lat, lon),
             targetWaypoint = LatLon(target.first, target.second),
             optimalTwa = optimalTwa,
             trueWindDirection = twd,
-            boatSpeed = state.speedThroughWater ?: state.speedOverGround ?: 5.0,
+            boatSpeed = boatSpeed,
             current = current,
             leewayRadians = leeway,
             isInfinite = isInfinite

@@ -35,16 +35,32 @@
     <string name="nautical_rigging_load_exceeded">RIGGING LOAD EXCEEDED</string>
     <string name="nautical_house_soc">House SOC</string>
     <string name="nautical_net_flow">Net Flow</string>
-    <string name="nautical_solar_input">Solar Input</string>
-    <string name="nautical_autonomy_estimate_default">Autonomy: 34h at current load</string>
-    <string name="nautical_battery_ttd_details">TTD to 20% cut-off | Rate: -4.5 Ah/h | Solar: 180W</string>
+    <string name="nautical_charging_power">Charging Power</string>
+    <string name="nautical_autonomy_waiting">Autonomy: waiting for battery data</string>
+    <string name="nautical_autonomy_no_telemetry_hint">Connect a Signal K battery monitor for a live autonomy estimate</string>
+    <string name="nautical_autonomy_hrs_fmt">Autonomy: %1$s h at current load</string>
+    <string name="nautical_autonomy_charging_fmt">Net charging %1$s A</string>
+    <string name="nautical_autonomy_discharging_fmt">Discharging at %1$s A</string>
+    <string name="nautical_autonomy_details_fmt">House SOC: %1$d%% | Net: %2$s A | Charge power: %3$s</string>
+    <string name="nautical_battery_full_in_fmt">Full in %1$s</string>
+    <string name="nautical_battery_empty_in_fmt">Empty in %1$s</string>
+    <string name="nautical_status_charging">Charging</string>
+    <string name="nautical_status_discharging">Discharging</string>
+    <string name="nautical_battery_instance_fmt">Battery %1$s</string>
+    <string name="nautical_battery_house">House bank</string>
+    <string name="nautical_batteries_section">Batteries</string>
+    <string name="nautical_battery_starter">Starter bank</string>
+    <string name="nautical_battery_thruster">Thruster bank</string>
+    <string name="nautical_battery_generator">Generator bank</string>
+    <string name="nautical_battery_aux">Auxiliary</string>
+    <string name="nautical_tank_low_suffix">⚠ LOW</string>
+    <string name="nautical_tank_full_suffix">⚠ FULL</string>
+    <string name="nautical_tank_type_instance_fmt">%1$s %2$s</string>
+    <string name="nautical_windlass_rode_fmt">Rode Deployed: %1$s m</string>
     <string name="nautical_engines_mechanical">Engines &amp; Mechanical</string>
     <string name="nautical_weather_layers">Weather Layers</string>
-    <string name="nautical_layer_wind_barbs">Wind Barbs</string>
-    <string name="nautical_layer_gusts">Gusts</string>
     <string name="nautical_layer_wave_height">Wave Height</string>
     <string name="nautical_layer_pressure_isobars">Pressure (Isobars)</string>
-    <string name="nautical_layer_temperature">Temperature</string>
     <string name="nautical_forecast_playback">Forecast Playback</string>
     <string name="nautical_live_latest">Live / Latest</string>
     <string name="nautical_loop_speed">Loop Speed</string>
@@ -113,8 +129,6 @@
     <string name="nautical_anchor_drift_caution">Anchor Drift Caution (85% Swing Radius)</string>
     <string name="nautical_anchor_drag_critical">CRITICAL ANCHOR DRAG DETECTED</string>
     <string name="nautical_low_battery_alarm">Low Battery Alarm</string>
-    <string name="nautical_battery_bank_house">House Bank</string>
-    <string name="nautical_battery_bank_starter">Starter Bank</string>
     <string name="nautical_ebl_vrm">EBL/VRM (Range &amp; Bearing)</string>
     <string name="nautical_add_tactical_waypoint">Add Tactical Waypoint</string>
     <string name="nautical_vhf_distress_script_btn">MAYDAY / PAN-PAN Radio Script</string>
@@ -191,6 +205,7 @@
     <string name="nautical_cockpit_wk_mob_active">MOB ACTIVE</string>
     <string name="nautical_cockpit_wk_mob_clear_state">No active MOB</string>
     <string name="nautical_cockpit_wk_mob_clear">Clear MOB</string>
+    <string name="nautical_cockpit_wk_mob_clear_confirm">Hold to clear MOB (2 s)</string>
     <string name="nautical_cockpit_nav_waypoint">Active waypoint</string>
     <string name="nautical_cockpit_nav_xte">Cross track error</string>
     <string name="nautical_cockpit_nav_distance">Distance / bearing to waypoint</string>
@@ -232,6 +247,7 @@
     <string name="nautical_banner_anchor_watch_ready">STATIONARY IN ANCHORAGE: ANCHOR WATCH READY</string>
     <string name="nautical_banner_telemetry_fallback">TELEMETRY FALLBACK: INTERNAL SENSORS ACTIVE</string>
     <string name="nautical_banner_gybe_prevented">GYBE PREVENTED - CONFIRM TO GYBE</string>
+    <string name="nautical_banner_squall_advisory_fmt">BAROMETRIC SQUALL ADVISORY: Rapid pressure drop %1$.1f hPa / 3h</string>
     <string name="nautical_voice_windlass_overload">Anchor snagged, windlass overload</string>
     <string name="nautical_voice_tack_in">Tack in %1$d</string>
     <string name="nautical_voice_minutes_to_start">%1$d minutes to start</string>
@@ -457,6 +473,10 @@
     <string name="nautical_metric_dual_wind_app">Apparent Wind (AWA / AWS)</string>
     <string name="nautical_metric_dual_wind_true">True Wind (TWA / TWS)</string>
     <string name="nautical_ais_targets_title">AIS Targets</string>
+    <string name="nautical_ais_vectors_true">MOTION VECTORS: TRUE</string>
+    <string name="nautical_ais_vectors_relative">MOTION VECTORS: RELATIVE</string>
+    <string name="nautical_ais_forward_horizon_realtime">Forward Horizon: Real-time (T +0m)</string>
+    <string name="nautical_ais_forward_horizon_fmt">Forward Horizon: T +%1$dm</string>
     <string name="nautical_ais_no_targets">No AIS targets detected</string>
     <string name="nautical_ais_danger_warning">COLLISION RISK WARNING</string>
     <string name="nautical_ais_details_range_bearing">Range / Bearing: %1$s</string>
@@ -493,7 +513,6 @@
     <string name="nautical_log_map_label">LOG</string>
     <string name="nautical_log_prefix">Log: %s</string>
     <string name="nautical_log_entry_generic">Log Entry</string>
-
     <string name="nautical_unlocking_hint">Hold to unlock...</string>
     <string name="nautical_tactics_prompt">TACTIC: %s NOW!</string>
     <string name="nautical_tactics_desc">Tactical sailing prompt</string>
@@ -510,7 +529,6 @@
     <string name="grib_import_error">Failed to import GRIB file</string>
     <string name="grib_isobar_step">Isobar Step (hPa)</string>
     <string name="grib_wave_direction_to">Wave Direction \"To\"</string>
-
     <string name="nautical_warn_anchor_dragging">Warning: Anchor may be dragging!</string>
     <string name="nautical_warn_anchor_dragging_msg">Anchor dragging detected by distance threshold!</string>
     <string name="nautical_show_laylines_here">Show Laylines to Here</string>
@@ -543,7 +561,6 @@
     <string name="nautical_touch_lock_active_full">%1$s\n%2$s</string>
     <string name="nautical_error_signal_lost">Signal Lost. Check GPS.</string>
     <string name="nautical_touch_lock_emergency_unlock">Hold for 3s to Emergency Unlock</string>
-
     <string name="nautical_shunting_maneuver_active">Shunting Maneuver Active</string>
     <string name="nautical_shunting_starting">Shunting maneuver starting.</string>
     <string name="nautical_shunt_completed">Shunting completed. Reverse course confirmed.</string>
@@ -604,13 +621,11 @@
     <string name="nautical_anchoring_settling">Rode Out - Settling Vessel...</string>
     <string name="nautical_anchoring_paying_out">Paying out: %1$.1f m / %2$.1f m</string>
     <string name="nautical_anchoring_set">Vessel Settled - Anchor Set</string>
-
     <string name="nautical_layline_reached_gybe">Layline reached. Ready to gybe.</string>
     <string name="nautical_layline_reached_tack">Layline reached. Ready to tack.</string>
     <string name="nautical_tacking_approaching_wind">Tacking: Approaching Wind</string>
     <string name="nautical_tacking_prepare">Tacking. Prepare to tack.</string>
     <string name="nautical_sheet_release">Sheet Release!</string>
-
     <string name="nautical_new_checklist">New Checklist</string>
     <string name="nautical_checklist_name">Checklist Name</string>
     <string name="nautical_add_item">Add Item</string>
@@ -687,9 +702,6 @@
     <string name="nautical_gpx_start">Start</string>
     <string name="nautical_gpx_wpt_prefix">WPT</string>
     <string name="nautical_sar_pattern_name">SAR Pattern</string>
-
-
-
     <string name="nautical_vessel_flag_port">Flag/Port</string>
     <string name="nautical_vessel_callsign">Callsign</string>
     <string name="nautical_vessel_mmsi_label">MMSI</string>
@@ -900,6 +912,9 @@
     <string name="nautical_mute_target_alarms">Mute Target Alarms</string>
     <string name="nautical_stop_calibration">Stop</string>
     <string name="nautical_pypilot_profile">Profile</string>
+    <string name="nautical_chart_rudder_sim">Rudder (sim)</string>
+    <string name="nautical_chart_heading_sim">Heading (sim)</string>
+    <string name="nautical_pypilot_profile_hint">Profile name (exact, as configured in pypilot)</string>
     <string name="nautical_windlass_control">Anchor Windlass (Hold to Actuate)</string>
     <string name="nautical_windlass_up">UP (Retrieve)</string>
     <string name="nautical_windlass_down">DOWN (Drop)</string>
@@ -1093,6 +1108,10 @@
     <string name="nautical_s63_import_summary_fmt">Imported %1$d valid permits, %2$d expired, %3$d errors</string>
     <string name="nautical_s63_errors_fmt">%1$d permit lines failed checksum/formatting</string>
     <string name="nautical_depth_profile_title">FORWARD DEPTH PROFILE (1.0 NM)</string>
+    <string name="nautical_depth_profile_summary_fmt">1.0 NM depth profile | Min clearance: %1$s (tap to expand)</string>
+    <string name="nautical_depth_profile_min_clearance_fmt">Min clearance: %1$s</string>
+    <string name="nautical_hazard_overhead_fmt">Overhead clearance warning: mast deficit %1$.1f m%2$s</string>
+    <string name="nautical_hazard_thermal_sag"> (thermal sag applied)</string>
     <string name="nautical_pp_section_title">Waypoint Sequence &amp; Nav Legs</string>
     <string name="nautical_pp_empty_hint">No active passage plan calculated. Generate an optimal weather route first.</string>
     <string name="nautical_polar_samples_placeholder">0 samples recorded</string>
@@ -1149,7 +1168,6 @@
     <string name="nautical_route_action_load">Load Route</string>
     <string name="nautical_route_action_update">Update with Active</string>
     <string name="nautical_route_action_delete">Delete from Server</string>
-
     <string name="nautical_ais_mob_banner_default">AIS-MOB ACTIVATED: Bearing 045° / Distance 0.8 NM</string>
     <string name="nautical_ais_set_sar_course">SET DIRECT SAR COURSE</string>
     <string name="nautical_ais_forward_horizon">Forward Horizon: Real-time (T +0m)</string>
@@ -1324,6 +1342,9 @@
     <string name="navtex_only_urgent">Only Urgent Messages</string>
     <string name="navtex_subject_filter">Subject Filter</string>
     <string name="navtex_max_distance">Max Message Distance</string>
+    <string name="navtex_filter_reset_all">Reset All</string>
+    <string name="navtex_filter_clear_subject">Clear Filter</string>
+    <string name="navtex_distance_any">Any</string>
     <string name="nautical_bt_device_address">Bluetooth Device Address (MAC)</string>
     <string name="nautical_usb_device_name">USB Device Name</string>
     <string name="nautical_nmea_baud_rate">NMEA Baud Rate</string>
@@ -1514,7 +1535,6 @@
 	<string name="nautical_heading_data_stale_fallback">NMEA Heading stale. Falling back to internal compass.</string>
 	<string name="nautical_anchoring_at_depth_localized">Anchoring at %1$s %2$s.</string>
 	<string name="nautical_anchoring_at_depth">Anchoring at %1$d meters.</string>
-
 	<string name="nautical_mob_target_bearing">Target %1$d meters, bearing %2$d degrees</string>
 	<string name="nautical_s63_error_prefix">Error: %1$s</string>
 	<string name="nautical_bearing">Bearing</string>
@@ -1539,7 +1559,6 @@
 	<string name="nautical_error_no_gps">Action blocked: No GPS position available.</string>
 	<string name="nautical_error_stale_wind">Tack blocked: Stale wind data.</string>
 	<string name="nautical_unit_amp">A</string>
-
 	<string name="nautical_server_settings">Signal K Connection</string>
 	<string name="nautical_safety_settings">Vessel Safety &amp; Boundaries</string>
 	<string name="nautical_display_settings">Map Display &amp; Projections</string>
@@ -1566,7 +1585,6 @@
 	<string name="s63_config_imported">Credentials imported from config.json</string>
 	<string name="s63_import_charts">Import Chart Files (.000, .enc, .031)</string>
 	<string name="s63_charts_imported">Imported %1$d chart files</string>
-
 	<string name="nautical_error_no_wind_data">Cannot switch to Wind mode: No wind data available.</string>
 	<string name="nautical_error_no_route">Cannot switch to Track mode: No active route.</string>
 	<string name="navtex_layer_name">Maritime Safety Broadcasts (NAVTEX)</string>
@@ -1599,7 +1617,6 @@
 	<string name="nautical_replay_speed_1x">1x</string>
 	<string name="nautical_replay_speed_2x">2x</string>
 	<string name="nautical_replay_speed_5x">5x</string>
-
 	<string name="tide_import_title">Harmonic Data Management</string>
 	<string name="tide_import_btn">Import Harmonic Data File</string>
 	<string name="tide_import_success">Successfully imported harmonic stations.</string>
@@ -1824,7 +1841,6 @@
 	<string name="nautical_battery_current">BATT CURR</string>
 	<string name="nautical_solar_current">SOLAR CURR</string>
 	<string name="nautical_engine_runtime">ENG HOURS</string>
-
 	<string name="nautical_vessel_type">Vessel Type</string>
 	<string name="nautical_vessel_conventional">Conventional</string>
 	<string name="nautical_vessel_proa">Proa</string>
@@ -1871,7 +1887,6 @@
 	<string name="nautical_connection_disconnected">DISCONNECTED</string>
 	<string name="nautical_receive_in_background">Keep SignalK connection active</string>
 	<string name="nautical_receive_in_background_description">Keep SignalK connection alive when the screen is off. CRITICAL for Anchor Watch and real-time hazard alerts.</string>
-
 	<string name="nautical_show_laylines">Show Laylines</string>
 	<string name="nautical_show_wind_shifts">Show Wind Shifts</string>
 	<string name="nautical_show_trajectory">Show Trajectory</string>
@@ -1879,9 +1894,7 @@
 	<string name="nautical_trajectory_exported">Trajectory exported to %1$s</string>
 	<string name="nautical_no_trajectory_data">No trajectory data available</string>
 	<string name="nautical_export_trajectory_failed">Failed to export trajectory</string>
-
 	<string name="nautical_new_heading">New heading: %1$d°</string>
-
 	<string name="nautical_toggle_night_vision">Toggle Night Vision</string>
 	<string name="nautical_night_vision">Night Vision (Red Filter)</string>
 	<string name="nautical_night_vision_desc">Apply red filter to the entire screen for better night vision</string>
@@ -1889,9 +1902,7 @@
 	<string name="nautical_select_track">Select Track</string>
 	<string name="nautical_no_tracks_found">No tracks found.</string>
 	<string name="nautical_loaded_points">Loaded %1$d points</string>
-
 	<string name="nautical_xte_threshold_desc">Threshold for Off Course alarm (NM)</string>
-
 	<string name="nautical_no_data">No data</string>
 	<string name="nautical_active_mode">Active Mode: %1$s</string>
 	<string name="nautical_status_off">OFF</string>
@@ -1902,10 +1913,8 @@
 	<string name="nautical_emergency_stop_executed">Emergency Stop Executed</string>
 	<string name="nautical_error_emergency_stop_not_implemented">Emergency stop not implemented</string>
 	<string name="nautical_autopilot_not_connected">Autopilot not connected: check settings</string>
-
 	<string name="nautical_use_standard_units">Nautical standard units</string>
 	<string name="nautical_use_standard_units_desc">Force knots and nautical miles regardless of locale settings</string>
-
 	<string name="nautical_pilot_title">Nautical Pilot</string>
 	<string name="nautical_mode_compass">COMPASS</string>
 	<string name="nautical_mode_wind">WIND</string>
@@ -1938,11 +1947,9 @@
 	<string name="nautical_error">Error</string>
 	<string name="nautical_compass_calibration_timeout">Calibration timed out. Please check connection and try again.</string>
 	<string name="nautical_compass_calibration_failed">Calibration failed on server. Ensure conditions are met.</string>
-
 	<string name="nautical_data_telemetry">Data Telemetry</string>
 	<string name="nautical_confirm_tactical_move">Confirm Tactical Move?</string>
 	<string name="nautical_confirm">CONFIRM</string>
-
 	    <string name="nautical_widget_vmg_label">Live VMG</string>
 	<string name="nautical_vmg_desc">Velocity Made Good</string>
 	<string name="nautical_widget_cog_label">COG</string>
@@ -1951,7 +1958,6 @@
 	<string name="nautical_depth_desc">Depth below transducer</string>
 	<string name="nautical_widget_wind_label">Wind</string>
 	<string name="nautical_wind_desc">True wind speed</string>
-
 	<string name="nautical_heading_magnetic_desc">Magnetic heading</string>
 	<string name="nautical_log_desc">Cumulative distance (Odometer)</string>
 	<string name="nautical_trip_log_desc">Trip distance</string>
@@ -1985,9 +1991,7 @@
 	<string name="nautical_battery_current_desc">Battery charge/discharge current</string>
 	<string name="nautical_solar_current_desc">Solar panel charge current</string>
 	<string name="nautical_engine_runtime_desc">Total engine hours</string>
-
 	<string name="nautical_history_title_pattern">%1$s History</string>
-
 	<string name="nautical_unit_nm">NM</string>
 	<string name="nautical_unit_knots">kn</string>
 	<string name="nautical_unit_meters">m</string>
@@ -2004,15 +2008,12 @@
 	<string name="nautical_unit_apparent_short">A</string>
 	<string name="nautical_unit_hour_short">h</string>
 	<string name="nautical_unit_min_short">min</string>
-
-
 	<string name="nautical_toast_heading_sent">Heading sent to autopilot</string>
 	<string name="nautical_toast_stopped">Autopilot stopped</string>
 	<string name="nautical_toast_conn_failed">Autopilot: Connection failed</string>
 	<string name="nautical_toast_server_error">Autopilot: Server error %1$d</string>
 	<string name="nautical_toast_mode_changed">Autopilot mode updated</string>
 	<string name="nautical_password_mask">********</string>
-
 	<string name="shared_string_nautical_depth">Depth</string>
 	<string name="shared_string_nautical_depth_desc">Displays depth below transducer</string>
 	<string name="shared_string_nautical_wind">Wind</string>
@@ -2681,14 +2682,12 @@
     <string name="obd_fuel_consumption_rate_sensor">Fuel consumption rate (sensor)</string>
     <string name="obd_fuel_consumption_rate_l_h_desc">Shows vehicle fuel consumption rate based on calculations (L/h)</string>
     <string name="obd_fuel_consumption_rate_sensor_desc">Shows vehicle fuel consumption rate based on sensor (L/h)</string>
-
     <string name="obd_fuel_level_liter">Fuel level (l)</string>
     <string name="obd_fuel_level_percent">Fuel level (%)</string>
     <string name="obd_fuel_left_km">Fuel left (km)</string>
     <string name="obd_fuel_consumption_rate_scanner">Fuel consumption rate (obd)</string>
     <string name="obd_fuel_consumption_rate_liter_hour">Fuel consumption rate</string>
     <string name="obd_fuel_consumption_rate_percent_hour">Fuel consumption rate %/h</string>
-
     <string name="route_guidance_desc">Provides real-time route guidance, including distance to the next turn, road name, current street name, and lane information. Widgets are active during navigation.</string>
 	<string name="route_guidance">Route guidance</string>
     <string name="obd_widget_vehicle_speed">Vehicle speed</string>
@@ -2852,7 +2851,6 @@ You will be able to pair this scanner again at any time.</string>
     <string name="rendering_attr_tidalFlatStyle_description">Style of tidal flats</string>
     <string name="rendering_attr_watercolor_name">Water color</string>
     <string name="rendering_attr_watercolor_description">Color of water</string>
-
     <string name="shared_string_obd">OBD</string>
     <string name="obd_widget_group">Vehicle Metrics</string>
     <string name="vehicle_metrics_plugin_settings">Vehicle Metrics settings</string>
@@ -2871,8 +2869,6 @@ You will be able to pair this scanner again at any time.</string>
     <string name="obd_fuel_consumption_rate_desc">Shows vehicle fuel consumption rate based on OBD an location</string>
     <string name="obd_fuel_left_liters">Fuel left (liters)</string>
     <string name="obd_fuel_type">Fuel type</string>
-
-
     <string name="obd_plugin_name">Vehicle Metrics</string>
     <string name="obd_plugin_description">Monitor key vehicle metrics using the OBD-II protocol. Access data including:\n
     • Engine speed, Engine Runtime, Calculated Engine Load \n
@@ -3067,7 +3063,6 @@ You will be able to pair this scanner again at any time.</string>
     <string name="visualized_by">Visualized by</string>
     <string name="wall_color">Wall color</string>
     <string name="track_line">Track line</string>
-
     <string name="fixed_height">Fixed height</string>
     <string name="downward_gradient">Downward gradient</string>
     <string name="upward_gradient">Upward gradient</string>
@@ -8658,4 +8653,5 @@ Download tile maps directly, or copy them as SQLite database files to OsmAnd\'s 
     <string name="nautical_sk_exported_description">Exported from OsmAnd Nautical</string>
     <string name="nautical_sk_updated_description">Updated from OsmAnd Nautical</string>
     <string name="nautical_crash_recovery_notes">CRASH RECOVERY: %1$s\n%2$s</string>
+    <string name="nautical_maneuver_no_wind">No live wind data — tack/gybe cannot be planned</string>
 </resources>

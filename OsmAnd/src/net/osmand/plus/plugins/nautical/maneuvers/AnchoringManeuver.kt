@@ -71,14 +71,22 @@ class AnchoringManeuver(app: OsmandApplication) : ManeuverEngine(app) {
             depthBelow, tideRise, freeboard, scopeRatio
         )
         
-        // GPS Bow Offset implementation
+        // GPS Bow Offset implementation: applies only with a real heading;
+        // with no heading known, the drop point is the GPS fix itself
+        // (previously the offset pushed the drop point due north).
         val lat = state.latitude ?: return
         val lon = state.longitude ?: return
-        val heading = state.headingTrue ?: 0.0
+        val heading = state.headingTrue
         val bowOffset = app.settings.NAUTICAL_ANCHOR_BOW_OFFSET.get().toDouble()
-        val dropPoint = net.osmand.plus.plugins.nautical.AnchorCalculator.calculateAnchorDrop(
-            lat, lon, Math.toDegrees(heading), bowOffset
-        )
+        val dropPoint = if (heading != null) {
+            net.osmand.plus.plugins.nautical.AnchorCalculator.calculateAnchorDrop(
+                lat, lon, Math.toDegrees(heading), bowOffset
+            )
+        } else {
+            net.osmand.plus.plugins.nautical.AnchorCalculator.calculateAnchorDrop(
+                lat, lon, 0.0, 0.0
+            )
+        }
         dropCoordinate = Pair(dropPoint.latitude, dropPoint.longitude)
         
         val (depthVal, depthUnit) = net.osmand.plus.plugins.nautical.engine.SignalKUnitConverter.formatValue(app, app.settings, depthBelow, "depth")

@@ -69,9 +69,16 @@ class PassagePlanBottomSheet : BaseNauticalBottomSheet() {
                     depthProfileView.setRouteData(result.legs, draft, margin)
 
                     val liveState = NauticalPlugin.engine?.getCurrentState()
-                    val twd = liveState?.windDirectionTrue ?: liveState?.windDirectionApparent ?: 0.0
-                    val (tacks, gybes) = NauticalWeatherRoutingEngine.countTacksAndGybes(result.legs, Math.toDegrees(twd))
-                    txtTacksGybes.text = getString(R.string.nautical_route_summary_tacks, tacks, gybes)
+                    val twd = liveState?.windDirectionTrue ?: liveState?.windDirectionApparent
+                    if (twd != null) {
+                        // Counted against real live wind only; without wind the
+                        // row would be a fabricated "wind from north" tally.
+                        val (tacks, gybes) = NauticalWeatherRoutingEngine.countTacksAndGybes(result.legs, Math.toDegrees(twd))
+                        txtTacksGybes.visibility = View.VISIBLE
+                        txtTacksGybes.text = getString(R.string.nautical_route_summary_tacks, tacks, gybes)
+                    } else {
+                        txtTacksGybes.visibility = View.GONE
+                    }
 
                     legAdapter.submitList(result.legs)
                     btnActivateAutopilot.isEnabled = true

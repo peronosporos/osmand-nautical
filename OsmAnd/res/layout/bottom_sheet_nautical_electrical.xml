@@ -66,7 +66,7 @@
                         android:id="@+id/txt_matrix_soc"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="92%"
+                        android:text="--%"
                         android:textSize="16sp"
                         android:textStyle="bold"
                         android:textColor="?attr/colorAccent" />
@@ -93,7 +93,7 @@
                         android:id="@+id/txt_matrix_net_flow"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="+4.5 A"
+                        android:text="-- A"
                         android:textSize="16sp"
                         android:textStyle="bold"
                         android:textColor="?attr/colorAccent" />
@@ -113,14 +113,14 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="@string/nautical_solar_input"
+                        android:text="@string/nautical_charging_power"
                         android:textSize="11sp"
                         android:textColor="?android:attr/textColorSecondary" />
                     <TextView
-                        android:id="@+id/txt_matrix_solar"
+                        android:id="@+id/txt_matrix_charge"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="180 W"
+                        android:text="-- W"
                         android:textSize="16sp"
                         android:textStyle="bold"
                         android:textColor="?attr/colorAccent" />
@@ -150,7 +150,7 @@
                     android:id="@+id/txt_autonomy_title"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="@string/nautical_autonomy_estimate_default"
+                    android:text="@string/nautical_autonomy_waiting"
                     android:textSize="14sp"
                     android:textStyle="bold"
                     android:textColor="?attr/colorAccent" />
@@ -160,7 +160,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="4dp"
-                    android:text="@string/nautical_battery_ttd_details"
+                    android:text="@string/nautical_autonomy_no_telemetry_hint"
                     android:textSize="11sp"
                     android:textColor="?android:attr/textColorSecondary" />
             </LinearLayout>
@@ -186,10 +186,11 @@
 
         <!-- Batteries Section -->
         <TextView
+            android:id="@+id/txt_batteries_label"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="20dp"
-            android:text="@string/nautical_battery_volt"
+            android:text="@string/nautical_batteries_section"
             android:textAppearance="@style/TextAppearance.AppCompat.Medium"
             android:textColor="?attr/colorAccent"
             android:textStyle="bold" />
@@ -241,6 +242,7 @@
 
         <!-- Tanks Section -->
         <TextView
+            android:id="@+id/txt_tanks_label"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="24dp"

@@ -85,118 +85,97 @@ class NauticalElectricalDashboardBottomSheet : BaseNauticalBottomSheet() {
             val engine = NauticalPlugin.engine
             val caps = engine?.capabilityManager?.capabilities?.value
             engine?.marineStateFlow?.collectLatest { state ->
-                // 1. Power Matrix Updates
+                // 1. Power Matrix Updates — honest values only, "--" when telemetry is absent.
                 val houseBattery = state.batteries.values.find { (it.name ?: "").contains("house", ignoreCase = true) || it.instance == "0" }
                     ?: state.batteries.values.firstOrNull()
-                val houseSocPct = (houseBattery?.stateOfCharge?.let { it * 100.0 } ?: 92.0).toInt()
-                val netCurrent = state.batteries.values.sumOf { it.current ?: 0.0 }
-                val solarWatts = state.chargers.values.sumOf { (it.voltage ?: 13.6) * (it.current ?: 0.0) }
+                val houseSocPct = houseBattery?.stateOfCharge?.let { (it * 100.0).toInt().coerceIn(0, 100) }
+                // Net current: only meaningful when at least one battery reports.
+                val netCurrent: Double? = if (state.batteries.isNotEmpty()) state.batteries.values.sumOf { it.current ?: 0.0 } else null
+                // Charging power: sum of ALL chargers (solar + shore + alternator/chargers), not just solar.
+                val chargingWatts: Double? = if (state.chargers.isNotEmpty()) state.chargers.values.sumOf { (it.voltage ?: 0.0) * (it.current ?: 0.0) } else null
 
                 val txtSoc = customView.findViewById<TextView>(R.id.txt_matrix_soc)
                 val txtNetFlow = customView.findViewById<TextView>(R.id.txt_matrix_net_flow)
-                val txtSolar = customView.findViewById<TextView>(R.id.txt_matrix_solar)
+                val txtCharge = customView.findViewById<TextView>(R.id.txt_matrix_charge)
 
-                txtSoc?.text = String.format(Locale.US, "%d%%", houseSocPct)
-                txtNetFlow?.text = String.format(Locale.US, "%+.1f A", if (netCurrent != 0.0) netCurrent else (houseBattery?.current ?: 4.5))
-                txtSolar?.text = String.format(Locale.US, "%.0f W", if (solarWatts > 0.0) solarWatts else 180.0)
+                txtSoc?.text = houseSocPct?.let { String.format(Locale.US, "%d%%", it) } ?: "--%"
+                txtNetFlow?.text = netCurrent?.let { String.format(Locale.US, "%+.1f A", it) } ?: "-- A"
+                txtCharge?.text = chargingWatts?.let { String.format(Locale.US, "%.0f W", it) } ?: "-- W"
 
-                // Autonomy & Solar Yield Forecaster
+                // Autonomy Forecaster — honest only: prefers the server-computed
+                // timeRemaining; invented capacity/current defaults removed.
                 val cardAutonomy = customView.findViewById<com.google.android.material.card.MaterialCardView>(R.id.card_autonomy_forecaster)
                 val txtAutonomyTitle = customView.findViewById<TextView>(R.id.txt_autonomy_title)
                 val txtAutonomyDetails = customView.findViewById<TextView>(R.id.txt_autonomy_details)
 
-                val bName = (houseBattery?.name ?: "").lowercase(Locale.US)
-                val isLithium = bName.contains("lithium") || bName.contains("lifepo4") || bName.contains("lfp")
-                val cutOffSoc = if (isLithium) 0.20 else 0.50
-                val nominalCapacityAh = 200.0 // 200 Ah nominal
-                val currentSoc = houseBattery?.stateOfCharge ?: 0.92
-                val usableAh = ((currentSoc - cutOffSoc).coerceAtLeast(0.0)) * nominalCapacityAh
+                val ttdHours = houseBattery?.timeRemaining?.let { it / 3600.0 }
+                txtAutonomyTitle?.text = when {
+                    ttdHours != null && ttdHours > 0.0 ->
+                        getString(R.string.nautical_autonomy_hrs_fmt, String.format(Locale.US, "%.1f", ttdHours))
+                    netCurrent != null && netCurrent >= 0.0 ->
+                        getString(R.string.nautical_autonomy_charging_fmt, String.format(Locale.US, "%+.1f", netCurrent))
+                    netCurrent != null ->
+                        getString(R.string.nautical_autonomy_discharging_fmt, String.format(Locale.US, "%.1f", kotlin.math.abs(netCurrent)))
+                    else -> getString(R.string.nautical_autonomy_waiting)
+                }
 
-                val totalNetAmps = if (netCurrent != 0.0) netCurrent else (houseBattery?.current ?: -4.5)
-                val activeSolarW = if (solarWatts > 0.0) solarWatts else 180.0
-
-                if (totalNetAmps >= 0.0) {
-                    txtAutonomyTitle?.text = String.format(Locale.US, "Autonomy: 100%%+ (Net Charging %+.1f A)", totalNetAmps)
-                    txtAutonomyDetails?.text = String.format(Locale.US, "Solar: %.0f W | Usable: %.0f Ah to %.0f%% cut-off", activeSolarW, usableAh, cutOffSoc * 100.0)
+                if (houseSocPct == null || netCurrent == null) {
+                    // No battery telemetry: disclose it instead of inventing figures.
+                    txtAutonomyDetails?.text = getString(R.string.nautical_autonomy_no_telemetry_hint)
                 } else {
-                    val dischargeRate = kotlin.math.abs(totalNetAmps)
-                    val ttdHours = usableAh / dischargeRate
-                    txtAutonomyTitle?.text = String.format(Locale.US, "Autonomy: %.1fh at current load", ttdHours)
-                    txtAutonomyDetails?.text = String.format(Locale.US, "TTD to %.0f%% cut-off | Rate: -%.1f Ah/h | Solar: %.0f W", cutOffSoc * 100.0, dischargeRate, activeSolarW)
+                    val chargeW = chargingWatts?.let { String.format(Locale.US, "%.0f W", it) } ?: "-- W"
+                    txtAutonomyDetails?.text = getString(R.string.nautical_autonomy_details_fmt, houseSocPct, String.format(Locale.US, "%+.1f", netCurrent), chargeW)
                 }
 
                 if (isNightVision) {
                     txtSoc?.setTextColor(0xFFFF1744.toInt())
                     txtNetFlow?.setTextColor(0xFFFF8A80.toInt())
-                    txtSolar?.setTextColor(0xFFFF8A80.toInt())
+                    txtCharge?.setTextColor(0xFFFF8A80.toInt())
                     cardAutonomy?.setCardBackgroundColor(0xEE120000.toInt())
                     cardAutonomy?.strokeColor = 0xFFFF1744.toInt()
                     txtAutonomyTitle?.setTextColor(0xFFFF1744.toInt())
                     txtAutonomyDetails?.setTextColor(0xFFFF8A80.toInt())
                 }
 
-                // 2. Engines & Mechanical
-                val engines = if (state.engines.isNotEmpty()) {
-                    state.engines.values.toList()
-                } else {
-                    listOf(
-                        Engine(instance = "0", revolutions = 30.0, coolantTemperature = 353.15, oilPressure = 350000.0, alternatorVoltage = 14.2),
-                        Engine(instance = "1", revolutions = 30.0, coolantTemperature = 351.15, oilPressure = 345000.0, alternatorVoltage = 14.1)
-                    )
-                }
+                // 2. Engines & Mechanical — live data only; the old code rendered
+                // two INVENTED engines (30 RPM, fake oil pressure) when none reported.
+                val engines = state.engines.values.toList()
                 engineAdapter.submitList(engines)
+                customView.findViewById<View>(R.id.txt_engines_label)?.visibility = if (engines.isEmpty()) View.GONE else View.VISIBLE
+                customView.findViewById<View>(R.id.rv_engines)?.visibility = if (engines.isEmpty()) View.GONE else View.VISIBLE
 
-                // 3. Batteries
-                val batteries = if (state.batteries.isNotEmpty()) {
-                    state.batteries.values.toList()
-                } else {
-                    listOf(
-                        Battery(instance = "0", name = "House Bank", voltage = 13.2, current = 4.5, stateOfCharge = 0.92),
-                        Battery(instance = "1", name = "Starter Bank", voltage = 12.8, current = 0.0, stateOfCharge = 0.98)
-                    )
-                }
+                // 3. Batteries — live data only (previously invented "House Bank 92%").
+                val batteries = state.batteries.values.toList()
                 batteryAdapter.submitList(batteries)
+                customView.findViewById<View>(R.id.txt_batteries_label)?.visibility = if (batteries.isEmpty()) View.GONE else View.VISIBLE
+                customView.findViewById<View>(R.id.rv_batteries)?.visibility = if (batteries.isEmpty()) View.GONE else View.VISIBLE
 
-                // 4. Tanks
-                val tanks = if (state.tanks.isNotEmpty()) {
-                    state.tanks.values.toList()
-                } else {
-                    listOf(
-                        Tank(instance = "0", type = "fuel", name = "Fuel Tank", currentLevel = 0.78, capacity = 250.0),
-                        Tank(instance = "0", type = "freshWater", name = "Fresh Water", currentLevel = 0.85, capacity = 400.0),
-                        Tank(instance = "0", type = "blackWater", name = "Holding Tank", currentLevel = 0.32, capacity = 120.0)
-                    )
-                }
+                // 4. Tanks — live data only (previously invented 78% fuel etc.).
+                val tanks = state.tanks.values.toList()
                 tankAdapter.submitList(tanks)
+                customView.findViewById<View>(R.id.txt_tanks_label)?.visibility = if (tanks.isEmpty()) View.GONE else View.VISIBLE
+                customView.findViewById<View>(R.id.rv_tanks)?.visibility = if (tanks.isEmpty()) View.GONE else View.VISIBLE
                 
                 val conversionItems = mutableListOf<ConversionItem>()
-                if (state.chargers.isNotEmpty() || state.inverters.isNotEmpty()) {
-                    state.chargers.forEach { (_, charger) -> conversionItems.add(ConversionItem.ChargerItem(charger)) }
-                    state.inverters.forEach { (_, inverter) -> conversionItems.add(ConversionItem.InverterItem(inverter)) }
-                } else {
-                    conversionItems.add(ConversionItem.ChargerItem(Charger(instance = "0", name = "Solar / Shore Charger", state = "Standby", mode = "Float", voltage = 13.6, current = 12.5)))
-                    conversionItems.add(ConversionItem.InverterItem(Inverter(instance = "0", name = "AC Inverter 230V", state = "Enabled", acVoltage = 230.0, acCurrent = 1.2)))
-                }
+                state.chargers.forEach { (_, charger) -> conversionItems.add(ConversionItem.ChargerItem(charger)) }
+                state.inverters.forEach { (_, inverter) -> conversionItems.add(ConversionItem.InverterItem(inverter)) }
                 conversionAdapter.submitList(conversionItems)
                 
-                customView.findViewById<View>(R.id.txt_conversion_label)?.visibility = View.VISIBLE
+                customView.findViewById<View>(R.id.txt_conversion_label)?.visibility = if (conversionItems.isEmpty()) View.GONE else View.VISIBLE
+                customView.findViewById<View>(R.id.rv_conversion)?.visibility = if (conversionItems.isEmpty()) View.GONE else View.VISIBLE
 
                 val watermakerItems = state.watermakers.values.toList()
                 watermakerAdapter.submitList(watermakerItems)
                 customView.findViewById<View>(R.id.txt_watermaker_label)?.visibility = if (watermakerItems.isEmpty()) View.GONE else View.VISIBLE
                 customView.findViewById<View>(R.id.rv_watermakers)?.visibility = if (watermakerItems.isEmpty()) View.GONE else View.VISIBLE
 
-                val switches = if (state.switches.isNotEmpty()) {
-                    state.switches.asSequence().map { it.toPair() }.sortedBy { it.first }.toList()
-                } else {
-                    listOf(
-                        "electrical.switches.navigation_lights" to true,
-                        "electrical.switches.anchor_light" to false,
-                        "electrical.switches.bilge_pump" to false,
-                        "electrical.switches.cabin_lights" to true
-                    )
-                }
+                // Switches — live data only; the old code fabricated four switches
+                // (nav lights ON, bilge pump OFF...) when none were discovered.
+                val switches = state.switches.asSequence().map { it.toPair() }.sortedBy { it.first }.toList()
                 switchAdapter.updateData(switches, state.timestamps, state.pathMeta, state.dimmers)
+                customView.findViewById<View>(R.id.rv_switches)?.visibility = if (switches.isEmpty()) View.GONE else View.VISIBLE
+                // Empty-state disclosure instead of invented devices.
+                customView.findViewById<View>(R.id.txt_empty_switches)?.visibility = if (switches.isEmpty()) View.VISIBLE else View.GONE
                 
                 val showWindlass = caps?.hasWindlassControl == true
                 customView.findViewById<View>(R.id.txt_windlass_label)?.visibility = if (showWindlass) View.VISIBLE else View.GONE
@@ -204,8 +183,6 @@ class NauticalElectricalDashboardBottomSheet : BaseNauticalBottomSheet() {
                 if (showWindlass) {
                     windlassAdapter.updateState(state.isEngineRunning, state.rodeDeployed)
                 }
-
-                customView.findViewById<View>(R.id.txt_empty_switches)?.visibility = View.GONE
             }
         }
 
@@ -240,18 +217,24 @@ class NauticalElectricalDashboardBottomSheet : BaseNauticalBottomSheet() {
             txtName.text = engineName
             txtType?.text = ctxt.getString(R.string.nautical_engine_propulsion)
 
-            val rpm = (engine.revolutions ?: 0.0) * 60.0
-            txtVolt.text = ctxt.getString(R.string.nautical_engine_rpm_fmt, rpm.toInt())
+            // Honest engine readouts: show "--" instead of invented values.
+            val rpm = engine.revolutions?.let { it * 60.0 }
+            txtVolt.text = if (rpm != null) ctxt.getString(R.string.nautical_engine_rpm_fmt, rpm.toInt()) else "--"
 
-            val tempC = engine.coolantTemperature?.let { if (it > 150) it - 273.15 else it } ?: 80.0
-            txtSoc.text = String.format(Locale.US, "%.0f°C", tempC)
-            pbSoc?.progress = ((tempC / 120.0) * 100).toInt().coerceIn(0, 100)
+            val tempC = engine.coolantTemperature?.let { if (it > 150) it - 273.15 else it }
+            if (tempC != null) {
+                txtSoc.text = String.format(Locale.US, "%.0f°C", tempC)
+                pbSoc?.progress = ((tempC / 120.0) * 100).toInt().coerceIn(0, 100)
+            } else {
+                txtSoc.text = "--"
+                pbSoc?.progress = 0
+            }
 
-            val bar = (engine.oilPressure ?: 350000.0) / 100000.0
-            txtCurrent.text = ctxt.getString(R.string.nautical_engine_oil_fmt, String.format(Locale.US, "%.1f", bar))
+            val bar = engine.oilPressure?.let { it / 100000.0 }
+            txtCurrent.text = if (bar != null) ctxt.getString(R.string.nautical_engine_oil_fmt, String.format(Locale.US, "%.1f", bar)) else "--"
 
-            val altV = engine.alternatorVoltage ?: 14.2
-            txtEta?.text = ctxt.getString(R.string.nautical_engine_alt_fmt, String.format(Locale.US, "%.1f", altV))
+            val altV = engine.alternatorVoltage
+            txtEta?.text = if (altV != null) ctxt.getString(R.string.nautical_engine_alt_fmt, String.format(Locale.US, "%.1f", altV)) else "--"
 
             val app = itemView.context.applicationContext as? net.osmand.plus.OsmandApplication
             val isNightVision = app?.let { NauticalPlugin.isNightVision(it) } ?: false
@@ -289,16 +272,19 @@ class NauticalElectricalDashboardBottomSheet : BaseNauticalBottomSheet() {
         private val txtCurrent: TextView = view.findViewById(R.id.txt_battery_current)
         private val txtEta: TextView? = view.findViewById(R.id.txt_battery_eta)
         private val cellText: TextView? = view.findViewById(R.id.txt_battery_cells)
+        // Palette reset targets: holder reuse must never keep a stale alarm colour.
+        private val socDefaultColor: Int = txtSoc.currentTextColor
 
         fun bind(battery: Battery) {
-            val rawName = battery.name ?: "Battery ${battery.instance}"
+            val ctxt = itemView.context
+            val rawName = battery.name ?: ctxt.getString(R.string.nautical_battery_instance_fmt, battery.instance)
             val lowerName = rawName.lowercase(Locale.US)
             val bankType = when {
-                lowerName.contains("house") || lowerName.contains("service") || battery.instance == "0" -> "HOUSE"
-                lowerName.contains("starter") || lowerName.contains("engine") || battery.instance == "1" -> "STARTER"
-                lowerName.contains("thruster") || lowerName.contains("bow") -> "THRUSTER"
-                lowerName.contains("gen") -> "GENERATOR"
-                else -> "AUX"
+                lowerName.contains("house") || lowerName.contains("service") || battery.instance == "0" -> ctxt.getString(R.string.nautical_battery_house)
+                lowerName.contains("starter") || lowerName.contains("engine") || battery.instance == "1" -> ctxt.getString(R.string.nautical_battery_starter)
+                lowerName.contains("thruster") || lowerName.contains("bow") -> ctxt.getString(R.string.nautical_battery_thruster)
+                lowerName.contains("gen") -> ctxt.getString(R.string.nautical_battery_generator)
+                else -> ctxt.getString(R.string.nautical_battery_aux)
             }
 
             txtName.text = rawName
@@ -321,7 +307,10 @@ class NauticalElectricalDashboardBottomSheet : BaseNauticalBottomSheet() {
                 pbSoc?.progressTintList = android.content.res.ColorStateList.valueOf(color)
             } else {
                 txtSoc.text = "--%"
-                pbSoc?.progress = 50
+                // Reset the tint state left by a previously bound battery.
+                txtSoc.setTextColor(socDefaultColor)
+                pbSoc?.progressTintList = null
+                pbSoc?.progress = 0
             }
 
             val current = battery.current
@@ -334,11 +323,11 @@ class NauticalElectricalDashboardBottomSheet : BaseNauticalBottomSheet() {
             val ttf = battery.timeToFull
             val ttr = battery.timeRemaining
             val etaStr = when {
-                ttf != null && ttf > 0 -> "Full in ${formatDuration(ttf)}"
-                ttr != null && ttr > 0 -> "Empty in ${formatDuration(ttr)}"
-                current != null && current > 0.5 -> "Charging"
-                current != null && current < -0.5 -> "Discharging"
-                else -> "Standby"
+                ttf != null && ttf > 0 -> ctxt.getString(R.string.nautical_battery_full_in_fmt, formatDuration(ttf))
+                ttr != null && ttr > 0 -> ctxt.getString(R.string.nautical_battery_empty_in_fmt, formatDuration(ttr))
+                current != null && current > 0.5 -> ctxt.getString(R.string.nautical_status_charging)
+                current != null && current < -0.5 -> ctxt.getString(R.string.nautical_status_discharging)
+                else -> ctxt.getString(R.string.nautical_status_standby)
             }
             txtEta?.text = etaStr
 
@@ -387,11 +376,15 @@ class NauticalElectricalDashboardBottomSheet : BaseNauticalBottomSheet() {
         private val txtName: TextView = view.findViewById(R.id.txt_tank_name)
         private val txtPercent: TextView = view.findViewById(R.id.txt_tank_percent)
         private val pbLevel: ProgressBar = view.findViewById(R.id.pb_tank_level)
+        // Reset target so a holder reused from a warning tank doesn't stay red.
+        private val percentDefaultColor: Int = txtPercent.currentTextColor
 
         fun bind(tank: Tank) {
+            val ctxt = itemView.context
             txtName.text = tank.name ?: formatTankDisplayName(tank.type, tank.instance)
-            val level = tank.currentLevel ?: 0.0
-            val percent = (level * 100.0).coerceIn(0.0, 100.0)
+            // Unknown level shows "--", never an invented 0%.
+            val level = tank.currentLevel
+            val percent = level?.let { (it * 100.0).coerceIn(0.0, 100.0) }
 
             val capLiters = if (tank.capacity != null && tank.capacity > 0.0) {
                 if (tank.capacity < 1.0) tank.capacity * 1000.0 else tank.capacity
@@ -399,22 +392,23 @@ class NauticalElectricalDashboardBottomSheet : BaseNauticalBottomSheet() {
 
             val curVolLiters = if (tank.currentVolume != null && tank.currentVolume > 0.0) {
                 if (tank.currentVolume < 1.0) tank.currentVolume * 1000.0 else tank.currentVolume
-            } else if (capLiters != null && tank.currentLevel != null) {
+            } else if (capLiters != null && level != null) {
                 capLiters * level
             } else null
 
             val isFuel = tank.type.lowercase(Locale.US).contains("fuel")
             val isWaste = tank.type.lowercase(Locale.US).let { it.contains("black") || it.contains("waste") || it.contains("holding") }
-            val isLowFuelWarning = isFuel && percent < 15.0
-            val isHighWasteWarning = isWaste && percent > 85.0
+            val isLowFuelWarning = isFuel && percent != null && percent < 15.0
+            val isHighWasteWarning = isWaste && percent != null && percent > 85.0
 
             val warningSuffix = when {
-                isLowFuelWarning -> " ⚠ LOW"
-                isHighWasteWarning -> " ⚠ FULL"
+                isLowFuelWarning -> ctxt.getString(R.string.nautical_tank_low_suffix)
+                isHighWasteWarning -> ctxt.getString(R.string.nautical_tank_full_suffix)
                 else -> ""
             }
 
             txtPercent.text = when {
+                percent == null -> "--"
                 curVolLiters != null && capLiters != null -> String.format(Locale.US, "%.0f%% (%.0f / %.0f L)%s", percent, curVolLiters, capLiters, warningSuffix)
                 capLiters != null -> String.format(Locale.US, "%.0f%% (%.0f L)%s", percent, capLiters, warningSuffix)
                 else -> String.format(Locale.US, "%.0f%%%s", percent, warningSuffix)
@@ -422,9 +416,11 @@ class NauticalElectricalDashboardBottomSheet : BaseNauticalBottomSheet() {
 
             if (isLowFuelWarning || isHighWasteWarning) {
                 txtPercent.setTextColor(0xFFFF1744.toInt())
+            } else {
+                txtPercent.setTextColor(percentDefaultColor)
             }
 
-            pbLevel.progress = percent.toInt()
+            pbLevel.progress = percent?.toInt() ?: 0
 
             val colorRes = when {
                 isLowFuelWarning || isHighWasteWarning -> R.color.nautical_status_red
@@ -448,20 +444,21 @@ class NauticalElectricalDashboardBottomSheet : BaseNauticalBottomSheet() {
         }
 
         private fun formatTankDisplayName(type: String, instance: String): String {
+            val ctxt = itemView.context
             val typeLabel = when (type.lowercase(Locale.US)) {
-                "fuel" -> "Fuel"
-                "freshwater" -> "Fresh Water"
-                "blackwater" -> "Black Water"
-                "wastewater" -> "Waste Water"
-                "greywater" -> "Grey Water"
-                "lubeoil", "oil" -> "Lube Oil"
-                "gas", "lpg", "cng" -> "Gas"
-                "livewell", "baitwell" -> "Live Well"
-                "ballast" -> "Ballast"
-                "rawwater" -> "Raw Water"
+                "fuel" -> ctxt.getString(R.string.nautical_tank_fuel)
+                "freshwater" -> ctxt.getString(R.string.nautical_tank_fresh_water)
+                "blackwater" -> ctxt.getString(R.string.nautical_tank_black_water)
+                "wastewater" -> ctxt.getString(R.string.nautical_tank_waste_water)
+                "greywater" -> ctxt.getString(R.string.nautical_tank_grey_water)
+                "lubeoil", "oil" -> ctxt.getString(R.string.nautical_tank_lube_oil)
+                "gas", "lpg", "cng" -> ctxt.getString(R.string.nautical_tank_gas)
+                "livewell", "baitwell" -> ctxt.getString(R.string.nautical_tank_live_well)
+                "ballast" -> ctxt.getString(R.string.nautical_tank_ballast)
+                "rawwater" -> ctxt.getString(R.string.nautical_tank_raw_water)
                 else -> type.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.US) else it.toString() }
             }
-            return if (instance.isNotEmpty() && instance != "0") "$typeLabel $instance" else typeLabel
+            return if (instance.isNotEmpty() && instance != "0") ctxt.getString(R.string.nautical_tank_type_instance_fmt, typeLabel, instance) else typeLabel
         }
     }
 
@@ -487,19 +484,19 @@ class NauticalElectricalDashboardBottomSheet : BaseNauticalBottomSheet() {
         fun bind(watermaker: Watermaker) {
             txtName.text = itemView.context.getString(R.string.nautical_watermaker_instance_name, watermaker.instance)
             txtState.text = watermaker.state?.uppercase(Locale.getDefault()) ?: "--"
-            txtVal1.text = watermaker.rate?.let { String.format("%.1f L/h", it) } ?: ""
-            txtVal2.text = watermaker.salinity?.let { String.format("%.0f ppm", it) } ?: ""
+            txtVal1.text = watermaker.rate?.let { String.format(Locale.US, "%.1f L/h", it) } ?: ""
+            txtVal2.text = watermaker.salinity?.let { String.format(Locale.US, "%.0f ppm", it) } ?: ""
             spinnerMode.visibility = View.GONE
         }
     }
 
     private class WindlassAdapter : RecyclerView.Adapter<WindlassViewHolder>() {
         private var isEngineRunning = false
-        private var rodeDeployed = 0.0
+        private var rodeDeployed: Double? = null
 
         fun updateState(running: Boolean, rode: Double?) {
             isEngineRunning = running
-            rodeDeployed = rode ?: 0.0
+            rodeDeployed = rode
             notifyItemChanged(0)
         }
 
@@ -517,8 +514,13 @@ class NauticalElectricalDashboardBottomSheet : BaseNauticalBottomSheet() {
         private val btnDown: View = view.findViewById(R.id.btn_windlass_down)
         private val txtGuard: TextView = view.findViewById(R.id.txt_windlass_guard)
 
-        fun bind(isEngineRunning: Boolean, rodeDeployed: Double) {
-            txtInfo.text = String.format("Rode Deployed: %.1f m", rodeDeployed)
+        fun bind(isEngineRunning: Boolean, rodeDeployed: Double?) {
+            // Never invent a rode length: null shows the disclosed "--" placeholder.
+            txtInfo.text = if (rodeDeployed != null) {
+                itemView.context.getString(R.string.nautical_windlass_rode_fmt, String.format(Locale.US, "%.1f", rodeDeployed))
+            } else {
+                itemView.context.getString(R.string.nautical_rode_deployed_placeholder)
+            }
             txtGuard.visibility = if (isEngineRunning) View.GONE else View.VISIBLE
             btnUp.isEnabled = isEngineRunning
             btnDown.isEnabled = isEngineRunning
@@ -582,18 +584,18 @@ class NauticalElectricalDashboardBottomSheet : BaseNauticalBottomSheet() {
             when (item) {
                 is ConversionItem.ChargerItem -> {
                     val charger = item.charger
-                    txtName.text = charger.name ?: "Charger ${charger.instance}"
+                    txtName.text = charger.name ?: itemView.context.getString(R.string.nautical_charger_instance, charger.instance)
                     txtState.text = charger.state?.uppercase(Locale.getDefault()) ?: "--"
-                    txtVal1.text = charger.voltage?.let { String.format("%.1f V", it) } ?: ""
-                    txtVal2.text = charger.current?.let { String.format("%.1f A", it) } ?: ""
+                    txtVal1.text = charger.voltage?.let { String.format(Locale.US, "%.1f V", it) } ?: ""
+                    txtVal2.text = charger.current?.let { String.format(Locale.US, "%.1f A", it) } ?: ""
                     setupModeSpinner(charger.instance, charger.mode, isCharger = true)
                 }
                 is ConversionItem.InverterItem -> {
                     val inverter = item.inverter
-                    txtName.text = inverter.name ?: "Inverter ${inverter.instance}"
+                    txtName.text = inverter.name ?: itemView.context.getString(R.string.nautical_inverter_instance, inverter.instance)
                     txtState.text = inverter.state?.uppercase(Locale.getDefault()) ?: "--"
-                    txtVal1.text = inverter.acVoltage?.let { String.format("%.0f V", it) } ?: ""
-                    txtVal2.text = inverter.acCurrent?.let { String.format("%.1f A", it) } ?: ""
+                    txtVal1.text = inverter.acVoltage?.let { String.format(Locale.US, "%.0f V", it) } ?: ""
+                    txtVal2.text = inverter.acCurrent?.let { String.format(Locale.US, "%.1f A", it) } ?: ""
                     setupModeSpinner(inverter.instance, inverter.mode, isCharger = false)
                 }
             }

@@ -88,8 +88,14 @@ class BoatAiRepository(private val app: OsmandApplication) {
         }
         if (q.contains("auto") || q.contains("compass mode") || q.contains("engage pilot") || q.contains("pilot on")) {
             actions.add(BoatAiAction(type = "autopilot_mode", value = "auto"))
-            val target = state.headingTrue?.let { Math.toDegrees(it).toInt() } ?: 0
-            return BoatAiResult("Autopilot engaged in Compass/Auto mode holding $target°.", actions)
+            // Only quote the held heading when it is real; never invent "0°".
+            val target = state.headingTrue?.let { Math.toDegrees(it).toInt() }
+            val reply = if (target != null) {
+                "Autopilot engaged in Compass/Auto mode holding $target°."
+            } else {
+                "Autopilot engaged in Compass/Auto mode. No heading data yet; hold pending."
+            }
+            return BoatAiResult(reply, actions)
         }
         if (q.contains("wind mode") || q.contains("vane mode") || q.contains("steer wind")) {
             actions.add(BoatAiAction(type = "autopilot_mode", value = "wind"))
@@ -141,8 +147,12 @@ class BoatAiRepository(private val app: OsmandApplication) {
 
         // 5. Anchor Controls & Status
         if (q.contains("set anchor") || q.contains("drop anchor")) {
-            val lat = state.latitude ?: 0.0
-            val lon = state.longitude ?: 0.0
+            // Refuse rather than arm a watch at a fabricated (0,0) fix.
+            val lat = state.latitude
+            val lon = state.longitude
+            if (lat == null || lon == null) {
+                return BoatAiResult("No GPS fix available; anchor watch NOT armed.", actions)
+            }
             actions.add(BoatAiAction(type = "anchor", value = mapOf("latitude" to lat, "longitude" to lon, "radius" to 50.0)))
             return BoatAiResult("Anchor watch armed at current position (50m radius).", actions)
         }
@@ -164,14 +174,25 @@ class BoatAiRepository(private val app: OsmandApplication) {
 
         // 6. Wind Information
         if (q.contains("wind") || q.contains("tws") || q.contains("twa") || q.contains("aws") || q.contains("awa")) {
-            val twsKn = (state.windSpeedTrue ?: 0.0) * 1.94384
-            val twdDeg = state.windDirectionTrue?.let { (Math.toDegrees(it).toInt() + 360) % 360 } ?: 0
-            val awsKn = (state.windSpeedApparent ?: 0.0) * 1.94384
-            val awaDeg = state.windDirectionApparent?.let { Math.toDegrees(it).toInt() } ?: 0
-            val side = if (awaDeg >= 0) "Starboard" else "Port"
-            val reply = "Wind Report:\n• True Wind: %.1f kn @ %d°\n• Apparent Wind: %.1f kn @ %d° (%s)".format(
-                java.util.Locale.US, twsKn, twdDeg, kotlin.math.abs(awsKn), kotlin.math.abs(awaDeg), side
-            )
+            // Report only what sensors actually provide; never a fabricated calm.
+            val twsKnown = state.windSpeedTrue
+            val twdKnown = state.windDirectionTrue
+            val awsKnown = state.windSpeedApparent
+            val awaKnown = state.windDirectionApparent
+            val lines = mutableListOf<String>()
+            if (twsKnown != null && twdKnown != null) {
+                lines.add("• True Wind: %.1f kn @ %d°".format(java.util.Locale.US, twsKnown * 1.94384, (Math.toDegrees(twdKnown).toInt() + 360) % 360))
+            }
+            if (awsKnown != null && awaKnown != null) {
+                val awaDeg = Math.toDegrees(awaKnown).toInt()
+                val side = if (awaDeg >= 0) "Starboard" else "Port"
+                lines.add("• Apparent Wind: %.1f kn @ %d° (%s)".format(java.util.Locale.US, awsKnown * 1.94384, kotlin.math.abs(awaDeg), side))
+            }
+            val reply = if (lines.isEmpty()) {
+                "Wind data currently offline."
+            } else {
+                lines.joinToString("\n")
+            }
             return BoatAiResult(reply, actions)
         }
 
@@ -191,14 +212,28 @@ class BoatAiRepository(private val app: OsmandApplication) {
 
         // 8. Speed, Heading, Course & Polar Performance
         if (q.contains("speed") || q.contains("sog") || q.contains("stw") || q.contains("heading") || q.contains("cog") || q.contains("polar")) {
-            val sogKn = (state.speedOverGround ?: 0.0) * 1.94384
-            val stwKn = (state.speedThroughWater ?: 0.0) * 1.94384
-            val hdg = state.headingTrue?.let { (Math.toDegrees(it).toInt() + 360) % 360 } ?: 0
-            val cog = state.courseOverGroundTrue?.let { (Math.toDegrees(it).toInt() + 360) % 360 } ?: 0
-            val polar = state.polarSpeedRatio?.let { " • Polar Efficiency: ${(it * 100).toInt()}%" } ?: ""
-            val reply = "Vessel Navigation:\n• SOG: %.1f kn | STW: %.1f kn\n• Heading: %d° | COG: %d°%s".format(
-                java.util.Locale.US, sogKn, stwKn, hdg, cog, polar
-            )
+            // Report only live values; never a fabricated 0.0 kn / 0° reply.
+            val lines = mutableListOf<String>()
+            val sogKnown = state.speedOverGround
+            val stwKnown = state.speedThroughWater
+            if (sogKnown != null || stwKnown != null) {
+                val sogStr = if (sogKnown != null) "%.1f kn".format(java.util.Locale.US, sogKnown * 1.94384) else "n/a"
+                val stwStr = if (stwKnown != null) "%.1f kn".format(java.util.Locale.US, stwKnown * 1.94384) else "n/a"
+                lines.add("• SOG: $sogStr | STW: $stwStr")
+            }
+            val hdgKnown = state.headingTrue
+            val cogKnown = state.courseOverGroundTrue
+            if (hdgKnown != null || cogKnown != null) {
+                val hdgStr = if (hdgKnown != null) "${(Math.toDegrees(hdgKnown).toInt() + 360) % 360}°" else "n/a"
+                val cogStr = if (cogKnown != null) "${(Math.toDegrees(cogKnown).toInt() + 360) % 360}°" else "n/a"
+                lines.add("• Heading: $hdgStr | COG: $cogStr")
+            }
+            state.polarSpeedRatio?.let { lines.add("• Polar Efficiency: ${(it * 100).toInt()}%") }
+            val reply = if (lines.isEmpty()) {
+                "Navigation data currently offline."
+            } else {
+                lines.joinToString("\n")
+            }
             return BoatAiResult(reply, actions)
         }
 

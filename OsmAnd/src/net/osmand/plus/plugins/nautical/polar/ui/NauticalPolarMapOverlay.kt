@@ -46,12 +46,6 @@ class NauticalPolarMapOverlay(
         color = 0xFFFFD600.toInt()
     }
 
-    private val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        textSize = 20f
-        typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-        textAlign = Paint.Align.CENTER
-    }
-
     private val polarPath = Path()
     private val noGoPath = Path()
 
@@ -69,12 +63,18 @@ class NauticalPolarMapOverlay(
         val twsMs = marineState.windSpeedTrue ?: marineState.windSpeedApparent ?: return
         if (twsMs < 1.0) return // Skip if calm
 
-        val windDirRad = marineState.windDirectionTrue ?: marineState.windDirectionApparent?.let {
-            val hdg = marineState.headingTrue ?: 0.0
-            (it + hdg) % (2.0 * Math.PI)
-        } ?: 0.0
-
         val polarDiagram = NauticalPlugin.getInstance()?.tacticalProcessor?.polarDiagram ?: return
+        // Honesty gate: without a loaded polar the engine would synthesize a
+        // generic invented curve (defaultTargetSpeed) — draw nothing instead.
+        if (!polarDiagram.isLoaded) return
+
+        // True wind direction. AWA->TWD conversion needs BOTH AWA and a live
+        // heading; the old `heading ?: 0.0` assumed the bow pointed north and
+        // the old final `?: 0.0` assumed wind from due north. Refuse instead.
+        val windDirRad: Double = marineState.windDirectionTrue
+            ?: marineState.windDirectionApparent?.let { awa ->
+                marineState.headingTrue?.let { hdg -> (awa + hdg) % (2.0 * Math.PI) }
+            } ?: return
 
         // Night vision theme adjustments
         if (isNight) {
@@ -83,14 +83,12 @@ class NauticalPolarMapOverlay(
             noGoPaint.color = 0x25B71C1C.toInt()
             vmgTargetPaint.color = 0x80FF1744.toInt()
             targetMarkerPaint.color = 0xFFFF8A80.toInt()
-            textPaint.color = 0xFFFF8A80.toInt()
         } else {
             polarLinePaint.color = 0xFF00E5FF.toInt()
             polarFillPaint.color = 0x1800E5FF.toInt()
             noGoPaint.color = 0x20FF5252.toInt()
             vmgTargetPaint.color = 0xFF00E676.toInt()
             targetMarkerPaint.color = 0xFFFFD600.toInt()
-            textPaint.color = Color.WHITE
         }
 
         val pxPerMs = 12f * (tileBox.density) // Scale factor for boat speed in m/s
@@ -140,10 +138,10 @@ class NauticalPolarMapOverlay(
         canvas.drawPath(polarPath, polarFillPaint)
         canvas.drawPath(polarPath, polarLinePaint)
 
-        // 2. Draw Optimum VMG Rays
-        val upwindSpeedMs = optimalUpwind?.targetSpeedMs ?: 3.0
+        // 2. Draw Optimum VMG Rays — OptimalVmgTarget is non-null (dead nullable switches removed)
+        val upwindSpeedMs = optimalUpwind.targetSpeedMs
         val upwindR = (upwindSpeedMs * pxPerMs).toFloat()
-        val downwindSpeedMs = optimalDownwind?.targetSpeedMs ?: 4.0
+        val downwindSpeedMs = optimalDownwind.targetSpeedMs
         val downwindR = (downwindSpeedMs * pxPerMs).toFloat()
 
         // Upwind Port & Starboard
@@ -155,33 +153,40 @@ class NauticalPolarMapOverlay(
         canvas.drawLine(cx, cy, cx + (downwindR * sin(windDirRad - downwindTwaRad)).toFloat(), cy - (downwindR * cos(windDirRad - downwindTwaRad)).toFloat(), vmgTargetPaint)
         canvas.drawLine(cx, cy, cx + (downwindR * sin(windDirRad + downwindTwaRad)).toFloat(), cy - (downwindR * cos(windDirRad + downwindTwaRad)).toFloat(), vmgTargetPaint)
 
-        // 3. Live STW vector vs Target Polar Speed
-        val currentStwMs = marineState.speedThroughWater ?: marineState.speedOverGround ?: 0.0
-        val currentTwaRad = marineState.trueWindAngle ?: marineState.windDirectionApparent ?: 0.0
-        val targetSpeedMs = polarDiagram.getTargetSpeedRad(twsMs, currentTwaRad)
+        // 3. Live STW vector vs Target Polar Speed — honest gates only:
+        // SOG is NOT substituted for STW (different frame); AWA is NOT used
+        // as TWA (forbidden substitution). Without the real values the
+        // performance comparison is simply not drawn.
+        val currentStwMs = marineState.speedThroughWater
+        val currentTwaRad = marineState.trueWindAngle
+        if (currentStwMs != null && currentStwMs > 0.0) {
+            val targetSpeedMs = if (currentTwaRad != null) polarDiagram.getTargetSpeedRad(twsMs, currentTwaRad) else null
 
-        val boatHdgRad = marineState.headingTrue ?: (windDirRad - currentTwaRad)
+            val boatHdgRad = marineState.headingTrue
+                ?: (currentTwaRad?.let { windDirRad - it } ?: return)
 
-        val targetR = (targetSpeedMs * pxPerMs).toFloat()
-        val actualR = (currentStwMs * pxPerMs).toFloat()
+            val actualR = (currentStwMs * pxPerMs).toFloat()
 
-        val perfRatio = if (targetSpeedMs > 0.1) currentStwMs / targetSpeedMs else 1.0
+            stwVectorPaint.color = when {
+                isNight -> 0xFFFF1744.toInt()
+                targetSpeedMs == null -> 0xFF00E5FF.toInt() // neutral: no honest comparison possible
+                targetSpeedMs > 0.1 && currentStwMs / targetSpeedMs >= 0.95 -> 0xFF00E676.toInt()
+                targetSpeedMs != null && targetSpeedMs > 0.1 && currentStwMs / targetSpeedMs >= 0.80 -> 0xFFFFD600.toInt()
+                else -> 0xFFFF1744.toInt()
+            }
 
-        stwVectorPaint.color = when {
-            isNight -> 0xFFFF1744.toInt()
-            perfRatio >= 0.95 -> 0xFF00E676.toInt()
-            perfRatio >= 0.80 -> 0xFFFFD600.toInt()
-            else -> 0xFFFF1744.toInt()
+            // Draw actual boat velocity vector
+            val actualX = cx + (actualR * sin(boatHdgRad)).toFloat()
+            val actualY = cy - (actualR * cos(boatHdgRad)).toFloat()
+            canvas.drawLine(cx, cy, actualX, actualY, stwVectorPaint)
+
+            // Target speed ring marker along heading — only with a REAL TWA.
+            if (currentTwaRad != null && targetSpeedMs != null) {
+                val targetR = (targetSpeedMs * pxPerMs).toFloat()
+                val targetX = cx + (targetR * sin(boatHdgRad)).toFloat()
+                val targetY = cy - (targetR * cos(boatHdgRad)).toFloat()
+                canvas.drawCircle(targetX, targetY, 5f * tileBox.density, targetMarkerPaint)
+            }
         }
-
-        // Draw actual boat velocity vector
-        val actualX = cx + (actualR * sin(boatHdgRad)).toFloat()
-        val actualY = cy - (actualR * cos(boatHdgRad)).toFloat()
-        canvas.drawLine(cx, cy, actualX, actualY, stwVectorPaint)
-
-        // Draw target speed ring marker along heading
-        val targetX = cx + (targetR * sin(boatHdgRad)).toFloat()
-        val targetY = cy - (targetR * cos(boatHdgRad)).toFloat()
-        canvas.drawCircle(targetX, targetY, 5f * tileBox.density, targetMarkerPaint)
     }
 }

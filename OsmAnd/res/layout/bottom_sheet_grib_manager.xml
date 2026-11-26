@@ -63,22 +63,6 @@
                     app:singleSelection="false">
 
                     <com.google.android.material.chip.Chip
-                        android:id="@+id/chip_layer_wind"
-                        style="@style/Widget.MaterialComponents.Chip.Filter"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:checked="true"
-                        android:text="@string/nautical_layer_wind_barbs" />
-
-                    <com.google.android.material.chip.Chip
-                        android:id="@+id/chip_layer_gusts"
-                        style="@style/Widget.MaterialComponents.Chip.Filter"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:checked="true"
-                        android:text="@string/nautical_layer_gusts" />
-
-                    <com.google.android.material.chip.Chip
                         android:id="@+id/chip_layer_waves"
                         style="@style/Widget.MaterialComponents.Chip.Filter"
                         android:layout_width="wrap_content"
@@ -93,14 +77,6 @@
                         android:layout_height="wrap_content"
                         android:checked="true"
                         android:text="@string/nautical_layer_pressure_isobars" />
-
-                    <com.google.android.material.chip.Chip
-                        android:id="@+id/chip_layer_temp"
-                        style="@style/Widget.MaterialComponents.Chip.Filter"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:checked="false"
-                        android:text="@string/nautical_layer_temperature" />
                 </com.google.android.material.chip.ChipGroup>
             </HorizontalScrollView>
 

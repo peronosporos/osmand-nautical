@@ -463,11 +463,14 @@ class SignalKDataBroker(private val settings: OsmandSettings? = null) {
         val isSquall = deltaP3h < -3.0
         if (isSquall && !state.isSquallAdvisoryActive) {
             try {
-                NauticalPlugin.hudManager?.get()?.showBanner(
-                    "BAROMETRIC SQUALL ADVISORY: Rapid pressure drop ${String.format(java.util.Locale.US, "%.1f", deltaP3h)} hPa / 3h",
-                    12000L,
-                    isWarning = true
-                )
+                val app = NauticalPlugin.getInstance()?.application
+                if (app != null) {
+                    NauticalPlugin.hudManager?.get()?.showBanner(
+                        app.getString(net.osmand.plus.R.string.nautical_banner_squall_advisory_fmt, deltaP3h),
+                        12000L,
+                        isWarning = true
+                    )
+                }
             } catch (e: Exception) {
                 // ignore
             }

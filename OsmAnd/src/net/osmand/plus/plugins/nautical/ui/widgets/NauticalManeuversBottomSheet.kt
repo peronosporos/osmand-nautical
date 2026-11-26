@@ -31,7 +31,9 @@ class NauticalManeuversBottomSheet : BaseNauticalBottomSheet() {
         setupParams(customView)
 
         val state = NauticalPlugin.engine?.getCurrentState()
-        val awaDeg = state?.windDirectionApparent?.let { kotlin.math.abs(Math.toDegrees(it)) } ?: 0.0
+        // Nullable wind: with no live AWA the beam-reach filter cannot be
+        // applied honestly, so BOTH tack and gybe are offered.
+        val awaDeg: Double? = state?.windDirectionApparent?.let { kotlin.math.abs(Math.toDegrees(it)) }
         val isProa = settings.NAUTICAL_VESSEL_TYPE.get() == VesselType.PROA
         
         val options = mutableListOf<ManeuverOption>()
@@ -39,10 +41,10 @@ class NauticalManeuversBottomSheet : BaseNauticalBottomSheet() {
             options.add(ManeuverOption("shunting", getString(R.string.nautical_shunt), R.drawable.ic_action_sail_boat_dark))
         } else {
             // Beam Reach logic (Item 10 fix): Show both if near 90 deg AWA
-            if (awaDeg < 110.0) {
+            if (awaDeg == null || awaDeg < 110.0) {
                 options.add(ManeuverOption("tacking", getString(R.string.nautical_tack), R.drawable.ic_action_sail_boat_dark))
             }
-            if (awaDeg > 70.0) {
+            if (awaDeg == null || awaDeg > 70.0) {
                 options.add(ManeuverOption("gybing", getString(R.string.nautical_gybe), R.drawable.ic_action_sail_boat_dark))
             }
         }
@@ -71,7 +73,11 @@ class NauticalManeuversBottomSheet : BaseNauticalBottomSheet() {
                         aLat = state?.latitude ?: lat
                         aLon = state?.longitude ?: lon
                     }
-                    (instance?.maneuverManager?.getManeuverById("weighing_anchor") as? net.osmand.plus.plugins.nautical.maneuvers.WeighingAnchorManeuver)?.setDropPoint(aLat, aLon)
+                    // Guard: never arm against a fabricated (0,0) drop point;
+                    // the maneuver itself also aborts on such coordinates.
+                    if (aLat != 0.0 && aLon != 0.0) {
+                        (instance?.maneuverManager?.getManeuverById("weighing_anchor") as? net.osmand.plus.plugins.nautical.maneuvers.WeighingAnchorManeuver)?.setDropPoint(aLat, aLon)
+                    }
                 }
                 "mooring" -> (instance?.maneuverManager?.getManeuverById("mooring") as? net.osmand.plus.plugins.nautical.maneuvers.MooringManeuver)?.setTarget(lat, lon)
                 "med_mooring" -> (instance?.maneuverManager?.getManeuverById("med_mooring") as? net.osmand.plus.plugins.nautical.maneuvers.MedMooringManeuver)?.setTarget(lat, lon)
@@ -134,9 +140,15 @@ class NauticalManeuversBottomSheet : BaseNauticalBottomSheet() {
             if (mm?.state == net.osmand.plus.plugins.nautical.maneuvers.ManeuverState.ARMED) {
                 (mm.activeManeuver as? net.osmand.plus.plugins.nautical.maneuvers.MedMooringManeuver)?.let { mmm ->
                     val state = NauticalPlugin.engine?.getCurrentState()
-                    val curDepth = (state?.depthBelowTransducer ?: 5.0) + (state?.depthSurfaceToTransducer ?: 1.0)
-                    val dropDistance = (curDepth * settings.NAUTICAL_MED_MOORING_SCOPE.get()) + settings.NAUTICAL_MED_MOORING_VESSEL_LENGTH.get()
-                    mmm.speak(getString(R.string.nautical_med_mooring_armed_msg, dropDistance.toInt()))
+                    // Announce the drop distance only from live depth:
+                    // old code invented "5m + 1m" and spoke a fabricated rode.
+                    val belowTransducer = state?.depthBelowTransducer
+                    val surfaceToTransducer = state?.depthSurfaceToTransducer
+                    if (belowTransducer != null && surfaceToTransducer != null) {
+                        val curDepth = belowTransducer + surfaceToTransducer
+                        val dropDistance = (curDepth * settings.NAUTICAL_MED_MOORING_SCOPE.get()) + settings.NAUTICAL_MED_MOORING_VESSEL_LENGTH.get()
+                        mmm.speak(getString(R.string.nautical_med_mooring_armed_msg, dropDistance.toInt()))
+                    }
                 }
                 (mm.activeManeuver as? net.osmand.plus.plugins.nautical.maneuvers.DockingManeuver)?.let { dm ->
                     dm.vesselLength = settings.NAUTICAL_MED_MOORING_VESSEL_LENGTH.get()
