@@ -21,6 +21,8 @@ import net.osmand.plus.R
 import net.osmand.plus.plugins.nautical.NauticalPlugin
 import net.osmand.plus.plugins.nautical.engine.MarineState
 import net.osmand.plus.plugins.nautical.ui.INauticalHudHeader
+import net.osmand.plus.plugins.nautical.ui.NauticalColorResolver
+import net.osmand.plus.plugins.nautical.ui.NauticalSemanticColor
 import java.util.Locale
 import kotlin.math.abs
 
@@ -56,7 +58,6 @@ class NauticalCockpitHudView @JvmOverloads constructor(
     private val txtPassageTwsLbl: TextView
     private val txtPassageVmgVal: TextView
     private val txtPassageXteVal: TextView
-    private val txtPassageLaylineLbl: TextView
 
     // Mode 2 Views
     private val txtMotorSogVal: TextView
@@ -83,6 +84,30 @@ class NauticalCockpitHudView @JvmOverloads constructor(
 
     private var gestureDetector: GestureDetector? = null
 
+    // Persisted across sessions so the strip reopens in the mode the
+    // skipper actually uses; auto-switching still works inside a session.
+    private fun persistMode(mode: CockpitHudMode) {
+        (context.applicationContext as? OsmandApplication)
+            ?.settings?.NAUTICAL_COCKPIT_LAST_HUD_MODE?.set(mode.name)
+    }
+
+    private fun restorePersistedMode() {
+        val app = context.applicationContext as? OsmandApplication ?: return
+        val saved = app.settings.NAUTICAL_COCKPIT_LAST_HUD_MODE.get()
+        val mode = CockpitHudMode.entries.firstOrNull { it.name == saved }
+            ?: CockpitHudMode.PASSAGE_SAIL
+        currentMode = mode
+        val buttonId = when (mode) {
+            CockpitHudMode.PASSAGE_SAIL -> R.id.btn_mode_passage
+            CockpitHudMode.MOTORING_HARBOR -> R.id.btn_mode_motoring
+            CockpitHudMode.ANCHOR_MOORED -> R.id.btn_mode_anchor
+        }
+        if (toggleHudMode.checkedButtonId != buttonId) {
+            toggleHudMode.check(buttonId)
+        }
+        updateModeLayout(mode)
+    }
+
     init {
         LayoutInflater.from(context).inflate(R.layout.nautical_cockpit_hud_strip, this, true)
 
@@ -105,7 +130,6 @@ class NauticalCockpitHudView @JvmOverloads constructor(
         txtPassageTwsLbl = findViewById(R.id.txt_passage_tws_lbl)
         txtPassageVmgVal = findViewById(R.id.txt_passage_vmg_val)
         txtPassageXteVal = findViewById(R.id.txt_passage_xte_val)
-        txtPassageLaylineLbl = findViewById(R.id.txt_passage_layline_lbl)
 
         txtMotorSogVal = findViewById(R.id.txt_motor_sog_val)
         txtMotorRudderVal = findViewById(R.id.txt_motor_rudder_val)
@@ -121,7 +145,7 @@ class NauticalCockpitHudView @JvmOverloads constructor(
         txtAnchorChafeLbl = findViewById(R.id.txt_anchor_chafe_lbl)
 
         setupListeners()
-        updateModeLayout(CockpitHudMode.PASSAGE_SAIL)
+        restorePersistedMode()
     }
 
     private fun setupListeners() {
@@ -133,6 +157,7 @@ class NauticalCockpitHudView @JvmOverloads constructor(
                     else -> CockpitHudMode.PASSAGE_SAIL
                 }
                 updateModeLayout(newMode)
+                persistMode(newMode)
             }
         }
 
@@ -229,57 +254,103 @@ class NauticalCockpitHudView @JvmOverloads constructor(
     }
 
     fun updateTelemetry(state: MarineState, app: OsmandApplication) {
-        val sogKn = (state.speedOverGround ?: 0.0) * 1.94384
-        val cogDeg = state.courseOverGroundTrue?.let { Math.toDegrees(it) } ?: 0.0
-        val twaDeg = state.trueWindAngle?.let { Math.toDegrees(it) } ?: state.windDirectionApparent?.let { Math.toDegrees(it) } ?: 0.0
-        val twsKn = (state.windSpeedTrue ?: state.windSpeedApparent ?: 0.0) * 1.94384
-        val depthM = state.depthBelowKeel ?: state.depthBelowTransducer ?: 0.0
-        val rudderDeg = state.rudderAngle?.let { Math.toDegrees(it) } ?: 0.0
+        val na = context.getString(R.string.nautical_not_available)
+        val knFmt = context.getString(R.string.nautical_hud_speed_kn_fmt)
+        val depthFmt = context.getString(R.string.nautical_hud_depth_m_fmt)
+        val distFmt = context.getString(R.string.nautical_hud_dist_m_fmt)
+
+        // No fabricated zeroes: an absent sensor shows n/a, never 0.0 that
+        // would read as a real measurement.
+        val sogKn = state.speedOverGround?.let { it * 1.94384 }
+        val sogTxt = sogKn?.let { String.format(Locale.US, knFmt, it) } ?: na
+        val cogTxt = state.courseOverGroundTrue?.let {
+            String.format(Locale.US, context.getString(R.string.nautical_hud_cog_fmt), Math.toDegrees(it))
+        } ?: na
+        // TWA only from a real true-wind-angle source: apparent wind
+        // direction is a different quantity and must not be dressed up as TWA.
+        val twaTxt = state.trueWindAngle?.let {
+            String.format(Locale.US, context.getString(R.string.nautical_hud_twa_fmt), Math.toDegrees(it))
+        } ?: na
+        val twsTxt = state.windSpeedTrue?.let {
+            String.format(Locale.US, context.getString(R.string.nautical_hud_tws_kn_fmt), it * 1.94384)
+        } ?: na
+        val depthM = state.depthBelowKeel ?: state.depthBelowTransducer
+        val depthTxt = depthM?.let { String.format(Locale.US, depthFmt, it) } ?: na
 
         // Mode 1 Updates
-        txtPassageSogVal.text = String.format(Locale.US, "%.1f kn", sogKn)
-        txtPassageCogLbl.text = String.format(Locale.US, "COG: %03.0f°", cogDeg)
-        txtPassageTwaVal.text = String.format(Locale.US, "TWA %03.0f°", twaDeg)
-        txtPassageTwsLbl.text = String.format(Locale.US, "TWS: %.1f kn", twsKn)
+        txtPassageSogVal.text = sogTxt
+        txtPassageCogLbl.text = cogTxt
+        txtPassageTwaVal.text = twaTxt
+        txtPassageTwsLbl.text = twsTxt
 
-        val polarPct = state.polarTargetSpeed?.let { tgt ->
-            if (tgt > 0.1) (state.speedOverGround ?: 0.0) / tgt * 100.0 else 100.0
-        } ?: 100.0
-        txtPassageVmgVal.text = String.format(Locale.US, "%.0f%%", polarPct)
+        // Polar performance percentage needs both a polar target and a
+        // measured speed; anything else is honestly n/a.
+        val polarPct: Double? = state.polarTargetSpeed?.takeIf { it > 0.1 }
+            ?.let { tgt -> sogKn?.let { it / tgt * 100.0 } }
+        txtPassageVmgVal.text = polarPct?.let {
+            String.format(Locale.US, context.getString(R.string.nautical_hud_polar_pct_fmt), it)
+        } ?: na
 
-        val xteM = state.xteMeters ?: 0.0
-        txtPassageXteVal.text = String.format(Locale.US, "XTE %.2f", abs(xteM) / 1852.0)
+        val xteTxt = state.xteMeters?.let {
+            String.format(Locale.US, context.getString(R.string.nautical_hud_xte_nm_fmt), abs(it) / 1852.0)
+        } ?: na
+        txtPassageXteVal.text = xteTxt
 
         // Mode 2 Updates
-        txtMotorSogVal.text = String.format(Locale.US, "%.1f kn", sogKn)
-        txtMotorRudderVal.text = String.format(Locale.US, "%s%.0f°", if (rudderDeg < 0) "P " else if (rudderDeg > 0) "S " else "", abs(rudderDeg))
-        txtMotorDepthVal.text = String.format(Locale.US, "%.1f m", depthM)
+        txtMotorSogVal.text = sogTxt
+        val rudderTxt = state.rudderAngle?.let { rudderDeg ->
+            val side = if (rudderDeg < 0) "P " else if (rudderDeg > 0) "S " else ""
+            String.format(Locale.US, context.getString(R.string.nautical_hud_rudder_deg_fmt), side, abs(rudderDeg))
+        } ?: na
+        txtMotorRudderVal.text = rudderTxt
+        txtMotorDepthVal.text = depthTxt
 
-        val tideH = state.tide?.heightNow ?: app.settings.NAUTICAL_ANCHOR_TIDE_RISE.get().toDouble()
-        txtMotorTideLbl.text = String.format(Locale.US, "TIDE: %.1fm", tideH)
+        // Tide height only from live tide data: falling back to the anchor
+        // rise setting would display a configured number as a measurement.
+        txtMotorTideLbl.text = state.tide?.heightNow?.let {
+            String.format(Locale.US, context.getString(R.string.nautical_hud_tide_m_fmt), it)
+        } ?: na
 
-        val isNight = NauticalPlugin.isNightVision(app)
         val hasHazard = state.forwardHazards.isNotEmpty()
-        txtMotorHazardVal.text = if (hasHazard) "HAZARD!" else "CLEAR"
-        txtMotorHazardVal.setTextColor(
-            if (hasHazard) 0xFFFF1744.toInt()
-            else if (isNight) 0xFFFF8A80.toInt()
-            else 0xFF43A047.toInt()
-        )
+        txtMotorHazardVal.text = if (hasHazard) {
+            context.getString(R.string.nautical_hud_hazard_wrn)
+        } else {
+            context.getString(R.string.nautical_hud_all_clear)
+        }
+        txtMotorHazardVal.setTextColor(NauticalColorResolver.getColor(context, NauticalSemanticColor.STATUS_ERROR))
+        val hazardOkColor = NauticalColorResolver.getColor(context, NauticalSemanticColor.STATUS_OK)
+        if (!hasHazard) {
+            txtMotorHazardVal.setTextColor(hazardOkColor)
+        }
 
         // Mode 3 Updates
-        txtAnchorDepthVal.text = String.format(Locale.US, "%.1f m", depthM)
+        txtAnchorDepthVal.text = depthTxt
         val rodeM = app.settings.NAUTICAL_ANCHOR_RODE_DEPLOYED_METERS.get().toDouble()
-        val scope = if (depthM > 0.5) rodeM / depthM else 5.0
-        txtAnchorRodeVal.text = String.format(Locale.US, "%.0f m", rodeM)
-        txtAnchorScopeLbl.text = String.format(Locale.US, "SCOPE: %.1f:1", scope)
+        txtAnchorRodeVal.text = String.format(Locale.US, distFmt, rodeM)
+        // Scope is only meaningful with measured depth under the keel and
+        // a deployed rode: an invented 5:1 would defeat its whole purpose.
+        val scopeTxt = depthM?.takeIf { it > 0.5 }?.let {
+            String.format(Locale.US, context.getString(R.string.nautical_hud_scope_fmt), rodeM / it)
+        } ?: na
+        txtAnchorScopeLbl.text = scopeTxt
 
         val swingRadius = app.settings.NAUTICAL_ANCHOR_RADIUS.get()
-        txtAnchorRadiusVal.text = String.format(Locale.US, "%.0f m", swingRadius)
+        txtAnchorRadiusVal.text = String.format(Locale.US, distFmt, swingRadius.toDouble())
 
-        val battSoc = state.batteries.values.firstOrNull()?.stateOfCharge ?: 0.85
-        txtAnchorBatteryVal.text = String.format(Locale.US, "%.0f%%", battSoc * 100.0)
-        txtAnchorBatteryVal.setTextColor(if (isNight) 0xFFFF8A80.toInt() else 0xFF43A047.toInt())
+        // Battery state of charge if the battery bank actually reports one;
+        // the old 0.85 default painted a fabricated 85% on the anchor strip.
+        val battSoc = state.batteries.values.firstOrNull()?.stateOfCharge
+        txtAnchorBatteryVal.text = battSoc?.let {
+            String.format(Locale.US, context.getString(R.string.nautical_hud_polar_pct_fmt), it * 100.0)
+        } ?: na
+        txtAnchorBatteryVal.setTextColor(
+            when {
+                battSoc == null -> NauticalColorResolver.getColor(context, NauticalSemanticColor.SECONDARY)
+                battSoc >= 0.5 -> NauticalColorResolver.getColor(context, NauticalSemanticColor.STATUS_OK)
+                battSoc >= 0.25 -> NauticalColorResolver.getColor(context, NauticalSemanticColor.STATUS_WARNING)
+                else -> NauticalColorResolver.getColor(context, NauticalSemanticColor.STATUS_ERROR)
+            }
+        )
     }
 
     override fun setCompactMode(enabled: Boolean) {
@@ -287,39 +358,66 @@ class NauticalCockpitHudView @JvmOverloads constructor(
         cardRoot.setContentPadding(p, p, p, p)
     }
 
+    private fun resolveThemeColor(attrResId: Int, fallbackResId: Int): Int {
+        val typedArray = context.obtainStyledAttributes(intArrayOf(attrResId))
+        val color = typedArray.getColor(0, ContextCompat.getColor(context, fallbackResId))
+        typedArray.recycle()
+        return color
+    }
+
     override fun applyNightVision(enabled: Boolean) {
         if (enabled) {
+            // Monochromatic red night-vision palette (see NauticalSemanticColor
+            // DARK notes): values bright red, secondary labels dimmer.
             cardRoot.setCardBackgroundColor(0xEE120000.toInt())
             cardRoot.strokeColor = 0xFF8B0000.toInt()
             txtPassageSogVal.setTextColor(0xFFFF1744.toInt())
+            txtPassageCogLbl.setTextColor(0xFFFF8A80.toInt())
             txtPassageTwaVal.setTextColor(0xFFFF1744.toInt())
+            txtPassageTwsLbl.setTextColor(0xFFFF8A80.toInt())
             txtPassageVmgVal.setTextColor(0xFFFF8A80.toInt())
             txtPassageXteVal.setTextColor(0xFFFF1744.toInt())
             txtMotorSogVal.setTextColor(0xFFFF1744.toInt())
             txtMotorRudderVal.setTextColor(0xFFFF1744.toInt())
             txtMotorDepthVal.setTextColor(0xFFFF1744.toInt())
+            txtMotorTideLbl.setTextColor(0xFFFF8A80.toInt())
+            txtMotorHazardVal.setTextColor(0xFFFF1744.toInt())
             txtAnchorDepthVal.setTextColor(0xFFFF1744.toInt())
             txtAnchorRodeVal.setTextColor(0xFFFF1744.toInt())
+            txtAnchorScopeLbl.setTextColor(0xFFFF8A80.toInt())
             txtAnchorRadiusVal.setTextColor(0xFFFF1744.toInt())
             txtAnchorBatteryVal.setTextColor(0xFFFF8A80.toInt())
+            txtAnchorChafeLbl.setTextColor(0xFFFF8A80.toInt())
             btnModePassage.setTextColor(0xFFFF1744.toInt())
             btnModeMotoring.setTextColor(0xFFFF1744.toInt())
             btnModeAnchor.setTextColor(0xFFFF1744.toInt())
         } else {
-            val primaryColor = ContextCompat.getColor(context, R.color.text_color_primary_light)
-            cardRoot.setCardBackgroundColor(ContextCompat.getColor(context, R.color.bg_color_light))
-            cardRoot.strokeColor = ContextCompat.getColor(context, R.color.divider_color_light)
+            // Day/night app theme: route through the shared semantic palette
+            // so a dark app theme gets dark colors instead of forced *_light.
+            val primaryColor = NauticalColorResolver.getColor(context, NauticalSemanticColor.PRIMARY)
+            val accentColor = NauticalColorResolver.getColor(context, NauticalSemanticColor.ACCENT)
+            val okColor = NauticalColorResolver.getColor(context, NauticalSemanticColor.STATUS_OK)
+            cardRoot.setCardBackgroundColor(
+                resolveThemeColor(R.attr.card_and_list_background_basic, R.color.bg_color_light)
+            )
+            cardRoot.strokeColor = resolveThemeColor(R.attr.divider_color, R.color.divider_color_light)
             txtPassageSogVal.setTextColor(primaryColor)
-            txtPassageTwaVal.setTextColor(ContextCompat.getColor(context, R.color.active_color_primary_light))
+            txtPassageCogLbl.setTextColor(NauticalColorResolver.getColor(context, NauticalSemanticColor.SECONDARY))
+            txtPassageTwaVal.setTextColor(accentColor)
+            txtPassageTwsLbl.setTextColor(NauticalColorResolver.getColor(context, NauticalSemanticColor.SECONDARY))
             txtPassageVmgVal.setTextColor(primaryColor)
             txtPassageXteVal.setTextColor(primaryColor)
             txtMotorSogVal.setTextColor(primaryColor)
-            txtMotorRudderVal.setTextColor(ContextCompat.getColor(context, R.color.active_color_primary_light))
+            txtMotorRudderVal.setTextColor(accentColor)
             txtMotorDepthVal.setTextColor(primaryColor)
+            txtMotorTideLbl.setTextColor(NauticalColorResolver.getColor(context, NauticalSemanticColor.SECONDARY))
+            txtMotorHazardVal.setTextColor(okColor)
             txtAnchorDepthVal.setTextColor(primaryColor)
-            txtAnchorRodeVal.setTextColor(ContextCompat.getColor(context, R.color.active_color_primary_light))
+            txtAnchorRodeVal.setTextColor(accentColor)
+            txtAnchorScopeLbl.setTextColor(NauticalColorResolver.getColor(context, NauticalSemanticColor.SECONDARY))
             txtAnchorRadiusVal.setTextColor(primaryColor)
-            txtAnchorBatteryVal.setTextColor(0xFF43A047.toInt())
+            txtAnchorBatteryVal.setTextColor(okColor)
+            txtAnchorChafeLbl.setTextColor(NauticalColorResolver.getColor(context, NauticalSemanticColor.SECONDARY))
             btnModePassage.setTextColor(primaryColor)
             btnModeMotoring.setTextColor(primaryColor)
             btnModeAnchor.setTextColor(primaryColor)

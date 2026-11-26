@@ -83,7 +83,10 @@ class CockpitShellActivity : AppCompatActivity() {
         val engine = NauticalPlugin.engine
         if (app.settings.NAUTICAL_COCKPIT_MODE_STRIP_ENABLED.get() && engine?.dataBroker != null) {
             val strip = NauticalCockpitHudView(this)
-            strip.applyNightVision(CockpitScreenTheme.isDark(app))
+            // Red night-vision palette only for true night-vision mode.
+            // A dark app theme is handled inside the strip by the shared
+            // semantic palette (NauticalColorResolver), not by the red filter.
+            strip.applyNightVision(NauticalPlugin.isNightVision(app))
             root.addView(
                 strip,
                 LinearLayout.LayoutParams(

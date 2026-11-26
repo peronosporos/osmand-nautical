@@ -145,7 +145,8 @@
                     android:id="@+id/txt_passage_sog_val"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="-- kn"
+                    android:text="@string/nautical_not_available"
+                    tools:text="6.4 kn"
                     android:textSize="14sp"
                     android:textStyle="bold"
                     android:textColor="?android:attr/textColorPrimary" />
@@ -153,7 +154,8 @@
                     android:id="@+id/txt_passage_cog_lbl"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="COG: --°"
+                    android:text="@string/nautical_not_available"
+                    tools:text="COG: 214°"
                     android:textSize="10sp"
                     android:textColor="?android:attr/textColorSecondary" />
             </LinearLayout>
@@ -168,7 +170,8 @@
                     android:id="@+id/txt_passage_twa_val"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="TWA --°"
+                    android:text="@string/nautical_not_available"
+                    tools:text="TWA 042°"
                     android:textSize="14sp"
                     android:textStyle="bold"
                     android:textColor="?attr/active_color_primary" />
@@ -176,7 +179,8 @@
                     android:id="@+id/txt_passage_tws_lbl"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="TWS: -- kn"
+                    android:text="@string/nautical_not_available"
+                    tools:text="TWS: 15.2 kn"
                     android:textSize="10sp"
                     android:textColor="?android:attr/textColorSecondary" />
             </LinearLayout>
@@ -191,7 +195,8 @@
                     android:id="@+id/txt_passage_vmg_val"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="-- %"
+                    android:text="@string/nautical_not_available"
+                    tools:text="92%"
                     android:textSize="14sp"
                     android:textStyle="bold"
                     android:textColor="?android:attr/textColorPrimary" />
@@ -213,7 +218,8 @@
                     android:id="@+id/txt_passage_xte_val"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="XTE 0.00"
+                    android:text="@string/nautical_not_available"
+                    tools:text="XTE 0.12"
                     android:textSize="14sp"
                     android:textStyle="bold"
                     android:textColor="?android:attr/textColorPrimary" />
@@ -221,7 +227,7 @@
                     android:id="@+id/txt_passage_layline_lbl"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="@string/nautical_on_layline"
+                    android:text="@string/nautical_xte_label"
                     android:textSize="10sp"
                     android:textColor="?android:attr/textColorSecondary" />
             </LinearLayout>
@@ -246,7 +252,8 @@
                     android:id="@+id/txt_motor_sog_val"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="-- kn"
+                    android:text="@string/nautical_not_available"
+                    tools:text="6.4 kn"
                     android:textSize="14sp"
                     android:textStyle="bold"
                     android:textColor="?android:attr/textColorPrimary" />
@@ -268,7 +275,8 @@
                     android:id="@+id/txt_motor_rudder_val"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="0° MID"
+                    android:text="@string/nautical_not_available"
+                    tools:text="P 12°"
                     android:textSize="14sp"
                     android:textStyle="bold"
                     android:textColor="?attr/active_color_primary" />
@@ -290,7 +298,8 @@
                     android:id="@+id/txt_motor_depth_val"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="-- m"
+                    android:text="@string/nautical_not_available"
+                    tools:text="8.4 m"
                     android:textSize="14sp"
                     android:textStyle="bold"
                     android:textColor="?android:attr/textColorPrimary" />
@@ -298,7 +307,8 @@
                     android:id="@+id/txt_motor_tide_lbl"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="TIDE: ▲ +0.0m"
+                    android:text="@string/nautical_not_available"
+                    tools:text="TIDE: 1.2m"
                     android:textSize="10sp"
                     android:textColor="?android:attr/textColorSecondary" />
             </LinearLayout>
@@ -313,10 +323,11 @@
                     android:id="@+id/txt_motor_hazard_val"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="CLEAR"
+                    android:text="@string/nautical_not_available"
+                    tools:text="CLEAR"
                     android:textSize="13sp"
                     android:textStyle="bold"
-                    android:textColor="#43A047" />
+                    android:textColor="@color/nautical_status_green" />
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -345,7 +356,8 @@
                     android:id="@+id/txt_anchor_depth_val"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="-- m"
+                    android:text="@string/nautical_not_available"
+                    tools:text="12.4 m"
                     android:textSize="14sp"
                     android:textStyle="bold"
                     android:textColor="?android:attr/textColorPrimary" />
@@ -367,7 +379,8 @@
                     android:id="@+id/txt_anchor_rode_val"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="-- m"
+                    android:text="@string/nautical_not_available"
+                    tools:text="40 m"
                     android:textSize="14sp"
                     android:textStyle="bold"
                     android:textColor="?attr/active_color_primary" />
@@ -375,7 +388,8 @@
                     android:id="@+id/txt_anchor_scope_lbl"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="SCOPE: 5:1"
+                    android:text="@string/nautical_not_available"
+                    tools:text="SCOPE: 3.2:1"
                     android:textSize="10sp"
                     android:textColor="?android:attr/textColorSecondary" />
             </LinearLayout>
@@ -390,7 +404,8 @@
                     android:id="@+id/txt_anchor_radius_val"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="-- m"
+                    android:text="@string/nautical_not_available"
+                    tools:text="42 m"
                     android:textSize="14sp"
                     android:textStyle="bold"
                     android:textColor="?android:attr/textColorPrimary" />
@@ -412,10 +427,11 @@
                     android:id="@+id/txt_anchor_battery_val"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="-- %"
+                    android:text="@string/nautical_not_available"
+                    tools:text="85%"
                     android:textSize="14sp"
                     android:textStyle="bold"
-                    android:textColor="#43A047" />
+                    android:textColor="@color/nautical_status_green" />
                 <TextView
                     android:id="@+id/txt_anchor_chafe_lbl"
                     android:layout_width="wrap_content"

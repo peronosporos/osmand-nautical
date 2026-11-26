@@ -3673,6 +3673,7 @@ public class OsmandSettings {
 	public final CommonPreference<Boolean> NAUTICAL_DEPTH_PROFILE_ENABLED = registerBooleanPreference("nautical_depth_profile_enabled", true).makeProfile();
 	public final CommonPreference<Boolean> NAUTICAL_POLAR_OVERLAY_ENABLED = registerBooleanPreference("nautical_polar_overlay_enabled", false).makeProfile();
 	public final CommonPreference<Boolean> NAUTICAL_COCKPIT_MODE_STRIP_ENABLED = registerBooleanPreference("nautical_cockpit_mode_strip_enabled", true).makeProfile();
+	public final CommonPreference<String> NAUTICAL_COCKPIT_LAST_HUD_MODE = registerStringPreference("nautical_cockpit_last_hud_mode", "PASSAGE_SAIL").makeProfile();
 	public final CommonPreference<Integer> NAUTICAL_DEPTH_UNITS = registerIntPreference("nautical_depth_units", 0).makeProfile();
 	public final CommonPreference<Boolean> NAUTICAL_DYNAMIC_TIDE_DEPTH_ENABLED = registerBooleanPreference("nautical_dynamic_tide_depth_enabled", true).makeProfile();
 	public final CommonPreference<Boolean> NAUTICAL_ENABLE_AUTO_DR = registerBooleanPreference("nautical_enable_auto_dr", false).makeProfile();
