@@ -19,8 +19,8 @@ class ForwardWatchHudView @JvmOverloads constructor(
     private val txtHazard: TextView
 
     init {
-        LayoutInflater.from(context).inflate(R.layout.nautical_environment_hud, this, true)
-        txtHazard = findViewById(R.id.env_humidity)
+        LayoutInflater.from(context).inflate(R.layout.nautical_forward_hazard_hud, this, true)
+        txtHazard = findViewById(R.id.txt_fwd_hazard)
         setBackgroundResource(R.drawable.bg_nautical_status_emergency)
         isVisible = false
     }

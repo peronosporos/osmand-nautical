@@ -26,8 +26,11 @@ class WatchScheduleHudView @JvmOverloads constructor(
 
     fun updateState(state: MarineState) {
         // Assuming path communication.crew.watch.current and communication.crew.watch.nextChange
-        val currentWatch = state.pathMeta["communication.crew.watch.current"]?.get("value")?.toString() ?: "OFF"
-        val nextChangeStr = state.pathMeta["communication.crew.watch.nextChange"]?.get("value")?.toString() ?: "--"
+        val na = context.getString(R.string.nautical_not_available)
+        // No watch data yet means exactly that: show n/a rather than
+        // inventing an "OFF" status that no data source ever reported.
+        val currentWatch = state.pathMeta["communication.crew.watch.current"]?.get("value")?.toString() ?: na
+        val nextChangeStr = state.pathMeta["communication.crew.watch.nextChange"]?.get("value")?.toString() ?: na
         
         txtWatch.text = context.getString(R.string.nautical_watch_label, currentWatch)
         txtNext.text = context.getString(R.string.nautical_next_change_label, nextChangeStr)

@@ -10,6 +10,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+import androidx.core.view.isVisible
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
@@ -85,7 +86,12 @@ class NauticalEnvironmentWidgetView @JvmOverloads constructor(
     }
 
     fun updateState(state: MarineState) {
-        humidityTxt.text = context.getString(R.string.nautical_humidity_label, String.format(Locale.US, "%.0f%%", (state.outsideHumidity ?: 0.0) * 100.0))
+        // Absent sensors hide their row instead of fabricating "0%"
+        // humidity or "0%" moon-phase readings.
+        humidityTxt.isVisible = state.outsideHumidity != null
+        humidityTxt.text = state.outsideHumidity?.let {
+            context.getString(R.string.nautical_humidity_label, String.format(Locale.US, "%.0f%%", it * 100.0))
+        } ?: context.getString(R.string.nautical_not_available)
         
         val (pVal, pUnit) = net.osmand.plus.plugins.nautical.engine.SignalKUnitConverter.formatValue(context, (context.applicationContext as net.osmand.plus.OsmandApplication).settings, state.outsidePressure, "pressure")
         pressureTxt.text = context.getString(R.string.nautical_pressure_label, "$pVal $pUnit")
@@ -93,8 +99,11 @@ class NauticalEnvironmentWidgetView @JvmOverloads constructor(
         val (tVal, tUnit) = net.osmand.plus.plugins.nautical.engine.SignalKUnitConverter.formatValue(context, (context.applicationContext as net.osmand.plus.OsmandApplication).settings, state.waterTemperature, "temperature")
         waterTempTxt.text = context.getString(R.string.nautical_water_temp_label, "$tVal$tUnit")
 
-        moonTxt.text = context.getString(R.string.nautical_moon_phase_label, String.format(Locale.US, "%.0f%%", (state.moonPhase ?: 0.0) * 100.0))
-        sunTxt.text = context.getString(R.string.nautical_sunlight_label, state.sunlightMode ?: context.getString(R.string.n_a))
+        moonTxt.isVisible = state.moonPhase != null
+        moonTxt.text = state.moonPhase?.let {
+            context.getString(R.string.nautical_moon_phase_label, String.format(Locale.US, "%.0f%%", it * 100.0))
+        } ?: context.getString(R.string.nautical_not_available)
+        sunTxt.text = context.getString(R.string.nautical_sunlight_label, state.sunlightMode ?: context.getString(R.string.nautical_not_available))
         
         pressureTxt.visibility = if (state.outsidePressure != null) VISIBLE else GONE
         waterTempTxt.visibility = if (state.waterTemperature != null) VISIBLE else GONE

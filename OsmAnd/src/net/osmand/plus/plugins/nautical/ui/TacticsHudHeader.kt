@@ -56,8 +56,10 @@ class TacticsHudHeader @JvmOverloads constructor(
 
         // If we are within 50m of a layline, show the prompt
         if (dPort < 50.0 || dStbd < 50.0) {
+            // A tack/gybe prompt without true wind data would just be a
+            // guess dressed up as tactics: hold the prompt back.
+            val twa = state.trueWindAngle ?: return
             isVisible = true
-            val twa = state.trueWindAngle ?: 0.0
             val action = if (abs(twa) < Math.PI / 2.0) {
                 context.getString(R.string.nautical_tack)
             } else {

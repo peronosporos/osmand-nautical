@@ -31,6 +31,8 @@ class ThermalWarningView @JvmOverloads constructor(
     private val iconView: ImageView = ImageView(context).apply {
         setImageResource(R.drawable.ic_action_alert)
         setColorFilter(Color.WHITE)
+        // Decorative: the adjacent warning text carries the semantics.
+        importantForAccessibility = IMPORTANT_FOR_ACCESSIBILITY_NO
         val size = AndroidUtils.dpToPx(context, 24f)
         layoutParams = LinearLayout.LayoutParams(size, size).apply {
             marginEnd = AndroidUtils.dpToPx(context, 12f)

@@ -401,11 +401,21 @@ class HeadingArcView @JvmOverloads constructor(
             textPaint.textSize = centerValueSize
             textPaint.color = textColorPrimary
             if (currentMode == "WIND") {
-                val tawa = targetWindAngleApparent ?: 0
-                val side = if (tawa < 0) "P" else if (tawa > 0) "S" else ""
-                val absVal = abs(tawa)
-                val displayText = if (side.isNotEmpty()) "$side $absVal°" else "$absVal°"
-                canvas.drawText(displayText, centerX, centerY + (centerValueSize * 0.35f), textPaint)
+                val tawa = targetWindAngleApparent
+                if (tawa == null) {
+                    // No wind data: an honest n/a instead of a fabricated 0°
+                    // apparent-wind target dead ahead.
+                    textPaint.color = NauticalColorResolver.getColor(context, NauticalSemanticColor.SECONDARY)
+                    canvas.drawText(
+                        context.getString(R.string.nautical_not_available),
+                        centerX, centerY + (centerValueSize * 0.35f), textPaint
+                    )
+                } else {
+                    val side = if (tawa < 0) "P" else if (tawa > 0) "S" else ""
+                    val absVal = abs(tawa)
+                    val displayText = if (side.isNotEmpty()) "$side $absVal°" else "$absVal°"
+                    canvas.drawText(displayText, centerX, centerY + (centerValueSize * 0.35f), textPaint)
+                }
             } else {
                 val centralValue = targetHeading
                 NauticalFormatter.drawDeg(canvas, centralValue.toFloat(), centerX, centerY + (centerValueSize * 0.35f), textPaint, degreeBuffer)

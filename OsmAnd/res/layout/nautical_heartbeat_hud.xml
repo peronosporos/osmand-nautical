@@ -16,7 +16,7 @@
         android:textSize="50sp"
         android:textStyle="bold"
         android:textColor="@color/color_ok"
-        android:text="000°"
+        android:text="---°"
         android:includeFontPadding="false"
         android:contentDescription="@string/nautical_accessibility_heading"
         android:importantForAccessibility="yes" />

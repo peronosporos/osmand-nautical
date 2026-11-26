@@ -12,6 +12,7 @@ import android.widget.ImageView
 import android.widget.TextView
 import androidx.core.view.isVisible
 import net.osmand.plus.OsmandApplication
+import androidx.core.content.ContextCompat
 import net.osmand.plus.R
 import net.osmand.plus.plugins.nautical.NauticalPlugin
 import net.osmand.plus.utils.AndroidUtils
@@ -80,12 +81,12 @@ class StartLineHudHeader @JvmOverloads constructor(
             val bg = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
                 cornerRadius = 8f * density
-                setColor(0xEE120000.toInt()) // Pitch dark red/black
-                setStroke((1.5f * density).toInt(), 0xFFFF1744.toInt())
+                setColor(ContextCompat.getColor(context, R.color.nautical_night_vision_bg)) // Pitch dark red/black
+                setStroke((1.5f * density).toInt(), ContextCompat.getColor(context, R.color.nautical_race_red))
             }
             rootLayout.background = bg
-            flagIcon.setColorFilter(0xFFFF1744.toInt())
-            timerLabel.setTextColor(0xFFFF1744.toInt())
+            flagIcon.setColorFilter(ContextCompat.getColor(context, R.color.nautical_race_red))
+            timerLabel.setTextColor(ContextCompat.getColor(context, R.color.nautical_race_red))
             distLabel.setTextColor(0xFFFF8A80.toInt())
             timeLabel.setTextColor(0xFFFF5252.toInt())
             biasLabel.setTextColor(0xFFFF8A80.toInt())
@@ -95,15 +96,15 @@ class StartLineHudHeader @JvmOverloads constructor(
             btnClear.setBackgroundColor(0xFF8B0000.toInt())
         } else {
             rootLayout.setBackgroundResource(R.drawable.bg_side_widget_day)
-            flagIcon.setColorFilter(0xFF00E676.toInt())
-            timerLabel.setTextColor(0xFFFFFFFF.toInt())
-            distLabel.setTextColor(0xFFB0BEC5.toInt())
-            timeLabel.setTextColor(0xFFFF1744.toInt())
-            biasLabel.setTextColor(0xFF00E5FF.toInt())
+            flagIcon.setColorFilter(ContextCompat.getColor(context, R.color.nautical_race_green))
+            timerLabel.setTextColor(android.graphics.Color.WHITE)
+            distLabel.setTextColor(ContextCompat.getColor(context, R.color.nautical_race_dim))
+            timeLabel.setTextColor(ContextCompat.getColor(context, R.color.nautical_race_red))
+            biasLabel.setTextColor(ContextCompat.getColor(context, R.color.nautical_race_cyan))
             btnSync.setTextColor(Color.WHITE)
-            btnSync.setBackgroundColor(0xFF1E88E5.toInt())
+            btnSync.setBackgroundColor(ContextCompat.getColor(context, R.color.nautical_race_blue))
             btnClear.setTextColor(Color.WHITE)
-            btnClear.setBackgroundColor(0xFF757575.toInt())
+            btnClear.setBackgroundColor(ContextCompat.getColor(context, R.color.nautical_race_neutral))
         }
     }
 
@@ -119,11 +120,17 @@ class StartLineHudHeader @JvmOverloads constructor(
 
         isVisible = true
         val state = NauticalPlugin.engine?.getCurrentState()
-        val lat = state?.latitude ?: 0.0
-        val lon = state?.longitude ?: 0.0
 
-        val dist = manager.getDistanceToLine(lat, lon) ?: 0.0
-        val time = manager.getTimeToBurn(lat, lon) ?: 0.0
+        // Distance and time-to-burn need the boat position; without a fix
+        // they show placeholders instead of being computed from a fabricated
+        // (0, 0) position and presented as real numbers.
+        val lat = state?.latitude
+        val lon = state?.longitude
+
+        // Direct null-checks so Kotlin smart-casts Double? -> Double for the
+        // manager calls below.
+        val dist = if (lat != null && lon != null) manager.getDistanceToLine(lat, lon) else null
+        val time = if (lat != null && lon != null) manager.getTimeToBurn(lat, lon) else null
         val advantage = manager.getFavoredEndAdvantage()?.let { fav ->
             if (fav.isStarboardFavored == null) context.getString(R.string.nautical_start_square_line) else {
                 val end = context.getString(if (fav.isStarboardFavored == true) R.string.nautical_start_starboard else R.string.nautical_start_port)
@@ -139,14 +146,18 @@ class StartLineHudHeader @JvmOverloads constructor(
         val timerSign = if (remainingSec < 0) "+" else ""
         timerLabel.text = String.format(Locale.US, "%s%02d:%02d", timerSign, mins, secs)
         if (remainingSec <= 0 && remainingSec > -10) {
-            timerLabel.setTextColor(if (isNightVision) 0xFFFF1744.toInt() else 0xFF00E676.toInt())
+            timerLabel.setTextColor(if (isNightVision) ContextCompat.getColor(context, R.color.nautical_race_red) else ContextCompat.getColor(context, R.color.nautical_race_green))
         } else {
-            timerLabel.setTextColor(if (isNightVision) 0xFFFF1744.toInt() else 0xFFFFFFFF.toInt())
+            timerLabel.setTextColor(if (isNightVision) ContextCompat.getColor(context, R.color.nautical_race_red) else android.graphics.Color.WHITE)
         }
 
-        distLabel.text = context.getString(R.string.nautical_start_dist_fmt, String.format(Locale.US, "%.0f", dist))
+        distLabel.text = dist?.let {
+            context.getString(R.string.nautical_start_dist_fmt, String.format(Locale.US, "%.0f", it))
+        } ?: context.getString(R.string.nautical_start_dist_placeholder)
 
-        if (abs(time) > 3600) {
+        if (time == null) {
+            timeLabel.text = context.getString(R.string.nautical_start_burn_placeholder)
+        } else if (abs(time) > 3600) {
             timeLabel.text = context.getString(R.string.nautical_start_burn_none)
         } else {
             val absBurn = abs(time).toInt()

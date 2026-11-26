@@ -26,11 +26,17 @@ class SlideToConfirmView @JvmOverloads constructor(
     private val touchSlop = ViewConfiguration.get(context).scaledTouchSlop
 
     var onConfirm: (() -> Unit)? = null
-    var label: String = "SLIDE TO CONFIRM"
+    var label: String = ""
         set(value) {
             field = value
             invalidate()
         }
+
+    init {
+        if (label.isEmpty()) {
+            label = context.getString(R.string.nautical_slide_to_confirm)
+        }
+    }
 
     private val trackPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = "#33FFFFFF".toColorInt()

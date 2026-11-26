@@ -12,7 +12,7 @@
         android:layout_width="24dp"
         android:layout_height="24dp"
         android:src="@drawable/ic_action_sail_boat_dark"
-        app:tint="#FFCC00"
+        app:tint="@color/nautical_race_yellow"
         android:contentDescription="@string/nautical_tactics_desc" />
 
     <TextView

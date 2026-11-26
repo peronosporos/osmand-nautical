@@ -1697,6 +1697,9 @@
     <string name="nautical_system_latency_ms">%1$dms</string>
     <string name="nautical_system_stale">Data Stale (%1$ds)</string>
     <string name="nautical_system_disconnected">Disconnected</string>
+    <string name="nautical_workflow_confirm">Confirm</string>
+    <string name="nautical_slide_to_confirm">SLIDE TO CONFIRM</string>
+    <string name="nautical_system_stale_no_data">Data Stale</string>
     <string name="nautical_rot_label">ROT: %1$s %2$s</string>
     <string name="nautical_drift_label">DRIFT: %1$s %2$s</string>
     <string name="nautical_set_label">SET: %1$s %2$s</string>

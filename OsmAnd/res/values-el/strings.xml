@@ -6047,6 +6047,9 @@
     <string name="nautical_hud_hazard_wrn">ΚΙΝΔΥΝΟΣ!</string>
     <string name="nautical_hud_all_clear">ΚΑΘΑΡΟ</string>
     <string name="nautical_a11y_hold_to_cancel_mob">Κρατήστε πατημένο 2 δευτερόλεπτα για ακύρωση MOB</string>
+    <string name="nautical_workflow_confirm">Επιβεβαίωση</string>
+    <string name="nautical_slide_to_confirm">ΣΥΡΕΤΕ ΓΙΑ ΕΠΙΒΕΒΑΙΩΣΗ</string>
+    <string name="nautical_system_stale_no_data">Στοιχεία Παλαιωμένα</string>
     <string name="mob_alarm_title">ΑΝΘΡΩΠΟΣ ΣΤΗ ΘΑΛΑΣΣΑ!</string>
     <string name="mob_btn_cancel">ΑΚΥΡΩΣΗ ΕΞΑΙΡΕΤΙΚΗΣ ΚΑΤΑΣΤΑΣΗΣ</string>
     <string name="nautical_anchor_breakout_risk_fmt">⚠ ΥΨΗΛΟΣ ΚΙΝΔΥΝΟΣ ΑΠΟΣΥΡΜΑΣΗΣ: Απότομη μεταβολή ανέμου %1$d°</string>
