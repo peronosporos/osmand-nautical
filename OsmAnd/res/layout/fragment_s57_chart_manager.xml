@@ -38,7 +38,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
-                android:text="Manage S-63 Permits"
+                android:text="@string/nautical_s63_manage_permits"
                 app:icon="@drawable/ic_action_lock"
                 app:iconTint="#FFFFFF"
                 android:textColor="#FFFFFF"
@@ -79,7 +79,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
-                android:text="No ENC charts found in nautical/enc/"
+                android:text="@string/nautical_s57_no_enc_charts"
                 android:textAppearance="@style/TextAppearance.AppCompat.Medium"
                 android:textColor="?android:attr/textColorSecondary"
                 android:gravity="center" />

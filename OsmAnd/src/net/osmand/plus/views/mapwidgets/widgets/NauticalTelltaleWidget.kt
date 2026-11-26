@@ -6,6 +6,7 @@ import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import net.osmand.plus.R
 import net.osmand.plus.activities.MapActivity
 import net.osmand.plus.plugins.nautical.NauticalPlugin
 import net.osmand.plus.views.layers.base.OsmandMapLayer
@@ -83,13 +84,13 @@ class NauticalTelltaleWidget(
         val stbdState = state.customValues["performance.telltales.starboard.state"]
 
         if (portState == null && stbdState == null) {
-            setText("Telltale", "No Data")
+            setText(mapActivity.getString(R.string.nautical_telltale_title), mapActivity.getString(R.string.nautical_no_data))
             view.alpha = 0.5f
             return
         }
 
-        val main = if ((portState ?: 0.5) > 0.5) "OK" else "STALL"
-        val sub = if ((stbdState ?: 0.5) > 0.5) "OK" else "STALL"
+        val main = if ((portState ?: 0.5) > 0.5) mapActivity.getString(R.string.shared_string_ok) else mapActivity.getString(R.string.nautical_telltale_stall)
+        val sub = if ((stbdState ?: 0.5) > 0.5) mapActivity.getString(R.string.shared_string_ok) else mapActivity.getString(R.string.nautical_telltale_stall)
 
         setText("P:$main", "S:$sub")
         

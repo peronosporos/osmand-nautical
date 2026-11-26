@@ -274,7 +274,7 @@ class NauticalPilotWidget(
                                         NauticalPlugin.autopilot?.dodgeStateFlow?.collect { dodge ->
                                             if (dodge.isDodging) {
                                                 btnDodgeResume?.visibility = View.VISIBLE
-                                                btnDodgeResume?.text = "RESUME (${dodge.remainingSeconds}s)"
+                                                btnDodgeResume?.text = mapActivity.getString(R.string.nautical_pilot_resume_fmt, dodge.remainingSeconds)
                                                 btnDodgePort?.visibility = View.GONE
                                                 btnDodgeStbd?.visibility = View.GONE
                                             } else {
@@ -292,7 +292,7 @@ class NauticalPilotWidget(
                                         NauticalPlugin.autopilot?.autoTackStateFlow?.collect { tack ->
                                             if (tack.isTacking) {
                                                 btnTackAbort?.visibility = View.VISIBLE
-                                                btnTackAbort?.text = if (tack.isCountdown) "ABORT (${tack.countdownSeconds}s)" else "ABORT"
+                                                btnTackAbort?.text = if (tack.isCountdown) mapActivity.getString(R.string.nautical_pilot_abort_fmt, tack.countdownSeconds) else mapActivity.getString(R.string.nautical_pilot_btn_abort)
                                                 btnTackPort?.visibility = View.GONE
                                                 btnTackStbd?.visibility = View.GONE
                                             } else {
@@ -394,7 +394,7 @@ class NauticalPilotWidget(
     private fun checkHelmLock(): Boolean {
         if (NauticalHelmArbitrator.getInstance(app).isLockedByEmergency()) {
             val maneuver = NauticalHelmArbitrator.getInstance(app).getActiveManeuver()
-            app.showToastMessage("Helm Locked by $maneuver")
+            app.showToastMessage(mapActivity.getString(R.string.nautical_helm_locked_fmt, maneuver))
             return false
         }
         return true
@@ -483,7 +483,7 @@ class NauticalPilotWidget(
         widgetName?.text = ""
         val state = NauticalPlugin.engine?.getCurrentState()
         if (state == null) {
-            setText("STANDBY", "")
+            setText(mapActivity.getString(R.string.nautical_ap_mode_standby), "")
             updateIcon()
             setStatusIcon(0)
             contentView?.alpha = 0.5f
@@ -499,10 +499,10 @@ class NauticalPilotWidget(
         if (state.isOffCourse) {
             val xteMeters = state.crossTrackError ?: 0.0
             val xteNm = kotlin.math.abs(xteMeters) / 1852.0
-            setText(String.format(Locale.US, "XTE %.2f", xteNm), "")
+            setText(mapActivity.getString(R.string.nautical_pilot_xte_fmt, xteNm), "")
             setStatusIcon(if (isStale) R.drawable.ic_action_time else R.drawable.ic_action_play_dark)
         } else if (!isEngaged) {
-            setText("STANDBY", "")
+            setText(mapActivity.getString(R.string.nautical_ap_mode_standby), "")
             setStatusIcon(0)
         } else {
             val rotDegSec = state.rateOfTurn?.let { Math.toDegrees(it) } ?: 0.0
@@ -515,9 +515,9 @@ class NauticalPilotWidget(
                         val deg = Math.toDegrees(targetWind)
                         val isNearGybe = abs(deg) > 155.0
                         if (isNearGybe) {
-                            setText(String.format(Locale.US, "AWA %.0f° ⚠", deg), "GYBE LOCK")
+                            setText(mapActivity.getString(R.string.nautical_pilot_awa_warn_fmt, deg), mapActivity.getString(R.string.nautical_pilot_gybe_lock))
                         } else {
-                            setText(String.format(Locale.US, "AWA %.0f°", deg), rotSub)
+                            setText(mapActivity.getString(R.string.nautical_pilot_awa_fmt, deg), rotSub)
                         }
                     } else {
                         setText("--", "")
@@ -529,9 +529,9 @@ class NauticalPilotWidget(
                         val deg = Math.toDegrees(targetWind)
                         val isNearGybe = abs(deg) > 155.0
                         if (isNearGybe) {
-                            setText(String.format(Locale.US, "TWA %.0f° ⚠", deg), "GYBE LOCK")
+                            setText(mapActivity.getString(R.string.nautical_pilot_twa_warn_fmt, deg), mapActivity.getString(R.string.nautical_pilot_gybe_lock))
                         } else {
-                            setText(String.format(Locale.US, "TWA %.0f°", deg), rotSub)
+                            setText(mapActivity.getString(R.string.nautical_pilot_twa_fmt, deg), rotSub)
                         }
                     } else {
                         setText("--", "")
@@ -540,7 +540,7 @@ class NauticalPilotWidget(
                 "nav", "track", "route" -> {
                     val heading = state.targetHeading ?: state.courseOverGroundTrue
                     val leewayComp = NauticalPlugin.autopilot?.computeLeewayFeedforward(state) ?: 0.0
-                    val subText = if (kotlin.math.abs(leewayComp) > 0.5) String.format(Locale.US, "LEEWAY: %+.1f°", leewayComp) else rotSub
+                    val subText = if (kotlin.math.abs(leewayComp) > 0.5) mapActivity.getString(R.string.nautical_pilot_leeway_fmt, leewayComp) else rotSub
                     if (heading != null && !isStale) {
                         val deg = Math.toDegrees(heading)
                         setText(String.format(Locale.US, "%.0f°", deg), subText)

@@ -90,13 +90,13 @@ class NauticalCameraWidget(
 
         val options = mutableListOf<String>()
         if (target != null) {
-            options.add("🎯 Slew PTZ to ${target.name} (${target.bearingDeg.toInt()}° / ${String.format(java.util.Locale.US, "%.1f", target.distanceNm)} NM)")
+            options.add(mapActivity.getString(R.string.nautical_camera_slew_target_fmt, target.name, target.bearingDeg.toInt(), target.distanceNm))
         } else {
-            options.add("🎯 Slew PTZ (No Target Active)")
+            options.add(mapActivity.getString(R.string.nautical_camera_slew_no_target))
         }
 
         availableCameras.forEach {
-            options.add("📹 Stream: ${it.name ?: it.identifier}")
+            options.add(mapActivity.getString(R.string.nautical_camera_stream_fmt, it.name ?: it.identifier))
         }
 
         AlertDialog.Builder(mapActivity)
@@ -105,7 +105,7 @@ class NauticalCameraWidget(
                 if (which == 0) {
                     manager.slewToTarget(
                         onSuccess = { t ->
-                            mapActivity.app.showToastMessage("PTZ Camera Slewed to ${t.name} (${t.bearingDeg.toInt()}°)")
+                            mapActivity.app.showToastMessage(mapActivity.getString(R.string.nautical_camera_slewed_fmt, t.name, t.bearingDeg.toInt()))
                             updateInfo(null)
                         },
                         onError = { err ->
@@ -119,7 +119,7 @@ class NauticalCameraWidget(
                     }
                 }
             }
-            .setNeutralButton("Refresh Cameras") { _, _ -> refreshCameraList() }
+            .setNeutralButton(mapActivity.getString(R.string.nautical_camera_refresh)) { _, _ -> refreshCameraList() }
             .show()
     }
 
@@ -131,7 +131,7 @@ class NauticalCameraWidget(
         // Signal K standard for chart-based cameras often uses the tilejson URL or a proxy path
         val url = "$protocol://$ip:$port/signalk/v1/api/resources/charts/${camera.identifier}/stream"
         
-        mapActivity.app.showToastMessage("Connecting to stream: ${camera.name ?: camera.identifier}")
+        mapActivity.app.showToastMessage(mapActivity.getString(R.string.nautical_camera_connecting_fmt, camera.name ?: camera.identifier))
         
         // Task: Open in full-screen WebView/VideoView fragment
         // For now, use browser as placeholder for the external player
