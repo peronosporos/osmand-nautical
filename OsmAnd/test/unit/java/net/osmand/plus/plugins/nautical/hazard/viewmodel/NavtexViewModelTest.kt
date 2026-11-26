@@ -40,7 +40,7 @@ class NavtexViewModelTest {
 
     @Test
     fun testUrgentFiltering() = runTest {
-        val msg1 = NavtexMessage("1", 'A', NavtexSubject.NAVTEX_WARNING, 1, 0, "", isUrgent = true)
+        val msg1 = NavtexMessage("1", 'A', NavtexSubject.NAVIGATIONAL_WARNING, 1, 0, "", isUrgent = true)
         val msg2 = NavtexMessage("2", 'A', NavtexSubject.UNKNOWN, 2, 0, "", isUrgent = false)
         messagesFlow.value = listOf(msg1, msg2)
 
@@ -53,7 +53,7 @@ class NavtexViewModelTest {
 
     @Test
     fun testProximityFiltering() = runTest {
-        val msg1 = NavtexMessage("1", 'A', NavtexSubject.NAVTEX_WARNING, 1, 0, "", 
+        val msg1 = NavtexMessage("1", 'A', NavtexSubject.NAVIGATIONAL_WARNING, 1, 0, "", 
             points = listOf(net.osmand.data.LatLon(10.0, 10.0)))
         messagesFlow.value = listOf(msg1)
 

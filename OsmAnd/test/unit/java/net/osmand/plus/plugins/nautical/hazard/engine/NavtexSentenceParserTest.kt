@@ -14,7 +14,7 @@ class NavtexSentenceParserTest {
         assertNotNull("Message should not be null", message)
         assertEquals("OA00", message?.id)
         assertEquals('O', message?.stationLetter)
-        assertEquals(NavtexSubject.NAVTEX_WARNING, message?.subject)
+        assertEquals(NavtexSubject.NAVIGATIONAL_WARNING, message?.subject)
         assertEquals(0, message?.sequenceNumber)
         assertTrue("Message should be urgent", message?.isUrgent ?: false)
         

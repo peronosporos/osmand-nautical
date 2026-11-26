@@ -34,7 +34,7 @@ class TideEngineTest {
         assertEquals(-123.0, station.longitude, 0.0001)
         assertEquals(2, station.constituents.size)
         assertEquals("M2", station.constituents[0].name)
-        assertEquals(28.9841042, station.constituents[0].speed, 0.0000001)
+        assertEquals(28.9841042, station.constituents[0].speed ?: 0.0, 0.0000001)
     }
 
     @Test

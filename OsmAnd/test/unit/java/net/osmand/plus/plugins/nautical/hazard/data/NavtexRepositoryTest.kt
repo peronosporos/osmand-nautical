@@ -30,7 +30,7 @@ class NavtexRepositoryTest {
         val message = NavtexMessage(
             id = "OA00",
             stationLetter = 'O',
-            subject = NavtexSubject.NAVTEX_WARNING,
+            subject = NavtexSubject.NAVIGATIONAL_WARNING,
             sequenceNumber = 0,
             timestamp = System.currentTimeMillis(),
             body = "TEST BODY",
