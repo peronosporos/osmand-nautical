@@ -586,7 +586,7 @@
     <string name="nautical_anchor_cleared">Ankerwache deaktiviert.</string>
     <string name="nautical_anchor_label">Ankerwache</string>
     <string name="nautical_anchor_set_auto">Anker gesetzt (Tiefe: %1$.1fm, Scope: %2$.1f:1, Radius: %3$dm)</string>
-    <string name="nautical_anchor_rode_deployed"> • Rode: %1$dm/%2$dft</string>
+    <string name="nautical_anchor_rode_deployed"> • Ankerleine: %1$dm/%2$dft</string>
     <string name="nautical_electrical_dashboard">Elektropanel</string>
     <string name="nautical_error_no_gps">Aktion blockiert: Keine GPS-Position verfügbar.</string>
     <string name="nautical_laylines_disabled">Laylines deaktiviert</string>
@@ -924,7 +924,7 @@
     <string name="nautical_ais_details_dimensions">Maße: %1$s</string>
     <string name="nautical_ais_details_draught">Tiefgang: %1$s</string>
     <string name="nautical_ais_details_eta">ETA: %1$s</string>
-    <string name="nautical_ais_details_position">Pos: %1$s</string>
+    <string name="nautical_ais_details_position">Pos.: %1$s</string>
     <string name="nautical_ais_details_status">Status: %1$s</string>
     <string name="nautical_ais_range_bearing">%1$s • %2$s</string>
     <string name="nautical_hide_track">Spur ausblenden</string>
@@ -1176,7 +1176,7 @@
     <string name="nautical_ais_details_rot">ROT: %1$s</string>
     <string name="nautical_ais_details_hdg">HDG: %1$s</string>
     <string name="nautical_ais_details_mmsi">MMSI: %1$d</string>
-    <string name="nautical_ais_details_callsign">Call: %1$s</string>
+    <string name="nautical_ais_details_callsign">Rufzeichen: %1$s</string>
     <string name="nautical_ais_details_imo">IMO: %1$s</string>
     <string name="nautical_systems_group">Nautische Systeme</string>
     <string name="nautical_lighting_control">Beleuchtungssteuerung</string>
@@ -1304,7 +1304,7 @@
     <string name="nautical_actuator_overload_alarm">AUTOPILOT-AKTUATOR ÜBERLAST!</string>
     <string name="nautical_add_metric">Metrik hinzufügen</string>
     <string name="nautical_advanced_compass_wizard">Kompass-Deviation-Assistent</string>
-    <string name="nautical_advanced_sensor_hardware">SENSOR &amp; HARDWARE</string>
+    <string name="nautical_advanced_sensor_hardware">SENSOREN &amp; HARDWARE</string>
     <string name="nautical_alternator_current">Lichtmaschinenstrom</string>
     <string name="nautical_alternator_voltage">Lichtmaschinenspannung</string>
     <string name="nautical_anchor_depth_label">Wassertiefe</string>
@@ -1491,7 +1491,7 @@
     <string name="nautical_pitch_desc">Schiffstrimmung (Nicken)</string>
     <string name="nautical_plugin_description">Fortgeschrittene Navigation auf See und Instrumentendaten. Unterstützt NMEA/SignalK-Backends und Autopilotsteuerung.</string>
     <string name="nautical_point_lock_active">Punktfixierung aktiv (virtueller Anker)</string>
-    <string name="nautical_polar_ratio">PERF %</string>
+    <string name="nautical_polar_ratio">LEIST %</string>
     <string name="nautical_polar_ratio_desc">Verhältnis von Ist-Geschwindigkeit zu Polarziel</string>
     <string name="nautical_polar_target">POLAR TGT</string>
     <string name="nautical_presets_header">Dashboard-Voreinstellungen</string>

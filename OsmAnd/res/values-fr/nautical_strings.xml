@@ -1176,7 +1176,7 @@
     <string name="nautical_ais_details_rot">ROT: %1$s</string>
     <string name="nautical_ais_details_hdg">HDG: %1$s</string>
     <string name="nautical_ais_details_mmsi">MMSI: %1$d</string>
-    <string name="nautical_ais_details_callsign">Call: %1$s</string>
+    <string name="nautical_ais_details_callsign">Indicatif : %1$s</string>
     <string name="nautical_ais_details_imo">IMO: %1$s</string>
     <string name="nautical_systems_group">Systèmes Nautiques</string>
     <string name="nautical_lighting_control">Contrôle de l\'Éclairage</string>
@@ -1190,7 +1190,7 @@
     <string name="nautical_engine_propulsion">PROPULSION</string>
     <string name="nautical_engine_rpm_fmt">%1$d RPM</string>
     <string name="nautical_engine_oil_fmt">Huile %1$s bar</string>
-    <string name="nautical_engine_alt_fmt">Alt %1$s V</string>
+    <string name="nautical_engine_alt_fmt">Altern. %1$s V</string>
     <string name="nautical_a11y_vessel_icon">Icône de Navire AIS</string>
     <string name="nautical_a11y_buddy_star">Buddy AIS</string>
     <string name="nautical_a11y_collision_warning">Alerte de Collision</string>

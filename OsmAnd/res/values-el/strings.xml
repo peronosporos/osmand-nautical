@@ -6764,7 +6764,7 @@
     <string name="nautical_screen_vessel_desc">Τύπος σκάφους, ρύθμιση αυτόματου πηδαλίου και παράμετροι ελιγμών</string>
     <string name="nautical_screen_safety_title">Ασφάλεια &amp; Άγκυρα</string>
     <string name="nautical_screen_safety_desc">Περιθώρια ασφαλείας, συναγερμοί και παρακολούθηση άγκυρας</string>
-    <string name="nautical_screen_targets_title">AIS, VHF &amp; Navtex</string>
+    <string name="nautical_screen_targets_title">AIS, VHF και Navtex</string>
     <string name="nautical_screen_targets_desc">Εμφάνιση στόχων, υποσύστημα VHF και φίλτρα navtex</string>
     <string name="nautical_screen_connection_title">Σύνδεση &amp; Όργανα</string>
     <string name="nautical_screen_connection_desc">Διακομιστής Signal K, πηγές NMEA και διαγνωστικά</string>
@@ -7631,7 +7631,7 @@
     <string name="nautical_sunlight_label">Ήλιος: %s</string>
     <string name="nautical_vhf_auto_replay_desc">Αυτόματη αναπαραγωγή νέων εκπομπών VHF</string>
     <string name="nautical_vhf_widget_label">Εντολές VHF</string>
-    <string name="nautical_vhf_live">LIVE</string>
+    <string name="nautical_vhf_live">ΖΩΝΤΑΝΑ</string>
     <string name="nautical_vhf_replay">ΕΠΑΝΑΛΗΨΗ</string>
     <string name="nautical_vhf_history">Ιστορικό VHF</string>
     <string name="nautical_vhf_no_history">Δεν καταγράφηκαν εκπομπές</string>
@@ -7753,7 +7753,7 @@
     <string name="nautical_heavy_weather_mode_desc">Αύξηση απόσβεσης αισθητήρων και ορίων συναγερμού για βαριά θάλασσα</string>
     <string name="nautical_leeway_coefficient_desc">Συντελεστής βαθμονόμησης για τον υπολογισμό παρέκκλισης σκάφους (leeway)</string>
     <string name="nautical_nmea_source_signalk">Ροή Signal K</string>
-    <string name="nautical_nmea_source_bluetooth">Bluetooth NMEA</string>
+    <string name="nautical_nmea_source_bluetooth">NMEA μέσω Bluetooth</string>
     <string name="nautical_nmea_source_usb">Σειριακό USB NMEA</string>
     <string name="nautical_nmea_source_tcp">Δίκτυο TCP/UDP</string>
     <string name="nautical_force_watch_layout_desc">Επιβολή βελτιστοποιημένης διάταξης για Wear OS / μικρές οθόνες</string>
@@ -8334,7 +8334,7 @@
     <string name="nautical_sail_name_main_full">Πλήρες κύριο πανί</string>
     <string name="nautical_sail_name_genoa">Γενόα (140%)</string>
     <string name="nautical_sail_name_jib">Φλόκος εργασίας (100%)</string>
-    <string name="nautical_sail_name_staysail">Solent / Staysail (75%)</string>
+    <string name="nautical_sail_name_staysail">Solent / Στέισειλ (75%)</string>
     <string name="nautical_sail_name_storm_jib">Φλόκος καταιγίδας (30%)</string>
     <string name="nautical_sail_name_code_zero">Code Zero</string>
     <string name="nautical_sail_name_asym_spin">Ασύμμετρο σπινάκερ</string>
@@ -8359,7 +8359,7 @@
     <string name="nautical_server_charts_empty">Δεν υπάρχουν διαθέσιμες στρώσεις χαρτών στον διακομιστή Signal K.</string>
     <string name="nautical_server_charts_failed_fmt">Αποτυχία φόρτωσης χαρτών από %1$s:%2$s.</string>
     <string name="nautical_server_charts_meta_fmt">Χάρτης %1$s · ζουμ %2$d-%3$d</string>
-    <string name="nautical_server_charts_raster">Raster</string>
+    <string name="nautical_server_charts_raster">Ράστερ</string>
     <string name="nautical_server_unable_connect_fmt">Αδυναμία σύνδεσης στο %1$s:%2$s. Βεβαιωθείτε ότι ο διακομιστής είναι προσβάσιμος και τα διαπιστευτήρια σωστά.</string>
     <string name="nautical_toast_diag_log_copied">Το ημερολόγιο διαγνωστικών αντιγράφηκε στο πρόχειρο</string>
     <string name="nautical_toast_no_polars">Δεν υπάρχουν διαθέσιμα προφίλ πόλων στο Signal K.</string>

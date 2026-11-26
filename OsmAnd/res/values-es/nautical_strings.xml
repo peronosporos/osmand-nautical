@@ -103,8 +103,8 @@
     <string name="nautical_start_burn_fmt">Burn: %1$s%2$02d:%3$02d</string>
     <string name="nautical_start_burn_none">Burn: --:--</string>
     <string name="nautical_start_burn_placeholder">Burn: --:--</string>
-    <string name="nautical_start_dist_fmt">Dist: %1$sm</string>
-    <string name="nautical_start_dist_placeholder">Dist: -- m</string>
+    <string name="nautical_start_dist_fmt">Dist.: %1$sm</string>
+    <string name="nautical_start_dist_placeholder">Dist.: -- m</string>
     <string name="nautical_start_favored_fmt">Favorecido: %1$s (+%2$s° / +%3$s BL)</string>
     <string name="nautical_start_favored_placeholder">Favorecido: --</string>
     <string name="nautical_start_line_bias_none">Sesgo de Línea: --</string>
@@ -920,11 +920,11 @@
     <string name="nautical_collision_danger">¡Peligro de colisión!</string>
     <string name="nautical_add_to_buddies">Añadir a amigos AIS</string>
     <string name="nautical_added_to_buddies">%1$s añadido a amigos AIS</string>
-    <string name="nautical_ais_details_destination">Dest: %1$s</string>
-    <string name="nautical_ais_details_dimensions">Dim: %1$s</string>
+    <string name="nautical_ais_details_destination">Destino: %1$s</string>
+    <string name="nautical_ais_details_dimensions">Dim.: %1$s</string>
     <string name="nautical_ais_details_draught">Calado: %1$s</string>
     <string name="nautical_ais_details_eta">ETA: %1$s</string>
-    <string name="nautical_ais_details_position">Pos: %1$s</string>
+    <string name="nautical_ais_details_position">Pos.: %1$s</string>
     <string name="nautical_ais_details_status">Estado: %1$s</string>
     <string name="nautical_ais_range_bearing">%1$s • %2$s</string>
     <string name="nautical_hide_track">Ocultar rastro</string>
@@ -1070,7 +1070,7 @@
     <string name="nautical_mode_auto_short">AUTO</string>
     <string name="nautical_maneuver_no_heading">Sin datos de rumbo, no se puede planificar la maniobra</string>
     <string name="nautical_mode_wind_short">VIENTO</string>
-    <string name="nautical_mode_track_short">TRACK</string>
+    <string name="nautical_mode_track_short">TRAZA</string>
     <string name="nautical_mode_standby">ESPERA</string>
     <string name="nautical_center_rudder">Centrar Timón</string>
     <string name="nautical_course_reset">Rumbo restablecido a la dirección actual</string>
@@ -1176,7 +1176,7 @@
     <string name="nautical_ais_details_rot">ROT: %1$s</string>
     <string name="nautical_ais_details_hdg">HDG: %1$s</string>
     <string name="nautical_ais_details_mmsi">MMSI: %1$d</string>
-    <string name="nautical_ais_details_callsign">Call: %1$s</string>
+    <string name="nautical_ais_details_callsign">Indicativo: %1$s</string>
     <string name="nautical_ais_details_imo">IMO: %1$s</string>
     <string name="nautical_systems_group">Sistemas Náuticos</string>
     <string name="nautical_lighting_control">Control de Iluminación</string>
@@ -1190,7 +1190,7 @@
     <string name="nautical_engine_propulsion">PROPULSIÓN</string>
     <string name="nautical_engine_rpm_fmt">%1$d RPM</string>
     <string name="nautical_engine_oil_fmt">Aceite %1$s bar</string>
-    <string name="nautical_engine_alt_fmt">Alt %1$s V</string>
+    <string name="nautical_engine_alt_fmt">Altern. %1$s V</string>
     <string name="nautical_a11y_vessel_icon">Icono de Buque AIS</string>
     <string name="nautical_a11y_buddy_star">Buddy AIS</string>
     <string name="nautical_a11y_collision_warning">Aviso de Colisión</string>
@@ -1491,7 +1491,7 @@
     <string name="nautical_pitch_desc">Asiento del buque (cabeceo)</string>
     <string name="nautical_plugin_description">Navegación marina avanzada y datos de instrumentos. Admite backends NMEA/SignalK y control del piloto automático.</string>
     <string name="nautical_point_lock_active">Bloqueo de punto activo (ancla virtual)</string>
-    <string name="nautical_polar_ratio">PERF %</string>
+    <string name="nautical_polar_ratio">REND %</string>
     <string name="nautical_polar_ratio_desc">Relación de velocidad real respecto al objetivo polar</string>
     <string name="nautical_polar_target">POLAR TGT</string>
     <string name="nautical_presets_header">Preajustes del panel</string>
