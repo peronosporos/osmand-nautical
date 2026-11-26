@@ -369,10 +369,12 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
                 autopilot?.applyWaveBias(state)
 
                 if (polarConfigViewModel?.wizardState?.value == WizardState.ACTIVE_LOGGING) {
-                    val tws = state.windSpeedTrue ?: 0.0
-                    val twa = state.trueWindAngle ?: 0.0
-                    val speed = state.speedOverGround ?: 0.0
-                    polarConfigViewModel?.recordDataPoint(tws, Math.toDegrees(twa), speed)
+                    val tws = state.windSpeedTrue
+                    val twa = state.trueWindAngle
+                    val speed = state.speedOverGround
+                    if (tws != null && twa != null && speed != null) {
+                        polarConfigViewModel?.recordDataPoint(tws, Math.toDegrees(twa), speed)
+                    }
                 }
 
                 maneuverManager?.updateState(state)

@@ -607,7 +607,13 @@ class NauticalContextMenuHelper(private val app: OsmandApplication) {
 
         adapter.addItem(
             ContextMenuItem("nautical_autopilot_mode").apply {
-                val mode = autopilot?.let { " (${engine?.getCurrentState()?.autopilotState ?: "standby"})" } ?: ""
+                val modeRes = when (engine?.getCurrentState()?.autopilotState) {
+                    "track" -> R.string.nautical_mode_track_short
+                    "wind" -> R.string.nautical_mode_wind_short
+                    "auto" -> R.string.nautical_mode_auto_short
+                    else -> R.string.nautical_mode_standby
+                }
+                val mode = autopilot?.let { " (${app.getString(modeRes)})" } ?: ""
                 title = app.getString(R.string.nautical_autopilot) + mode
                 icon = R.drawable.ic_action_settings
                 applyNauticalStyle()

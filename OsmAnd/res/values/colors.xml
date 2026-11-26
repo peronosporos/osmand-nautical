@@ -678,6 +678,7 @@
 	<color name="nautical_chip_idle_stroke">#40888888</color>
 	<color name="nautical_night_vision_recording">#FFB71C1C</color>
 	<color name="nautical_night_vision_recording_idle">#FF8B0000</color>
+	<color name="nautical_polar_cell_empty">#FF333333</color>
 	<color name="nautical_ais_buddy_gold">#FFD700</color>
 	<color name="nautical_ais_danger_bg">#33FF0000</color>
 	<color name="nautical_ais_danger_icon">#FF0000</color>

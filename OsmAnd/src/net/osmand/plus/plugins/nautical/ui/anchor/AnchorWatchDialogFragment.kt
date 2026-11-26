@@ -7,6 +7,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
@@ -260,9 +261,9 @@ class AnchorWatchDialogFragment : BaseMaterialBottomSheetDialogFragment() {
 
         val isNight = NauticalPlugin.isNightVision(app)
         if (isNight) {
-            sliderPlayback?.trackActiveTintList = android.content.res.ColorStateList.valueOf(0xFFFF1744.toInt())
-            sliderPlayback?.thumbTintList = android.content.res.ColorStateList.valueOf(0xFFFF1744.toInt())
-            txtPlaybackTime?.setTextColor(0xFFFF1744.toInt())
+            sliderPlayback?.trackActiveTintList = android.content.res.ColorStateList.valueOf(ContextCompat.getColor(requireContext(), R.color.nautical_night_vision_primary))
+            sliderPlayback?.thumbTintList = android.content.res.ColorStateList.valueOf(ContextCompat.getColor(requireContext(), R.color.nautical_night_vision_primary))
+            txtPlaybackTime?.setTextColor(ContextCompat.getColor(requireContext(), R.color.nautical_night_vision_primary))
         }
 
         btnDisarmAnchor?.setOnClickListener {

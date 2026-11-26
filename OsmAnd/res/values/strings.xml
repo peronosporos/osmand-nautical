@@ -1178,11 +1178,15 @@
     <string name="nautical_polar_wizard_step3_title">Step 3: Recording Polar Data</string>
     <string name="nautical_polar_wizard_step3_desc">Sail on all points of wind at various speeds. The heatmap below shows your coverage. Aim for green cells in all sectors.</string>
     <string name="nautical_polar_wizard_review_points">Review Points</string>
-    <string name="nautical_polar_wizard_step4_title">Step 4: Review and Smoothing</string>
-    <string name="nautical_polar_wizard_step4_desc">The recorded points are being smoothed into a polar curve. Verify if this matches your expected vessel performance.</string>
+    <string name="nautical_polar_wizard_step4_title">Step 4: Review &amp; Save</string>
+    <string name="nautical_polar_wizard_step4_desc">Review your recorded coverage before saving the profile to the Signal K server.</string>
     <string name="nautical_polar_wizard_save_to_server">Save to Server</string>
     <string name="nautical_polar_wizard_finalizing">Finalizing…</string>
     <string name="nautical_polar_wizard_syncing">Syncing your new polar profile with the Signal K server…</string>
+    <string name="nautical_polar_wizard_sail_plan_hint">Sail plan (e.g. Main + Jib)</string>
+    <string name="nautical_polar_wizard_sail_plan_default">Main + Jib</string>
+    <string name="nautical_polar_wizard_no_data">No polar data recorded yet; sail with logging engaged first</string>
+    <string name="nautical_ais_target_icon_desc">AIS target type icon</string>
     <string name="nautical_checklist_progress_fmt">Progress: %1$d / %2$d (%3$d%%)</string>
     <string name="nautical_checklist_all_verified">ALL VERIFIED</string>
     <string name="nautical_checklist_incomplete">INCOMPLETE</string>
@@ -1982,7 +1986,7 @@
 	<string name="dr_banner_warning">WARNING: GPS Lost - Running on Dead Reckoning</string>
 	<string name="dr_banner_time">DR Duration: %1$d s</string>
 	<string name="nautical_sail_plan_desc">Current configuration of sails</string>
-	<string name="nautical_discovery_searching" translatable="false">Searching for Signal K servers...</string>
+	<string name="nautical_discovery_searching">Searching for Signal K servers...</string>
 	<string name="nautical_discovery_found" translatable="false">Discovered servers</string>
 	<string name="sailing_performance_plugin_name">Advanced Sailing Performance</string>
 	<string name="sailing_performance_plugin_desc">Advanced polar analysis, weather routing, and GRIB integration for nautical navigation.</string>

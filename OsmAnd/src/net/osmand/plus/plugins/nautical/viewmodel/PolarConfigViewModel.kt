@@ -100,9 +100,7 @@ class PolarConfigViewModel : ViewModel() {
 
     fun transitionTo(newState: WizardState) {
         _wizardState.value = newState
-        if (newState == WizardState.ACTIVE_LOGGING) {
-            updateRecommendation(10.0, 50.0)
-        } else if (newState == WizardState.SAVING) {
+        if (newState == WizardState.SAVING) {
             saveToServer()
         }
     }
@@ -133,6 +131,15 @@ class PolarConfigViewModel : ViewModel() {
     private fun saveToServer() {
         val plugin = net.osmand.plus.plugins.nautical.NauticalPlugin.getInstance() ?: return
         val client = plugin.okHttpClient ?: return
+
+        if (_heatmapCells.value.none { it.sampleCount >= 1.0 }) {
+            plugin.application.runInUIThread {
+                plugin.application.showToastMessage(
+                    plugin.application.getString(net.osmand.plus.R.string.nautical_polar_wizard_no_data)
+                )
+            }
+            return
+        }
         
         val ip = plugin.application.settings.NAUTICAL_SERVER_IP.get()
         val port = plugin.application.settings.NAUTICAL_SERVER_PORT.get()

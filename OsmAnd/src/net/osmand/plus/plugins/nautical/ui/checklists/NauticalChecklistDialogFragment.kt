@@ -7,6 +7,7 @@ import android.view.ViewGroup
 import android.widget.CheckBox
 import android.widget.ProgressBar
 import android.widget.TextView
+import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -132,8 +133,8 @@ class NauticalChecklistDialogFragment : BottomSheetDialogFragment() {
 
         val isNightVision = NauticalPlugin.isNightVision(app)
         if (isNightVision) {
-            view.setBackgroundColor(0xEE120000.toInt())
-            view.findViewById<TextView>(R.id.txt_checklist_title)?.setTextColor(0xFFFF1744.toInt())
+            view.setBackgroundColor(ContextCompat.getColor(view.context, R.color.nautical_night_vision_bg))
+            view.findViewById<TextView>(R.id.txt_checklist_title)?.setTextColor(ContextCompat.getColor(view.context, R.color.nautical_night_vision_primary))
         }
 
         return view
@@ -157,10 +158,10 @@ class NauticalChecklistDialogFragment : BottomSheetDialogFragment() {
         txtProgress.text = getString(R.string.nautical_checklist_progress_fmt, checked, total, pct)
         if (pct == 100) {
             txtStatus.text = getString(R.string.nautical_checklist_all_verified)
-            txtStatus.setTextColor(0xFF43A047.toInt())
+            txtStatus.setTextColor(ContextCompat.getColor(txtStatus.context, R.color.nautical_status_green))
         } else {
             txtStatus.text = getString(R.string.nautical_checklist_incomplete)
-            txtStatus.setTextColor(0xFFE53935.toInt())
+            txtStatus.setTextColor(ContextCompat.getColor(txtStatus.context, R.color.nautical_status_red))
         }
     }
 

@@ -6,9 +6,11 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
 import androidx.lifecycle.ViewModelProvider
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.progressindicator.LinearProgressIndicator
+import com.google.android.material.textfield.TextInputEditText
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import net.osmand.plus.R
@@ -26,6 +28,8 @@ class PolarWizardFragment : BaseOsmAndFragment() {
     private lateinit var nextBtn: MaterialButton
     private lateinit var backBtn: MaterialButton
     private var heatmapView: PolarHeatmapView? = null
+    private var sailPlanLayout: View? = null
+    private var sailPlanInput: TextInputEditText? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -40,6 +44,8 @@ class PolarWizardFragment : BaseOsmAndFragment() {
         statusText = root.findViewById(R.id.wizard_status)
         recommendationText = root.findViewById(R.id.wizard_recommendation)
         progressIndicator = root.findViewById(R.id.wizard_progress)
+        sailPlanLayout = root.findViewById(R.id.wizard_sail_plan_layout)
+        sailPlanInput = root.findViewById(R.id.wizard_sail_plan_input)
         nextBtn = root.findViewById(R.id.btn_next)
         backBtn = root.findViewById(R.id.btn_back)
 
@@ -73,6 +79,7 @@ class PolarWizardFragment : BaseOsmAndFragment() {
 
     private fun updateUi(state: WizardState) {
         val root = view as? ViewGroup
+        sailPlanLayout?.visibility = if (state == WizardState.PROFILE_SETUP) View.VISIBLE else View.GONE
         when (state) {
             WizardState.INITIAL_CHECK -> {
                 statusText.text = getString(R.string.nautical_polar_wizard_step1_title)
@@ -160,9 +167,9 @@ class PolarWizardFragment : BaseOsmAndFragment() {
                 val top = yIdx * cellH
                 
                 paint.color = when {
-                    cell.sampleCount > 5 -> 0xFF4CAF50.toInt() // Green
-                    cell.sampleCount > 0 -> 0xFFFFC107.toInt() // Amber
-                    else -> 0xFF333333.toInt() // Dark Grey
+                    cell.sampleCount > 5 -> ContextCompat.getColor(context, R.color.nautical_status_green)
+                    cell.sampleCount > 0 -> ContextCompat.getColor(context, R.color.nautical_status_orange)
+                    else -> ContextCompat.getColor(context, R.color.nautical_polar_cell_empty)
                 }
                 canvas.drawRect(left + 2, top + 2, left + cellW - 2, top + cellH - 2, paint)
             }
@@ -178,13 +185,20 @@ class PolarWizardFragment : BaseOsmAndFragment() {
                 viewModel.transitionTo(WizardState.PROFILE_SETUP)
             }
             WizardState.PROFILE_SETUP -> {
-                viewModel.setProfileMetadata("OsmAnd-Polar-1", "Cruising")
+                val plan = sailPlanInput?.text?.toString()?.trim()?.takeIf { it.isNotEmpty() }
+                    ?: getString(R.string.nautical_polar_wizard_sail_plan_default)
+                viewModel.setProfileMetadata("OsmAnd-Polar-1", plan)
                 viewModel.transitionTo(WizardState.ACTIVE_LOGGING)
             }
             WizardState.ACTIVE_LOGGING -> {
                 viewModel.transitionTo(WizardState.REVIEW_AND_SMOOTH)
             }
             WizardState.REVIEW_AND_SMOOTH -> {
+                if (viewModel.qualityScore.value <= 0) {
+                    (activity?.application as? net.osmand.plus.OsmandApplication)
+                        ?.showToastMessage(getString(R.string.nautical_polar_wizard_no_data))
+                    return
+                }
                 viewModel.transitionTo(WizardState.SAVING)
                 requireActivity().onBackPressedDispatcher.onBackPressed()
             }

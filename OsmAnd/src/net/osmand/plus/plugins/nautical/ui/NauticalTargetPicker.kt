@@ -194,7 +194,7 @@ class NauticalTargetPicker : BottomSheetDialogFragment() {
                     drawable?.colorFilter = PorterDuffColorFilter(iconColor, PorterDuff.Mode.SRC_IN)
                 }
                 setImageDrawable(drawable)
-                contentDescription = "Target Icon"
+                contentDescription = themedCtx.getString(R.string.nautical_ais_target_icon_desc)
             }
             row.addView(iconView)
 
@@ -326,7 +326,7 @@ class NauticalTargetPicker : BottomSheetDialogFragment() {
     private fun selectColor(type: AisObjType): Int {
         val app = requireActivity().application as? OsmandApplication
         if (app != null && NauticalPlugin.isNightVision(app)) {
-            return 0xFFFF1744.toInt()
+            return ContextCompat.getColor(requireContext(), R.color.nautical_night_vision_primary)
         }
         return when (type) {
             AisObjType.AIS_VESSEL -> Color.GREEN

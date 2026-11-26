@@ -6,6 +6,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
 import androidx.appcompat.widget.SwitchCompat
+import androidx.core.content.ContextCompat
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.google.android.material.button.MaterialButtonToggleGroup
 import com.google.android.material.textfield.TextInputLayout
@@ -72,8 +73,8 @@ class NauticalSarConfigDialog : BottomSheetDialogFragment() {
         val app = activity?.application as? net.osmand.plus.OsmandApplication
         val isNightVision = app?.let { NauticalPlugin.isNightVision(it) } ?: false
         if (isNightVision) {
-            view.setBackgroundColor(0xEE120000.toInt())
-            btnExecute.backgroundTintList = android.content.res.ColorStateList.valueOf(0xFFB71C1C.toInt())
+            view.setBackgroundColor(ContextCompat.getColor(view.context, R.color.nautical_night_vision_bg))
+            btnExecute.backgroundTintList = android.content.res.ColorStateList.valueOf(ContextCompat.getColor(view.context, R.color.nautical_status_text_emergency))
         }
 
         // Stepper: Track Spacing (-0.5 / +0.5 NM)
