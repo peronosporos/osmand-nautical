@@ -10,6 +10,7 @@ import android.widget.Button
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.core.content.ContextCompat
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
@@ -48,8 +49,8 @@ class CockpitShellActivity : AppCompatActivity() {
         registry = CockpitScreenRegistry.createDefault(app)
 
         val night = CockpitScreenTheme.isDark(app)
-        val bg = if (night) 0xFF101010.toInt() else 0xFFF5F5F5.toInt()
-        val fg = if (night) 0xFFDDDDDD.toInt() else 0xFF202020.toInt()
+        val bg = if (night) ContextCompat.getColor(this, R.color.nautical_cockpit_night_bg) else ContextCompat.getColor(this, R.color.nautical_cockpit_day_bg)
+        val fg = if (night) ContextCompat.getColor(this, R.color.nautical_cockpit_night_fg) else ContextCompat.getColor(this, R.color.nautical_cockpit_day_fg)
 
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -63,7 +64,7 @@ class CockpitShellActivity : AppCompatActivity() {
         mobBanner = TextView(this).apply {
             setText(R.string.nautical_cockpit_mob_banner)
             setTextColor(Color.BLACK)
-            setBackgroundColor(0xFFFF1744.toInt())
+            setBackgroundColor(ContextCompat.getColor(this, R.color.nautical_cockpit_stage_danger))
             setTypeface(typeface, Typeface.BOLD)
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 18f)
             gravity = Gravity.CENTER
@@ -121,7 +122,7 @@ class CockpitShellActivity : AppCompatActivity() {
             val button = Button(this).apply {
                 text = paneName(id)
                 setTextColor(fg)
-                setBackgroundColor(if (night) 0xFF303030.toInt() else 0xFFDDDDDD.toInt())
+                setBackgroundColor(if (night) ContextCompat.getColor(this, R.color.nautical_cockpit_night_button_bg) else ContextCompat.getColor(this, R.color.nautical_cockpit_day_button_bg))
                 isAllCaps = false
                 setOnClickListener { mount(id) }
             }

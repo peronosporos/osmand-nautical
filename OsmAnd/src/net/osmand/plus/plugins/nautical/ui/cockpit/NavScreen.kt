@@ -7,6 +7,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.core.content.ContextCompat
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -44,9 +45,9 @@ class NavScreen(private val app: OsmandApplication) : CockpitScreen {
 
     override fun onCreateView(context: Context, parent: ViewGroup): View {
         val night = CockpitScreenTheme.isDark(app)
-        val bg = if (night) 0xFF101010.toInt() else 0xFFF5F5F5.toInt()
-        val fg = if (night) 0xFFDDDDDD.toInt() else 0xFF202020.toInt()
-        val accent = if (night) 0xFFFF6E00.toInt() else 0xFF0B57D0.toInt()
+        val bg = if (night) ContextCompat.getColor(app, R.color.nautical_cockpit_night_bg) else ContextCompat.getColor(app, R.color.nautical_cockpit_day_bg)
+        val fg = if (night) ContextCompat.getColor(app, R.color.nautical_cockpit_night_fg) else ContextCompat.getColor(app, R.color.nautical_cockpit_day_fg)
+        val accent = if (night) ContextCompat.getColor(app, R.color.nautical_cockpit_night_accent) else ContextCompat.getColor(app, R.color.nautical_cockpit_day_accent)
         accentColor = accent
 
         val column = LinearLayout(context).apply {
@@ -119,10 +120,10 @@ class NavScreen(private val app: OsmandApplication) : CockpitScreen {
                 net.osmand.util.MapUtils.getDistance(lat, lon, position.latitude, position.longitude)
             )
             val bearing = initialBearingDeg(lat, lon, position.latitude, position.longitude)
-            var text = String.format(Locale.US, "%.1f nm / %.0f°", distNm, bearing)
+            var text = app.getString(R.string.nautical_fmt_nm1, distNm) + " / " + String.format(Locale.US, "%.0f°", bearing)
             if (state.isGpsStale()) {
                 text = "$text (${app.getString(R.string.nautical_cockpit_stale)})"
-                distValue.setTextColor(if (CockpitScreenTheme.isDark(app)) 0xFFF9A825.toInt() else 0xFF795548.toInt())
+                distValue.setTextColor(if (CockpitScreenTheme.isDark(app)) ContextCompat.getColor(app, R.color.nautical_cockpit_night_stale) else ContextCompat.getColor(app, R.color.nautical_cockpit_day_stale))
             } else {
                 // Reset the amber "stale" tint once GPS is fresh again.
                 distValue.setTextColor(accentColor)

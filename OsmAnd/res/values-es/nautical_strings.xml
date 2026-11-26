@@ -322,6 +322,11 @@
     <string name="nautical_cockpit_helm_heading">Rumbo</string>
     <string name="nautical_cockpit_helm_mode">Piloto automático</string>
     <string name="nautical_cockpit_helm_mode_value">Piloto automático: %1$s</string>
+    <string name="nautical_ap_mode_standby">En espera</string>
+    <string name="nautical_ap_mode_off">Apagado</string>
+    <string name="nautical_ap_mode_compass">Brújula</string>
+    <string name="nautical_ap_mode_gps">GPS</string>
+    <string name="nautical_ap_mode_wind">Viento</string>
     <string name="nautical_cockpit_helm_rudder">Timón</string>
     <string name="nautical_cockpit_helm_standby">En espera</string>
     <string name="nautical_cockpit_helm_tack_countdown">Virada en %1$d s</string>
@@ -2141,5 +2146,18 @@
     <string name="raster_no_charts_imported">No se han importado cartas ráster</string>
     <string name="s63_keys_loaded">Se cargaron %1$d claves de celdas</string>
     <string name="s63_permit_copied">Permiso de usuario copiado al portapapeles</string>
+    <string name="s63_manager_title">Descifrado de cartas S-63 (BYOK)</string>
+    <string name="s63_disclaimer">Proporcione su propio ID de fabricante, clave y PERMIT.TXT. OsmAnd no proporciona claves de descifrado.</string>
+    <string name="s63_m_id_label">ID de fabricante (M_ID)</string>
+    <string name="s63_m_key_label">Clave de fabricante (M_KEY)</string>
+    <string name="s63_load_permit_txt">Cargar PERMIT.TXT</string>
+    <string name="s63_import_config">Importar config.json</string>
+    <string name="s63_invalid_config">Archivo de configuración no válido</string>
+    <string name="s63_config_imported">Credenciales importadas de config.json</string>
+    <string name="s63_import_charts">Importar archivos de cartas (.000, .enc, .031)</string>
+    <string name="s63_charts_imported">Se importaron %1$d archivos de cartas</string>
+    <string name="s63_invalid_permit">No se encontraron permisos S-63 válidos en el archivo</string>
+    <string name="s63_all_expired_fmt">Todos los %1$d permisos de celdas del archivo han caducado</string>
+    <string name="s63_crc_failed_fmt">%1$d permisos no superaron la verificación CRC-32 / formato</string>
     <string name="s63_user_permit_label">Tu permiso de usuario (proporciónalo al distribuidor)</string>
 </resources>

@@ -213,6 +213,11 @@
     <string name="nautical_cockpit_helm_rudder">Rudder</string>
     <string name="nautical_cockpit_helm_mode">Autopilot</string>
     <string name="nautical_cockpit_helm_mode_value">Autopilot: %1$s</string>
+    <string name="nautical_ap_mode_standby">Standby</string>
+    <string name="nautical_ap_mode_off">Off</string>
+    <string name="nautical_ap_mode_compass">Compass</string>
+    <string name="nautical_ap_mode_gps">GPS</string>
+    <string name="nautical_ap_mode_wind">Wind</string>
     <string name="nautical_cockpit_helm_engage">Engage</string>
     <string name="nautical_cockpit_helm_standby">Standby</string>
     <string name="nautical_cockpit_helm_tack_port">Auto-tack port</string>
@@ -2013,7 +2018,6 @@
 	<string name="s63_user_permit_label">Your User Permit (Provide to Distributor)</string>
 	<string name="s63_m_id_label">Manufacturer ID (M_ID)</string>
 	<string name="s63_m_key_label">Manufacturer Key (M_KEY)</string>
-	<string name="s63_copy_permit">Copy Permit</string>
 	<string name="s63_permit_copied">User Permit copied to clipboard</string>
 	<string name="s63_load_permit_txt">Load PERMIT.TXT</string>
 	<string name="s63_import_config">Import config.json</string>
@@ -2022,6 +2026,8 @@
 	<string name="s63_config_imported">Credentials imported from config.json</string>
 	<string name="s63_import_charts">Import Chart Files (.000, .enc, .031)</string>
 	<string name="s63_charts_imported">Imported %1$d chart files</string>
+	<string name="s63_all_expired_fmt">All %1$d cell permits in file are expired</string>
+	<string name="s63_crc_failed_fmt">%1$d permits failed CRC-32 checksum / formatting</string>
 	<string name="nautical_error_no_wind_data">Cannot switch to Wind mode: No wind data available.</string>
 	<string name="nautical_error_no_route">Cannot switch to Track mode: No active route.</string>
 	<string name="navtex_layer_name">Maritime Safety Broadcasts (NAVTEX)</string>

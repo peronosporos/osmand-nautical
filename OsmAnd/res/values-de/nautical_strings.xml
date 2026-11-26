@@ -322,6 +322,11 @@
     <string name="nautical_cockpit_helm_heading">Kurs</string>
     <string name="nautical_cockpit_helm_mode">Autopilot</string>
     <string name="nautical_cockpit_helm_mode_value">Autopilot: %1$s</string>
+    <string name="nautical_ap_mode_standby">Bereitschaft</string>
+    <string name="nautical_ap_mode_off">Aus</string>
+    <string name="nautical_ap_mode_compass">Kompass</string>
+    <string name="nautical_ap_mode_gps">GPS</string>
+    <string name="nautical_ap_mode_wind">Wind</string>
     <string name="nautical_cockpit_helm_rudder">Ruder</string>
     <string name="nautical_cockpit_helm_standby">Bereitschaft</string>
     <string name="nautical_cockpit_helm_tack_countdown">Wende in %1$d s</string>
@@ -2141,5 +2146,18 @@
     <string name="raster_no_charts_imported">Keine Rasterkarten importiert</string>
     <string name="s63_keys_loaded">%1$d Zellenschlüssel geladen</string>
     <string name="s63_permit_copied">Benutzerberechtigung in die Zwischenablage kopiert</string>
+    <string name="s63_manager_title">S-63-Kartenentschlüsselung (BYOK)</string>
+    <string name="s63_disclaimer">Geben Sie eigene Hersteller-ID, Schlüssel und PERMIT.TXT an. OsmAnd stellt keine Entschlüsselungsschlüssel bereit.</string>
+    <string name="s63_m_id_label">Hersteller-ID (M_ID)</string>
+    <string name="s63_m_key_label">Herstellerschlüssel (M_KEY)</string>
+    <string name="s63_load_permit_txt">PERMIT.TXT laden</string>
+    <string name="s63_import_config">config.json importieren</string>
+    <string name="s63_invalid_config">Ungültige Konfigurationsdatei</string>
+    <string name="s63_config_imported">Zugangsdaten aus config.json importiert</string>
+    <string name="s63_import_charts">Kartendateien importieren (.000, .enc, .031)</string>
+    <string name="s63_charts_imported">%1$d Kartendateien importiert</string>
+    <string name="s63_invalid_permit">Keine gültigen S-63-Lizenzen in der Datei gefunden</string>
+    <string name="s63_all_expired_fmt">Alle %1$d Zelllizenzen der Datei sind abgelaufen</string>
+    <string name="s63_crc_failed_fmt">%1$d Lizenzen bestanden die CRC-32-Prüfung / Formatierung nicht</string>
     <string name="s63_user_permit_label">Deine Benutzerberechtigung (an den Händler weitergeben)</string>
 </resources>

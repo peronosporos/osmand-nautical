@@ -6760,6 +6760,11 @@
     <string name="nautical_cockpit_helm_heading">Πλεύση</string>
     <string name="nautical_cockpit_helm_mode">Αυτόματος Πηδαλιούχος</string>
     <string name="nautical_cockpit_helm_mode_value">Αυτόματος Πηδαλιούχος: %1$s</string>
+    <string name="nautical_ap_mode_standby">Αναμονή</string>
+    <string name="nautical_ap_mode_off">Ανενεργό</string>
+    <string name="nautical_ap_mode_compass">Πυξίδα</string>
+    <string name="nautical_ap_mode_gps">GPS</string>
+    <string name="nautical_ap_mode_wind">Άνεμος</string>
     <string name="nautical_cockpit_helm_rudder">Τιμόνι</string>
     <string name="nautical_cockpit_helm_standby">Αναμονή</string>
     <string name="nautical_cockpit_helm_tack_countdown">Τακ σε %1$d s</string>
@@ -8331,5 +8336,18 @@
     <string name="raster_no_charts_imported">Δεν έχουν εισαχθεί ράστερ χάρτες</string>
     <string name="s63_keys_loaded">Φορτώθηκαν %1$d κλειδιά κελιών</string>
     <string name="s63_permit_copied">Η άδεια χρήστη αντιγράφηκε στο πρόχειρο</string>
+    <string name="s63_manager_title">Αποκρυπτογράφηση ναυτικών χαρτών S-63 (BYOK)</string>
+    <string name="s63_disclaimer">Δώστε δικό σας ID κατασκευαστή, κλειδί και PERMIT.TXT. Το OsmAnd δεν παρέχει κλειδιά αποκρυπτογράφησης.</string>
+    <string name="s63_m_id_label">ID κατασκευαστή (M_ID)</string>
+    <string name="s63_m_key_label">Κλειδί κατασκευαστή (M_KEY)</string>
+    <string name="s63_load_permit_txt">Φόρτωση PERMIT.TXT</string>
+    <string name="s63_import_config">Εισαγωγή config.json</string>
+    <string name="s63_invalid_config">Μη έγκυρο αρχείο ρυθμίσεων</string>
+    <string name="s63_config_imported">Τα διαπιστευτήρια εισήχθησαν από config.json</string>
+    <string name="s63_import_charts">Εισαγωγή αρχείων χαρτών (.000, .enc, .031)</string>
+    <string name="s63_charts_imported">Εισήχθησαν %1$d αρχεία χαρτών</string>
+    <string name="s63_invalid_permit">Δεν βρέθηκαν έγκυρες άδειες S-63 στο αρχείο</string>
+    <string name="s63_all_expired_fmt">Όλες οι %1$d άδειες κελιών στο αρχείο έχουν λήξει</string>
+    <string name="s63_crc_failed_fmt">%1$d άδειες απέτυχαν σε έλεγχο CRC-32 μορφοποίησης</string>
     <string name="s63_user_permit_label">Η άδειά σας χρήστη (παρέχετε στον διανομέα)</string>
 </resources>

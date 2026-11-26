@@ -7,6 +7,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.core.content.ContextCompat
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -44,9 +45,9 @@ class InstrumentsPane(private val app: OsmandApplication) : CockpitScreen {
 
     override fun onCreateView(context: Context, parent: ViewGroup): View {
         val night = CockpitScreenTheme.isDark(app)
-        val bg = if (night) NIGHT_BG else DAY_BG
-        val fg = if (night) NIGHT_FG else DAY_FG
-        val accent = if (night) NIGHT_ACCENT else DAY_ACCENT
+        val bg = if (night) ContextCompat.getColor(app, R.color.nautical_cockpit_night_bg) else ContextCompat.getColor(app, R.color.nautical_cockpit_day_bg)
+        val fg = if (night) ContextCompat.getColor(app, R.color.nautical_cockpit_night_fg) else ContextCompat.getColor(app, R.color.nautical_cockpit_day_fg)
+        val accent = if (night) ContextCompat.getColor(app, R.color.nautical_cockpit_night_accent) else ContextCompat.getColor(app, R.color.nautical_cockpit_day_accent)
 
         val column = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
@@ -110,8 +111,8 @@ class InstrumentsPane(private val app: OsmandApplication) : CockpitScreen {
 
     private fun render(state: MarineState) {
         val night = CockpitScreenTheme.isDark(app)
-        val accent = if (night) NIGHT_ACCENT else DAY_ACCENT
-        val staleColor = if (night) 0xFFF9A825.toInt() else 0xFF795548.toInt()
+        val accent = if (night) ContextCompat.getColor(app, R.color.nautical_cockpit_night_accent) else ContextCompat.getColor(app, R.color.nautical_cockpit_day_accent)
+        val staleColor = if (night) ContextCompat.getColor(app, R.color.nautical_cockpit_night_stale) else ContextCompat.getColor(app, R.color.nautical_cockpit_day_stale)
         val staleMark = app.getString(R.string.nautical_cockpit_stale)
 
         fun setValue(view: TextView, text: String?, stale: Boolean) {
@@ -169,12 +170,4 @@ class InstrumentsPane(private val app: OsmandApplication) : CockpitScreen {
 
     private fun dp(v: Int): Int = (v * app.resources.displayMetrics.density).toInt()
 
-    companion object {
-        private const val DAY_BG = 0xFFF5F5F5.toInt()
-        private const val DAY_FG = 0xFF202020.toInt()
-        private const val DAY_ACCENT = 0xFF0B57D0.toInt()
-        private const val NIGHT_BG = 0xFF101010.toInt()
-        private const val NIGHT_FG = 0xFFDDDDDD.toInt()
-        private const val NIGHT_ACCENT = 0xFFFF6E00.toInt()
-    }
 }

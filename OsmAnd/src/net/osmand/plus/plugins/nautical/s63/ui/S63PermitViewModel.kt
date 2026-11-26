@@ -156,9 +156,9 @@ class S63PermitViewModel(
                     )
                 } else {
                     val detail = if (expiredPermits.isNotEmpty()) {
-                        "All ${expiredPermits.size} cell permits in file are expired"
+                        app.getString(R.string.s63_all_expired_fmt, expiredPermits.size)
                     } else if (errorCount > 0) {
-                        "$errorCount permits failed CRC-32 checksum / formatting"
+                        app.getString(R.string.s63_crc_failed_fmt, errorCount)
                     } else {
                         app.getString(R.string.s63_invalid_permit)
                     }

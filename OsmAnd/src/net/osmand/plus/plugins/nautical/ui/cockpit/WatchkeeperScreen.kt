@@ -12,6 +12,7 @@ import android.view.ViewGroup
 import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.core.content.ContextCompat
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -62,9 +63,9 @@ class WatchkeeperScreen(private val app: OsmandApplication) : CockpitScreen {
 
     override fun onCreateView(context: Context, parent: ViewGroup): View {
         val night = CockpitScreenTheme.isDark(app)
-        val bg = if (night) 0xFF101010.toInt() else 0xFFF5F5F5.toInt()
-        val fg = if (night) 0xFFDDDDDD.toInt() else 0xFF202020.toInt()
-        val accent = if (night) 0xFFFF6E00.toInt() else 0xFF0B57D0.toInt()
+        val bg = if (night) ContextCompat.getColor(app, R.color.nautical_cockpit_night_bg) else ContextCompat.getColor(app, R.color.nautical_cockpit_day_bg)
+        val fg = if (night) ContextCompat.getColor(app, R.color.nautical_cockpit_night_fg) else ContextCompat.getColor(app, R.color.nautical_cockpit_day_fg)
+        val accent = if (night) ContextCompat.getColor(app, R.color.nautical_cockpit_night_accent) else ContextCompat.getColor(app, R.color.nautical_cockpit_day_accent)
         accentColor = accent
 
         val column = LinearLayout(context).apply {
@@ -95,7 +96,7 @@ class WatchkeeperScreen(private val app: OsmandApplication) : CockpitScreen {
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 15f)
             alpha = 0.9f
         }
-        mobValue = value(24f, 0xFFFF1744.toInt())
+        mobValue = value(24f, ContextCompat.getColor(app, R.color.nautical_cockpit_stage_danger))
 
         column.addView(label(R.string.nautical_cockpit_wk_stage))
         column.addView(stageValue)
@@ -112,7 +113,7 @@ class WatchkeeperScreen(private val app: OsmandApplication) : CockpitScreen {
         mobButton = Button(context).apply {
             setText(R.string.nautical_cockpit_wk_mob_clear)
             setTextColor(fg)
-            setBackgroundColor(if (night) 0xFF303030.toInt() else 0xFFDDDDDD.toInt())
+            setBackgroundColor(if (night) ContextCompat.getColor(app, R.color.nautical_cockpit_night_button_bg) else ContextCompat.getColor(app, R.color.nautical_cockpit_day_button_bg))
             isAllCaps = false
             // Safety standard shared with MobEmergencyHeaderView: clearing an
             // ACTIVE man-over-board emergency requires a 2-second hold; a
@@ -198,7 +199,7 @@ class WatchkeeperScreen(private val app: OsmandApplication) : CockpitScreen {
             var text = String.format(Locale.US, "%.0f m / %.0f°", distM, bearing)
             if (state.isGpsStale()) {
                 text = "$text (${app.getString(R.string.nautical_cockpit_stale)})"
-                distanceValue.setTextColor(if (CockpitScreenTheme.isDark(app)) 0xFFF9A825.toInt() else 0xFF795548.toInt())
+                distanceValue.setTextColor(if (CockpitScreenTheme.isDark(app)) ContextCompat.getColor(app, R.color.nautical_cockpit_night_stale) else ContextCompat.getColor(app, R.color.nautical_cockpit_day_stale))
             } else {
                 // Reset the amber "stale" tint once GPS is fresh again
                 // (it previously stuck until the screen was rebuilt).
@@ -237,11 +238,11 @@ class WatchkeeperScreen(private val app: OsmandApplication) : CockpitScreen {
     private fun renderStage(stage: AnchorDriftWatchdog.AnchorDriftStage) {
         val (textRes, color) = when (stage) {
             AnchorDriftWatchdog.AnchorDriftStage.SAFE ->
-                R.string.nautical_cockpit_wk_stage_safe to 0xFF2E7D32.toInt()
+                R.string.nautical_cockpit_wk_stage_safe to ContextCompat.getColor(app, R.color.nautical_cockpit_stage_safe)
             AnchorDriftWatchdog.AnchorDriftStage.CAUTION ->
-                R.string.nautical_cockpit_wk_stage_caution to 0xFFF9A825.toInt()
+                R.string.nautical_cockpit_wk_stage_caution to ContextCompat.getColor(app, R.color.nautical_cockpit_stage_caution)
             AnchorDriftWatchdog.AnchorDriftStage.CRITICAL_DRAG ->
-                R.string.nautical_cockpit_wk_stage_drag to 0xFFFF1744.toInt()
+                R.string.nautical_cockpit_wk_stage_drag to ContextCompat.getColor(app, R.color.nautical_cockpit_stage_danger)
         }
         stageValue.setText(textRes)
         stageValue.setTextColor(color)

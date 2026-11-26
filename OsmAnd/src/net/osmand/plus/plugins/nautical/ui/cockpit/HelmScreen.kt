@@ -9,6 +9,7 @@ import android.view.ViewGroup
 import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.core.content.ContextCompat
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -43,9 +44,9 @@ class HelmScreen(private val app: OsmandApplication) : CockpitScreen {
 
     override fun onCreateView(context: Context, parent: ViewGroup): View {
         val night = CockpitScreenTheme.isDark(app)
-        val bg = if (night) 0xFF101010.toInt() else 0xFFF5F5F5.toInt()
-        val fg = if (night) 0xFFDDDDDD.toInt() else 0xFF202020.toInt()
-        val accent = if (night) 0xFFFF6E00.toInt() else 0xFF0B57D0.toInt()
+        val bg = if (night) ContextCompat.getColor(context, R.color.nautical_cockpit_night_bg) else ContextCompat.getColor(context, R.color.nautical_cockpit_day_bg)
+        val fg = if (night) ContextCompat.getColor(context, R.color.nautical_cockpit_night_fg) else ContextCompat.getColor(context, R.color.nautical_cockpit_day_fg)
+        val accent = if (night) ContextCompat.getColor(context, R.color.nautical_cockpit_night_accent) else ContextCompat.getColor(context, R.color.nautical_cockpit_day_accent)
 
         val column = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
@@ -76,7 +77,7 @@ class HelmScreen(private val app: OsmandApplication) : CockpitScreen {
             Button(context).apply {
                 setText(textRes)
                 setTextColor(fg)
-                setBackgroundColor(if (night) 0xFF303030.toInt() else 0xFFDDDDDD.toInt())
+                setBackgroundColor(if (night) ContextCompat.getColor(context, R.color.nautical_cockpit_night_button_bg) else ContextCompat.getColor(context, R.color.nautical_cockpit_day_button_bg))
                 isAllCaps = false
                 setOnClickListener { onClick(this) }
             }
@@ -131,7 +132,7 @@ class HelmScreen(private val app: OsmandApplication) : CockpitScreen {
             val b = Button(context).apply {
                 this.text = text
                 setTextColor(fg)
-                setBackgroundColor(if (night) 0xFF303030.toInt() else 0xFFDDDDDD.toInt())
+                setBackgroundColor(if (night) ContextCompat.getColor(context, R.color.nautical_cockpit_night_button_bg) else ContextCompat.getColor(context, R.color.nautical_cockpit_day_button_bg))
                 setOnClickListener { autopilot()?.adjustHeading(delta.toDouble()) }
             }
             nudgeRow.addView(
@@ -157,8 +158,8 @@ class HelmScreen(private val app: OsmandApplication) : CockpitScreen {
         controls.addView(tackRow, rowParams)
 
         tackBanner = TextView(context).apply {
-            setTextColor(if (night) 0xFF101010.toInt() else 0xFFFFFFFF.toInt())
-            setBackgroundColor(0xFFFF6E00.toInt())
+            setTextColor(if (night) ContextCompat.getColor(context, R.color.nautical_cockpit_night_banner_text) else ContextCompat.getColor(context, R.color.nautical_cockpit_day_banner_text))
+            setBackgroundColor(ContextCompat.getColor(context, R.color.nautical_cockpit_banner_bg))
             setTypeface(typeface, Typeface.BOLD)
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
             gravity = Gravity.CENTER
@@ -225,7 +226,7 @@ class HelmScreen(private val app: OsmandApplication) : CockpitScreen {
 
         modeValue.text = app.getString(
             R.string.nautical_cockpit_helm_mode_value,
-            state.autopilotState.uppercase(Locale.US)
+            apModeLabel(state.autopilotState)
         )
 
         val standby = state.autopilotState.equals("standby", ignoreCase = true)
@@ -233,6 +234,18 @@ class HelmScreen(private val app: OsmandApplication) : CockpitScreen {
             if (standby) R.string.nautical_cockpit_helm_engage
             else R.string.nautical_cockpit_helm_standby
         )
+    }
+
+    private fun apModeLabel(raw: String): String {
+        val res = when (raw.lowercase(Locale.US)) {
+            "standby" -> R.string.nautical_ap_mode_standby
+            "off" -> R.string.nautical_ap_mode_off
+            "compass", "heading", "auto" -> R.string.nautical_ap_mode_compass
+            "gps", "nav", "track", "route" -> R.string.nautical_ap_mode_gps
+            "wind", "vane", "twa", "awa" -> R.string.nautical_ap_mode_wind
+            else -> return raw.uppercase(Locale.US)
+        }
+        return app.getString(res)
     }
 
     private fun autopilot() = NauticalPlugin.autopilot

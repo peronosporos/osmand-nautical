@@ -9,6 +9,7 @@ import android.view.ViewGroup
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
+import androidx.core.content.ContextCompat
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -38,8 +39,8 @@ class VhfScreen(private val app: OsmandApplication) : CockpitScreen {
 
     override fun onCreateView(context: Context, parent: ViewGroup): View {
         val night = CockpitScreenTheme.isDark(app)
-        val bg = if (night) 0xFF101010.toInt() else 0xFFF5F5F5.toInt()
-        val fg = if (night) 0xFFDDDDDD.toInt() else 0xFF202020.toInt()
+        val bg = if (night) ContextCompat.getColor(app, R.color.nautical_cockpit_night_bg) else ContextCompat.getColor(app, R.color.nautical_cockpit_day_bg)
+        val fg = if (night) ContextCompat.getColor(app, R.color.nautical_cockpit_night_fg) else ContextCompat.getColor(app, R.color.nautical_cockpit_day_fg)
 
         val scroll = ScrollView(context).apply { setBackgroundColor(bg) }
         listContainer = LinearLayout(context).apply {
@@ -85,7 +86,7 @@ class VhfScreen(private val app: OsmandApplication) : CockpitScreen {
     private fun renderTargets() {
         val container = listContainer ?: return
         val night = CockpitScreenTheme.isDark(app)
-        val fg = if (night) 0xFFDDDDDD.toInt() else 0xFF202020.toInt()
+        val fg = if (night) ContextCompat.getColor(app, R.color.nautical_cockpit_night_fg) else ContextCompat.getColor(app, R.color.nautical_cockpit_day_fg)
         val targets = NauticalPlugin.getInstance()
             ?.aisManager
             ?.getActiveTargets(AisSortMode.THREAT_CPA)
@@ -105,9 +106,9 @@ class VhfScreen(private val app: OsmandApplication) : CockpitScreen {
 
         targets.take(MAX_ROWS).forEach { t ->
             val color = when {
-                isThreat(t) -> 0xFFFF1744.toInt()
-                isCaution(t) -> 0xFFF9A825.toInt()
-                else -> if (night) 0xFF8BC34A.toInt() else 0xFF2E7D32.toInt()
+                isThreat(t) -> ContextCompat.getColor(app, R.color.nautical_cockpit_stage_danger)
+                isCaution(t) -> ContextCompat.getColor(app, R.color.nautical_cockpit_stage_caution)
+                else -> if (night) ContextCompat.getColor(app, R.color.nautical_cockpit_night_ok) else ContextCompat.getColor(app, R.color.nautical_cockpit_day_ok)
             }
             val row = LinearLayout(app).apply {
                 orientation = LinearLayout.HORIZONTAL

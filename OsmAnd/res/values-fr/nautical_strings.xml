@@ -322,6 +322,11 @@
     <string name="nautical_cockpit_helm_heading">Cap</string>
     <string name="nautical_cockpit_helm_mode">Pilote automatique</string>
     <string name="nautical_cockpit_helm_mode_value">Pilote automatique : %1$s</string>
+    <string name="nautical_ap_mode_standby">Veille</string>
+    <string name="nautical_ap_mode_off">Désactivé</string>
+    <string name="nautical_ap_mode_compass">Compas</string>
+    <string name="nautical_ap_mode_gps">GPS</string>
+    <string name="nautical_ap_mode_wind">Vent</string>
     <string name="nautical_cockpit_helm_rudder">Barre</string>
     <string name="nautical_cockpit_helm_standby">Veille</string>
     <string name="nautical_cockpit_helm_tack_countdown">Virement dans %1$d s</string>
@@ -2141,5 +2146,18 @@
     <string name="raster_no_charts_imported">Aucune carte raster importée</string>
     <string name="s63_keys_loaded">%1$d clés de cellules chargées</string>
     <string name="s63_permit_copied">Permis utilisateur copié dans le presse-papiers</string>
+    <string name="s63_manager_title">Décryptage des cartes S-63 (BYOK)</string>
+    <string name="s63_disclaimer">Fournissez votre propre ID fabricant, clé et PERMIT.TXT. OsmAnd ne fournit pas de clés de décryptage.</string>
+    <string name="s63_m_id_label">ID fabricant (M_ID)</string>
+    <string name="s63_m_key_label">Clé fabricant (M_KEY)</string>
+    <string name="s63_load_permit_txt">Charger PERMIT.TXT</string>
+    <string name="s63_import_config">Importer config.json</string>
+    <string name="s63_invalid_config">Fichier de configuration non valide</string>
+    <string name="s63_config_imported">Identifiants importés depuis config.json</string>
+    <string name="s63_import_charts">Importer des fichiers de cartes (.000, .enc, .031)</string>
+    <string name="s63_charts_imported">%1$d fichiers de cartes importés</string>
+    <string name="s63_invalid_permit">Aucun permis S-63 valide trouvé dans le fichier</string>
+    <string name="s63_all_expired_fmt">Les %1$d permis de cellules du fichier sont tous expirés</string>
+    <string name="s63_crc_failed_fmt">%1$d permis ont échoué à la vérification CRC-32 / au formatage</string>
     <string name="s63_user_permit_label">Votre permis utilisateur (à fournir au distributeur)</string>
 </resources>
