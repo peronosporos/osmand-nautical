@@ -357,6 +357,7 @@
     <string name="nautical_camera_refresh">Actualizar cámaras</string>
     <string name="nautical_camera_slewed_fmt">Cámara PTZ orientada a %1$s (%2$d°)</string>
     <string name="nautical_camera_connecting_fmt">Conectando a la transmisión: %1$s</string>
+    <string name="nautical_boat_ai_hint">Pregunta a tu embarcación...</string>
     <string name="nautical_ap_mode_standby">En espera</string>
     <string name="nautical_ap_mode_off">Apagado</string>
     <string name="nautical_ap_mode_compass">Brújula</string>

@@ -30,7 +30,7 @@
             android:layout_height="64dp"
             android:src="@drawable/ic_action_info_dark"
             app:tint="?attr/colorAccent"
-            android:contentDescription="Empty State Icon" />
+            android:contentDescription="@null" />
 
         <TextView
             android:id="@+id/txt_empty_title"

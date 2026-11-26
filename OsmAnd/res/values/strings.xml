@@ -248,6 +248,7 @@
     <string name="nautical_camera_refresh">Refresh Cameras</string>
     <string name="nautical_camera_slewed_fmt">PTZ camera slewed to %1$s (%2$d°)</string>
     <string name="nautical_camera_connecting_fmt">Connecting to stream: %1$s</string>
+    <string name="nautical_boat_ai_hint">Ask your vessel...</string>
     <string name="nautical_ap_mode_standby">Standby</string>
     <string name="nautical_ap_mode_off">Off</string>
     <string name="nautical_ap_mode_compass">Compass</string>

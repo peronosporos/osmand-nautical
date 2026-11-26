@@ -357,6 +357,7 @@
     <string name="nautical_camera_refresh">Kameras aktualisieren</string>
     <string name="nautical_camera_slewed_fmt">PTZ-Kamera auf %1$s gedreht (%2$d°)</string>
     <string name="nautical_camera_connecting_fmt">Verbinde mit Stream: %1$s</string>
+    <string name="nautical_boat_ai_hint">Fragen Sie Ihr Boot...</string>
     <string name="nautical_ap_mode_standby">Bereitschaft</string>
     <string name="nautical_ap_mode_off">Aus</string>
     <string name="nautical_ap_mode_compass">Kompass</string>
