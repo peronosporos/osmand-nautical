@@ -1787,6 +1787,10 @@
     <string name="nautical_leg_cts_only_fmt">CTS: %1$03d°</string>
     <string name="nautical_leg_drift_fmt">Current: %1$s kn @ %2$03d°</string>
     <string name="nautical_pp_depth_na_fmt">Depth: %1$s</string>
+    <string name="nautical_route_hazard_leg_fmt">Leg %1$d</string>
+    <string name="nautical_tech_reefs_fmt">Reefs: %1$s</string>
+    <string name="nautical_tech_sats_fmt">Sats: %1$s</string>
+    <string name="nautical_tech_source_fmt">Src: %1$s</string>
     <string name="nautical_pp_badge_clearance_fmt">Min Keel Clearance: %1$s m (%2$s)</string>
     <string name="nautical_pp_depth_profile_title">Route Depth &amp; Clearance Profile</string>
     <string name="nautical_pp_no_bathymetry">Chart depth data unavailable for this route</string>
