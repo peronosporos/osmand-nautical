@@ -213,6 +213,17 @@
     <string name="nautical_cockpit_helm_rudder">Rudder</string>
     <string name="nautical_cockpit_helm_mode">Autopilot</string>
     <string name="nautical_cockpit_helm_mode_value">Autopilot: %1$s</string>
+    <string name="nautical_screen_vessel_title">Vessel &amp; Maneuvers</string>
+    <string name="nautical_screen_vessel_desc">Vessel type, autopilot tuning, and maneuver parameters</string>
+    <string name="nautical_screen_safety_title">Safety &amp; Anchor</string>
+    <string name="nautical_screen_safety_desc">Safety margins, alarms, and anchor watch</string>
+    <string name="nautical_screen_targets_title">AIS, VHF &amp; Navtex</string>
+    <string name="nautical_screen_targets_desc">Target display, VHF backend, and navtex filters</string>
+    <string name="nautical_screen_connection_title">Connection &amp; Instruments</string>
+    <string name="nautical_screen_connection_desc">Signal K server, NMEA sources, and diagnostics</string>
+    <string name="nautical_screen_charts_title">Charts &amp; Voyage Data</string>
+    <string name="nautical_screen_charts_desc">ENC, tides, GRIB, logbook, and data cleanup</string>
+    <string name="nautical_more_settings_title">More settings</string>
     <string name="nautical_ap_mode_standby">Standby</string>
     <string name="nautical_ap_mode_off">Off</string>
     <string name="nautical_ap_mode_compass">Compass</string>

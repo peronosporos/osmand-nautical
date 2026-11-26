@@ -322,6 +322,17 @@
     <string name="nautical_cockpit_helm_heading">Cap</string>
     <string name="nautical_cockpit_helm_mode">Pilote automatique</string>
     <string name="nautical_cockpit_helm_mode_value">Pilote automatique : %1$s</string>
+    <string name="nautical_screen_vessel_title">Navire et manœuvres</string>
+    <string name="nautical_screen_vessel_desc">Type de navire, réglage du pilote automatique et paramètres de manœuvre</string>
+    <string name="nautical_screen_safety_title">Sécurité et ancre</string>
+    <string name="nautical_screen_safety_desc">Marges de sécurité, alarmes et surveillance de l\'ancre</string>
+    <string name="nautical_screen_targets_title">AIS, VHF et Navtex</string>
+    <string name="nautical_screen_targets_desc">Affichage des cibles, backend VHF et filtres navtex</string>
+    <string name="nautical_screen_connection_title">Connexion et instruments</string>
+    <string name="nautical_screen_connection_desc">Serveur Signal K, sources NMEA et diagnostic</string>
+    <string name="nautical_screen_charts_title">Cartes et données de voyage</string>
+    <string name="nautical_screen_charts_desc">ENC, marées, GRIB, journal de bord et nettoyage des données</string>
+    <string name="nautical_more_settings_title">Plus de réglages</string>
     <string name="nautical_ap_mode_standby">Veille</string>
     <string name="nautical_ap_mode_off">Désactivé</string>
     <string name="nautical_ap_mode_compass">Compas</string>

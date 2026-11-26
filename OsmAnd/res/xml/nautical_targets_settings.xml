@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    android:title="@string/nautical_screen_targets_title">
+
+    <PreferenceCategory
+        android:key="ais_details_group"
+        android:layout="@layout/preference_category_with_descr"
+        android:title="@string/ais_details_group">
+
+        <net.osmand.plus.settings.preferences.EditTextPreferenceEx
+            android:key="nautical_ais_own_mmsi"
+            android:layout="@layout/preference_with_descr"
+            android:title="@string/nautical_ais_own_mmsi" />
+
+        <net.osmand.plus.settings.preferences.SwitchPreferenceEx
+            android:key="nautical_ais_display_own_position"
+            android:layout="@layout/preference_with_descr"
+            android:title="@string/nautical_ais_display_own_position" />
+
+        <net.osmand.plus.settings.preferences.ListPreferenceEx
+            android:key="nautical_ais_obj_lost_timeout"
+            android:layout="@layout/preference_with_descr"
+            android:title="@string/nautical_ais_obj_lost_timeout" />
+
+        <net.osmand.plus.settings.preferences.ListPreferenceEx
+            android:key="nautical_ais_ship_lost_timeout"
+            android:layout="@layout/preference_with_descr"
+            android:title="@string/nautical_ais_ship_lost_timeout" />
+
+        <net.osmand.plus.settings.preferences.ListPreferenceEx
+            android:key="nautical_ais_cpa_warning_time"
+            android:layout="@layout/preference_with_descr"
+            android:title="@string/nautical_ais_cpa_warning_time" />
+
+        <net.osmand.plus.settings.preferences.ListPreferenceEx
+            android:key="nautical_ais_cpa_warning_distance"
+            android:layout="@layout/preference_with_descr"
+            android:title="@string/nautical_ais_cpa_warning_distance" />
+    </PreferenceCategory>
+
+    <PreferenceCategory
+        android:key="vhf_details_group"
+        android:layout="@layout/preference_category_with_descr"
+        android:title="@string/vhf_details_group">
+
+        <Preference
+            android:key="nautical_vhf_history_view"
+            android:layout="@layout/preference_with_descr"
+            android:title="@string/nautical_vhf_history_view_title"
+            android:summary="@string/nautical_vhf_history_view_desc" />
+
+        <net.osmand.plus.settings.preferences.EditTextPreferenceEx
+            android:key="nautical_vhf_backend_url"
+            android:layout="@layout/preference_with_descr"
+            android:title="@string/nautical_vhf_backend_url" />
+
+        <net.osmand.plus.settings.preferences.SwitchPreferenceEx
+            android:key="nautical_vhf_auto_replay"
+            android:layout="@layout/preference_with_descr"
+            android:title="@string/nautical_vhf_auto_replay" />
+    </PreferenceCategory>
+
+    <PreferenceCategory
+        android:key="navtex_details_group"
+        android:layout="@layout/preference_category_with_descr"
+        android:title="@string/navtex_details_group">
+
+        <net.osmand.plus.settings.preferences.SwitchPreferenceEx
+            android:key="navtex_only_urgent"
+            android:layout="@layout/preference_with_descr"
+            android:title="@string/navtex_only_urgent" />
+
+        <net.osmand.plus.settings.preferences.EditTextPreferenceEx
+            android:key="navtex_subject_filter"
+            android:layout="@layout/preference_with_descr"
+            android:title="@string/navtex_subject_filter" />
+
+        <net.osmand.plus.settings.preferences.EditTextPreferenceEx
+            android:key="navtex_max_distance"
+            android:layout="@layout/preference_with_descr"
+            android:title="@string/navtex_max_distance" />
+
+        <net.osmand.plus.settings.preferences.EditTextPreferenceEx
+            android:key="nautical_navtex_expiry_hours"
+            android:layout="@layout/preference_with_descr"
+            android:title="@string/nautical_navtex_expiry_hours" />
+    </PreferenceCategory>
+
+</PreferenceScreen>

@@ -322,6 +322,17 @@
     <string name="nautical_cockpit_helm_heading">Rumbo</string>
     <string name="nautical_cockpit_helm_mode">Piloto automático</string>
     <string name="nautical_cockpit_helm_mode_value">Piloto automático: %1$s</string>
+    <string name="nautical_screen_vessel_title">Embarcación y maniobras</string>
+    <string name="nautical_screen_vessel_desc">Tipo de embarcación, ajuste del piloto automático y parámetros de maniobra</string>
+    <string name="nautical_screen_safety_title">Seguridad y ancla</string>
+    <string name="nautical_screen_safety_desc">Márgenes de seguridad, alarmas y vigilancia del ancla</string>
+    <string name="nautical_screen_targets_title">AIS, VHF y Navtex</string>
+    <string name="nautical_screen_targets_desc">Visualización de objetivos, backend de VHF y filtros de navtex</string>
+    <string name="nautical_screen_connection_title">Conexión e instrumentos</string>
+    <string name="nautical_screen_connection_desc">Servidor Signal K, fuentes NMEA y diagnóstico</string>
+    <string name="nautical_screen_charts_title">Cartas y datos de travesía</string>
+    <string name="nautical_screen_charts_desc">ENC, mareas, GRIB, diario de navegación y limpieza de datos</string>
+    <string name="nautical_more_settings_title">Más ajustes</string>
     <string name="nautical_ap_mode_standby">En espera</string>
     <string name="nautical_ap_mode_off">Apagado</string>
     <string name="nautical_ap_mode_compass">Brújula</string>

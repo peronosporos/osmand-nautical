@@ -6760,6 +6760,17 @@
     <string name="nautical_cockpit_helm_heading">Πλεύση</string>
     <string name="nautical_cockpit_helm_mode">Αυτόματος Πηδαλιούχος</string>
     <string name="nautical_cockpit_helm_mode_value">Αυτόματος Πηδαλιούχος: %1$s</string>
+    <string name="nautical_screen_vessel_title">Σκάφος &amp; Ελιγμοί</string>
+    <string name="nautical_screen_vessel_desc">Τύπος σκάφους, ρύθμιση αυτόματου πηδαλίου και παράμετροι ελιγμών</string>
+    <string name="nautical_screen_safety_title">Ασφάλεια &amp; Άγκυρα</string>
+    <string name="nautical_screen_safety_desc">Περιθώρια ασφαλείας, συναγερμοί και παρακολούθηση άγκυρας</string>
+    <string name="nautical_screen_targets_title">AIS, VHF &amp; Navtex</string>
+    <string name="nautical_screen_targets_desc">Εμφάνιση στόχων, υποσύστημα VHF και φίλτρα navtex</string>
+    <string name="nautical_screen_connection_title">Σύνδεση &amp; Όργανα</string>
+    <string name="nautical_screen_connection_desc">Διακομιστής Signal K, πηγές NMEA και διαγνωστικά</string>
+    <string name="nautical_screen_charts_title">Χάρτες &amp; Δεδομένα Πλου</string>
+    <string name="nautical_screen_charts_desc">ENC, παλίρροιες, GRIB, ημερολόγιο πλου και εκκαθάριση δεδομένων</string>
+    <string name="nautical_more_settings_title">Περαιτέρω ρυθμίσεις</string>
     <string name="nautical_ap_mode_standby">Αναμονή</string>
     <string name="nautical_ap_mode_off">Ανενεργό</string>
     <string name="nautical_ap_mode_compass">Πυξίδα</string>

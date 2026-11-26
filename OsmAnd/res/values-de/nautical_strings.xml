@@ -322,6 +322,17 @@
     <string name="nautical_cockpit_helm_heading">Kurs</string>
     <string name="nautical_cockpit_helm_mode">Autopilot</string>
     <string name="nautical_cockpit_helm_mode_value">Autopilot: %1$s</string>
+    <string name="nautical_screen_vessel_title">Boot und Manöver</string>
+    <string name="nautical_screen_vessel_desc">Bootsart, Autopilot-Abstimmung und Manöverparameter</string>
+    <string name="nautical_screen_safety_title">Sicherheit und Anker</string>
+    <string name="nautical_screen_safety_desc">Sicherheitsmargen, Alarme und Ankerwache</string>
+    <string name="nautical_screen_targets_title">AIS, VHF und Navtex</string>
+    <string name="nautical_screen_targets_desc">Zieldarstellung, VHF-Backend und Navtex-Filter</string>
+    <string name="nautical_screen_connection_title">Verbindung und Instrumente</string>
+    <string name="nautical_screen_connection_desc">Signal-K-Server, NMEA-Quellen und Diagnose</string>
+    <string name="nautical_screen_charts_title">Karten und Fahrtdaten</string>
+    <string name="nautical_screen_charts_desc">ENC, Gezeiten, GRIB, Logbuch und Datenbereinigung</string>
+    <string name="nautical_more_settings_title">Weitere Einstellungen</string>
     <string name="nautical_ap_mode_standby">Bereitschaft</string>
     <string name="nautical_ap_mode_off">Aus</string>
     <string name="nautical_ap_mode_compass">Kompass</string>

@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    android:title="@string/nautical_screen_safety_title">
+
+    <Preference
+        android:key="nautical_safety_regions"
+        android:layout="@layout/preference_with_descr"
+        android:title="@string/nautical_safety_regions_title"
+        android:summary="@string/nautical_safety_regions_desc" />
+
+    <PreferenceCategory
+        android:key="nautical_safety_category"
+        android:layout="@layout/preference_category_with_descr"
+        android:title="@string/nautical_safety_settings" />
+
+    <net.osmand.plus.settings.preferences.EditTextPreferenceEx
+        android:key="nautical_safety_margin"
+        android:layout="@layout/preference_with_descr"
+        android:title="@string/nautical_safety_margin"
+        android:inputType="numberDecimal" />
+
+    <net.osmand.plus.settings.preferences.EditTextPreferenceEx
+        android:key="nautical_xte_threshold"
+        android:layout="@layout/preference_with_descr"
+        android:title="@string/nautical_xte_threshold_desc"
+        android:inputType="numberDecimal" />
+
+    <net.osmand.plus.settings.preferences.EditTextPreferenceEx
+        android:key="nautical_off_course_alarm"
+        android:layout="@layout/preference_with_descr"
+        android:title="@string/nautical_off_course_alarm_title"
+        android:inputType="numberDecimal" />
+
+    <net.osmand.plus.settings.preferences.EditTextPreferenceEx
+        android:key="nautical_corridor_width"
+        android:layout="@layout/preference_with_descr"
+        android:title="@string/nautical_corridor_width"
+        android:inputType="numberDecimal" />
+
+    <net.osmand.plus.settings.preferences.EditTextPreferenceEx
+        android:key="nautical_safety_corridor_buffer"
+        android:layout="@layout/preference_with_descr"
+        android:title="@string/nautical_safety_corridor_buffer"
+        android:inputType="numberDecimal" />
+
+    <net.osmand.plus.settings.preferences.EditTextPreferenceEx
+        android:key="nautical_actuator_alarm_threshold"
+        android:layout="@layout/preference_with_descr"
+        android:title="@string/nautical_actuator_alarm_threshold" />
+
+    <net.osmand.plus.settings.preferences.SwitchPreferenceEx
+        android:key="nautical_mob_audio_guidance"
+        android:layout="@layout/preference_with_descr"
+        android:title="@string/nautical_mob_audio_guidance" />
+
+    <Preference
+        android:key="nautical_test_alarm"
+        android:layout="@layout/preference_with_descr"
+        android:title="@string/nautical_test_alarm" />
+
+    <Preference
+        android:key="nautical_test_tts"
+        android:layout="@layout/preference_with_descr"
+        android:title="@string/nautical_test_tts" />
+
+    <net.osmand.plus.settings.preferences.EditTextPreferenceEx
+        android:key="nautical_look_ahead_radius_nm"
+        android:layout="@layout/preference_with_descr"
+        android:title="@string/nautical_look_ahead_radius_nm"
+        android:dialogTitle="@string/nautical_look_ahead_radius_nm" />
+
+    <!-- Advanced Anchor Sub-section -->
+
+    <PreferenceCategory
+        android:key="nautical_anchor_advanced_category"
+        android:title="@string/nautical_anchor_advanced_category_title"
+        android:layout="@layout/preference_category_with_descr">
+
+        <net.osmand.plus.settings.preferences.EditTextPreferenceEx
+            android:key="nautical_anchor_depth"
+            android:layout="@layout/preference_with_descr"
+            android:title="@string/nautical_anchor_label_depth"
+            android:inputType="numberDecimal" />
+
+        <net.osmand.plus.settings.preferences.EditTextPreferenceEx
+            android:key="nautical_anchor_tide_rise"
+            android:layout="@layout/preference_with_descr"
+            android:title="@string/nautical_anchor_label_tide"
+            android:inputType="numberDecimal" />
+
+        <net.osmand.plus.settings.preferences.EditTextPreferenceEx
+            android:key="nautical_anchor_bow_offset"
+            android:layout="@layout/preference_with_descr"
+            android:title="@string/nautical_anchor_label_bow_offset"
+            android:inputType="numberDecimal" />
+
+        <net.osmand.plus.settings.preferences.EditTextPreferenceEx
+            android:key="nautical_anchor_safety_margin"
+            android:layout="@layout/preference_with_descr"
+            android:title="@string/nautical_anchor_label_safety_margin"
+            android:inputType="numberDecimal" />
+
+        <net.osmand.plus.settings.preferences.EditTextPreferenceEx
+            android:key="nautical_anchor_freeboard"
+            android:layout="@layout/preference_with_descr"
+            android:title="@string/nautical_anchor_freeboard_title"
+            android:summary="@string/nautical_anchor_freeboard_desc"
+            android:inputType="numberDecimal" />
+
+        <net.osmand.plus.settings.preferences.EditTextPreferenceEx
+            android:key="nautical_anchor_scope_ratio"
+            android:layout="@layout/preference_with_descr"
+            android:title="@string/nautical_anchor_label_ratio"
+            android:inputType="numberDecimal" />
+
+        <net.osmand.plus.settings.preferences.EditTextPreferenceEx
+            android:key="nautical_anchor_accuracy_threshold"
+            android:layout="@layout/preference_with_descr"
+            android:title="@string/nautical_anchor_accuracy_threshold"
+            android:inputType="numberDecimal" />
+
+        <Preference
+            android:key="nautical_anchor_watch_dialog"
+            android:layout="@layout/preference_with_descr"
+            android:title="@string/nautical_anchor_label"
+            android:summary="@string/nautical_anchor_watch_dialog_desc" />
+
+        <Preference
+            android:key="nautical_clear_anchor"
+            android:layout="@layout/preference_with_descr"
+            android:title="@string/nautical_anchor_clear_watch" />
+    </PreferenceCategory>
+
+</PreferenceScreen>

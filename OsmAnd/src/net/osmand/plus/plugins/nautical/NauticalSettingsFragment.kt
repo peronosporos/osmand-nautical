@@ -82,6 +82,7 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
         setupNmeaDiagnosticsCategory()
         setupCockpitErgonomicsCategory()
         setupMaintenanceCategory()
+        setupScreensCategory()
 
         updateSecureSettingsVisibility(settings.NAUTICAL_USE_SECURE_CONNECTION.get())
         updateHardwareVisibility(settings.NAUTICAL_NMEA_SOURCE.get())
@@ -1035,6 +1036,15 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
         findPreference<Preference>(settings.NAUTICAL_NMEA_BAUD_RATE.id)?.isVisible = (source == net.osmand.plus.settings.enums.NmeaSource.USB)
     }
 
+    private fun setupScreensCategory() {
+        findPreference<Preference>("nautical_screen_vessel")?.setThemedIcon(OsmAndR.drawable.ic_action_sail_boat_dark)
+        findPreference<Preference>("nautical_screen_safety")?.setThemedIcon(OsmAndR.drawable.ic_action_alert)
+        findPreference<Preference>("nautical_screen_targets")?.setThemedIcon(OsmAndR.drawable.ic_action_group_list)
+        findPreference<Preference>("nautical_screen_connection")?.setThemedIcon(OsmAndR.drawable.ic_action_antenna)
+        findPreference<Preference>("nautical_screen_charts")?.setThemedIcon(OsmAndR.drawable.ic_action_world_globe)
+        findPreference<Preference>("nautical_master_telemetry")?.setThemedIcon(OsmAndR.drawable.ic_sensors_search)
+    }
+
     override fun onPreferenceClick(preference: Preference): Boolean {
         val key = preference.key
         when (key) {
@@ -1091,6 +1101,30 @@ class NauticalSettingsFragment : BaseSettingsFragment(), OnPreferenceChanged {
             }
             "s63_permit_manager" -> {
                 showInstance(requireActivity(), SettingsScreenType.S63_PERMIT_MANAGER)
+                return true
+            }
+            "nautical_screen_vessel" -> {
+                showInstance(requireActivity(), SettingsScreenType.NAUTICAL_VESSEL_SETTINGS)
+                return true
+            }
+            "nautical_screen_safety" -> {
+                showInstance(requireActivity(), SettingsScreenType.NAUTICAL_SAFETY_SETTINGS)
+                return true
+            }
+            "nautical_screen_targets" -> {
+                showInstance(requireActivity(), SettingsScreenType.NAUTICAL_TARGETS_SETTINGS)
+                return true
+            }
+            "nautical_screen_connection" -> {
+                showInstance(requireActivity(), SettingsScreenType.NAUTICAL_CONNECTION_SETTINGS)
+                return true
+            }
+            "nautical_screen_charts" -> {
+                showInstance(requireActivity(), SettingsScreenType.NAUTICAL_CHART_DATA_SETTINGS)
+                return true
+            }
+            "nautical_master_telemetry" -> {
+                showInstance(requireActivity(), SettingsScreenType.NAUTICAL_MASTER_TELEMETRY)
                 return true
             }
             "nautical_enc_manager" -> {

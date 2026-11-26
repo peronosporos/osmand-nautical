@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    android:title="@string/nautical_screen_charts_title">
+
+    <PreferenceCategory
+        android:key="grib_details_group"
+        android:layout="@layout/preference_category_with_descr"
+        android:title="@string/grib_details_group_title">
+
+        <net.osmand.plus.settings.preferences.SwitchPreferenceEx
+            android:key="nautical_grib_source_signalk"
+            android:layout="@layout/preference_with_descr"
+            android:title="@string/nautical_grib_source_signalk" />
+    </PreferenceCategory>
+
+    <Preference
+        android:key="nautical_passage_plan"
+        android:layout="@layout/preference_with_descr"
+        android:title="@string/nautical_active_passage_plan_title"
+        android:summary="@string/nautical_passage_plan_desc" />
+
+    <PreferenceCategory
+        android:key="logbook_details_group"
+        android:layout="@layout/preference_category_with_descr"
+        android:title="@string/logbook_details_group">
+
+        <Preference
+            android:key="nautical_open_logbook"
+            android:layout="@layout/preference_with_descr"
+            android:title="@string/nautical_log_entries"
+            android:summary="@string/nautical_open_logbook_desc" />
+
+        <net.osmand.plus.settings.preferences.ListPreferenceEx
+            android:key="nautical_logbook_interval"
+            android:layout="@layout/preference_with_descr"
+            android:title="@string/nautical_logbook_interval" />
+    </PreferenceCategory>
+
+    <PreferenceCategory
+        android:key="nautical_maintenance_category"
+        android:layout="@layout/preference_category_with_descr"
+        android:title="@string/nautical_maintenance_category_title" />
+
+    <Preference
+        android:key="nautical_enc_manager"
+        android:layout="@layout/preference_with_descr"
+        android:title="@string/nautical_enc_manager" />
+
+    <Preference
+        android:key="nautical_tide_manager"
+        android:layout="@layout/preference_with_descr"
+        android:title="@string/nautical_tide_manager" />
+
+    <Preference
+        android:key="nautical_grib_manager"
+        android:layout="@layout/preference_with_descr"
+        android:title="@string/nautical_grib_manager" />
+
+    <Preference
+        android:key="nautical_server_routes"
+        android:layout="@layout/preference_with_descr"
+        android:title="@string/nautical_server_routes_title"
+        android:summary="@string/nautical_server_routes_summary" />
+
+    <Preference
+        android:key="nautical_server_charts"
+        android:layout="@layout/preference_with_descr"
+        android:title="@string/nautical_server_charts_title"
+        android:summary="@string/nautical_server_charts_summary" />
+
+    <Preference
+        android:key="marine_raster_manager"
+        android:layout="@layout/preference_with_descr"
+        android:title="@string/raster_manager_title" />
+
+    <Preference
+        android:key="s63_permit_manager"
+        android:layout="@layout/preference_with_descr"
+        android:title="@string/s63_manager_title" />
+
+    <Preference
+        android:key="nautical_replay_manager"
+        android:layout="@layout/preference_with_descr"
+        android:title="@string/nautical_replay_title"
+        android:summary="@string/nautical_replay_manager_desc" />
+
+    <Preference
+        android:key="nautical_clear_data"
+        android:layout="@layout/preference_with_descr"
+        android:title="@string/nautical_clear_marine_data" />
+
+</PreferenceScreen>

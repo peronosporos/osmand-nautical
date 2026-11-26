@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    android:title="@string/nautical_screen_connection_title">
+
+    <PreferenceCategory
+        android:key="nautical_energy_category"
+        android:layout="@layout/preference_category_with_descr"
+        android:title="@string/nautical_energy_title"
+        android:summary="@string/nautical_energy_desc">
+
+        <Preference
+            android:key="nautical_switch_panel"
+            android:layout="@layout/preference_with_descr"
+            android:title="@string/nautical_switch_panel_title"
+            android:summary="@string/nautical_switch_panel_summary" />
+
+        <Preference
+            android:key="nautical_hardware_health"
+            android:layout="@layout/preference_with_descr"
+            android:title="@string/nautical_hardware_health_title"
+            android:summary="@string/nautical_hardware_health_desc" />
+    </PreferenceCategory>
+
+    <!-- Section 3: Connection & Hardware -->
+
+    <PreferenceCategory
+        android:key="nautical_connection_category"
+        android:layout="@layout/preference_category_with_descr"
+        android:title="@string/nautical_server_settings" />
+
+    <Preference
+        android:key="nautical_discovery_mdns"
+        android:layout="@layout/preference_with_descr"
+        android:title="@string/nautical_discovery_mdns" />
+
+    <net.osmand.plus.settings.preferences.EditTextPreferenceEx
+        android:key="nautical_server_ip"
+        android:layout="@layout/preference_with_descr"
+        android:title="@string/nautical_server_ip_desc"
+        android:dialogTitle="@string/nautical_server_ip_desc" />
+
+    <net.osmand.plus.settings.preferences.EditTextPreferenceEx
+        android:key="nautical_server_port"
+        android:layout="@layout/preference_with_descr"
+        android:title="@string/nautical_server_port_desc"
+        android:dialogTitle="@string/nautical_server_port_desc" />
+
+    <net.osmand.plus.settings.preferences.SwitchPreferenceEx
+        android:key="nautical_server_secure"
+        android:layout="@layout/preference_with_descr"
+        android:title="@string/nautical_server_secure_desc" />
+
+    <net.osmand.plus.settings.preferences.EditTextPreferenceEx
+        android:key="nautical_server_username"
+        android:layout="@layout/preference_with_descr"
+        android:title="@string/nautical_server_username_desc"
+        android:dependency="nautical_server_secure" />
+
+    <net.osmand.plus.settings.preferences.EditTextPreferenceEx
+        android:key="nautical_server_password"
+        android:layout="@layout/preference_with_descr"
+        android:title="@string/nautical_server_password_desc"
+        android:dependency="nautical_server_secure" />
+
+    <net.osmand.plus.settings.preferences.EditTextPreferenceEx
+        android:key="nautical_signal_k_auth_token"
+        android:layout="@layout/preference_with_descr"
+        android:title="@string/nautical_auth_token"
+        android:dependency="nautical_server_secure" />
+
+    <net.osmand.plus.settings.preferences.SwitchPreferenceEx
+        android:key="nautical_server_trust_all"
+        android:layout="@layout/preference_with_descr"
+        android:title="@string/nautical_server_trust_all"
+        android:dependency="nautical_server_secure" />
+
+    <net.osmand.plus.settings.preferences.ListPreferenceEx
+        android:key="nautical_telemetry_refresh_rate"
+        android:layout="@layout/preference_with_descr"
+        android:title="@string/nautical_telemetry_refresh_rate" />
+
+    <net.osmand.plus.settings.preferences.ListPreferenceEx
+        android:key="nautical_nmea_source"
+        android:layout="@layout/preference_with_descr"
+        android:title="@string/nautical_nmea_source" />
+
+    <net.osmand.plus.settings.preferences.EditTextPreferenceEx
+        android:key="nautical_bt_device_address"
+        android:layout="@layout/preference_with_descr"
+        android:title="@string/nautical_bt_device_address" />
+
+    <net.osmand.plus.settings.preferences.EditTextPreferenceEx
+        android:key="nautical_usb_device_name"
+        android:layout="@layout/preference_with_descr"
+        android:title="@string/nautical_usb_device_name" />
+
+    <net.osmand.plus.settings.preferences.ListPreferenceEx
+        android:key="nautical_nmea_baud_rate"
+        android:layout="@layout/preference_with_descr"
+        android:title="@string/nautical_nmea_baud_rate" />
+
+    <net.osmand.plus.settings.preferences.SwitchPreferenceEx
+        android:key="nautical_shadow_drive"
+        android:layout="@layout/preference_with_descr"
+        android:title="@string/nautical_shadow_drive"
+        android:summary="@string/nautical_shadow_drive_desc" />
+
+    <net.osmand.plus.settings.preferences.ListPreferenceEx
+        android:key="nautical_receive_in_background"
+        android:layout="@layout/preference_with_descr"
+        android:title="@string/nautical_receive_in_background" />
+
+    <net.osmand.plus.settings.preferences.SwitchPreferenceEx
+        android:key="nautical_force_watch_layout"
+        android:layout="@layout/preference_with_descr"
+        android:title="@string/nautical_force_watch_layout" />
+
+    <Preference
+        android:key="nautical_compass_wizard"
+        android:layout="@layout/preference_with_descr"
+        android:title="@string/nautical_compass_wizard" />
+
+    <!-- Section 9: NMEA Diagnostics & Fallback -->
+
+    <PreferenceCategory
+        android:key="nautical_nmea_diagnostics_category"
+        android:layout="@layout/preference_category_with_descr"
+        android:title="@string/nautical_nmea_diagnostics_category_title" />
+
+    <net.osmand.plus.settings.preferences.ListPreferenceEx
+        android:key="nautical_sensor_fallback_timeout"
+        android:layout="@layout/preference_with_descr"
+        android:title="@string/nautical_sensor_fallback_timeout_title"
+        android:summary="@string/nautical_sensor_fallback_timeout_desc" />
+
+    <!-- Section 11: Maintenance & Tools -->
+
+    <PreferenceCategory
+        android:key="telemetry_widgets_group"
+        android:layout="@layout/preference_category_with_descr"
+        android:title="@string/telemetry_widgets_group_title">
+
+        <Preference
+            android:key="nautical_master_telemetry"
+            android:layout="@layout/preference_with_descr"
+            android:title="@string/nautical_master_telemetry"
+            android:summary="@string/nautical_master_telemetry_desc" />
+    </PreferenceCategory>
+
+</PreferenceScreen>
