@@ -117,17 +117,25 @@ class NauticalRemoteServer(
 
     private fun serveTelemetry(output: OutputStream) {
         val state = NauticalPlugin.engine?.getCurrentState()
-        val sogKn = (state?.speedOverGround ?: 0.0) * 1.94384
-        val cogDeg = state?.courseOverGroundTrue?.let { Math.toDegrees(it) } ?: 0.0
-        val depthM = state?.depthBelowKeel ?: state?.depthBelowTransducer ?: 0.0
-        val twaDeg = state?.trueWindAngle?.let { Math.toDegrees(it) } ?: 0.0
-        val twsKn = (state?.windSpeedTrue ?: 0.0) * 1.94384
+        val sogKn = state?.speedOverGround?.let { it * 1.94384 }
+        val cogDeg = state?.courseOverGroundTrue?.let { Math.toDegrees(it) }
+        val depthM = state?.depthBelowKeel ?: state?.depthBelowTransducer
+        val twaDeg = state?.trueWindAngle?.let { Math.toDegrees(it) }
+        val twsKn = state?.windSpeedTrue?.let { it * 1.94384 }
         val swingRadius = app.settings.NAUTICAL_ANCHOR_RADIUS.get()
+        val anchorArmed = app.settings.NAUTICAL_ANCHOR_LAT.get() != 0.0
+        val anchorStage = if (anchorArmed) {
+            NauticalPlugin.getInstance()?.anchorWatchdog?.driftStage?.value?.name?.lowercase() ?: "unknown"
+        } else {
+            "off"
+        }
 
+        fun jf(v: Double?, fmt: String): String = if (v == null) "null" else String.format(Locale.US, fmt, v)
         val json = String.format(
             Locale.US,
-            """{"sogKn":%.2f,"cogDeg":%.1f,"depthM":%.2f,"twaDeg":%.1f,"twsKn":%.2f,"swingRadiusM":%d}""",
-            sogKn, cogDeg, depthM, twaDeg, twsKn, swingRadius
+            """{"sogKn":%s,"cogDeg":%s,"depthM":%s,"twaDeg":%s,"twsKn":%s,"swingRadiusM":%d,"anchorWatch":"%s"}""",
+            jf(sogKn, "%.2f"), jf(cogDeg, "%.1f"), jf(depthM, "%.2f"), jf(twaDeg, "%.1f"), jf(twsKn, "%.2f"),
+            swingRadius, anchorStage
         )
         val bytes = json.toByteArray(Charsets.UTF_8)
         val header = "HTTP/1.1 200 OK\r\n" +
@@ -229,7 +237,7 @@ class NauticalRemoteServer(
                     </div>
                     <div class="card">
                         <div class="label">Anchor Watch</div>
-                        <div class="value" id="anchor">HOLDING</div>
+                        <div class="value" id="anchor">--</div>
                         <div class="unit" id="anchor_radius">Radius: -- m</div>
                     </div>
                 </div>
@@ -240,12 +248,19 @@ class NauticalRemoteServer(
                         try {
                             const res = await fetch('/api/telemetry');
                             const data = await res.json();
-                            document.getElementById('sog').innerText = (data.sogKn || 0).toFixed(1);
-                            document.getElementById('cog').innerText = Math.round(data.cogDeg || 0) + '°';
-                            document.getElementById('depth').innerText = (data.depthM || 0).toFixed(1);
-                            document.getElementById('twa').innerText = Math.round(data.twaDeg || 0) + '°';
-                            document.getElementById('tws').innerText = (data.twsKn || 0).toFixed(1);
-                            document.getElementById('anchor_radius').innerText = 'Radius: ' + (data.swingRadiusM || 0) + ' m';
+                            const num1 = (v) => v == null ? '--' : v.toFixed(1);
+                            const deg = (v) => v == null ? '--' : Math.round(v) + '°';
+                            document.getElementById('sog').innerText = num1(data.sogKn);
+                            document.getElementById('cog').innerText = deg(data.cogDeg);
+                            document.getElementById('depth').innerText = num1(data.depthM);
+                            document.getElementById('twa').innerText = deg(data.twaDeg);
+                            document.getElementById('tws').innerText = num1(data.twsKn);
+                            document.getElementById('anchor_radius').innerText = 'Radius: ' + (data.swingRadiusM == null ? '--' : data.swingRadiusM) + ' m';
+                            const anchorEl = document.getElementById('anchor');
+                            if (data.anchorWatch === 'critical_drag') anchorEl.innerText = 'CRITICAL DRAG';
+                            else if (data.anchorWatch === 'caution') anchorEl.innerText = 'CAUTION';
+                            else if (data.anchorWatch === 'safe') anchorEl.innerText = 'HOLDING';
+                            else anchorEl.innerText = '--';
                         } catch(e) {}
                     }
                     setInterval(updateTelemetry, 1000);

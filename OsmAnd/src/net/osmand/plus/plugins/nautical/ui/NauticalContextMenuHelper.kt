@@ -389,11 +389,11 @@ class NauticalContextMenuHelper(private val app: OsmandApplication) {
                     camManager.slewToCoordinate(
                         targetLat = lat,
                         targetLon = lon,
-                        label = String.format(Locale.US, "Point (%.3f, %.3f)", lat, lon),
+                        label = String.format(Locale.US, app.getString(R.string.nautical_camera_target_point_fmt), lat, lon),
                         onSuccess = { target ->
                             val msg = String.format(
                                 Locale.US,
-                                "Camera slewed to target: Bearing %03.0f° / Range %.2f NM",
+                                app.getString(R.string.nautical_toast_camera_slewed_fmt),
                                 target.bearingDeg, target.distanceNm
                             )
                             app.showToastMessage(msg)
@@ -537,7 +537,7 @@ class NauticalContextMenuHelper(private val app: OsmandApplication) {
 
                         val msg = String.format(
                             Locale.US,
-                            "Electronic Bearing Line & Variable Range Marker:\n\n• Range: %.2f NM (%.0f meters)\n• Bearing: %03.1f° True (%03.1f° Magnetic)",
+                            app.getString(R.string.nautical_ebl_vrm_msg_fmt),
                             distNm, distMeters, trueBearing, magBearing
                         )
                         MaterialAlertDialogBuilder(mapActivity)
@@ -783,7 +783,7 @@ class NauticalContextMenuHelper(private val app: OsmandApplication) {
                     pluginScope?.launch {
                         val routes = engine?.fetchRoutesFromServer()
                         if (!routes.isNullOrEmpty()) {
-                            val names = routes.values.map { (it.name ?: "Unnamed Route") as CharSequence }.toTypedArray()
+                            val names = routes.values.map { (it.name ?: app.getString(R.string.nautical_unnamed_route)) as CharSequence }.toTypedArray()
                             val ids = routes.keys.toTypedArray()
 
                             app.runInUIThread {
@@ -809,7 +809,7 @@ class NauticalContextMenuHelper(private val app: OsmandApplication) {
                                                         1 -> {
                                                             val activePoints = engine?.getRoutePoints() ?: emptyList()
                                                             if (activePoints.isNotEmpty()) {
-                                                                engine?.updateRouteOnServer(routeId, selectedRoute?.name ?: "Updated", activePoints)
+                                                                engine?.updateRouteOnServer(routeId, selectedRoute?.name ?: app.getString(R.string.nautical_updated_route_name), activePoints)
                                                             }
                                                         }
                                                         2 -> {
@@ -868,7 +868,7 @@ class NauticalContextMenuHelper(private val app: OsmandApplication) {
                 icon = R.drawable.ic_action_export
                 applyNauticalStyle()
                 setListener { _, _, _, _ ->
-                    val name = "Route-${System.currentTimeMillis()}"
+                    val name = app.getString(R.string.nautical_uploaded_route_name_fmt, System.currentTimeMillis())
                     pluginScope?.launch {
                         engine?.uploadActiveRouteToSignalK(name)
                     }
@@ -916,7 +916,7 @@ class NauticalContextMenuHelper(private val app: OsmandApplication) {
         routingViewModel?.optimalRoute?.value?.let { weatherRoute ->
             adapter.addItem(
                 ContextMenuItem("nautical_export_weather_route").apply {
-                    title = app.getString(R.string.nautical_export_route_gpx) + " (Weather)"
+                    title = app.getString(R.string.nautical_export_weather_route_gpx)
                     icon = R.drawable.ic_action_export
                     applyNauticalStyle()
                     setListener { _, _, _, _ ->
@@ -985,11 +985,11 @@ class NauticalContextMenuHelper(private val app: OsmandApplication) {
                         val items = withContext(Dispatchers.IO) {
                             val extracted = mutableListOf<Pair<String, List<WptPt>>>()
                             gpx.routes.forEach { rte ->
-                                if (rte.points.isNotEmpty()) extracted.add((rte.name ?: "Route") to rte.points)
+                                if (rte.points.isNotEmpty()) extracted.add((rte.name ?: app.getString(R.string.nautical_gpx_fallback_route)) to rte.points)
                             }
                             gpx.tracks.forEach { trk ->
                                 val pts = trk.segments.flatMap { it.points }
-                                if (pts.isNotEmpty()) extracted.add((trk.name ?: "Track") to pts)
+                                if (pts.isNotEmpty()) extracted.add((trk.name ?: app.getString(R.string.nautical_gpx_fallback_track)) to pts)
                             }
                             extracted
                         }

@@ -138,6 +138,15 @@
     <string name="nautical_anchor_drag_critical">CRITICAL ANCHOR DRAG DETECTED</string>
     <string name="nautical_low_battery_alarm">Low Battery Alarm</string>
     <string name="nautical_ebl_vrm">EBL/VRM (Range &amp; Bearing)</string>
+    <string name="nautical_ebl_vrm_msg_fmt">Electronic Bearing Line &amp; Variable Range Marker:\n\n• Range: %1$.2f NM (%2$.0f meters)\n• Bearing: %3$03.1f° True (%4$03.1f° Magnetic)</string>
+    <string name="nautical_toast_camera_slewed_fmt">Camera slewed to target: Bearing %1$03.0f° / Range %2$.2f NM</string>
+    <string name="nautical_camera_target_point_fmt">Point (%1$.3f, %2$.3f)</string>
+    <string name="nautical_unnamed_route">Unnamed Route</string>
+    <string name="nautical_uploaded_route_name_fmt">Route-%1$d</string>
+    <string name="nautical_updated_route_name">Updated</string>
+    <string name="nautical_gpx_fallback_route">Route</string>
+    <string name="nautical_gpx_fallback_track">Track</string>
+    <string name="nautical_export_weather_route_gpx">Export Route as GPX (Weather)</string>
     <string name="nautical_add_tactical_waypoint">Add Tactical Waypoint</string>
     <string name="nautical_vhf_distress_script_btn">MAYDAY / PAN-PAN Radio Script</string>
     <string name="nautical_sensor_diagnostics">Sensor &amp; Telemetry Diagnostics</string>

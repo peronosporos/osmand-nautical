@@ -206,7 +206,7 @@ class SignalKServerRoutesFragment : BaseOsmAndFragment() {
 
         fun bind(entry: Map.Entry<String, SignalKRoute>, onNav: (String, SignalKRoute) -> Unit, onP: (String, SignalKRoute) -> Unit, onDel: (String, SignalKRoute) -> Unit) {
             val route = entry.value
-            txtName.text = route.name ?: "Unnamed Route"
+            txtName.text = route.name ?: itemView.context.getString(R.string.nautical_unnamed_route)
             txtDesc.text = route.description ?: ""
             btnNavigate.setOnClickListener { onNav(entry.key, route) }
             btnPush.setOnClickListener { onP(entry.key, route) }
