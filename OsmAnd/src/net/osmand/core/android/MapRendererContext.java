@@ -17,7 +17,6 @@ import androidx.annotation.Nullable;
 
 import net.osmand.NativeLibrary.RenderedObject;
 import net.osmand.core.jni.*;
-import net.osmand.core.jni.ElevationConfiguration.SlopeAlgorithm;
 import net.osmand.core.jni.ElevationConfiguration.VisualizationStyle;
 import net.osmand.core.jni.IGeoTiffCollection.RasterType;
 import net.osmand.core.jni.MapPresentationEnvironment.LanguagePreference;
@@ -605,13 +604,17 @@ public class MapRendererContext {
 		SRTMPlugin plugin = PluginsHelper.getPlugin(SRTMPlugin.class);
 		boolean disableVertexHillshade = plugin != null && plugin.isTerrainLayerEnabled() && plugin.isHillshadeMode();
 		if (disableVertexHillshade) {
-			elevationConfiguration.setSlopeAlgorithm(SlopeAlgorithm.None);
+			// The core's ElevationConfiguration no longer exposes a slope
+			// algorithm setting (removed in the current upstream master-snapshot,
+			// which this build consumes). VisualizationStyle.None alone disables
+			// the vertex hillshade, matching upstream OsmAnd's own adaptation.
 			elevationConfiguration.setVisualizationStyle(VisualizationStyle.None);
 		}
 		if (plugin != null) {
 			elevationConfiguration.setZScaleFactor(plugin.getVerticalExaggerationScale());
-			elevationConfiguration.setHillshadeSunAngle(plugin.HILLSHADE_SUN_ANGLE.get());
-			elevationConfiguration.setHillshadeSunAzimuth(plugin.HILLSHADE_SUN_AZIMUTH.get());
+			// Hillshade sun angle/azimuth setters were removed from the core's
+			// ElevationConfiguration as well; the core derives the sun parameters
+			// itself now. The plugin preferences and their listeners are kept.
 		}
 		mapRendererView.setElevationConfiguration(elevationConfiguration);
 	}
