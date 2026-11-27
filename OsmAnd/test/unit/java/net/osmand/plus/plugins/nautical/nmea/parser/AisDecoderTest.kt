@@ -16,23 +16,23 @@ class AisDecoderTest {
 
     // Type 5: mmsi 247123456, imo 1234567, callsign TEST123, name TEST VESSEL,
     // ship type 37, draught 1.5 m, ETA 06-15 08:30, destination PIRAEUS.
-    private val type5 = "!AIVDM,1,1,,B,53cc>000Bm`M@E=C7;=@E=B1HE=<Dh000000000U1@:335W`N3l2DPAEDh0000000000000,2*2E"
+    private val type5 = "!AIVDM,1,1,,B,53cc>000Bm`M@E=C7;=@E=B1HE=<Dh000000000U1@:335W`N3l2DPAEDh0000000000000,2*0F"
 
     // Same type 5 message delivered as two fragments (message id 7).
-    private val type5Fragment1 = "!AIVDM,2,1,7,B,53cc>000Bm`M@E=C7;=@E=B1HE=<Dh000000000U1@:335W`,0*37"
-    private val type5Fragment2 = "!AIVDM,2,2,7,B,N3l2DPAEDh0000000000000,2*1E"
+    private val type5Fragment1 = "!AIVDM,2,1,7,B,53cc>000Bm`M@E=C7;=@E=B1HE=<Dh000000000U1@:335W`,0*16"
+    private val type5Fragment2 = "!AIVDM,2,2,7,B,N3l2DPAEDh0000000000000,2*3F"
 
     // Type 18 Class B: mmsi 367123456, sog 12.0 kn, cog 45.0 deg, lat 37.9, lon 23.5.
-    private val type18 = "!AIVDM,1,1,,B,B5N7L000N72QcTi0Ect87h000000,0*37"
+    private val type18 = "!AIVDM,1,1,,B,B5N7L000N0Jq<@5Jw20L8FP00000,0*36"
 
     // Type 21 AtoN: mmsi 992660001, aid type 5, name TEST BUOY, lat 37.55, lon 23.65.
-    private val type21 = "!AIVDM,1,1,,B,E>jc:8Bb2ab@1:WdP0000000000@n8Fh:gSr050`HHP000,4*38"
+    private val type21 = "!AIVDM,1,1,,B,E>jc:8Bb2ab@1:WdP0000000000@n8Fh:gSr050`HHP000,4*19"
 
     // Type 18 with coastal station MMSI 003669100 (7 digits, not an AIS target).
-    private val coastalStation = "!AIVDM,1,1,,B,B03OtK00N72QcTi0Ect800000000,0*2B"
+    private val coastalStation = "!AIVDM,1,1,,B,B03OtK00N0Jq<@5Jw20L8FP00000,0*75"
 
     // Type 18 with handheld Class B MMSI 836612345 (ITU-R M.585 category 8).
-    private val handheldClassB = "!AIVDM,1,1,,B,B<Mnhv@0N72QcTi0Ect800000000,0*29"
+    private val handheldClassB = "!AIVDM,1,1,,B,B<Mnhv@0N0Jq<@5Jw20L8FP00000,0*77"
 
     private fun values(sentence: String) =
         AisDecoder.decode(sentence)?.updates?.firstOrNull()?.values

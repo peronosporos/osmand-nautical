@@ -83,7 +83,7 @@ class NmeaSentenceParserTest {
     @Test
     fun testParseAIS() {
         // !AIVDM,...
-        val sentence = "!AIVDM,1,1,,A,13u9P80000OrqunE9S`000000000,0*11"
+        val sentence = "!AIVDM,1,1,,A,13u9P80000OrqunE9S`000000000,0*28"
         // Our parser doesn't parse AIVDM payload yet, but it should validate it
         // and return empty values (or null if no recognized fragments)
         // Wait, parseRMC, parseMWV, parseDepth only handle RMC, MWV, DBT, DBS.
