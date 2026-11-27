@@ -57,6 +57,14 @@ android {
 		unitTests.returnDefaultValues = true
 		unitTests.all {
 			useJUnitPlatform()
+			// Log every test start and result so CI failures (including
+			// worker-level crashes like OOM) can be attributed to the
+			// exact test that was running, instead of leaving a log with
+			// no per-test output at all.
+			testLogging {
+				events "started", "passed", "skipped", "failed"
+				exceptionFormat "full"
+			}
 		}
 	}
 
