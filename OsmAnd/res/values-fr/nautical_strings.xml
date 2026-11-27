@@ -2136,6 +2136,7 @@
     <string name="nautical_s63_error_prefix">Erreur : %1$s</string>
     <string name="nautical_sail_category_downwind">Vent arrière / largue</string>
     <string name="nautical_sail_category_headsail">Voiles d\'avant</string>
+    <string name="nautical_sail_area_fmt">%1$s • %2$d%% Surface</string>
     <string name="nautical_sail_category_main">Grand-voile</string>
     <string name="nautical_sail_efficiency_label">Efficacité de la surface de voilure : %1$d%%</string>
     <string name="nautical_sail_furled">Enroulée</string>

@@ -364,7 +364,7 @@ class HeadingArcView @JvmOverloads constructor(
                 awaTrianglePath.close()
 
                 paint.style = Paint.Style.FILL
-                paint.color = if (isAmbientMode) Color.WHITE else Color.parseColor("#4FC3F7")
+                paint.color = if (isAmbientMode) Color.WHITE else NauticalColorResolver.getColor(context, NauticalSemanticColor.ACCENT)
                 paint.alpha = 255
                 canvas.drawPath(awaTrianglePath, paint)
             }

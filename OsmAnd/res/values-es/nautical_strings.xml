@@ -2136,6 +2136,7 @@
     <string name="nautical_s63_error_prefix">Error: %1$s</string>
     <string name="nautical_sail_category_downwind">Popa / largo</string>
     <string name="nautical_sail_category_headsail">Velas de proa</string>
+    <string name="nautical_sail_area_fmt">%1$s • %2$d%% Superficie</string>
     <string name="nautical_sail_category_main">Vela mayor</string>
     <string name="nautical_sail_efficiency_label">Eficiencia de superficie vélica: %1$d%%</string>
     <string name="nautical_sail_furled">Enrollado</string>

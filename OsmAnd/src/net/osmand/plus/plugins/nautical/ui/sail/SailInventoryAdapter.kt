@@ -100,7 +100,7 @@ class SailInventoryAdapter(
                 sail.area != null -> sail.area.toInt()
                 else -> 100
             }
-            txtDesc.text = "${sail.type} • $areaPct% Area"
+            txtDesc.text = context.getString(R.string.nautical_sail_area_fmt, sail.type, areaPct)
 
             val iconRes = when (item.category) {
                 SailCategory.MAIN -> R.drawable.ic_action_sail_boat_dark

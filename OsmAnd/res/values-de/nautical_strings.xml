@@ -2136,6 +2136,7 @@
     <string name="nautical_s63_error_prefix">Fehler: %1$s</string>
     <string name="nautical_sail_category_downwind">Vorwind / Raumwind</string>
     <string name="nautical_sail_category_headsail">Vorsegel</string>
+    <string name="nautical_sail_area_fmt">%1$s • %2$d%% Fläche</string>
     <string name="nautical_sail_category_main">Großsegel</string>
     <string name="nautical_sail_efficiency_label">Segelflächeneffizienz: %1$d%%</string>
     <string name="nautical_sail_furled">Eingerollt</string>

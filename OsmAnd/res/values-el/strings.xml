@@ -6504,6 +6504,7 @@
     <string name="nautical_sail_furled">Μαζεμένο (Τυλιγμένο)</string>
     <string name="nautical_sail_efficiency_label">Αποδοτικότητα Επιφάνειας Ιστίων: %1$d%%</string>
     <string name="nautical_sail_efficiency_none">Αποδοτικότητα Επιφάνειας Ιστίων: --</string>
+    <string name="nautical_sail_area_fmt">%1$s • %2$d%% Επιφάνεια</string>
     <string name="nautical_signalk_waypoint">Σημείο πορείας SignalK</string>
     <string name="nautical_battery_low_starter_fmt">Χαμηλή μπαταρία εκκίνησης: %1$s στα %2$.1f V</string>
     <string name="nautical_battery_low_fmt">Χαμηλή μπαταρία: %1$s στα %2$.1f V (%3$.0f%% SoC)</string>
