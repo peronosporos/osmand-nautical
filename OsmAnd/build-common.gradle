@@ -50,6 +50,11 @@ android {
 
 	testOptions {
 		animationsDisabled = true
+		// JVM unit tests run against the mockable android.jar. Framework calls
+		// that are not explicitly mocked (android.util.Log in PlatformUtil,
+		// MapUtils getMapBounds etc.) must return defaults instead of throwing
+		// "Method ... not mocked" and taking down every test that logs.
+		unitTests.returnDefaultValues = true
 		unitTests.all {
 			useJUnitPlatform()
 		}

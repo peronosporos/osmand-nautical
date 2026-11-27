@@ -6,8 +6,18 @@ class GribInterpolationEngine(private val gridData: GribGridData) {
 
     private val sortedSteps = gridData.timeSteps.sortedBy { it.timestamp }
 
+    // Mixed-grid files (wind and waves at different resolutions) carry one
+    // step per grid, so each parameter interpolates over the steps that
+    // actually contain it, using the geometry of the grid it was decoded on.
+    private val windSteps = sortedSteps.filter { it.uGrid != null && it.vGrid != null }
+    private val pressureSteps = sortedSteps.filter { it.pressureGrid != null }
+    private val waveSteps = sortedSteps.filter { it.waveHeightGrid != null && it.waveDirectionGrid != null }
+    private val currentSteps = sortedSteps.filter { it.currentUGrid != null && it.currentVGrid != null }
+
+    private fun headerOf(step: TimeStepGrid): GribHeader = step.gridHeader ?: gridData.header
+
     fun getWindVector(lat: Double, lon: Double, timestamp: Long): WindVector? {
-        val (lower, upper, ratio) = getTimeSteps(timestamp) ?: return null
+        val (lower, upper, ratio) = getTimeSteps(windSteps, timestamp) ?: return null
         val windAtLower = interpolateWind(lat, lon, lower) ?: return null
         val windAtUpper = interpolateWind(lat, lon, upper) ?: return null
 
@@ -17,7 +27,7 @@ class GribInterpolationEngine(private val gridData: GribGridData) {
     }
 
     fun getCurrentVector(lat: Double, lon: Double, timestamp: Long): WindVector? {
-        val (lower, upper, ratio) = getTimeSteps(timestamp) ?: return null
+        val (lower, upper, ratio) = getTimeSteps(currentSteps, timestamp) ?: return null
         val curAtLower = interpolateCurrent(lat, lon, lower) ?: return null
         val curAtUpper = interpolateCurrent(lat, lon, upper) ?: return null
 
@@ -27,18 +37,18 @@ class GribInterpolationEngine(private val gridData: GribGridData) {
     }
 
     fun getPressure(lat: Double, lon: Double, timestamp: Long): Double? {
-        val (lower, upper, ratio) = getTimeSteps(timestamp) ?: return null
-        val pAtLower = interpolateScalar(lat, lon, lower.pressureGrid) ?: return null
-        val pAtUpper = interpolateScalar(lat, lon, upper.pressureGrid) ?: return null
+        val (lower, upper, ratio) = getTimeSteps(pressureSteps, timestamp) ?: return null
+        val pAtLower = interpolateScalar(lat, lon, lower.pressureGrid, headerOf(lower)) ?: return null
+        val pAtUpper = interpolateScalar(lat, lon, upper.pressureGrid, headerOf(upper)) ?: return null
         return pAtLower + ratio * (pAtUpper - pAtLower)
     }
 
     fun getWaveData(lat: Double, lon: Double, timestamp: Long): WaveVector? {
-        val (lower, upper, ratio) = getTimeSteps(timestamp) ?: return null
-        val hAtLower = interpolateScalar(lat, lon, lower.waveHeightGrid) ?: return null
-        val dAtLower = interpolateAngle(lat, lon, lower.waveDirectionGrid) ?: return null
-        val hAtUpper = interpolateScalar(lat, lon, upper.waveHeightGrid) ?: return null
-        val dAtUpper = interpolateAngle(lat, lon, upper.waveDirectionGrid) ?: return null
+        val (lower, upper, ratio) = getTimeSteps(waveSteps, timestamp) ?: return null
+        val hAtLower = interpolateScalar(lat, lon, lower.waveHeightGrid, headerOf(lower)) ?: return null
+        val dAtLower = interpolateAngle(lat, lon, lower.waveDirectionGrid, headerOf(lower)) ?: return null
+        val hAtUpper = interpolateScalar(lat, lon, upper.waveHeightGrid, headerOf(upper)) ?: return null
+        val dAtUpper = interpolateAngle(lat, lon, upper.waveDirectionGrid, headerOf(upper)) ?: return null
 
         val h = hAtLower + ratio * (hAtUpper - hAtLower)
         val d = interpolateShortestArc(dAtLower, dAtUpper, ratio)
@@ -54,18 +64,18 @@ class GribInterpolationEngine(private val gridData: GribGridData) {
         return (result % 360.0 + 360.0) % 360.0
     }
 
-    private fun getTimeSteps(timestamp: Long): Triple<TimeStepGrid, TimeStepGrid, Double>? {
-        if (sortedSteps.isEmpty()) return null
+    private fun getTimeSteps(steps: List<TimeStepGrid>, timestamp: Long): Triple<TimeStepGrid, TimeStepGrid, Double>? {
+        if (steps.isEmpty()) return null
 
-        if (timestamp <= sortedSteps.first().timestamp) return Triple(sortedSteps.first(), sortedSteps.first(), 0.0)
-        if (timestamp >= sortedSteps.last().timestamp) return Triple(sortedSteps.last(), sortedSteps.last(), 0.0)
+        if (timestamp <= steps.first().timestamp) return Triple(steps.first(), steps.first(), 0.0)
+        if (timestamp >= steps.last().timestamp) return Triple(steps.last(), steps.last(), 0.0)
 
-        // Item 6: Binary search for efficiency
-        val index = sortedSteps.binarySearch { it.timestamp.compareTo(timestamp) }
-        
+        // Binary search for efficiency
+        val index = steps.binarySearch { it.timestamp.compareTo(timestamp) }
+
         val lowerIdx: Int
         val upperIdx: Int
-        
+
         if (index >= 0) {
             lowerIdx = index
             upperIdx = index
@@ -74,28 +84,27 @@ class GribInterpolationEngine(private val gridData: GribGridData) {
             lowerIdx = upperIdx - 1
         }
 
-        val lower = sortedSteps[lowerIdx]
-        val upper = sortedSteps[upperIdx]
+        val lower = steps[lowerIdx]
+        val upper = steps[upperIdx]
 
         val stepSpan = upper.timestamp - lower.timestamp
         val ratio = if (stepSpan > 0) (timestamp - lower.timestamp).toDouble() / stepSpan.toDouble() else 0.0
         return Triple(lower, upper, ratio.coerceIn(0.0, 1.0))
     }
 
-    private fun interpolateAngle(lat: Double, lon: Double, grid: FloatArray?): Double? {
+    private fun interpolateAngle(lat: Double, lon: Double, grid: FloatArray?, header: GribHeader): Double? {
         if (grid == null) return null
-        val header = gridData.header
-        
+
         var nLon = lon
         while (nLon < header.lonMin) nLon += 360.0
         while (nLon >= header.lonMin + 360.0) nLon -= 360.0
-        
+
         if (lat < header.latMin || lat > header.latMax) return null
-        
+
         val latSpan = header.latMax - header.latMin
         val lonSpan = header.lonMax - header.lonMin
         val isGlobalLon = abs(lonSpan - 360.0) < 1.0 || (lonSpan >= 360.0 - (360.0 / header.lonSteps))
-        
+
         if (!isGlobalLon && (nLon < header.lonMin || nLon > header.lonMax)) return null
 
         val latFrac = (lat - header.latMin) / latSpan * (header.latSteps - 1)
@@ -104,7 +113,7 @@ class GribInterpolationEngine(private val gridData: GribGridData) {
         val latIdx = latFrac.toInt().coerceIn(0, header.latSteps - 2)
         val lonIdx = lonFrac.toInt().coerceIn(0, header.lonSteps - 1)
         val nextLonIdx = if (lonIdx + 1 < header.lonSteps) lonIdx + 1 else if (isGlobalLon) 0 else return null
-        
+
         val latRem = latFrac - latIdx
         val lonRem = lonFrac - lonIdx
 
@@ -112,7 +121,7 @@ class GribInterpolationEngine(private val gridData: GribGridData) {
         val a10 = grid[(latIdx + 1) * header.lonSteps + lonIdx].toDouble()
         val a01 = grid[latIdx * header.lonSteps + nextLonIdx].toDouble()
         val a11 = grid[(latIdx + 1) * header.lonSteps + nextLonIdx].toDouble()
-        
+
         if (a00.isNaN() || a10.isNaN() || a01.isNaN() || a11.isNaN()) return null
 
         // Convert angles to components for safe interpolation
@@ -129,7 +138,7 @@ class GribInterpolationEngine(private val gridData: GribGridData) {
                 x10 * latRem * (1 - lonRem) +
                 x01 * (1 - latRem) * lonRem +
                 x11 * latRem * lonRem
-        
+
         val y = y00 * (1 - latRem) * (1 - lonRem) +
                 y10 * latRem * (1 - lonRem) +
                 y01 * (1 - latRem) * lonRem +
@@ -138,24 +147,23 @@ class GribInterpolationEngine(private val gridData: GribGridData) {
         return (Math.toDegrees(atan2(y, x)) + 360.0) % 360.0
     }
 
-    private fun interpolateScalar(lat: Double, lon: Double, grid: FloatArray?): Double? {
+    private fun interpolateScalar(lat: Double, lon: Double, grid: FloatArray?, header: GribHeader): Double? {
         if (grid == null) return null
-        val header = gridData.header
-        
+
         // Normalize lon to [lonMin, lonMin + 360]
         var nLon = lon
         while (nLon < header.lonMin) nLon += 360.0
         while (nLon >= header.lonMin + 360.0) nLon -= 360.0
-        
+
         // Check lat bounds
         if (lat < header.latMin || lat > header.latMax) return null
-        
+
         val latSpan = header.latMax - header.latMin
         val lonSpan = header.lonMax - header.lonMin
-        
+
         // Handle global grid vs regional
         val isGlobalLon = abs(lonSpan - 360.0) < 1.0 || (lonSpan >= 360.0 - (360.0 / header.lonSteps))
-        
+
         if (!isGlobalLon && (nLon < header.lonMin || nLon > header.lonMax)) return null
 
         val latFrac = (lat - header.latMin) / latSpan * (header.latSteps - 1)
@@ -163,9 +171,9 @@ class GribInterpolationEngine(private val gridData: GribGridData) {
 
         val latIdx = latFrac.toInt().coerceIn(0, header.latSteps - 2)
         val lonIdx = lonFrac.toInt().coerceIn(0, header.lonSteps - 1)
-        
+
         val nextLonIdx = if (lonIdx + 1 < header.lonSteps) lonIdx + 1 else if (isGlobalLon) 0 else return null
-        
+
         val latRem = latFrac - latIdx
         val lonRem = lonFrac - lonIdx
 
@@ -173,7 +181,7 @@ class GribInterpolationEngine(private val gridData: GribGridData) {
         val v10 = grid[(latIdx + 1) * header.lonSteps + lonIdx].toDouble()
         val v01 = grid[latIdx * header.lonSteps + nextLonIdx].toDouble()
         val v11 = grid[(latIdx + 1) * header.lonSteps + nextLonIdx].toDouble()
-        
+
         if (v00.isNaN() || v10.isNaN() || v01.isNaN() || v11.isNaN()) return null
 
         return v00 * (1 - latRem) * (1 - lonRem) +
@@ -183,16 +191,18 @@ class GribInterpolationEngine(private val gridData: GribGridData) {
     }
 
     private fun interpolateWind(lat: Double, lon: Double, timeStep: TimeStepGrid): WindVector? {
-        val u = interpolateScalar(lat, lon, timeStep.uGrid) ?: return null
-        val v = interpolateScalar(lat, lon, timeStep.vGrid) ?: return null
+        val header = headerOf(timeStep)
+        val u = interpolateScalar(lat, lon, timeStep.uGrid, header) ?: return null
+        val v = interpolateScalar(lat, lon, timeStep.vGrid, header) ?: return null
         return WindVector(u, v)
     }
 
     private fun interpolateCurrent(lat: Double, lon: Double, timeStep: TimeStepGrid): WindVector? {
-        val u = interpolateScalar(lat, lon, timeStep.currentUGrid) ?: return null
-        val v = interpolateScalar(lat, lon, timeStep.currentVGrid) ?: return null
+        val header = headerOf(timeStep)
+        val u = interpolateScalar(lat, lon, timeStep.currentUGrid, header) ?: return null
+        val v = interpolateScalar(lat, lon, timeStep.currentVGrid, header) ?: return null
         return WindVector(u, v)
     }
-    
+
     private fun abs(d: Double): Double = if (d < 0) -d else d
 }

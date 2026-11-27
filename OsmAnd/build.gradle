@@ -272,6 +272,11 @@ dependencies {
 
 	// Unit test dependencies (nautical plugin tests live in src/test/java)
 	testImplementation 'junit:junit:4.13.2'
+	// useJUnitPlatform() is enabled in build-common.gradle, and the JUnit
+	// Platform silently skips org.junit.Test classes unless the vintage engine
+	// is on the classpath. Without this line none of the JUnit4 unit tests
+	// actually execute: they were only compiled before.
+	testImplementation 'org.junit.vintage:junit-vintage-engine:5.10.0'
 	testImplementation 'org.jetbrains.kotlin:kotlin-test'
 	testImplementation 'io.mockk:mockk:1.13.13'
 	testImplementation 'org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.1'

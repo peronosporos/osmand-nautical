@@ -22,7 +22,11 @@ class GribParser {
         try {
             var offset = 0
             var globalHeader: GribHeader? = null
-            val timeSteps = mutableMapOf<Long, MutableTimeStep>()
+            // Weather files can mix grids per parameter (wind and waves at
+            // different resolutions). Each timestamp therefore holds one
+            // MutableTimeStep per distinct grid, so fields are never indexed
+            // with the geometry of another grid.
+            val timeSteps = mutableMapOf<Long, MutableList<MutableTimeStep>>()
 
             while (offset < (bytes.size - 4)) {
                 // Section 0: Indicator Section
@@ -40,6 +44,13 @@ class GribParser {
 
                 val totalLength = buffer.getLong(offset + 8)
                 val msgEnd = offset + totalLength.toInt()
+                if (msgEnd <= offset) {
+                    // A zero or negative total length would re-scan the same
+                    // message forever and hang the parse coroutine (which
+                    // cannot be cancelled while busy-looping).
+                    log.warn("GRIB: Non-advancing message length $totalLength at offset $offset")
+                    break
+                }
                 
                 // Pre-scan sections for this message
                 val sections = scanSections(bytes, offset + 16, msgEnd)
@@ -91,7 +102,8 @@ class GribParser {
                         val lon1 = buffer.getInt(sec3 + 42) / 1000000.0
                         val lat2 = buffer.getInt(sec3 + 51) / 1000000.0
                         val lon2 = buffer.getInt(sec3 + 55) / 1000000.0
-                        scanMode = bytes[sec3 + 64].toInt() and 0xFF
+                        // Template 3.10: scanning mode is octet 60 of section 3.
+                        scanMode = bytes[sec3 + 59].toInt() and 0xFF
                         
                         currentHeader = GribHeader(
                             latMin = minOf(lat1, lat2),
@@ -128,7 +140,7 @@ class GribParser {
                     
                     if ((sec5 != null) && (sec7 != null)) {
                         val data = extractData(buffer, sec5, sec6, sec7, ni, nj, scanMode)
-                        val step = timeSteps.getOrPut(timestamp) { MutableTimeStep(timestamp, currentHeader) }
+                        val step = stepFor(timeSteps, timestamp, currentHeader)
                         mapParameter(discipline, cat, num, data, step)
                     }
                 }
@@ -137,13 +149,32 @@ class GribParser {
             }
 
             return globalHeader?.let { h ->
-                GribGridData(h, timeSteps.values.map { it.toTimeStepGrid() })
+                GribGridData(h, timeSteps.values.flatten().map { it.toTimeStepGrid() })
             }
 
+        } catch (e: UnsupportedGribException) {
+            // Propagate so callers can tell an unsupported edition apart from
+            // a broken file (GribRepository switches to UNSUPPORTED_EDITION on
+            // this exception). The generic catch below used to swallow it.
+            throw e
         } catch (e: Exception) {
             log.error("Error parsing GRIB bytes: ${e.message}", e)
             return null
         }
+    }
+
+    /**
+     * Returns the step for the given timestamp whose grid matches, creating it
+     * when this is the first parameter on that grid.
+     */
+    private fun stepFor(
+        timeSteps: MutableMap<Long, MutableList<MutableTimeStep>>,
+        timestamp: Long,
+        header: GribHeader
+    ): MutableTimeStep {
+        val steps = timeSteps.getOrPut(timestamp) { mutableListOf() }
+        return steps.firstOrNull { it.header == header }
+            ?: MutableTimeStep(timestamp, header).also { steps.add(it) }
     }
 
     private fun scanSections(bytes: ByteArray, startOffset: Int, msgEnd: Int): Map<Int, Int> {
@@ -170,6 +201,12 @@ class GribParser {
             5 -> value * 86400000L * 365 * 10 // Decade
             6 -> value * 86400000L * 365 * 30 // Normal
             7 -> value * 86400000L * 365 * 100 // Century
+            // 8 and 9 are reserved in the NOAA/NCEP edition of Code Table 4.4;
+            // later WMO editions define them as 3 and 6 hours. Files never use
+            // them with the NOAA meaning, so treating them as 3/6 hours is the
+            // safe interpretation under both editions.
+            8 -> value * 3600000L * 3 // 3 Hours
+            9 -> value * 3600000L * 6 // 6 Hours
             10 -> value * 3600000L * 3 // 3 Hours
             11 -> value * 3600000L * 6 // 6 Hours
             12 -> value * 3600000L * 12 // 12 Hours
@@ -335,13 +372,14 @@ class GribParser {
 
         fun toTimeStepGrid() = TimeStepGrid(
             timestamp,
-            uGrid ?: FloatArray(header.latSteps * header.lonSteps),
-            vGrid ?: FloatArray(header.latSteps * header.lonSteps),
+            uGrid,
+            vGrid,
             pressureGrid,
             waveHeightGrid,
             waveDirectionGrid,
             currentUGrid,
             currentVGrid,
+            header
         )
     }
 }

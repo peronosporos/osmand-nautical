@@ -19,7 +19,8 @@ class Grib1Parser {
         try {
             var offset = 0
             var globalHeader: GribHeader? = null
-            val timeSteps = mutableMapOf<Long, MutableTimeStep>()
+            // One step per distinct grid per timestamp (mixed-grid files).
+            val timeSteps = mutableMapOf<Long, MutableList<MutableTimeStep>>()
 
             while (offset < (bytes.size - 8)) {
                 // Section 0
@@ -39,6 +40,12 @@ class Grib1Parser {
                 }
 
                 val msgEnd = offset + totalLength
+                if (msgEnd <= offset) {
+                    // Zero or negative length would re-scan the same message
+                    // forever and hang the parse coroutine.
+                    log.warn("GRIB1: Non-advancing message length $totalLength at offset $offset")
+                    break
+                }
                 
                 // Section 1: PDS
                 val pdsOffset = offset + 8
@@ -149,7 +156,7 @@ class Grib1Parser {
                 val bdsOffset = bmsOffset
                 if (currentHeader != null) {
                     val data = extractGrib1Data(buffer, bdsOffset, ni, nj, scanMode, bitMap, pdsOffset)
-                    val step = timeSteps.getOrPut(timestamp) { MutableTimeStep(timestamp, currentHeader) }
+                    val step = stepFor(timeSteps, timestamp, currentHeader)
                     mapGrib1Parameter(paramId, data, step)
                 }
 
@@ -157,13 +164,27 @@ class Grib1Parser {
             }
 
             return globalHeader?.let { h ->
-                GribGridData(h, timeSteps.values.map { it.toTimeStepGrid() })
+                GribGridData(h, timeSteps.values.flatten().map { it.toTimeStepGrid() })
             }
 
         } catch (e: Exception) {
             log.error("Error parsing GRIB1: ${e.message}", e)
             return null
         }
+    }
+
+    /**
+     * Returns the step for the given timestamp whose grid matches, creating it
+     * when this is the first parameter on that grid.
+     */
+    private fun stepFor(
+        timeSteps: MutableMap<Long, MutableList<MutableTimeStep>>,
+        timestamp: Long,
+        header: GribHeader
+    ): MutableTimeStep {
+        val steps = timeSteps.getOrPut(timestamp) { mutableListOf() }
+        return steps.firstOrNull { it.header == header }
+            ?: MutableTimeStep(timestamp, header).also { steps.add(it) }
     }
 
     private fun decodeGrib1Angle(b1: Int, b2: Int, b3: Int): Double {
@@ -177,6 +198,9 @@ class Grib1Parser {
             0 -> value * 60000L // Minutes
             1 -> value * 3600000L // Hours
             2 -> value * 86400000L // Days
+            10 -> value * 3600000L * 3 // 3 Hours (Code table 4)
+            11 -> value * 3600000L * 6 // 6 Hours
+            12 -> value * 3600000L * 12 // 12 Hours
             else -> value * 3600000L
         }
     }
@@ -297,13 +321,14 @@ class Grib1Parser {
 
         fun toTimeStepGrid() = TimeStepGrid(
             timestamp,
-            uGrid ?: FloatArray(header.latSteps * header.lonSteps),
-            vGrid ?: FloatArray(header.latSteps * header.lonSteps),
+            uGrid,
+            vGrid,
             pressureGrid,
             waveHeightGrid,
             waveDirectionGrid,
             currentUGrid,
             currentVGrid,
+            header
         )
     }
 }

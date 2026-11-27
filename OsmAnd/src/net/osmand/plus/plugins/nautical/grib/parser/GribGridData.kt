@@ -27,13 +27,17 @@ data class WaveVector(
 
 data class TimeStepGrid(
     val timestamp: Long,
-    val uGrid: FloatArray,
-    val vGrid: FloatArray,
+    val uGrid: FloatArray? = null,
+    val vGrid: FloatArray? = null,
     val pressureGrid: FloatArray? = null,    // Surface pressure (hPa)
     val waveHeightGrid: FloatArray? = null,  // Significant wave height (m)
     val waveDirectionGrid: FloatArray? = null, // Wave direction (degrees)
     val currentUGrid: FloatArray? = null,   // Eastward current (m/s)
-    val currentVGrid: FloatArray? = null    // Northward current (m/s)
+    val currentVGrid: FloatArray? = null,    // Northward current (m/s)
+    // Grid geometry this step's arrays were decoded on. Weather files can mix
+    // grids per parameter (e.g. wind 0.25 deg, waves 0.5 deg in one file), so
+    // each step carries the geometry of the grid that produced its data.
+    val gridHeader: GribHeader? = null
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -42,8 +46,14 @@ data class TimeStepGrid(
         other as TimeStepGrid
 
         if (timestamp != other.timestamp) return false
-        if (!uGrid.contentEquals(other.uGrid)) return false
-        if (!vGrid.contentEquals(other.vGrid)) return false
+        if (uGrid != null) {
+            if (other.uGrid == null) return false
+            if (!uGrid.contentEquals(other.uGrid)) return false
+        } else if (other.uGrid != null) return false
+        if (vGrid != null) {
+            if (other.vGrid == null) return false
+            if (!vGrid.contentEquals(other.vGrid)) return false
+        } else if (other.vGrid != null) return false
         if (pressureGrid != null) {
             if (other.pressureGrid == null) return false
             if (!pressureGrid.contentEquals(other.pressureGrid)) return false
@@ -69,18 +79,21 @@ data class TimeStepGrid(
             if (!currentVGrid.contentEquals(other.currentVGrid)) return false
         } else if (other.currentVGrid != null) return false
 
+        if (gridHeader != other.gridHeader) return false
+
         return true
     }
 
     override fun hashCode(): Int {
         var result = timestamp.hashCode()
-        result = 31 * result + uGrid.contentHashCode()
-        result = 31 * result + vGrid.contentHashCode()
+        result = 31 * result + (uGrid?.contentHashCode() ?: 0)
+        result = 31 * result + (vGrid?.contentHashCode() ?: 0)
         result = 31 * result + (pressureGrid?.contentHashCode() ?: 0)
         result = 31 * result + (waveHeightGrid?.contentHashCode() ?: 0)
         result = 31 * result + (waveDirectionGrid?.contentHashCode() ?: 0)
         result = 31 * result + (currentUGrid?.contentHashCode() ?: 0)
         result = 31 * result + (currentVGrid?.contentHashCode() ?: 0)
+        result = 31 * result + (gridHeader?.hashCode() ?: 0)
         return result
     }
 }
