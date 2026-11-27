@@ -58,12 +58,26 @@ class S57ChartManagerFragment : BaseOsmAndFragment() {
         viewLifecycleOwner.lifecycleScope.launch {
             val encFiles = withContext(Dispatchers.IO) {
                 val encDir = app.getAppPath("nautical/enc")
+                // Signature files (S-63 5.3.2) share the cell extension but
+                // are authentication metadata, not charts.
                 (encDir.listFiles { _, name ->
-                    S57CellFiles.isChartFile(name)
+                    S57CellFiles.isChartFile(name) && !S57CellFiles.isSignatureFileName(name)
                 }?.toList() ?: emptyList()).sortedWith(
                         // Each base cell followed by its update files, cells alphabetically
                         compareBy({ S57CellFiles.cellName(it.name) }, { !S57CellFiles.isUpdateFile(it.name) }, { S57CellFiles.updateNumber(it.name) })
                 )
+            }
+
+            // Encrypted S-63 cells keep the .000/.001 extensions (S-63 3.1),
+            // so encryption is detected by an installed cell permit rather
+            // than by the file extension.
+            val encryptedCells = withContext(Dispatchers.IO) {
+                val store = net.osmand.plus.plugins.nautical.s63.ui.S63CredentialStore(app)
+                encFiles.map { S57CellFiles.cellName(it.name) }
+                    .filter { cell ->
+                        store.getCellKey(cell)?.isNotEmpty() == true ||
+                                store.getCellKey2(cell)?.isNotEmpty() == true
+                    }.toSet()
             }
 
             val plugin = NauticalPlugin.getInstance()
@@ -77,7 +91,7 @@ class S57ChartManagerFragment : BaseOsmAndFragment() {
                 encFiles.filter { index?.isFileIndexed(it) == true }.map { it.absolutePath }.toSet()
             }
 
-            recyclerView.adapter = ChartAdapter(encFiles, boundsMap, appliedPaths)
+            recyclerView.adapter = ChartAdapter(encFiles, boundsMap, appliedPaths, encryptedCells)
             emptyView.visibility = if (encFiles.isEmpty()) View.VISIBLE else View.GONE
             
             val area = calculateTotalAreaNm(boundsMap.values)
@@ -133,7 +147,8 @@ class S57ChartManagerFragment : BaseOsmAndFragment() {
     private inner class ChartAdapter(
         private val files: List<File>,
         private val bounds: Map<String, DoubleArray>,
-        private val appliedPaths: Set<String>
+        private val appliedPaths: Set<String>,
+        private val encryptedCells: Set<String>
     ) : RecyclerView.Adapter<ChartViewHolder>() {
         private val colorGreen = androidx.core.content.ContextCompat.getColor(requireContext(), R.color.nautical_status_green)
         private val colorOrange = androidx.core.content.ContextCompat.getColor(requireContext(), R.color.nautical_status_orange)
@@ -144,7 +159,8 @@ class S57ChartManagerFragment : BaseOsmAndFragment() {
         }
         override fun onBindViewHolder(holder: ChartViewHolder, position: Int) {
             val file = files[position]
-            val isS63 = file.name.uppercase(Locale.US).endsWith(".031") || file.name.uppercase(Locale.US).endsWith(".ENC")
+            val isS63 = file.name.uppercase(Locale.US).endsWith(".ENC") ||
+                    S57CellFiles.cellName(file.name) in encryptedCells
             val isUpdate = S57CellFiles.isUpdateFile(file.name)
             // "S-57" / "S-63" are IHO transfer-standard names and stay
             // untranslated, like other product names

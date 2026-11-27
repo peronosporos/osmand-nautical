@@ -51,6 +51,12 @@ object S63BridgeStream {
             return null
         }
         val name = file.name.uppercase()
+        if (net.osmand.plus.plugins.nautical.s57.S57CellFiles.isSignatureFileName(name)) {
+            // A signature file (S-63 5.3.2, band letters I-N in the third
+            // position) is authentication metadata and never chart data.
+            log.warn("S-63: $name is an ENC signature file, not a chart; refusing to serve it as S-57 data.")
+            return null
+        }
         val cellName = file.nameWithoutExtension.uppercase()
         val store = S63CredentialStore(app)
         if (!authenticateCell(file, name, app, store)) {

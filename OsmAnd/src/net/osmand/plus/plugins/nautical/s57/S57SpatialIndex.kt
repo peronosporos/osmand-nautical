@@ -39,11 +39,15 @@ class S57SpatialIndex(
              _indexingStatus.value = S57IndexStatus(S57IndexStatus.Kind.NO_CHARTS)
              return@withContext
         }
+        // S-63 signature files (GBI00001.000, S-63 5.3.2) share the cell
+        // extension and therefore pass the chart file filter; they are
+        // authentication metadata and must not be parsed as charts.
+        val chartFiles = files.filterNot { S57CellFiles.isSignatureFileName(it.name) }
 
         // Group each base cell with its update files (.001... .999) so the
         // update instructions are applied to their own base in numeric
         // order (IHO S-57 Part 3 section 2.6).
-        val groups = files.groupBy { S57CellFiles.cellName(it.name) }
+        val groups = chartFiles.groupBy { S57CellFiles.cellName(it.name) }
                 .map { (cell, groupFiles) -> cell to S57CellFiles.sortGroup(groupFiles) }
                 .sortedBy { it.first }
 
@@ -67,19 +71,36 @@ class S57SpatialIndex(
             for (file in groupFiles) {
                 sqliteHelper.removeFile(file.absolutePath)
             }
+            // sortGroup orders the base cell first, so when the update
+            // files are reached the base has already been opened or failed.
+            var baseIndexed = false
             for (file in groupFiles) {
                 val lastModified = file.lastModified()
                 _indexingStatus.value = S57IndexStatus(S57IndexStatus.Kind.INDEXING, index + 1, groups.size, file.name)
+                if (S57CellFiles.isUpdateFile(file.name) && !baseIndexed) {
+                    // The base cell of this group was not indexed (missing
+                    // permit, failed authentication or a parse error).
+                    // Applying updates without their base would add partial,
+                    // misleading content to the index.
+                    log.warn("S-57: Skipping update ${file.name} because the base cell of $cell was not indexed")
+                    sqliteHelper.removeFile(file.absolutePath)
+                    continue
+                }
+                var opened = false
                 try {
                     log.info("Indexing S-63/S-57 chart: ${file.name} (Changed or New)")
                     val stream = S63BridgeStream.open(file, app)
                     if (stream != null) {
                         val reader = S57FileReader(stream)
                         sqliteHelper.addFeaturesStreaming(file.absolutePath, lastModified, reader)
+                        opened = true
                         log.info("Successfully indexed ${file.name} to persistent storage")
                     }
                 } catch (e: Exception) {
                     log.error("Failed to index chart: ${file.absolutePath}", e)
+                }
+                if (!S57CellFiles.isUpdateFile(file.name)) {
+                    baseIndexed = opened
                 }
             }
         }

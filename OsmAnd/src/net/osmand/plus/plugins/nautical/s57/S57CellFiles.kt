@@ -39,6 +39,21 @@ object S57CellFiles {
     fun isCatalogFile(name: String): Boolean =
             extension(name) == CATALOG_EXTENSION && cellName(name) == CATALOG_CELL_NAME
 
+    /**
+     * True for S-63 ENC signature files (S-63 5.3.2): the cell name with the
+     * navigational purpose digit in the third position replaced by the band
+     * letters I to N (GB100001.000 -> GBI00001.000). Signature files keep
+     * the cell extension, so by extension alone they are indistinguishable
+     * from base cells and must be excluded from the chart pipeline.
+     */
+    fun isSignatureFileName(name: String): Boolean {
+        if (name.length < 4) {
+            return false
+        }
+        val band = name[2].uppercaseChar()
+        return band in 'I'..'N'
+    }
+
     /** True for update files .001 ... .999 (the catalogue is not an update). */
     fun isUpdateFile(name: String): Boolean {
         if (isCatalogFile(name)) {

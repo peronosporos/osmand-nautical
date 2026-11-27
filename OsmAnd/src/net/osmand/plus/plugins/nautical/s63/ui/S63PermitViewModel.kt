@@ -208,12 +208,18 @@ class S63PermitViewModel(
         val trimmed = text.trimStart { it == ' ' || it == '\r' || it == '\n' || it == '\t' }
         val fileName = getFileName(uri) ?: ""
         if (trimmed.startsWith("//")) {
+            if (trimmed.contains("signature part", ignoreCase = true)) {
+                // An ENC signature file (.SF) carries the data server key of
+                // one chart; installing it as the Scheme Administrator key
+                // would break authentication of every other chart.
+                return null
+            }
             val key = S63AuthVerifier.dsaKeyFromAsciiPublicKey(trimmed)
                 ?: return app.getString(R.string.s63_certificate_invalid)
             store.saveSaKey(key, null)
             return app.getString(R.string.s63_sa_key_imported)
         }
-        if (bytes.isNotEmpty() && bytes[0] == 0x30.toByte()) {
+        if (isDerSequence(bytes)) {
             val pair = S63AuthVerifier.dsaKeyFromX509(bytes)
                 ?: return app.getString(R.string.s63_certificate_invalid)
             val (key, certificate) = pair
@@ -232,6 +238,25 @@ class S63PermitViewModel(
             }
         }
         return null
+    }
+
+    /**
+     * True when the bytes are a DER SEQUENCE whose declared length covers
+     * the whole file. The leading 0x30 alone is not sufficient: the ASCII
+     * character '0' is also 0x30, so a text file starting with the digit
+     * zero must fall through to permit parsing.
+     */
+    private fun isDerSequence(bytes: ByteArray): Boolean {
+        if (bytes.size < 4 || bytes[0] != 0x30.toByte()) {
+            return false
+        }
+        return when {
+            bytes[1] == 0x81.toByte() -> 3 + (bytes[2].toInt() and 0xFF) == bytes.size
+            bytes[1] == 0x82.toByte() ->
+                4 + (((bytes[2].toInt() and 0xFF) shl 8) or (bytes[3].toInt() and 0xFF)) == bytes.size
+            bytes[1] >= 0 && bytes[1] < 0x80.toByte() -> 2 + (bytes[1].toInt() and 0xFF) == bytes.size
+            else -> false
+        }
     }
 
     fun clearToast() {

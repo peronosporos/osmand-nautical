@@ -91,4 +91,28 @@ class S57CellFilesTest {
         val sorted = S57CellFiles.sortGroup(listOf(file("CATALOG.031")))
         assertEquals(listOf("CATALOG.031"), sorted.map { it.name })
     }
+
+    @Test
+    fun signatureFilesAreRecognized() {
+        // S-63 5.3.2: band letters I-N in the third position.
+        assertTrue(S57CellFiles.isSignatureFileName("GBI00001.000"))
+        assertTrue(S57CellFiles.isSignatureFileName("GBN1021A.001"))
+        assertTrue(S57CellFiles.isSignatureFileName("gbi00001.000"))
+        assertTrue(S57CellFiles.isSignatureFileName("XXM00001.ENC"))
+        // Cells keep the navigational purpose digit 1-6 there.
+        assertFalse(S57CellFiles.isSignatureFileName("GB100001.000"))
+        assertFalse(S57CellFiles.isSignatureFileName("GB61021A.001"))
+        assertFalse(S57CellFiles.isSignatureFileName("CATALOG.031"))
+        assertFalse(S57CellFiles.isSignatureFileName("GB.000"))
+        assertFalse(S57CellFiles.isSignatureFileName("GB"))
+    }
+
+    @Test
+    fun signatureFileNameForOutputIsAlwaysRecognizedAsSignatureFile() {
+        for (cellName in listOf("GB100001.000", "GB61021A.001", "GB301620.000", "XX100002.031")) {
+            val signatureName = net.osmand.plus.plugins.nautical.s63.crypto.S63SignatureFile
+                    .signatureFileNameFor(cellName)
+            assertTrue(signatureName != null && S57CellFiles.isSignatureFileName(signatureName))
+        }
+    }
 }
