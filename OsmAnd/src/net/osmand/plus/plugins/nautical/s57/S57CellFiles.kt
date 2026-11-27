@@ -32,6 +32,11 @@ object S57CellFiles {
             name.substringBeforeLast('.').uppercase()
 
     fun isBaseFile(name: String): Boolean {
+        // A base cell needs the 8-character cell name before the extension;
+        // a dotfile like ".000" has an empty stem and is not a chart.
+        if (cellName(name).isEmpty()) {
+            return false
+        }
         val ext = extension(name)
         return ext == BASE_EXTENSION || ext == ENCRYPTED_EXTENSION
     }
@@ -56,7 +61,7 @@ object S57CellFiles {
 
     /** True for update files .001 ... .999 (the catalogue is not an update). */
     fun isUpdateFile(name: String): Boolean {
-        if (isCatalogFile(name)) {
+        if (isCatalogFile(name) || cellName(name).isEmpty()) {
             return false
         }
         val ext = extension(name)
@@ -78,10 +83,13 @@ object S57CellFiles {
     /**
      * Orders the files of one cell group: base (or catalogue) first, then
      * updates by ascending number, so update instructions are applied in
-     * the order the data server issued them.
+     * the order the data server issued them. The first key must sort the
+     * base/catalogue (isUpdateFile == false) before the updates (true);
+     * the historic !isUpdateFile key inverted the group and applied
+     * updates before their base cell.
      */
     fun sortGroup(files: List<File>): List<File> =
             files.sortedWith(
-                    compareBy({ !isUpdateFile(it.name) }, { updateNumber(it.name) }, { it.name.uppercase() })
+                    compareBy({ isUpdateFile(it.name) }, { updateNumber(it.name) }, { it.name.uppercase() })
             )
 }

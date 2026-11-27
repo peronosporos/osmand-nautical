@@ -29,8 +29,10 @@ object SailingDependencyContainer {
     val okHttpClient: OkHttpClient
         get() = _okHttpClient ?: throw IllegalStateException("Nautical dependencies not initialized")
 
+    // internal set: production code initializes it through initialize(); JVM
+    // unit tests in this module inject a fake repository for the view models.
     var performanceRepository: SailingPerformanceRepository? = null
-        private set
+        internal set
 
     var gribRepository: GribRepository? = null
         private set

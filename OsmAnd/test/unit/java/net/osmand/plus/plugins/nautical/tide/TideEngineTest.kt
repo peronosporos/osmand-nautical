@@ -42,15 +42,30 @@ class TideEngineTest {
         val m2 = HarmonicConstituent("M2", 1.0, 0.0, 28.9841042)
         val station = TideStation("1", "Test", 0.0, 0.0, 0, constituents = listOf(m2))
         val engine = TideCalculationEngine()
-        
-        // At t=0, cos(0) = 1, so height = 1.0
-        val h0 = engine.calculateHeight(station, 0L)
-        assertEquals(1.0, h0, 0.001)
-        
-        // Half period of M2 is ~6.21 hours. cos(pi) = -1
+
+        // The engine evaluates the full Doodson astronomical argument
+        // (V + u - g with nodal factor f), so h(0) is NOT the naive cos(0) = 1.0:
+        // the epoch angle depends on the Moon/Sun mean longitudes at the epoch.
+        // For a single constituent the result is still a pure, slowly modulated
+        // sinusoid at the constituent speed, so two invariants pin the frequency:
+        // over one M2 half period the curve inverts, over one full period it
+        // repeats (both hold to ~2e-5 for integer-millisecond offsets, verified
+        // against a Python port of the engine). The historic bug that added
+        // speed*t twice cycled at double frequency and fails both invariants.
         val halfPeriodMs = (((180.0 / 28.9841042) * 3600) * 1000).toLong()
-        val h1 = engine.calculateHeight(station, halfPeriodMs)
-        assertEquals(-1.0, h1, 0.001)
+        val periodMs = (((360.0 / 28.9841042) * 3600) * 1000).toLong()
+        val hourMs = 3600L * 1000L
+        for (t0 in longArrayOf(0L, 3L * hourMs, 27L * hourMs, 5L * 24 * hourMs, 200L * 24 * hourMs)) {
+            val h0 = engine.calculateHeight(station, t0)
+            assertEquals("half-period inversion at t=$t0",
+                -h0, engine.calculateHeight(station, t0 + halfPeriodMs), 0.001)
+            assertEquals("full-period repetition at t=$t0",
+                h0, engine.calculateHeight(station, t0 + periodMs), 0.001)
+        }
+
+        // A station with no constituents returns its datum unchanged.
+        val emptyStation = TideStation("2", "Empty", 0.0, 0.0, 0, datum = 2.5, constituents = emptyList())
+        assertEquals(2.5, engine.calculateHeight(emptyStation, 0L), 0.000001)
     }
 
     @Test

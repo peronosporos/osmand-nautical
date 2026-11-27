@@ -151,6 +151,16 @@ class S57FileReader(private val inputStream: InputStream) {
             log.error("Malformed record leader: length=$recordLength base=$fieldAreaStart")
             return null
         }
+        // ISO 8211: leader byte 6 is 'L' for the Data Descriptive Record
+        // (field definitions only) and 'D' for data records. The DDR defines
+        // fields tagged VRID/FRID/DSSI/ATTF/FSPT; parsed as data it emitted a
+        // garbage feature whose FSPT keys resolved against the equally
+        // garbage VRID entry, so every cell file started with a phantom
+        // feature. Skip its directory and field area wholesale.
+        if (leader[6] == 'L'.code.toByte()) {
+            source.skip((recordLength - 24).toLong())
+            return RawRecord(ArrayList())
+        }
         val lenFieldLength = leader[20] - '0'.code
         val lenFieldPos = leader[21] - '0'.code
         val lenFieldTag = leader[23] - '0'.code
