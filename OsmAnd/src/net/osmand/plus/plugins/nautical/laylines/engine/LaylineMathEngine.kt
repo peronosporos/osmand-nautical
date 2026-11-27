@@ -135,8 +135,16 @@ object LaylineMathEngine {
         )
         val stbdShiftCone = if (pStbd1 != null && pStbd2 != null) Pair(pStbd1, pStbd2) else null
 
-        // 7. Determine fetchability
-        val isFetchable = !isWithinArc(bearingToTarget, stbdCogHeading, portCogHeading)
+        // 7. Determine fetchability: the mark is single-tack reachable only
+        // when its bearing lies OUTSIDE the minor arc between the two COG
+        // headings. Measure that arc in the direction in which it is the
+        // minor one; on downwind legs the starboard-to-port arc wraps the
+        // long way round (270 degrees at a 45 degree gybe angle), which made
+        // every mark read as fetchable.
+        val arcFromStbdToPort = normalizeRadians(portCogHeading - stbdCogHeading)
+        val arcStart = if (arcFromStbdToPort <= PI) stbdCogHeading else portCogHeading
+        val arcEnd = if (arcFromStbdToPort <= PI) portCogHeading else stbdCogHeading
+        val isFetchable = !isWithinArc(bearingToTarget, arcStart, arcEnd)
 
         return LaylineData(
             portTackPoint = portTackPoint,
@@ -225,11 +233,17 @@ object LaylineMathEngine {
 
         val cosThetaA = (sin(lat2) - sin(lat1) * cos(dist12)) / (sin(dist12) * cos(lat1))
         val cosThetaB = (sin(lat1) - sin(lat2) * cos(dist12)) / (sin(dist12) * cos(lat2))
-        
-        if (cosThetaA !in -1.0..1.0 || cosThetaB !in -1.0..1.0) return null
 
-        val thetaA = acos(cosThetaA)
-        val thetaB = acos(cosThetaB)
+        // Mathematically both values are in [-1, 1], but floating-point
+        // drift pushes meridian-aligned points to e.g. -1.000000000000026.
+        // A strict range check rejected those, so every layline
+        // intersection for a due-north/due-south target returned null.
+        if (cosThetaA.isNaN() || cosThetaB.isNaN() ||
+            abs(cosThetaA) > 1.000001 || abs(cosThetaB) > 1.000001
+        ) return null
+
+        val thetaA = acos(cosThetaA.coerceIn(-1.0, 1.0))
+        val thetaB = acos(cosThetaB.coerceIn(-1.0, 1.0))
 
         val theta12 = if (sin(deltaLon) > 0) thetaA else 2 * PI - thetaA
         val theta21 = if (sin(deltaLon) > 0) 2 * PI - thetaB else thetaB
@@ -241,9 +255,9 @@ object LaylineMathEngine {
         if (sin(alpha1) * sin(alpha2) < 0) return null
 
         val cosAlpha3 = -cos(alpha1) * cos(alpha2) + sin(alpha1) * sin(alpha2) * cos(dist12)
-        if (cosAlpha3 !in -1.0..1.0) return null
-        
-        val alpha3 = acos(cosAlpha3)
+        if (cosAlpha3.isNaN() || abs(cosAlpha3) > 1.000001) return null
+
+        val alpha3 = acos(cosAlpha3.coerceIn(-1.0, 1.0))
         val dist13 = atan2(sin(dist12) * sin(alpha1) * sin(alpha2), cos(alpha2) + cos(alpha1) * cos(alpha3))
         
         if (dist13.isNaN()) return null

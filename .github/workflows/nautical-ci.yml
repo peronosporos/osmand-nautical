@@ -44,7 +44,8 @@ jobs:
       with:
         name: unit-test-results
         path: |
-          android/OsmAnd/build/test-results/testAndroidFullLegacyArm64DebugUnitTest/*.xml
-          android/OsmAnd-shared/build/test-results/jvmTest/*.xml
+          android/OsmAnd/build/test-results/**/*.xml
+          android/OsmAnd-shared/build/test-results/**/*.xml
+          android/OsmAnd/build/reports/tests/**
         retention-days: 14
         if-no-files-found: warn

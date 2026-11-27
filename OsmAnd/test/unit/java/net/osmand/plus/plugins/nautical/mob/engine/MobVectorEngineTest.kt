@@ -48,9 +48,15 @@ class MobVectorEngineTest {
         val drop = LatLon(45.0, -1.0)
         val boat = LatLon(45.0, -1.0)
         // 0.5 m/s due east for 1000 s = 500 m east of the drop point.
+        // twsMps = 0.0 isolates the tidal vector; a null tws would engage
+        // the default 10 kn wind assumption pinned by the other test.
         val event = eventAt(45.0, -1.0, elapsedSecAgo = 1000)
 
-        val v = MobVectorEngine.calculateReturnVector(boat, event, sog = 3.0, driftMps = 0.5, driftDeg = 90.0)
+        val v = MobVectorEngine.calculateReturnVector(
+            boat, event, sog = 3.0,
+            driftMps = 0.5, driftDeg = 90.0,
+            twsMps = 0.0, twdDeg = 90.0
+        )
 
         assertEquals(500.0, v.distanceMeters, 15.0)
         assertEquals(90.0, v.bearingDegrees, 3.0) // casualty is due east
@@ -103,11 +109,13 @@ class MobVectorEngineTest {
         assertTrue(abs(leg1 - 500.0) < 3.0)
         assertTrue(abs(leg2 - 1000.0) < 5.0)
         assertTrue(abs(leg3 - 1000.0) < 5.0)
-        // Successive legs turn 90 degrees to starboard (east, south, west, north).
-        assertEquals(90.0, bearingDeg(track[0], track[1]), 2.0)
-        assertEquals(180.0, bearingDeg(track[1], track[2]), 2.0)
-        assertEquals(270.0, bearingDeg(track[2], track[3]), 2.0)
-        assertEquals(0.0, bearingDeg(track[3], track[4]), 2.0)
+        // Successive legs turn 90 degrees to starboard (north, east, south,
+        // west): a north-aligned start, the same convention the sector
+        // search pattern generator uses.
+        assertEquals(0.0, bearingDeg(track[0], track[1]), 2.0)
+        assertEquals(90.0, bearingDeg(track[1], track[2]), 2.0)
+        assertEquals(180.0, bearingDeg(track[2], track[3]), 2.0)
+        assertEquals(270.0, bearingDeg(track[3], track[4]), 2.0)
     }
 
     private fun distanceM(a: LatLon, b: LatLon): Double {

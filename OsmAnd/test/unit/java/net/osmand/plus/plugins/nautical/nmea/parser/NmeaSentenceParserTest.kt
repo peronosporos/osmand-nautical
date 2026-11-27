@@ -37,7 +37,7 @@ class NmeaSentenceParserTest {
 
     @Test
     fun testParseMWV() {
-        val sentence = "\$IIMWV,214.8,T,05.1,N,A*29"
+        val sentence = "\$IIMWV,214.8,T,05.1,N,A*00"
         val delta = parser.parse(sentence)
         
         assertNotNull(delta)
@@ -56,7 +56,7 @@ class NmeaSentenceParserTest {
 
     @Test
     fun testParseDBT() {
-        val sentence = "\$IIDBT,033.1,f,010.1,M,005.4,F*25"
+        val sentence = "\$IIDBT,033.1,f,010.1,M,005.4,F*11"
         val delta = parser.parse(sentence)
         
         assertNotNull(delta)

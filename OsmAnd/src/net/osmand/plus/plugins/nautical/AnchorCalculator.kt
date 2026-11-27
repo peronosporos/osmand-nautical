@@ -61,7 +61,8 @@ object AnchorCalculator {
     ): LatLon {
         if (bowOffsetMeters <= 0) return LatLon(currentLat, currentLon)
         
-        // MapUtils.greatCircleDestinationPoint takes bearing in radians
-        return MapUtils.greatCircleDestinationPoint(currentLat, currentLon, Math.toRadians(headingTrueDeg), bowOffsetMeters)
+        // MapUtils.greatCircleDestinationPoint takes the distance first and
+        // the bearing in DEGREES (it converts internally).
+        return MapUtils.greatCircleDestinationPoint(currentLat, currentLon, bowOffsetMeters, headingTrueDeg)
     }
 }

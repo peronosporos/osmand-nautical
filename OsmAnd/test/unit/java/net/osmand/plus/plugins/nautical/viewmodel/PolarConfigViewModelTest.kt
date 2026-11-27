@@ -8,7 +8,12 @@ class PolarConfigViewModelTest {
     @Test
     fun testBilinearDataRecording() {
         val viewModel = PolarConfigViewModel()
-        
+
+        // recordDataPoint only records when the engine is off and the
+        // sensors are calibrated (wizard prerequisites), so enable both.
+        viewModel.setEngineOff(true)
+        viewModel.setSensorsCalibrated(true)
+
         // Initial state
         assertEquals(0, viewModel.qualityScore.value)
         
@@ -43,7 +48,11 @@ class PolarConfigViewModelTest {
     @Test
     fun testAdaptiveThresholds() {
         val viewModel = PolarConfigViewModel()
-        
+
+        // Enable the wizard prerequisites so recording is not skipped.
+        viewModel.setEngineOff(true)
+        viewModel.setSensorsCalibrated(true)
+
         // Record point near grid point
         viewModel.recordDataPoint(8.1, 51.0, 7.0)
         

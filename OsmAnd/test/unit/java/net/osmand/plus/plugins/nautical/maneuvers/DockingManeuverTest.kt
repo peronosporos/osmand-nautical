@@ -5,7 +5,12 @@ import io.mockk.mockk
 import io.mockk.mockkObject
 import io.mockk.mockkStatic
 import io.mockk.unmockkAll
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.setMain
+import kotlinx.coroutines.test.StandardTestDispatcher
 import net.osmand.plus.OsmandApplication
+import net.osmand.plus.plugins.nautical.audio.NauticalAudioArbiter
 import net.osmand.plus.plugins.nautical.engine.MarineState
 import net.osmand.plus.plugins.nautical.engine.NauticalHelmArbitrator
 import net.osmand.util.MapUtils
@@ -21,16 +26,27 @@ class DockingManeuverTest {
 
     @Before
     fun setup() {
+        // ManeuverEngine launches its timeout timer on Dispatchers.Main,
+        // which does not exist on a plain JVM and makes engineScope.launch
+        // throw MissingMainDispatcherException (an IllegalStateException).
+        Dispatchers.setMain(StandardTestDispatcher())
+
         mockkStatic(MapUtils::class)
         mockkObject(NauticalHelmArbitrator)
         every { NauticalHelmArbitrator.getInstance(any()) } returns mockk(relaxed = true)
-        
+
+        // speak() reaches NauticalAudioArbiter, whose real constructor needs
+        // an AudioManager from the OS; substitute a relaxed mock.
+        mockkObject(NauticalAudioArbiter)
+        every { NauticalAudioArbiter.getInstance(any()) } returns mockk(relaxed = true)
+
         maneuver = DockingManeuver(app)
         maneuver.setTarget(10.0, 10.0)
     }
 
     @After
     fun teardown() {
+        Dispatchers.resetMain()
         unmockkAll()
     }
 
