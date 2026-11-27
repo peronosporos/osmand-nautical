@@ -49,7 +49,12 @@ class Grib1Parser {
                 
                 // Section 1: PDS
                 val pdsOffset = offset + 8
-                val pdsActualLen = bytes[pdsOffset].toInt() and 0xFF
+                // The PDS length is a 3-byte field (octets 1-3). Octet 1 is
+                // zero for every real-world PDS length, so reading a single
+                // byte yields 0 and misplaces every following section.
+                val pdsActualLen = ((bytes[pdsOffset].toInt() and 0xFF) shl 16) or
+                                   ((bytes[pdsOffset + 1].toInt() and 0xFF) shl 8) or
+                                   (bytes[pdsOffset + 2].toInt() and 0xFF)
                 
                 val paramId = bytes[pdsOffset + 8].toInt() and 0xFF
                 val unitOfTime = bytes[pdsOffset + 17].toInt() and 0xFF

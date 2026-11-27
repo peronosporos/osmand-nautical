@@ -94,13 +94,13 @@ class GribRouteParsingTest {
         u32(21).copyInto(s1, 0)
         s1[4] = 1
         u16(7).copyInto(s1, 5) // center
-        s1[12] = 1 // significance of reference time
-        u16(2026).copyInto(s1, 13) // year (octets 13-14)
-        s1[15] = 6 // month
-        s1[16] = 15 // day
-        s1[17] = 12 // hour
-        s1[18] = 0 // minute
-        s1[19] = 0 // second
+        s1[11] = 1 // significance of reference time (octet 12)
+        u16(2026).copyInto(s1, 12) // year (octets 13-14)
+        s1[14] = 6 // month (octet 15)
+        s1[15] = 15 // day (octet 16)
+        s1[16] = 12 // hour (octet 17)
+        s1[17] = 0 // minute (octet 18)
+        s1[18] = 0 // second (octet 19)
 
         // Section 4: Product Definition, template 4.0 (34 octets)
         val s4 = ByteArray(34)
@@ -140,7 +140,8 @@ class GribRouteParsingTest {
         "GRIB".toByteArray().copyInto(msg, 0)
         msg[6] = discipline.toByte()
         msg[7] = 2 // edition 2
-        u32(total.toLong()).copyInto(msg, 8)
+        // Total length is octets 9-16: the value fits in the low 4 bytes.
+        u32(total.toLong()).copyInto(msg, 12)
         var off = 16
         s1.copyInto(msg, off); off += s1.size
         gridSection.copyInto(msg, off); off += gridSection.size
@@ -167,7 +168,10 @@ class GribRouteParsingTest {
     ): ByteArray {
         // PDS: 28 octets, GDS present (octet 8 = 0x80), unit hour, analysis.
         val pds = ByteArray(28)
-        pds[0] = 28.toByte()
+        // Section lengths are 3-byte fields (octets 1-3).
+        pds[0] = 0
+        pds[1] = 0
+        pds[2] = 28
         pds[3] = 3 // parameter table version (octet 4)
         pds[4] = 7 // center (octet 5)
         pds[6] = 255.toByte() // grid identification (octet 7)
@@ -188,7 +192,9 @@ class GribRouteParsingTest {
 
         // GDS: 32 octets, lat/lon grid, millidegree angles in 3 octets.
         val gds = ByteArray(32)
-        gds[0] = 32.toByte()
+        gds[0] = 0
+        gds[1] = 0
+        gds[2] = 32
         gds[3] = 0 // NV
         gds[4] = 255.toByte() // PV/PL
         gds[5] = 0 // data representation type: lat/lon
@@ -205,7 +211,7 @@ class GribRouteParsingTest {
 
         // BDS: simple packing, R = 0, E = 0, 8 bits per value.
         val bds = ByteArray(11 + packed.size)
-        u16(11 + packed.size).copyInto(bds, 0) // length octets 1-2 (high byte 0)
+        // Section lengths are 3-byte fields (octets 1-3).
         bds[0] = 0
         bds[1] = ((11 + packed.size) ushr 8).toByte()
         bds[2] = ((11 + packed.size) and 0xFF).toByte()
