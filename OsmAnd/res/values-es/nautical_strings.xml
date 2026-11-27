@@ -2190,4 +2190,10 @@
     <string name="s63_all_expired_fmt">Todos los %1$d permisos de celdas del archivo han caducado</string>
     <string name="s63_crc_failed_fmt">%1$d permisos no superaron la verificación CRC-32 / formato</string>
     <string name="s63_user_permit_label">Tu permiso de usuario (proporciónalo al distribuidor)</string>
+    <string name="s63_sa_key_imported">Clave del Scheme Administrator instalada</string>
+    <string name="s63_trusted_key_imported">Certificado de confianza instalado: %1$s</string>
+    <string name="s63_certificate_invalid">Archivo de certificado o clave pública S-63 no válido</string>
+    <string name="s63_sa_cert_expired">El certificado del Scheme Administrator de S-63 ha caducado (SSE 22)</string>
+    <string name="nautical_s63_auth_warning">La carta %1$s no está autenticada por el IHO como Scheme Administrator (SSE 26)</string>
+    <string name="nautical_s63_auth_rejected">La carta %1$s no superó la autenticación de datos S-63 y no se cargó</string>
 </resources>

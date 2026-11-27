@@ -2190,4 +2190,10 @@
     <string name="s63_all_expired_fmt">Les %1$d permis de cellules du fichier sont tous expirés</string>
     <string name="s63_crc_failed_fmt">%1$d permis ont échoué à la vérification CRC-32 / au formatage</string>
     <string name="s63_user_permit_label">Votre permis utilisateur (à fournir au distributeur)</string>
+    <string name="s63_sa_key_imported">Clé du Scheme Administrator installée</string>
+    <string name="s63_trusted_key_imported">Certificat approuvé installé : %1$s</string>
+    <string name="s63_certificate_invalid">Fichier de certificat ou de clé publique S-63 non valide</string>
+    <string name="s63_sa_cert_expired">Le certificat du Scheme Administrator S-63 a expiré (SSE 22)</string>
+    <string name="nautical_s63_auth_warning">La carte %1$s n\'est pas authentifiée par l\'OHI en tant que Scheme Administrator (SSE 26)</string>
+    <string name="nautical_s63_auth_rejected">La carte %1$s a échoué à l\'authentification des données S-63 et n\'a pas été chargée</string>
 </resources>

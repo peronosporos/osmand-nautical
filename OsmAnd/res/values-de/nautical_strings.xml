@@ -2190,4 +2190,10 @@
     <string name="s63_all_expired_fmt">Alle %1$d Zelllizenzen der Datei sind abgelaufen</string>
     <string name="s63_crc_failed_fmt">%1$d Lizenzen bestanden die CRC-32-Prüfung / Formatierung nicht</string>
     <string name="s63_user_permit_label">Deine Benutzerberechtigung (an den Händler weitergeben)</string>
+    <string name="s63_sa_key_imported">Scheme-Administrator-Schlüssel installiert</string>
+    <string name="s63_trusted_key_imported">Vertrauenswürdiges Zertifikat installiert: %1$s</string>
+    <string name="s63_certificate_invalid">Keine gültige S-63-Zertifikats- oder Public-Key-Datei</string>
+    <string name="s63_sa_cert_expired">Das S-63-Zertifikat des Scheme Administrators ist abgelaufen (SSE 22)</string>
+    <string name="nautical_s63_auth_warning">Die Karte %1$s ist nicht vom IHO als Scheme Administrator authentifiziert (SSE 26)</string>
+    <string name="nautical_s63_auth_rejected">Die Karte %1$s bestand die S-63-Datenauthentifizierung nicht und wurde nicht geladen</string>
 </resources>

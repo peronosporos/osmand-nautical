@@ -8150,4 +8150,10 @@
     <string name="s63_all_expired_fmt">Όλες οι %1$d άδειες κελιών στο αρχείο έχουν λήξει</string>
     <string name="s63_crc_failed_fmt">%1$d άδειες απέτυχαν σε έλεγχο CRC-32 μορφοποίησης</string>
     <string name="s63_user_permit_label">Η άδειά σας χρήστη (παρέχετε στον διανομέα)</string>
+    <string name="s63_sa_key_imported">Εγκαταστάθηκε το κλειδί του Scheme Administrator</string>
+    <string name="s63_trusted_key_imported">Εγκαταστάθηκε αξιόπιστο πιστοποιητικό: %1$s</string>
+    <string name="s63_certificate_invalid">Μη έγκυρο αρχείο πιστοποιητικού ή δημόσιου κλειδιού S-63</string>
+    <string name="s63_sa_cert_expired">Το πιστοποιητικό Scheme Administrator του S-63 έχει λήξει (SSE 22)</string>
+    <string name="nautical_s63_auth_warning">Ο χάρτης %1$s δεν πιστοποιείται από τον IHO ως Scheme Administrator (SSE 26)</string>
+    <string name="nautical_s63_auth_rejected">Ο χάρτης %1$s απέτυχε στην πιστοποίηση δεδομένων S-63 και δεν φορτώθηκε</string>
 </resources>

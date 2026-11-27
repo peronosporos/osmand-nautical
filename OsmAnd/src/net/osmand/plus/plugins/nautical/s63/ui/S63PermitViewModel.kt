@@ -15,6 +15,7 @@ import kotlinx.coroutines.withContext
 import net.osmand.plus.OsmandApplication
 import net.osmand.plus.R
 import net.osmand.plus.plugins.nautical.s63.crypto.CellPermitStatus
+import net.osmand.plus.plugins.nautical.s63.crypto.S63AuthVerifier
 import net.osmand.plus.plugins.nautical.s63.crypto.S63PermitGenerator
 import org.json.JSONObject
 
@@ -125,6 +126,16 @@ class S63PermitViewModel(
         importJob?.cancel()
         importJob = viewModelScope.launch {
             try {
+                // S-63 10.6.2: a Scheme Administrator certificate or public
+                // key, or another data server certificate, is imported through
+                // the same file picker as PERMIT.TXT.
+                val certificateMessage = withContext(Dispatchers.IO) {
+                    importCertificateOrPublicKey(uri)
+                }
+                if (certificateMessage != null) {
+                    _uiState.value = _uiState.value.copy(toastMessage = certificateMessage)
+                    return@launch
+                }
                 val (validPermits, expiredPermits, errorCount) = withContext(Dispatchers.IO) {
                     val hwid = store.getHwid()
                     var content = ""
@@ -182,6 +193,45 @@ class S63PermitViewModel(
                 )
             }
         }
+    }
+
+    /**
+     * Imports an S-63 public key or certificate (S-63 10.6.2): an ASCII
+     * public key file (IHO.PUB format), or a DER encoded X.509 certificate
+     * such as IHO.CRT or a data server certificate. Returns the user
+     * message when the file was recognized as a key or certificate, or
+     * null when the content is a PERMIT.TXT and permit parsing applies.
+     */
+    private fun importCertificateOrPublicKey(uri: Uri): String? {
+        val bytes = app.contentResolver.openInputStream(uri)?.use { it.readBytes() } ?: return null
+        val text = bytes.toString(Charsets.ISO_8859_1)
+        val trimmed = text.trimStart { it == ' ' || it == '\r' || it == '\n' || it == '\t' }
+        val fileName = getFileName(uri) ?: ""
+        if (trimmed.startsWith("//")) {
+            val key = S63AuthVerifier.dsaKeyFromAsciiPublicKey(trimmed)
+                ?: return app.getString(R.string.s63_certificate_invalid)
+            store.saveSaKey(key, null)
+            return app.getString(R.string.s63_sa_key_imported)
+        }
+        if (bytes.isNotEmpty() && bytes[0] == 0x30.toByte()) {
+            val pair = S63AuthVerifier.dsaKeyFromX509(bytes)
+                ?: return app.getString(R.string.s63_certificate_invalid)
+            val (key, certificate) = pair
+            val now = System.currentTimeMillis()
+            if (certificate.notAfter.time in 1 until now) {
+                return app.getString(R.string.s63_sa_cert_expired)
+            }
+            val isSchemeAdministrator = fileName.uppercase().contains("IHO") ||
+                    certificate.subjectX500Principal.name.contains("Scheme Administrator", ignoreCase = true)
+            return if (isSchemeAdministrator) {
+                store.saveSaKey(key, certificate.notAfter.time)
+                app.getString(R.string.s63_sa_key_imported)
+            } else {
+                store.addTrustedKey(key, certificate.notAfter.time)
+                app.getString(R.string.s63_trusted_key_imported, fileName)
+            }
+        }
+        return null
     }
 
     fun clearToast() {

@@ -1903,6 +1903,12 @@
 	<string name="s63_charts_imported">Imported %1$d chart files</string>
 	<string name="s63_all_expired_fmt">All %1$d cell permits in file are expired</string>
 	<string name="s63_crc_failed_fmt">%1$d permits failed CRC-32 checksum / formatting</string>
+	<string name="s63_sa_key_imported">Scheme Administrator key installed</string>
+	<string name="s63_trusted_key_imported">Trusted certificate installed: %1$s</string>
+	<string name="s63_certificate_invalid">Not a valid S-63 certificate or public key file</string>
+	<string name="s63_sa_cert_expired">The S-63 Scheme Administrator certificate has expired (SSE 22)</string>
+	<string name="nautical_s63_auth_warning">%1$s is not authenticated by the IHO acting as the Scheme Administrator (SSE 26)</string>
+	<string name="nautical_s63_auth_rejected">%1$s failed S-63 data authentication and was not loaded</string>
 	<string name="nautical_error_no_wind_data">Cannot switch to Wind mode: No wind data available.</string>
 	<string name="nautical_error_no_route">Cannot switch to Track mode: No active route.</string>
 	<string name="navtex_layer_name">Maritime Safety Broadcasts (NAVTEX)</string>

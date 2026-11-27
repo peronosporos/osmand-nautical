@@ -3,12 +3,16 @@ package net.osmand.plus.plugins.nautical.s63.bridge
 import kotlinx.coroutines.*
 import net.osmand.PlatformUtil
 import net.osmand.plus.OsmandApplication
+import net.osmand.plus.R
+import net.osmand.plus.plugins.nautical.s63.crypto.S63AuthVerifier
 import net.osmand.plus.plugins.nautical.s63.crypto.S63Decryptor
+import net.osmand.plus.plugins.nautical.s63.crypto.S63SignatureFile
 import net.osmand.plus.plugins.nautical.s63.ui.S63CredentialStore
 import java.io.File
 import java.io.InputStream
 import java.io.PipedInputStream
 import java.io.PipedOutputStream
+import java.util.Collections
 
 /**
  * Middleware to provide a decrypted InputStream for S-63 files.
@@ -18,6 +22,13 @@ object S63BridgeStream {
     private val log = PlatformUtil.getLog(S63BridgeStream::class.java)
 
     private val decryptionScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+
+    /**
+     * Cells already reported to the user during this session. open() runs
+     * on the rendering path and is called repeatedly for the same file, so
+     * each authentication notice is shown only once.
+     */
+    private val reportedCells = Collections.synchronizedSet(HashSet<String>())
 
     /**
      * Opens a file and returns an InputStream.
@@ -42,6 +53,9 @@ object S63BridgeStream {
         val name = file.name.uppercase()
         val cellName = file.nameWithoutExtension.uppercase()
         val store = S63CredentialStore(app)
+        if (!authenticateCell(file, name, app, store)) {
+            return null
+        }
         val key1 = store.getCellKey(cellName)?.takeIf { it.isNotEmpty() }
         val key2 = store.getCellKey2(cellName)?.takeIf { it.isNotEmpty() }
         val expiry = store.getExpiryDate(cellName)
@@ -85,6 +99,84 @@ object S63BridgeStream {
             return file.inputStream()
         }
         return null
+    }
+
+    /**
+     * S-63 data authentication (S-63 10.6). Runs only when the signature
+     * file of this cell exists on the exchange set next to it; cells without
+     * a signature file keep the legacy permit based behavior.
+     *
+     * Outcomes, verified against the IHO S-64 test data set:
+     * - SA authenticated, or authenticated with another installed key:
+     *   proceed; in the second case with warning SSE 26.
+     * - Certificate verifies with no installed key (SSE 06), the ENC
+     *   signature fails (SSE 09) or the signature file is malformed
+     *   (SSE 24): the cell is not decrypted.
+     * - An installed Scheme Administrator X.509 certificate that has
+     *   expired terminates processing with SSE 22 (S-64 test 4d).
+     */
+    private fun authenticateCell(
+        file: File,
+        name: String,
+        app: OsmandApplication,
+        store: S63CredentialStore): Boolean {
+        val signatureFileName = S63SignatureFile.signatureFileNameFor(name) ?: return true
+        val signatureFile = File(file.parentFile, signatureFileName)
+        if (!signatureFile.exists()) {
+            return true
+        }
+        val now = System.currentTimeMillis()
+        if (store.isSaKeyUserInstalled()) {
+            val notAfter = store.getSaCertificateNotAfter()
+            if (notAfter != null && notAfter in 1 until now) {
+                log.error("S-63: Installed Scheme Administrator certificate has EXPIRED (SSE 22).")
+                report(app, name) { app.getString(R.string.s63_sa_cert_expired) }
+                return false
+            }
+        }
+        val outcome = try {
+            val signatureBytes = signatureFile.readBytes()
+            file.inputStream().use { cellStream ->
+                S63AuthVerifier.authenticate(
+                    signatureBytes, cellStream, store.getInstalledSaKey(), store.getTrustedKeys(now))
+            }
+        } catch (e: Exception) {
+            log.error("S-63: Data authentication failed for $name", e)
+            S63AuthVerifier.Outcome.SignatureFileMalformed
+        }
+        return when (outcome) {
+            is S63AuthVerifier.Outcome.SaAuthenticated -> {
+                log.debug("S-63: $name authenticated by the IHO Scheme Administrator.")
+                true
+            }
+            is S63AuthVerifier.Outcome.ThirdPartyAuthenticated -> {
+                log.warn("S-63: $name is not authenticated by the IHO acting as the Scheme Administrator (SSE 26).")
+                report(app, name) { app.getString(R.string.nautical_s63_auth_warning, name) }
+                true
+            }
+            is S63AuthVerifier.Outcome.CertificateInvalid -> {
+                log.error("S-63: $name is not authenticated with an installed key (SSE 06).")
+                report(app, name) { app.getString(R.string.nautical_s63_auth_rejected, name) }
+                false
+            }
+            is S63AuthVerifier.Outcome.CellSignatureInvalid -> {
+                log.error("S-63: ENC signature of $name does not verify (SSE 09).")
+                report(app, name) { app.getString(R.string.nautical_s63_auth_rejected, name) }
+                false
+            }
+            is S63AuthVerifier.Outcome.SignatureFileMalformed -> {
+                log.error("S-63: Signature file of $name is malformed (SSE 24).")
+                report(app, name) { app.getString(R.string.nautical_s63_auth_rejected, name) }
+                false
+            }
+        }
+    }
+
+    /** Shows the notice once per cell per session. */
+    private fun report(app: OsmandApplication, name: String, message: () -> String) {
+        if (reportedCells.add(name)) {
+            app.runInUIThread { app.showToastMessage(message()) }
+        }
     }
 
     private fun readFirstBlock(file: File): ByteArray {
