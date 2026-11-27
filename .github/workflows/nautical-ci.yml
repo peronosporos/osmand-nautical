@@ -37,3 +37,14 @@ jobs:
         _JAVA_OPTIONS: "-Xmx4g"
         GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx4g -Dorg.gradle.workers.max=2"
       run: ./gradlew :OsmAnd-shared:jvmTest :OsmAnd:testAndroidFullLegacyArm64DebugUnitTest --no-daemon
+
+    - name: Upload unit test results (XML with full stack traces)
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: unit-test-results
+        path: |
+          android/OsmAnd/build/test-results/testAndroidFullLegacyArm64DebugUnitTest/*.xml
+          android/OsmAnd-shared/build/test-results/jvmTest/*.xml
+        retention-days: 14
+        if-no-files-found: warn

@@ -8,7 +8,7 @@ class NavtexSentenceParserTest {
     @Test
     fun testParseCRRXO() {
         // Mock sentence with coordinates in body
-        val sentence = "\$CRRXO,518,OA00,0,ZCZC 37-55N 023-40E NAVIGATIONAL WARNING NNNN*4A"
+        val sentence = "\$CRRXO,518,OA00,0,ZCZC 37-55N 023-40E NAVIGATIONAL WARNING NNNN*01"
         val message = NavtexSentenceParser.parseNmeaSentence(sentence)
         
         assertNotNull("Message should not be null", message)
@@ -27,7 +27,7 @@ class NavtexSentenceParserTest {
     @Test
     fun testParseCZCX() {
         // Mock CZCX sentence
-        val sentence = "\$CZCX,518,PA01,0,BOUNDED BY 38N 020E, 38N 022E, 36N 022E*4C"
+        val sentence = "\$CZCX,518,PA01,0,BOUNDED BY 38N 020E, 38N 022E, 36N 022E*4A"
         val message = NavtexSentenceParser.parseNmeaSentence(sentence)
         
         assertNotNull("Message should not be null", message)
@@ -40,7 +40,7 @@ class NavtexSentenceParserTest {
 
     @Test
     fun testParseGPNVT() {
-        val sentence = "\$GPNVT,123456,5045.123,N,00112.456,W,OA01*00" // Added dummy checksum for mandatory check
+        val sentence = "\$GPNVT,123456,5045.123,N,00112.456,W,OA01*7B" // Valid NMEA checksum
         val message = NavtexSentenceParser.parseNmeaSentence(sentence)
         
         assertNotNull("Message should not be null", message)
@@ -60,11 +60,11 @@ class NavtexSentenceParserTest {
         assertEquals(37.9166, points1[0].latitude, 0.001)
         assertEquals(23.6666, points1[0].longitude, 0.001)
 
-        // Test Pattern 2: 37N55 E02340
-        val points2 = NavtexSentenceParser.extractCoordinates("AREA 37N55 E02340")
+        // Test Pattern 2: NMEA concatenation ddmm.m (documented LAT_NMEA/LON_NMEA form)
+        val points2 = NavtexSentenceParser.extractCoordinates("AREA 3712.5N 02340.0E")
         assertEquals(1, points2.size)
-        assertEquals(37.9166, points2[0].latitude, 0.001)
-        assertEquals(23.6666, points2[0].longitude, 0.001)
+        assertEquals(37.2083, points2[0].latitude, 0.001)
+        assertEquals(23.6667, points2[0].longitude, 0.001)
 
         // Test mixed delimiters: 37°55'N / 023°40'E
         val points3 = NavtexSentenceParser.extractCoordinates("LOC: 37°55'N / 023°40'E")
@@ -105,7 +105,7 @@ class NavtexSentenceParserTest {
     @Test
     fun testMeteorologicalUrgency() {
         // Meteorological Warning ('B') should be urgent
-        val sentence = "\$CRRXO,518,OB01,0,ZCZC GALE WARNING NNNN*40" // Dummy checksum
+        val sentence = "\$CRRXO,518,OB01,0,ZCZC GALE WARNING NNNN*31" // Valid NMEA checksum
         val message = NavtexSentenceParser.parseNmeaSentence(sentence)
         assertNotNull(message)
         assertTrue("Meteorological warning should be urgent", message!!.isUrgent)
