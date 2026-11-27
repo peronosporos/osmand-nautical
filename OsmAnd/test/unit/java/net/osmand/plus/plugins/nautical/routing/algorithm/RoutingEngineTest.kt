@@ -38,6 +38,10 @@ class RoutingEngineTest {
         )
 
         every { gribEngine.getWindVector(any(), any(), any()) } returns WindVector(5.0, 0.0)
+        // Production reads the current vector at the departure point before
+        // the first isochrone; without this stub the mockk strict stub has
+        // no answer and the route calculation never starts.
+        every { gribEngine.getCurrentVector(any(), any(), any()) } returns null
 
         val result = runBlocking { engine.calculateRoute(request) }
 

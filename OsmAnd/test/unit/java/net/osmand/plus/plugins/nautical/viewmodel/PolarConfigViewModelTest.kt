@@ -36,8 +36,11 @@ class PolarConfigViewModelTest {
         // TWA coeff = (55-50)/(60-50) = 0.5
         // Weights: 0.25 each.
         viewModel.recordDataPoint(9.0, 55.0, 10.0)
-        
-        val cell10_60 = cells.find { it.tws == 10.0 && it.twa == 60.0 }
+
+        // Re-read the live state: the snapshot taken after the first point
+        // cannot reflect the bilinear distribution of the second point.
+        val updatedCells = viewModel.heatmapCells.value
+        val cell10_60 = updatedCells.find { it.tws == 10.0 && it.twa == 60.0 }
         assertNotNull(cell10_60)
         assertTrue("Cell (10, 60) should have received weight", (cell10_60?.sampleCount ?: 0.0) > 0)
         assertNotNull(cell10_60)

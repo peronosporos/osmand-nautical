@@ -21,8 +21,15 @@ class NavtexRepositoryTest {
         every { app.getSQLiteAPI() } returns sqliteAPI
         every { sqliteAPI.getOrCreateDatabase(any(), any()) } returns db
         every { db.version } returns 1
+        every { db.setVersion(any()) } just Runs
         every { db.close() } just Runs
+        // The helper migrates a version-1 database (DROP TABLE + CREATE) via
+        // the single-argument execSQL before any repository statement runs.
+        every { db.execSQL(any()) } just Runs
         every { db.execSQL(any(), any()) } just Runs
+        every { db.beginTransactionNonExclusive() } just Runs
+        every { db.setTransactionSuccessful() } just Runs
+        every { db.endTransaction() } just Runs
     }
 
     @Test

@@ -169,7 +169,15 @@ class S57FileReader(private val inputStream: InputStream) {
             return null
         }
         val entryLength = lenFieldTag + lenFieldLength + lenFieldPos
-        val directoryLength = fieldAreaStart - 24 - 1 // directory terminated by FT
+        // The directory spans the bytes between the end of the leader and the
+        // field-area base address, INCLUDING its terminating field terminator
+        // (ISO 8211 puts the first field byte exactly at the base address).
+        // Reading one byte less left the terminator in the stream: the field
+        // area was then sliced from the terminator onward, every record
+        // consumed recordLength-1 bytes, and the stream desynchronized so no
+        // record after the first ever parsed (the S-64 update cell emitted
+        // zero features).
+        val directoryLength = fieldAreaStart - 24
 
         val directory = source.readByteArray(directoryLength.toLong())
         val entries = ArrayList<DirectoryEntry>()

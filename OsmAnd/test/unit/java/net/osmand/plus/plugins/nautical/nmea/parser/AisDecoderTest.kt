@@ -26,7 +26,7 @@ class AisDecoderTest {
     private val type18 = "!AIVDM,1,1,,B,B5N7L000N0Jq<@5Jw20L8FP00000,0*36"
 
     // Type 21 AtoN: mmsi 992660001, aid type 5, name TEST BUOY, lat 37.55, lon 23.65.
-    private val type21 = "!AIVDM,1,1,,B,E>jc:8Bb2ab@1:WdP0000000000@n8Fh:gSr050`HHP000,4*19"
+    private val type21 = "!AIVDM,1,1,,B,E>jc:8Bb2ab@1:WdP00000000000n8Fh:gSr050`HHU000,4*6C"
 
     // Type 18 with coastal station MMSI 003669100 (7 digits, not an AIS target).
     private val coastalStation = "!AIVDM,1,1,,B,B03OtK00N0Jq<@5Jw20L8FP00000,0*75"

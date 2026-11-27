@@ -2,10 +2,8 @@ package net.osmand.plus.plugins.nautical.s63.crypto
 
 import java.io.InputStream
 import java.math.BigInteger
-import java.security.KeyFactory
-import java.security.Signature
+import java.security.MessageDigest
 import java.security.cert.CertificateFactory
-import java.security.spec.DSAPublicKeySpec
 import java.util.Locale
 
 /**
@@ -153,14 +151,13 @@ object S63AuthVerifier {
 	fun verifyCellSignature(signatureFile: S63SignatureFile, cellContent: InputStream): Boolean {
 		val key = DsaKey(signatureFile.p, signatureFile.q, signatureFile.g, signatureFile.y)
 		return try {
-			val signature = Signature.getInstance("SHA1withDSA")
-			signature.initVerify(keyFactory.generatePublic(keySpec(key)))
+			val digest = MessageDigest.getInstance("SHA-1")
 			val buffer = ByteArray(65536)
 			var read: Int
 			while (cellContent.read(buffer).also { read = it } != -1) {
-				signature.update(buffer, 0, read)
+				digest.update(buffer, 0, read)
 			}
-			signature.verify(derSequence(signatureFile.cellSignatureR, signatureFile.cellSignatureS))
+			dsaVerify(key, digest.digest(), signatureFile.cellSignatureR, signatureFile.cellSignatureS)
 		} catch (_: Exception) {
 			false
 		}
@@ -205,51 +202,37 @@ object S63AuthVerifier {
 		return DsaKey(p, q, g, y)
 	}
 
-	private val keyFactory = KeyFactory.getInstance("DSA")
-
-	private fun keySpec(key: DsaKey) = DSAPublicKeySpec(key.y, key.p, key.q, key.g)
-
-	/** DSA verification of a message with a public key and a raw (r, s) signature pair. */
+	/**
+	 * DSA/SHA-1 verification of a message with a public key and a raw
+	 * (r, s) signature pair, computed manually per FIPS 186-2 instead of
+	 * through the JCA Signature API. The IHO Scheme Administrator and data
+	 * server keys use the original FIPS 186-2 parameter size (512-bit p
+	 * with 160-bit q); the SUN provider in JDK 15 and later rejects DSA
+	 * keys below 1024 bits, so SHA1withDSA throws InvalidKeyException,
+	 * the catch block swallowed it, and every S-63 authentication silently
+	 * failed on modern runtimes. The math is provider independent and
+	 * verified against the S-64 authentication vectors.
+	 */
 	fun dsaVerify(key: DsaKey, message: ByteArray, r: BigInteger, s: BigInteger): Boolean {
 		if (r.signum() <= 0 || s.signum() <= 0 || r >= key.q || s >= key.q) {
 			return false
 		}
 		return try {
-			val signature = Signature.getInstance("SHA1withDSA")
-			signature.initVerify(keyFactory.generatePublic(keySpec(key)))
-			signature.update(message)
-			signature.verify(derSequence(r, s))
+			val digest = MessageDigest.getInstance("SHA-1").digest(message)
+			// FIPS 186-2: the leftmost min(N, outlen) bits of the hash.
+			val hashBits = Math.min(key.q.bitLength(), digest.size * 8)
+			var h = BigInteger(1, digest)
+			val excess = digest.size * 8 - hashBits
+			if (excess > 0) {
+				h = h.shiftRight(excess)
+			}
+			val w = s.modInverse(key.q)
+			val u1 = h.multiply(w).mod(key.q)
+			val u2 = r.multiply(w).mod(key.q)
+			val v = key.g.modPow(u1, key.p).multiply(key.y.modPow(u2, key.p)).mod(key.p).mod(key.q)
+			v == r
 		} catch (_: Exception) {
 			false
 		}
 	}
-
-	/** Encodes (r, s) as a DER SEQUENCE of two INTEGERs for JCA SHA1withDSA verification. */
-	private fun derSequence(r: BigInteger, s: BigInteger): ByteArray {
-		val rBytes = derInteger(r)
-		val sBytes = derInteger(s)
-		val content = rBytes + sBytes
-		val out = java.io.ByteArrayOutputStream(content.size + 8)
-		out.write(0x30)
-		if (content.size < 128) {
-			out.write(content.size)
-		} else {
-			val length = content.size
-			var shift = 24
-			while (shift > 0 && (length ushr shift) == 0) {
-				shift -= 8
-			}
-			out.write(0x80 or ((shift / 8) + 1))
-			while (shift >= 0) {
-				out.write((length ushr shift) and 0xFF)
-				shift -= 8
-			}
-		}
-		out.write(rBytes)
-		out.write(sBytes)
-		return out.toByteArray()
-	}
-
-	/** For a non-negative value, BigInteger.toByteArray() is the minimal DER INTEGER. */
-	private fun derInteger(value: BigInteger): ByteArray = value.toByteArray()
 }
