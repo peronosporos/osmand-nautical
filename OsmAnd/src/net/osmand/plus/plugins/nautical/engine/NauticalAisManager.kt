@@ -12,6 +12,7 @@ import net.osmand.plus.R
 import net.osmand.plus.plugins.nautical.NauticalPlugin
 import net.osmand.plus.plugins.nautical.audio.AlarmType
 import net.osmand.plus.plugins.nautical.audio.NauticalAudioArbiter
+import net.osmand.plus.plugins.nautical.nmea.parser.AisDecoder
 import net.osmand.plus.plugins.nautical.utils.TemporalUtils
 import net.osmand.shared.aistracker.AisDataListener
 import net.osmand.shared.aistracker.AisLocation
@@ -338,6 +339,101 @@ class NauticalAisManager(private val app: OsmandApplication) : AisDataListener {
                         target.dimensionToPort, target.dimensionToStarboard,
                         target.draught, target.destination,
                         target.etaMon, target.etaDay, target.etaHour, target.etaMin
+                    )
+                    target.set(updated)
+                    target.lastUpdate = now
+                }
+            }
+            AisDecoder.PATH_MSG_TYPE -> {
+                val msgType = (valueObj as? Number)?.toInt() ?: -1
+                if (msgType in 1..27) {
+                    // Merge the AIS message type into the target so initObjectClass()
+                    // re-runs (Class B, AtoN, SAR aircraft) and removeLostObjects()
+                    // applies the extended Class B prune timeout. Position is
+                    // preserved because the temporary object carries no position.
+                    val updated = AisObject(
+                        target.mmsi, msgType,
+                        AisObjectConstants.INVALID_LAT, AisObjectConstants.INVALID_LON
+                    )
+                    target.set(updated)
+                    target.lastUpdate = now
+                }
+            }
+            AisDecoder.PATH_AID_TYPE -> {
+                val aidType = (valueObj as? Number)?.toInt() ?: 0
+                if (aidType in 1..31) {
+                    val updated = AisObject(
+                        target.mmsi, 21,
+                        AisObjectConstants.INVALID_LAT, AisObjectConstants.INVALID_LON,
+                        aidType,
+                        AisObjectConstants.INVALID_DIMENSION, AisObjectConstants.INVALID_DIMENSION,
+                        AisObjectConstants.INVALID_DIMENSION, AisObjectConstants.INVALID_DIMENSION
+                    )
+                    target.set(updated)
+                    target.lastUpdate = now
+                }
+            }
+            "imo" -> {
+                val imo = (valueObj as? Number)?.toInt() ?: 0
+                if (imo > 0) {
+                    val updated = AisObject(
+                        target.mmsi, effectiveMsgType,
+                        imo, target.callSign, target.shipName,
+                        target.shipType,
+                        target.dimensionToBow, target.dimensionToStern,
+                        target.dimensionToPort, target.dimensionToStarboard,
+                        target.draught, target.destination,
+                        target.etaMon, target.etaDay, target.etaHour, target.etaMin
+                    )
+                    target.set(updated)
+                    target.lastUpdate = now
+                }
+            }
+            "design.draft" -> {
+                val draught = (valueObj as? Number)?.toDouble() ?: Double.NaN
+                if (!draught.isNaN() && draught > 0.0 && draught <= 30.0) {
+                    val updated = AisObject(
+                        target.mmsi, effectiveMsgType,
+                        target.imo, target.callSign, target.shipName,
+                        target.shipType,
+                        target.dimensionToBow, target.dimensionToStern,
+                        target.dimensionToPort, target.dimensionToStarboard,
+                        draught, target.destination,
+                        target.etaMon, target.etaDay, target.etaHour, target.etaMin
+                    )
+                    target.set(updated)
+                    target.lastUpdate = now
+                }
+            }
+            AisDecoder.PATH_ETA -> {
+                var mon = 0
+                var day = 0
+                var hour = 0
+                var minute = 0
+                when (valueObj) {
+                    is JSONObject -> {
+                        mon = valueObj.optInt("month", 0)
+                        day = valueObj.optInt("day", 0)
+                        hour = valueObj.optInt("hour", 0)
+                        minute = valueObj.optInt("minute", 0)
+                    }
+                    is Map<*, *> -> {
+                        mon = (valueObj["month"] as? Number)?.toInt() ?: 0
+                        day = (valueObj["day"] as? Number)?.toInt() ?: 0
+                        hour = (valueObj["hour"] as? Number)?.toInt() ?: 0
+                        minute = (valueObj["minute"] as? Number)?.toInt() ?: 0
+                    }
+                }
+                // ETA not-available conventions: month 0, day 0, hour 24, minute 60.
+                if (mon in 0..12 && day in 0..31 && hour in 0..24 && minute in 0..60) {
+                    val updated = AisObject(
+                        target.mmsi, effectiveMsgType,
+                        target.imo, target.callSign, target.shipName,
+                        target.shipType,
+                        target.dimensionToBow, target.dimensionToStern,
+                        target.dimensionToPort, target.dimensionToStarboard,
+                        target.draught, target.destination,
+                        mon, day, hour, minute
                     )
                     target.set(updated)
                     target.lastUpdate = now
