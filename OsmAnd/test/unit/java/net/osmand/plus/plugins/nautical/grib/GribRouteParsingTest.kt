@@ -50,7 +50,7 @@ class GribRouteParsingTest {
         u32(nj.toLong()).copyInto(s, 34) // Nj (octets 35-38)
         u32(la1.toLong()).copyInto(s, 46) // La1 (octets 47-50)
         u32(lo1.toLong()).copyInto(s, 50) // Lo1 (octets 51-54)
-        s[54] = 0x80 // resolution and component flags
+        s[54] = 0x80.toByte() // resolution and component flags
         u32(la2.toLong()).copyInto(s, 55) // La2 (octets 56-59)
         u32(lo2.toLong()).copyInto(s, 59) // Lo2 (octets 60-63)
         s[71] = scanMode.toByte() // scanning mode (octet 72)
@@ -70,7 +70,7 @@ class GribRouteParsingTest {
         u32(nj.toLong()).copyInto(s, 34) // Nj (octets 35-38)
         u32(la1.toLong()).copyInto(s, 38) // La1 (octets 39-42)
         u32(lo1.toLong()).copyInto(s, 42) // Lo1 (octets 43-46)
-        s[46] = 0x80 // resolution and component flags (octet 47)
+        s[46] = 0x80.toByte() // resolution and component flags (octet 47)
         u32(laD.toLong()).copyInto(s, 47) // LaD (octets 48-51)
         u32(la2.toLong()).copyInto(s, 51) // La2 (octets 52-55)
         u32(lo2.toLong()).copyInto(s, 55) // Lo2 (octets 56-59)
@@ -196,7 +196,7 @@ class GribRouteParsingTest {
         u16(nj).copyInto(gds, 8) // Nj (octets 9-10)
         grib1Angle(la1).copyInto(gds, 10) // La1 (octets 11-13)
         grib1Angle(lo1).copyInto(gds, 13) // Lo1 (octets 14-16)
-        gds[16] = 0x80 // resolution flags (octet 17)
+        gds[16] = 0x80.toByte() // resolution flags (octet 17)
         grib1Angle(la2).copyInto(gds, 17) // La2 (octets 18-20)
         grib1Angle(lo2).copyInto(gds, 20) // Lo2 (octets 21-23)
         u16(500).copyInto(gds, 23) // Di (octets 24-25)
