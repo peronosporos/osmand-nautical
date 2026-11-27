@@ -562,6 +562,9 @@ class NauticalMapLayer(context: Context) : OsmandMapLayer(context), SharedPrefer
         val density = context.resources.displayMetrics.density
         drPaint.color = if (isSunlight) Color.BLACK else ContextCompat.getColor(context, R.color.nautical_map_dr)
         drPaint.strokeWidth = 3f * density
+        // Scale the dash with the stroke; ambient redraws are infrequent so the
+        // small allocation is acceptable here.
+        drPaint.pathEffect = DashPathEffect(floatArrayOf(15f * density, 10f * density), 0f)
         
         // Industry Standard DR Symbol: Circle around position with cross
         canvas.drawCircle(x, y, 40f * density, drPaint)
@@ -587,20 +590,21 @@ class NauticalMapLayer(context: Context) : OsmandMapLayer(context), SharedPrefer
         val density = context.resources.displayMetrics.density
         val text = context.getString(R.string.nautical_sk_connection_lost)
         val x = canvas.width / 2f
-        val y = 200f // Top area
-        
-        val textWidth = warningPaint.measureText(text)
-        val padding = 20f * density
-        canvas.drawRect((x - (textWidth / 2)) - padding, y - 80, x + (textWidth / 2) + padding, y + 30, warningBgPaint)
-        
+        val y = 200f * density // Top area
+
         val oldColor = warningPaint.color
         val oldSize = warningPaint.textSize
         val oldFakeBold = warningPaint.isFakeBoldText
-        
+
         warningPaint.color = ContextCompat.getColor(context, R.color.nautical_map_alert_text)
-        warningPaint.textSize = 70f
+        warningPaint.textSize = 70f * density
         warningPaint.isFakeBoldText = true
-        
+
+        // Measure with the size actually drawn, so the banner box fits on every density.
+        val textWidth = warningPaint.measureText(text)
+        val padding = 20f * density
+        canvas.drawRect((x - (textWidth / 2)) - padding, y - 80f * density, x + (textWidth / 2) + padding, y + 30f * density, warningBgPaint)
+
         canvas.drawText(text, x, y, warningPaint)
         
         warningPaint.color = oldColor
@@ -609,10 +613,11 @@ class NauticalMapLayer(context: Context) : OsmandMapLayer(context), SharedPrefer
     }
 
     private val slipAnglePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        val density = context.resources.displayMetrics.density
         color = ContextCompat.getColor(context, R.color.nautical_map_slip_angle)
-        strokeWidth = 4f
+        strokeWidth = 4f * density
         style = Paint.Style.STROKE
-        pathEffect = DashPathEffect(floatArrayOf(10f, 10f), 0f)
+        pathEffect = DashPathEffect(floatArrayOf(10f * density, 10f * density), 0f)
         alpha = 180
     }
 
@@ -731,7 +736,11 @@ class NauticalMapLayer(context: Context) : OsmandMapLayer(context), SharedPrefer
                 canvas.drawLine(headingCache.lastEndX, headingCache.lastEndY, cogCache.lastEndX, cogCache.lastEndY, slipAnglePaint)
                 val midX = (headingCache.lastEndX + cogCache.lastEndX) / 2
                 val midY = (headingCache.lastEndY + cogCache.lastEndY) / 2
-                canvas.drawText(String.format(Locale.US, "%.1f°", diff), midX, midY - 20, textPaint)
+                val density = context.resources.displayMetrics.density
+                val oldSize = textPaint.textSize
+                textPaint.textSize = 32f * density
+                canvas.drawText(String.format(Locale.US, "%.1f°", diff), midX, midY - 20f * density, textPaint)
+                textPaint.textSize = oldSize
             }
         }
 
@@ -926,8 +935,10 @@ class NauticalMapLayer(context: Context) : OsmandMapLayer(context), SharedPrefer
         val pixelsPerMeter = getPixelsPerMeter(tileBox, lat, lon)
         val radiusPx = (radiusMeters * pixelsPerMeter).toFloat()
         anchorZonePaint.color = if (isSunlight) Color.BLACK else ContextCompat.getColor(context, R.color.nautical_map_anchor_zone)
+        // Set style explicitly: drawAnchorPreviewZone must not leak a different style into this paint.
+        anchorZonePaint.style = Paint.Style.STROKE
         canvas.drawCircle(px, py, radiusPx, anchorZonePaint)
-        canvas.drawCircle(px, py, 10f, anchorZonePaint)
+        canvas.drawCircle(px, py, 10f * context.resources.displayMetrics.density, anchorZonePaint)
     }
 
     private fun drawAnchorPreviewZone(canvas: Canvas, tileBox: RotatedTileBox, lat: Double, lon: Double, radiusMeters: Double, isSunlight: Boolean) {
@@ -937,10 +948,10 @@ class NauticalMapLayer(context: Context) : OsmandMapLayer(context), SharedPrefer
         val radiusPx = (radiusMeters * pixelsPerMeter).toFloat()
         anchorZonePaint.color = if (isSunlight) Color.BLACK else ContextCompat.getColor(context, R.color.nautical_map_anchor_zone_preview)
         anchorZonePaint.style = Paint.Style.STROKE
-        anchorZonePaint.strokeWidth = 5f
+        // Stroke width intentionally inherited from the per-frame setup
+        // (4f * density * strokeScale); the old raw 5f overwrite broke density scaling.
         canvas.drawCircle(px, py, radiusPx, anchorZonePaint)
-        canvas.drawCircle(px, py, 15f, anchorZonePaint)
-        anchorZonePaint.style = Paint.Style.FILL_AND_STROKE
+        canvas.drawCircle(px, py, 15f * context.resources.displayMetrics.density, anchorZonePaint)
     }
 
     private fun drawSteeringWorm(canvas: Canvas, tileBox: RotatedTileBox, lat: Double, lon: Double, heading: Double, sog: Double, rot: Double, isSunlight: Boolean) {
@@ -1084,6 +1095,7 @@ class NauticalMapLayer(context: Context) : OsmandMapLayer(context), SharedPrefer
             }
             
             polarPerformancePaint.style = Paint.Style.STROKE
+            polarPerformancePaint.strokeWidth = 4f * density
             polarPerformancePaint.alpha = 60
             polarPerformancePaint.color = ContextCompat.getColor(context, R.color.nautical_polar_curve)
             canvas.drawPath(polarPath, polarPerformancePaint)
