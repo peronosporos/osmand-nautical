@@ -497,6 +497,7 @@
     <string name="nautical_s57_colpat_stripes_unknown">Streifen (Richtung unbekannt)</string>
     <string name="nautical_s57_colpat_border">Randstreifen</string>
     <string name="nautical_s57_chart_info_fmt">Größe: %1$.1f KB | Typ: %2$s</string>
+    <string name="nautical_s57_chart_type_update_fmt">%1$s (Aktualisierung)</string>
     <string name="nautical_s57_status_indexed">Indiziert</string>
     <string name="nautical_s57_status_pending">Ausstehend</string>
     <!-- Logbook module -->

@@ -15,6 +15,7 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
+import java.io.ByteArrayInputStream
 import java.io.File
 
 /**
@@ -127,5 +128,90 @@ class S57SpatialIndexTest {
             S57IndexStatus(S57IndexStatus.Kind.INDEXING, 2, 2, "BBB.ENC").localized(app))
         assertEquals("uptodate-string",
             S57IndexStatus(S57IndexStatus.Kind.UP_TO_DATE, chartCount = 2).localized(app))
+    }
+
+    @Test
+    fun updateFilesAreAppliedAfterBaseInNumericOrder() = runBlocking {
+        val enc = tmp.newFolder("enc")
+        File(enc, "GB100001.000").writeText("")
+        File(enc, "GB100001.002").writeText("")
+        File(enc, "GB100001.001").writeText("")
+        every { app.getAppPath(any<String>()) } returns enc
+        every { helper.isFileUpToDate(any(), any()) } returns false
+        every { S63BridgeStream.open(any(), any()) } returns ByteArrayInputStream(ByteArray(0))
+        val order = mutableListOf<String>()
+        every { helper.addFeaturesStreaming(any(), any(), any()) } answers {
+            order.add(firstArg<String>().substringAfterLast('/'))
+        }
+
+        index.indexCharts()
+
+        // The base must be indexed before its updates, updates in numeric order.
+        assertEquals(listOf("GB100001.000", "GB100001.001", "GB100001.002"), order)
+        verify(exactly = 3) { helper.removeFile(any()) }
+        assertEquals(1, index.indexingStatus.value.chartCount)
+    }
+
+    @Test
+    fun updateWithoutBaseIsSkipped() = runBlocking {
+        val enc = tmp.newFolder("enc")
+        File(enc, "GB100001.001").writeText("")
+        every { app.getAppPath(any<String>()) } returns enc
+        every { helper.isFileUpToDate(any(), any()) } returns false
+
+        index.indexCharts()
+
+        // Applying an update without its base would produce a partial chart.
+        verify(exactly = 0) { S63BridgeStream.open(any(), any()) }
+        verify(exactly = 0) { helper.addFeaturesStreaming(any(), any(), any()) }
+        verify(exactly = 0) { helper.removeFile(any()) }
+        assertEquals(1, index.indexingStatus.value.chartCount)
+    }
+
+    @Test
+    fun upToDateCellGroupIsNotReindexed() = runBlocking {
+        val enc = tmp.newFolder("enc")
+        File(enc, "GB100001.000").writeText("")
+        File(enc, "GB100001.001").writeText("")
+        every { app.getAppPath(any<String>()) } returns enc
+        every { helper.isFileUpToDate(any(), any()) } returns true
+
+        index.indexCharts()
+
+        verify(exactly = 0) { S63BridgeStream.open(any(), any()) }
+        verify(exactly = 0) { helper.addFeaturesStreaming(any(), any(), any()) }
+        verify(exactly = 0) { helper.removeFile(any()) }
+        assertEquals(1, index.indexingStatus.value.chartCount)
+    }
+
+    @Test
+    fun catalogueFileIsIndexedStandalone() = runBlocking {
+        val enc = tmp.newFolder("enc")
+        File(enc, "CATALOG.031").writeText("")
+        every { app.getAppPath(any<String>()) } returns enc
+        every { helper.isFileUpToDate(any(), any()) } returns false
+        every { S63BridgeStream.open(any(), any()) } returns ByteArrayInputStream(ByteArray(0))
+
+        index.indexCharts()
+
+        // CATALOG.031 is not an update of a cell named CATALOG; it keeps its
+        // standalone chart treatment.
+        verify(exactly = 1) { S63BridgeStream.open(any(), any()) }
+        assertEquals(1, index.indexingStatus.value.chartCount)
+    }
+
+    @Test
+    fun mixedCellsAreCountedAsCellGroups() = runBlocking {
+        val enc = tmp.newFolder("enc")
+        File(enc, "AAA.ENC").writeText("")
+        File(enc, "GB100001.000").writeText("")
+        File(enc, "GB100001.001").writeText("")
+        every { app.getAppPath(any<String>()) } returns enc
+        every { helper.isFileUpToDate(any(), any()) } returns true
+
+        index.indexCharts()
+
+        // Two cells: AAA plus the GB100001 base/update pair.
+        assertEquals(2, index.indexingStatus.value.chartCount)
     }
 }

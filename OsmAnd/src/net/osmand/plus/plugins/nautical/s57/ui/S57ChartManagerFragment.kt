@@ -15,6 +15,7 @@ import kotlinx.coroutines.withContext
 import net.osmand.plus.R
 import net.osmand.plus.base.BaseOsmAndFragment
 import net.osmand.plus.plugins.nautical.NauticalPlugin
+import net.osmand.plus.plugins.nautical.s57.S57CellFiles
 import net.osmand.plus.settings.fragments.SettingsScreenType
 import java.io.File
 import java.util.Locale
@@ -57,18 +58,26 @@ class S57ChartManagerFragment : BaseOsmAndFragment() {
         viewLifecycleOwner.lifecycleScope.launch {
             val encFiles = withContext(Dispatchers.IO) {
                 val encDir = app.getAppPath("nautical/enc")
-                encDir.listFiles { _, name -> 
-                    val up = name.uppercase()
-                    up.endsWith(".000") || up.endsWith(".031") || up.endsWith(".ENC")
-                }?.toList() ?: emptyList()
+                (encDir.listFiles { _, name ->
+                    S57CellFiles.isChartFile(name)
+                }?.toList() ?: emptyList()).sortedWith(
+                        // Each base cell followed by its update files, cells alphabetically
+                        compareBy({ S57CellFiles.cellName(it.name) }, { !S57CellFiles.isUpdateFile(it.name) }, { S57CellFiles.updateNumber(it.name) })
+                )
             }
 
             val plugin = NauticalPlugin.getInstance()
+            val index = plugin?.s57SpatialIndex
             val boundsMap = withContext(Dispatchers.IO) {
-                plugin?.s57SpatialIndex?.getChartBounds() ?: emptyMap()
+                index?.getChartBounds() ?: emptyMap()
             }
-            
-            recyclerView.adapter = ChartAdapter(encFiles, boundsMap)
+            // Files whose current content was already applied; update files
+            // that only delete or modify features leave no rows of their own.
+            val appliedPaths = withContext(Dispatchers.IO) {
+                encFiles.filter { index?.isFileIndexed(it) == true }.map { it.absolutePath }.toSet()
+            }
+
+            recyclerView.adapter = ChartAdapter(encFiles, boundsMap, appliedPaths)
             emptyView.visibility = if (encFiles.isEmpty()) View.VISIBLE else View.GONE
             
             val area = calculateTotalAreaNm(boundsMap.values)
@@ -121,7 +130,11 @@ class S57ChartManagerFragment : BaseOsmAndFragment() {
         return totalArea
     }
 
-    private inner class ChartAdapter(private val files: List<File>, private val bounds: Map<String, DoubleArray>) : RecyclerView.Adapter<ChartViewHolder>() {
+    private inner class ChartAdapter(
+        private val files: List<File>,
+        private val bounds: Map<String, DoubleArray>,
+        private val appliedPaths: Set<String>
+    ) : RecyclerView.Adapter<ChartViewHolder>() {
         private val colorGreen = androidx.core.content.ContextCompat.getColor(requireContext(), R.color.nautical_status_green)
         private val colorOrange = androidx.core.content.ContextCompat.getColor(requireContext(), R.color.nautical_status_orange)
 
@@ -132,18 +145,21 @@ class S57ChartManagerFragment : BaseOsmAndFragment() {
         override fun onBindViewHolder(holder: ChartViewHolder, position: Int) {
             val file = files[position]
             val isS63 = file.name.uppercase(Locale.US).endsWith(".031") || file.name.uppercase(Locale.US).endsWith(".ENC")
-            val hasIndex = bounds.containsKey(file.absolutePath)
-            
-            holder.title.text = file.name
+            val isUpdate = S57CellFiles.isUpdateFile(file.name)
             // "S-57" / "S-63" are IHO transfer-standard names and stay
             // untranslated, like other product names
-            holder.info.text = String.format(Locale.US, getString(R.string.nautical_s57_chart_info_fmt), file.length() / 1024.0, if (isS63) "S-63 (Encrypted)" else "S-57")
-            holder.status.text = getString(if (hasIndex) R.string.nautical_s57_status_indexed else R.string.nautical_s57_status_pending)
-            holder.status.setTextColor(if (hasIndex) colorGreen else colorOrange)
-            
+            val baseType = if (isS63) "S-63 (Encrypted)" else "S-57"
+            val typeLabel = if (isUpdate) getString(R.string.nautical_s57_chart_type_update_fmt, baseType) else baseType
+            val isApplied = bounds.containsKey(file.absolutePath) || appliedPaths.contains(file.absolutePath)
+
+            holder.title.text = file.name
+            holder.info.text = String.format(Locale.US, getString(R.string.nautical_s57_chart_info_fmt), file.length() / 1024.0, typeLabel)
+            holder.status.text = getString(if (isApplied) R.string.nautical_s57_status_indexed else R.string.nautical_s57_status_pending)
+            holder.status.setTextColor(if (isApplied) colorGreen else colorOrange)
+
             holder.itemView.setOnClickListener {
-                if (hasIndex) {
-                    val b = bounds[file.absolutePath]!!
+                val b = bounds[file.absolutePath]
+                if (b != null) {
                     app.settings.setMapLocationToShow((b[0] + b[1]) / 2.0, (b[2] + b[3]) / 2.0, 12)
                     app.runInUIThread { requireActivity().onBackPressedDispatcher.onBackPressed() }
                 }

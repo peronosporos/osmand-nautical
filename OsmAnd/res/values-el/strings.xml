@@ -7141,6 +7141,7 @@
     <string name="nautical_s57_colpat_stripes_unknown">Ρίγες (Άγνωστη Κατεύθυνση)</string>
     <string name="nautical_s57_colpat_border">Περιγραμματική Ρίγα</string>
     <string name="nautical_s57_chart_info_fmt">Μέγεθος: %1$.1f KB | Τύπος: %2$s</string>
+    <string name="nautical_s57_chart_type_update_fmt">%1$s (Ενημέρωση)</string>
     <string name="nautical_s57_status_indexed">Καταχωρημένο</string>
     <string name="nautical_s57_status_pending">Σε Εκκρεμότητα</string>
     <string name="nautical_s57_status_fmt">Κατάσταση: %1$s</string>

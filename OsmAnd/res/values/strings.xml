@@ -843,6 +843,7 @@
     <string name="nautical_s57_colpat_stripes_unknown">Stripes (direction unknown)</string>
     <string name="nautical_s57_colpat_border">Border stripe</string>
     <string name="nautical_s57_chart_info_fmt">Size: %1$.1f KB | Type: %2$s</string>
+    <string name="nautical_s57_chart_type_update_fmt">%1$s (Update)</string>
     <string name="nautical_s57_status_indexed">Indexed</string>
     <string name="nautical_s57_status_pending">Pending</string>
     <string name="nautical_abort_stalled_in_irons">Stalled in irons</string>

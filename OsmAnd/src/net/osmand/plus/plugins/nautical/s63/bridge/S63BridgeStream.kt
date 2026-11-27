@@ -23,9 +23,9 @@ object S63BridgeStream {
      * Opens a file and returns an InputStream.
      *
      * S-63 cell files on an exchange set keep their S-57 extensions (.000 for
-     * base cells) and are encrypted Blowfish/ECB ZIP archives (S-63 3.1,
-     * 9.5.3); the S-57 catalogue (.031) and other exchange set files are
-     * never encrypted (S-63 3.1). Therefore the container is detected by
+     * base cells, .001... .999 for update cells) and are encrypted
+     * Blowfish/ECB ZIP archives (S-63 3.1, 9.5.3); the S-57 catalogue (.031)
+     * is never encrypted (S-63 3.1). The container is detected by
      * decrypting its first block and checking for the ZIP local file header
      * (S-63 10.7.3 footnote 15): CK1 is tried first and then CK2
      * (S-63 10.7.3 steps a and c). Files whose first block does not decrypt
@@ -74,9 +74,14 @@ object S63BridgeStream {
             return null
         }
 
-        // Plain S-57 base cell (.000) or S-57 catalogue (.031); these are
-        // never encrypted on an S-63 exchange set (S-63 3.1).
-        if (name.endsWith(".000") || name.endsWith(".031")) {
+        // Plain S-57 fallback for the base cell (.000), update cells
+        // (.001... .999) and the S-57 catalogue (.031) when no permit key
+        // decrypts them. On real S-63 exchange sets the base and update
+        // cells are encrypted and were already handled by the permit
+        // sniffing above; update cells carry the same cell key as their
+        // base (S-63 10.7.2, verified against the IHO S-64 test data set).
+        if (name.endsWith(".000") || name.endsWith(".031") ||
+                net.osmand.plus.plugins.nautical.s57.S57CellFiles.isUpdateFile(name)) {
             return file.inputStream()
         }
         return null

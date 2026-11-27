@@ -10,6 +10,7 @@ import net.osmand.PlatformUtil
 import net.osmand.plus.OsmandApplication
 import net.osmand.plus.R
 import net.osmand.plus.plugins.nautical.s63.bridge.S63BridgeStream
+import java.io.File
 
 /**
  * High-level spatial index for S-57 features.
@@ -32,22 +33,44 @@ class S57SpatialIndex(
             return@withContext
         }
 
-        val files = encDir.listFiles { _, name -> 
-            val up = name.uppercase()
-            up.endsWith(".000") || up.endsWith(".031") || up.endsWith(".ENC")
+        val files = encDir.listFiles { _, name ->
+            S57CellFiles.isChartFile(name)
         } ?: run {
              _indexingStatus.value = S57IndexStatus(S57IndexStatus.Kind.NO_CHARTS)
              return@withContext
         }
-        
-        val sortedFiles = files.sortedBy { it.name.uppercase() }
-        
-        for ((index, file) in sortedFiles.withIndex()) {
-            val lastModified = file.lastModified()
-            _indexingStatus.value = S57IndexStatus(S57IndexStatus.Kind.CHECKING, index + 1, sortedFiles.size, file.name)
-            if (!sqliteHelper.isFileUpToDate(file.absolutePath, lastModified)) {
+
+        // Group each base cell with its update files (.001... .999) so the
+        // update instructions are applied to their own base in numeric
+        // order (IHO S-57 Part 3 section 2.6).
+        val groups = files.groupBy { S57CellFiles.cellName(it.name) }
+                .map { (cell, groupFiles) -> cell to S57CellFiles.sortGroup(groupFiles) }
+                .sortedBy { it.first }
+
+        for ((index, group) in groups.withIndex()) {
+            val (cell, groupFiles) = group
+            _indexingStatus.value = S57IndexStatus(S57IndexStatus.Kind.CHECKING, index + 1, groups.size, cell)
+            if (groupFiles.all { sqliteHelper.isFileUpToDate(it.absolutePath, it.lastModified()) }) {
+                log.debug("Cell group up-to-date in persistent index: $cell")
+                continue
+            }
+            if (groupFiles.any { S57CellFiles.isUpdateFile(it.name) } &&
+                    groupFiles.none { S57CellFiles.isBaseFile(it.name) }) {
+                // An update references records of its base cell; applying it
+                // without the base would produce a partial, misleading chart.
+                log.warn("S-57: Skipping update file(s) of $cell because no base cell (.000/.ENC) is installed")
+                continue
+            }
+            // Clear every row sourced from this cell group so re-indexing
+            // starts from a clean state; features dropped by a newer edition
+            // or update must not survive in the index.
+            for (file in groupFiles) {
+                sqliteHelper.removeFile(file.absolutePath)
+            }
+            for (file in groupFiles) {
+                val lastModified = file.lastModified()
+                _indexingStatus.value = S57IndexStatus(S57IndexStatus.Kind.INDEXING, index + 1, groups.size, file.name)
                 try {
-                    _indexingStatus.value = S57IndexStatus(S57IndexStatus.Kind.INDEXING, index + 1, sortedFiles.size, file.name)
                     log.info("Indexing S-63/S-57 chart: ${file.name} (Changed or New)")
                     val stream = S63BridgeStream.open(file, app)
                     if (stream != null) {
@@ -58,12 +81,19 @@ class S57SpatialIndex(
                 } catch (e: Exception) {
                     log.error("Failed to index chart: ${file.absolutePath}", e)
                 }
-            } else {
-                log.debug("Chart up-to-date in persistent index: ${file.name}")
             }
         }
-        _indexingStatus.value = S57IndexStatus(S57IndexStatus.Kind.UP_TO_DATE, chartCount = sortedFiles.size)
+        _indexingStatus.value = S57IndexStatus(S57IndexStatus.Kind.UP_TO_DATE, chartCount = groups.size)
     }
+
+    /**
+     * True when the file's current content has already been processed into
+     * the index. Update files that only delete or modify features leave no
+     * rows of their own, so "applied" is tracked per file rather than by
+     * the presence of feature rows (used by the chart manager).
+     */
+    fun isFileIndexed(file: File): Boolean =
+            sqliteHelper.isFileUpToDate(file.absolutePath, file.lastModified())
 
     /**
      * Queries features within the specified bounding box.
