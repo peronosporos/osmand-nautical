@@ -111,7 +111,8 @@ object S63AuthVerifier {
 		trustedKeys: List<DsaKey>): Outcome {
 		val signatureFile = S63SignatureFile.parse(signatureFileBytes)
 			?: return Outcome.SignatureFileMalformed
-		when (val certificateOutcome = verifyDataServerCertificate(signatureFile, schemeAdministratorKey, trustedKeys)) {
+		val certificateOutcome = verifyDataServerCertificate(signatureFile, schemeAdministratorKey, trustedKeys)
+		when (certificateOutcome) {
 			is Outcome.SaAuthenticated, is Outcome.ThirdPartyAuthenticated -> {}
 			else -> return certificateOutcome
 		}
