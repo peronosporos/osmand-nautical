@@ -70,7 +70,8 @@
         <net.osmand.plus.plugins.nautical.ui.editor.PolarCurveCanvasView
             android:id="@+id/polar_canvas_view"
             android:layout_width="match_parent"
-            android:layout_height="match_parent" />
+            android:layout_height="match_parent"
+            android:contentDescription="@string/nautical_a11y_polar_chart" />
     </com.google.android.material.card.MaterialCardView>
 
     <!-- Controls -->

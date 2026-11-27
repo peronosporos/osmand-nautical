@@ -1349,6 +1349,11 @@
     <string name="nautical_a11y_voice_input">Voice Input</string>
     <string name="nautical_a11y_mode_switch_lock">Auto Mode Switch Lock</string>
     <string name="nautical_a11y_berth_qr">Remote Web Berth Display QR</string>
+    <string name="nautical_a11y_wind_rose">Analog Wind Rose</string>
+    <string name="nautical_a11y_polar_chart">Polar Curve Chart</string>
+    <string name="nautical_a11y_depth_profile">Route Depth Profile Graph</string>
+    <string name="nautical_a11y_tide_graph">Tide Graph</string>
+    <string name="nautical_a11y_telemetry_chart">Telemetry History Graph</string>
     <string name="nautical_polar_select_profile">Select Polar Profile</string>
     <string name="nautical_confirm_delete_waypoint_fmt">Are you sure you want to delete waypoint \'%1$s\' from server?</string>
     <string name="nautical_confirm_delete_route_fmt">Are you sure you want to delete route \'%1$s\' from Signal K server?</string>

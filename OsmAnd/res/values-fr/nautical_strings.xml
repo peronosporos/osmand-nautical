@@ -980,6 +980,11 @@
     <string name="nautical_chafe_ok">USURE: OK</string>
     <string name="nautical_a11y_mode_switch_lock">Verrouillage du changement de mode auto</string>
     <string name="nautical_a11y_berth_qr">QR d\'affichage web distant</string>
+    <string name="nautical_a11y_wind_rose">Rose des Vents Analogique</string>
+    <string name="nautical_a11y_polar_chart">Diagramme de Courbe Polaire</string>
+    <string name="nautical_a11y_depth_profile">Graphique du Profil de Profondeur de la Route</string>
+    <string name="nautical_a11y_tide_graph">Graphique de Marée</string>
+    <string name="nautical_a11y_telemetry_chart">Graphique d\'Historique de Télémétrie</string>
     <string name="nautical_hud_tab_sail">VOILE</string>
     <string name="nautical_hud_tab_motor">MOTEUR</string>
     <string name="nautical_hud_tab_anchor">ANCRE</string>

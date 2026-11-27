@@ -80,7 +80,8 @@
                 <net.osmand.plus.plugins.nautical.routing.ui.RouteDepthProfileGraphView
                     android:id="@+id/view_route_depth_profile"
                     android:layout_width="match_parent"
-                    android:layout_height="140dp" />
+                    android:layout_height="140dp"
+                    android:contentDescription="@string/nautical_a11y_depth_profile" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 

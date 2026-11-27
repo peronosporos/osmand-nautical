@@ -119,7 +119,8 @@
                 <net.osmand.plus.plugins.nautical.ui.editor.PolarCurveCanvasView
                     android:id="@+id/polar_canvas_view"
                     android:layout_width="match_parent"
-                    android:layout_height="220dp" />
+                    android:layout_height="220dp"
+                    android:contentDescription="@string/nautical_a11y_polar_chart" />
 
                 <LinearLayout
                     android:layout_width="match_parent"

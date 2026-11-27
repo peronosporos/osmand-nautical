@@ -980,6 +980,11 @@
     <string name="nautical_chafe_ok">SCHEUERN: OK</string>
     <string name="nautical_a11y_mode_switch_lock">Sperre des automatischen Moduswechsels</string>
     <string name="nautical_a11y_berth_qr">QR der Remote-Webanzeige</string>
+    <string name="nautical_a11y_wind_rose">Analoge Windrose</string>
+    <string name="nautical_a11y_polar_chart">Polarkurven-Diagramm</string>
+    <string name="nautical_a11y_depth_profile">Tiefenprofil-Diagramm der Route</string>
+    <string name="nautical_a11y_tide_graph">Gezeitendiagramm</string>
+    <string name="nautical_a11y_telemetry_chart">Telemetrie-Verlaufsdiagramm</string>
     <string name="nautical_hud_tab_sail">SEGEL</string>
     <string name="nautical_hud_tab_motor">MOTOR</string>
     <string name="nautical_hud_tab_anchor">ANKER</string>

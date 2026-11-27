@@ -22,6 +22,10 @@ class TideGraphView @JvmOverloads constructor(
     defStyleAttr: Int = 0,
 ) : View(context, attrs, defStyleAttr) {
 
+    init {
+        contentDescription = context.getString(R.string.nautical_a11y_tide_graph)
+    }
+
     private var predictions: List<TidePrediction> = emptyList()
     private var vesselTide: net.osmand.plus.plugins.nautical.engine.TideState? = null
 

@@ -6097,6 +6097,11 @@
     <string name="nautical_tech_sats_fmt">Δορυφόροι: %1$s</string>
     <string name="nautical_tech_source_fmt">Πηγή: %1$s</string>
     <string name="nautical_a11y_drag_handle">Λαβή μεταφοράς</string>
+    <string name="nautical_a11y_wind_rose">Αναλογικό Ρόδο Ανέμων</string>
+    <string name="nautical_a11y_polar_chart">Διάγραμμα Πολικής Καμπύλης</string>
+    <string name="nautical_a11y_depth_profile">Γράφημα Προφίλ Βάθους Πορείας</string>
+    <string name="nautical_a11y_tide_graph">Γράφημα Παλίρροιας</string>
+    <string name="nautical_a11y_telemetry_chart">Γράφημα Ιστορικού Τηλεμετρίας</string>
     <string name="nautical_confirm_delete_waypoint_fmt">Σίγουρα θέλετε να διαγράψετε το σημείο διαδρομής \'%1$s\' από τον διακομιστή;</string>
     <string name="nautical_error_no_anchor_drop">Δεν έχει οριστεί σημείο αφέσης άγκυρας</string>
     <string name="nautical_insecure_command_warning">Μη ασφαλής σύνδεση: οι εντολές προς αυτόν τον διακομιστή αποστέλλονται χωρίς κρυπτογράφηση. Ενεργοποιήστε το HTTPS στις ρυθμίσεις του διακομιστή όταν είναι δυνατόν.</string>

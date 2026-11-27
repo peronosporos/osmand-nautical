@@ -39,6 +39,10 @@ class TelemetryChartView @JvmOverloads constructor(
     defStyleAttr: Int = 0
 ) : View(context, attrs, defStyleAttr) {
 
+    init {
+        contentDescription = context.getString(R.string.nautical_a11y_telemetry_chart)
+    }
+
     var samples: List<TelemetrySample> = emptyList()
         set(value) {
             field = value
