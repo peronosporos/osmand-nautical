@@ -66,7 +66,15 @@ class BitVector {
      * @return BitVector with specified range
      */
     operator fun get(from: Int, to: Int): BitVector {
-        val slice = fBitVector.copyOfRange(from, to)
+        // Upstream marine-api delegates to java.util.BitSet.get, which treats
+        // bits beyond the vector end as unset instead of throwing. The type-21
+        // parser reads the variable-length name extension at fixed bits
+        // 272..359 even when the message is only 272 bits long, so an
+        // out-of-range read must yield zero bits rather than an exception
+        // that would drop the whole Aid-to-Navigation report.
+        val end = minOf(to, fBitVector.size)
+        val start = minOf(from, end)
+        val slice = fBitVector.copyOfRange(start, end)
         return BitVector(slice)
     }
 
@@ -77,7 +85,10 @@ class BitVector {
      * @return `true` if bit is set, otherwise `false`.
      */
     fun getBoolean(index: Int): Boolean {
-        return fBitVector[index]
+        // java.util.BitSet returns false for indices beyond the set; mirror
+        // that so variable-length trailing fields (the type-21 name
+        // extension) read as unset bits instead of crashing.
+        return index < fBitVector.size && fBitVector[index]
     }
 
     fun previousSetBit(index: Int): Int {

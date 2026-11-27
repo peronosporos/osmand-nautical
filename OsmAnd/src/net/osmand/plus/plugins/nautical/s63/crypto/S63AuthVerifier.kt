@@ -157,7 +157,9 @@ object S63AuthVerifier {
 			while (cellContent.read(buffer).also { read = it } != -1) {
 				digest.update(buffer, 0, read)
 			}
-			dsaVerify(key, digest.digest(), signatureFile.cellSignatureR, signatureFile.cellSignatureS)
+			// The stream is hashed exactly once here; dsaVerifyHash takes the
+			// hash itself so the digest bytes are not hashed a second time.
+			dsaVerifyHash(key, digest.digest(), signatureFile.cellSignatureR, signatureFile.cellSignatureS)
 		} catch (_: Exception) {
 			false
 		}
@@ -214,15 +216,27 @@ object S63AuthVerifier {
 	 * verified against the S-64 authentication vectors.
 	 */
 	fun dsaVerify(key: DsaKey, message: ByteArray, r: BigInteger, s: BigInteger): Boolean {
+		return try {
+			dsaVerifyHash(key, MessageDigest.getInstance("SHA-1").digest(message), r, s)
+		} catch (_: Exception) {
+			false
+		}
+	}
+
+	/**
+	 * Manual DSA verification over a precomputed SHA-1 hash, shared by the
+	 * certificate path (dsaVerify hashes the raw message) and the cell path
+	 * (verifyCellSignature hashes the stream while reading it).
+	 */
+	private fun dsaVerifyHash(key: DsaKey, hash: ByteArray, r: BigInteger, s: BigInteger): Boolean {
 		if (r.signum() <= 0 || s.signum() <= 0 || r >= key.q || s >= key.q) {
 			return false
 		}
 		return try {
-			val digest = MessageDigest.getInstance("SHA-1").digest(message)
 			// FIPS 186-2: the leftmost min(N, outlen) bits of the hash.
-			val hashBits = Math.min(key.q.bitLength(), digest.size * 8)
-			var h = BigInteger(1, digest)
-			val excess = digest.size * 8 - hashBits
+			val hashBits = Math.min(key.q.bitLength(), hash.size * 8)
+			var h = BigInteger(1, hash)
+			val excess = hash.size * 8 - hashBits
 			if (excess > 0) {
 				h = h.shiftRight(excess)
 			}

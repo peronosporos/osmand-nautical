@@ -6,6 +6,8 @@ import net.osmand.plus.OsmandApplication
 import net.osmand.plus.api.SQLiteAPI
 import net.osmand.plus.plugins.nautical.hazard.engine.NavtexMessage
 import net.osmand.plus.plugins.nautical.hazard.engine.NavtexSubject
+import net.osmand.plus.settings.backend.OsmandSettings
+import net.osmand.plus.settings.backend.preferences.CommonPreference
 import org.junit.Before
 import org.junit.Test
 
@@ -14,11 +16,21 @@ class NavtexRepositoryTest {
     private val app = mockk<OsmandApplication>()
     private val sqliteAPI = mockk<SQLiteAPI>()
     private val db = mockk<SQLiteAPI.SQLiteConnection>()
+    private val settings = mockk<OsmandSettings>()
+    private val expiryPreference = mockk<CommonPreference<Int>>()
     private val repository = NavtexRepository(app)
 
     @Before
     fun setUp() {
         every { app.getSQLiteAPI() } returns sqliteAPI
+        // The navtex expiry preference is a public final Java field on
+        // OsmandSettings, which mockk cannot intercept, so inject the
+        // preference mock reflectively and route getSettings() to it.
+        OsmandSettings::class.java
+            .getField("NAUTICAL_NAVTEX_EXPIRY_HOURS")
+            .set(settings, expiryPreference)
+        every { app.getSettings() } returns settings
+        every { expiryPreference.get() } returns 48
         every { sqliteAPI.getOrCreateDatabase(any(), any()) } returns db
         every { db.version } returns 1
         every { db.setVersion(any()) } just Runs
