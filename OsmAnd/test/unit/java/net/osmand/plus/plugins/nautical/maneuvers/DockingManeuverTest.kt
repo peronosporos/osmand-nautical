@@ -13,6 +13,7 @@ import net.osmand.plus.OsmandApplication
 import net.osmand.plus.plugins.nautical.audio.NauticalAudioArbiter
 import net.osmand.plus.plugins.nautical.engine.MarineState
 import net.osmand.plus.plugins.nautical.engine.NauticalHelmArbitrator
+import net.osmand.plus.settings.backend.TestOsmandSettings
 import net.osmand.util.MapUtils
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -39,6 +40,13 @@ class DockingManeuverTest {
         // an AudioManager from the OS; substitute a relaxed mock.
         mockkObject(NauticalAudioArbiter)
         every { NauticalAudioArbiter.getInstance(any()) } returns mockk(relaxed = true)
+
+        // onStateUpdate formats instructions through OsmAndFormatter, which
+        // reads METRIC_SYSTEM and SPEED_SYSTEM preference fields on the
+        // app's settings. Those are public final Java fields that mockk
+        // cannot intercept, so provide a real settings object over an
+        // in-memory SettingsAPI.
+        every { app.settings } returns TestOsmandSettings.create(app)
 
         maneuver = DockingManeuver(app)
         maneuver.setTarget(10.0, 10.0)

@@ -6,6 +6,7 @@ import net.osmand.plus.OsmandApplication
 import net.osmand.plus.api.SQLiteAPI
 import net.osmand.plus.plugins.nautical.hazard.engine.NavtexMessage
 import net.osmand.plus.plugins.nautical.hazard.engine.NavtexSubject
+import net.osmand.plus.settings.backend.TestOsmandSettings
 import org.junit.Before
 import org.junit.Test
 
@@ -19,13 +20,13 @@ class NavtexRepositoryTest {
     @Before
     fun setUp() {
         every { app.getSQLiteAPI() } returns sqliteAPI
-        // Remaining blocker: cleanupExpiredInternal reads the expiry from
+        // cleanupExpiredInternal reads the expiry from
         // app.settings.NAUTICAL_NAVTEX_EXPIRY_HOURS, a public final Java
-        // field on OsmandSettings. Neither mockk interception nor reflective
-        // Field.set can supply a final field (JDK 17 rejects it), so these
-        // tests stay red until the settings injection round provides an
-        // OsmandSettings test double. The database stubs below are the ones
-        // the repository logic itself needs and stay valid for that round.
+        // field on OsmandSettings that mockk cannot intercept. Provide a
+        // real settings object over an in-memory SettingsAPI, which yields
+        // the registered default (48 hours).
+        every { app.settings } returns TestOsmandSettings.create(app)
+        // The database stubs below are the ones the repository logic needs.
         every { sqliteAPI.getOrCreateDatabase(any(), any()) } returns db
         every { db.version } returns 1
         every { db.setVersion(any()) } just Runs
@@ -80,8 +81,10 @@ class NavtexRepositoryTest {
 
         repository.cleanupExpired()
 
-        // Verify two DELETE calls: one for 72h, one for 24h met warnings
-        verify(exactly = 2) {
+        // A single DELETE: the repository and the view model deliberately
+        // follow one configurable expiry rule (NAUTICAL_NAVTEX_EXPIRY_HOURS,
+        // default 48 hours) instead of per-subject tiers.
+        verify(exactly = 1) {
             db.execSQL(match { it.contains("DELETE FROM") }, any())
         }
     }

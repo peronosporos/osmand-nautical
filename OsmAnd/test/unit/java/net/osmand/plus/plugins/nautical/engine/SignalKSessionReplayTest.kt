@@ -5,7 +5,6 @@ import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
-import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
@@ -13,8 +12,7 @@ import net.osmand.plus.OsmandApplication
 import net.osmand.plus.plugins.nautical.nmea.multiplexer.DirectNmeaMultiplexer
 import net.osmand.plus.plugins.nautical.nmea.parser.NmeaSentenceParser
 import net.osmand.plus.plugins.nautical.service.SailingDataAggregator
-import net.osmand.plus.settings.backend.OsmandSettings
-import net.osmand.plus.settings.backend.preferences.CommonPreference
+import net.osmand.plus.settings.backend.TestOsmandSettings
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -44,28 +42,18 @@ class SignalKSessionReplayTest {
         Dispatchers.setMain(testDispatcher)
 
         app = mockk<OsmandApplication>(relaxed = true)
-        val settings = mockk<OsmandSettings>(relaxed = true)
+        // OsmandSettings preferences are public final Java fields, so mockk
+        // cannot intercept them. Use a real settings object backed by an
+        // in-memory SettingsAPI instead.
+        val settings = TestOsmandSettings.create(app)
         every { app.settings } returns settings
-
-        val xtePref = mockk<CommonPreference<Float>>(relaxed = true)
-        every { xtePref.get() } returns 0.1f
-        every { settings.NAUTICAL_XTE_THRESHOLD } returns xtePref
-
-        val draftPref = mockk<CommonPreference<Float>>(relaxed = true)
-        every { draftPref.get() } returns 1.5f
-        every { settings.NAUTICAL_VESSEL_DRAFT } returns draftPref
-
-        val corridorPref = mockk<CommonPreference<Float>>(relaxed = true)
-        every { corridorPref.get() } returns 0.5f
-        every { settings.NAUTICAL_CORRIDOR_WIDTH } returns corridorPref
-
-        val bufferPref = mockk<CommonPreference<Float>>(relaxed = true)
-        every { bufferPref.get() } returns 0.1f
-        every { settings.NAUTICAL_SAFETY_CORRIDOR_BUFFER } returns bufferPref
-
-        val arrivalPref = mockk<CommonPreference<Float>>(relaxed = true)
-        every { arrivalPref.get() } returns 50.0f
-        every { settings.NAUTICAL_ARRIVAL_RADIUS } returns arrivalPref
+        // Pin the values this suite was written against so it does not
+        // depend on the defaults registered in OsmandSettings.
+        settings.NAUTICAL_XTE_THRESHOLD.set(0.1f)
+        settings.NAUTICAL_VESSEL_DRAFT.set(1.5f)
+        settings.NAUTICAL_CORRIDOR_WIDTH.set(0.5f)
+        settings.NAUTICAL_SAFETY_CORRIDOR_BUFFER.set(0.1f)
+        settings.NAUTICAL_ARRIVAL_RADIUS.set(50.0f)
 
         val aisManager = NauticalAisManager(app)
         engine = SignalKEngine(app, testScope)
@@ -86,7 +74,11 @@ class SignalKSessionReplayTest {
     @Test
     fun `recorded passage produces golden end state`() = runTest(testDispatcher) {
         RecordedSignalSessions.SHORT_PASSAGE.forEach { engine.handleIncomingMessage(it) }
-        advanceUntilIdle()
+        assertTrue("recorded passage did not settle in time", awaitPipeline {
+            val state = engine.getCurrentState()
+            state.timestamps.containsKey(RecordedSignalSessions.IGNORED_DEPTH_PATH) &&
+                aisManager.getAisObjects().isNotEmpty()
+        })
 
         val state = engine.getCurrentState()
 
@@ -106,7 +98,7 @@ class SignalKSessionReplayTest {
         assertEquals(5.8, state.speedThroughWater!!, 0.001)
 
         // Session-order regressions:
-        // 1. "self" in a message must not suppress updates processing (old isHello bug) —
+        // 1. "self" in a message must not suppress updates processing (old isHello bug):
         //    proven by every non-null assertion above, all from self-bearing messages.
         // 2. The malformed depth value at 12:00:04 must NOT have refreshed the depth
         //    timestamp, so staleness checks would flag a dead sensor instead of trusting it.
@@ -127,7 +119,9 @@ class SignalKSessionReplayTest {
     @Test
     fun `passthrough of self identity and mmsi extraction`() = runTest(testDispatcher) {
         RecordedSignalSessions.SHORT_PASSAGE.forEach { engine.handleIncomingMessage(it) }
-        advanceUntilIdle()
+        assertTrue("self identity did not settle in time", awaitPipeline {
+            engine.sessionManager.trueSelfContext != "vessels.self"
+        })
 
         // The "self" of the first message must become the true context.
         assertEquals(
@@ -139,7 +133,9 @@ class SignalKSessionReplayTest {
     @Test
     fun `stw only stream does not mask sog staleness`() = runTest(testDispatcher) {
         RecordedSignalSessions.STW_ONLY.forEach { engine.handleIncomingMessage(it) }
-        advanceUntilIdle()
+        assertTrue("STW-only stream did not settle in time", awaitPipeline {
+            engine.getCurrentState().speedThroughWater != null
+        })
 
         val state = engine.getCurrentState()
         assertEquals("STW must be ingested", 5.5, state.speedThroughWater!!, 0.001)

@@ -1,17 +1,23 @@
 package net.osmand.plus.plugins.nautical.hazard.viewmodel
 
 import io.mockk.*
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.setMain
 import net.osmand.Location
 import net.osmand.plus.OsmandApplication
 import net.osmand.plus.OsmAndLocationProvider
 import net.osmand.plus.plugins.nautical.hazard.data.NavtexRepository
 import net.osmand.plus.plugins.nautical.hazard.engine.NavtexMessage
 import net.osmand.plus.plugins.nautical.hazard.engine.NavtexSubject
+import net.osmand.plus.settings.backend.TestOsmandSettings
 import net.osmand.util.MapUtils
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
@@ -28,6 +34,15 @@ class NavtexViewModelTest {
 
     @Before
     fun setUp() {
+        // viewModelScope is backed by Dispatchers.Main, which does not exist
+        // on a plain JVM; substitute an unconfined test dispatcher so the
+        // stateIn/combine pipeline can run without a scheduler.
+        Dispatchers.setMain(UnconfinedTestDispatcher())
+        // The view model reads and writes its filter preferences through
+        // OsmandSettings public final Java fields, which mockk cannot
+        // intercept; a real settings object over an in-memory SettingsAPI
+        // provides working defaults and set() persistence.
+        every { app.settings } returns TestOsmandSettings.create(app)
         every { app.locationProvider } returns locationProvider
         every { locationProvider.lastKnownLocation } returns null
         every { locationProvider.addLocationListener(any()) } just Runs
@@ -36,6 +51,11 @@ class NavtexViewModelTest {
         coEvery { repository.refreshMessages() } just Runs
         
         mockkStatic(MapUtils::class)
+    }
+
+    @After
+    fun tearDown() {
+        Dispatchers.resetMain()
     }
 
     @Test

@@ -16,7 +16,7 @@ import net.osmand.plus.plugins.nautical.nmea.multiplexer.DirectNmeaMultiplexer
 import net.osmand.plus.plugins.nautical.nmea.parser.NmeaSentenceParser
 import net.osmand.plus.plugins.nautical.service.SailingDataAggregator
 import net.osmand.plus.settings.backend.OsmandSettings
-import net.osmand.plus.settings.backend.preferences.CommonPreference
+import net.osmand.plus.settings.backend.TestOsmandSettings
 import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
@@ -39,28 +39,18 @@ class SignalKEnginePipelineTest {
         Dispatchers.setMain(testDispatcher)
 
         app = mockk<OsmandApplication>(relaxed = true)
-        settings = mockk<OsmandSettings>(relaxed = true)
+        // OsmandSettings preferences are public final Java fields, so mockk
+        // cannot intercept them. Use a real settings object backed by an
+        // in-memory SettingsAPI instead.
+        settings = TestOsmandSettings.create(app)
         every { app.settings } returns settings
-
-        val xtePref = mockk<CommonPreference<Float>>(relaxed = true)
-        every { xtePref.get() } returns 0.1f
-        every { settings.NAUTICAL_XTE_THRESHOLD } returns xtePref
-
-        val draftPref = mockk<CommonPreference<Float>>(relaxed = true)
-        every { draftPref.get() } returns 1.5f
-        every { settings.NAUTICAL_VESSEL_DRAFT } returns draftPref
-
-        val corridorPref = mockk<CommonPreference<Float>>(relaxed = true)
-        every { corridorPref.get() } returns 0.5f
-        every { settings.NAUTICAL_CORRIDOR_WIDTH } returns corridorPref
-
-        val bufferPref = mockk<CommonPreference<Float>>(relaxed = true)
-        every { bufferPref.get() } returns 0.1f
-        every { settings.NAUTICAL_SAFETY_CORRIDOR_BUFFER } returns bufferPref
-
-        val arrivalPref = mockk<CommonPreference<Float>>(relaxed = true)
-        every { arrivalPref.get() } returns 50.0f
-        every { settings.NAUTICAL_ARRIVAL_RADIUS } returns arrivalPref
+        // Pin the values this suite was written against so it does not
+        // depend on the defaults registered in OsmandSettings.
+        settings.NAUTICAL_XTE_THRESHOLD.set(0.1f)
+        settings.NAUTICAL_VESSEL_DRAFT.set(1.5f)
+        settings.NAUTICAL_CORRIDOR_WIDTH.set(0.5f)
+        settings.NAUTICAL_SAFETY_CORRIDOR_BUFFER.set(0.1f)
+        settings.NAUTICAL_ARRIVAL_RADIUS.set(50.0f)
 
         engine = SignalKEngine(app, testScope)
         aisManager = NauticalAisManager(app)
@@ -84,7 +74,10 @@ class SignalKEnginePipelineTest {
         val rmcSentence = "\$GPRMC,123519,A,4807.038,N,01131.000,E,022.4,084.4,230394,003.1,W*6A"
         multiplexer.injectSentence(rmcSentence)
 
-        testDispatcher.scheduler.advanceUntilIdle()
+        assertTrue("RMC pipeline did not settle in time", awaitPipeline {
+            val state = engine.getCurrentState()
+            state.speedOverGround != null && state.courseOverGroundTrue != null
+        })
 
         val state = engine.getCurrentState()
         // SOG: 22.4 knots * 0.514444 = 11.5235456 m/s
@@ -101,7 +94,9 @@ class SignalKEnginePipelineTest {
         val dbtSentence = "\$IIDBT,033.1,f,010.1,M,005.4,F*25"
         multiplexer.injectSentence(dbtSentence)
 
-        testDispatcher.scheduler.advanceUntilIdle()
+        assertTrue("DBT pipeline did not settle in time", awaitPipeline {
+            engine.getCurrentState().depthBelowTransducer != null
+        })
 
         val state = engine.getCurrentState()
         assertNotNull(state.depthBelowTransducer)
@@ -127,7 +122,10 @@ class SignalKEnginePipelineTest {
 
         engine.handleIncomingMessage(jsonDelta)
 
-        testDispatcher.scheduler.advanceUntilIdle()
+        assertTrue("position delta pipeline did not settle in time", awaitPipeline {
+            val state = engine.getCurrentState()
+            state.latitude != null && state.speedOverGround != null
+        })
 
         val state = engine.getCurrentState()
         assertNotNull(state.latitude)
@@ -156,7 +154,9 @@ class SignalKEnginePipelineTest {
 
         engine.handleDelta(aisDelta)
 
-        testDispatcher.scheduler.advanceUntilIdle()
+        assertTrue("AIS delta pipeline did not settle in time", awaitPipeline {
+            aisManager.getAisObjects().isNotEmpty()
+        })
 
         val aisObjects = aisManager.getAisObjects()
         assertEquals(1, aisObjects.size)
@@ -194,7 +194,9 @@ class SignalKEnginePipelineTest {
         """.trimIndent()
 
         engine.handleIncomingMessage(jsonDelta)
-        testDispatcher.scheduler.advanceUntilIdle()
+        assertTrue("connected-paths delta did not settle in time", awaitPipeline {
+            engine.getCurrentState().crossTrackError != null
+        })
 
         val state = engine.getCurrentState()
         assertEquals(15.5, state.crossTrackError!!, 0.001)
@@ -225,7 +227,10 @@ class SignalKEnginePipelineTest {
         """.trimIndent()
 
         engine.handleIncomingMessage(jsonDelta)
-        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertTrue("source-sentence delta did not settle in time", awaitPipeline {
+            engine.getCurrentState().windSpeedApparent != null
+        })
 
         val state = engine.getCurrentState()
         // 12.5 knots * 0.514444 = 6.43055 m/s
@@ -253,7 +258,11 @@ class SignalKEnginePipelineTest {
         """.trimIndent()
 
         engine.handleIncomingMessage(jsonDelta)
-        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertTrue("decomposed-keys delta did not settle in time", awaitPipeline {
+            val state = engine.getCurrentState()
+            state.speedOverGround != null && state.latitude != null
+        })
 
         val state = engine.getCurrentState()
         assertNotNull(state.speedOverGround)
@@ -271,7 +280,9 @@ class SignalKEnginePipelineTest {
         // VWT: True wind 30 deg starboard, 15.0 knots -> 7.71666 m/s
         val vwtSentence = "${'$'}IIVWT,030.0,R,15.0,N,07.7,M,027.8,K*23"
         multiplexer.injectSentence(vwtSentence)
-        testDispatcher.scheduler.advanceUntilIdle()
+        assertTrue("VWT pipeline did not settle in time", awaitPipeline {
+            engine.getCurrentState().windSpeedTrue != null
+        })
 
         val state = engine.getCurrentState()
         assertNotNull(state.windSpeedTrue)
@@ -280,7 +291,10 @@ class SignalKEnginePipelineTest {
         // VTG: COG 120.5 deg, SOG 8.5 knots -> 4.37277 m/s
         val vtgSentence = "${'$'}GPVTG,120.5,T,118.0,M,08.5,N,015.7,K,A*23"
         multiplexer.injectSentence(vtgSentence)
-        testDispatcher.scheduler.advanceUntilIdle()
+        assertTrue("VTG pipeline did not settle in time", awaitPipeline {
+            val state = engine.getCurrentState()
+            state.courseOverGroundTrue != null && state.speedOverGround != null
+        })
 
         val state2 = engine.getCurrentState()
         assertNotNull(state2.courseOverGroundTrue)
