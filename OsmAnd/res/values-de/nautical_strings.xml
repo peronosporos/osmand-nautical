@@ -45,7 +45,6 @@
     <string name="nautical_cpa_none">CPA: --</string>
     <string name="nautical_cpa_past_fmt">CPA: %1$s (vorbei)</string>
     <string name="nautical_cpa_tcpa_format">CPA: %1$.2f%2$s | TCPA: %3$ds</string>
-    <string name="nautical_cpa_tcpa_placeholder">CPA: -- NM (TCPA: -- min)</string>
     <string name="nautical_cpa_threshold_hint">Abstand in NM</string>
     <string name="nautical_cpa_threshold_msg_fmt">CPA-Alarmgrenzwert für %1$s eingeben:</string>
     <string name="nautical_emergency_collision">Kollision</string>
@@ -57,7 +56,6 @@
     <string name="nautical_emergency_power_low">NOTFALL: Batteriespannung niedrig</string>
     <string name="nautical_emergency_sinking">Sinkgang / Wassereinbruch</string>
     <string name="nautical_emergency_stop">Not-Halt ausgeführt</string>
-    <string name="nautical_emergency_stop_desc">Autopilot abschalten und Ruder mittig</string>
     <string name="nautical_emergency_stop_executed">Not-Halt ausgeführt</string>
     <string name="nautical_emergency_stop_label">Not-Halt</string>
     <string name="nautical_hazard_ahead">Gefahr voraus</string>
@@ -97,7 +95,6 @@
     <string name="nautical_sh_title">Sensor- und Telemetrie-Diagnose</string>
     <string name="nautical_sh_wind_details_fmt">AWS %1$s @ %2$s · TWS %3$s @ %4$s</string>
     <string name="nautical_sh_wind_ph">Scheinbarer Wind: -- kn @ --°\nWahrer Wind: -- kn @ --° • Rate: -- Hz</string>
-    <string name="nautical_shallow_depth_alarm">Untiefe</string>
     <string name="nautical_shallow_hazard_desc">Einer oder mehrere Wegpunkte der Route durchqueren Tiefenlinien unter der Sicherheitsmindesttiefe.</string>
     <string name="nautical_shallow_hazard_warning">Warnung: Untiefe</string>
     <string name="nautical_start_burn_fmt">Burn: %1$s%2$02d:%3$02d</string>
@@ -109,11 +106,9 @@
     <string name="nautical_start_favored_placeholder">Bevorzugt: --</string>
     <string name="nautical_start_line_bias_none">Linien-Bias: --</string>
     <string name="nautical_start_line_flag">Startlinie</string>
-    <string name="nautical_start_line_gun">SIGNAL! START!</string>
     <string name="nautical_start_port">Backbord</string>
     <string name="nautical_start_square_line">Rechte Linie (Neutral)</string>
     <string name="nautical_start_starboard">Steuerbord</string>
-    <string name="nautical_start_timer_sync">Startlinie synchronisiert</string>
     <string name="nautical_vessel_generic">Schiff</string>
     <string name="nautical_ais_call_sign_fmt">Rufzeichen: %1$s</string>
     <string name="nautical_sail_efficiency_none">Segelflächen-Effizienz: --</string>
@@ -154,11 +149,9 @@
     <string name="nautical_vhf_13_safety">13 SICHERHEIT</string>
     <string name="nautical_vhf_16_distress">16 NOTRUF</string>
     <string name="nautical_vhf_16_label">VHF 16</string>
-    <string name="nautical_vhf_25w_high">25W HOCH</string>
     <string name="nautical_vhf_72_ship_ship">72 SCHIFF-SCHIFF</string>
     <string name="nautical_vhf_77_port">77 HAFEN</string>
     <string name="nautical_vhf_auto_replay">DSC-Rufe automatisch wiedergeben</string>
-    <string name="nautical_vhf_auto_replay_desc">Neue VHF-Aussendungen automatisch wiedergeben</string>
     <string name="nautical_vhf_backend_desc">Mit VHF-Backend verbinden</string>
     <string name="nautical_vhf_backend_error_fmt">Backend-Fehler: %1$d</string>
     <string name="nautical_vhf_backend_url">VHF-Backend-API-URL</string>
@@ -172,8 +165,6 @@
     <string name="nautical_vhf_channel_fmt">Kanal: %1$s</string>
     <string name="nautical_vhf_copied_to_clipboard">VHF-Kanal %1$s kopiert</string>
     <string name="nautical_vhf_distress_script_btn">MAYDAY / PAN-PAN Sprechprotokoll</string>
-    <string name="nautical_vhf_dual_watch_off">DOPPELWACHE: AUS</string>
-    <string name="nautical_vhf_duration">%1$ds</string>
     <string name="nautical_vhf_error_invalid">Ungültiger Seefunkkanal</string>
     <string name="nautical_vhf_facility_channels">Hafen- und Betriebskanäle</string>
     <string name="nautical_vhf_history">VHF-Verlauf</string>
@@ -182,7 +173,6 @@
     <string name="nautical_vhf_live_stream">Live-Stream</string>
     <string name="nautical_vhf_mayday">MAYDAY</string>
     <string name="nautical_vhf_nature_of_emergency">Art des Notfalls / der Notmeldung</string>
-    <string name="nautical_vhf_no_history">Keine Aussendungen aufgezeichnet</string>
     <string name="nautical_vhf_no_transmissions">Keine aktuellen Audioaussendungen aufgezeichnet</string>
     <string name="nautical_vhf_pan_pan">PAN-PAN</string>
     <string name="nautical_vhf_picker_hint">Kanal eingeben (z. B. 16)</string>
@@ -206,7 +196,6 @@
     <string name="nautical_vhf_stop_audio">Audio stoppen</string>
     <string name="nautical_vhf_streaming_port">VHF-Streaming-Port</string>
     <string name="nautical_vhf_title">Seefunk VHF</string>
-    <string name="nautical_vhf_transmission_badge">KAN %1$s</string>
     <string name="nautical_vhf_transmission_received">Neue VHF-Aussendung: %1$s</string>
     <string name="nautical_vhf_url_missing">Die VHF-Backend-URL ist nicht konfiguriert.</string>
     <string name="nautical_vhf_widget_label">VHF-Befehl</string>
@@ -617,8 +606,6 @@
     <string name="nautical_ai_stt_unavailable">Spracherkennung ist auf diesem Gerät nicht verfügbar.</string>
     <string name="nautical_ai_stt_error">Sprachfehler: %1$s</string>
     <string name="nautical_ai_welcome">Hallo! Ich bin dein Boots-KI-Assistent. Frag mich alles über den Zustand deines Bootes.</string>
-    <string name="nautical_ai_no_text">Ich habe deine Anfrage verarbeitet, aber der Server hat keinen Text zurückgegeben.</string>
-    <string name="nautical_ai_connection_error">Entschuldigung, ich habe Verbindungsprobleme zum Bootssystem.</string>
     <string name="nautical_ai_server_error">Verbindungsfehler. Läuft Signal K?</string>
     <string name="nautical_ai_error_fmt">Fehler: %1$s</string>
     <string name="nautical_ai_stt_net_error">Netzwerkfehler</string>
