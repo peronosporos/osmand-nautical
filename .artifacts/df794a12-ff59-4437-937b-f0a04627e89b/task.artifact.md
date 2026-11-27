@@ -1,7 +1,0 @@
-- [x] Fix warnings in `TacticalProcessor.kt`
-- [x] Fix warnings in `NauticalPlugin.kt`
-- [x] Fix warnings in `NauticalMapLayer.kt`
-- [x] Fix warnings in `WeatherRoutingMapLayer.kt`
-- [x] Fix warnings in `S57FileReader.kt`
-- [x] Fix warnings in `NauticalSettingsFragment.kt`
-- [x] Verification

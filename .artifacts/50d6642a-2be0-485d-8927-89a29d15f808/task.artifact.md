@@ -1,4 +1,0 @@
-- [x] Fix `MarineState.kt`
-    - [x] Rename `autopilotTargetHeading` to `autopilotHeadingSet`
-    - [x] Rename `ForwardHazard.location` to `ForwardHazard.position`
-- [x] Verify build (verified via `analyze_file` on affected files)

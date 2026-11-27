@@ -1,2 +1,0 @@
-- [x] Modify `SecureStringPreference.java` for lazy initialization of `encryptedPrefs`
-- [/] Verify fix by checking logcat for crashes on startup

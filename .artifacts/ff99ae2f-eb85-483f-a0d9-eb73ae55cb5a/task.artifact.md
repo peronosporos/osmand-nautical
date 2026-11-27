@@ -1,5 +1,0 @@
-- [x] Fix `NAUTICAL_DR_SPEED` in `OsmandSettings.java` (Verified it is not missing/needed in current logic)
-- [x] Fix enum generic type errors in `OsmandSettings.java`
-- [x] Fix `PaletteConstants.DEFAULT_NAME` error in `OsmandSettings.java`
-- [x] Verify `PluginsHelper.java` cleanup
-- [x] Final verification with `analyze_file`

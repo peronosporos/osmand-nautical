@@ -1,4 +1,0 @@
-- [x] Implement `map` method in `CommonPreference.java`
-- [x] Fix nautical preferences in `OsmandSettings.java`
-- [x] Replace `ManeuverPlugin` with `SailingIntegrationPlugin` in `PluginsHelper.java`
-- [x] Verify build (via `analyze_file`)

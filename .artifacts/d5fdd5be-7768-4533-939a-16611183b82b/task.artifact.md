@@ -1,8 +1,0 @@
-- `[x]` Add new strings to `strings.xml`
-- `[x]` Update `NauticalPlugin.kt`
-    - `[x]` Track `connectionStatus` transitions in `marineStateListener`
-    - `[x]` Enhance `routeStepListener` with toast and next course TTS
-    - `[x]` Add toast to `checkOffCourseAlert`
-    - `[x]` Add TTS to `checkEmergencyPower`
-- `[x]` Verify `SignalKEngine.kt` callback triggering
-- `[x]` Manual verification of alerts and notifications

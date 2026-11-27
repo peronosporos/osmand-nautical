@@ -1,3 +1,0 @@
-- [x] Refactor `BaseMaterialBottomSheetDialogFragment.kt` to fix JVM signature clashes
-- [x] Verify the fix by analyzing the file
-- [x] Verify the build (manual)
