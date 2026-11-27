@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
@@ -29,7 +30,7 @@
                 android:id="@+id/txt_coverage_stats"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Charts: 0 | Coverage: 0 NM"
+                tools:text="Charts: 0 | Coverage: 0 NM"
                 android:textAppearance="@style/TextAppearance.AppCompat.Subhead"
                 android:textColor="?android:attr/textColorPrimary" />
 

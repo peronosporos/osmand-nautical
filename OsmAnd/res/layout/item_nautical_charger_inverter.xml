@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:layout_margin="4dp"
@@ -27,7 +28,7 @@
                 android:layout_weight="1"
                 android:textAppearance="@style/TextAppearance.AppCompat.Small"
                 android:textColor="?android:attr/textColorSecondary"
-                android:text="Inverter/Charger" />
+                tools:text="Inverter/Charger" />
 
             <TextView
                 android:id="@+id/txt_device_state"
@@ -35,7 +36,7 @@
                 android:layout_height="wrap_content"
                 android:textAppearance="@style/TextAppearance.AppCompat.Small"
                 android:textColor="?attr/colorAccent"
-                android:text="ON" />
+                tools:text="ON" />
         </LinearLayout>
 
         <LinearLayout
@@ -51,7 +52,7 @@
                 android:layout_height="wrap_content"
                 android:textAppearance="@style/TextAppearance.AppCompat.Medium"
                 android:textColor="?android:attr/textColorPrimary"
-                android:text="230V" />
+                tools:text="230V" />
 
             <TextView
                 android:id="@+id/txt_device_val2"
@@ -61,7 +62,7 @@
                 android:layout_marginStart="8dp"
                 android:textAppearance="@style/TextAppearance.AppCompat.Small"
                 android:textColor="?android:attr/textColorSecondary"
-                android:text="5.0A" />
+                tools:text="5.0A" />
 
             <Spinner
                 android:id="@+id/spinner_device_mode"
