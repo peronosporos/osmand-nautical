@@ -4,9 +4,13 @@ import io.mockk.*
 import kotlinx.coroutines.runBlocking
 import net.osmand.plus.OsmandApplication
 import net.osmand.plus.api.SQLiteAPI
+import net.osmand.plus.plugins.nautical.di.SailingDependencyContainer
 import net.osmand.plus.plugins.nautical.hazard.engine.NavtexMessage
 import net.osmand.plus.plugins.nautical.hazard.engine.NavtexSubject
 import net.osmand.plus.settings.backend.TestOsmandSettings
+import org.junit.After
+import org.junit.Assert.assertNotSame
+import org.junit.Assert.assertSame
 import org.junit.Before
 import org.junit.Test
 
@@ -69,6 +73,32 @@ class NavtexRepositoryTest {
         verify {
             db.execSQL(match { it.contains("INSERT OR REPLACE") }, any())
         }
+    }
+
+    @After
+    fun tearDown() {
+        // getNavtexRepository() caches a process-wide singleton; reset the
+        // seam so this class does not leak its instance into other tests.
+        SailingDependencyContainer.setNavtexRepositoryForTesting(null)
+    }
+
+    @Test
+    fun testSharedRepositorySingletonAcrossContainer() {
+        // Every NAVTEX construction site (multiplexer writer, view models,
+        // UI overlay) must observe the same repository instance, or
+        // bulletins persisted by the multiplexer never reach UI flows.
+        val repo1 = SailingDependencyContainer.getNavtexRepository(app)
+        val repo2 = SailingDependencyContainer.getNavtexRepository(app)
+        assertSame(repo1, repo2)
+
+        // The test seam overrides the singleton and clears it again.
+        val fake = mockk<NavtexRepository>()
+        SailingDependencyContainer.setNavtexRepositoryForTesting(fake)
+        assertSame(fake, SailingDependencyContainer.getNavtexRepository(app))
+
+        SailingDependencyContainer.setNavtexRepositoryForTesting(null)
+        val fresh = SailingDependencyContainer.getNavtexRepository(app)
+        assertNotSame(repo1, fresh)
     }
 
     @Test

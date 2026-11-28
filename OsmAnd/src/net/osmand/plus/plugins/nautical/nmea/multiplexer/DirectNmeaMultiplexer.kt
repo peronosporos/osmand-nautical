@@ -18,6 +18,7 @@ import net.osmand.plus.plugins.nautical.replay.NmeaStreamRecorder
 import net.osmand.plus.plugins.nautical.service.SailingDataAggregator
 
 import net.osmand.plus.plugins.nautical.hazard.engine.NavtexMessageDecoder
+import net.osmand.plus.plugins.nautical.hazard.engine.NavtexSentenceParser
 import net.osmand.plus.plugins.nautical.hazard.data.NavtexRepository
 
 /**
@@ -86,9 +87,32 @@ class DirectNmeaMultiplexer(
         // Pass to NAVTEX decoder if it looks like ASCII block
         if (transport != null) {
             val buffer = transportBuffers.getOrPut(transport) { StringBuilder() }
-            if (sentence.contains("ZCZC")) {
+            val isNmeaSentence = sentence.startsWith("$") || sentence.startsWith("!")
+            if (isNmeaSentence) {
+                // NMEA-formatted sentences must never be appended to an
+                // open raw-text block, or they pollute the message body.
+                // Proprietary NAVTEX sentences ($CRRXO/$CZCX text,
+                // $GPNVT position) carry the bulletin in their fields
+                // instead of ASCII lines, so route them through the
+                // sentence parser; anything else falls through to the
+                // regular NMEA/AIS handling below.
+                NavtexSentenceParser.parseNmeaSentence(sentence)?.let { msg ->
+                    navtexRepo?.upsertMessage(msg)
+                }
+            } else if (sentence.contains("ZCZC")) {
+                // A ZCZC header always starts a fresh block, discarding any
+                // incomplete previous one.
                 buffer.setLength(0)
                 buffer.append(sentence)
+                if (sentence.contains("NNNN")) {
+                    // Short broadcasts can carry the header and the
+                    // terminator in the same sentence; flush immediately or
+                    // the block would never be decoded.
+                    NavtexMessageDecoder.decode(buffer.toString())?.let { msg ->
+                        navtexRepo?.upsertMessage(msg)
+                    }
+                    buffer.setLength(0)
+                }
             } else if (buffer.isNotEmpty()) {
                 buffer.append("\n").append(sentence)
                 if (sentence.contains("NNNN")) {

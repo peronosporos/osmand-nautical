@@ -15,6 +15,7 @@ import kotlinx.coroutines.launch
 import net.osmand.Location
 import net.osmand.plus.OsmAndLocationProvider
 import net.osmand.plus.OsmandApplication
+import net.osmand.plus.plugins.nautical.di.SailingDependencyContainer
 import net.osmand.plus.plugins.nautical.hazard.data.NavtexRepository
 import net.osmand.plus.plugins.nautical.hazard.engine.NavtexMessage
 import net.osmand.plus.plugins.nautical.hazard.engine.NavtexSubject
@@ -33,8 +34,17 @@ data class NavtexUiState(
 
 class NavtexViewModel(
     private val app: OsmandApplication,
-    private val repository: NavtexRepository = NavtexRepository(app)
+    // The shared repository is the one the multiplexer writes to; a private
+    // default instance would never receive live bulletins.
+    private val repository: NavtexRepository = SailingDependencyContainer.getNavtexRepository(app)
 ) : ViewModel() {
+
+    private companion object {
+        // Bulletins dated up to this far ahead of the device clock are kept
+        // (small receiver clock skew), anything further in the future is
+        // filtered as invalid.
+        const val FUTURE_TIMESTAMP_TOLERANCE_MS = 60_000L
+    }
 
     private val settings = app.settings
     private val _filters = MutableStateFlow(
@@ -71,6 +81,11 @@ class NavtexViewModel(
 
         val filtered = messages.filter { msg ->
             // Filter out expired bulletins or messages with timestamp in the future / invalid
+            if (msg.timestamp <= 0) return@filter false
+            // A bulletin dated slightly ahead of the device clock is usually a
+            // small receiver clock skew, not a genuinely future message; a
+            // larger step is treated as invalid.
+            if (msg.timestamp - now > FUTURE_TIMESTAMP_TOLERANCE_MS) return@filter false
             if (now - msg.timestamp > expiryMs) return@filter false
 
             // Non-rejectable subject categories (A, B, D plus L, which is

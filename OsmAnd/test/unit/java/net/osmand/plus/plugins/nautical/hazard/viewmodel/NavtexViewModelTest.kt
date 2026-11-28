@@ -75,6 +75,24 @@ class NavtexViewModelTest {
     }
 
     @Test
+    fun testFutureAndInvalidTimestampsAreFiltered() = runTest {
+        val now = System.currentTimeMillis()
+        // A bulletin dated far in the future is invalid; it must not display
+        // even though its subject is urgent.
+        val future = NavtexMessage("1", 'A', NavtexSubject.NAVIGATIONAL_WARNING, 1, now + 3_600_000L, "", isUrgent = true)
+        // A zero timestamp is invalid as well.
+        val zero = NavtexMessage("2", 'A', NavtexSubject.NAVIGATIONAL_WARNING, 2, 0L, "", isUrgent = true)
+        // Small receiver clock skew (inside the tolerance window) is kept.
+        val skew = NavtexMessage("3", 'A', NavtexSubject.NAVIGATIONAL_WARNING, 3, now + 30_000L, "", isUrgent = true)
+        messagesFlow.value = listOf(future, zero, skew)
+
+        val state = viewModel.uiState.first()
+
+        assertEquals(1, state.messages.size)
+        assertEquals("3", state.messages[0].id)
+    }
+
+    @Test
     fun testProximityFiltering() = runTest {
         // Expired bulletins are filtered out, so the fixture must be dated now.
         val now = System.currentTimeMillis()

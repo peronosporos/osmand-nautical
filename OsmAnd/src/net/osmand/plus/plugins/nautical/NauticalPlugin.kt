@@ -1026,7 +1026,10 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
 
     fun updateNmeaSource() {
         val source = app.settings.NAUTICAL_NMEA_SOURCE.get()
-        val navtexRepo = net.osmand.plus.plugins.nautical.hazard.data.NavtexRepository(app)
+        // The NAVTEX repository is a process-wide singleton: a private
+        // instance here would persist multiplexer bulletins into a
+        // database the UI flows never observe.
+        val navtexRepo = SailingDependencyContainer.getNavtexRepository(app)
         val multiplexer = SailingDependencyContainer.getNmeaMultiplexer(app, pluginScope!!, navtexRepo)
         multiplexer.stopAll()
 

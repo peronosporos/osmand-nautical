@@ -53,6 +53,37 @@ object SailingDependencyContainer {
     val nmeaMultiplexer: DirectNmeaMultiplexer?
         get() = _nmeaMultiplexer
 
+    // Single shared NAVTEX repository. It was previously constructed in
+    // four places (container initialize(), NauticalPlugin.updateNmeaSource,
+    // NauticalUiOverlayManager.initNavtexSystem and the NavtexViewModel
+    // default parameter); every instance owns a private StateFlow with no
+    // cross-instance notification, so bulletins persisted by the multiplexer
+    // never reached the UI flows until a restart. All construction sites
+    // must go through getNavtexRepository().
+    private var _navtexRepository: NavtexRepository? = null
+
+    /**
+     * The one NAVTEX repository for the process: the multiplexer writer and
+     * every UI reader must observe the same instance, or persisted
+     * bulletins never surface in the HUD, list or map layer.
+     */
+    @Synchronized
+    fun getNavtexRepository(app: OsmandApplication): NavtexRepository {
+        _navtexRepository?.let { return it }
+        val repo = NavtexRepository(app)
+        _navtexRepository = repo
+        return repo
+    }
+
+    /**
+     * Test seam for JVM unit tests. Production code must use
+     * getNavtexRepository(); tests reset it to null in @After so the
+     * singleton does not leak across test classes.
+     */
+    fun setNavtexRepositoryForTesting(repo: NavtexRepository?) {
+        _navtexRepository = repo
+    }
+
     /**
      * Test seam for JVM unit tests: lets a test inject its own multiplexer
      * instance so sentence routing through the container can be exercised
@@ -102,7 +133,7 @@ object SailingDependencyContainer {
             }
         }
 
-        val navtexRepo = NavtexRepository(app)
+        val navtexRepo = getNavtexRepository(app)
         val aggregator = SailingDataAggregator()
         val multiplexer = DirectNmeaMultiplexer(app, aggregator, scope, navtexRepo = navtexRepo)
         _nmeaMultiplexer = multiplexer
@@ -121,6 +152,12 @@ object SailingDependencyContainer {
         
         _nmeaMultiplexer?.stopAll()
         _nmeaMultiplexer = null
+        // NOTE: _navtexRepository is deliberately NOT cleared here. A new
+        // multiplexer is not created by teardown, so a stale writer can only
+        // exist if the caller never re-runs initialize(); clearing the cache
+        // would instead guarantee a split brain (a fresh repository for new
+        // readers while a still-alive multiplexer keeps writing into the
+        // old one).
         
         containerScope?.cancel()
         containerScope = null

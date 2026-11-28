@@ -188,7 +188,9 @@ class NauticalUiOverlayManager(private val app: OsmandApplication) {
         onNavtexVmCreated: (NavtexViewModel) -> Unit
     ) {
         if (navtexHudView?.context == activity) return
-        val repo = net.osmand.plus.plugins.nautical.hazard.data.NavtexRepository(app)
+        // The shared repository is the one the NMEA multiplexer writes to;
+        // a private instance here would never see live bulletins.
+        val repo = SailingDependencyContainer.getNavtexRepository(app)
         val viewModel = NavtexViewModel(app, repo)
         onNavtexVmCreated(viewModel)
 
