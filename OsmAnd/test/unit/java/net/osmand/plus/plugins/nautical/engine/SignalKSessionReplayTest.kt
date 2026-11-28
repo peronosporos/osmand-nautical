@@ -22,6 +22,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
+import org.junit.Assert.fail
 import org.junit.Before
 import org.junit.Test
 
@@ -100,16 +101,44 @@ class SignalKSessionReplayTest {
     @Test
     fun `recorded passage produces golden end state`() = runTest(testDispatcher) {
         RecordedSignalSessions.SHORT_PASSAGE.forEach { engine.handleIncomingMessage(it) }
-        assertTrue("recorded passage did not settle in time", awaitPipeline {
+
+        // The engine ingests the messages in batches on its own worker, so
+        // the settle condition must wait for the LAST message of the
+        // recording: waiting only for the depth stamp and the AIS contact
+        // can return while the final batch is still in flight. The position
+        // path is only stamped with the final fix time once the last fix is
+        // accepted, so it is an exact "the whole session was replayed" pin.
+        val finalFixTime = net.osmand.plus.plugins.nautical.utils.TemporalUtils
+            .parseIso8601("2026-08-15T12:00:05.000Z")
+        val settled = awaitPipeline {
             val state = engine.getCurrentState()
-            state.timestamps.containsKey(RecordedSignalSessions.IGNORED_DEPTH_PATH) &&
+            state.timestamps[SignalKPaths.NAV_POSITION] == finalFixTime &&
+                state.timestamps.containsKey(RecordedSignalSessions.IGNORED_DEPTH_PATH) &&
                 aisManager.getAisObjects().isNotEmpty()
-        })
+        }
+        if (!settled) {
+            val partial = engine.getCurrentState()
+            fail("recorded passage did not settle in time. Partial end state: " +
+                "lat=${partial.latitude} lon=${partial.longitude} " +
+                "sog=${partial.speedOverGround} stw=${partial.speedThroughWater} " +
+                "hdg=${partial.headingTrue} cog=${partial.courseOverGroundTrue} " +
+                "depth=${partial.depthBelowTransducer} " +
+                "wind=${partial.windDirectionApparent}/${partial.windSpeedApparent} " +
+                "ts=${partial.timestamps}")
+        }
 
         val state = engine.getCurrentState()
 
         // Position and velocity from the LAST valid fix in the recording.
-        assertEquals(37.7802, state.latitude!!, 0.0001)
+        // The message dumps the end state so a CI failure shows exactly
+        // which paths of the recorded session were ingested.
+        val endStateDump = "lat=${state.latitude} lon=${state.longitude} " +
+            "sog=${state.speedOverGround} stw=${state.speedThroughWater} " +
+            "hdg=${state.headingTrue} cog=${state.courseOverGroundTrue} " +
+            "depth=${state.depthBelowTransducer} " +
+            "wind=${state.windDirectionApparent}/${state.windSpeedApparent} " +
+            "ts=${state.timestamps.entries.joinToString { "${it.key}=${it.value}" }}"
+        assertEquals(endStateDump, 37.7802, state.latitude!!, 0.0001)
         assertEquals(-122.4245, state.longitude!!, 0.0001)
         assertEquals(6.9, state.speedOverGround!!, 0.001)
 

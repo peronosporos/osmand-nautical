@@ -54,6 +54,15 @@ class DockingManeuverTest {
         // is only assigned by the Android app startup and is null on a plain
         // JVM. Formatting is a UI concern for this test, so stub the two
         // formatter entry points the maneuver uses.
+        // OsmAndFormatter's static initializer calls its own statics (the
+        // day-name table via getLettersStringArray, setTwelveHoursFormatting
+        // for the time formatters). If that initialization runs while the
+        // static mock is recording, the intercepted initializer calls land
+        // inside the every-block and MockK's recording determinism check
+        // aborts with "every/verify {} block were run several times".
+        // Initialize the class before the mock is installed so only the
+        // stubbed call is recorded on every run of the block.
+        Class.forName("net.osmand.plus.utils.OsmAndFormatter")
         mockkStatic(OsmAndFormatter::class)
         every { OsmAndFormatter.getFormattedDistance(any(), any<OsmandApplication>()) } returns "100 m"
         every { OsmAndFormatter.getFormattedSpeed(any(), any<OsmandApplication>()) } returns "5 kn"

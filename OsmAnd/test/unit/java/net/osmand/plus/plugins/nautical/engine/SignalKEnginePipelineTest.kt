@@ -184,8 +184,11 @@ class SignalKEnginePipelineTest {
 
         engine.handleDelta(aisDelta)
 
+        // Settle on the target's position, not on the object's existence:
+        // the object is registered before its values are applied, and the
+        // assertion below needs the position to have landed.
         assertTrue("AIS delta pipeline did not settle in time", awaitPipeline {
-            aisManager.getAisObjects().isNotEmpty()
+            aisManager.getAisObjects().firstOrNull()?.position != null
         })
 
         val aisObjects = aisManager.getAisObjects()

@@ -209,7 +209,9 @@ class NauticalAisManager(private val app: OsmandApplication) : AisDataListener {
 
     fun updateVessel(context: String, updateObj: JSONObject) {
         val numericMmsi = resolveMmsiFromContext(context) ?: return
+        var freshlyCreated = false
         val target = objects.getOrPut(numericMmsi) {
+            freshlyCreated = true
             val type = context.substringBefore(".")
             val msgType = when (type) {
                 "aircraft" -> 9
@@ -218,6 +220,17 @@ class NauticalAisManager(private val app: OsmandApplication) : AisDataListener {
                 else -> 1 // Default vessel
             }
             AisObject(numericMmsi, msgType, AisObjectConstants.INVALID_LAT, AisObjectConstants.INVALID_LON)
+        }
+        // The AisObject constructor stamps lastUpdate with the device wall
+        // clock. The out-of-order gate in updateAisTargetInternal would then
+        // reject the vessel's very first delta whenever its Signal K
+        // timestamp trails the device clock (server clock skew, replayed or
+        // backfilled sessions), leaving a new target permanently without
+        // position or name. A freshly created target has not accepted any
+        // update yet, so the gate must compare against zero until the first
+        // update is taken.
+        if (freshlyCreated) {
+            target.lastUpdate = 0L
         }
 
         // Source Detection (APRS / Meshtastic)
