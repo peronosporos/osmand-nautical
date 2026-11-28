@@ -587,6 +587,9 @@
     <string name="nautical_mob_triggered">MANN ÜBER BORD: Notfallmarke erstellt und Navigation gestartet.</string>
     <string name="nautical_mob_emergency_message">MOB-Notfallmarke gesetzt. Rückkehr zur Position.</string>
     <string name="nautical_alarm_banner_dismiss">Hinweis ausblenden</string>
+    <string name="nautical_pilot_unavailable">Der Autopilot benötigt eine aktive SignalK-Verbindung.</string>
+    <string name="nautical_pilot_open_setup">Einrichtungsassistenten öffnen</string>
+    <string name="nautical_pilot_route_pick_gpx">Der Routenmodus folgt einer Spur. Wählen Sie eine GPX-Spur zum Laden.</string>
     <string name="nautical_night_vision">Nachtsicht (Rotfilter)</string>
     <string name="nautical_passage_plan_title">Reiseplan</string>
     <string name="nautical_pilot_title">Nautischer Pilot</string>

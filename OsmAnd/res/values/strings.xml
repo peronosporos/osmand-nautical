@@ -435,6 +435,9 @@
     <string name="nautical_mob_triggered">MAN OVERBOARD: Emergency marker created and navigation initiated.</string>
     <string name="nautical_mob_emergency_message">Emergency MOB marker dropped. Returning to position.</string>
     <string name="nautical_alarm_banner_dismiss">Dismiss banner</string>
+    <string name="nautical_pilot_unavailable">Autopilot control needs an active SignalK connection.</string>
+    <string name="nautical_pilot_open_setup">Open setup wizard</string>
+    <string name="nautical_pilot_route_pick_gpx">Route mode follows a track. Choose a GPX track to load.</string>
     <string name="nautical_vhf_title">VHF Marine Radio</string>
     <string name="nautical_signalk_server">Signal K Server</string>
     <string name="nautical_weigh_anchor">Weigh Anchor</string>

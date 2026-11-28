@@ -149,7 +149,11 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
         val plugin = NauticalPlugin.getInstance()
 
         if (engine == null || autopilot == null) {
-            dismissAllowingStateLoss()
+            // Previously this sheet dismissed itself silently when the
+            // SignalK engine was not initialized, leaving the user with
+            // no feedback at all. Show the requirement and offer the
+            // setup wizard instead.
+            addRequirementsView()
             return
         }
 
@@ -294,6 +298,10 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
                             autopilot.setAutopilotMode("track")
                             speakMode("TRACK")
                         } else {
+                            // Route mode needs a track: explain the flow
+                            // before opening the file picker, which otherwise
+                            // appears without any context.
+                            app.showToastMessage(R.string.nautical_pilot_route_pick_gpx)
                             GpxDialogs.selectGPXFile(
                                 requireActivity(), false, false,
                                 { result ->
@@ -347,30 +355,24 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
             it.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
         }
 
-        // Tactical Maneuver Actions with Pre-activation Target Heading Setup
+        // Tactical Maneuver Actions with Pre-activation Target Heading Setup.
+        // Button order and labels come from PilotManeuverCatalog.
+        val secondaryButtons = listOf(
+            btnManeuverSec1, btnManeuverSec2, btnManeuverSec3, btnManeuverSec4,
+            btnManeuverSec5, btnManeuverSec6, btnManeuverSec7, btnManeuverSec8,
+            btnManeuverSec9, btnManeuverSec10, btnManeuverSec11, btnManeuverSec12,
+            btnManeuverSec13, btnManeuverSec14
+        )
+        val secondaryRows = listOf(
+            layoutSecondaryRow3, layoutSecondaryRow4, layoutSecondaryRow5,
+            layoutSecondaryRow6, layoutSecondaryRow7
+        )
         val helper = AutopilotBottomSheetHelper(
             sheet = this,
             tackPortBtn = tackPortBtn,
             tackStbdBtn = tackStbdBtn,
-            btnManeuverSec1 = btnManeuverSec1,
-            btnManeuverSec2 = btnManeuverSec2,
-            btnManeuverSec3 = btnManeuverSec3,
-            btnManeuverSec4 = btnManeuverSec4,
-            btnManeuverSec5 = btnManeuverSec5,
-            btnManeuverSec6 = btnManeuverSec6,
-            btnManeuverSec7 = btnManeuverSec7,
-            btnManeuverSec8 = btnManeuverSec8,
-            btnManeuverSec9 = btnManeuverSec9,
-            btnManeuverSec10 = btnManeuverSec10,
-            btnManeuverSec11 = btnManeuverSec11,
-            btnManeuverSec12 = btnManeuverSec12,
-            btnManeuverSec13 = btnManeuverSec13,
-            btnManeuverSec14 = btnManeuverSec14,
-            layoutSecondaryRow3 = layoutSecondaryRow3,
-            layoutSecondaryRow4 = layoutSecondaryRow4,
-            layoutSecondaryRow5 = layoutSecondaryRow5,
-            layoutSecondaryRow6 = layoutSecondaryRow6,
-            layoutSecondaryRow7 = layoutSecondaryRow7,
+            secondaryButtons = secondaryButtons,
+            secondaryRows = secondaryRows,
             onInitiateManeuver = { title, targetHeading, onExecute ->
                 showEmbeddedConfirmation(title, targetHeading, onExecute)
             }
@@ -388,75 +390,17 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
             helper.handlePrimaryManeuver(settings.NAUTICAL_VESSEL_TYPE.get(), state, isPort = false)
         }
 
-        btnManeuverSec1.setOnClickListener {
-            val state = NauticalPlugin.engine?.getCurrentState()
-            helper.handleSecondaryManeuver(1, settings.NAUTICAL_VESSEL_TYPE.get(), state)
-            it.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
-        }
-        btnManeuverSec2.setOnClickListener {
-            val state = NauticalPlugin.engine?.getCurrentState()
-            helper.handleSecondaryManeuver(2, settings.NAUTICAL_VESSEL_TYPE.get(), state)
-            it.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
-        }
-        btnManeuverSec3.setOnClickListener {
-            val state = NauticalPlugin.engine?.getCurrentState()
-            helper.handleSecondaryManeuver(3, settings.NAUTICAL_VESSEL_TYPE.get(), state)
-            it.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
-        }
-        btnManeuverSec4.setOnClickListener {
-            val state = NauticalPlugin.engine?.getCurrentState()
-            helper.handleSecondaryManeuver(4, settings.NAUTICAL_VESSEL_TYPE.get(), state)
-            it.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
-        }
-        btnManeuverSec5.setOnClickListener {
-            val state = NauticalPlugin.engine?.getCurrentState()
-            helper.handleSecondaryManeuver(5, settings.NAUTICAL_VESSEL_TYPE.get(), state)
-            it.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
-        }
-        btnManeuverSec6.setOnClickListener {
-            val state = NauticalPlugin.engine?.getCurrentState()
-            helper.handleSecondaryManeuver(6, settings.NAUTICAL_VESSEL_TYPE.get(), state)
-            it.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
-        }
-        btnManeuverSec7.setOnClickListener {
-            val state = NauticalPlugin.engine?.getCurrentState()
-            helper.handleSecondaryManeuver(7, settings.NAUTICAL_VESSEL_TYPE.get(), state)
-            it.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
-        }
-        btnManeuverSec8.setOnClickListener {
-            val state = NauticalPlugin.engine?.getCurrentState()
-            helper.handleSecondaryManeuver(8, settings.NAUTICAL_VESSEL_TYPE.get(), state)
-            it.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
-        }
-        btnManeuverSec9.setOnClickListener {
-            val state = NauticalPlugin.engine?.getCurrentState()
-            helper.handleSecondaryManeuver(9, settings.NAUTICAL_VESSEL_TYPE.get(), state)
-            it.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
-        }
-        btnManeuverSec10.setOnClickListener {
-            val state = NauticalPlugin.engine?.getCurrentState()
-            helper.handleSecondaryManeuver(10, settings.NAUTICAL_VESSEL_TYPE.get(), state)
-            it.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
-        }
-        btnManeuverSec11.setOnClickListener {
-            val state = NauticalPlugin.engine?.getCurrentState()
-            helper.handleSecondaryManeuver(11, settings.NAUTICAL_VESSEL_TYPE.get(), state)
-            it.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
-        }
-        btnManeuverSec12.setOnClickListener {
-            val state = NauticalPlugin.engine?.getCurrentState()
-            helper.handleSecondaryManeuver(12, settings.NAUTICAL_VESSEL_TYPE.get(), state)
-            it.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
-        }
-        btnManeuverSec13.setOnClickListener {
-            val state = NauticalPlugin.engine?.getCurrentState()
-            helper.handleSecondaryManeuver(13, settings.NAUTICAL_VESSEL_TYPE.get(), state)
-            it.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
-        }
-        btnManeuverSec14.setOnClickListener {
-            val state = NauticalPlugin.engine?.getCurrentState()
-            helper.handleSecondaryManeuver(14, settings.NAUTICAL_VESSEL_TYPE.get(), state)
-            it.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+        // Secondary maneuver buttons are data-bound to the catalog: the
+        // button index maps to the catalog entry for the current vessel type.
+        secondaryButtons.forEachIndexed { index, btn ->
+            btn.setOnClickListener {
+                val state = NauticalPlugin.engine?.getCurrentState()
+                val kind = PilotManeuverCatalog.secondaryManeuvers(settings.NAUTICAL_VESSEL_TYPE.get()).getOrNull(index)?.kind
+                if (kind != null) {
+                    helper.handleSecondaryManeuver(kind, state)
+                    it.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                }
+            }
         }
 
         updateManeuverButtons()
@@ -528,6 +472,37 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
         }
 
         items.add(BaseBottomSheetItem.Builder().setCustomView(customView).create())
+    }
+
+    private fun addRequirementsView() {
+        addTitleItem(getString(R.string.nautical_pilot_title))
+        val themedCtx = net.osmand.plus.utils.UiUtilities.getThemedContext(requireContext(), nightMode)
+        val density = resources.displayMetrics.density
+        val root = LinearLayout(themedCtx).apply {
+            orientation = LinearLayout.VERTICAL
+            val pad = (16 * density).toInt()
+            setPadding(pad, pad, pad, pad)
+        }
+        val explanation = TextView(themedCtx).apply {
+            setText(R.string.nautical_pilot_unavailable)
+            setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 14f)
+            setTextColor(net.osmand.plus.utils.AndroidUtils.getColorFromAttr(themedCtx, android.R.attr.textColorPrimary))
+        }
+        root.addView(explanation)
+        val openWizardBtn = MaterialButton(themedCtx).apply {
+            setText(R.string.nautical_pilot_open_setup)
+            val margin = (12 * density).toInt()
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { topMargin = margin }
+            setOnClickListener {
+                net.osmand.plus.plugins.nautical.ui.NauticalSetupWizardDialog.show(parentFragmentManager)
+                dismiss()
+            }
+        }
+        root.addView(openWizardBtn)
+        items.add(BaseBottomSheetItem.Builder().setCustomView(root).create())
     }
 
     private fun syncUiWithState() {

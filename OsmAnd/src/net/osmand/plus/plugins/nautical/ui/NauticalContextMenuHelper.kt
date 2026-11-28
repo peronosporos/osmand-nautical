@@ -102,6 +102,19 @@ class NauticalContextMenuHelper(private val app: OsmandApplication) {
                 }
             )
 
+            // Pilot sheet entry point: previously reachable only via a
+            // user-configured quick action.
+            adapter.addItem(
+                ContextMenuItem("nautical_item_pilot").apply {
+                    setTitleId(R.string.nautical_pilot_title, mapActivity)
+                    icon = R.drawable.ic_action_compass
+                    setListener { _, _, _, _ ->
+                        net.osmand.plus.plugins.nautical.ui.widgets.NauticalPilotBottomSheet.show(mapActivity.supportFragmentManager)
+                        true
+                    }
+                }
+            )
+
             // Overlays Group
             adapter.addItem(
                 ContextMenuItem("nautical_overlays_group").apply {

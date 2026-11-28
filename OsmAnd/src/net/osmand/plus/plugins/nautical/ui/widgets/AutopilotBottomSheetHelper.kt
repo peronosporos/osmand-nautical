@@ -8,159 +8,50 @@ import net.osmand.plus.plugins.nautical.engine.MarineState
 import net.osmand.plus.settings.enums.VesselType
 import kotlin.math.abs
 
+/**
+ * Binds the pilot sheet maneuver buttons to their actions.
+ *
+ * Button texts, accessibility labels, and row visibility come from
+ * [PilotManeuverCatalog]; execution is keyed by [PilotManeuverKind], so
+ * each maneuver action exists exactly once regardless of which button
+ * position it occupies for a given vessel type.
+ */
 class AutopilotBottomSheetHelper(
     private val sheet: NauticalPilotBottomSheet,
     private val tackPortBtn: MaterialButton,
     private val tackStbdBtn: MaterialButton,
-    private val btnManeuverSec1: MaterialButton,
-    private val btnManeuverSec2: MaterialButton,
-    private val btnManeuverSec3: MaterialButton,
-    private val btnManeuverSec4: MaterialButton,
-    private val btnManeuverSec5: MaterialButton,
-    private val btnManeuverSec6: MaterialButton,
-    private val btnManeuverSec7: MaterialButton,
-    private val btnManeuverSec8: MaterialButton,
-    private val btnManeuverSec9: MaterialButton,
-    private val btnManeuverSec10: MaterialButton,
-    private val btnManeuverSec11: MaterialButton,
-    private val btnManeuverSec12: MaterialButton,
-    private val btnManeuverSec13: MaterialButton,
-    private val btnManeuverSec14: MaterialButton,
-    private val layoutSecondaryRow3: View,
-    private val layoutSecondaryRow4: View,
-    private val layoutSecondaryRow5: View,
-    private val layoutSecondaryRow6: View,
-    private val layoutSecondaryRow7: View,
+    private val secondaryButtons: List<MaterialButton>,
+    private val secondaryRows: List<View>,
     private val onInitiateManeuver: (title: String, targetHeading: Int?, onExecute: (targetHeading: Int?) -> Unit) -> Unit
 ) {
 
     fun updateManeuverButtons(vesselType: VesselType) {
-        val isProa = vesselType == VesselType.PROA
-        if (isProa) {
-            // Proa / Shunter: Shunt & Center Rudder on primary row.
-            tackPortBtn.text = sheet.getString(R.string.nautical_shunt)
-            tackPortBtn.contentDescription = sheet.getString(R.string.nautical_shunt)
-            tackStbdBtn.text = sheet.getString(R.string.nautical_center_rudder)
-            tackStbdBtn.contentDescription = sheet.getString(R.string.nautical_center_rudder)
+        tackPortBtn.text = sheet.getString(PilotManeuverCatalog.primaryPortLabelRes(vesselType))
+        tackPortBtn.contentDescription = sheet.getString(PilotManeuverCatalog.primaryPortDescriptionRes(vesselType))
+        tackStbdBtn.text = sheet.getString(PilotManeuverCatalog.primaryStarboardLabelRes(vesselType))
+        tackStbdBtn.contentDescription = sheet.getString(PilotManeuverCatalog.primaryStarboardDescriptionRes(vesselType))
 
-            // Secondary Panel (Heave-To, Tack, and Gybe are hidden):
-            // Row 1 (Anchor): Drop & Set Anchor, Weigh Anchor
-            btnManeuverSec1.text = sheet.getString(R.string.nautical_maneuver_anchoring)
-            btnManeuverSec1.contentDescription = sheet.getString(R.string.nautical_maneuver_anchoring)
-            btnManeuverSec1.visibility = View.VISIBLE
-            btnManeuverSec2.text = sheet.getString(R.string.nautical_weigh_anchor)
-            btnManeuverSec2.contentDescription = sheet.getString(R.string.nautical_weigh_anchor)
-            btnManeuverSec2.visibility = View.VISIBLE
-
-            // Row 2 (Harbor / Mooring): Alongside Docking, Stern-to Med Mooring
-            btnManeuverSec3.text = sheet.getString(R.string.nautical_maneuver_docking)
-            btnManeuverSec3.contentDescription = sheet.getString(R.string.nautical_maneuver_docking)
-            btnManeuverSec3.visibility = View.VISIBLE
-            btnManeuverSec4.text = sheet.getString(R.string.nautical_maneuver_med_mooring)
-            btnManeuverSec4.contentDescription = sheet.getString(R.string.nautical_maneuver_med_mooring)
-            btnManeuverSec4.visibility = View.VISIBLE
-
-            // Row 3 (Harbor / Mooring): Mooring Buoy, Slip Exit
-            layoutSecondaryRow3.visibility = View.VISIBLE
-            btnManeuverSec5.text = sheet.getString(R.string.nautical_maneuver_mooring)
-            btnManeuverSec5.contentDescription = sheet.getString(R.string.nautical_maneuver_mooring)
-            btnManeuverSec5.visibility = View.VISIBLE
-            btnManeuverSec6.text = sheet.getString(R.string.nautical_maneuver_slip_exit)
-            btnManeuverSec6.contentDescription = sheet.getString(R.string.nautical_maneuver_slip_exit)
-            btnManeuverSec6.visibility = View.VISIBLE
-
-            // Row 4 (Tactical): Dodge Port, Dodge Starboard
-            layoutSecondaryRow4.visibility = View.VISIBLE
-            btnManeuverSec7.text = sheet.getString(R.string.nautical_dodge_port_label)
-            btnManeuverSec7.contentDescription = sheet.getString(R.string.nautical_dodge_port_label)
-            btnManeuverSec7.visibility = View.VISIBLE
-            btnManeuverSec8.text = sheet.getString(R.string.nautical_dodge_stbd_label)
-            btnManeuverSec8.contentDescription = sheet.getString(R.string.nautical_dodge_stbd_label)
-            btnManeuverSec8.visibility = View.VISIBLE
-
-            // Row 5 (Tactical): Holding Pattern, Emergency Stop
-            layoutSecondaryRow5.visibility = View.VISIBLE
-            btnManeuverSec9.text = sheet.getString(R.string.nautical_holding_pattern)
-            btnManeuverSec9.contentDescription = sheet.getString(R.string.nautical_holding_pattern)
-            btnManeuverSec9.visibility = View.VISIBLE
-            btnManeuverSec10.text = sheet.getString(R.string.nautical_emergency_stop_label)
-            btnManeuverSec10.contentDescription = sheet.getString(R.string.nautical_emergency_stop_label)
-            btnManeuverSec10.visibility = View.VISIBLE
-
-            layoutSecondaryRow6.visibility = View.GONE
-            layoutSecondaryRow7.visibility = View.GONE
-        } else {
-            // Conventional Monohull / Catamaran:
-            tackPortBtn.text = sheet.getString(R.string.nautical_tack_port_short)
-            tackPortBtn.contentDescription = sheet.getString(R.string.nautical_tack_port)
-            tackStbdBtn.text = sheet.getString(R.string.nautical_tack_stbd_short)
-            tackStbdBtn.contentDescription = sheet.getString(R.string.nautical_tack_stbd)
-
-            // Row 1: Gybe Port, Gybe Starboard
-            btnManeuverSec1.text = sheet.getString(R.string.nautical_gybe_port_short)
-            btnManeuverSec1.contentDescription = sheet.getString(R.string.nautical_gybe_port_label)
-            btnManeuverSec1.visibility = View.VISIBLE
-            btnManeuverSec2.text = sheet.getString(R.string.nautical_gybe_stbd_short)
-            btnManeuverSec2.contentDescription = sheet.getString(R.string.nautical_gybe_stbd_label)
-            btnManeuverSec2.visibility = View.VISIBLE
-
-            // Row 2: Heave-To, Center Rudder
-            btnManeuverSec3.text = sheet.getString(R.string.nautical_heave_to)
-            btnManeuverSec3.contentDescription = sheet.getString(R.string.nautical_heave_to)
-            btnManeuverSec3.visibility = View.VISIBLE
-            btnManeuverSec4.text = sheet.getString(R.string.nautical_center_rudder)
-            btnManeuverSec4.contentDescription = sheet.getString(R.string.nautical_center_rudder)
-            btnManeuverSec4.visibility = View.VISIBLE
-
-            // Row 3 (Anchor): Drop & Set Anchor, Weigh Anchor
-            layoutSecondaryRow3.visibility = View.VISIBLE
-            btnManeuverSec5.text = sheet.getString(R.string.nautical_maneuver_anchoring)
-            btnManeuverSec5.contentDescription = sheet.getString(R.string.nautical_maneuver_anchoring)
-            btnManeuverSec5.visibility = View.VISIBLE
-            btnManeuverSec6.text = sheet.getString(R.string.nautical_weigh_anchor)
-            btnManeuverSec6.contentDescription = sheet.getString(R.string.nautical_weigh_anchor)
-            btnManeuverSec6.visibility = View.VISIBLE
-
-            // Row 4 (Harbor / Mooring): Alongside Docking, Stern-to Med Mooring
-            layoutSecondaryRow4.visibility = View.VISIBLE
-            btnManeuverSec7.text = sheet.getString(R.string.nautical_maneuver_docking)
-            btnManeuverSec7.contentDescription = sheet.getString(R.string.nautical_maneuver_docking)
-            btnManeuverSec7.visibility = View.VISIBLE
-            btnManeuverSec8.text = sheet.getString(R.string.nautical_maneuver_med_mooring)
-            btnManeuverSec8.contentDescription = sheet.getString(R.string.nautical_maneuver_med_mooring)
-            btnManeuverSec8.visibility = View.VISIBLE
-
-            // Row 5 (Harbor / Mooring): Mooring Buoy, Slip Exit
-            layoutSecondaryRow5.visibility = View.VISIBLE
-            btnManeuverSec9.text = sheet.getString(R.string.nautical_maneuver_mooring)
-            btnManeuverSec9.contentDescription = sheet.getString(R.string.nautical_maneuver_mooring)
-            btnManeuverSec9.visibility = View.VISIBLE
-            btnManeuverSec10.text = sheet.getString(R.string.nautical_maneuver_slip_exit)
-            btnManeuverSec10.contentDescription = sheet.getString(R.string.nautical_maneuver_slip_exit)
-            btnManeuverSec10.visibility = View.VISIBLE
-
-            // Row 6 (Tactical): Dodge Port, Dodge Starboard
-            layoutSecondaryRow6.visibility = View.VISIBLE
-            btnManeuverSec11.text = sheet.getString(R.string.nautical_dodge_port_label)
-            btnManeuverSec11.contentDescription = sheet.getString(R.string.nautical_dodge_port_label)
-            btnManeuverSec11.visibility = View.VISIBLE
-            btnManeuverSec12.text = sheet.getString(R.string.nautical_dodge_stbd_label)
-            btnManeuverSec12.contentDescription = sheet.getString(R.string.nautical_dodge_stbd_label)
-            btnManeuverSec12.visibility = View.VISIBLE
-
-            // Row 7 (Tactical): Holding Pattern, Emergency Stop
-            layoutSecondaryRow7.visibility = View.VISIBLE
-            btnManeuverSec13.text = sheet.getString(R.string.nautical_holding_pattern)
-            btnManeuverSec13.contentDescription = sheet.getString(R.string.nautical_holding_pattern)
-            btnManeuverSec13.visibility = View.VISIBLE
-            btnManeuverSec14.text = sheet.getString(R.string.nautical_emergency_stop_label)
-            btnManeuverSec14.contentDescription = sheet.getString(R.string.nautical_emergency_stop_label)
-            btnManeuverSec14.visibility = View.VISIBLE
+        val maneuvers = PilotManeuverCatalog.secondaryManeuvers(vesselType)
+        secondaryButtons.forEachIndexed { index, btn ->
+            val maneuver = maneuvers.getOrNull(index)
+            if (maneuver == null) {
+                btn.visibility = View.GONE
+            } else {
+                btn.text = sheet.getString(maneuver.labelRes)
+                btn.contentDescription = sheet.getString(maneuver.descriptionRes)
+                btn.visibility = View.VISIBLE
+            }
+        }
+        // Rows 3..7 hold buttons 5..14 in pairs. Row number k is visible
+        // when the catalog holds at least 2k-1 maneuvers (see catalog doc).
+        secondaryRows.forEachIndexed { rowIndex, row ->
+            val rowNumber = rowIndex + 3
+            row.visibility = if (maneuvers.size >= 2 * rowNumber - 1) View.VISIBLE else View.GONE
         }
     }
 
     fun handlePrimaryManeuver(vesselType: VesselType, state: MarineState?, isPort: Boolean) {
-        val isProa = vesselType == VesselType.PROA
+        val isProa = PilotManeuverCatalog.isProa(vesselType)
         // No invented 0-degree base heading: maneuvers that compute a target
         // from the current heading refuse when nothing was measured.
         val hasHeading = state?.targetHeading != null || state?.headingTrue != null
@@ -213,8 +104,7 @@ class AutopilotBottomSheetHelper(
         }
     }
 
-    fun handleSecondaryManeuver(index: Int, vesselType: VesselType, state: MarineState?) {
-        val isProa = vesselType == VesselType.PROA
+    fun handleSecondaryManeuver(kind: PilotManeuverKind, state: MarineState?) {
         // No invented 0-degree base heading: dodge/gybe below refuse when
         // nothing was measured (same honesty rule as the primary maneuvers).
         val hasHeading = state?.targetHeading != null || state?.headingTrue != null
@@ -224,224 +114,106 @@ class AutopilotBottomSheetHelper(
         val awaDeg = state?.windDirectionApparent?.let { Math.toDegrees(it) }
         val mm = NauticalPlugin.getInstance()?.maneuverManager
 
-        if (isProa) {
-            when (index) {
-                1 -> {
-                    // Drop & Set Anchor
-                    onInitiateManeuver(sheet.getString(R.string.nautical_maneuver_anchoring), null) {
-                        mm?.setActiveManeuver("anchoring")
-                        mm?.execute()
-                    }
+        when (kind) {
+            PilotManeuverKind.GYBE_PORT,
+            PilotManeuverKind.GYBE_STBD -> {
+                val port = kind == PilotManeuverKind.GYBE_PORT
+                if (awaDeg == null) {
+                    NauticalPlugin.getInstance()?.application?.showToastMessage(R.string.nautical_maneuver_no_wind)
+                    return
                 }
-                2 -> {
-                    // Weigh Anchor
-                    onInitiateManeuver(sheet.getString(R.string.nautical_weigh_anchor), null) {
-                        mm?.setActiveManeuver("weigh_anchor")
-                        mm?.execute()
-                    }
+                if (!hasHeading) {
+                    NauticalPlugin.getInstance()?.application?.showToastMessage(R.string.nautical_maneuver_no_heading)
+                    return
                 }
-                3 -> {
-                    // Alongside Docking
-                    onInitiateManeuver(sheet.getString(R.string.nautical_maneuver_docking), null) {
-                        NauticalPlugin.autopilot?.dockingHold()
-                        mm?.setActiveManeuver("docking")
-                        mm?.execute()
-                    }
+                val delta = (180.0 - 2.0 * abs(180.0 - abs(awaDeg))).coerceIn(70.0, 120.0)
+                val targetDeg = if (port) {
+                    (((curH - delta) % 360.0 + 360.0) % 360.0).toInt()
+                } else {
+                    (((curH + delta) % 360.0 + 360.0) % 360.0).toInt()
                 }
-                4 -> {
-                    // Stern-to Med Mooring
-                    onInitiateManeuver(sheet.getString(R.string.nautical_maneuver_med_mooring), null) {
-                        mm?.setActiveManeuver("med_mooring")
-                        mm?.execute()
-                    }
-                }
-                5 -> {
-                    // Mooring Buoy
-                    onInitiateManeuver(sheet.getString(R.string.nautical_maneuver_mooring), null) {
-                        mm?.setActiveManeuver("mooring")
-                        mm?.execute()
-                    }
-                }
-                6 -> {
-                    // Slip Exit
-                    onInitiateManeuver(sheet.getString(R.string.nautical_maneuver_slip_exit), null) {
-                        mm?.setActiveManeuver("slip_exit")
-                        mm?.execute()
-                    }
-                }
-                7 -> {
-                    // Dodge Port (-10°)
-                    if (!hasHeading) {
-                        NauticalPlugin.getInstance()?.application?.showToastMessage(R.string.nautical_maneuver_no_heading)
-                        return
-                    }
-                    val targetDeg = (((curH - 10.0) % 360.0 + 360.0) % 360.0).toInt()
-                    onInitiateManeuver(sheet.getString(R.string.nautical_dodge_port_label), targetDeg) { confirmedDeg ->
-                        confirmedDeg?.let { NauticalPlugin.autopilot?.setTargetHeading(it.toDouble()) }
-                        NauticalPlugin.autopilot?.dodge(port = true)
-                    }
-                }
-                8 -> {
-                    // Dodge Starboard (+10°)
-                    if (!hasHeading) {
-                        NauticalPlugin.getInstance()?.application?.showToastMessage(R.string.nautical_maneuver_no_heading)
-                        return
-                    }
-                    val targetDeg = (((curH + 10.0) % 360.0 + 360.0) % 360.0).toInt()
-                    onInitiateManeuver(sheet.getString(R.string.nautical_dodge_stbd_label), targetDeg) { confirmedDeg ->
-                        confirmedDeg?.let { NauticalPlugin.autopilot?.setTargetHeading(it.toDouble()) }
-                        NauticalPlugin.autopilot?.dodge(port = false)
-                    }
-                }
-                9 -> {
-                    // Holding Pattern
-                    onInitiateManeuver(sheet.getString(R.string.nautical_holding_pattern), null) {
-                        mm?.setActiveManeuver("holding_pattern")
-                        mm?.execute()
-                    }
-                }
-                10 -> {
-                    // Emergency Stop
-                    onInitiateManeuver(sheet.getString(R.string.nautical_emergency_stop_label), null) {
-                        NauticalPlugin.autopilot?.emergencyStop()
-                        mm?.abort(sheet.getString(R.string.nautical_emergency_stop_executed), isAlarm = true)
-                    }
+                val title = if (port) sheet.getString(R.string.nautical_gybe_port_label) else sheet.getString(R.string.nautical_gybe_stbd_label)
+                onInitiateManeuver(title, targetDeg) { confirmedDeg ->
+                    confirmedDeg?.let { NauticalPlugin.autopilot?.setTargetHeading(it.toDouble()) }
+                    NauticalPlugin.autopilot?.gybe(port = port)
+                    mm?.setActiveManeuver(if (port) "gybe_port" else "gybe_stbd")
+                    mm?.execute()
                 }
             }
-        } else {
-            when (index) {
-                1 -> {
-                    // Gybe Port
-                    if (awaDeg == null) {
-                        NauticalPlugin.getInstance()?.application?.showToastMessage(R.string.nautical_maneuver_no_wind)
-                        return
-                    }
-                    if (!hasHeading) {
-                        NauticalPlugin.getInstance()?.application?.showToastMessage(R.string.nautical_maneuver_no_heading)
-                        return
-                    }
-                    val delta = (180.0 - 2.0 * abs(180.0 - abs(awaDeg))).coerceIn(70.0, 120.0)
-                    val targetDeg = (((curH - delta) % 360.0 + 360.0) % 360.0).toInt()
-                    onInitiateManeuver(sheet.getString(R.string.nautical_gybe_port_label), targetDeg) { confirmedDeg ->
-                        confirmedDeg?.let { NauticalPlugin.autopilot?.setTargetHeading(it.toDouble()) }
-                        NauticalPlugin.autopilot?.gybe(port = true)
-                        mm?.setActiveManeuver("gybe_port")
-                        mm?.execute()
-                    }
+            PilotManeuverKind.HEAVE_TO -> {
+                onInitiateManeuver(sheet.getString(R.string.nautical_heave_to), null) {
+                    NauticalPlugin.autopilot?.heaveTo(port = true)
+                    mm?.setActiveManeuver("heave_to")
+                    mm?.execute()
                 }
-                2 -> {
-                    // Gybe Starboard
-                    if (awaDeg == null) {
-                        NauticalPlugin.getInstance()?.application?.showToastMessage(R.string.nautical_maneuver_no_wind)
-                        return
-                    }
-                    if (!hasHeading) {
-                        NauticalPlugin.getInstance()?.application?.showToastMessage(R.string.nautical_maneuver_no_heading)
-                        return
-                    }
-                    val delta = (180.0 - 2.0 * abs(180.0 - abs(awaDeg))).coerceIn(70.0, 120.0)
-                    val targetDeg = (((curH + delta) % 360.0 + 360.0) % 360.0).toInt()
-                    onInitiateManeuver(sheet.getString(R.string.nautical_gybe_stbd_label), targetDeg) { confirmedDeg ->
-                        confirmedDeg?.let { NauticalPlugin.autopilot?.setTargetHeading(it.toDouble()) }
-                        NauticalPlugin.autopilot?.gybe(port = false)
-                        mm?.setActiveManeuver("gybe_stbd")
-                        mm?.execute()
-                    }
+            }
+            PilotManeuverKind.CENTER_RUDDER -> {
+                onInitiateManeuver(sheet.getString(R.string.nautical_center_rudder), null) {
+                    NauticalPlugin.autopilot?.setRudderAngle(0.0)
                 }
-                3 -> {
-                    // Heave-To
-                    onInitiateManeuver(sheet.getString(R.string.nautical_heave_to), null) {
-                        NauticalPlugin.autopilot?.heaveTo(port = true)
-                        mm?.setActiveManeuver("heave_to")
-                        mm?.execute()
-                    }
+            }
+            PilotManeuverKind.ANCHORING -> {
+                onInitiateManeuver(sheet.getString(R.string.nautical_maneuver_anchoring), null) {
+                    mm?.setActiveManeuver("anchoring")
+                    mm?.execute()
                 }
-                4 -> {
-                    // Center Rudder
-                    onInitiateManeuver(sheet.getString(R.string.nautical_center_rudder), null) {
-                        NauticalPlugin.autopilot?.setRudderAngle(0.0)
-                    }
+            }
+            PilotManeuverKind.WEIGH_ANCHOR -> {
+                onInitiateManeuver(sheet.getString(R.string.nautical_weigh_anchor), null) {
+                    mm?.setActiveManeuver("weigh_anchor")
+                    mm?.execute()
                 }
-                5 -> {
-                    // Drop & Set Anchor
-                    onInitiateManeuver(sheet.getString(R.string.nautical_maneuver_anchoring), null) {
-                        mm?.setActiveManeuver("anchoring")
-                        mm?.execute()
-                    }
+            }
+            PilotManeuverKind.DOCKING -> {
+                onInitiateManeuver(sheet.getString(R.string.nautical_maneuver_docking), null) {
+                    NauticalPlugin.autopilot?.dockingHold()
+                    mm?.setActiveManeuver("docking")
+                    mm?.execute()
                 }
-                6 -> {
-                    // Weigh Anchor
-                    onInitiateManeuver(sheet.getString(R.string.nautical_weigh_anchor), null) {
-                        mm?.setActiveManeuver("weigh_anchor")
-                        mm?.execute()
-                    }
+            }
+            PilotManeuverKind.MED_MOORING -> {
+                onInitiateManeuver(sheet.getString(R.string.nautical_maneuver_med_mooring), null) {
+                    mm?.setActiveManeuver("med_mooring")
+                    mm?.execute()
                 }
-                7 -> {
-                    // Alongside Docking
-                    onInitiateManeuver(sheet.getString(R.string.nautical_maneuver_docking), null) {
-                        NauticalPlugin.autopilot?.dockingHold()
-                        mm?.setActiveManeuver("docking")
-                        mm?.execute()
-                    }
+            }
+            PilotManeuverKind.MOORING -> {
+                onInitiateManeuver(sheet.getString(R.string.nautical_maneuver_mooring), null) {
+                    mm?.setActiveManeuver("mooring")
+                    mm?.execute()
                 }
-                8 -> {
-                    // Stern-to Med Mooring
-                    onInitiateManeuver(sheet.getString(R.string.nautical_maneuver_med_mooring), null) {
-                        mm?.setActiveManeuver("med_mooring")
-                        mm?.execute()
-                    }
+            }
+            PilotManeuverKind.SLIP_EXIT -> {
+                onInitiateManeuver(sheet.getString(R.string.nautical_maneuver_slip_exit), null) {
+                    mm?.setActiveManeuver("slip_exit")
+                    mm?.execute()
                 }
-                9 -> {
-                    // Mooring Buoy
-                    onInitiateManeuver(sheet.getString(R.string.nautical_maneuver_mooring), null) {
-                        mm?.setActiveManeuver("mooring")
-                        mm?.execute()
-                    }
+            }
+            PilotManeuverKind.DODGE_PORT,
+            PilotManeuverKind.DODGE_STBD -> {
+                val port = kind == PilotManeuverKind.DODGE_PORT
+                if (!hasHeading) {
+                    NauticalPlugin.getInstance()?.application?.showToastMessage(R.string.nautical_maneuver_no_heading)
+                    return
                 }
-                10 -> {
-                    // Slip Exit
-                    onInitiateManeuver(sheet.getString(R.string.nautical_maneuver_slip_exit), null) {
-                        mm?.setActiveManeuver("slip_exit")
-                        mm?.execute()
-                    }
+                val offset = if (port) -10.0 else 10.0
+                val targetDeg = (((curH + offset) % 360.0 + 360.0) % 360.0).toInt()
+                val title = if (port) sheet.getString(R.string.nautical_dodge_port_label) else sheet.getString(R.string.nautical_dodge_stbd_label)
+                onInitiateManeuver(title, targetDeg) { confirmedDeg ->
+                    confirmedDeg?.let { NauticalPlugin.autopilot?.setTargetHeading(it.toDouble()) }
+                    NauticalPlugin.autopilot?.dodge(port = port)
                 }
-                11 -> {
-                    // Dodge Port (-10°)
-                    if (!hasHeading) {
-                        NauticalPlugin.getInstance()?.application?.showToastMessage(R.string.nautical_maneuver_no_heading)
-                        return
-                    }
-                    val targetDeg = (((curH - 10.0) % 360.0 + 360.0) % 360.0).toInt()
-                    onInitiateManeuver(sheet.getString(R.string.nautical_dodge_port_label), targetDeg) { confirmedDeg ->
-                        confirmedDeg?.let { NauticalPlugin.autopilot?.setTargetHeading(it.toDouble()) }
-                        NauticalPlugin.autopilot?.dodge(port = true)
-                    }
+            }
+            PilotManeuverKind.HOLDING_PATTERN -> {
+                onInitiateManeuver(sheet.getString(R.string.nautical_holding_pattern), null) {
+                    mm?.setActiveManeuver("holding_pattern")
+                    mm?.execute()
                 }
-                12 -> {
-                    // Dodge Starboard (+10°)
-                    if (!hasHeading) {
-                        NauticalPlugin.getInstance()?.application?.showToastMessage(R.string.nautical_maneuver_no_heading)
-                        return
-                    }
-                    val targetDeg = (((curH + 10.0) % 360.0 + 360.0) % 360.0).toInt()
-                    onInitiateManeuver(sheet.getString(R.string.nautical_dodge_stbd_label), targetDeg) { confirmedDeg ->
-                        confirmedDeg?.let { NauticalPlugin.autopilot?.setTargetHeading(it.toDouble()) }
-                        NauticalPlugin.autopilot?.dodge(port = false)
-                    }
-                }
-                13 -> {
-                    // Holding Pattern
-                    onInitiateManeuver(sheet.getString(R.string.nautical_holding_pattern), null) {
-                        mm?.setActiveManeuver("holding_pattern")
-                        mm?.execute()
-                    }
-                }
-                14 -> {
-                    // Emergency Stop
-                    onInitiateManeuver(sheet.getString(R.string.nautical_emergency_stop_label), null) {
-                        NauticalPlugin.autopilot?.emergencyStop()
-                        mm?.abort(sheet.getString(R.string.nautical_emergency_stop_executed), isAlarm = true)
-                    }
+            }
+            PilotManeuverKind.EMERGENCY_STOP -> {
+                onInitiateManeuver(sheet.getString(R.string.nautical_emergency_stop_label), null) {
+                    NauticalPlugin.autopilot?.emergencyStop()
+                    mm?.abort(sheet.getString(R.string.nautical_emergency_stop_executed), isAlarm = true)
                 }
             }
         }

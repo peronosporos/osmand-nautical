@@ -65,6 +65,13 @@ class NauticalToolCenterDialog : BaseMaterialBottomSheetDialogFragment() {
                 // effect of the toggle is visible without dismissing.
                 NauticalNightWindowHelper.applyToDialog(dialog)
             },
+            ToolItem(getString(R.string.nautical_pilot_title), R.drawable.ic_action_compass) {
+                // The pilot sheet was previously reachable only through a
+                // user-configured quick action; the tool center is its
+                // always-available entry point now.
+                net.osmand.plus.plugins.nautical.ui.widgets.NauticalPilotBottomSheet.show(parentFragmentManager)
+                dismiss()
+            },
             ToolItem(getString(R.string.logbook_title), R.drawable.ic_action_track_16) {
                 BaseSettingsFragment.showInstance(requireActivity(), SettingsScreenType.MARINE_LOGBOOK)
                 dismiss()

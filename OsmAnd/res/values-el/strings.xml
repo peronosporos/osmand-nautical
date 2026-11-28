@@ -6560,6 +6560,9 @@
     <string name="nautical_mob_triggered">ΑΝΘΡΩΠΟΣ ΣΤΗ ΘΑΛΑΣΣΑ: Δημιουργήθηκε σημείο έκτακτης ανάγκης και ξεκίνησε πλοήγηση.</string>
     <string name="nautical_mob_emergency_message">Δημιουργήθηκε σημείο έκτακτης ανάγκης MOB. Επιστροφή στη θέση.</string>
     <string name="nautical_alarm_banner_dismiss">Απόκρυψη ειδοποίησης</string>
+    <string name="nautical_pilot_unavailable">Ο αυτόματος πιλότος απαιτεί ενεργή σύνδεση SignalK.</string>
+    <string name="nautical_pilot_open_setup">Άνοιγμα οδηγού ρύθμισης</string>
+    <string name="nautical_pilot_route_pick_gpx">Η λειτουργία διαδρομής ακολουθεί ένα ίχνος. Επιλέξτε ένα ίχνος GPX για φόρτωση.</string>
     <string name="nautical_vhf_title">Ναυτικός Ασύρματος VHF</string>
     <string name="nautical_signalk_server">Διακομιστής Signal K</string>
     <string name="nautical_weigh_anchor">Ανέλκυση Άγκυρας (Βίρα)</string>

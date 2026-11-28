@@ -587,6 +587,9 @@
     <string name="nautical_mob_triggered">HOMME À LA MER : marque d\'urgence créée et navigation lancée.</string>
     <string name="nautical_mob_emergency_message">Balise d\'urgence MOB larguée. Retour vers la position.</string>
     <string name="nautical_alarm_banner_dismiss">Masquer l\'alerte</string>
+    <string name="nautical_pilot_unavailable">Le pilote automatique nécessite une connexion SignalK active.</string>
+    <string name="nautical_pilot_open_setup">Ouvrir l\'assistant de configuration</string>
+    <string name="nautical_pilot_route_pick_gpx">Le mode route suit une trace. Sélectionnez une trace GPX à charger.</string>
     <string name="nautical_night_vision">Vision nocturne (filtre rouge)</string>
     <string name="nautical_passage_plan_title">Plan de traversée</string>
     <string name="nautical_pilot_title">Pilote nautique</string>

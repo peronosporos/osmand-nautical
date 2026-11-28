@@ -587,6 +587,9 @@
     <string name="nautical_mob_triggered">HOMBRE AL AGUA: se creó la marca de emergencia y se inició la navegación.</string>
     <string name="nautical_mob_emergency_message">Se lanzó la marca de emergencia MOB. Regresando a la posición.</string>
     <string name="nautical_alarm_banner_dismiss">Descartar aviso</string>
+    <string name="nautical_pilot_unavailable">El piloto automático necesita una conexión SignalK activa.</string>
+    <string name="nautical_pilot_open_setup">Abrir el asistente de configuración</string>
+    <string name="nautical_pilot_route_pick_gpx">El modo ruta sigue una pista. Seleccione una pista GPX para cargarla.</string>
     <string name="nautical_night_vision">Visión nocturna (filtro rojo)</string>
     <string name="nautical_passage_plan_title">Plan de travesía</string>
     <string name="nautical_pilot_title">Piloto náutico</string>
