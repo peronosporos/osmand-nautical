@@ -42,6 +42,20 @@ class NavtexRepositoryTest {
         every { db.beginTransactionNonExclusive() } just Runs
         every { db.setTransactionSuccessful() } just Runs
         every { db.endTransaction() } just Runs
+        // Default answer for the repository's debounced performRefresh():
+        // every NavtexRepository constructed by a test keeps a live
+        // Dispatchers.IO scope, and its 500 ms-debounced refresh fires even
+        // AFTER the test method ends (JUnit builds one class instance per
+        // method, so each instance leaks its own refresh). Without a
+        // default rawQuery answer, MockK throws "no answer found" on that
+        // background thread and kotlinx-coroutines-test attributes the
+        // uncaught exception to the next runTest in the suite
+        // (UncaughtExceptionsBeforeTest in SignalKRepositoryTest). Per-test
+        // rawQuery stubs recorded later still take precedence.
+        val emptyCursor = mockk<SQLiteAPI.SQLiteCursor>()
+        every { db.rawQuery(any(), any()) } returns emptyCursor
+        every { emptyCursor.moveToFirst() } returns false
+        every { emptyCursor.close() } just Runs
     }
 
     @Test

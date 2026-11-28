@@ -44,6 +44,7 @@ class DirectNmeaMultiplexerNavtexRouteTest {
     private lateinit var app: OsmandApplication
     private lateinit var transport: NmeaTransport
     private lateinit var navtexRepo: NavtexRepository
+    private lateinit var aggregator: SailingDataAggregator
     private lateinit var multiplexer: DirectNmeaMultiplexer
     private val recorded = mutableListOf<NavtexMessage>()
 
@@ -61,9 +62,10 @@ class DirectNmeaMultiplexerNavtexRouteTest {
             recorded.add(firstArg())
             Unit
         }
+        aggregator = SailingDataAggregator()
         multiplexer = DirectNmeaMultiplexer(
             app,
-            SailingDataAggregator(),
+            aggregator,
             scope,
             NmeaSentenceParser(app),
             navtexRepo
@@ -72,8 +74,11 @@ class DirectNmeaMultiplexerNavtexRouteTest {
 
     @After
     fun tearDown() {
-        // Cancels the multiplexer worker launched in its init block.
+        // Cancels the multiplexer worker launched in its init block and the
+        // aggregator's infinite staleness watchdog, so nothing keeps
+        // running on background dispatchers after the class ends.
         scope.cancel()
+        aggregator.stop()
     }
 
     @Test
