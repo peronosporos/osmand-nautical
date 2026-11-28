@@ -59,6 +59,13 @@ class NauticalAisDetailsDialog : BaseBottomSheetDialogFragment() {
         mmsi = arguments?.getInt(ARG_MMSI) ?: 0
     }
 
+    override fun onStart() {
+        super.onStart()
+        // Dialog windows escape the map activity red filter; apply the shared
+        // night treatment (red filter + dimmed brightness) to this sheet.
+        NauticalNightWindowHelper.applyToDialog(dialog)
+    }
+
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         val view = themedInflater.inflate(R.layout.dialog_nautical_ais_details, container, false)
         val ais = NauticalPlugin.getAisObject(mmsi)

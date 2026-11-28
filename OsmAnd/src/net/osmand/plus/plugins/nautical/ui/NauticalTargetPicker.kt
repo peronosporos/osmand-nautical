@@ -40,6 +40,13 @@ class NauticalTargetPicker : BottomSheetDialogFragment() {
         }
     }
 
+    override fun onStart() {
+        super.onStart()
+        // Dialog windows escape the map activity red filter; apply the shared
+        // night treatment (red filter + dimmed brightness) to this sheet.
+        NauticalNightWindowHelper.applyToDialog(dialog)
+    }
+
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         val context = requireContext()
         val root = LinearLayout(context).apply {

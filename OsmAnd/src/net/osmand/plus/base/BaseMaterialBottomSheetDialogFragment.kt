@@ -13,8 +13,6 @@ import net.osmand.plus.base.dialog.IOsmAndFragment
 import net.osmand.plus.settings.backend.ApplicationMode
 import net.osmand.plus.settings.backend.OsmandSettings
 import net.osmand.plus.settings.enums.ThemeUsageContext
-import net.osmand.plus.plugins.nautical.NauticalPlugin
-import android.graphics.Paint
 import net.osmand.plus.utils.InsetsUtils
 import net.osmand.plus.utils.UiUtilities
 
@@ -83,13 +81,10 @@ open class BaseMaterialBottomSheetDialogFragment :
         }
         
         // ITEM 2: Extend night vision coverage to BottomSheets (Bug #2)
-        if (dialog != null && dialog.window != null && NauticalPlugin.isNightVision(app)) {
-            val decorView = dialog.window!!.decorView
-            val paint = Paint().apply {
-                colorFilter = NauticalPlugin.NIGHT_VISION_FILTER
-            }
-            decorView.setLayerType(View.LAYER_TYPE_HARDWARE, paint)
-        }
+        // Routed through NauticalNightWindowHelper so dialog windows also get
+        // the dimmed night brightness, and the treatment is cleared when night
+        // vision is toggled off while a sheet is open.
+        net.osmand.plus.plugins.nautical.ui.NauticalNightWindowHelper.applyToDialog(dialog)
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {

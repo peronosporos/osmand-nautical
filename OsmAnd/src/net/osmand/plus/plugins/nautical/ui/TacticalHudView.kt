@@ -118,6 +118,10 @@ class TacticalHudView @JvmOverloads constructor(
         isNightVision = NauticalPlugin.isNightVision(app)
     }
 
+    override fun applyNightVision(enabled: Boolean) {
+        applyNightVisionTheme(enabled)
+    }
+
     private fun applyNightVisionTheme(enabled: Boolean) {
         val density = context.resources.displayMetrics.density
         if (enabled) {

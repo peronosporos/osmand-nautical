@@ -75,6 +75,33 @@ class NauticalContextMenuHelper(private val app: OsmandApplication) {
                 }
             )
 
+            // Night vision (red mode) toggle. Previously reachable only via a
+            // configurable quick action or deep in the settings list; now it is
+            // available directly in the map menu. Not pref-backed: toggling
+            // must run applyDisplayMode, which drives the window filter,
+            // brightness, and render properties as one unit.
+            adapter.addItem(
+                ContextMenuItem("nautical_item_night_vision").apply {
+                    setTitleId(R.string.nautical_night_vision, mapActivity)
+                    selected = NauticalPlugin.isNightVision(app)
+                    icon = R.drawable.ic_action_red_filter_overlay_on
+                    setListener { uiAdapter, _, item, isChecked ->
+                        val targetMode = if (isChecked) {
+                            net.osmand.plus.settings.enums.NauticalDisplayMode.DARK
+                        } else {
+                            net.osmand.plus.settings.enums.NauticalDisplayMode.NORMAL
+                        }
+                        NauticalPlugin.getInstance()?.applyDisplayMode(mapActivity, targetMode)
+                        item.selected = NauticalPlugin.isNightVision(app)
+                        uiAdapter.onDataSetChanged()
+                        onRequestRefresh()
+                        mapActivity.mapView?.refreshMap()
+                        mapActivity.updateStatusBarColor()
+                        true
+                    }
+                }
+            )
+
             // Overlays Group
             adapter.addItem(
                 ContextMenuItem("nautical_overlays_group").apply {

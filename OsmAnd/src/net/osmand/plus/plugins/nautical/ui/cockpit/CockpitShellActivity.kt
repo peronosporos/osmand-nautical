@@ -1,6 +1,7 @@
 package net.osmand.plus.plugins.nautical.ui.cockpit
 
 import android.graphics.Color
+import net.osmand.plus.plugins.nautical.ui.NauticalNightWindowHelper
 import android.graphics.Typeface
 import android.os.Bundle
 import android.util.TypedValue
@@ -45,6 +46,12 @@ class CockpitShellActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+
+        // The cockpit runs in its own window outside the map activity, so the
+        // night vision filter applied to the map decor view does not reach it.
+        // Apply the shared window treatment so the whole cockpit turns red and
+        // dims in night vision mode, like the map and all nautical sheets.
+        NauticalNightWindowHelper.applyToWindow(window, app)
 
         registry = CockpitScreenRegistry.createDefault(app)
 
@@ -202,5 +209,12 @@ class CockpitShellActivity : AppCompatActivity() {
             mobBannerShown = false
             mobBanner.visibility = android.view.View.GONE
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // Re-sync in case night vision was toggled on the map while the
+        // cockpit was paused.
+        NauticalNightWindowHelper.applyToWindow(window, app)
     }
 }

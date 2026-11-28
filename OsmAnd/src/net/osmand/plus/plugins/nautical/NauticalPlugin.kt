@@ -118,7 +118,6 @@ import net.osmand.util.MapUtils
 import okhttp3.OkHttpClient
 import java.io.File
 import java.lang.ref.WeakReference
-import java.util.Locale
 import kotlin.math.abs
 
 class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper.MapThemeProvider {
@@ -182,7 +181,7 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
         fun isNightVision(app: OsmandApplication?): Boolean {
             if (app == null) return false
             val plugin = getInstance()
-            return (plugin != null) && plugin.isActive && (plugin.isNightVisionEnabled || app.settings.NAUTICAL_DISPLAY_MODE.get() == NauticalDisplayMode.DARK)
+            return (plugin != null) && plugin.isActive && (plugin.isNightVisionEnabled || NauticalDisplayModes.isNight(app.settings.NAUTICAL_DISPLAY_MODE.get()))
         }
 
         @JvmStatic
@@ -474,12 +473,8 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
                         presentationManager?.updateState(state)
 
                         state.sunlightMode?.let { sMode ->
+                            val targetMode = NauticalDisplayModes.fromServerSunlightHint(sMode)
                             val currentMode = app.settings.NAUTICAL_DISPLAY_MODE.get()
-                            val targetMode = when (sMode.lowercase(Locale.US)) {
-                                "high", "bright", "sunlight" -> NauticalDisplayMode.SUNLIGHT
-                                "night", "dark" -> NauticalDisplayMode.DARK
-                                else -> NauticalDisplayMode.NORMAL
-                            }
                             if (targetMode != currentMode) {
                                 app.settings.NAUTICAL_DISPLAY_MODE.set(targetMode)
                             }
@@ -1521,17 +1516,11 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
 
     fun toggleNightVision(mapActivity: MapActivity) {
         val currentMode = app.settings.NAUTICAL_DISPLAY_MODE.get()
-        val nextMode = if (currentMode == NauticalDisplayMode.DARK) NauticalDisplayMode.NORMAL else NauticalDisplayMode.DARK
-        applyDisplayMode(mapActivity, nextMode)
+        applyDisplayMode(mapActivity, NauticalDisplayModes.nextForNightVisionToggle(currentMode))
     }
 
     override fun getMapTheme(): DayNightMode? {
-        val mode = app.settings.NAUTICAL_DISPLAY_MODE.get()
-        return when (mode) {
-            NauticalDisplayMode.DARK -> DayNightMode.NIGHT
-            NauticalDisplayMode.SUNLIGHT -> DayNightMode.DAY
-            else -> null
-        }
+        return NauticalDisplayModes.dayNightTheme(app.settings.NAUTICAL_DISPLAY_MODE.get())
     }
 
     fun applyVesselContext(context: VesselContext) {

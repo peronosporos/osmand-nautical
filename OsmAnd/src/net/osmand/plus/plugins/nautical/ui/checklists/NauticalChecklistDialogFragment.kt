@@ -1,6 +1,7 @@
 package net.osmand.plus.plugins.nautical.ui.checklists
 
 import android.os.Bundle
+import net.osmand.plus.plugins.nautical.ui.NauticalNightWindowHelper
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -72,6 +73,13 @@ class NauticalChecklistDialogFragment : BottomSheetDialogFragment() {
     private lateinit var progressBar: ProgressBar
     private lateinit var txtProgress: TextView
     private lateinit var txtStatus: TextView
+
+    override fun onStart() {
+        super.onStart()
+        // Dialog windows escape the map activity red filter; apply the shared
+        // night treatment (red filter + dimmed brightness) to this sheet.
+        NauticalNightWindowHelper.applyToDialog(dialog)
+    }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         val view = inflater.inflate(R.layout.dialog_nautical_checklist, container, false)

@@ -236,6 +236,10 @@ class MobEmergencyHeaderView @JvmOverloads constructor(
         }
     }
 
+    override fun applyNightVision(enabled: Boolean) {
+        applyNightVisionTheme(enabled)
+    }
+
     private fun applyNightVisionTheme(enabled: Boolean) {
         if (enabled) {
             mobContainer?.setBackgroundColor(

@@ -50,6 +50,21 @@ class NauticalToolCenterDialog : BaseMaterialBottomSheetDialogFragment() {
         root.addView(recyclerView)
         
         val items = listOf(
+            ToolItem(getString(R.string.nautical_night_vision), R.drawable.ic_action_red_filter_overlay_on) {
+                val act = activity as? net.osmand.plus.activities.MapActivity
+                val plugin = NauticalPlugin.getInstance()
+                if (act == null || plugin == null) {
+                    app.showToastMessage(R.string.nautical_plugin_inactive)
+                } else {
+                    plugin.toggleNightVision(act)
+                    act.mapView?.refreshMap()
+                    act.updateStatusBarColor()
+                    plugin.requestRefresh()
+                }
+                // Keep this sheet open and restyle it immediately, so the
+                // effect of the toggle is visible without dismissing.
+                NauticalNightWindowHelper.applyToDialog(dialog)
+            },
             ToolItem(getString(R.string.logbook_title), R.drawable.ic_action_track_16) {
                 BaseSettingsFragment.showInstance(requireActivity(), SettingsScreenType.MARINE_LOGBOOK)
                 dismiss()

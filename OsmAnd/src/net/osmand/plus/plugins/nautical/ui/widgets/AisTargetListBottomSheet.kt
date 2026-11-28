@@ -1,6 +1,7 @@
 package net.osmand.plus.plugins.nautical.ui.widgets
 
 import android.content.res.ColorStateList
+import net.osmand.plus.plugins.nautical.ui.NauticalNightWindowHelper
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
@@ -67,6 +68,13 @@ class AisTargetListBottomSheet : BaseBottomSheetDialogFragment() {
                 AisTargetListBottomSheet().show(fragmentManager, TAG)
             }
         }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        // Dialog windows escape the map activity red filter; apply the shared
+        // night treatment (red filter + dimmed brightness) to this sheet.
+        NauticalNightWindowHelper.applyToDialog(dialog)
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {

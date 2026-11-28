@@ -1,6 +1,7 @@
 package net.osmand.plus.plugins.nautical.hazard.ui
 
 import android.os.Bundle
+import net.osmand.plus.plugins.nautical.ui.NauticalNightWindowHelper
 import android.view.KeyEvent
 import android.view.LayoutInflater
 import android.view.View
@@ -34,6 +35,13 @@ class NavtexDetailsBottomSheet : BottomSheetDialogFragment() {
                 newInstance(message).show(manager, TAG)
             }
         }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        // Dialog windows escape the map activity red filter; apply the shared
+        // night treatment (red filter + dimmed brightness) to this sheet.
+        NauticalNightWindowHelper.applyToDialog(dialog)
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {

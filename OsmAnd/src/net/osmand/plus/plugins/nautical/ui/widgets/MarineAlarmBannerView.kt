@@ -196,7 +196,7 @@ class MarineAlarmBannerView @JvmOverloads constructor(
             setImageResource(R.drawable.ic_action_remove_dark)
             setColorFilter(0xCCFFFFFF.toInt())
             background = RippleDrawable(ColorStateList.valueOf(0x44FFFFFF), null, null)
-            contentDescription = "Dismiss Banner"
+            contentDescription = context.getString(R.string.nautical_alarm_banner_dismiss)
             setOnClickListener {
                 it.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
                 val key = currentAlarm?.key ?: "alarm"
@@ -567,6 +567,10 @@ class MarineAlarmBannerView @JvmOverloads constructor(
         cardLayout.setPadding(p, p, p, p)
         titleTextView.textSize = if (enabled) 12.5f else 14f
         messageTextView.textSize = if (enabled) 11f else 12.5f
+    }
+
+    override fun applyNightVision(enabled: Boolean) {
+        applyNightVisionTheme(enabled)
     }
 
     private fun applyNightVisionTheme(enabled: Boolean) {

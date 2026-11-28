@@ -7,7 +7,7 @@ import android.view.ViewGroup
 import androidx.annotation.StringRes
 import net.osmand.plus.base.MenuBottomSheetDialogFragment
 import net.osmand.plus.base.bottomsheetmenu.simpleitems.TitleItem
-import net.osmand.plus.plugins.nautical.NauticalPlugin
+import net.osmand.plus.plugins.nautical.ui.NauticalNightWindowHelper
 
 /**
  * A standard OsmAnd bottom sheet for Nautical plugin with proper integration and theme support.
@@ -23,18 +23,13 @@ abstract class NauticalMenuBottomSheetDialogFragment : MenuBottomSheetDialogFrag
         // Subclasses implement this
     }
 
-    override fun onCreateView(inflater: LayoutInflater, parent: ViewGroup?, savedInstanceState: Bundle?): View? {
-        val view = super.onCreateView(inflater, parent, savedInstanceState)
-        
-        // Apply Nautical red filter if night vision is on
-        if (NauticalPlugin.isNightVision(app)) {
-            val paint = android.graphics.Paint().apply {
-                colorFilter = NauticalPlugin.NIGHT_VISION_FILTER
-            }
-            view?.setLayerType(View.LAYER_TYPE_HARDWARE, paint)
-        }
-        
-        return view
+    override fun onStart() {
+        super.onStart()
+        // Window-level night treatment (red filter + dimmed brightness), applied
+        // to the dialog decor view so the whole sheet, including its window
+        // background, follows night vision mode. Previously only the content
+        // view was filtered and screen brightness jumped back to full.
+        NauticalNightWindowHelper.applyToDialog(dialog)
     }
 
     protected fun addTitleItem(@StringRes titleId: Int) {

@@ -1,6 +1,7 @@
 package net.osmand.plus.plugins.nautical.grib.ui
 
 import android.os.Bundle
+import net.osmand.plus.plugins.nautical.ui.NauticalNightWindowHelper
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -432,6 +433,9 @@ class GribManagerBottomSheet : BottomSheetDialogFragment() {
 
     override fun onStart() {
         super.onStart()
+        // Dialog windows escape the map activity red filter; apply the shared
+        // night treatment (red filter + dimmed brightness) to this sheet.
+        NauticalNightWindowHelper.applyToDialog(dialog)
         (dialog as? BottomSheetDialog)?.let { sheetDialog ->
             sheetDialog.findViewById<View>(com.google.android.material.R.id.design_bottom_sheet)?.let { bottomSheet ->
                 val behavior = BottomSheetBehavior.from(bottomSheet)

@@ -434,6 +434,7 @@
     <string name="nautical_disarm_mob_confirm">Are you sure you want to cancel the Man Overboard emergency alarm and navigation?</string>
     <string name="nautical_mob_triggered">MAN OVERBOARD: Emergency marker created and navigation initiated.</string>
     <string name="nautical_mob_emergency_message">Emergency MOB marker dropped. Returning to position.</string>
+    <string name="nautical_alarm_banner_dismiss">Dismiss banner</string>
     <string name="nautical_vhf_title">VHF Marine Radio</string>
     <string name="nautical_signalk_server">Signal K Server</string>
     <string name="nautical_weigh_anchor">Weigh Anchor</string>

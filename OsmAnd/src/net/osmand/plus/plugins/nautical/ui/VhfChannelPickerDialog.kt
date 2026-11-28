@@ -18,6 +18,13 @@ class VhfChannelPickerDialog : DialogFragment() {
 
     private var facilityChannels: List<String> = emptyList()
 
+    override fun onStart() {
+        super.onStart()
+        // Dialog windows escape the map activity red filter; apply the shared
+        // night treatment (red filter + dimmed brightness) to this sheet.
+        NauticalNightWindowHelper.applyToDialog(dialog)
+    }
+
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
         val app = activity?.application as? net.osmand.plus.OsmandApplication
         val isNightVision = app?.let { NauticalPlugin.isNightVision(it) } ?: false

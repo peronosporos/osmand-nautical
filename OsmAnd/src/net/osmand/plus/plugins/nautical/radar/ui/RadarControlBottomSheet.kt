@@ -1,6 +1,7 @@
 package net.osmand.plus.plugins.nautical.radar.ui
 
 import android.os.Bundle
+import net.osmand.plus.plugins.nautical.ui.NauticalNightWindowHelper
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -19,6 +20,13 @@ import java.util.Locale
 class RadarControlBottomSheet : BaseBottomSheetDialogFragment() {
 
     override fun getThemeUsageContext(): ThemeUsageContext = ThemeUsageContext.APP
+
+    override fun onStart() {
+        super.onStart()
+        // Dialog windows escape the map activity red filter; apply the shared
+        // night treatment (red filter + dimmed brightness) to this sheet.
+        NauticalNightWindowHelper.applyToDialog(dialog)
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater,

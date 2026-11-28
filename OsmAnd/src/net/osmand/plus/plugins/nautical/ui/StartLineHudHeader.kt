@@ -75,6 +75,10 @@ class StartLineHudHeader @JvmOverloads constructor(
         setPadding(px, px, px, px)
     }
 
+    override fun applyNightVision(enabled: Boolean) {
+        applyNightVisionTheme(enabled)
+    }
+
     private fun applyNightVisionTheme(enabled: Boolean) {
         val density = context.resources.displayMetrics.density
         if (enabled) {

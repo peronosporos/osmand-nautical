@@ -116,15 +116,11 @@ class NauticalHudManager(val activity: MapActivity) {
         }
         
         registeredHeaders.forEach { record ->
+            // Night vision is applied through the INauticalHudHeader interface.
+            // Views that previously relied on the reflective applyNightVisionTheme
+            // dispatch now override applyNightVision directly, so a renamed or
+            // removed method can no longer silently drop night theming.
             (record.view as? INauticalHudHeader)?.applyNightVision(isNight)
-            try {
-                val method = record.view.javaClass.getMethod("applyNightVisionTheme", Boolean::class.javaPrimitiveType)
-                method.invoke(record.view, isNight)
-            } catch (_: Exception) {}
-            try {
-                val method = record.view.javaClass.getMethod("setNightVision", Boolean::class.javaPrimitiveType)
-                method.invoke(record.view, isNight)
-            } catch (_: Exception) {}
         }
     }
 

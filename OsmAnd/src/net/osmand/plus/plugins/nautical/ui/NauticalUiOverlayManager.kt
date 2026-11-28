@@ -1,6 +1,5 @@
 package net.osmand.plus.plugins.nautical.ui
 
-import android.graphics.ColorMatrixColorFilter
 import android.graphics.Paint
 import android.view.View
 import androidx.core.view.isVisible
@@ -32,6 +31,7 @@ import net.osmand.plus.plugins.nautical.mob.engine.MobStateMachine
 import net.osmand.plus.plugins.nautical.mob.ui.MobEmergencyHeaderView
 import net.osmand.plus.plugins.nautical.mob.viewmodel.MobAudioAlertManager
 import net.osmand.plus.plugins.nautical.mob.viewmodel.MobViewModel
+import net.osmand.plus.plugins.nautical.NauticalDisplayModes
 import net.osmand.plus.plugins.nautical.ui.anchor.AnchorWatchHudView
 import net.osmand.plus.settings.backend.ApplicationMode
 import net.osmand.plus.settings.enums.NauticalDisplayMode
@@ -106,12 +106,13 @@ class NauticalUiOverlayManager(private val app: OsmandApplication) {
         internal set
     private var isSyncingDisplayMode: Boolean = false
 
-    private val RED_FILTER_MATRIX = floatArrayOf(
-        0.8f, 0.0f, 0.0f, 0.0f, 0.0f,
-        0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
-        0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
-        0.0f, 0.0f, 0.0f, 1.0f, 0.0f
-    )
+    init {
+        // Sync the in-memory flags with the persisted display mode state at
+        // construction, so the flags no longer start as false when the app
+        // relaunches with night vision or sunlight mode already enabled.
+        isNightVisionEnabled = app.settings.NAUTICAL_NIGHT_VISION_ENABLED.get()
+        isSunlightModeEnabled = app.settings.NAUTICAL_SUNLIGHT_MODE.get()
+    }
 
     fun initForwardWatchSystem(activity: MapActivity, hudManager: WeakReference<NauticalHudManager>?) {
         if (forwardWatchHudView?.context == activity) return
@@ -298,8 +299,8 @@ class NauticalUiOverlayManager(private val app: OsmandApplication) {
         onRequestRefresh: () -> Unit
     ) {
         if (isSyncingDisplayMode) return
-        val enableNightVision = mode == NauticalDisplayMode.DARK
-        val enableSunlight = mode == NauticalDisplayMode.SUNLIGHT
+        val enableNightVision = NauticalDisplayModes.isNight(mode)
+        val enableSunlight = NauticalDisplayModes.isSunlight(mode)
 
         isSyncingDisplayMode = true
         try {
@@ -309,11 +310,7 @@ class NauticalUiOverlayManager(private val app: OsmandApplication) {
             isSyncingDisplayMode = false
         }
 
-        val renderMode = when (mode) {
-            NauticalDisplayMode.DARK -> "night"
-            NauticalDisplayMode.SUNLIGHT -> "sunlight"
-            else -> "day"
-        }
+        val renderMode = NauticalDisplayModes.renderPropertyValue(mode)
         app.settings.getCustomRenderProperty("nautical_display_mode", "day").set(renderMode)
         app.settings.getCustomRenderProperty("nautical_night_mode", "false").set(if (enableNightVision) "true" else "false")
         app.settings.getCustomRenderProperty("nautical_sunlight_mode", "false").set(if (enableSunlight) "true" else "false")
@@ -329,7 +326,7 @@ class NauticalUiOverlayManager(private val app: OsmandApplication) {
 
             if (enableNightVision) {
                 val paint = Paint().apply {
-                    colorFilter = ColorMatrixColorFilter(RED_FILTER_MATRIX)
+                    colorFilter = NauticalPlugin.NIGHT_VISION_FILTER
                 }
                 decorView.setLayerType(View.LAYER_TYPE_HARDWARE, paint)
 
