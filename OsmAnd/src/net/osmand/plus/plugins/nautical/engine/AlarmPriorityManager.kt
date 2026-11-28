@@ -32,6 +32,15 @@ class AlarmPriorityManager(
 
     private val snoozedAlarms = ConcurrentHashMap<String, Long>()
 
+    // Locally evaluated alarms (shallow water, TSS violations, off-course,
+    // gybe danger, ...) are appended to the raw broker state by the plugin
+    // before the notification manager sees them, but they never exist in
+    // dataBroker.marineState. Without merging them here, the persistent
+    // cockpit alarm banner pane (fed by activeCriticalNotifications) never
+    // displays them, even though their audio and one-shot banner fire via
+    // NauticalNotificationManager.
+    private val _localEvaluations = MutableStateFlow<Map<String, SignalKNotification>>(emptyMap())
+
     data class ThreatInfo(
         val vesselName: String,
         val cpaNm: Double,
@@ -108,9 +117,7 @@ class AlarmPriorityManager(
                 dataBroker.marineState.map { it.notifications }
                     .distinctUntilChanged()
                     .collect { notifications ->
-                        val critical = notifications.filter { (key, notif) ->
-                            ((notif.state == NotificationState.ALARM) || (notif.state == NotificationState.EMERGENCY)) && !isAlarmSnoozed(key)
-                        }
+                        val critical = mergedCriticalNotifications(notifications)
                         _activeCriticalNotifications.value = critical
 
                         // Task 4: Solo Watchdog Alert
@@ -280,12 +287,26 @@ class AlarmPriorityManager(
         }
     }
 
-    fun refreshActiveNotifications() {
-        val notifications = dataBroker.marineState.value.notifications
-        val critical = notifications.filter { (key, notif) ->
+    /**
+     * Publishes the plugin-side combined notification map (raw broker
+     * state plus locally evaluated alarms) so alarm surfaces that read
+     * activeCriticalNotifications also see local alarms. WARN-level
+     * entries are filtered by the same critical-only rule as the rest.
+     */
+    fun updateLocalNotifications(evaluations: Map<String, SignalKNotification>) {
+        _localEvaluations.value = evaluations
+        refreshActiveNotifications()
+    }
+
+    private fun mergedCriticalNotifications(notifications: Map<String, SignalKNotification>): Map<String, SignalKNotification> {
+        return (notifications + _localEvaluations.value).filter { (key, notif) ->
             ((notif.state == NotificationState.ALARM) || (notif.state == NotificationState.EMERGENCY)) && !isAlarmSnoozed(key)
         }
-        _activeCriticalNotifications.value = critical
+    }
+
+    fun refreshActiveNotifications() {
+        val notifications = dataBroker.marineState.value.notifications
+        _activeCriticalNotifications.value = mergedCriticalNotifications(notifications)
 
         val isCollSnoozed = isAlarmSnoozed(SignalKPaths.NOTIFICATIONS_COLLISION_RISK) || isAlarmSnoozed("collision") || isAlarmSnoozed("collision_danger")
         if (isCollSnoozed) {

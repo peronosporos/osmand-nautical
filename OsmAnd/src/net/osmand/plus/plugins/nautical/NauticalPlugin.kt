@@ -372,6 +372,12 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
 
                 safetyEvaluator.evaluateVesselSafety(state, combinedNotifications, safetyManager)
 
+                // Locally evaluated alarms (shallow water, TSS, off-course, ...)
+                // exist only in combinedNotifications; push them to the priority
+                // manager so the persistent cockpit alarm banner pane, which reads
+                // activeCriticalNotifications, sees them too.
+                alarmPriorityManager?.updateLocalNotifications(combinedNotifications)
+
                 val navtexNotif = state.notifications["navigation.navtex"]
                 val decodedNavtex = navtexNotif?.let { NavtexMessageDecoder.decode(it.message) }
 
@@ -1251,6 +1257,16 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
         aisManager = null
         telemetryFilterEngine?.stop()
         telemetryFilterEngine = null
+        // The engine is recreated unconditionally on the next enable with
+        // a FRESH data broker, while alarmPriorityManager was created only
+        // once and holds collectors on this engine's broker: after a
+        // disable/re-enable cycle, collision, battery and watchdog alarm
+        // monitoring would silently observe the orphaned broker forever.
+        // Stop and drop it so the next enable rebuilds it against the new
+        // broker; snooze state is intentionally not carried across plugin
+        // sessions, alarms re-evaluate from live state.
+        alarmPriorityManager?.stop()
+        alarmPriorityManager = null
         signalKLocationManager?.stop()
         signalKLocationManager = null
         refreshHandler.removeCallbacks(refreshRunnable)

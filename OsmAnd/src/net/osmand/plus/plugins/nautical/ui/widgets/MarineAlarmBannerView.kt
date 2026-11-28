@@ -48,6 +48,19 @@ class MarineAlarmBannerView @JvmOverloads constructor(
 
     private val cardLayout: LinearLayout
     private val iconView: ImageView
+
+    /**
+     * The plugin recreates the AlarmPriorityManager on a disable/re-enable
+     * cycle (fresh engine, fresh data broker). A cached field would keep
+     * observing the orphaned instance, leaving this banner frozen and its
+     * buttons acting on a dead manager, so always prefer the plugin's
+     * current instance and keep the explicit constructor value only as a
+     * fallback (tests inject their own manager while no plugin exists).
+     */
+    private fun currentManager(): AlarmPriorityManager? {
+        NauticalPlugin.getInstance()?.alarmPriorityManager?.let { alarmPriorityManager = it }
+        return alarmPriorityManager
+    }
     private val titleTextView: TextView
     private val messageTextView: TextView
     private val snoozeButton: TextView
@@ -187,7 +200,7 @@ class MarineAlarmBannerView @JvmOverloads constructor(
             setOnClickListener {
                 it.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
                 val key = currentAlarm?.key ?: "alarm"
-                val apm = alarmPriorityManager ?: NauticalPlugin.getInstance()?.alarmPriorityManager
+                val apm = currentManager()
                 apm?.acknowledgeAlarm(key)
                 hideBanner()
             }
@@ -283,7 +296,7 @@ class MarineAlarmBannerView @JvmOverloads constructor(
             setOnClickListener {
                 it.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
                 val key = currentAlarm?.key ?: SignalKPaths.NOTIFICATIONS_COLLISION_RISK
-                val apm = alarmPriorityManager ?: NauticalPlugin.getInstance()?.alarmPriorityManager
+                val apm = currentManager()
                 apm?.snoozeAudioOnly(key, 120_000L)
             }
         }
@@ -312,7 +325,7 @@ class MarineAlarmBannerView @JvmOverloads constructor(
             setOnClickListener {
                 it.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
                 val key = currentAlarm?.key ?: SignalKPaths.NOTIFICATIONS_COLLISION_RISK
-                val apm = alarmPriorityManager ?: NauticalPlugin.getInstance()?.alarmPriorityManager
+                val apm = currentManager()
                 apm?.acknowledgeAlarm(key)
                 hideBanner()
             }
@@ -335,10 +348,10 @@ class MarineAlarmBannerView @JvmOverloads constructor(
 
     override fun onAttachedToWindow() {
         super.onAttachedToWindow()
-        if (alarmPriorityManager == null) {
-            alarmPriorityManager = NauticalPlugin.getInstance()?.alarmPriorityManager
-        }
-        val apm = alarmPriorityManager ?: return
+        // Re-resolve against the plugin on every attach: a cached stale
+        // manager after a plugin disable/re-enable cycle would freeze the
+        // banner (its StateFlow never emits again).
+        val apm = currentManager() ?: return
 
         observeJob?.cancel()
         observeJob = viewScope.launch {
@@ -431,7 +444,7 @@ class MarineAlarmBannerView @JvmOverloads constructor(
     }
 
     private fun resolveActiveAlarm(): ActiveAlarmInfo? {
-        val apm = alarmPriorityManager ?: NauticalPlugin.getInstance()?.alarmPriorityManager ?: return null
+        val apm = currentManager() ?: return null
         val state = NauticalPlugin.engine?.getCurrentState()
         val ownLoc = (context.applicationContext as? OsmandApplication)?.locationProvider?.lastKnownLocation
 

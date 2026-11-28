@@ -196,7 +196,7 @@ class MobViewModel(
                         NauticalPlugin.getInstance()?.notificationManager?.postCriticalNotification(
                             "mob_emergency",
                             app.getString(R.string.nautical_mob_label),
-                            "Emergency MOB marker dropped. Returning to position."
+                            app.getString(R.string.nautical_mob_emergency_message)
                         )
                     }
                     MobState.RESOLVED -> {

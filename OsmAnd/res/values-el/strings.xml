@@ -6558,6 +6558,7 @@
     <string name="nautical_plugin_inactive">Το πρόσθετο Nautical δεν είναι ενεργό</string>
     <string name="nautical_disarm_mob_confirm">Είστε βέβαιοι ότι θέλετε να ακυρώσετε τον συναγερμό έκτακτης ανάγκης MOB και την πλοήγηση;</string>
     <string name="nautical_mob_triggered">ΑΝΘΡΩΠΟΣ ΣΤΗ ΘΑΛΑΣΣΑ: Δημιουργήθηκε σημείο έκτακτης ανάγκης και ξεκίνησε πλοήγηση.</string>
+    <string name="nautical_mob_emergency_message">Δημιουργήθηκε σημείο έκτακτης ανάγκης MOB. Επιστροφή στη θέση.</string>
     <string name="nautical_vhf_title">Ναυτικός Ασύρματος VHF</string>
     <string name="nautical_signalk_server">Διακομιστής Signal K</string>
     <string name="nautical_weigh_anchor">Ανέλκυση Άγκυρας (Βίρα)</string>
