@@ -11,6 +11,7 @@ import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import net.osmand.plus.OsmandApplication
+import net.osmand.plus.plugins.nautical.NauticalPlugin
 import net.osmand.plus.plugins.nautical.nmea.multiplexer.DirectNmeaMultiplexer
 import net.osmand.plus.plugins.nautical.nmea.parser.NmeaSentenceParser
 import net.osmand.plus.plugins.nautical.service.SailingDataAggregator
@@ -55,6 +56,12 @@ class SignalKSessionReplayTest {
         // in-memory SettingsAPI instead.
         val settings = TestOsmandSettings.create(app)
         every { app.settings } returns settings
+        // WearOsNauticalManager.isWatchMode() (reached from every telemetry
+        // buffer access) reads settings through context.applicationContext;
+        // on a bare relaxed mock that is a fresh mock whose final settings
+        // fields are null, so the delta batch would die on an NPE and be
+        // silently dropped. Route it back to the stubbed app instance.
+        every { app.applicationContext } returns app
         // Pin the values this suite was written against so it does not
         // depend on the defaults registered in OsmandSettings.
         settings.NAUTICAL_XTE_THRESHOLD.set(0.1f)
@@ -67,6 +74,13 @@ class SignalKSessionReplayTest {
         engine = SignalKEngine(app, engineScope)
         engine.registerAisListener { target -> aisManager.onAisObjectReceived(target) }
         this.aisManager = aisManager
+        // AIS contacts in the recorded sessions route through
+        // NauticalPlugin.getInstance()?.aisManager before reaching the engine
+        // listeners; install a mock plugin (objenesis mock, no Android plugin
+        // lifecycle) that hands the routing to this suite's manager.
+        val plugin = mockk<NauticalPlugin>(relaxed = true)
+        every { plugin.aisManager } returns aisManager
+        NauticalPlugin.setInstanceForTesting(plugin)
 
         val aggregator = SailingDataAggregator()
         val parser = NmeaSentenceParser(app)
@@ -80,6 +94,7 @@ class SignalKSessionReplayTest {
         // Stops the engine maintenance and multiplexer worker threads
         // (their IO loops would otherwise leak across tests).
         engineScope.cancel()
+        NauticalPlugin.setInstanceForTesting(null)
     }
 
     @Test

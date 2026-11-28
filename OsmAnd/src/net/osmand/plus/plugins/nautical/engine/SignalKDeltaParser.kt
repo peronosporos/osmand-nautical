@@ -1,7 +1,5 @@
 package net.osmand.plus.plugins.nautical.engine
 
-import android.util.JsonReader
-import android.util.JsonToken
 import android.util.Log
 import com.google.gson.Gson
 import com.google.gson.JsonParser
@@ -20,7 +18,6 @@ import net.osmand.plus.plugins.nautical.utils.TemporalUtils
 import net.osmand.shared.aistracker.AisObject
 import org.json.JSONArray
 import org.json.JSONObject
-import java.io.StringReader
 import java.util.Locale
 import java.util.concurrent.CopyOnWriteArraySet
 import kotlin.math.abs
@@ -44,48 +41,56 @@ class SignalKDeltaParser(
         initialState: MarineState,
         onSelfIdentity: (String) -> Unit
     ): Pair<MarineState, Boolean> {
-        val reader = JsonReader(StringReader(jsonMessage))
+        // org.json tree parsing instead of android.util.JsonReader streaming:
+        // the reader is an Android framework class that silently no-ops on a
+        // plain JVM, while org.json behaves identically on device and in JVM
+        // unit tests (where a real org.json artifact replaces the stub).
         var currentState = initialState
         var stateChanged = false
         try {
-            reader.beginObject()
+            val root = JSONObject(jsonMessage)
             var context: String? = null
 
-            while (reader.hasNext()) {
-                val name = reader.nextName()
+            val names = root.keys()
+            while (names.hasNext()) {
+                val name = names.next()
                 when (name) {
                     "self" -> {
-                        val self = reader.nextString()
-                        onSelfIdentity(self)
+                        val self = root.optString(name)
+                        if (self.isNotEmpty()) onSelfIdentity(self)
                     }
-                    "context" -> context = reader.nextString()
+                    "context" -> context = root.optString(name)
                     "updates" -> {
-                        val res = processUpdates(reader, context ?: "vessels.self", currentState)
+                        val res = processUpdates(root.optJSONArray(name), context ?: "vessels.self", currentState)
                         currentState = res.first
                         if (res.second) stateChanged = true
                     }
-                    else -> reader.skipValue()
+                    else -> {
+                        // Unknown top level members are ignored, same as the
+                        // previous skipValue behavior.
+                    }
                 }
             }
-            reader.endObject()
         } catch (e: Exception) {
             val preview = if (jsonMessage.length > 100) jsonMessage.substring(0, 100) + "..." else jsonMessage
-            log.error("JsonReader error: ${e.message}. Snippet: $preview", e)
-        } finally {
-            try { reader.close() } catch (_: Exception) {}
+            log.error("Json parsing error: ${e.message}. Snippet: $preview", e)
         }
         return Pair(currentState, stateChanged)
     }
 
-    private suspend fun processUpdates(reader: JsonReader, context: String, initialState: MarineState): Pair<MarineState, Boolean> {
+    private suspend fun processUpdates(
+        updatesArray: JSONArray?,
+        context: String,
+        initialState: MarineState
+    ): Pair<MarineState, Boolean> {
+        if (updatesArray == null) return Pair(initialState, false)
         val isSelf = isContextSelf(context, initialState)
 
-        reader.beginArray()
         var currentState = initialState
         var stateUpdated = false
 
-        while (reader.hasNext()) {
-            val updateObj = readJsonValue(reader) as? JSONObject ?: continue
+        for (i in 0 until updatesArray.length()) {
+            val updateObj = updatesArray.optJSONObject(i) ?: continue
 
             val sourceObj = updateObj.optJSONObject("source")
             val timestampStr = updateObj.optString("timestamp", "")
@@ -155,7 +160,6 @@ class SignalKDeltaParser(
                 stateUpdated = true
             }
         }
-        reader.endArray()
 
         return Pair(currentState, stateUpdated)
     }
@@ -352,39 +356,6 @@ class SignalKDeltaParser(
             return true
         }
         return false
-    }
-
-    private fun readJsonValue(reader: JsonReader): Any? {
-        return when (reader.peek()) {
-            JsonToken.NUMBER -> {
-                val s = reader.nextString()
-                s.toLongOrNull() ?: s.toDoubleOrNull() ?: s
-            }
-            JsonToken.STRING -> reader.nextString()
-            JsonToken.BOOLEAN -> reader.nextBoolean()
-            JsonToken.NULL -> { reader.nextNull(); null }
-            JsonToken.BEGIN_OBJECT -> {
-                val obj = JSONObject()
-                reader.beginObject()
-                while (reader.hasNext()) {
-                    val key = reader.nextName()
-                    val v = readJsonValue(reader)
-                    if (v != null) obj.put(key, v)
-                }
-                reader.endObject()
-                obj
-            }
-            JsonToken.BEGIN_ARRAY -> {
-                val arr = JSONArray()
-                reader.beginArray()
-                while (reader.hasNext()) {
-                    arr.put(readJsonValue(reader))
-                }
-                reader.endArray()
-                arr
-            }
-            else -> { reader.skipValue(); null }
-        }
     }
 
     private fun processMetaBatch(metaArray: JSONArray, s: MarineState): MarineState {

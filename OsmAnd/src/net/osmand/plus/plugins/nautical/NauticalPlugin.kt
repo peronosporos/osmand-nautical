@@ -212,6 +212,18 @@ class NauticalPlugin(app: OsmandApplication) : OsmandPlugin(app), DayNightHelper
 
         @JvmStatic
         fun getInstance(): NauticalPlugin? = instanceRef?.get()
+
+        /**
+         * Test seam for JVM unit tests: installs a mock plugin instance so
+         * engine paths that resolve NauticalPlugin.getInstance() (AIS delta
+         * routing) can be exercised without the Android plugin lifecycle.
+         * Tests must clear it in teardown so it cannot leak into other
+         * test classes sharing the same JVM.
+         */
+        @JvmStatic
+        fun setInstanceForTesting(plugin: NauticalPlugin?) {
+            instanceRef = if (plugin != null) WeakReference(plugin) else null
+        }
     }
 
     internal val okHttpClient: OkHttpClient?

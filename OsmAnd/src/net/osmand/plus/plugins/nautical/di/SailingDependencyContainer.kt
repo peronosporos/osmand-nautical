@@ -53,6 +53,16 @@ object SailingDependencyContainer {
     val nmeaMultiplexer: DirectNmeaMultiplexer?
         get() = _nmeaMultiplexer
 
+    /**
+     * Test seam for JVM unit tests: lets a test inject its own multiplexer
+     * instance so sentence routing through the container can be exercised
+     * without the full plugin initialization. Production code must keep
+     * using initialize(), which builds and owns the real multiplexer.
+     */
+    fun setNmeaMultiplexer(multiplexer: DirectNmeaMultiplexer?) {
+        _nmeaMultiplexer = multiplexer
+    }
+
     var replayManager: NmeaReplayManager? = null
         private set
 

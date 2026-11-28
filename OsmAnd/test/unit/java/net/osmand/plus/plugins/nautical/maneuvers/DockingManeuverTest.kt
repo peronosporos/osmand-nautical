@@ -14,6 +14,7 @@ import net.osmand.plus.plugins.nautical.audio.NauticalAudioArbiter
 import net.osmand.plus.plugins.nautical.engine.MarineState
 import net.osmand.plus.plugins.nautical.engine.NauticalHelmArbitrator
 import net.osmand.plus.settings.backend.TestOsmandSettings
+import net.osmand.plus.utils.OsmAndFormatter
 import net.osmand.util.MapUtils
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -47,6 +48,15 @@ class DockingManeuverTest {
         // cannot intercept, so provide a real settings object over an
         // in-memory SettingsAPI.
         every { app.settings } returns TestOsmandSettings.create(app)
+
+        // getFormattedSpeed also derives the current application mode, whose
+        // getDefaultSpeed reaches the static OsmandApplication reference that
+        // is only assigned by the Android app startup and is null on a plain
+        // JVM. Formatting is a UI concern for this test, so stub the two
+        // formatter entry points the maneuver uses.
+        mockkStatic(OsmAndFormatter::class)
+        every { OsmAndFormatter.getFormattedDistance(any(), any<OsmandApplication>()) } returns "100 m"
+        every { OsmAndFormatter.getFormattedSpeed(any(), any<OsmandApplication>()) } returns "5 kn"
 
         maneuver = DockingManeuver(app)
         maneuver.setTarget(10.0, 10.0)

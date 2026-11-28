@@ -8,6 +8,8 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import kotlinx.coroutines.test.resetMain
 import net.osmand.plus.OsmandApplication
+import net.osmand.plus.plugins.nautical.NauticalPlugin
+import net.osmand.plus.plugins.nautical.di.SailingDependencyContainer
 import net.osmand.plus.plugins.nautical.network.DeltaMessage
 import net.osmand.plus.plugins.nautical.network.Update
 import net.osmand.plus.plugins.nautical.network.Value
@@ -50,6 +52,12 @@ class SignalKEnginePipelineTest {
         // in-memory SettingsAPI instead.
         settings = TestOsmandSettings.create(app)
         every { app.settings } returns settings
+        // WearOsNauticalManager.isWatchMode() (reached from every telemetry
+        // buffer access) reads settings through context.applicationContext;
+        // on a bare relaxed mock that is a fresh mock whose final settings
+        // fields are null, so the delta batch would die on an NPE and be
+        // silently dropped. Route it back to the stubbed app instance.
+        every { app.applicationContext } returns app
         // Pin the values this suite was written against so it does not
         // depend on the defaults registered in OsmandSettings.
         settings.NAUTICAL_XTE_THRESHOLD.set(0.1f)
@@ -63,11 +71,22 @@ class SignalKEnginePipelineTest {
         engine.registerAisListener { target ->
             aisManager.onAisObjectReceived(target)
         }
+        // AIS deltas route through NauticalPlugin.getInstance()?.aisManager
+        // before they reach the engine listeners; install a mock plugin
+        // (objenesis mock, no Android plugin lifecycle) that hands the
+        // routing to this suite's manager.
+        val plugin = mockk<NauticalPlugin>(relaxed = true)
+        every { plugin.aisManager } returns aisManager
+        NauticalPlugin.setInstanceForTesting(plugin)
 
         aggregator = SailingDataAggregator()
         val parser = NmeaSentenceParser(app)
         multiplexer = DirectNmeaMultiplexer(app, aggregator, engineScope, parser)
         multiplexer.deltaConsumer = { delta -> engine.handleDelta(delta) }
+        // Deltas that arrive as Signal K "source.sentence" or "raw" updates
+        // are routed through the container's multiplexer rather than this
+        // instance, so register it for the duration of the suite.
+        SailingDependencyContainer.setNmeaMultiplexer(multiplexer)
     }
 
     @After
@@ -76,6 +95,8 @@ class SignalKEnginePipelineTest {
         // Stops the engine maintenance and multiplexer worker threads
         // (their IO loops would otherwise leak across tests).
         engineScope.cancel()
+        SailingDependencyContainer.setNmeaMultiplexer(null)
+        NauticalPlugin.setInstanceForTesting(null)
     }
 
     @Test
@@ -100,7 +121,7 @@ class SignalKEnginePipelineTest {
 
     @Test
     fun testNmeaDbtPipelineUpdatesDepth() = runTest(testDispatcher) {
-        val dbtSentence = "\$IIDBT,033.1,f,010.1,M,005.4,F*25"
+        val dbtSentence = "\$IIDBT,033.1,f,010.1,M,005.4,F*11"
         multiplexer.injectSentence(dbtSentence)
 
         assertTrue("DBT pipeline did not settle in time", awaitPipeline {
@@ -229,7 +250,7 @@ class SignalKEnginePipelineTest {
                 {
                   "timestamp": "2026-08-15T12:00:00.000Z",
                   "source": { "sentence": "MWV", "talker": "II" },
-                  "raw": "${'$'}IIMWV,045.0,R,12.5,N,A*23"
+                  "raw": "${'$'}IIMWV,045.0,R,12.5,N,A*0A"
                 }
               ]
             }
@@ -287,7 +308,7 @@ class SignalKEnginePipelineTest {
     @Test
     fun testVwtAndVtgSentenceParsing() = runTest(testDispatcher) {
         // VWT: True wind 30 deg starboard, 15.0 knots -> 7.71666 m/s
-        val vwtSentence = "${'$'}IIVWT,030.0,R,15.0,N,07.7,M,027.8,K*23"
+        val vwtSentence = "${'$'}IIVWT,030.0,R,15.0,N,07.7,M,027.8,K*45"
         multiplexer.injectSentence(vwtSentence)
         assertTrue("VWT pipeline did not settle in time", awaitPipeline {
             engine.getCurrentState().windSpeedTrue != null
@@ -298,7 +319,7 @@ class SignalKEnginePipelineTest {
         assertEquals(7.7, state.windSpeedTrue!!, 0.05)
 
         // VTG: COG 120.5 deg, SOG 8.5 knots -> 4.37277 m/s
-        val vtgSentence = "${'$'}GPVTG,120.5,T,118.0,M,08.5,N,015.7,K,A*23"
+        val vtgSentence = "${'$'}GPVTG,120.5,T,118.0,M,08.5,N,015.7,K,A*13"
         multiplexer.injectSentence(vtgSentence)
         assertTrue("VTG pipeline did not settle in time", awaitPipeline {
             val state = engine.getCurrentState()

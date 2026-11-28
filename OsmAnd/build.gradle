@@ -281,6 +281,10 @@ dependencies {
 	testImplementation 'io.mockk:mockk:1.13.13'
 	testImplementation 'org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.1'
 	testImplementation 'app.cash.turbine:turbine:1.1.0'
+	// Real org.json implementation for JVM unit tests: without it the
+	// android.jar stub returns null/0 from every JSONObject/JSONArray
+	// method, so any JSON-handling pipeline silently produces nothing.
+	testImplementation 'org.json:json:20240303'
 }
 
 afterEvaluate {

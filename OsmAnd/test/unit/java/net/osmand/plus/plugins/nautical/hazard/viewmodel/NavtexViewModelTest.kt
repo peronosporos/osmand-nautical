@@ -60,8 +60,11 @@ class NavtexViewModelTest {
 
     @Test
     fun testUrgentFiltering() = runTest {
-        val msg1 = NavtexMessage("1", 'A', NavtexSubject.NAVIGATIONAL_WARNING, 1, 0, "", isUrgent = true)
-        val msg2 = NavtexMessage("2", 'A', NavtexSubject.UNKNOWN, 2, 0, "", isUrgent = false)
+        // The view model drops bulletins older than NAUTICAL_NAVTEX_EXPIRY_HOURS,
+        // so the fixtures must be dated now to survive the expiry filter.
+        val now = System.currentTimeMillis()
+        val msg1 = NavtexMessage("1", 'A', NavtexSubject.NAVIGATIONAL_WARNING, 1, now, "", isUrgent = true)
+        val msg2 = NavtexMessage("2", 'A', NavtexSubject.UNKNOWN, 2, now, "", isUrgent = false)
         messagesFlow.value = listOf(msg1, msg2)
 
         viewModel.setUrgentOnly(true)
@@ -73,7 +76,9 @@ class NavtexViewModelTest {
 
     @Test
     fun testProximityFiltering() = runTest {
-        val msg1 = NavtexMessage("1", 'A', NavtexSubject.NAVIGATIONAL_WARNING, 1, 0, "", 
+        // Expired bulletins are filtered out, so the fixture must be dated now.
+        val now = System.currentTimeMillis()
+        val msg1 = NavtexMessage("1", 'A', NavtexSubject.NAVIGATIONAL_WARNING, 1, now, "",
             points = listOf(net.osmand.data.LatLon(10.0, 10.0)))
         messagesFlow.value = listOf(msg1)
 
