@@ -4,7 +4,6 @@ import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.*
 import kotlinx.coroutines.test.StandardTestDispatcher
-import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import kotlinx.coroutines.test.resetMain
@@ -25,7 +24,14 @@ import org.junit.Test
 class SignalKEnginePipelineTest {
 
     private val testDispatcher = StandardTestDispatcher()
-    private val testScope = TestScope(testDispatcher)
+
+    // The engine schedules periodic maintenance (5-minute autosave) on the
+    // scope it is given. On the shared test scheduler runTest would chase
+    // those re-arming delays forever after the body completes and the
+    // worker would never go idle, so keep the engine off the virtual clock.
+    // The engine consumes sentences on its own Default-dispatcher scopes
+    // and the tests wait for outcomes with awaitPipeline real-time polls.
+    private val engineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     private lateinit var app: OsmandApplication
     private lateinit var settings: OsmandSettings
@@ -52,7 +58,7 @@ class SignalKEnginePipelineTest {
         settings.NAUTICAL_SAFETY_CORRIDOR_BUFFER.set(0.1f)
         settings.NAUTICAL_ARRIVAL_RADIUS.set(50.0f)
 
-        engine = SignalKEngine(app, testScope)
+        engine = SignalKEngine(app, engineScope)
         aisManager = NauticalAisManager(app)
         engine.registerAisListener { target ->
             aisManager.onAisObjectReceived(target)
@@ -60,13 +66,16 @@ class SignalKEnginePipelineTest {
 
         aggregator = SailingDataAggregator()
         val parser = NmeaSentenceParser(app)
-        multiplexer = DirectNmeaMultiplexer(app, aggregator, testScope, parser)
+        multiplexer = DirectNmeaMultiplexer(app, aggregator, engineScope, parser)
         multiplexer.deltaConsumer = { delta -> engine.handleDelta(delta) }
     }
 
     @After
     fun tearDown() {
         Dispatchers.resetMain()
+        // Stops the engine maintenance and multiplexer worker threads
+        // (their IO loops would otherwise leak across tests).
+        engineScope.cancel()
     }
 
     @Test

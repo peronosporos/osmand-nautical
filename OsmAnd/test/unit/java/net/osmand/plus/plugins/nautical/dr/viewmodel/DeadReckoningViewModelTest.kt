@@ -1,9 +1,11 @@
 package net.osmand.plus.plugins.nautical.dr.viewmodel
 
+import androidx.lifecycle.viewModelScope
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.*
 import net.osmand.plus.OsmandApplication
@@ -49,14 +51,23 @@ class DeadReckoningViewModelTest {
         val app = testApp()
         val viewModel = DeadReckoningViewModel(app, repo)
         
-        // Run the queued collectors without fast-forwarding virtual time:
-        // the watchdog and projection loops reschedule forever, so
-        // advanceUntilIdle would never return.
-        testDispatcher.scheduler.runCurrent()
-        
-        val state = viewModel.uiState.value
-        assertEquals(FixSource.GPS, state.source)
-        assertEquals(50.0, state.latitude ?: 0.0, 0.0001)
+        try {
+            // Run the queued collectors without fast-forwarding virtual time:
+            // the watchdog and projection loops reschedule forever, so
+            // advanceUntilIdle would never return.
+            testDispatcher.scheduler.runCurrent()
+            
+            val state = viewModel.uiState.value
+            assertEquals(FixSource.GPS, state.source)
+            assertEquals(50.0, state.latitude ?: 0.0, 0.0001)
+        } finally {
+            // The watchdog schedules itself every second on the shared test
+            // scheduler. runTest keeps advancing the scheduler until idle
+            // after the body completes, and the re-arming delay would keep
+            // it busy forever (the 10s timeout cannot preempt a
+            // non-suspending spin). Kill the scope before that happens.
+            viewModel.viewModelScope.cancel()
+        }
     }
 
     @Test
@@ -73,17 +84,24 @@ class DeadReckoningViewModelTest {
         
         val app = testApp()
         val viewModel = DeadReckoningViewModel(app, repo)
-        testDispatcher.scheduler.runCurrent()
-        assertEquals(FixSource.GPS, viewModel.uiState.value.source)
 
-        // Simulate GPS loss: coordinates stop arriving.
-        flow.value = LivePerformanceData(latitude = null, longitude = null, timestamp = now - 4000)
+        try {
+            testDispatcher.scheduler.runCurrent()
+            assertEquals(FixSource.GPS, viewModel.uiState.value.source)
 
-        // The staleness branch fires on the next collect pass (the last
-        // valid fix is more than 3 seconds old) and the projection
-        // coroutine publishes the dead reckoning state.
-        testDispatcher.scheduler.runCurrent()
+            // Simulate GPS loss: coordinates stop arriving.
+            flow.value = LivePerformanceData(latitude = null, longitude = null, timestamp = now - 4000)
 
-        assertEquals(FixSource.DEAD_RECKONING, viewModel.uiState.value.source)
+            // The staleness branch fires on the next collect pass (the last
+            // valid fix is more than 3 seconds old) and the projection
+            // coroutine publishes the dead reckoning state.
+            testDispatcher.scheduler.runCurrent()
+
+            assertEquals(FixSource.DEAD_RECKONING, viewModel.uiState.value.source)
+        } finally {
+            // Same scheduler hazard as the GPS test: the projection loop
+            // and the watchdog re-arm forever on the test scheduler.
+            viewModel.viewModelScope.cancel()
+        }
     }
 }
