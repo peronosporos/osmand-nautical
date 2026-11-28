@@ -92,9 +92,14 @@ class DockingManeuverTest {
         maneuver.onStateUpdate(MarineState(latitude = 1.1, longitude = 1.1))
         assertEquals(50, maneuver.progressFlow.value)
 
-        // 3rd update: current distance 0, progress 100%
+        // 3rd update: distance 0 with zero speed is an arrival, and the
+        // completionDist gate in DockingManeuver.onStateUpdate auto-completes
+        // the maneuver on arrival instead of pushing a final progress value,
+        // so the progress flow keeps the last approach value. Pin that
+        // behavior explicitly.
         maneuver.onStateUpdate(MarineState(latitude = 1.2, longitude = 1.2))
-        assertEquals(100, maneuver.progressFlow.value)
+        assertEquals(ManeuverStateMachine.State.COMPLETED, maneuver.currentState)
+        assertEquals(50, maneuver.progressFlow.value)
     }
 
     @Test
