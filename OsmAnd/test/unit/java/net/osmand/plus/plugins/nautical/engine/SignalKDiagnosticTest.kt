@@ -64,14 +64,14 @@ class SignalKDiagnosticTest {
     }
 
     @Test
-    fun diagInlineStagesAfterRmc() = runBlocking {
+    fun diagInlineStagesAfterRmc(): Unit = runBlocking {
         val rmc = "\$GPRMC,123519,A,4807.038,N,01131.000,E,022.4,084.4,230394,003.1,W*6A"
         multiplexer.injectSentence(rmc)
         dump("INLINE after inject:")
     }
 
     @Test
-    fun diagEngineStateTwoSecondsAfterRmc() = runBlocking {
+    fun diagEngineStateTwoSecondsAfterRmc(): Unit = runBlocking {
         val rmc = "\$GPRMC,123519,A,4807.038,N,01131.000,E,022.4,084.4,230394,003.1,W*6A"
         multiplexer.injectSentence(rmc)
         Thread.sleep(2000)
@@ -79,7 +79,7 @@ class SignalKDiagnosticTest {
     }
 
     @Test
-    fun diagEngineStateAfterJsonMessage() = runBlocking {
+    fun diagEngineStateAfterJsonMessage(): Unit = runBlocking {
         val json = "{\"context\":\"vessels.self\",\"updates\":[{\"timestamp\":\"2026-08-15T12:00:00.000Z\",\"values\":[{\"path\":\"navigation.speedOverGround\",\"value\":6.5}]}]}"
         engine.handleIncomingMessage(json)
         Thread.sleep(2000)
