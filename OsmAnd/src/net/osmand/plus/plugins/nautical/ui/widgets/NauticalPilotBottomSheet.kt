@@ -506,11 +506,14 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
                         overrideTarget = pending.targetHeading
                     )
                 } else {
-                    maneuverHelper?.handleSecondaryManeuver(
-                        pending.kind,
-                        state,
-                        overrideTarget = pending.targetHeading
-                    )
+                    val kind = pending.kind
+                    if (kind != null) {
+                        maneuverHelper?.handleSecondaryManeuver(
+                            kind,
+                            state,
+                            overrideTarget = pending.targetHeading
+                        )
+                    }
                 }
             }
         }
