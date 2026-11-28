@@ -2,7 +2,6 @@ package net.osmand.plus.plugins.nautical.nmea.multiplexer
 
 import io.mockk.coEvery
 import io.mockk.every
-import io.mockk.firstArg
 import io.mockk.mockk
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
