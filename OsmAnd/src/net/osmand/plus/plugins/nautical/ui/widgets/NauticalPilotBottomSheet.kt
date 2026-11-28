@@ -104,13 +104,14 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
     private var confirmationJob: Job? = null
     private var maneuverHelper: AutopilotBottomSheetHelper? = null
 
+    private var pendingRequest: PilotManeuverRequest? = null
     private var isCourseLocked = false
     private var pendingTargetHeading: Int? = null
     private var pendingManeuverTitle: String = ""
-    private var pendingExecuteAction: ((targetHeading: Int?) -> Unit)? = null
 
     companion object {
         const val TAG = "NauticalPilotBottomSheet"
+        private const val KEY_PENDING_MANEUVER = "pilot_pending_maneuver"
 
         @JvmStatic
         fun newInstance(): NauticalPilotBottomSheet {
@@ -128,6 +129,24 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         isCancelable = true
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        // A maneuver confirmation in progress is re-derivable from its
+        // identity plus the user-adjusted target heading, so a rotation no
+        // longer silently cancels an armed maneuver.
+        pendingRequest?.let { request ->
+            outState.putString(
+                KEY_PENDING_MANEUVER,
+                PilotPendingManeuver(
+                    isPrimary = request.isPrimary,
+                    kind = request.kind,
+                    isPort = request.isPort,
+                    targetHeading = pendingTargetHeading
+                ).encode()
+            )
+        }
     }
 
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
@@ -373,8 +392,8 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
             tackStbdBtn = tackStbdBtn,
             secondaryButtons = secondaryButtons,
             secondaryRows = secondaryRows,
-            onInitiateManeuver = { title, targetHeading, onExecute ->
-                showEmbeddedConfirmation(title, targetHeading, onExecute)
+            onInitiateManeuver = { request ->
+                showEmbeddedConfirmation(request)
             }
         )
         maneuverHelper = helper
@@ -471,6 +490,31 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
             }
         }
 
+        // Restore a maneuver confirmation that was armed when the sheet was
+        // destroyed (rotation / process recreation). The execute action is
+        // re-derived through the helper from the saved identity; the saved
+        // target heading is the user-adjusted one that was on screen.
+        savedInstanceState?.getString(KEY_PENDING_MANEUVER)?.let { raw ->
+            val pending = PilotPendingManeuver.decode(raw)
+            if (pending != null) {
+                val state = NauticalPlugin.engine?.getCurrentState()
+                if (pending.isPrimary) {
+                    maneuverHelper?.handlePrimaryManeuver(
+                        settings.NAUTICAL_VESSEL_TYPE.get(),
+                        state,
+                        isPort = pending.isPort,
+                        overrideTarget = pending.targetHeading
+                    )
+                } else {
+                    maneuverHelper?.handleSecondaryManeuver(
+                        pending.kind,
+                        state,
+                        overrideTarget = pending.targetHeading
+                    )
+                }
+            }
+        }
+
         items.add(BaseBottomSheetItem.Builder().setCustomView(customView).create())
     }
 
@@ -551,18 +595,18 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
         }
     }
 
-    private fun showEmbeddedConfirmation(title: String, targetHeading: Int?, onExecute: (targetHeading: Int?) -> Unit) {
+    private fun showEmbeddedConfirmation(request: PilotManeuverRequest) {
         confirmationJob?.cancel()
-        pendingManeuverTitle = title
-        pendingTargetHeading = targetHeading
-        pendingExecuteAction = onExecute
+        pendingRequest = request
+        pendingManeuverTitle = request.title
+        pendingTargetHeading = request.targetHeading
 
         tacticalActionsRow.visibility = View.GONE
         layoutSecondaryManeuvers.visibility = View.GONE
         layoutEmbeddedConfirmation.visibility = View.VISIBLE
 
-        txtManeuverTitle.text = title
-        if (targetHeading != null) {
+        txtManeuverTitle.text = request.title
+        if (request.targetHeading != null) {
             layoutManeuverTargetSetup.visibility = View.VISIBLE
             btnManeuverDegMinus.visibility = View.VISIBLE
             btnManeuverDegPlus.visibility = View.VISIBLE
@@ -577,7 +621,7 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
 
         embeddedSlideConfirm.reset()
         embeddedSlideConfirm.onConfirm = {
-            pendingExecuteAction?.invoke(pendingTargetHeading)
+            pendingRequest?.execute?.invoke(pendingTargetHeading)
             hideEmbeddedConfirmation()
         }
 
@@ -590,7 +634,7 @@ class NauticalPilotBottomSheet : BaseNauticalBottomSheet() {
     private fun hideEmbeddedConfirmation() {
         confirmationJob?.cancel()
         confirmationJob = null
-        pendingExecuteAction = null
+        pendingRequest = null
         pendingTargetHeading = null
         layoutEmbeddedConfirmation.visibility = View.GONE
         tacticalActionsRow.visibility = View.VISIBLE

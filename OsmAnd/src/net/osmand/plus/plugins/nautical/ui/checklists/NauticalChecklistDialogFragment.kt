@@ -25,7 +25,30 @@ import java.util.Locale
 enum class ChecklistType {
     PRE_DEPARTURE,
     HEAVY_WEATHER,
-    WATCH_HANDOVER
+    WATCH_HANDOVER;
+
+    companion object {
+        fun fromName(raw: String?): ChecklistType? =
+            entries.firstOrNull { it.name == raw }
+    }
+}
+
+/**
+ * Pure encode/apply helpers for checklist tick state across a
+ * configuration change. A saved array is applied only when its length
+ * still matches the list, so a stale bundle (e.g. after checklist items
+ * were edited between versions) is ignored rather than half-applied.
+ */
+object ChecklistSavedState {
+
+    fun encodeChecked(items: List<ChecklistItem>): BooleanArray =
+        BooleanArray(items.size) { index -> items[index].isChecked }
+
+    fun applyChecked(items: List<ChecklistItem>, checked: BooleanArray?): Boolean {
+        if (checked == null || checked.size != items.size) return false
+        items.forEachIndexed { index, item -> item.isChecked = checked[index] }
+        return true
+    }
 }
 
 data class ChecklistItem(
@@ -81,10 +104,32 @@ class NauticalChecklistDialogFragment : BottomSheetDialogFragment() {
         NauticalNightWindowHelper.applyToDialog(dialog)
     }
 
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        // The selected checklist and every ticked item survive a rotation;
+        // a half-completed pre-departure check no longer resets to zero
+        // because the screen turned.
+        outState.putString(KEY_TYPE, currentType.name)
+        if (::preDepartureItems.isInitialized) {
+            outState.putBooleanArray(KEY_CHECKED_PRE_DEPARTURE, ChecklistSavedState.encodeChecked(preDepartureItems))
+            outState.putBooleanArray(KEY_CHECKED_HEAVY_WEATHER, ChecklistSavedState.encodeChecked(heavyWeatherItems))
+            outState.putBooleanArray(KEY_CHECKED_WATCH_HANDOVER, ChecklistSavedState.encodeChecked(watchHandoverItems))
+        }
+    }
+
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         val view = inflater.inflate(R.layout.dialog_nautical_checklist, container, false)
         val app = requireActivity().application as OsmandApplication
         initChecklistItems()
+
+        // Restore the checklist that was open (with its tick marks) before
+        // any view is wired, so the adapter and toggle group reflect it.
+        savedInstanceState?.let { saved ->
+            ChecklistType.fromName(saved.getString(KEY_TYPE))?.let { currentType = it }
+            ChecklistSavedState.applyChecked(preDepartureItems, saved.getBooleanArray(KEY_CHECKED_PRE_DEPARTURE))
+            ChecklistSavedState.applyChecked(heavyWeatherItems, saved.getBooleanArray(KEY_CHECKED_HEAVY_WEATHER))
+            ChecklistSavedState.applyChecked(watchHandoverItems, saved.getBooleanArray(KEY_CHECKED_WATCH_HANDOVER))
+        }
 
         view.findViewById<View>(R.id.btn_close_checklist)?.setOnClickListener { dismiss() }
 
@@ -100,7 +145,13 @@ class NauticalChecklistDialogFragment : BottomSheetDialogFragment() {
         }
         rv.adapter = adapter
 
-        toggleGroup.check(R.id.btn_type_predeparture)
+        toggleGroup.check(
+            when (currentType) {
+                ChecklistType.PRE_DEPARTURE -> R.id.btn_type_predeparture
+                ChecklistType.HEAVY_WEATHER -> R.id.btn_type_heavy_weather
+                ChecklistType.WATCH_HANDOVER -> R.id.btn_type_watch_handover
+            }
+        )
         toggleGroup.addOnButtonCheckedListener { _, checkedId, isChecked ->
             if (isChecked) {
                 currentType = when (checkedId) {
@@ -175,6 +226,10 @@ class NauticalChecklistDialogFragment : BottomSheetDialogFragment() {
 
     companion object {
         private const val TAG = "NauticalChecklistDialogFragment"
+        private const val KEY_TYPE = "checklist_type"
+        private const val KEY_CHECKED_PRE_DEPARTURE = "checklist_checked_pre_departure"
+        private const val KEY_CHECKED_HEAVY_WEATHER = "checklist_checked_heavy_weather"
+        private const val KEY_CHECKED_WATCH_HANDOVER = "checklist_checked_watch_handover"
 
         fun show(fragmentManager: FragmentManager) {
             NauticalChecklistDialogFragment().show(fragmentManager, TAG)

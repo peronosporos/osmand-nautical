@@ -64,6 +64,10 @@ class AnchorWatchDialogFragment : BaseMaterialBottomSheetDialogFragment() {
         }
         viewModel = ViewModelProvider(this, factory)[AnchorCalculatorViewModel::class.java]
 
+        // Restore the manual-depth flag before the live state observer is
+        // wired, so a rotation cannot reset it mid-edit.
+        isDepthManuallyEdited = savedInstanceState?.getBoolean(KEY_DEPTH_MANUALLY_EDITED, false) ?: false
+
         val editDepth = view.findViewById<TextInputEditText>(R.id.edit_depth)
         val editBowRollerHeight = view.findViewById<TextInputEditText>(R.id.edit_bow_roller_height)
         val editTide = view.findViewById<TextInputEditText>(R.id.edit_tide)
@@ -405,8 +409,16 @@ class AnchorWatchDialogFragment : BaseMaterialBottomSheetDialogFragment() {
         override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
     }
 
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        // Losing this flag on rotation would let the next live depth
+        // emission overwrite a manually entered depth.
+        outState.putBoolean(KEY_DEPTH_MANUALLY_EDITED, isDepthManuallyEdited)
+    }
+
     companion object {
         const val TAG = "AnchorWatchDialogFragment"
+        private const val KEY_DEPTH_MANUALLY_EDITED = "anchor_depth_manually_edited"
 
         /**
          * Shows the anchor watch configuration dialog safely.

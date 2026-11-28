@@ -9,6 +9,22 @@ import net.osmand.plus.settings.enums.VesselType
 import kotlin.math.abs
 
 /**
+ * A maneuver confirmation requested from the sheet: identity (primary flag,
+ * kind, side), the localized title, the suggested target heading, and the
+ * execute action. The identity travels with the request so the sheet can
+ * save a [PilotPendingManeuver] spec and re-derive the whole confirmation
+ * after a configuration change.
+ */
+data class PilotManeuverRequest(
+    val isPrimary: Boolean,
+    val kind: PilotManeuverKind?,
+    val isPort: Boolean,
+    val title: String,
+    val targetHeading: Int?,
+    val execute: (targetHeading: Int?) -> Unit
+)
+
+/**
  * Binds the pilot sheet maneuver buttons to their actions.
  *
  * Button texts, accessibility labels, and row visibility come from
@@ -22,7 +38,7 @@ class AutopilotBottomSheetHelper(
     private val tackStbdBtn: MaterialButton,
     private val secondaryButtons: List<MaterialButton>,
     private val secondaryRows: List<View>,
-    private val onInitiateManeuver: (title: String, targetHeading: Int?, onExecute: (targetHeading: Int?) -> Unit) -> Unit
+    private val onInitiateManeuver: (request: PilotManeuverRequest) -> Unit
 ) {
 
     fun updateManeuverButtons(vesselType: VesselType) {
@@ -50,7 +66,12 @@ class AutopilotBottomSheetHelper(
         }
     }
 
-    fun handlePrimaryManeuver(vesselType: VesselType, state: MarineState?, isPort: Boolean) {
+    fun handlePrimaryManeuver(
+        vesselType: VesselType,
+        state: MarineState?,
+        isPort: Boolean,
+        overrideTarget: Int? = null
+    ) {
         val isProa = PilotManeuverCatalog.isProa(vesselType)
         // No invented 0-degree base heading: maneuvers that compute a target
         // from the current heading refuse when nothing was measured.
@@ -65,15 +86,31 @@ class AutopilotBottomSheetHelper(
                     return
                 }
                 val targetDeg = (((curH + 180.0) % 360.0 + 360.0) % 360.0).toInt()
-                onInitiateManeuver(sheet.getString(R.string.nautical_shunt), targetDeg) {
-                    NauticalPlugin.autopilot?.shunt()
-                    mm?.setActiveManeuver("shunt")
-                    mm?.execute()
-                }
+                onInitiateManeuver(
+                    PilotManeuverRequest(
+                        isPrimary = true,
+                        kind = null,
+                        isPort = true,
+                        title = sheet.getString(R.string.nautical_shunt),
+                        targetHeading = overrideTarget ?: targetDeg
+                    ) {
+                        NauticalPlugin.autopilot?.shunt()
+                        mm?.setActiveManeuver("shunt")
+                        mm?.execute()
+                    }
+                )
             } else {
-                onInitiateManeuver(sheet.getString(R.string.nautical_center_rudder), null) {
-                    NauticalPlugin.autopilot?.setRudderAngle(0.0)
-                }
+                onInitiateManeuver(
+                    PilotManeuverRequest(
+                        isPrimary = true,
+                        kind = null,
+                        isPort = false,
+                        title = sheet.getString(R.string.nautical_center_rudder),
+                        targetHeading = null
+                    ) {
+                        NauticalPlugin.autopilot?.setRudderAngle(0.0)
+                    }
+                )
             }
         } else {
             // Tack planning needs real wind AND a real heading: refuse
@@ -95,16 +132,24 @@ class AutopilotBottomSheetHelper(
                 (((curH + delta) % 360.0 + 360.0) % 360.0).toInt()
             }
 
-            onInitiateManeuver(title, targetDeg) { confirmedDeg ->
-                confirmedDeg?.let { NauticalPlugin.autopilot?.setTargetHeading(it.toDouble()) }
-                NauticalPlugin.autopilot?.tack(port = isPort)
-                mm?.setActiveManeuver(if (isPort) "tack_port" else "tack_stbd")
-                mm?.execute()
-            }
+            onInitiateManeuver(
+                PilotManeuverRequest(
+                    isPrimary = true,
+                    kind = null,
+                    isPort = isPort,
+                    title = title,
+                    targetHeading = overrideTarget ?: targetDeg
+                ) { confirmedDeg ->
+                    confirmedDeg?.let { NauticalPlugin.autopilot?.setTargetHeading(it.toDouble()) }
+                    NauticalPlugin.autopilot?.tack(port = isPort)
+                    mm?.setActiveManeuver(if (isPort) "tack_port" else "tack_stbd")
+                    mm?.execute()
+                }
+            )
         }
     }
 
-    fun handleSecondaryManeuver(kind: PilotManeuverKind, state: MarineState?) {
+    fun handleSecondaryManeuver(kind: PilotManeuverKind, state: MarineState?, overrideTarget: Int? = null) {
         // No invented 0-degree base heading: dodge/gybe below refuse when
         // nothing was measured (same honesty rule as the primary maneuvers).
         val hasHeading = state?.targetHeading != null || state?.headingTrue != null
@@ -133,61 +178,133 @@ class AutopilotBottomSheetHelper(
                     (((curH + delta) % 360.0 + 360.0) % 360.0).toInt()
                 }
                 val title = if (port) sheet.getString(R.string.nautical_gybe_port_label) else sheet.getString(R.string.nautical_gybe_stbd_label)
-                onInitiateManeuver(title, targetDeg) { confirmedDeg ->
-                    confirmedDeg?.let { NauticalPlugin.autopilot?.setTargetHeading(it.toDouble()) }
-                    NauticalPlugin.autopilot?.gybe(port = port)
-                    mm?.setActiveManeuver(if (port) "gybe_port" else "gybe_stbd")
-                    mm?.execute()
-                }
+                onInitiateManeuver(
+                    PilotManeuverRequest(
+                        isPrimary = false,
+                        kind = kind,
+                        isPort = port,
+                        title = title,
+                        targetHeading = overrideTarget ?: targetDeg
+                    ) { confirmedDeg ->
+                        confirmedDeg?.let { NauticalPlugin.autopilot?.setTargetHeading(it.toDouble()) }
+                        NauticalPlugin.autopilot?.gybe(port = port)
+                        mm?.setActiveManeuver(if (port) "gybe_port" else "gybe_stbd")
+                        mm?.execute()
+                    }
+                )
             }
             PilotManeuverKind.HEAVE_TO -> {
-                onInitiateManeuver(sheet.getString(R.string.nautical_heave_to), null) {
-                    NauticalPlugin.autopilot?.heaveTo(port = true)
-                    mm?.setActiveManeuver("heave_to")
-                    mm?.execute()
-                }
+                onInitiateManeuver(
+                    PilotManeuverRequest(
+                        isPrimary = false,
+                        kind = kind,
+                        isPort = false,
+                        title = sheet.getString(R.string.nautical_heave_to),
+                        targetHeading = null
+                    ) {
+                        NauticalPlugin.autopilot?.heaveTo(port = true)
+                        mm?.setActiveManeuver("heave_to")
+                        mm?.execute()
+                    }
+                )
             }
             PilotManeuverKind.CENTER_RUDDER -> {
-                onInitiateManeuver(sheet.getString(R.string.nautical_center_rudder), null) {
-                    NauticalPlugin.autopilot?.setRudderAngle(0.0)
-                }
+                onInitiateManeuver(
+                    PilotManeuverRequest(
+                        isPrimary = false,
+                        kind = kind,
+                        isPort = false,
+                        title = sheet.getString(R.string.nautical_center_rudder),
+                        targetHeading = null
+                    ) {
+                        NauticalPlugin.autopilot?.setRudderAngle(0.0)
+                    }
+                )
             }
             PilotManeuverKind.ANCHORING -> {
-                onInitiateManeuver(sheet.getString(R.string.nautical_maneuver_anchoring), null) {
-                    mm?.setActiveManeuver("anchoring")
-                    mm?.execute()
-                }
+                onInitiateManeuver(
+                    PilotManeuverRequest(
+                        isPrimary = false,
+                        kind = kind,
+                        isPort = false,
+                        title = sheet.getString(R.string.nautical_maneuver_anchoring),
+                        targetHeading = null
+                    ) {
+                        mm?.setActiveManeuver("anchoring")
+                        mm?.execute()
+                    }
+                )
             }
             PilotManeuverKind.WEIGH_ANCHOR -> {
-                onInitiateManeuver(sheet.getString(R.string.nautical_weigh_anchor), null) {
-                    mm?.setActiveManeuver("weigh_anchor")
-                    mm?.execute()
-                }
+                onInitiateManeuver(
+                    PilotManeuverRequest(
+                        isPrimary = false,
+                        kind = kind,
+                        isPort = false,
+                        title = sheet.getString(R.string.nautical_weigh_anchor),
+                        targetHeading = null
+                    ) {
+                        mm?.setActiveManeuver("weigh_anchor")
+                        mm?.execute()
+                    }
+                )
             }
             PilotManeuverKind.DOCKING -> {
-                onInitiateManeuver(sheet.getString(R.string.nautical_maneuver_docking), null) {
-                    NauticalPlugin.autopilot?.dockingHold()
-                    mm?.setActiveManeuver("docking")
-                    mm?.execute()
-                }
+                onInitiateManeuver(
+                    PilotManeuverRequest(
+                        isPrimary = false,
+                        kind = kind,
+                        isPort = false,
+                        title = sheet.getString(R.string.nautical_maneuver_docking),
+                        targetHeading = null
+                    ) {
+                        NauticalPlugin.autopilot?.dockingHold()
+                        mm?.setActiveManeuver("docking")
+                        mm?.execute()
+                    }
+                )
             }
             PilotManeuverKind.MED_MOORING -> {
-                onInitiateManeuver(sheet.getString(R.string.nautical_maneuver_med_mooring), null) {
-                    mm?.setActiveManeuver("med_mooring")
-                    mm?.execute()
-                }
+                onInitiateManeuver(
+                    PilotManeuverRequest(
+                        isPrimary = false,
+                        kind = kind,
+                        isPort = false,
+                        title = sheet.getString(R.string.nautical_maneuver_med_mooring),
+                        targetHeading = null
+                    ) {
+                        mm?.setActiveManeuver("med_mooring")
+                        mm?.execute()
+                    }
+                )
             }
             PilotManeuverKind.MOORING -> {
-                onInitiateManeuver(sheet.getString(R.string.nautical_maneuver_mooring), null) {
-                    mm?.setActiveManeuver("mooring")
-                    mm?.execute()
-                }
+                onInitiateManeuver(
+                    PilotManeuverRequest(
+                        isPrimary = false,
+                        kind = kind,
+                        isPort = false,
+                        title = sheet.getString(R.string.nautical_maneuver_mooring),
+                        targetHeading = null
+                    ) {
+                        mm?.setActiveManeuver("mooring")
+                        mm?.execute()
+                    }
+                )
             }
             PilotManeuverKind.SLIP_EXIT -> {
-                onInitiateManeuver(sheet.getString(R.string.nautical_maneuver_slip_exit), null) {
-                    mm?.setActiveManeuver("slip_exit")
-                    mm?.execute()
-                }
+                onInitiateManeuver(
+                    PilotManeuverRequest(
+                        isPrimary = false,
+                        kind = kind,
+                        isPort = false,
+                        title = sheet.getString(R.string.nautical_maneuver_slip_exit),
+                        targetHeading = null
+                    ) {
+                        mm?.setActiveManeuver("slip_exit")
+                        mm?.execute()
+                    }
+                )
             }
             PilotManeuverKind.DODGE_PORT,
             PilotManeuverKind.DODGE_STBD -> {
@@ -199,22 +316,46 @@ class AutopilotBottomSheetHelper(
                 val offset = if (port) -10.0 else 10.0
                 val targetDeg = (((curH + offset) % 360.0 + 360.0) % 360.0).toInt()
                 val title = if (port) sheet.getString(R.string.nautical_dodge_port_label) else sheet.getString(R.string.nautical_dodge_stbd_label)
-                onInitiateManeuver(title, targetDeg) { confirmedDeg ->
-                    confirmedDeg?.let { NauticalPlugin.autopilot?.setTargetHeading(it.toDouble()) }
-                    NauticalPlugin.autopilot?.dodge(port = port)
-                }
+                onInitiateManeuver(
+                    PilotManeuverRequest(
+                        isPrimary = false,
+                        kind = kind,
+                        isPort = port,
+                        title = title,
+                        targetHeading = overrideTarget ?: targetDeg
+                    ) { confirmedDeg ->
+                        confirmedDeg?.let { NauticalPlugin.autopilot?.setTargetHeading(it.toDouble()) }
+                        NauticalPlugin.autopilot?.dodge(port = port)
+                    }
+                )
             }
             PilotManeuverKind.HOLDING_PATTERN -> {
-                onInitiateManeuver(sheet.getString(R.string.nautical_holding_pattern), null) {
-                    mm?.setActiveManeuver("holding_pattern")
-                    mm?.execute()
-                }
+                onInitiateManeuver(
+                    PilotManeuverRequest(
+                        isPrimary = false,
+                        kind = kind,
+                        isPort = false,
+                        title = sheet.getString(R.string.nautical_holding_pattern),
+                        targetHeading = null
+                    ) {
+                        mm?.setActiveManeuver("holding_pattern")
+                        mm?.execute()
+                    }
+                )
             }
             PilotManeuverKind.EMERGENCY_STOP -> {
-                onInitiateManeuver(sheet.getString(R.string.nautical_emergency_stop_label), null) {
-                    NauticalPlugin.autopilot?.emergencyStop()
-                    mm?.abort(sheet.getString(R.string.nautical_emergency_stop_executed), isAlarm = true)
-                }
+                onInitiateManeuver(
+                    PilotManeuverRequest(
+                        isPrimary = false,
+                        kind = kind,
+                        isPort = false,
+                        title = sheet.getString(R.string.nautical_emergency_stop_label),
+                        targetHeading = null
+                    ) {
+                        NauticalPlugin.autopilot?.emergencyStop()
+                        mm?.abort(sheet.getString(R.string.nautical_emergency_stop_executed), isAlarm = true)
+                    }
+                )
             }
         }
     }

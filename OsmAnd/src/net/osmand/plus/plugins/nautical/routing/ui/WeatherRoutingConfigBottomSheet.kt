@@ -35,6 +35,31 @@ import java.util.Locale
 import kotlin.math.cos
 import kotlin.math.sin
 
+/**
+ * Pure validation of the routing config values restored from a saved
+ * instance state. A tampered or outdated saved value falls back to the
+ * sheet defaults instead of producing a state no button matches (e.g. a
+ * departure offset the toggle group cannot display) or a route computed
+ * from out-of-range inputs.
+ */
+object WeatherRoutingConfigValues {
+    const val DEFAULT_DEPARTURE_OFFSET_HOURS: Long = 0L
+    const val DEFAULT_TIME_STEP_HOURS: Double = 1.0
+    const val DEFAULT_COMFORT_SPEED_WEIGHT: Int = 50
+    const val DEFAULT_MIN_DEPTH_CLEARANCE: Double = 2.5
+
+    fun sanitizeDepartureOffsetHours(raw: Long): Long =
+        if (raw in listOf(0L, 1L, 3L, 6L)) raw else DEFAULT_DEPARTURE_OFFSET_HOURS
+
+    fun sanitizeTimeStepHours(raw: Double): Double =
+        if (raw == 0.25 || raw == 0.5 || raw == 1.0 || raw == 3.0) raw else DEFAULT_TIME_STEP_HOURS
+
+    fun sanitizeComfortWeight(raw: Int): Int = raw.coerceIn(0, 100)
+
+    fun sanitizeMinDepthClearance(raw: Double): Double =
+        if (raw in 1.0..20.0) raw else DEFAULT_MIN_DEPTH_CLEARANCE
+}
+
 class WeatherRoutingConfigBottomSheet : BaseNauticalBottomSheet() {
 
     private var departureOffsetHours: Long = 0L
@@ -42,7 +67,33 @@ class WeatherRoutingConfigBottomSheet : BaseNauticalBottomSheet() {
     private var comfortSpeedWeight: Int = 50
     private var minDepthClearance: Double = 2.5
 
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        // A tuned routing configuration (departure delay, step, comfort
+        // weighting, depth clearance) survives rotations instead of
+        // silently resetting and producing a route from defaults.
+        outState.putLong(KEY_DEPARTURE_OFFSET_HOURS, departureOffsetHours)
+        outState.putDouble(KEY_TIME_STEP_HOURS, timeStepHours)
+        outState.putInt(KEY_COMFORT_SPEED_WEIGHT, comfortSpeedWeight)
+        outState.putDouble(KEY_MIN_DEPTH_CLEARANCE, minDepthClearance)
+    }
+
     override fun createMenuItems(savedInstanceState: Bundle?) {
+        savedInstanceState?.let { saved ->
+            departureOffsetHours = WeatherRoutingConfigValues.sanitizeDepartureOffsetHours(
+                saved.getLong(KEY_DEPARTURE_OFFSET_HOURS, WeatherRoutingConfigValues.DEFAULT_DEPARTURE_OFFSET_HOURS)
+            )
+            timeStepHours = WeatherRoutingConfigValues.sanitizeTimeStepHours(
+                saved.getDouble(KEY_TIME_STEP_HOURS, WeatherRoutingConfigValues.DEFAULT_TIME_STEP_HOURS)
+            )
+            comfortSpeedWeight = WeatherRoutingConfigValues.sanitizeComfortWeight(
+                saved.getInt(KEY_COMFORT_SPEED_WEIGHT, WeatherRoutingConfigValues.DEFAULT_COMFORT_SPEED_WEIGHT)
+            )
+            minDepthClearance = WeatherRoutingConfigValues.sanitizeMinDepthClearance(
+                saved.getDouble(KEY_MIN_DEPTH_CLEARANCE, WeatherRoutingConfigValues.DEFAULT_MIN_DEPTH_CLEARANCE)
+            )
+        }
+
         addTitleItem(getString(R.string.nautical_weather_routing_title))
 
         val themedCtx = net.osmand.plus.utils.UiUtilities.getThemedContext(requireContext(), nightMode)
@@ -272,6 +323,9 @@ class WeatherRoutingConfigBottomSheet : BaseNauticalBottomSheet() {
             viewModel.calculateWeatherRoute(request, resolvedGrid, index, safety, minDepthClearance)
         }
 
+        // Seekbar position (and its label, via the listener) follow the
+        // restored comfort weighting instead of sitting at the XML default.
+        seekComfortSpeed.progress = comfortSpeedWeight
         updateDepButtons()
         updateStepButtons()
         updateDepthDisplay()
@@ -283,6 +337,10 @@ class WeatherRoutingConfigBottomSheet : BaseNauticalBottomSheet() {
         const val TAG = "WeatherRoutingConfigBottomSheet"
         const val EXTRA_DEST_LAT = "extra_dest_lat"
         const val EXTRA_DEST_LON = "extra_dest_lon"
+        private const val KEY_DEPARTURE_OFFSET_HOURS = "wr_departure_offset_hours"
+        private const val KEY_TIME_STEP_HOURS = "wr_time_step_hours"
+        private const val KEY_COMFORT_SPEED_WEIGHT = "wr_comfort_speed_weight"
+        private const val KEY_MIN_DEPTH_CLEARANCE = "wr_min_depth_clearance"
 
         fun newInstance(destLat: Double? = null, destLon: Double? = null): WeatherRoutingConfigBottomSheet {
             val fragment = WeatherRoutingConfigBottomSheet()

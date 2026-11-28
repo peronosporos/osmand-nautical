@@ -221,6 +221,31 @@ class TelemetryChartView @JvmOverloads constructor(
     }
 }
 
+/**
+ * Pure mapping between the metric graph time-range chips and their
+ * durations. Kept free of Android types so the restore path is covered by
+ * JVM unit tests; unknown values fall back to the 5-minute default.
+ */
+object MetricGraphRange {
+    const val DEFAULT_DURATION_MS: Long = 300_000L
+
+    fun durationForChipId(chipId: Int): Long? = when (chipId) {
+        R.id.chip_range_5m -> 300_000L
+        R.id.chip_range_30m -> 1_800_000L
+        R.id.chip_range_6h -> 21_600_000L
+        R.id.chip_range_24h -> 86_400_000L
+        else -> null
+    }
+
+    fun chipIdForDuration(durationMs: Long): Int = when (durationMs) {
+        300_000L -> R.id.chip_range_5m
+        1_800_000L -> R.id.chip_range_30m
+        21_600_000L -> R.id.chip_range_6h
+        86_400_000L -> R.id.chip_range_24h
+        else -> R.id.chip_range_5m
+    }
+}
+
 class MetricGraphBottomSheet : NauticalMenuBottomSheetDialogFragment() {
 
     private var metricKey: String = ""
@@ -236,6 +261,7 @@ class MetricGraphBottomSheet : NauticalMenuBottomSheetDialogFragment() {
     companion object {
         const val TAG = "nautical_metric_graph"
         const val KEY_METRIC = "key_metric"
+        private const val KEY_DURATION_MS = "key_duration_ms"
 
         fun show(manager: FragmentManager, metricKey: String) {
             if (manager.isStateSaved) return
@@ -253,6 +279,13 @@ class MetricGraphBottomSheet : NauticalMenuBottomSheetDialogFragment() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         metricKey = arguments?.getString(KEY_METRIC) ?: ""
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        // The selected time range survives rotations instead of snapping
+        // back to 5 minutes.
+        outState.putLong(KEY_DURATION_MS, selectedDurationMs)
     }
 
     override fun createMenuItems(savedInstanceState: Bundle?) {
@@ -330,7 +363,16 @@ class MetricGraphBottomSheet : NauticalMenuBottomSheetDialogFragment() {
         chip6h.setOnClickListener { selectChip(chip6h, 21_600_000L) }
         chip24h.setOnClickListener { selectChip(chip24h, 86_400_000L) }
 
-        selectChip(chip5m, 300_000L)
+        // Restore the time range chosen before a configuration change; an
+        // unknown saved duration falls back to the 5-minute default.
+        val restoredDuration = savedInstanceState?.getLong(KEY_DURATION_MS, -1L) ?: -1L
+        val initialDuration = if (chips.any { MetricGraphRange.durationForChipId(it.id) == restoredDuration }) {
+            restoredDuration
+        } else {
+            MetricGraphRange.DEFAULT_DURATION_MS
+        }
+        val initialChip = chips.firstOrNull { it.id == MetricGraphRange.chipIdForDuration(initialDuration) } ?: chip5m
+        selectChip(initialChip, initialDuration)
 
         items.add(BaseBottomSheetItem.Builder().setCustomView(layout).create())
 

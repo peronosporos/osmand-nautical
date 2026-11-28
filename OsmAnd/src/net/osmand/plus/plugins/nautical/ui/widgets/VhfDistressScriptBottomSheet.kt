@@ -32,6 +32,68 @@ import kotlin.math.abs
  * UTC timestamps, vessel identifiers, nature of distress, and POB.
  * Features 1-tap Clipboard Copy and Text-To-Speech practice recitation.
  */
+/**
+ * Pure restore/sanitize logic for the distress script selections. The
+ * canonical English nature phrases are the exact strings spoken in the
+ * GMDSS script; they are used here only to validate a saved selection, the
+ * script itself is unchanged.
+ */
+object VhfScriptSelection {
+    val canonicalNatures: Set<String> = setOf(
+        "SINKING / FLOODING",
+        "FIRE / EXPLOSION",
+        "GROUNDING",
+        "COLLISION",
+        "MAN OVERBOARD",
+        "DISABLED / ADRIFT",
+        "MEDICAL EMERGENCY"
+    )
+
+    const val DEFAULT_NATURE = "SINKING / FLOODING"
+    const val DEFAULT_PERSONS_ON_BOARD = 4
+
+    fun sanitize(
+        callType: VhfDistressScriptBottomSheet.CallType?,
+        nature: String?,
+        personsOnBoard: Int
+    ): Triple<VhfDistressScriptBottomSheet.CallType, String, Int> {
+        val safeCallType = callType ?: VhfDistressScriptBottomSheet.CallType.MAYDAY
+        val safeNature = if (nature != null && nature in canonicalNatures) nature else DEFAULT_NATURE
+        val safePersons = personsOnBoard.coerceIn(1, 99)
+        return Triple(safeCallType, safeNature, safePersons)
+    }
+
+    fun callTypeButtonId(callType: VhfDistressScriptBottomSheet.CallType): Int = when (callType) {
+        VhfDistressScriptBottomSheet.CallType.MAYDAY -> R.id.btn_type_mayday
+        VhfDistressScriptBottomSheet.CallType.PAN_PAN -> R.id.btn_type_pan_pan
+        VhfDistressScriptBottomSheet.CallType.SECURITE -> R.id.btn_type_securite
+    }
+
+    fun chipIdForNature(nature: String): Int = when (nature) {
+        "SINKING / FLOODING" -> R.id.chip_sinking
+        "FIRE / EXPLOSION" -> R.id.chip_fire
+        "GROUNDING" -> R.id.chip_grounding
+        "COLLISION" -> R.id.chip_collision
+        "MAN OVERBOARD" -> R.id.chip_mob
+        "DISABLED / ADRIFT" -> R.id.chip_adrift
+        "MEDICAL EMERGENCY" -> R.id.chip_medical
+        // Unknown phrases (e.g. from a future edit) keep the default chip
+        // selected instead of leaving the group with nothing checked.
+        else -> R.id.chip_sinking
+    }
+
+    fun natureForChipId(chipId: Int): String? = when (chipId) {
+        R.id.chip_sinking -> "SINKING / FLOODING"
+        R.id.chip_fire -> "FIRE / EXPLOSION"
+        R.id.chip_grounding -> "GROUNDING"
+        R.id.chip_collision -> "COLLISION"
+        R.id.chip_mob -> "MAN OVERBOARD"
+        R.id.chip_adrift -> "DISABLED / ADRIFT"
+        R.id.chip_medical -> "MEDICAL EMERGENCY"
+        else -> null
+    }
+}
+
 class VhfDistressScriptBottomSheet : BaseNauticalBottomSheet() {
 
     enum class CallType {
@@ -53,7 +115,32 @@ class VhfDistressScriptBottomSheet : BaseNauticalBottomSheet() {
         timeZone = TimeZone.getTimeZone("UTC")
     }
 
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        // The composed distress setup (call type, nature, POB) survives
+        // rotations; nothing is more disruptive than losing a half-spoken
+        // MAYDAY composition to a screen turn.
+        outState.putString(KEY_CALL_TYPE, callType.name)
+        outState.putString(KEY_NATURE_OF_DISTRESS, natureOfDistress)
+        outState.putInt(KEY_PERSONS_ON_BOARD, personsOnBoard)
+    }
+
     override fun createMenuItems(savedInstanceState: Bundle?) {
+        // Restore a previously composed selection before the views are
+        // wired, so the toggles and script below reflect it.
+        savedInstanceState?.let { saved ->
+            val savedCallType = saved.getString(KEY_CALL_TYPE)
+                ?.let { name -> CallType.entries.firstOrNull { it.name == name } }
+            val restored = VhfScriptSelection.sanitize(
+                savedCallType,
+                saved.getString(KEY_NATURE_OF_DISTRESS),
+                saved.getInt(KEY_PERSONS_ON_BOARD, VhfScriptSelection.DEFAULT_PERSONS_ON_BOARD)
+            )
+            callType = restored.first
+            natureOfDistress = restored.second
+            personsOnBoard = restored.third
+        }
+
         val title = when (callType) {
             CallType.MAYDAY -> getString(R.string.nautical_vhf_mayday_script_title)
             CallType.PAN_PAN -> getString(R.string.nautical_vhf_pan_pan_script_title)
@@ -76,7 +163,7 @@ class VhfDistressScriptBottomSheet : BaseNauticalBottomSheet() {
         // Initialize TTS
         initTextToSpeech()
 
-        toggleCallType.check(R.id.btn_type_mayday)
+        toggleCallType.check(VhfScriptSelection.callTypeButtonId(callType))
         toggleCallType.addOnButtonCheckedListener { _, checkedId, isChecked ->
             if (isChecked) {
                 callType = when (checkedId) {
@@ -106,6 +193,9 @@ class VhfDistressScriptBottomSheet : BaseNauticalBottomSheet() {
                 updateScript()
             }
         }
+        // Reflect a restored nature selection on the chips (the listener
+        // above re-derives the same phrase, keeping field and UI in sync).
+        chipGroupNature.check(VhfScriptSelection.chipIdForNature(natureOfDistress))
 
         btnPobMinus.setOnClickListener {
             if (personsOnBoard > 1) {
@@ -368,6 +458,9 @@ class VhfDistressScriptBottomSheet : BaseNauticalBottomSheet() {
 
     companion object {
         const val TAG = "VhfDistressScriptBottomSheet"
+        private const val KEY_CALL_TYPE = "vhf_call_type"
+        private const val KEY_NATURE_OF_DISTRESS = "vhf_nature_of_distress"
+        private const val KEY_PERSONS_ON_BOARD = "vhf_persons_on_board"
 
         fun show(fragmentManager: FragmentManager) {
             if (fragmentManager.isStateSaved) return
